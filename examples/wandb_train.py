@@ -137,9 +137,9 @@ def main(params):
     
     if model_name == "rkt":
         testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = \
-            train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model, data_config[dataset_name], fold)
+            train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model, data_config[dataset_name], fold, params['use_wandb'])
     else:
-        testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)
+        testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model, use_wandb=params['use_wandb'])
     
     if save_model:
         best_model = init_model(model_name, model_config, data_config[dataset_name], emb_type)

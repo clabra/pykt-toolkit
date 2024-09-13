@@ -176,9 +176,13 @@ def model_forward(model, data, rel=None):
     return loss
     
 
-def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, test_loader=None, test_window_loader=None, save_model=False, data_config=None, fold=None):
+def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, test_loader=None, test_window_loader=None, save_model=False, data_config=None, fold=None, use_wandb=0):
     max_auc, best_epoch = 0, -1
     train_step = 0
+
+    if (use_wandb==1):
+        import wandb
+        wandb.init()
 
     rel = None
     if model.model_name == "rkt":
@@ -248,6 +252,8 @@ def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, t
         print(f"Epoch: {i}, validauc: {validauc:.4}, validacc: {validacc:.4}, best epoch: {best_epoch}, best auc: {max_auc:.4}, train loss: {loss_mean}, emb_type: {model.emb_type}, model: {model.model_name}, save_dir: {ckpt_path}")
         print(f"            testauc: {round(testauc,4)}, testacc: {round(testacc,4)}, window_testauc: {round(window_testauc,4)}, window_testacc: {round(window_testacc,4)}")
 
+        if (use_wandb == 1): 
+            wandb.log({"validacc": validacc, "validauc": validauc, "max_auc": max_auc})
 
         if i - best_epoch >= 10:
             break
