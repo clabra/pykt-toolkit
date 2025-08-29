@@ -13,7 +13,6 @@ dist/
 saved_model
 build/
 .vscode/
-.devcontainer/
 data/assist*
 data/assist2012
 data/algebra2005
