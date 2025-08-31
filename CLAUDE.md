@@ -26,7 +26,7 @@ Project Focus:
 - Focus on interpretability and causal explanations as key contributions
 
 Reference Documents:
-- quickstart.pdf - explains how start to train and evaluate models, it's useful to understand project organization
+- quickstart.pdf - explains how train and evaluate models, follow these guidelines when it comes to generate scripts for training and testing 
 - contribute.pdf - explains how to proceed to add new models and datasets, follow these guidelined when it comes to code generation, scripts and documentation
 - datasets.pdf - explains what datasets are used to evaluate models and how to get them
 - models.pdf - list of models implemented in pykt/model foldes, includes a description and the name of the paper explaining the model (you can find the papers in papers-pykt folder)
@@ -43,6 +43,7 @@ Research Approach:
 ## Data directories:
 - `/data`: Processed datasets ready for training
 - `/data_original`: Raw datasets (do not modify)
+- /data/trajectories.csv: dataset with learning trajectories by student. It contains the (S. N, M) tuples to infer learning curves and trajectories
 
 
 
@@ -56,6 +57,8 @@ pip install -e .
 
 ### Important Constraints
 - Do NOT modify files in `/data_original` directory
+- Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
+- DO NOT modify existent models in pykt/models (only the new created model/s)
 - Always work within the activated conda pykt virtual environment
 
 ## Documentation
