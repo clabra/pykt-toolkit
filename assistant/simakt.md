@@ -1,5 +1,18 @@
 # SimAKT Architecture
 
+## IMPORTANT: Implementation Status
+
+**CURRENT IMPLEMENTATION STATUS**:
+- ✅ **IMPLEMENTED**: Basic SimAKT model with cosine similarity-based attention
+- ✅ **IMPLEMENTED**: 4 mathematical transformations of cosine similarity (NOT true TSMini views)
+- ✅ **IMPLEMENTED**: Learning curve prediction with sigmoid parameters
+- ✅ **IMPLEMENTED**: Multi-skill integration and response prediction
+- ❌ **NOT IMPLEMENTED**: TSMini integration (ConvEmbeder, MSA-LLM, multi-metric distances)
+- ❌ **NOT IMPLEMENTED**: Advanced trajectory similarity computation from TSMini paper
+
+**KEY DISTINCTION**:
+The current implementation uses **BASIC cosine similarity** with simple mathematical transformations. References to "TSMini similarity" in this document refer to the **PLANNED FUTURE ENHANCEMENT**, not the current implementation. The TSMini folder code exists but has not been integrated into the SimAKT model.
+
 ## Introduction
 
 The original Transformer was designed for seq2seq tasks like machine translation, where both the input and output are sequences of the same type of tokens (e.g., words). In contrast, Knowledge Tracing (KT) tasks involve input sequences composed of interaction data, including concept IDs, responses, and sometimes additional information such as problem/question IDs or timestamps. The output, is typically a prediction about the student's next response. 
@@ -122,7 +135,7 @@ As we characterize students by their sequences of learning curves, two similar t
 
   3. Concrete Similarity Metrics Discussion
 
-We'll use the code in the `TSMini` folder to calculate similarities between trajectories. It uses an approach based on KNN and Attenttion mechanisms. Read TSMini/paper.pdf for a detailed explanation. 
+**PLANNED**: We plan to integrate the code in the `TSMini` folder to calculate similarities between trajectories. It uses an approach based on KNN and Attention mechanisms. Read TSMini/paper.pdf for a detailed explanation. Currently, the implementation uses basic cosine similarity as a foundation. 
 
   4. Key Design Questions for Discussion
 
@@ -167,8 +180,8 @@ They allow, as well, to calculate the skill mastery level and from that figure o
 - **Learning Curves**: Each skill S generates a sigmoid curve with N as x-coordinate and M as y-coordinate
 
 **Similarity Computation:**
-- **Method**: TSMini-based approach using KNN and attention mechanisms (see TSMini/paper.pdf)
-- **Granularity**: Multi-view, multi-granular approach as implemented in TSMini
+- **Method**: **CURRENT**: Basic cosine similarity with mathematical transformations. **PLANNED**: TSMini-based approach using KNN and attention mechanisms (see TSMini/paper.pdf)
+- **Granularity**: **CURRENT**: 4 mathematical views of cosine similarity. **PLANNED**: Multi-view, multi-granular approach as implemented in TSMini
 - **Scope**: Global similarity across all skills (not skill-specific)
 - **Weighting**: Attention mechanisms determine skill relevance automatically
 
@@ -272,12 +285,14 @@ Specialized Models and SimAKT Advantages:
 
 **Currently Implemented:** 
 - **Standard Multi-Head Structure**: 8 attention heads using traditional QKV projection
-- **Trajectory-Based Similarity**: TSMini similarity computation with 4 views:
-  - View 0: Direct cosine similarity (temporal patterns)
-  - View 1: Squared similarity (emphasizes high similarity) 
-  - View 2: Exponential similarity (difficulty progression)
-  - View 3: Linear transformation (error recovery patterns)
-- **Similarity-Weighted Attention**: Attention weights derived from trajectory similarity instead of dot-product
+- **Basic Trajectory Similarity**: Simple cosine similarity computation between trajectory embeddings with 4 mathematical transformations:
+  - View 0: Direct cosine similarity (baseline)
+  - View 1: Squared cosine similarity (emphasizes high similarity) 
+  - View 2: Exponential of cosine similarity (non-linear amplification)
+  - View 3: Linear scaling of cosine similarity (weighted baseline)
+- **Similarity-Weighted Attention**: Attention weights derived from basic trajectory similarity instead of dot-product
+
+**NOTE**: This is NOT the full TSMini implementation. The current approach uses simple mathematical transformations of basic cosine similarity.
 
 **Future Enhancement Opportunities:**
 - Skill-Specific Similarity Head: Focus on trajectories for individual skills
@@ -295,20 +310,31 @@ Specialized Models and SimAKT Advantages:
 
     2. Multi-View Similarity:
 
-    sim_skill = TSMini_skill(Tᵢ, Tⱼ)
-    sim_temporal = TSMini_temporal(Tᵢ, Tⱼ)
-    sim_difficulty = TSMini_difficulty(Tᵢ, Tⱼ)
-    sim_error = TSMini_error(Tᵢ, Tⱼ)
+    # CURRENT: Basic mathematical transformations of cosine similarity
+    base_similarity = cosine_similarity(Tᵢ, Tⱼ)
+    sim_view0 = base_similarity                    # Direct
+    sim_view1 = base_similarity ** 2              # Squared
+    sim_view2 = torch.exp(base_similarity)        # Exponential  
+    sim_view3 = 2.0 * base_similarity            # Linear scaling
+    
+    # PLANNED: Full TSMini multi-metric approach
+    # sim_skill = TSMini_skill(Tᵢ, Tⱼ)
+    # sim_temporal = TSMini_temporal(Tᵢ, Tⱼ)
+    # sim_difficulty = TSMini_difficulty(Tᵢ, Tⱼ)
+    # sim_error = TSMini_error(Tᵢ, Tⱼ)
 
-    3. Attention Weights:
+    3. Attention Weights (CURRENT IMPLEMENTATION):
 
-    α_skill = softmax(sim_skill / τ₁)
-    α_temporal = softmax(sim_temporal / τ₂)
-    α_difficulty = softmax(sim_difficulty / τ₃)
-    α_error = softmax(sim_error / τ₄)
+    α_view0 = softmax(sim_view0 / τ₁)     # Direct similarity
+    α_view1 = softmax(sim_view1 / τ₂)     # Squared similarity
+    α_view2 = softmax(sim_view2 / τ₃)     # Exponential similarity
+    α_view3 = softmax(sim_view3 / τ₄)     # Scaled similarity
 
-    4. Multi-Head Output:
-    output = concat(α_skill⊗V_skill, α_temporal⊗V_temporal, α_difficulty⊗V_difficulty, α_error⊗V_error)
+    4. Multi-Head Output (CURRENT):
+    output = concat(α_view0⊗V, α_view1⊗V, α_view2⊗V, α_view3⊗V)
+    
+    # PLANNED: TSMini-based multi-head output
+    # output = concat(α_skill⊗V_skill, α_temporal⊗V_temporal, α_difficulty⊗V_difficulty, α_error⊗V_error)
 
   #### Key Design Decisions
 
@@ -645,13 +671,15 @@ This approach ensures seamless integration with existing pyKT training pipelines
 ### Current Trajectory Similarity Implementation
 
 **Existing Implementation Status:**
-The current SimAKT implementation includes a basic trajectory similarity computation that serves as a foundation for TSMini integration:
+The current SimAKT implementation includes a BASIC trajectory similarity computation using simple cosine similarity. This is NOT the full TSMini approach but serves as a foundation for future TSMini integration:
 
-**Current TSMiniSimilarity Class:**
-- **Multi-view similarity**: 4 different perspectives (temporal, difficulty, error, progress)  
-- **Cosine similarity baseline**: Simple normalized dot-product computation
-- **View transformations**: Different mathematical transformations applied to cosine similarity
+**Current Basic Similarity Class:**
+- **Multi-view transformations**: 4 different mathematical transformations of basic cosine similarity (NOT true TSMini views)
+- **Cosine similarity baseline**: Simple normalized dot-product computation between trajectory embeddings
+- **Mathematical transformations**: Direct, squared, exponential, and linear scaling of cosine similarity
 - **Integration point**: Used within MultiHeadSimilarityAttention to compute attention weights
+
+**IMPORTANT**: This is NOT the TSMini implementation described in the paper. It's a simplified placeholder using basic cosine similarity.
 
 **Current Trajectory Encoding:**
 - **(S, N, M) tuple construction**: Skills, number of attempts, mastery level
@@ -660,12 +688,14 @@ The current SimAKT implementation includes a basic trajectory similarity computa
 
 ### TSMini Framework Analysis
 
-**Key Components from TSMini Implementation:**
+**Key Components from TSMini Implementation (NOT YET INTEGRATED):**
 
-1. **ConvEmbeder**: Convolutional trajectory embedding with stacked Conv1D layers
-2. **Multi-Scale Attention (MSA-LLM)**: Transformer-based trajectory encoder  
-3. **Trajectory Similarity**: Comprehensive trajectory comparison with multiple distance metrics
-4. **Training Pipeline**: Specialized loss functions for trajectory similarity learning
+1. **ConvEmbeder**: Convolutional trajectory embedding with stacked Conv1D layers - **PENDING INTEGRATION**
+2. **Multi-Scale Attention (MSA-LLM)**: Transformer-based trajectory encoder - **PENDING INTEGRATION**
+3. **Trajectory Similarity**: Comprehensive trajectory comparison with multiple distance metrics - **PENDING INTEGRATION**
+4. **Training Pipeline**: Specialized loss functions for trajectory similarity learning - **PENDING INTEGRATION**
+
+**STATUS**: The TSMini code exists in the /TSMini folder but has NOT been integrated into the SimAKT model. Current implementation uses basic cosine similarity only.
 
 **TSMini Architecture Advantages:**
 - **Patch-based embedding**: More efficient representation for long trajectories
@@ -1300,7 +1330,12 @@ Release checklist:
 
 ## Overview
 
-Successfully implemented the SimAKT (Similarity-based Attention for Knowledge Tracing) model following the pyKT framework guidelines. The model introduces a novel Transformer-based architecture that uses trajectory similarity instead of traditional attention mechanisms for knowledge tracing.
+Successfully implemented the SimAKT (Similarity-based Attention for Knowledge Tracing) model following the pyKT framework guidelines. The model introduces a novel Transformer-based architecture that uses BASIC trajectory similarity instead of traditional attention mechanisms for knowledge tracing.
+
+**IMPORTANT IMPLEMENTATION STATUS**:
+- **IMPLEMENTED**: Basic trajectory similarity using cosine similarity with mathematical transformations
+- **NOT IMPLEMENTED**: Full TSMini integration with ConvEmbeder, MSA-LLM, and multi-metric distances
+- **CURRENT STATE**: Foundation implementation ready for TSMini enhancement
 
 ## Key Components Implemented
 
@@ -1315,7 +1350,7 @@ Successfully implemented the SimAKT (Similarity-based Attention for Knowledge Tr
 **Architecture:**
 - **Input Processing**: Handles question IDs, concept IDs, and responses
 - **Trajectory Encoder**: Converts interaction sequences to (S, N, M) tuples
-- **TSMini Similarity**: Computes multi-view trajectory similarities
+- **Basic Similarity Computation**: Computes simple cosine similarity with 4 mathematical transformations (NOT full TSMini)
 - **Similarity-based Attention**: Replaces traditional QKV attention with trajectory similarity
 - **Learning Curve Predictor**: Estimates sigmoid parameters for skill mastery evolution
 - **Multi-skill Integrator**: Combines mastery across multiple skills
@@ -1402,12 +1437,14 @@ Total_Loss = λ₁×Binary_CrossEntropy + λ₂×Curve_MSE + λ₃×Regularizati
 - Provides interpretable skill mastery evolution
 - Enables causal explanations through learning curves
 
-### 3. Multi-View Similarity
-- Four different similarity perspectives:
-  - Temporal patterns
-  - Difficulty progression  
-  - Error recovery patterns
-  - Learning progress patterns
+### 3. Basic Multi-View Mathematical Transformations
+- Four different mathematical transformations of cosine similarity:
+  - Direct cosine similarity (baseline)
+  - Squared cosine similarity (emphasizes high similarity)
+  - Exponential cosine similarity (non-linear amplification)
+  - Linear scaled cosine similarity (weighted baseline)
+
+**NOTE**: These are NOT the TSMini similarity perspectives but simple mathematical transformations.
 
 ### 4. Interpretable Outputs
 - Learning curve parameters for each skill
@@ -1416,6 +1453,8 @@ Total_Loss = λ₁×Binary_CrossEntropy + λ₂×Curve_MSE + λ₃×Regularizati
 - Mastery evolution tracking
 
 ## Performance Characteristics
+
+**Poor Performance**: validauc: 0.4829, validacc: 0.337
 
 **Memory Footprint**: ~500MB for typical batch sizes (B=32, T=200, skills=50)
 
@@ -1461,3 +1500,68 @@ Total_Loss = λ₁×Binary_CrossEntropy + λ₂×Curve_MSE + λ₃×Regularizati
 The SimAKT model is now fully implemented, tested, and ready for experimental validation following the research plan outlined in `assistant/simakt.md`.
 
 
+## How Cosine Similarity is Calculated in SimAKT
+
+```
+
+  1. Trajectory Construction from (S, N, M) Tuples
+
+  The TrajectoryEncoder class (lines 368-429) processes the raw (S, N, M) tuples through neural network encoding:
+
+  # For each interaction at time t:
+  S = skill_id                                    # Skill identifier
+  N = skill_attempts[skill]                       # Number of attempts on this skill
+  M = skill_correct[skill] / skill_attempts[skill] # Mastery (success rate)
+
+  # These are NOT used directly, but encoded:
+  s_enc = self.skill_encoder(S)        # Linear(1, curve_dim/3)
+  n_enc = self.attempts_encoder(N)     # Linear(1, curve_dim/3)  
+  m_enc = self.mastery_encoder(M)      # Linear(1, curve_dim/3)
+
+  # Concatenate and project to embedding space:
+  tuple_enc = concat([s_enc, n_enc, m_enc])       # [curve_dim]
+  trajectory_embedding = self.trajectory_proj(tuple_enc)  # Linear(curve_dim, emb_size)
+
+  2. Cosine Similarity Computation
+
+  The TSMiniSimilarity class (lines 432-486) computes similarity between embedded trajectories:
+
+  # Step 1: Normalize trajectory embeddings
+  query_norm = F.normalize(query_trajectory, p=2, dim=-1)   # L2 normalization
+  key_norm = F.normalize(key_trajectories, p=2, dim=-1)
+
+  # Step 2: Compute cosine similarity via dot product of normalized vectors
+  cosine_sim = torch.matmul(query_norm, key_norm.transpose(-2, -1))
+  # This gives values in range [-1, 1]
+
+  3. Mathematical Transformations (The "4 Views")
+
+  The cosine similarity is then transformed into 4 different "views" (lines 474-484):
+
+  # View 0: Sigmoid of direct cosine similarity
+  similarities[:, :, :, 0] = sigmoid(cosine_sim)
+
+  # View 1: Squared similarity (emphasizes high similarity)
+  similarities[:, :, :, 1] = sigmoid(cosine_sim ** 2)
+
+  # View 2: Exponential similarity
+  similarities[:, :, :, 2] = sigmoid(exp(cosine_sim - 1))
+
+  # View 3: Linear transformation
+  similarities[:, :, :, 3] = sigmoid(0.5 * cosine_sim + 0.5)
+```
+
+  Summary of the Process:
+
+  1. (S, N, M) tuples → Neural network encoding → Trajectory embeddings (256-dim vectors)
+  2. Trajectory embeddings → L2 normalization → Cosine similarity
+  3. Cosine similarity → 4 mathematical transformations → Similarity scores
+
+  Key Points:
+
+  - The (S, N, M) tuples are NOT used directly for similarity calculation
+  - They are encoded through learned neural networks into embedding vectors
+  - The cosine similarity is computed on these learned embeddings, not the raw tuples
+  - The "4 views" are simple mathematical transformations of the same base cosine similarity, not different similarity metrics
+
+  This approach allows the model to learn useful representations of the trajectories through the encoding networks, rather than relying on fixed similarity measures between raw (S, N, M) values.
