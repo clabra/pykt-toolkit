@@ -55,7 +55,6 @@ examples/best_model_path_1002
 examples/pred_wandbs_all_best_models_lqq
 examples/wandb_tmp/
 examples/archive/
-prediction.csv
 data/peiyou
 examples/iekt_ab/
 examples/qikt_improve/
@@ -64,4 +63,3 @@ examples/nips2022-peiyou/
 examples/nips2022-ednet/
 examples/models/
 data_original/*
-assistant/
