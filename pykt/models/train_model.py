@@ -70,6 +70,9 @@ def cal_loss(model, ys, r, rshft, sm, preloss=[]):
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
         loss = binary_cross_entropy(y.double(), t.double()) + preloss[0]
+    elif model_name == "simakt":
+        # SimAKT uses custom loss function that handles curve fitting and regularization
+        loss = model.get_loss(c, r, cshft, rshft, sm)
     elif model_name == "lpkt":
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
@@ -252,9 +255,15 @@ def model_forward(model, data, rel=None):
         y,loss = model.train_one_step(data)
     elif model_name == "dimkt":
         y = model(q.long(),c.long(),sd.long(),qd.long(),r.long(),qshft.long(),cshft.long(),sdshft.long(),qdshft.long())
+        ys.append(y)
+    elif model_name == "simakt":
+        # SimAKT forward pass
+        y = model(cq.long(), cr.long(), cshft.long())
+        # Compute loss using SimAKT's compute_loss method
+        loss = model.compute_loss(cq.long(), cr.long(), cshft.long(), rshft.long(), sm)
         ys.append(y) 
 
-    if model_name not in ["atkt", "atktfix"]+que_type_models or model_name in ["lpkt", "rkt"]:
+    if model_name not in ["atkt", "atktfix", "simakt"]+que_type_models or model_name in ["lpkt", "rkt"]:
         loss = cal_loss(model, ys, r, rshft, sm, preloss)
     if model_name in ["ukt"] and model.use_CL != 0:
         return loss,temp

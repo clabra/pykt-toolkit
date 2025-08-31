@@ -102,5 +102,15 @@
     },
     "dimkt":{
         "dropout":0.2  
+    },
+    "simakt": {
+        "learning_rate": 1e-3,
+        "emb_size": 256,
+        "num_attn_heads": 8,
+        "dropout": 0.1,
+        "num_en": 4,
+        "similarity_cache_size": 10000,
+        "mastery_threshold": 0.9,
+        "curve_dim": 128
     }
 }

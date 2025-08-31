@@ -148,6 +148,8 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                     c, cshft = q, qshft  # question level
             elif model_name == "dimkt":
                 y = model(q.long(),c.long(),sd.long(),qd.long(),r.long(),qshft.long(),cshft.long(),sdshft.long(),qdshft.long())
+            elif model_name == "simakt":
+                y = model(c.long(), r.long(), cshft.long())
             # print(f"after y: {y.shape}")
             # save predict result
             if save_path != "":

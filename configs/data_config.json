@@ -26,7 +26,8 @@
         "train_valid_file_quelevel": "train_valid_sequences_quelevel.csv",
         "test_file_quelevel": "test_sequences_quelevel.csv",
         "test_window_file_quelevel": "test_window_sequences_quelevel.csv",
-        "test_original_file_quelevel": "test_quelevel.csv"
+        "test_original_file_quelevel": "test_quelevel.csv",
+        "trajectories_file": "trajectories.csv"
     },
     "algebra2005": {
         "dpath": "../data/algebra2005",
