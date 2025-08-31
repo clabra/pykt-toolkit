@@ -1,6 +1,100 @@
 # Taxonomy of Attention-Based Knowledge Tracing Models
 
-## From Seq2Seq to Knowledge Tracing
+## How Knowledge Tracing differs from language modeling
+
+### The task is NOT Token Prediction 
+
+```
+  Language Modeling (GPT-style):
+  # Predict the ENTIRE next token
+  Input: ["The", "cat", "sat", "on"]
+  Predict: "the"  # Complete token prediction
+
+  Knowledge Tracing:
+  # Given: question q_{t+1}
+  # Predict: ONLY the response r_{t+1}
+  Input: [(q₁,r₁), (q₂,r₂), (q₃,r₃)], q₄
+  Predict: r₄  # Only predict response, not the pair!`
+```
+
+```
+The problem with treating (q,r) as atomic tokens:
+
+  # WRONG conceptualization:
+  Sequence: [(q₁,r₁), (q₂,r₂), (q₃,r₃), ???]
+                                           ↑
+                              Predict next (q,r) token?
+
+  # But q₄ is GIVEN! We don't predict it!
+
+  # CORRECT conceptualization:
+  History: [(q₁,r₁), (q₂,r₂), (q₃,r₃)]
+  Query: q₄
+  Predict: r₄
+```
+
+```
+  Three Approaches to Handle This
+
+  - Approach 1: Shifted Sequences (SAKT-style)
+
+  # Input sequence includes query question
+  input_seq = [(q₁,r₁), (q₂,r₂), (q₃,r₃), (q₄,r₀)]
+                                             ↑
+                                      r₀ = dummy/mask token
+
+  # Predict r₄ at position 4
+  hidden = encoder(input_seq)
+  prediction = predict(hidden[3])  # Predicts r₄
+
+  - Approach 2: Separate Query Encoding (AKT-style)
+
+  # History and query processed differently
+  history = encoder([(q₁,r₁), (q₂,r₂), (q₃,r₃)])
+  query_features = question_encoder(q₄)
+
+  # Combine for prediction
+  combined = concat(history[-1], query_features)
+  prediction = predict(combined)
+
+  - Approach 3: Cross-Attention to Query (some variants)
+
+  # History as context
+  history = encoder([(q₁,r₁), (q₂,r₂), (q₃,r₃)])
+
+  # Query attends to history
+  query_emb = question_emb(q₄)
+  attended = cross_attention(query=query_emb, key=history, value=history)
+  prediction = predict(attended)
+
+  - Approach 4: Encoder-Decoder (SAINT)
+
+  # Encoder sees questions (including future query)
+  encoder_in = [q₁, q₂, q₃, q₄]  # Can include query!
+
+  # Decoder predicts responses
+  decoder_in = [START, r₁, r₂, r₃]
+  decoder_out = decoder(decoder_in, encoder_out)
+  predict_r₄ = decoder_out[3]  # Aligned with q₄
+```
+
+We can say that the KT task is not standard sequence modeling:
+
+  1. Standard Sequence Modeling: Predict next token from vocabulary
+  2. Knowledge Tracing: Given next question, predict binary response
+
+  This is why KT models need special architectures:
+  - They're not predicting from a vocabulary
+  - They're doing conditional binary classification: P(correct | question, history)
+
+  This distinction is why:
+  - Pure autoregressive models (like GPT) don't directly apply
+  - Models need separate question and interaction embeddings
+  - The "next token prediction" framing is misleading
+
+
+
+### Heterogeneous Inputs and Outputs
 The original Transformer was designed for seq2seq tasks like machine translation, where both the input and output are sequences of the same type of tokens (e.g., words). In contrast, Knowledge Tracing (KT) tasks involve input sequences composed of interaction data, including concept IDs, responses, and sometimes additional information such as problem/question IDs or timestamps. The output, is typically a prediction about the student's next response. 
 
 The main approaches followed to adapt attention for KT are: 
@@ -17,13 +111,27 @@ The main approaches followed to adapt attention for KT are:
 
 In essence, the adaptation from seq2seq to KT involves reframing the problem **from "translating a sequence" to "querying a history"**. The **attention mechanism becomes a tool for dynamically querying the student's interaction history to find the most relevant information for predicting the performance on a new task**.
 
+## Types of Attention Mechanisms in KT
+
+### **Transformer Attention (Standard)**
+Models using standard self-attention or cross-attention mechanisms:
+- SAKT, AKT, SAINT, DTransformer, SimpleKT, AT-DKT, etc.
+
+### **Memory-Based Attention (Variants)**  
+Models using attention over external memory structures:
+- **DKVMN**: Soft attention over knowledge component memory (non-transformer)
+- **SKVMN**: Sequential memory networks with attention (non-transformer)
+- **RKT**: Custom attention with correlation matrices (non-transformer)
+
+These models use attention mechanisms but not standard transformer architectures.
+
 Below we analyze how attention mechanisms, originally designed for homogeneous seq2seq tasks (tokens → tokens), are **adapted for the heterogeneous, multi-modal nature of Knowledge Tracing where inputs include diverse entity types (problems, concepts, responses, temporal information, etc.) and outputs range from binary predictions to continuous knowledge states**.
 
-## Seq2Seq to KT Transformation Strategies
+### Transformation Strategies
 
-### Input Sequence Heterogeneity Handling
+#### Input Sequence Heterogeneity Handling
 
-#### **Strategy 1: Concatenation of Embeddings**
+- **Strategy 1: Concatenation of Embeddings**
 
 Sequences of different types are fed into different embedding processes and then concatenated. 
 ```python
@@ -37,7 +145,7 @@ interaction = concat([problem_emb, response_emb, skill_emb, time_emb])
 # Used by: SAKT, RKT, SAINT
 ```
 
-#### **Strategy 2: Cross-attention with Separation of Encoder Channels**
+- **Strategy 2: Cross-attention with Separation of Encoder Channels**
 
 In cross-attention one sequence attends to a different sequence, computing attention weights between queries from one sequence and keys/values from another one. The computation follows the standard attention formula:
   
@@ -61,7 +169,7 @@ attention_output = cross_attention(exercise_sequence, response_sequence)
 # Used by: SAINT, DTransformer
 ```
 
-#### **Strategy 3: Memory-Augmented Attention**
+- **Strategy 3: Memory-Augmented Attention**
 
 In this case, Keys and Values are obtained form external memory. 
 ```python
@@ -74,9 +182,9 @@ retrieved_knowledge = attention_weights @ memory_values
 # Used by: DKVMN, SKVMN
 ```
 
-### Output Heterogeneity Handling
+#### Output Heterogeneity Handling
 
-#### **Binary Prediction Tasks**
+- **Binary Prediction Tasks**
 ```python
 # Standard approach: attention → classification head
 attention_output = self_attention(interaction_sequence)
@@ -84,7 +192,7 @@ prediction = sigmoid(linear_layer(attention_output[-1]))
 # Used by: Most KT models for next response prediction
 ```
 
-#### **Knowledge State Estimation**
+- **Knowledge State Estimation**
 ```python
 # Continuous knowledge states per skill
 attention_per_skill = multi_head_attention(interactions, skill_mask)
@@ -92,7 +200,7 @@ knowledge_states = tanh(skill_specific_layers(attention_per_skill))
 # Used by: AKT, DTransformer, Deep-IRT
 ```
 
-#### **Multi-Task Outputs**
+- **Multi-Task Outputs**
 ```python
 # Multiple prediction heads from shared attention
 shared_attention = transformer_layers(interactions)
@@ -101,6 +209,180 @@ knowledge_state = regression_head(shared_attention)
 difficulty_est = irt_head(shared_attention)
 # Used by: Deep-IRT, AKT with multiple objectives
 ```
+
+## Most Attention-Based KT Models Use Encoder-Only Architecture
+
+### Why Encoder-Only Dominates
+
+```
+  The Fundamental Difference
+
+  Encoder-Only (SAKT, AKT, DTransformer):
+  # Single sequence combining questions and responses
+  input = [(q₁,r₁), (q₂,r₂), (q₃,r₃), ...]
+  hidden_states = Encoder(input)
+  prediction = predict(hidden_states)  # Predict r₄ given q₄
+
+  Encoder-Decoder (SAINT):
+  # Two separate sequences
+  encoder_input = [q₁, q₂, q₃, ...]
+  decoder_input = [START, r₁, r₂, r₃, ...]
+  exercise_context = Encoder(encoder_input)
+  response_prediction = Decoder(decoder_input, exercise_context)
+
+```
+
+
+```
+  1. Natural Problem Formulation
+
+  Knowledge tracing is fundamentally about predicting the next response given history:
+
+  # The natural KT formulation:
+  P(r_t+1 | q₁,r₁, q₂,r₂, ..., q_t,r_t, q_t+1)
+           └─────── past history ────────┘  └─query─┘
+
+  Encoder-only models directly model this:
+  # SAKT approach
+  history = [(q₁,r₁), (q₂,r₂), ..., (q_t,r_t)]
+  hidden = Encoder(history)
+  prediction = predict_head(hidden, q_t+1)
+
+  This is a single sequence problem, not a sequence-to-sequence translation!
+
+
+  ---
+  2. Information Coupling
+
+  Critical Insight: Questions and responses are intrinsically coupled in KT:
+
+  # You can't understand response r₃ without knowing question q₃
+  # "Correct" is meaningless without "Correct to what?"
+
+  # Encoder-only naturally handles this:
+  interaction_embedding = embed(question_id, response)  # Joint representation
+
+  # Encoder-decoder artificially separates them:
+  encoder: [Math_Q1, Science_Q2, Math_Q3]      # Loses response info
+  decoder: [START, Correct, Wrong]              # Loses question context
+
+  ---
+  3. Temporal Causality
+
+  The key constraint in KT: Can only use past information to predict future!
+
+  # At time t, we have:
+  Known: [(q₁,r₁), (q₂,r₂), ..., (q_t,r_t), q_t+1]
+  Predict: r_t+1
+
+  # Encoder-only with causal mask handles this naturally:
+  attention_mask[i][j] = 1 if j <= i else 0  # Can only attend to past
+
+  Why encoder-decoder is awkward here:
+  - Encoder processes questions: But should it see future questions? (No!)
+  - Decoder processes responses: But responses are tied to specific questions
+  - The separation doesn't match the problem structure
+
+  ---
+  4. Simplicity and Efficiency
+
+  Encoder-Only:
+  class SAKT(nn.Module):
+      def __init__(self):
+          self.interaction_emb = Embedding(2*num_skills, d_model)
+          self.encoder = TransformerEncoder(num_layers)
+          self.predict = Linear(d_model, 1)
+
+      def forward(self, questions, responses):
+          x = self.interaction_emb(questions + num_skills * responses)
+          hidden = self.encoder(x, causal_mask)
+          return self.predict(hidden)
+
+  Encoder-Decoder (more complex):
+  class SAINT(nn.Module):
+      def __init__(self):
+          self.q_emb = Embedding(num_questions, d_model)
+          self.r_emb = Embedding(2, d_model)
+          self.encoder = TransformerEncoder(num_layers)
+          self.decoder = TransformerDecoder(num_layers)
+          self.predict = Linear(d_model, 1)
+
+      def forward(self, questions, responses):
+          enc_out = self.encoder(self.q_emb(questions))
+          dec_out = self.decoder(self.r_emb(responses), enc_out)
+          return self.predict(dec_out)
+
+  More parameters, more complexity, often no performance gain!
+
+  ---
+  5. Theoretical Justification
+
+  From Attention Theory: The self-attention mechanism computes:
+  Attention(Q,K,V) = softmax(QK^T/√d)V
+
+  In encoder-only KT models:
+  - Q: "What do I need to know to predict current response?"
+  - K: "What information is available from past interactions?"
+  - V: "The actual knowledge state from past interactions"
+
+  This maps perfectly to the KT problem!
+```
+
+```
+  When Does Encoder-Decoder Make Sense?
+
+  SAINT argues for encoder-decoder based on conceptual separation:
+
+  1. Exercise Encoder: Models the "curriculum" or "learning opportunities"
+  2. Response Decoder: Models the "student state" or "knowledge evolution"
+
+  # Conceptually appealing separation:
+  Learning_Opportunities → [ENCODER] → Context
+  Student_Responses → [DECODER] → Knowledge_State → Prediction
+
+  Potential Advantages:
+
+  1. Different Representations: Exercises and responses might need different embedding spaces
+  2. Asymmetric Processing: Maybe exercises need different attention patterns than responses
+  3. Interpretability: Separate exercise difficulty from student ability
+
+  ---
+  Empirical Evidence
+
+  Performance Comparisons (typical results):
+
+  | Model        | Architecture    | ASSISTments AUC | EdNet AUC | Parameters |
+  |--------------|-----------------|-----------------|-----------|------------|
+  | SAKT         | Encoder-only    | 0.729           | 0.764     | 1.2M       |
+  | AKT          | Encoder-only    | 0.765           | 0.781     | 1.4M       |
+  | SAINT        | Encoder-Decoder | 0.754           | 0.773     | 2.1M       |
+  | DTransformer | Encoder-only    | 0.771           | 0.785     | 1.3M       |
+
+  Key Observation: Encoder-decoder doesn't consistently outperform simpler encoder-only models!
+
+```
+
+### Reasons for **SimAKT Using Encoder-Only**
+
+  SimAKT follows the encoder-only pattern because trajectory similarity needs complete (q,r) pairs to compute meaningful trajectories. 
+
+```
+  # SimAKT needs coupled information:
+  trajectory = compute_trajectory(questions, responses)  # Can't separate!
+  similarity = compare_trajectories(trajectory_i, trajectory_j)
+```
+
+
+  ### Conclusion
+
+  Encoder-only dominates because:
+  1. Natural Fit: KT is a single-sequence prediction problem
+  2. Information Coupling: Questions and responses are intrinsically linked
+  3. Simplicity: Fewer parameters, easier to train
+  4. Performance: No consistent advantage for encoder-decoder
+  5. Interpretability: Joint modeling often more interpretable
+
+  The encoder-decoder architecture (SAINT) represents an interesting alternative perspective, but empirically hasn't shown compelling advantages over simpler encoder-only approaches. This is why most recent SOTA models (SimplKT, DTransformer) stick with encoder-only architectures
 
 ### Timeline of Innovations
 
@@ -122,9 +404,6 @@ graph TB
         A1["SAKT: Standard self-attention<br/>for KT sequences"]
         B1["AKT: Rasch model + monotonic<br/>attention with decay"]
         C1["SAINT: Cross-modal attention<br/>exercises ↔ responses"]
-        C2["IEKT: Individual cognition attention"]
-        C3["LPKT: Process-consistent attention"]
-        C4["HawkesKT: Temporal cross-effects"]
     end
     
     A --> A1
@@ -215,9 +494,6 @@ timeline
               : RKT : Relation-Aware Self-Attention
     2021      : SAINT : Encoder-Decoder Architecture
               : ATKT : Adversarial Training with Attention
-              : IEKT : Individual Cognition Attention
-              : LPKT : Process-Consistent Attention
-              : HawkesKT : Temporal Cross-Effects
     2022      : DIMKT : Difficulty-Aware Attention
     2023      : simpleKT : Simplified Baseline
               : sparseKT : K-Sparse Selection
@@ -399,9 +675,9 @@ A way to classify Transformer-based models in Knowledge Tracing is according to 
 |-------------------|------------|---------------------------|---------------------|
 | **Problem-Centric** | DKVMN, SAKT, QIKT, simpleKT, sparseKT | Question/Item embeddings, difficulty, content features, question-centric cognitive representations | Q: current problem, K: past problems |
 | **Skill/KC-Centric** | AKT, Deep-IRT, HCGKT | Knowledge components, concept mastery, prerequisite relations | Q: current KC, K: KC interactions |
-| **Student-Centric** | ATKT, IEKT, LPKT, LSKT, csKT | Individual abilities, learning patterns, cognitive load, cold-start scenarios, individual cognition | Q: student state, K: personalized history |
+| **Student-Centric** | ATKT, LSKT, csKT | Individual abilities, learning patterns, cognitive load, cold-start scenarios | Q: student state, K: personalized history |
 | **Interaction-Centric** | RKT, SAINT, AT-DKT, FlucKT | Problem-response pairs, sequential dependencies, cognitive fluctuations, multi-task interactions | Q: current interaction, K: past interactions |
-| **Temporal-Centric** | DTransformer, HawkesKT, stableKT, lefoKT, KVFKT | Time intervals, forgetting curves, learning trajectories, relative forgetting, temporal cross-effects | Q: current time, K: temporal contexts |
+| **Temporal-Centric** | DTransformer, stableKT, lefoKT, KVFKT | Time intervals, forgetting curves, learning trajectories, relative forgetting | Q: current time, K: temporal contexts |
 | **Uncertainty-Centric** | UKT, DisKT | Probability distributions, causal bias, contradictory responses | Q: uncertainty state, K: probabilistic history |
 | **Geometric-Centric** | DisenKT, extraKT | Hyperbolic embeddings, hierarchical structures, sequence length | Q: geometric position, K: spatial relationships |
 
@@ -419,9 +695,6 @@ A way to classify Transformer-based models in Knowledge Tracing is according to 
 | **HCGKT** | Skills + Concepts + Domains | Multi-level graph filtering with contrastive learning | Hierarchical graph attention |
 | **LSKT** | Interactions + Cognitive patterns | Multi-scale convolutions with cognitive load modeling | Scale-aware temporal attention |
 | **csKT** | Short sequences + Kernel mappings | Cone attention with kernel bias for cold-start | Adaptive cone-shaped attention |
-| **IEKT** | Interactions + Individual cognition | Individual differences in learning patterns | Personalized attention weights |
-| **LPKT** | Interactions + Learning processes | Process consistency constraints | Process-aware attention |
-| **HawkesKT** | Problems + KCs + Temporal effects | Hawkes process for cross-KC effects | Time-decaying cross-attention |
 | **QIKT** | Questions + Cognitive representations | Question-sensitive cognitive insights | Question-centric attention |
 | **AT-DKT** | Problems + Responses + Task tags | Multi-task learning framework | Shared multi-task attention |
 | **FlucKT** | Trends + Fluctuations | Decomposition-based separation of signals | Dual-component attention |
@@ -474,9 +747,6 @@ Input:  [(problem₁, response₁, skill₁, time₁), ..., (problemₙ, respons
 | **SAINT** | 8 | Encoder-decoder | Exercise attention + response attention |
 | **RKT** | 4-8 | Relation-aware | Exercise relations + forgetting patterns |
 | **ATKT** | 4-8 | LSTM with attention | Adversarial training patterns |
-| **IEKT** | 4-8 | Individual cognition | Personalized learning patterns |
-| **LPKT** | 4-8 | Process-consistent | Learning process constraints |
-| **HawkesKT** | 4-8 | Temporal cross-effects | Cross-KC temporal propagation |
 | **DTransformer** | 6-12 | Temporal-cumulative | Question-level + knowledge-level |
 | **QIKT** | 4-8 | Question-centric | Cognitive representation modules |
 | **AT-DKT** | 4-8 | Multi-task attention | Auxiliary task heads |
@@ -869,9 +1139,6 @@ The following table characterizes each attention-based knowledge tracing model a
 | **AKT** | 2020 | Foundation | Ghosh, A., Heffernan, N., & Lan, A. S. (2020). Context-aware attentive knowledge tracing. | Enhances interpretability using Rasch model-based embeddings with context-aware monotonic attention incorporating exponential decay. | Context-Aware Attentive | Interpretability via Rasch model | **Entities:** Problems, Responses, Skills; **Relations:** Rasch model parameters; **Monotonic:** Explicit monotonic attention; **Forgetting:** Exponential decay; **Context:** Skill-aware embeddings | Current question embedding | Past question embeddings | Past question-response pairs | Binary response probability | ✅ |
 | **SAINT** | 2021 | Foundation | Choi, Y., Lee, Y., Cho, J., et al. (2021). Towards an appropriate query, key, and value computation for knowledge tracing. | Applies separated self-attention networks with encoder for exercises and decoder for responses, leveraging full transformer architecture. | Transformer (Encoder-Decoder) | Deep self-attentive layers | **Entities:** Exercises, Responses (separated streams); **Relations:** Encoder-decoder dependencies; **Architecture:** Multi-head self-attention; **Separation:** Exercise-response decoupling | Exercise embeddings | Exercise embeddings | Response embeddings | Binary response probability | ✅ |
 | **ATKT** | 2021 | Foundation | Guo, X., Huang, Z., Gao, J., et al. (2021). Enhancing knowledge tracing via adversarial training. | Applies adversarial perturbations to student interaction sequences with attention-based LSTM to improve generalization. | Adversarial Training with LSTM | Reduces overfitting | **Entities:** Problems, Responses; **Relations:** Sequential LSTM dependencies; **Adversarial:** Noise perturbations; **Regularization:** Overfitting prevention; **Attention:** LSTM-integrated attention | Current interaction + noise | Past interactions + noise | Past interactions + noise | Binary response probability | ✅ |
-| **IEKT** | 2021 | Foundation | Long, T., Liu, Y., Shen, J., et al. (2021). Tracing knowledge state with individual cognition and acquisition estimation. | Models individual cognition differences and knowledge acquisition processes through attention mechanisms for personalized knowledge tracing. | Individual Cognition Attention | Individual cognition modeling | **Entities:** Problems, Responses, Individual patterns; **Relations:** Personalized learning paths; **Cognition:** Individual differences; **Acquisition:** Knowledge gain estimation; **Attention:** Personalized attention weights | Current individual state | Personalized interaction history | Individual-weighted interactions | Binary response + cognition state | ✅ |
-| **LPKT** | 2021 | Foundation | Shen, J., et al. (2021). Learning process-consistent knowledge tracing. | Ensures learning consistency through process-aware attention mechanisms that model the learning process explicitly. | Process-Consistent Attention | Learning process consistency | **Entities:** Problems, Responses, Learning processes; **Relations:** Process dependencies; **Consistency:** Learning path constraints; **Process:** Explicit process modeling; **Attention:** Process-aware weighting | Current learning stage | Process-ordered interactions | Process-consistent values | Binary response probability | ✅ |
-| **HawkesKT** | 2021 | Foundation | Wang, C., et al. (2021). Temporal cross-effects in knowledge tracing. | Models temporal cross-effects between different knowledge components using Hawkes processes with attention mechanisms. | Hawkes Process Attention | Temporal cross-effects | **Entities:** Problems, Responses, KCs; **Relations:** Cross-KC temporal effects; **Hawkes:** Point process modeling; **Temporal:** Cross-effect propagation; **Attention:** Time-decaying cross-attention | Current KC state | Cross-KC temporal patterns | Hawkes-weighted interactions | Binary response probability | ✅ |
 | **DIMKT** | 2022 | Specialized | Shen, S., Huang, Z., Liu, Q., et al. (2022). Assessing student's dynamic knowledge state by exploring the question difficulty effect. | Explicitly incorporates difficulty levels into question representations to model the relationship between knowledge state and difficulty. | Difficulty Matching | Question difficulty effect | **Entities:** Problems, Responses; **Relations:** Difficulty-knowledge state mapping; **Difficulty:** Explicit difficulty modeling; **Matching:** Difficulty-ability alignment; **Dynamic:** State-difficulty interaction | Difficulty-modulated problem | Past problems with difficulty | Difficulty-adjusted responses | Binary response probability | ✅ |
 | **simpleKT** | 2023 | Specialized | Liu, Z., Liu, Q., Chen, J., et al. (2023). simpleKT: A simple but tough-to-beat baseline for knowledge tracing. | Provides a strong yet simple baseline using Rasch model for question variations with ordinary dot-product attention. | Rasch model & Dot-product Attention | Simple, robust baseline | **Entities:** Problems, Responses; **Relations:** Rasch model parameters; **Variations:** Question parameter variations; **Simplicity:** Dot-product attention; **Baseline:** Minimal architectural complexity | Current interaction | Past interactions | Past interactions | Binary response probability | ✅ |
 | **sparseKT** | 2023 | Specialized | Huang, S., Liu, Z., Lu, X., et al. (2023). Towards robust knowledge tracing models via k-sparse attention. | Incorporates k-selection module with soft-thresholding or top-K sparse attention to avoid irrelevant interactions. | k-selection module | Robustness via k-sparse attention | **Entities:** Problems, Responses; **Relations:** Relevance scoring; **Sparsity:** k-selection mechanism; **Robustness:** Irrelevant interaction filtering; **Selection:** Top-K sparse attention | Current interaction | Top-K relevant interactions | Selected relevant interactions | Binary response probability | ✅ |

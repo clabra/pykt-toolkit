@@ -1,17 +1,5 @@
 # SimAKT Architecture
 
-## IMPORTANT: Implementation Status
-
-**CURRENT IMPLEMENTATION STATUS**:
-- ✅ **IMPLEMENTED**: Basic SimAKT model with cosine similarity-based attention
-- ✅ **IMPLEMENTED**: 4 mathematical transformations of cosine similarity (NOT true TSMini views)
-- ✅ **IMPLEMENTED**: Learning curve prediction with sigmoid parameters
-- ✅ **IMPLEMENTED**: Multi-skill integration and response prediction
-- ❌ **NOT IMPLEMENTED**: TSMini integration (ConvEmbeder, MSA-LLM, multi-metric distances)
-- ❌ **NOT IMPLEMENTED**: Advanced trajectory similarity computation from TSMini paper
-
-**KEY DISTINCTION**:
-The current implementation uses **BASIC cosine similarity** with simple mathematical transformations. References to "TSMini similarity" in this document refer to the **PLANNED FUTURE ENHANCEMENT**, not the current implementation. The TSMini folder code exists but has not been integrated into the SimAKT model.
 
 ## Introduction
 
