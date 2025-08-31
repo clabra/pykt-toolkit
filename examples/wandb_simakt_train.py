@@ -17,6 +17,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_attn_heads", type=int, default=8)
     parser.add_argument("--num_en", type=int, default=4)
     parser.add_argument("--seq_len", type=int, default=200)
+    parser.add_argument("--num_epochs", type=int, default=200)
+    parser.add_argument("--batch_size", type=int, default=256)
     
     # SimAKT similarity and learning curve parameters
     parser.add_argument("--similarity_cache_size", type=int, default=10000)

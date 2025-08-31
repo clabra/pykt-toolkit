@@ -4,6 +4,8 @@
 
 ### The task is NOT Token Prediction 
 
+#### The problem with treating (q,r) as atomic tokens:
+
 ```
   Language Modeling (GPT-style):
   # Predict the ENTIRE next token
@@ -18,8 +20,6 @@
 ```
 
 ```
-The problem with treating (q,r) as atomic tokens:
-
   # WRONG conceptualization:
   Sequence: [(q₁,r₁), (q₂,r₂), (q₃,r₃), ???]
                                            ↑
@@ -33,9 +33,9 @@ The problem with treating (q,r) as atomic tokens:
   Predict: r₄
 ```
 
-```
-  Three Approaches to Handle This
+#### Three Approaches to Handle This
 
+```
   - Approach 1: Shifted Sequences (SAKT-style)
 
   # Input sequence includes query question
@@ -111,21 +111,7 @@ The main approaches followed to adapt attention for KT are:
 
 In essence, the adaptation from seq2seq to KT involves reframing the problem **from "translating a sequence" to "querying a history"**. The **attention mechanism becomes a tool for dynamically querying the student's interaction history to find the most relevant information for predicting the performance on a new task**.
 
-## Types of Attention Mechanisms in KT
 
-### **Transformer Attention (Standard)**
-Models using standard self-attention or cross-attention mechanisms:
-- SAKT, AKT, SAINT, DTransformer, SimpleKT, AT-DKT, etc.
-
-### **Memory-Based Attention (Variants)**  
-Models using attention over external memory structures:
-- **DKVMN**: Soft attention over knowledge component memory (non-transformer)
-- **SKVMN**: Sequential memory networks with attention (non-transformer)
-- **RKT**: Custom attention with correlation matrices (non-transformer)
-
-These models use attention mechanisms but not standard transformer architectures.
-
-Below we analyze how attention mechanisms, originally designed for homogeneous seq2seq tasks (tokens → tokens), are **adapted for the heterogeneous, multi-modal nature of Knowledge Tracing where inputs include diverse entity types (problems, concepts, responses, temporal information, etc.) and outputs range from binary predictions to continuous knowledge states**.
 
 ### Transformation Strategies
 
@@ -209,6 +195,22 @@ knowledge_state = regression_head(shared_attention)
 difficulty_est = irt_head(shared_attention)
 # Used by: Deep-IRT, AKT with multiple objectives
 ```
+
+## Types of Attention Mechanisms in KT
+
+### **Transformer Attention (Standard)**
+Models using standard self-attention or cross-attention mechanisms:
+- SAKT, AKT, SAINT, DTransformer, SimpleKT, AT-DKT, etc.
+
+### **Memory-Based Attention (Variants)**  
+Models using attention over external memory structures:
+- **DKVMN**: Soft attention over knowledge component memory (non-transformer)
+- **SKVMN**: Sequential memory networks with attention (non-transformer)
+- **RKT**: Custom attention with correlation matrices (non-transformer)
+
+These models use attention mechanisms but not standard transformer architectures.
+
+Below we analyze how attention mechanisms, originally designed for homogeneous seq2seq tasks (tokens → tokens), are **adapted for the heterogeneous, multi-modal nature of Knowledge Tracing where inputs include diverse entity types (problems, concepts, responses, temporal information, etc.) and outputs range from binary predictions to continuous knowledge states**.
 
 ## Most Attention-Based KT Models Use Encoder-Only Architecture
 
