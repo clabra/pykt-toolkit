@@ -39,6 +39,7 @@ from .ukt import UKT
 from .hcgkt import HCGKT
 from .robustkt import Robustkt
 from .simakt import SimAKT
+from .simakt_v2 import SimAKT as SimAKT_v2
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
@@ -145,6 +146,9 @@ def init_model(model_name, model_config, data_config, emb_type):
     elif model_name == "simakt":
         model = SimAKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, 
                       emb_path=data_config["emb_path"]).to(device)
+    elif model_name == "simakt_v2":
+        model = SimAKT_v2(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, 
+                         emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")
         return None
