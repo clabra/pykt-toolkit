@@ -212,9 +212,11 @@ These models use attention mechanisms but not standard transformer architectures
 
 Below we analyze how attention mechanisms, originally designed for homogeneous seq2seq tasks (tokens → tokens), are **adapted for the heterogeneous, multi-modal nature of Knowledge Tracing where inputs include diverse entity types (problems, concepts, responses, temporal information, etc.) and outputs range from binary predictions to continuous knowledge states**.
 
-## Most Attention-Based KT Models Use Encoder-Only Architecture
+## Encoder-Only vs Encoder-Decoder Architectures
 
-### Why Encoder-Only Dominates
+In recent competitions the core of the winning solutions was a Transformer-based architecture, confirming that **models like AKT (encoder) and [SAINT+](https://arxiv.org/pdf/2010.12042) (encoder-decoder) are the foundational building blocks for top performance**.
+
+### Encoder-Based
 
 ```
   The Fundamental Difference
@@ -360,31 +362,20 @@ Below we analyze how attention mechanisms, originally designed for homogeneous s
   | SAINT        | Encoder-Decoder | 0.754           | 0.773     | 2.1M       |
   | DTransformer | Encoder-only    | 0.771           | 0.785     | 1.3M       |
 
-  Key Observation: Encoder-decoder doesn't consistently outperform simpler encoder-only models!
 
-```
-
-### Reasons for **SimAKT Using Encoder-Only**
-
-  SimAKT follows the encoder-only pattern because trajectory similarity needs complete (q,r) pairs to compute meaningful trajectories. 
-
-```
-  # SimAKT needs coupled information:
-  trajectory = compute_trajectory(questions, responses)  # Can't separate!
-  similarity = compare_trajectories(trajectory_i, trajectory_j)
 ```
 
 
   ### Conclusion
 
-  Encoder-only dominates because:
+**Many SOTA models (AKT, DTransformer) use encoder-only architectures**. Key advantages of encoder-only are: 
   1. Natural Fit: KT is a single-sequence prediction problem
   2. Information Coupling: Questions and responses are intrinsically linked
   3. Simplicity: Fewer parameters, easier to train
   4. Performance: No consistent advantage for encoder-decoder
   5. Interpretability: Joint modeling often more interpretable
 
-  The encoder-decoder architecture (SAINT) represents an interesting alternative perspective, but empirically hasn't shown compelling advantages over simpler encoder-only approaches. This is why most recent SOTA models (SimplKT, DTransformer) stick with encoder-only architectures
+However, **variants with encoder-decoder architectures based on SAINT+, have shown top performance in recent competitions**. 
 
 ### Timeline of Innovations
 
@@ -411,9 +402,7 @@ graph TB
     A --> A1
     B --> B1  
     C --> C1
-    C --> C2
-    C --> C3
-    C --> C4
+
     
     classDef foundation fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef specialized fill:#f3e5f5,stroke:#4a148c,stroke-width:2px

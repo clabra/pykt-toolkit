@@ -63,3 +63,5 @@ examples/nips2022-peiyou/
 examples/nips2022-ednet/
 examples/models/
 data_original/*
+
+TSMini/
