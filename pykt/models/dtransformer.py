@@ -223,18 +223,18 @@ class DTransformer(nn.Module):
 
 
     def get_loss(self, q, s, pids=None, q_cl=False):
-        if pid.size(1) ==0:
-            pid = None
+        if pids is not None and pids.size(1) == 0:
+            pids = None
         q = q.to(device)
         s = s.to(device)
-        if pid is not None:
-            pid = pid.to(device)
-        output, concat_q, _, _, reg_loss, _ = self.predict(q, s, pid)
+        if pids is not None:
+            pids = pids.to(device)
+        output, concat_q, _, _, reg_loss, _ = self.predict(q, s, pids)
         m = nn.Sigmoid()
         preds = m(output)
         if q_cl:
             masked_labels = s[s>=0].float()
-            masked_logits = logits[s>=0]
+            masked_logits = output[s>=0]
             return (
             F.binary_cross_entropy_with_logits(masked_logits, masked_labels, reduction="mean")+ reg_loss 
             )
@@ -245,7 +245,7 @@ class DTransformer(nn.Module):
         bs = s.size(0)
 
         # Input data preprocess
-        if pid.size(1) ==0:
+        if pid is not None and pid.size(1) == 0:
             pid = None
         q = q.to(device)
         s = s.to(device)
@@ -257,7 +257,7 @@ class DTransformer(nn.Module):
         minlen = lens.min().item()
         if minlen < MIN_SEQ_LEN:
 
-            return self.get_loss(q, s, pid,True)
+            return self.get_loss(q, s, pid, True)
 
         # augmentation
         q_ = q.clone()

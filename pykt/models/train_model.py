@@ -255,7 +255,7 @@ def model_forward(model, data, rel=None):
         ys.append(y)
         ys.append(y) 
 
-    if model_name not in ["atkt", "atktfix", "simakt"]+que_type_models or model_name in ["lpkt", "rkt"]:
+    if model_name not in ["atkt", "atktfix"]+que_type_models or model_name in ["lpkt", "rkt"]:
         loss = cal_loss(model, ys, r, rshft, sm, preloss)
     if model_name in ["ukt"] and model.use_CL != 0:
         return loss,temp
@@ -299,7 +299,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, t
             loss.backward()#compute gradients
             if model.model_name == "rkt":
                 clip_grad_norm_(model.parameters(), model.grad_clip)
-            if model.model_name == "dtransformer":
+            if model.model_name in ["dtransformer", "simakt"]:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()#update model’s parameters
                 
