@@ -1105,9 +1105,71 @@ This roadmap provides a systematic approach to evolving the As-Is architecture i
 
 ## To-Be Architecture: SimAKT with Inter-Student Attention
 
-### Enhanced Transformer Block Components with Inter-Student Attention
+### Minimal Implementation (Core Requirements Only)
 
-The following diagram shows the modified SimAKT architecture incorporating inter-student attention through a memory bank of student archetypes:
+The following components are **REQUIRED** for a working inter-student attention mechanism:
+
+#### Core Required Components
+
+1. **Memory Bank** - Store student archetypes (K × d_model tensor)
+2. **Modified Block 3** - Split attention heads (6 intra + 2 inter)
+3. **Standard Loss** - Use existing BCE + CL (no changes needed)
+
+#### Minimal Architecture Diagram
+
+```mermaid
+graph TB
+    %% Core Components Only
+    Input["Input Sequences<br/>[BS, SeqLen]<br/>Questions (q), Responses (s)"]
+    
+    %% REQUIRED: Memory Bank
+    MemBank["Memory Bank<br/>[K=100, d_model=256]<br/>Student Archetypes<br/>(REQUIRED)"]
+    
+    %% Standard Embeddings
+    Input --> EmbLayer["Embedding Layer<br/>(No changes)"]
+    EmbLayer --> QEmb["Question Embeddings<br/>[BS, SeqLen, 256]"]
+    EmbLayer --> SEmb["Interaction Embeddings<br/>[BS, SeqLen, 256]"]
+    
+    %% Blocks 1-2 (No changes)
+    QEmb --> TB1["Block 1: Questions<br/>(No changes)"]
+    TB1 --> HQ["hq"]
+    SEmb --> TB2["Block 2: Interactions<br/>(No changes)"]
+    TB2 --> HS["hs"]
+    
+    %% REQUIRED: Modified Block 3
+    subgraph "Block 3: Modified (REQUIRED)"
+        HQ --> Heads6["6 Heads: Intra<br/>Q=hq, K=hq, V=hs"]
+        MemBank --> Heads2["2 Heads: Inter<br/>Q=hq, K=mem, V=mem"]
+        Heads6 --> Concat["Concatenate"]
+        Heads2 --> Concat
+        Concat --> Proj["Standard Projection"]
+    end
+    
+    Proj --> P["Fused Features<br/>(same structure)"]
+    
+    %% Block 4 and output (No changes)
+    P --> TB4["Block 4: Knowledge<br/>(No changes)"]
+    TB4 --> Output["Standard Output<br/>(No changes)"]
+    
+    %% Standard Loss (No changes)
+    Output --> Loss["BCE + CL Loss<br/>(No changes)"]
+    
+    style MemBank fill:#ffcda8,stroke:#ff6b6b,stroke-width:3px
+    style Heads2 fill:#ffe0b2,stroke:#ff6b6b,stroke-width:2px
+```
+
+### Enhanced Implementation (Optional Additions)
+
+The following components are **OPTIONAL** enhancements that can be added after validating the core functionality:
+
+#### Optional Components
+
+1. **Similarity Loss** - Encourage consistent predictions for similar students
+2. **Dynamic Memory Updates** - Online learning of archetypes
+3. **Adaptive Head Allocation** - Learn optimal intra/inter ratio
+4. **Trajectory Preprocessing** - Advanced (S, N, M) representations
+
+#### Full Enhanced Architecture Diagram
 
 ```mermaid
 graph TB
@@ -1183,14 +1245,14 @@ graph TB
     Z --> CL["Contrastive Learning<br/>(if training)"]
     CL --> CLLoss["CL Loss<br/>λ=0.1"]
     
-    %% Similarity Loss (NEW)
-    P --> SimLoss["Similarity Loss<br/>(NEW)<br/>Based on trajectory similarity"]
+    %% Similarity Loss (OPTIONAL)
+    P -.-> SimLoss["Similarity Loss<br/>(OPTIONAL)<br/>Based on trajectory similarity"]
     
     %% Loss Computation
     Logits --> BCE["Binary Cross-Entropy"]
-    BCE --> TotalLoss["Total Loss<br/>BCE + λ_cl*CL + λ_sim*Sim"]
+    BCE --> TotalLoss["Total Loss<br/>BCE + λ_cl*CL + (λ_sim*Sim)"]
     CLLoss --> TotalLoss
-    SimLoss --> TotalLoss
+    SimLoss -.-> TotalLoss
     
     %% Styling
     style Input fill:#e1f5fe
@@ -1207,33 +1269,158 @@ graph TB
     style TotalLoss fill:#ffcdd2
 ```
 
-### Key Architectural Changes from As-Is to To-Be
+### To-Be Architecture: Minimal vs Enhanced Features
 
-#### 1. **Memory Bank Addition** (NEW)
-- **Size**: [K=100, d_model=256] where K is the number of student archetypes
-- **Content**: Pre-computed cluster centroids from student learning trajectories
-- **Update**: Can be static (pre-computed) or dynamic (updated during training)
-
-#### 2. **Modified Block 3: Dual Attention Mechanism**
-The fusion layer now implements a hybrid attention strategy:
-
+```mermaid
+graph TD
+    %% Input and Embeddings (Unchanged)
+    Input["Student Interactions<br/>[BS, SeqLen, Features]"]
+    Input --> QEmb["Question Embeddings<br/>[BS, SeqLen, d_model=256]"]
+    Input --> SEmb["Interaction Embeddings<br/>[BS, SeqLen, d_model=256]"]
+    
+    %% Memory Bank (REQUIRED)
+    MemBank["Memory Bank<br/>[100, 256]<br/>🔴 REQUIRED<br/>Student archetypes"]
+    
+    %% Encoder Block 1 (Unchanged)
+    QEmb --> TB1["Encoder Block 1<br/>(Self-Attention on Questions)"]
+    TB1 --> HQ["Hidden Questions (hq)<br/>[BS, SeqLen, 256]"]
+    
+    %% Encoder Block 2 (Unchanged)
+    SEmb --> TB2["Encoder Block 2<br/>(Self-Attention on Interactions)"]
+    TB2 --> HS["Hidden States (hs)<br/>[BS, SeqLen, 256]"]
+    
+    %% Encoder Block 3 - CORE MODIFICATION (REQUIRED)
+    HQ --> TB3Q[Query]
+    HQ --> TB3K[Key]
+    HS --> TB3V[Value]
+    
+    subgraph "Block 3: Minimal Inter-Student Attention (REQUIRED)"
+        TB3Q --> IntraAttn["🔴 Intra-Student Attention<br/>(6 heads)<br/>Q-Q-S attention"]
+        TB3K --> IntraAttn
+        TB3V --> IntraAttn
+        
+        TB3Q --> InterAttn["🔴 Inter-Student Attention<br/>(2 heads)<br/>Q from current student"]
+        MemBank --> InterAttnKV["🔴 K,V from Memory Bank<br/>(Static retrieval)"]
+        InterAttnKV --> InterAttn
+        
+        IntraAttn --> Concat["🔴 Concatenate<br/>6 intra + 2 inter heads"]
+        InterAttn --> Concat
+        Concat --> Proj["🔴 Output Projection<br/>→ d_model"]
+    end
+    
+    %% Enhanced Features (OPTIONAL)
+    Proj --> P["Basic Fused Features<br/>[BS, SeqLen, 256]"]
+    P -.-> PEnhanced["🟡 Enhanced Features<br/>With similarity weighting<br/>OPTIONAL"]
+    
+    %% Knowledge Encoder (Unchanged)
+    KnowParams["Knowledge Parameters<br/>[n_know=16, d_model=256]<br/>(Learnable)"]
+    KnowParams --> Query["Query Expansion<br/>[BS*16, SeqLen, 256]"]
+    HQ --> HQExp["HQ Expansion<br/>[BS*16, SeqLen, 256]"]
+    P --> PExp["P Expansion<br/>[BS*16, SeqLen, 256]"]
+    PEnhanced -.-> PExpEnh["🟡 Enhanced P Expansion<br/>OPTIONAL"]
+    
+    %% Encoder Block 4 (Unchanged)
+    Query --> TB4["Encoder Block 4<br/>(Knowledge Attention)<br/>Query from Knowledge Params"]
+    HQExp --> TB4
+    PExp --> TB4
+    PExpEnh -.-> TB4
+    TB4 --> Z["Knowledge States (z)<br/>[BS, SeqLen, n_know*256]"]
+    
+    %% Readout and Output (Unchanged)
+    Z --> Readout["Readout Layer<br/>(Knowledge Aggregation)"]
+    Query --> Readout
+    Readout --> H["Aggregated Hidden<br/>[BS, SeqLen, 256]"]
+    
+    QEmb --> ConcatFinal["Concatenate<br/>[BS, SeqLen, 512]"]
+    H --> ConcatFinal
+    
+    ConcatFinal --> OutLayer["Output MLP<br/>Linear(512→256)→GELU→<br/>Dropout→Linear(256→128)→<br/>GELU→Dropout→Linear(128→1)"]
+    OutLayer --> Logits["Response Predictions<br/>[BS, SeqLen, 1]"]
+    
+    %% Loss Components
+    Logits --> BCE["Binary Cross-Entropy<br/>🔴 REQUIRED"]
+    
+    %% Optional Enhanced Losses
+    Z -.-> CL["🟡 Contrastive Learning<br/>λ_cl=0.1<br/>OPTIONAL"]
+    P -.-> SimLoss["🟡 Similarity Loss<br/>λ_sim=0.05<br/>OPTIONAL<br/>Based on trajectory similarity"]
+    MemBank -.-> DynUpdate["🟡 Dynamic Memory Update<br/>OPTIONAL<br/>Update archetypes"]
+    
+    %% Final Loss
+    BCE --> MinimalLoss["🔴 Minimal Loss<br/>BCE only"]
+    BCE -.-> EnhancedLoss["🟡 Enhanced Loss<br/>BCE + λ_cl*CL + λ_sim*Sim<br/>OPTIONAL"]
+    CL -.-> EnhancedLoss
+    SimLoss -.-> EnhancedLoss
+    
+    %% Styling for Required vs Optional
+    style MemBank fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style IntraAttn fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style InterAttn fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style InterAttnKV fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style Concat fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style Proj fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style BCE fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    style MinimalLoss fill:#ffcda8,stroke:#d32f2f,stroke-width:3px
+    
+    style PEnhanced fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    style PExpEnh fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    style CL fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    style SimLoss fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    style DynUpdate fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    style EnhancedLoss fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
+    
+    %% Legend
+    subgraph Legend [" "]
+        LegendReq["🔴 Required Components<br/>Minimal working implementation"]
+        LegendOpt["🟡 Optional Enhancements<br/>Advanced features"]
+    end
+    style Legend fill:#f9f9f9,stroke:#ccc
+    style LegendReq fill:#ffcda8,stroke:#d32f2f,stroke-width:2px
+    style LegendOpt fill:#fff3c4,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 3 3
 ```
-Original (8 heads, all intra-student):
-- All 8 heads: Attention(Q=hq, K=hq, V=hs)
 
-Modified (6 intra + 2 inter):
-- 6 heads: Intra-student attention(Q=hq, K=hq, V=hs)
-- 2 heads: Inter-student attention(Q=hq, K=memory, V=memory)
+### Implementation Guide
+
+#### Minimal Implementation (v1.0) - Start Here
+
+##### Required Changes Only:
+
+1. **Add Memory Bank** (REQUIRED)
+```python
+self.memory_bank = nn.Parameter(torch.randn(100, d_model))
 ```
 
-#### 3. **Enhanced Information Flow**
-- **Intra-Student Path**: Personal learning history → 75% of attention capacity
-- **Inter-Student Path**: Similar student patterns → 25% of attention capacity
-- **Fusion**: Concatenation + learned projection combines both perspectives
+2. **Modify Block 3 Only** (REQUIRED)
+```python
+# Split 8 heads: 6 for intra, 2 for inter
+self.block3 = DTransformerLayerWithMemory(
+    d_model, n_heads=8, inter_heads=2, memory=self.memory_bank
+)
+```
 
-#### 4. **Additional Loss Component**
-- **Similarity Regularization**: Encourages consistent predictions for similar trajectories
-- **Formula**: `Total Loss = BCE + λ_cl * CL_loss + λ_sim * Similarity_loss`
+3. **Keep Everything Else The Same**
+- Use existing loss: BCE + CL
+- No changes to Blocks 1, 2, 4
+- No changes to embeddings or output layers
+
+##### Enhanced Implementation (v2.0) - Add Later
+
+1. **Similarity Loss** (OPTIONAL)
+```python
+# Add similarity-based regularization
+sim_loss = compute_similarity_loss(predictions, trajectory_similarity)
+total_loss = bce + λ_cl * cl_loss + λ_sim * sim_loss  # NEW term
+```
+
+2. **Dynamic Memory** (OPTIONAL)
+```python
+# Update memory bank during training
+memory_bank = exponential_moving_average(memory_bank, new_patterns)
+```
+
+3. **Advanced Features** (OPTIONAL)
+- Trajectory preprocessing with (S, N, M) tuples
+- Adaptive head allocation
+- Sparse attention for large memory banks
 
 ### Attention Head Distribution Detail
 
