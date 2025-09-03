@@ -2,7 +2,20 @@
 
 Guidelines for the design and implementation of a new SimAKT (Similarity-based Attention for Knowledge Tracing) model. 
 
-## Introduction
+Approach: we start with a As-Is initial architecture for the SimAKT model and evolve it progresively towards a To-Be architecture.  
+
+## Requirements for the To-Be Architecture Design 
+
+1. Goal
+
+To augment a standard encoder-only Transformer architecture for Knowledge Tracing. The objective is to incorporate information from similar students to enhance prediction accuracy for a target student. This looks as a promising direction, moving beyond purely intra-student sequential modeling to leverage collaborative patterns.
+
+2. Augmented architecture
+
+We look for a non-invasive approach that takes one model and augment it to improve performance disrupting existing arquitecture as less as possible.
+
+
+## Similarity-Based Attention 
 
 The original Transformer was designed for seq2seq tasks like machine translation, where both the input and output are sequences of the same type of tokens (e.g., words). In contrast, Knowledge Tracing (KT) tasks involve input sequences composed of interaction data, including concept IDs, responses, and sometimes additional information such as problem/question IDs or timestamps. The output, is typically a prediction about the student's next response. 
 
@@ -11,21 +24,9 @@ The 'taxonomy.md' file provides a overview of the main models and challengues of
 
 ### From Intra-Student to Inter-Student Modeling: A Paradigm Shift 
  
-A significant challenge in personalized learning systems is data sparsity. For new students or 
-those with limited interaction history, the "intra-student information" is sparse and insufficient 
-to train a reliable model. This issue mirrors a classic problem in recommender systems, 
-where a cold-start user with no history is difficult to make recommendations for. The solution, 
-in both domains, involves a shift from a purely individualized approach to one that leverages 
-"inter-student information"—the collective intelligence of a peer group.
-
-The central thesis of the paper is that a next major conceptual leap in knowledge tracing might be 
-the integration of collaborative information. By identifying and leveraging the learning 
-behaviors of "students who have similar question-answering experiences," a model can inform 
-predictions for a given student, even when their own history is limited.
-
-This paradigm shift addresses the fundamental limitation of data sparsity by allowing the model to draw on a 
-richer, more extensive set of data from similar peers, providing a powerful supplement to a 
-student's own historical sequence. 
+The central thesis of the approach is the shift from a purely individualized approach to collaborative filetring that leverages inter-users information. By identifying and leveraging the learning behaviors of "students who have similar question-answering experiences," 
+a model can inform predictions for a given student. This paradigm shift allows the model to draw on a richer, more extensive 
+set of data from similar peers, providing a powerful supplement to a student's own historical sequence. 
  
 
 ### Defining "Collaborative Information" in Knowledge Tracing 
@@ -36,15 +37,6 @@ as similar to a target student. This goes beyond the traditional intra-student f
 explicitly modeling the relationships and collective patterns that exist across a student 
 population. This approach is motivated by the observation that learners sharing similar 
 cognitive states often display comparable problem-solving performances. 
-
-Collaborative signals can manifest in several forms, each with its own architectural 
-implications. The most direct form involves retrieving the full question-answering sequences 
-of peers who have a history of similar interactions. A more abstract approach leverages 
-pre-calculated or learned patterns, such as "Follow-up Performance Trends" (FPTs), that 
-represent common learning trajectories derived from the entire student corpus. These 
-trends, while not tied to a specific individual, still represent an aggregate form of collaborative 
-information. The efficacy of a collaborative model is therefore fundamentally dependent on 
-the definition of what constitutes "similarity" and how these external signals are integrated. 
 
 
 ### The Mechanisms of Similarity-Based Attention 
@@ -64,28 +56,11 @@ representation for the current time step is then a weighted sum of the "value" v
 these similar peers. This process allows the model to selectively and dynamically leverage the 
 most pertinent collaborative information, thereby enhancing its ability to make accurate 
 predictions, particularly when the intra-student data is sparse. The choice of what 
-constitutes "similarity"—be it a simple metric on question-answering history or a complex, 
-learned embedding—is a crucial design decision that fundamentally determines the model's 
+constitutes "similarity" —be it a simple metric on question-answering history or a complex, 
+learned embedding— is a crucial design decision that fundamentally determines the model's 
 capability and its computational complexity. 
 
-In our case we will use an approach based in similarity of learning paths. The sequence of student interactions is preprocessed to have a sequence of tuples where each tuple can be consideerd a point in a trajectory. Then we will applied existent techniques to encode trajectories as h vectors. Two similar trajectories will have similar h vectors. 
-
-    Each tuple (S, N, M) will contain information about: 
-    - question or skill (S)
-    - number of attempts (N): number of interactions of the student with the question or skill
-    - mastery (M): level of mastery skill acquired after the number of attemps
-
-Each tuple defines the learning curve for this skill. We use a sigmoid curve to model a monotonic learning curve that follows a pattern cahractrized by slow start, rapid improvement phase and a plateau effect once the skill has been mastered. 
-
- 
-### Current Similarity-based Models  
- 
-Some models exemplify the shift towards collaborative and similarity-based attention 
-mechanisms. They each address the problem from a distinct architectural perspective, 
-highlighting a growing consensus that collaborative information is a vital component for 
-robust knowledge tracing. See section "3. In-Depth Examination of Relevant Models" of similarity-transformers.pdf" for a description of CoKT, FINER and Coral. 
-
-## Definition of Learning Trajectory Similarity for SimAKT
+In our case we will use an approach based in similarity of learning trajectories.  
 
 Learning trajectories can be represented as: 
 
@@ -108,65 +83,114 @@ The learning curve can be modeled through a sigmoid calculated from a (S, N, M) 
 
 We have M as the y and N as the x coordinate in the sigmoid curve characteristic of each S skill. After N attempts the student learns (achieves skill mastery level) or fails. 
 
-**SimAKT, unlike other models, uses this format.**
+**SimAKT, unlike other models, uses this format.**. As we characterize students by their sequences of learning curves, two similar trajectories in SimAKT mean that the students have been exposed to similar concepts (i.e. questions to train similar skills) with similar performance (i.e. they got simialr mastery levels after similar number of attempts).  
 
-As we characterize students by their sequences of learning curves, two similar trajectories in SimAKT mean that the students have been exposed to similar concepts (i.e. questions to train similar skills) with similar performance (i.e. they got simialr mastery levels after similar number of attempts).  
+The sequence of student interactions is preprocessed to have the sequence of tuples where each tuple can be consideerd a point in a trajectory.
+
+ 
+### Current Similarity-based Models  
+ 
+Some models exemplify the shift towards collaborative and similarity-based attention 
+mechanisms. They each address the problem from a distinct architectural perspective, 
+highlighting a growing consensus that collaborative information is a vital component for 
+robust knowledge tracing. 
+
+- CokT: uses similarity calculated using IDF (Inverse Document Frequency) and BM (Best Match). The architecture uses RNN + Attention instead of a Transformer archuitecture. The cokt-ktsimilarity.pdf paper describes the approach in detail. 
+- FINER: uses similarity calculated using extracted so-called Follow-up Performance Trends (FPTs) and historical data to improve the predictions of a model based on Long Short Term Memory (LSTM) networks + Attention. The paper finer-ktsimilarity.pdf describes the approach in detail. 
 
 
-
-## SimAKT Implementation Requirements
-
+## Integration with pyKT Framework
 
 The SimAKT  model implementation follows the guidelines defined in contribute.pdf to add a new model to the pyKT framework. This model introduces a novel Transformer-based architecture that uses attention mechanisms based on trajectory similarity. 
 
-### Integration with pyKT Framework
+### Compatibility
 
-**Compatibility**: Full integration with existing pyKT infrastructure
+Full integration with existing pyKT infrastructure
 - Standard data loaders and preprocessing
 - Evaluation metrics (AUC, accuracy, precision, recall)
 - Cross-validation and model comparison tools
 - WandB experiment tracking
 
-**Configuration**: Supports all standard pyKT parameters plus SimAKT-specific options:
-- `mastery_threshold`: Threshold for response correctness prediction
 
 
 ### Key Components
 
-**Core SimAKT Model** (`pykt/models/simakt.py`)
+1. **Argument Parsing** (wandb_simakt_train.py)
+    - Parses command-line arguments
+    - Sets default values for SimAKT-specific parameters
+    - Passes parameters to main training function
 
-**Model Initialization** (`pykt/models/init_model.py`):
-- SimAKT registered in model factory (line 145)
-- Compatible with standard pyKT configuration parameters
-- Integrated with existing data loading and preprocessing
+2. **Configuration Loading**
+    - **kt_config.json**: Training hyperparameters (batch_size=32 for SimAKT)
+    - **data_config.json**: Dataset specifications (assist2015: 100 concepts, maxlen=200)
 
-**Training Integration**:
-- `compute_loss()` method for PyKT compatibility
-- Loss function 
-- Proper sequence mask handling
-- Compatible with existing training loops
+3. **Data Loading** (init_dataset4train)
+    - Loads preprocessed sequences from CSV files
+    - Creates PyTorch DataLoaders
+    - Handles train/valid/test splits based on fold
 
-**Training Script** (`examples/wandb_simakt_train.py`):
-- Command-line interface following pyKT patterns
-- SimAKT-specific hyperparameters (similarity_cache_size, mastery_threshold, curve_dim)
-- WandB integration support
-- Standard training parameters (num_epochs, batch_size, learning_rate)
+4. **Model Initialization** (init_model)
+    - Creates SimAKT model instance with specified architecture
+    - Initializes embeddings for questions and interactions
+    - Sets up Transformer blocks with similarity-based attention
 
-**Configuration Setup**:
-- Model parameters defined in `configs/kt_config.json` 
-- Standard pyKT configuration pattern followed
-- SimAKT hyperparameters properly configured
+5. **Training Loop** (train_model)
+    - Iterates through epochs
+    - For each batch:
+      - Forward pass through model
+      - Calculate loss (BCE + Contrastive Loss)
+      - Backward pass and optimization
+      - Track training metrics
+    - Validates after each epoch
+    - Saves best model based on validation AUC
+    - `compute_loss()` method for PyKT compatibility
+    - Loss function 
+    - Proper sequence mask handling
+    - Compatible with existing training loops
+
+6. **Evaluation** (evaluate)
+    - Runs model in eval mode
+    - Computes AUC and accuracy on validation/test sets
+    - No gradient computation during evaluation
+
+7. **Model Saving**
+    - Saves model checkpoint when validation improves
+    - Stores configuration alongside model
+    - Enables model restoration for inference
+
+### Data Flow
+
+1. **Input**: Student interaction sequences (questions, responses)
+2. **Embedding**: Convert discrete tokens to continuous representations
+3. **Attention Processing**: Apply similarity-based attention mechanisms
+4. **Prediction**: Output probability of correct response
+5. **Loss Calculation**: Compare predictions with ground truth
+6. **Optimization**: Update model parameters via backpropagation
+
+### Key Parameters
+
+- **Dataset**: assist2015 (100 concepts, educational dataset)
+- **Model Architecture**: 
+  - d_model=256 (embedding dimension)
+  - n_blocks=4 (Transformer layers)
+  - num_attn_heads=8 (attention heads)
+  - dropout=0.3
+- **Training**:
+  - batch_size=32
+  - learning_rate=0.001
+  - optimizer=Adam with weight_decay=1e-5
+- **Loss Function**: Binary Cross-Entropy + Contrastive Loss (λ=0.1)
+
 
 ## Baseline Models
 
-We take as baselines these attention-based models: 
+We will take as baselines for metrics comparison these attention-based models (all of them implemented in pykt/models folder): 
 
 - SAKT: one of the first attention-based models that remains competitive and serves as a baseline for subsequent attention-based models
 - AKT: consistently outperforms other models in many evaluation with different datasets and scenarios 
 - DKVMN: a competitive variant that is relevant for our approach because is based on the use of memory
 - SAINT: usually don't outperform AKT but it's interesting due to its encoder-decoder architecture. A variant, SAINT+, is reported to show top performance with the EdNet dataset
 - DTransformer (2023): tne most recent of the chosen models, outperforms the rest of models (including AKT) in most evaluations with different datasets and scenarios 
-- CL4KT?: Contrastive Learning for Knowledge Tracing (https://drive.google.com/file/d/1JtJNKr1tHU5lxLHy0zEms3_I-aYv2Ph0/view)
 
 Other models show promising performance and could outperform AKT, including SAINT+ (2021), DIMKT (2023), stableKT (2024), and extraKT (2024). However, these models have been excluded because they lack evaluation on datasets that would enable meaningful comparison with the selected baseline models.
 
@@ -176,11 +200,13 @@ Unlike the feature-engineering and logistic regression-based models that were co
 
 Below are indicative performance metrics for some well-known Knowledge Tracing models on a version of the 'Bridge to Algebra 2008-2009' dataset, often referred to as 'kddcup' in research papers.
 
+```
 Model	AUC	ACC
 DKT (Deep Knowledge Tracing)	~0.83-0.85	~0.76-0.78
 DKVMN (Dynamic Key-Value Memory Networks)	~0.84-0.86	~0.77-0.79
 AKT (Attentive Knowledge Tracing)	~0.86-0.88	~0.78-0.80
 SAINT+ (Separated Self-Attentive Neural KT)	~0.87-0.89	~0.79-0.81
+```
 
 State-of-the-Art AUC: 
 
@@ -188,9 +214,9 @@ State-of-the-Art AUC:
 - Transformer Dominance: In all cases, the core of the winning solutions was a Transformer-based architecture, confirming that **models like AKT and [SAINT+](https://arxiv.org/pdf/2010.12042) are the foundational building blocks for top performance**.
 - Ensembling and Feature Engineering are Crucial: Achieving the highest scores requires more than just a single, well-designed model. The winning solutions consistently use ensembles of multiple models and incorporate carefully engineered features related to timing, past performance, and question characteristics to gain a competitive edge.
 
-## Architecture Decissions
+## As-Is Implementation
 
-We will use the DTransformer model as the foundation for our architecture due to its superior performance among the baseline models. Additionally, we will incorporate key concepts from the AKT model, as DTransformer builds upon several ideas originally proposed in AKT.
+The As-Is architecture of the SimAKT model is based on DTransformer due to its superior performance among the baseline models (taking AKT also into account since DTransformer builds upon several ideas originally proposed in AKT).
 
 **AKT:**
 - Uses two encoders: the Question Encoder (which considers only the questions) and the Knowledge Encoder (which considers both the questions and the responses), along with a Knowledge Retriever that determines the knowledge state based on both encoders.
@@ -206,21 +232,653 @@ We will use the DTransformer model as the foundation for our architecture due to
 - Both DTransformer and AKT use a Rasch Model that accounts for the difficulty of exercises. This explains why a skill might be considered mastered at a given time, yet later, an exercise targeting the same skill could be answered incorrectly if its difficulty is high.
 - DTransformer leverages the modified attention mechanism from AKT.
 
+### Training
 
-## Architecture Design Requirements
-
-- The SimAKT model is ready as an copy of DTransformer. This provides a clean foundation to build upon with novel similarity-based attention mechanisms and learning trajectory improvements.
-- I'll provide instructions for evolving this DTransformer-based foundation into the SimAKT model
-
-
-
-## Architecture Design
-
-
-
-## Testing
-
+```
 python wandb_dtransformer_train.py --dataset_name=assist2015 --use_wandb=0
 
+  dtransformer weight_decay = 1e-5
+  2025-09-03 10:16:08 - main - said: train model
+  ts.shape: (102749,), ps.shape: (102749,)
+  Epoch: 1, validauc: 0.7122, validacc: 0.7501, best epoch: 1, best auc: 0.7122, train loss: 0.5438427040418677, emb_type: qid_cl, model: dtransformer, save_dir: saved_model/assist2015_dtransformer_qid_cl_saved_model_3407_0_0.3_256_256_8_4_0.001_16_0.1_1_True_False_0_1
+              testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+  ts.shape: (102749,), ps.shape: (102749,)
+  Epoch: 2, validauc: 0.7147, validacc: 0.752, best epoch: 2, best auc: 0.7147, train loss: 0.5287243626882813, emb_type: qid_cl, model: dtransformer, save_dir: saved_model/assist2015_dtransformer_qid_cl_saved_model_3407_0_0.3_256_256_8_4_0.001_16_0.1_1_True_False_0_1
+              testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1```
+
 python wandb_simakt_train.py --dataset_name=assist2015 --use_wandb=0
+
+            simakt weight_decay = 1e-5
+2025-09-03 15:45:01 - main - said: train model
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 1, validauc: 0.7122, validacc: 0.7501, best epoch: 1, best auc: 0.7122, train loss: 0.5438427040418677, emb_type: qid_cl, model: simakt, save_dir: saved_model/assist2015_simakt_qid_cl_saved_model_3407_0_0.3_256_256_8_4_0.001_16_0.1_1_True_False_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 2, validauc: 0.7147, validacc: 0.752, best epoch: 2, best auc: 0.7147, train loss: 0.5287243626882813, emb_type: qid_cl, model: simakt, save_dir: saved_model/assist2015_simakt_qid_cl_saved_model_3407_0_0.3_256_256_8_4_0.001_16_0.1_1_True_False_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+```
+
+
+
+### Training Workflow
+
+```bash
+Command to launch the training process: 
+python wandb_simakt_train.py --dataset_name=assist2015 --use_wandb=0
+```
+
+Below there is an End-to-End Sequence Diagram showing the training process. 
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Main as wandb_simakt_train.py
+    participant Train as wandb_train.py
+    participant Config as Config Files
+    participant Data as Dataset Loader
+    participant Model as SimAKT Model
+    participant Optimizer
+    participant TrainLoop as Training Loop
+    participant Eval as Evaluator
+    participant Save as Model Saver
+
+    User->>Main: python wandb_simakt_train.py --dataset_name=assist2015 --use_wandb=0
+    
+    Note over Main: Parse arguments:<br/>- dataset_name=assist2015<br/>- model_name=simakt<br/>- emb_type=qid_cl<br/>- use_wandb=0
+    
+    Main->>Train: main(params)
+    
+    rect rgb(240, 248, 255)
+        Note over Train: Initialization Phase
+        Train->>Train: set_seed(3407)
+        Train->>Config: Load kt_config.json
+        Config-->>Train: train_config, batch_size=32
+        Train->>Config: Load data_config.json
+        Config-->>Train: data_config[assist2015]
+        Note over Train: Dataset config:<br/>- num_c: 100<br/>- maxlen: 200<br/>- input_type: [concepts]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Train: Data Loading Phase
+        Train->>Data: init_dataset4train()<br/>(dataset=assist2015, model=simakt)
+        Data->>Data: Load train_valid_sequences.csv
+        Data->>Data: Process sequences
+        Data->>Data: Create DataLoaders
+        Data-->>Train: train_loader, valid_loader
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Train: Model Initialization
+        Train->>Model: init_model("simakt", model_config, data_config)
+        Model->>Model: Initialize SimAKT()<br/>- d_model=256<br/>- n_blocks=4<br/>- num_attn_heads=8<br/>- dropout=0.3
+        Model->>Model: Setup embeddings<br/>- Question embeddings<br/>- Interaction embeddings
+        Model->>Model: Initialize Transformer blocks
+        Model-->>Train: model instance
+        
+        Train->>Optimizer: Adam(lr=0.001, weight_decay=1e-5)
+        Optimizer-->>Train: optimizer instance
+    end
+
+    rect rgb(255, 245, 245)
+        Note over Train: Training Phase
+        Train->>TrainLoop: train_model(model, train_loader, valid_loader)
+        
+        loop For each epoch (num_epochs)
+            TrainLoop->>TrainLoop: model.train()
+            
+            loop For each batch in train_loader
+                TrainLoop->>Model: Forward pass
+                Note over Model: Process sequence:<br/>1. Embed interactions<br/>2. Apply attention<br/>3. Predict responses
+                Model-->>TrainLoop: predictions
+                
+                TrainLoop->>TrainLoop: cal_loss(predictions, targets)
+                Note over TrainLoop: Binary Cross-Entropy<br/>+ Contrastive Loss (λ=0.1)
+                
+                TrainLoop->>Model: Backward pass
+                TrainLoop->>Optimizer: optimizer.step()
+                TrainLoop->>TrainLoop: Update metrics
+            end
+            
+            TrainLoop->>Eval: evaluate(model, valid_loader)
+            Eval->>Model: model.eval()
+            
+            loop For each batch in valid_loader
+                Eval->>Model: Forward pass (no grad)
+                Model-->>Eval: predictions
+                Eval->>Eval: Calculate AUC, ACC
+            end
+            
+            Eval-->>TrainLoop: valid_auc, valid_acc
+            
+            alt valid_auc > best_auc
+                TrainLoop->>Save: Save checkpoint
+                Save->>Save: torch.save(model.state_dict())
+                Save-->>TrainLoop: Model saved
+                TrainLoop->>TrainLoop: Update best_auc
+            end
+            
+            TrainLoop->>TrainLoop: Log metrics
+            Note over TrainLoop: Epoch X:<br/>Train Loss: X.XX<br/>Valid AUC: X.XX<br/>Valid ACC: X.XX
+        end
+    end
+
+    rect rgb(245, 245, 255)
+        Note over Train: Final Evaluation
+        TrainLoop->>Save: Load best model
+        Save-->>TrainLoop: Best model checkpoint
+        TrainLoop->>Eval: Final evaluation
+        Eval-->>TrainLoop: test_auc, test_acc
+        TrainLoop-->>Train: Results
+    end
+    
+    Train->>Train: Print final results
+    Note over Train: Final Results:<br/>Test AUC: X.XXXX<br/>Test ACC: X.XXXX<br/>Best Epoch: X
+    
+    Train-->>Main: Return results
+    Main-->>User: Training completed
+
+```
+
+
+The following sequence diagram deep dive in all the steps that happen during SimAK **model.train()**:
+
+```mermaid
+sequenceDiagram
+    participant Trainer as Training Loop
+    participant DataLoader
+    participant Model as SimAKT Model
+    participant Forward as Forward Pass
+    participant CL as Contrastive Learning
+    participant Loss as Loss Calculation
+    participant Backward as Backpropagation
+    participant Optimizer
+
+    Note over Trainer: Start Training Epoch
+    Trainer->>Model: model.train()
+    
+    loop For each batch
+        Trainer->>DataLoader: Get batch data
+        DataLoader-->>Trainer: dcur = {qseqs, cseqs, rseqs, masks, ...}
+        
+        Note over Trainer: Prepare data<br/>[BS, SeqLen]
+        Trainer->>Trainer: Extract sequences:<br/>q, c, r (questions, concepts, responses)<br/>qshft, cshft, rshft (shifted)
+        Trainer->>Trainer: Concatenate:<br/>cq = cat([q[0:1], qshft])<br/>cc = cat([c[0:1], cshft])<br/>cr = cat([r[0:1], rshft])
+        
+        rect rgb(240, 248, 255)
+            Note over Model: Forward Pass with CL
+            Trainer->>Model: model.get_cl_loss(cc, cr, cq)
+            
+            Model->>Model: Move to device (GPU)
+            Model->>Model: Check sequence lengths<br/>lens = (s >= 0).sum(dim=1)
+            
+            alt minlen < MIN_SEQ_LEN (5)
+                Model->>Forward: Skip CL, use get_loss()
+                Forward->>Forward: Regular forward pass
+                Forward-->>Model: predictions, reg_loss
+            else minlen >= MIN_SEQ_LEN
+                Note over Model: Data Augmentation
+                
+                Model->>Model: Clone inputs:<br/>q_ = q.clone()<br/>s_ = s.clone()<br/>pid_ = pid.clone()
+                
+                rect rgb(255, 248, 240)
+                    Note over Model: Order Manipulation
+                    loop For each batch b
+                        Model->>Model: Sample indices:<br/>idx = random.sample(range(lens[b]-1),<br/>max(1, int(lens[b]*dropout)))
+                        loop For each index i in idx
+                            Model->>Model: Swap adjacent items:<br/>q_[b,i] ↔ q_[b,i+1]<br/>s_[b,i] ↔ s_[b,i+1]<br/>pid_[b,i] ↔ pid_[b,i+1]
+                        end
+                    end
+                end
+                
+                rect rgb(248, 255, 240)
+                    Note over Model: Response Flipping (Hard Negatives)
+                    alt hard_neg == True
+                        Model->>Model: s_flip = s.clone()
+                    else hard_neg == False
+                        Model->>Model: s_flip = s_.clone()
+                    end
+                    
+                    loop For each batch b
+                        Model->>Model: Sample indices:<br/>idx = random.sample(range(lens[b]),<br/>max(1, int(lens[b]*dropout)))
+                        loop For each index i in idx
+                            Model->>Model: Flip response:<br/>s_flip[b,i] = 1 - s_flip[b,i]
+                        end
+                    end
+                end
+                
+                rect rgb(245, 245, 255)
+                    Note over Forward: Three Forward Passes
+                    
+                    Model->>Forward: predict(q, s, pid) - Original
+                    Forward->>Forward: embedding(q, s, pid)
+                    Note over Forward: q_emb = q_embed + pid_embed * q_diff<br/>s_emb = s_embed + q_embed + pid_embed * s_diff
+                    Forward->>Forward: Pass through 4 Transformer blocks
+                    Forward->>Forward: readout() + output layer
+                    Forward-->>Model: logits, concat_q, z_1, q_emb, reg_loss
+                    
+                    Model->>Forward: predict(q_, s_, pid_) - Augmented
+                    Forward->>Forward: Same process with augmented data
+                    Forward-->>Model: _, _, z_2, ...
+                    
+                    alt hard_neg == True
+                        Model->>Forward: predict(q, s_flip, pid) - Hard Negative
+                        Forward->>Forward: Same process with flipped responses
+                        Forward-->>Model: _, _, z_3, ...
+                    end
+                end
+                
+                rect rgb(255, 245, 245)
+                    Note over CL: Contrastive Loss Calculation
+                    
+                    Model->>CL: sim(z_1[:,:minlen,:], z_2[:,:minlen,:])
+                    CL->>CL: Project if proj layer exists
+                    CL->>CL: Cosine similarity:<br/>F.cosine_similarity(z1.mean(-2), z2.mean(-2)) / 0.05
+                    CL-->>Model: input tensor
+                    
+                    alt hard_neg == True
+                        Model->>CL: sim(z_1[:,:minlen,:], z_3[:,:minlen,:])
+                        CL-->>Model: hard_neg tensor
+                        Model->>Model: Concatenate: input = cat([input, hard_neg])
+                    end
+                    
+                    Model->>Model: Create target:<br/>target = arange(bs).expand(-1, minlen)
+                    Model->>CL: F.cross_entropy(input, target)
+                    CL-->>Model: cl_loss
+                end
+                
+                rect rgb(255, 235, 235)
+                    Note over Loss: Prediction Loss (Window)
+                    
+                    loop For i in range(1, window)
+                        Model->>Model: label = s[:, i:]<br/>query = q_emb[:, i:]
+                        Model->>Model: h = readout(z_1[:,:query.size(1),:], query)
+                        Model->>Model: y = out(cat([query, h])).squeeze(-1)
+                        Model->>Loss: F.binary_cross_entropy_with_logits(<br/>y[label>=0], label[label>=0])
+                        Loss-->>Model: pred_loss += loss
+                    end
+                end
+                
+                Model->>Model: Apply sigmoid: preds = sigmoid(logits)
+                Model-->>Trainer: preds, total_loss = cl_loss * λ + reg_loss
+            end
+        end
+        
+        rect rgb(255, 240, 240)
+            Note over Trainer: Loss & Backpropagation
+            
+            Trainer->>Loss: cal_loss(model, ys=[preds[:,1:]], r, rshft, sm, preloss=[total_loss])
+            Loss->>Loss: y = masked_select(ys[0], sm)<br/>t = masked_select(rshft, sm)
+            Loss->>Loss: loss = BCE(y, t) + preloss[0]
+            Loss-->>Trainer: final_loss
+            
+            Trainer->>Optimizer: optimizer.zero_grad()
+            Trainer->>Backward: final_loss.backward()
+            Backward->>Backward: Compute gradients for all parameters
+            Trainer->>Optimizer: optimizer.step()
+            Optimizer->>Model: Update model parameters
+        end
+        
+        Trainer->>Trainer: Update metrics (loss, accuracy)
+    end
+    
+    Note over Trainer: End of Epoch
+```
+
+### Key Training Process Details
+
+1. **Data Preparation**:
+   - Sequences are shifted to create teacher forcing inputs
+   - Concatenation creates proper input sequences with initial tokens
+
+2. **Contrastive Learning Pipeline**:
+   - **Data Augmentation**: Random order swapping of adjacent elements
+   - **Hard Negatives**: Optional response flipping for stronger contrastive signals
+   - **Multiple Forward Passes**: Original, augmented, and optionally hard negative
+   - **Similarity Computation**: Cosine similarity between knowledge states
+
+3. **Loss Components**:
+   - **Prediction Loss**: Binary cross-entropy for response prediction
+   - **Contrastive Loss**: Cross-entropy on similarity scores (λ=0.1)
+   - **Regularization Loss**: L2 penalty on problem difficulty embeddings (1e-3)
+
+4. **Optimization**:
+   - Adam optimizer with weight decay (1e-5)
+   - Gradient computation through backpropagation
+   - Parameter updates based on computed gradients
+
+
+
+## As-Is Architecture Design
+
+### Transformer Block Components
+
+The SimAKT model uses a stack of layers with the following architecture:
+
+```mermaid
+graph TB
+    %% Input Data
+    Input["Input Sequences<br/>[BS, SeqLen]<br/>Questions (q), Responses (s), PIDs"]
+    
+    %% Embedding Layer
+    Input --> EmbLayer["Embedding Layer"]
+    EmbLayer --> QEmb["Question Embeddings<br/>[BS, SeqLen, d_model=256]<br/>q_embed + difficulty"]
+    EmbLayer --> SEmb["Interaction Embeddings<br/>[BS, SeqLen, d_model=256]<br/>s_embed + q_embed + difficulty"]
+    
+    %% Transformer Block 1
+    QEmb --> TB1["DTransformer Block 1<br/>(Self-Attention on Questions)"]
+    TB1 --> HQ["Hidden Questions (hq)<br/>[BS, SeqLen, 256]"]
+    
+    %% Transformer Block 2
+    SEmb --> TB2["DTransformer Block 2<br/>(Self-Attention on Interactions)"]
+    TB2 --> HS["Hidden States (hs)<br/>[BS, SeqLen, 256]"]
+    
+    %% Transformer Block 3
+    HQ --> TB3Q[Query]
+    HQ --> TB3K[Key]
+    HS --> TB3V[Value]
+    TB3Q --> TB3["DTransformer Block 3<br/>(Cross-Attention)"]
+    TB3K --> TB3
+    TB3V --> TB3
+    TB3 --> P["Predictions (p)<br/>[BS, SeqLen, 256]"]
+    TB3 --> QScores["Q-Attention Scores<br/>[BS, n_heads, SeqLen, SeqLen]"]
+    
+    %% Knowledge Encoder
+    KnowParams["Knowledge Parameters<br/>[n_know=16, d_model=256]<br/>(Learnable)"]
+    KnowParams --> Query["Query Expansion<br/>[BS*16, SeqLen, 256]"]
+    HQ --> HQExp["HQ Expansion<br/>[BS*16, SeqLen, 256]"]
+    P --> PExp["P Expansion<br/>[BS*16, SeqLen, 256]"]
+    
+    %% Transformer Block 4
+    Query --> TB4Qu[Query]
+    HQExp --> TB4K[Key]
+    PExp --> TB4V[Value]
+    TB4Qu --> TB4["DTransformer Block 4<br/>(Knowledge Attention)<br/>kq_same=False"]
+    TB4K --> TB4
+    TB4V --> TB4
+    TB4 --> Z["Knowledge States (z)<br/>[BS, SeqLen, n_know*256]"]
+    TB4 --> KScores["K-Attention Scores<br/>[BS, n_heads, SeqLen, n_know, SeqLen]"]
+    
+    %% Readout and Output
+    Z --> Readout["Readout Layer<br/>(Knowledge Aggregation)"]
+    Query --> Readout
+    Readout --> H["Aggregated Hidden<br/>[BS, SeqLen, 256]"]
+    
+    QEmb --> Concat["Concatenate<br/>[BS, SeqLen, 512]"]
+    H --> Concat
+    
+    Concat --> OutLayer["Output MLP<br/>Linear(512→256)→GELU→<br/>Dropout→Linear(256→128)→<br/>GELU→Dropout→Linear(128→1)"]
+    OutLayer --> Logits["Response Predictions<br/>[BS, SeqLen, 1]"]
+    
+    %% Contrastive Learning
+    Z --> CL["Contrastive Learning<br/>(if training)"]
+    CL --> CLLoss["CL Loss<br/>λ=0.1"]
+    
+    %% Loss Computation
+    Logits --> BCE["Binary Cross-Entropy"]
+    BCE --> TotalLoss["Total Loss<br/>BCE + λ*CL"]
+    CLLoss --> TotalLoss
+    
+    style Input fill:#e1f5fe
+    style QEmb fill:#fff3e0
+    style SEmb fill:#fff3e0
+    style HQ fill:#f3e5f5
+    style HS fill:#f3e5f5
+    style P fill:#f3e5f5
+    style Z fill:#e8f5e9
+    style Logits fill:#ffebee
+    style TotalLoss fill:#ffcdd2
+```
+
+### SimAKT Layer Internal Structure
+
+```mermaid
+graph TD
+    %% Inputs
+    Q["Query<br/>[BS, SeqLen, d_model]"]
+    K["Key<br/>[BS, SeqLen, d_model]"]
+    V["Value<br/>[BS, SeqLen, d_model]"]
+    
+    %% Multi-Head Attention Components
+    Q --> QLinear["Q Linear<br/>[d_model → d_model]"]
+    K --> KLinear["K Linear<br/>[d_model → d_model]"]
+    V --> VLinear["V Linear<br/>[d_model → d_model]"]
+    
+    QLinear --> QHeads["Reshape & Transpose<br/>[BS, n_heads=8, SeqLen, d_k=32]"]
+    KLinear --> KHeads["Reshape & Transpose<br/>[BS, n_heads=8, SeqLen, d_k=32]"]
+    VLinear --> VHeads["Reshape & Transpose<br/>[BS, n_heads=8, SeqLen, d_k=32]"]
+    
+    %% Attention Mechanism
+    QHeads --> Attention["Scaled Dot-Product Attention<br/>scores = QK^T / √d_k"]
+    KHeads --> Attention
+    
+    %% Temporal Effect (DTransformer specific)
+    Gamma["Learnable Gamma<br/>[n_heads, 1, 1]"] --> TemporalEffect["Temporal Effect<br/>Distance-based decay"]
+    Attention --> TemporalEffect
+    
+    %% Causal Mask
+    Mask["Causal Mask<br/>(Lower triangular)"] --> MaskedScores["Masked Scores<br/>+ Softmax"]
+    TemporalEffect --> MaskedScores
+    
+    %% Apply to Values
+    MaskedScores --> ApplyV["Matmul with V"]
+    VHeads --> ApplyV
+    
+    %% Output Processing
+    ApplyV --> Concat["Concatenate Heads<br/>[BS, SeqLen, d_model]"]
+    Concat --> OutProj["Output Projection<br/>[d_model → d_model]"]
+    
+    %% Residual & Norm
+    Q --> Residual["Residual Connection"]
+    OutProj --> Dropout["Dropout<br/>p=0.3"]
+    Dropout --> Residual
+    Residual --> LayerNorm["Layer Normalization"]
+    
+    %% Outputs
+    LayerNorm --> Output["Output<br/>[BS, SeqLen, d_model]"]
+    MaskedScores --> Scores["Attention Scores<br/>[BS, n_heads, SeqLen, SeqLen]"]
+    
+    style Q fill:#e3f2fd
+    style K fill:#e3f2fd
+    style V fill:#e3f2fd
+    style Output fill:#c8e6c9
+    style Scores fill:#fff9c4
+```
+
+### Key Architectural Features
+
+1. **Four-Layer Transformer Stack**:
+   - Block 1: Self-attention on question embeddings
+   - Block 2: Self-attention on interaction embeddings
+   - Block 3: Cross-attention between questions and interactions
+   - Block 4: Knowledge-aware attention with learnable knowledge parameters
+
+2. **Knowledge Encoding**:
+   - 16 learnable knowledge parameters (n_know=16)
+   - Knowledge states expanded and attended to separately
+   - Readout mechanism for knowledge aggregation
+
+3. **Temporal Attention Mechanism**:
+   - Distance-based decay using learnable gamma parameters
+   - Cumulative attention scoring for temporal modeling
+   - Causal masking to prevent information leakage
+
+4. **Embedding Components**:
+   - Question embeddings with difficulty integration
+   - Interaction embeddings combining response and question information
+   - Optional problem ID embeddings for difficulty modeling
+
+5. **Output Processing**:
+   - Multi-layer perceptron with GELU activations
+   - Progressive dimension reduction: 512 → 256 → 128 → 1
+   - Dropout regularization at each layer
+
+6. **Training Enhancements**:
+   - Contrastive learning with λ=0.1
+   - Data augmentation through sequence manipulation
+   - Optional hard negative sampling
+
+
+
+## To-Be Architecture Design
+
+### Approach 1: Inter-Student Attention Head
+
+This approach directly modifies the core self-attention mechanism to allow the model to explicitly query information from other students. It is architecturally elegant (in terms of the non invasive criteria) and leverages the inherent flexibility of the Multi-Head Attention (MHA) mechanism.
+
+**Conceptual Framework:**
+
+Standard self-attention in models like SAKT or SAINT calculates attention scores *within* a single student's interaction sequence. We propose to dedicate one or more attention heads to look *outside* this sequence and attend to a repository of relevant student information.
+
+**Architectural Implementation:**
+
+1.  **Memory Bank Construction:** First, we must create an external memory bank, $M \in \mathbb{R}^{k \times d}$, which stores representations of $k$ "archetypal" student states or trajectories. This memory can be constructed by:
+    * Clustering the hidden states of all students from the training data (e.g., using K-Means) and using the cluster centroids as memory slots.
+    * Maintaining a dynamic memory of recent or representative student states.
+
+2.  **Modified Multi-Head Attention:** Let the input to an attention block be the sequence of embeddings $X \in \mathbb{R}^{L \times d}$. In a standard $H$-head MHA, each head computes:
+    $$\text{Head}_i = \text{Attention}(XW_i^Q, XW_i^K, XW_i^V)$$
+    Where $W_i^Q, $W_i^K, $W_i^V are the projection matrices for the $i$-th head.
+
+    We can modify this by designating, for instance, the final head ($H$) as the "inter-student" head. For heads $i = 1, ..., H-1$, the computation remains standard (intra-student). For head $H$, the Key ($K$) and Value ($V$) are derived not from the input sequence $X$, but from the external memory bank $M$:
+
+    $$\text{Head}_H = \text{Attention}(XW_H^Q, MW_H^K, MW_H^V)$$
+
+    The formula for scaled dot-product attention for this head becomes:
+
+    $$\text{Attention}(Q, K_M, V_M) = \text{softmax}\left(\frac{QK_M^T}{\sqrt{d_k}}\right)V_M$$
+
+    Where \( Q = XW_H^Q \), \( K_M = MW_H^K \), and \( V_M = MW_H^V \).
+
+3.  **Concatenation:** The output of this inter-student head is concatenated with the outputs of the standard intra-student heads, and then passed through the final linear layer, just as in the original MHA block:
+    $$\text{MHA}(X) = \text{Concat}(\text{Head}_1, ..., \text{Head}_{H-1}, \text{Head}_H)W^O$$
+
+This modification allows the model, at each time step, to query the memory of archetypal student states and incorporate a summary of relevant historical patterns from the broader student population into its representation of the current student.
+
+### As-Is Architecture Diagram: Single-Head Encoder-Only Transformer
+
+The diagram below illustrates a simplified, typical encoder-only architecture with one intra-student attention head. This is the As-Is architecture of SimAKT. 
+
+```mermaid
+graph TD
+    subgraph Input Processing
+        A["Interaction Sequence (q1, r1), (q2, r2)..."] --> B("Interaction Embedding");
+        C["Positional Encoding"] --> D{Add};
+        B --> D;
+    end
+
+    subgraph Transformer Encoder Block
+        D --> E("Self-Attention Mechanism");
+        E --> F["Linear Projections to Q, K, V"];
+        F -- Query --> G(("Attention Score softmax(Q*Kᵀ/√d)"));
+        F -- Key --> G;
+        F -- Value --> H{"Apply Scores to Value"};
+        G --> H;
+        H --> I("Attention Output");
+    end
+
+    subgraph Post-Processing
+        I --> J{Add & Norm};
+        D --> J;
+        J --> K["Feed-Forward Network"];
+        K --> L{Add & Norm};
+        J --> L;
+        L --> M["Final Linear Layer"];
+        M --> N(("Prediction Softmax"));
+    end
+
+    style E fill:#cde4ff,stroke:#333
+```
+
+
+### To-Be Architecture Diagram: Two-Head (Intra- and Inter-Student) Transformer
+
+The modified diagram below shows the introduction of the inter-student head. The key change is within the "Attention Mechanism" block, which now takes two sources of information: the student's sequence and the external memory.
+
+```mermaid
+graph TD
+    subgraph InputProcessing ["Input Processing"]
+        A[Interaction Sequence X] --> B(Interaction Embedding);
+        C[Positional Encoding] --> D{Add};
+        B --> D;
+        M_Input[External Memory Bank M]:::memory;
+    end
+
+    subgraph TransformerEncoderBlock ["Transformer Encoder Block"]
+        D --> E(Multi-Head Attention Block);
+        
+        subgraph E
+            direction LR
+            subgraph Head1 ["Head 1: Intra-Student"]
+                D_in1[From Input Seq. X] --> F1[Projections Q1, K1, V1];
+                F1 --> G1((Attention Output O1 Dim: L x d_head));
+            end
+            
+            subgraph Head2 ["Head 2: Inter-Student"]
+                D_in2[From Input Seq. X] --> F2_Q[Projection Q2];
+                M_Input_in[From Memory M] --> F2_KV[Projections K2, V2];
+                F2_Q --> G2((Attention Output O2 Dim: L x d_head));
+                F2_KV --> G2;
+            end
+
+            G1 --> H{Concatenate Heads Dim: L x 2*d_head};
+            G2 --> H;
+            H --> I[Final Projection Layer WO Maps back to d_model];
+        end
+        I --> J{Add & Norm};
+    end
+
+    subgraph PostProcessing ["Post-Processing"]
+        D --> J;
+        J --> K[Feed-Forward Network];
+        K --> L{Add & Norm};
+        J --> L;
+        L --> M_out[Final Linear Layer];
+        M_out --> N((Prediction Softmax));
+    end
+    
+    classDef memory fill:#ffcda8,stroke:#333
+    style E fill:#cde4ff,stroke:#333
+```
+
+### Concatenation of the two attention heads 
+
+Note that concatenating the two attention heads means taking their individual output vectors and joining them together side-by-side to create a single, wider vector. This new vector contains the insights from both the intra-student and inter-student perspectives simultaneously.
+
+An Analogy: Two Specialists 
+Imagine two specialists evaluating a student.
+
+- Specialist 1 (Intra-Student Head): Reviews the student's personal academic file, looking only at their past performance and learning trajectory. They write a report summarizing this internal view.
+
+- Specialist 2 (Inter-Student Head): Compares the student's record to a large database of similar student cases (the "external memory"). They write a second report summarizing how this student fits into broader patterns.
+
+Concatenation is the act of stapling these two reports together. Before a final decision is made, you now have a single dossier that includes both the personal history and the comparative analysis, providing a much richer context.
+
+
+### Tensor Dimensions and Final Projection
+
+Let's examine the dimensions of the tensors involved in the multi-head attention mechanism. The output of a single attention head is a vector for each interaction in the sequence.
+
+#### Individual Head Outputs
+Assume the model's dimension ($d_{\text{model}}$) is 128, and there are two attention heads. Each head's output dimension ($d_{\text{head}}$) would typically be:
+
+$$d_{\text{head}} = \frac{d_{\text{model}}}{2} = 64$$
+
+For a sequence of $L$ interactions:
+- The **Intra-Student Head** produces a tensor: $O_1 \in \mathbb{R}^{L \times 64}$
+- The **Inter-Student Head** produces another tensor: $O_2 \in \mathbb{R}^{L \times 64}$
+
+#### Concatenation
+The concatenation operation joins these two tensors along their last dimension (the feature dimension):
+
+$$O_{\text{concat}} = \text{Concat}(O_1, O_2)$$
+
+The resulting concatenated tensor has a shape of $\mathbb{R}^{L \times 128}$ (since $64 + 64 = 128$). This tensor now holds the information from both heads for each of the $L$ interactions.
+
+#### Purpose of the Final Projection
+The concatenated vector is an intermediate step. The final step inside the Multi-Head Attention block is to pass this combined vector through a linear projection layer (denoted as $W^O$). This layer has two main purposes:
+
+1. **Mix Information:** It learns the optimal way to combine the insights from the two heads. For example, it might prioritize the inter-student view for certain interactions and the intra-student history for others.
+2. **Restore Dimension:** It projects the concatenated vector back to the model's original dimension ($d_{\text{model}}$). This ensures that the output of the attention block matches its input shape, enabling the residual connection in the "Add & Norm" step.
+
+The concatenated tensor ($O_{\text{concat}} \in \mathbb{R}^{L \times 128}$) is multiplied by the projection matrix $W^O$ ($\in \mathbb{R}^{128 \times 128}$) to produce the final output $Z$ ($\in \mathbb{R}^{L \times 128}$), which is then passed to the rest of the Transformer encoder.
 
