@@ -166,6 +166,7 @@ We take as baselines these attention-based models:
 - DKVMN: a competitive variant that is relevant for our approach because is based on the use of memory
 - SAINT: usually don't outperform AKT but it's interesting due to its encoder-decoder architecture. A variant, SAINT+, is reported to show top performance with the EdNet dataset
 - DTransformer (2023): tne most recent of the chosen models, outperforms the rest of models (including AKT) in most evaluations with different datasets and scenarios 
+- CL4KT?: Contrastive Learning for Knowledge Tracing (https://drive.google.com/file/d/1JtJNKr1tHU5lxLHy0zEms3_I-aYv2Ph0/view)
 
 Other models show promising performance and could outperform AKT, including SAINT+ (2021), DIMKT (2023), stableKT (2024), and extraKT (2024). However, these models have been excluded because they lack evaluation on datasets that would enable meaningful comparison with the selected baseline models.
 
@@ -187,9 +188,39 @@ State-of-the-Art AUC:
 - Transformer Dominance: In all cases, the core of the winning solutions was a Transformer-based architecture, confirming that **models like AKT and [SAINT+](https://arxiv.org/pdf/2010.12042) are the foundational building blocks for top performance**.
 - Ensembling and Feature Engineering are Crucial: Achieving the highest scores requires more than just a single, well-designed model. The winning solutions consistently use ensembles of multiple models and incorporate carefully engineered features related to timing, past performance, and question characteristics to gain a competitive edge.
 
+## Architecture Decissions
+
+We will use the DTransformer model as the foundation for our architecture due to its superior performance among the baseline models. Additionally, we will incorporate key concepts from the AKT model, as DTransformer builds upon several ideas originally proposed in AKT.
+
+**AKT:**
+- Uses two encoders: the Question Encoder (which considers only the questions) and the Knowledge Encoder (which considers both the questions and the responses), along with a Knowledge Retriever that determines the knowledge state based on both encoders.
+- Employs the traditional attention mechanism with modifications aimed at: 1) monotonic attention in the Knowledge Retriever, 2) reducing the relevance of exercises completed a long time ago, and 3) reducing the relevance of exercises involving different concepts.
+- Each encoder and the Knowledge Retriever has a key, query, and value embedding layer that maps the input into output queries, keys, and values of dimensions \(D_q = D_k\), \(D_k\), and \(D_v\), respectively.
+- Uses question embeddings to map both queries and keys (while SAKT, for example, uses question embeddings for queries and response embeddings to map keys and values).
+
+**DTransformer:**
+- Uses an approach based on "Temporal and Cumulative Attention (TCA)" that considers the cumulative effort in the learning process when implementing the attention mechanism. This allows it to infer the student's knowledge state at each moment and predict responses accordingly. Additionally, DTransformer uses Contrastive Learning in the loss function to enforce the monotonicity of knowledge. In contrast, the AKT model infers the knowledge state based on responses, which can lead to unstable and non-monotonic knowledge states.
+- Uses knowledge as a query (in addition to questions as queries) in the attention mechanism, enabling it to extract the knowledge state.
+
+**Similarities:**
+- Both DTransformer and AKT use a Rasch Model that accounts for the difficulty of exercises. This explains why a skill might be considered mastered at a given time, yet later, an exercise targeting the same skill could be answered incorrectly if its difficulty is high.
+- DTransformer leverages the modified attention mechanism from AKT.
+
 
 ## Architecture Design Requirements
+
+- The SimAKT model is ready as an copy of DTransformer. This provides a clean foundation to build upon with novel similarity-based attention mechanisms and learning trajectory improvements.
+- I'll provide instructions for evolving this DTransformer-based foundation into the SimAKT model
 
 
 
 ## Architecture Design
+
+
+
+## Testing
+
+python wandb_dtransformer_train.py --dataset_name=assist2015 --use_wandb=0
+
+python wandb_simakt_train.py --dataset_name=assist2015 --use_wandb=0
+

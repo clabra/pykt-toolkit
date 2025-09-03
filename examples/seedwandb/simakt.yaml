@@ -1,4 +1,4 @@
-program: wandb_simakt_train.py
+program: ./wandb_simakt_train.py
 method: bayes
 metric:
     goal: maximize
@@ -7,30 +7,26 @@ parameters:
     model_name:
         values: ["simakt"]
     dataset_name:
-        values: ["assist2015"]
+        values: ["xes"]
     emb_type:
-        values: ["qid"]
+        values: ["qid_cl"]
     save_dir:
-        values: ["models/simakt"]
-    emb_size:
-        values: [128, 256, 512]
-    learning_rate:
-        values: [1e-3, 5e-4, 1e-4]
-    num_attn_heads:
-        values: [4, 8, 16]
-    dropout:
-        values: [0.05, 0.1, 0.2]
-    num_en:
-        values: [2, 4, 6]
-    seq_len:
-        values: [200, 500]
-    similarity_cache_size:
-        values: [5000, 10000]
-    mastery_threshold:
-        values: [0.8, 0.9, 0.95]
-    curve_dim:
+        values: ["models/simakt_tiaocan"]
+    d_model:
         values: [64, 128, 256]
+    d_ff:
+        values: [64, 128, 256]
+    dropout:
+        values: [0.05,0.1,0.3,0.5]
+    learning_rate:
+        values: [1e-3, 1e-4, 1e-5]
+    num_attn_heads:
+        values: [2, 4, 8]
+    n_blocks:
+        values: [3]
+    n_know:
+       values: [4, 8, 16, 32]
     seed:
-        values: [42, 3407, 1234]
+        values: [42, 3407]
     fold:
         values: [0, 1, 2, 3, 4]

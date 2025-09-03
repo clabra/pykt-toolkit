@@ -66,13 +66,10 @@ def cal_loss(model, ys, r, rshft, sm, preloss=[]):
         loss_w2 = loss_w2.mean() / model.num_c
 
         loss = loss + model.lambda_r * loss_r + model.lambda_w1 * loss_w1 + model.lambda_w2 * loss_w2
-    elif model_name in ["akt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx","lefokt_akt", "dtransformer", "fluckt"]:
+    elif model_name in ["akt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx","lefokt_akt", "dtransformer", "simakt", "fluckt"]:
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
         loss = binary_cross_entropy(y.double(), t.double()) + preloss[0]
-    elif model_name == "simakt":
-        # SimAKT uses custom loss function that handles curve fitting and regularization
-        loss = model.get_loss(c, r, cshft, rshft, sm)
     elif model_name == "lpkt":
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
@@ -185,7 +182,7 @@ def model_forward(model, data, rel=None):
         opt.step()
         model.sfm_cl.gcl.update_target_network(mm)  
         return loss
-    elif model_name in ["dtransformer"]:
+    elif model_name in ["dtransformer", "simakt"]:
         if model.emb_type == "qid_cl":
             y, loss = model.get_cl_loss(cc.long(), cr.long(), cq.long())  # with cl loss
         else:
@@ -256,11 +253,6 @@ def model_forward(model, data, rel=None):
     elif model_name == "dimkt":
         y = model(q.long(),c.long(),sd.long(),qd.long(),r.long(),qshft.long(),cshft.long(),sdshft.long(),qdshft.long())
         ys.append(y)
-    elif model_name == "simakt":
-        # SimAKT forward pass
-        y = model(cq.long(), cr.long(), cshft.long())
-        # Compute loss using SimAKT's compute_loss method
-        loss = model.compute_loss(cq.long(), cr.long(), cshft.long(), rshft.long(), sm)
         ys.append(y) 
 
     if model_name not in ["atkt", "atktfix", "simakt"]+que_type_models or model_name in ["lpkt", "rkt"]:

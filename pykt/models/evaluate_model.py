@@ -117,7 +117,7 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
             elif model_name in ["akt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:                                
                 y, reg_loss = model(cc.long(), cr.long(), cq.long())
                 y = y[:,1:]
-            elif model_name in ["dtransformer"]:
+            elif model_name in ["dtransformer", "simakt"]:
                 output, *_ = model.predict(cc.long(), cr.long(), cq.long())
                 sg = nn.Sigmoid()
                 y = sg(output)
@@ -148,8 +148,6 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                     c, cshft = q, qshft  # question level
             elif model_name == "dimkt":
                 y = model(q.long(),c.long(),sd.long(),qd.long(),r.long(),qshft.long(),cshft.long(),sdshft.long(),qdshft.long())
-            elif model_name == "simakt":
-                y = model(c.long(), r.long(), cshft.long())
             # print(f"after y: {y.shape}")
             # save predict result
             if save_path != "":
@@ -185,7 +183,7 @@ def early_fusion(curhs, model, model_name):
         que_diff = model.diff_layer(curhs[1])#equ 13
         p = torch.sigmoid(3.0*stu_ability-que_diff)#equ 14
         p = p.squeeze(-1)
-    elif model_name in ["akt","extrakt", "folibikt","robustkt", "dtransformer","simplekt","stablekt","cskt", "fluckt", "datakt", "sparsekt", "lefokt_akt", "ukt", "hcgkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
+    elif model_name in ["akt","extrakt", "folibikt","robustkt", "dtransformer", "simakt","simplekt","stablekt","cskt", "fluckt", "datakt", "sparsekt", "lefokt_akt", "ukt", "hcgkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
         output = model.out(curhs[0]).squeeze(-1)
         m = nn.Sigmoid()
         p = m(output)
@@ -438,7 +436,7 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
             elif model_name in ["akt","extrakt", "folibikt","fluckt","robustkt", "lefokt_akt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
                 y, reg_loss, h = model(cc.long(), cr.long(), cq.long(), True)
                 y = y[:,1:]
-            elif model_name in ["dtransformer"]:
+            elif model_name in ["dtransformer", "simakt"]:
                 output, h, *_ = model.predict(cc.long(), cr.long(), cq.long())
                 sg = nn.Sigmoid()
                 y = sg(output)
@@ -947,7 +945,7 @@ def predict_each_group(dtotal, dcur, dforget, curdforget, is_repeat, qidx, uid, 
 
             y, reg_loss = model(cin.long(), rin.long(), qin.long())
             pred = y[0][-1]
-        elif model_name in ["dtransformer"]:
+        elif model_name in ["dtransformer", "simakt"]:
             #### 输入有question！     
             if qout != None:
                 curq = torch.tensor([[qout.item()]]).to(device)
@@ -1323,7 +1321,7 @@ def predict_each_group2(dtotal, dcur, dforget, curdforget, is_repeat, qidx, uid,
         elif model_name in ["akt","extrakt","folibikt", "robustkt", "cakt","fluckt","lefokt_akt",  "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:                                
             y, reg_loss = model(ccc.long(), ccr.long(), ccq.long())
             y = y[:,1:]
-        elif model_name in ["dtransformer"]:
+        elif model_name in ["dtransformer", "simakt"]:
             y,  *_  = model.predict(ccc.long(), ccr.long(), ccq.long(),True,1)
             m = nn.Sigmoid()
             y = m(y)
