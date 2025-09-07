@@ -1,6 +1,8 @@
-# Phase 1 Architecture Design Exploration and Refinement - Emcoder-only
+# Phase 1 Architecture Design Exploration and Refinement - Encoder-only
 
 Approach based on adding modular inter-student heads to an encdoder-only architecture. 
+
+This approach is based in looking at the current student sequence, infer knowledge states and from them predict the response. The additional inter-student head provides another view about how to predict responses: look at what happened in the past with similar students. 
 
 ## Approach Guidelines: 
 1) Look for a modular design where the attention module have an abstract design, ready to implement new similar-based attention heads with a kind of plug-and-play approach, allowing add new heads, combine them and enable/disable each head based on a config file. 

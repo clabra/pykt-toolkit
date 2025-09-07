@@ -897,6 +897,26 @@ The concatenated tensor ($O_{\text{concat}} \in \mathbb{R}^{L \times 128}$) is m
 
 #### Phase 1 - Architecture Design Exploration and Refinement
 
+##### Explored approaches: 
+
+#### 1. Encoder-only
+This approach involves incorporating an inter-student attention head into an encoder-only architecture initially inspired by DTransformer. The design leverages attention heads that utilize a *Temporal and Cumulative Attention (TCA)* mechanism to estimate knowledge states. These states are inferred by explicitly accounting for: (1) the temporal dynamics of the learning process, and (2) the cumulative effort exerted by the student. The inter-student head provides another complementary view about how to predict responses by lookin what happened in the past with similar students. 
+
+The approach has been explored, analyzed and described in detail in *simakt_phase1_proposal_encoder.md* but is left aside, for now, in favor of a decoder-only approach that looks more promising when it comes to leverage inter-student information. The problem with the encoder-only design is that the **encoding of the students is not learned but calculated previously** using heuristic approaches, saved in a bank memory and then retrieved using clustering or k-nn techniques. 
+
+A decoder-only approach looks more prommising when it comes to **encode student trajectories through model training, with a proper loss to match students in such a way that response predictions are optimized**. 
+
+#### Approaches to explore
+
+#### 1. Decoder-only
+
+
+
+
+
+
+
+
 
 
 
