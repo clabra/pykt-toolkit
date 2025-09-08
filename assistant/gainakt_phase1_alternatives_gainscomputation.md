@@ -2578,6 +2578,21 @@ Epoch: 3, **validauc: 0.7184, validacc: 0.7507**, best epoch: 3, best auc: 0.718
 Improved version: 
 Epoch: 3, validauc: 0.7187, validacc: 0.7516, best epoch: 3, best auc: 0.7187, train loss: 0.5138521135311795, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
             testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+
+Dynamic version: 
+
+Epoch: 1, validauc: 0.6966, validacc: 0.7459, best epoch: 1, best auc: 0.6966, train loss: 0.5496876139554583, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 2, validauc: 0.7131, validacc: 0.7501, best epoch: 2, best auc: 0.7131, train loss: 0.5230638321346521, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 3, validauc: 0.7188, validacc: 0.7514, best epoch: 3, best auc: 0.7188, train loss: 0.5133113719193195, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 4, validauc: 0.7188, validacc: 0.7514, best epoch: 3, best auc: 0.7188, train loss: 0.506151722754697, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1       
 ```
 
 ```
@@ -2606,4 +2621,15 @@ Epoch: 4, validauc: 0.7215, validacc: 0.7527, best epoch: 4, best auc: 0.7215, t
 
 Epoch: 7, validauc: 0.7224, validacc: 0.7531, best epoch: 5, best auc: 0.7224, train loss: 0.49468506359101283, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
             testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+...
+
+Epoch: 15, validauc: 0.7224, validacc: 0.7531, best epoch: 5, best auc: 0.7224, train loss: 0.4267902011577052, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+
+Improved version: 
+Epoch: 1, validauc: 0.6935, validacc: 0.7455, best epoch: 1, best auc: 0.6935, train loss: 0.557194140293839, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+Epoch: 2, validauc: 0.7113, validacc: 0.7495, best epoch: 2, best auc: 0.7113, train loss: 0.5271843211102596, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+
 ```

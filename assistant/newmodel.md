@@ -620,6 +620,134 @@ graph TD
     class Predictions output
 ```
 
+#### Dynamic Value Stream Architecture
+
+This version of the architecture modifies the encoder block to create a dynamic value stream, where the value representations are updated at each layer. The nodes highlighted in green represent the changes from the original architecture.
+
+```mermaid
+graph TD
+    subgraph "Input Layer"
+        direction LR
+        Input_q["Input Questions (q)<br/>Shape: [B, L]"]
+        Input_r["Input Responses (r)<br/>Shape: [B, L]"]
+    end
+
+    subgraph "Tokenization & Embedding"
+        direction TB
+        
+        Tokens["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]
+        
+        Context_Emb["Context Embedding Table"]
+        Value_Emb["Value Embedding Table"]
+        Skill_Emb["Skill Embedding Table"]
+
+        Tokens --> Context_Emb
+        Tokens --> Value_Emb
+        Input_q --> Skill_Emb
+
+        Context_Seq["Context Sequence<br/>Shape: [B, L, D]"]
+        Value_Seq["Value Sequence<br/>Shape: [B, L, D]"]
+        Pos_Emb["Positional Embeddings<br/>Shape: [B, L, D]"]
+        
+        Context_Emb --> Context_Seq
+        Value_Emb --> Value_Seq
+
+        Context_Seq_Pos["Context + Positional<br/>Shape: [B, L, D]"]
+        Value_Seq_Pos["Value + Positional<br/>Shape: [B, L, D]"]
+        
+        Context_Seq --"Add"--> Context_Seq_Pos
+        Pos_Emb --"Add"--> Context_Seq_Pos
+        Value_Seq --"Add"--> Value_Seq_Pos
+        Pos_Emb --"Add"--> Value_Seq_Pos
+    end
+
+    Input_q --> Tokens
+    Input_r --> Tokens
+
+    subgraph "Dynamic Encoder Block"
+        direction TB
+        
+        Encoder_Input_Context["Input: Context Sequence<br/>[B, L, D]"]
+        Encoder_Input_Value["Input: Value Sequence<br/>[B, L, D]"]
+
+        subgraph "Attention Mechanism"
+            Attn_Output["Reshaped Attn Output<br/>[B, L, D]"]
+        end
+
+        Encoder_Input_Context -->|"Q, K"| Attn_Output
+        Encoder_Input_Value -->|"V"| Attn_Output
+
+        AddNorm_Ctx["Add & Norm (Context)"]
+        Attn_Output --> AddNorm_Ctx
+        Encoder_Input_Context --"Residual"--> AddNorm_Ctx
+
+        AddNorm_Val["Add & Norm (Value)<br/>**NEW**"]
+        Attn_Output --> AddNorm_Val
+        Encoder_Input_Value --"Residual"--> AddNorm_Val
+
+        FFN["Feed-Forward Network"]
+        AddNorm_Ctx --> FFN
+        
+        AddNorm2["Add & Norm"]
+        FFN --> AddNorm2
+        AddNorm_Ctx --"Residual"--> AddNorm2
+        
+        Encoder_Output_Ctx["Output: Context (h)<br/>[B, L, D]"]
+        AddNorm2 --> Encoder_Output_Ctx
+
+        Encoder_Output_Val["Output: Value (v)<br/>[B, L, D]<br/>**NEW**"]
+        AddNorm_Val --> Encoder_Output_Val
+    end
+
+    Context_Seq_Pos --> Encoder_Input_Context
+    Value_Seq_Pos --> Encoder_Input_Value
+
+    subgraph "Prediction Head"
+        direction TB
+        
+        Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
+        Pred_Input_v["Input: Value State (v)<br/>[B, L, D]<br/>**NEW**"]
+        Pred_Input_s["Input: Target Skill (s)<br/>[B, L, D]"]
+
+        Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]<br/>**NEW**"]
+        MLP["MLP Head"]
+        Sigmoid["Sigmoid"]
+        
+        Pred_Input_h --> Concat
+        Pred_Input_v --> Concat
+        Pred_Input_s --> Concat
+        Concat --> MLP
+        MLP --> Sigmoid
+    end
+    
+    Encoder_Output_Ctx --> Pred_Input_h
+    Encoder_Output_Val --> Pred_Input_v
+    Skill_Emb --"Lookup"--> Pred_Input_s
+
+    subgraph "Final Output"
+        direction LR
+        Predictions["Predictions<br/>[B, L]"]
+    end
+
+    Sigmoid --> Predictions
+
+    classDef input fill:#e1f5fe,stroke:#01579b
+    classDef embedding fill:#f3e5f5,stroke:#4a148c
+    classDef attention fill:#fff3e0,stroke:#e65100
+    classDef knowledge fill:#e8f5e8,stroke:#2e7d32
+    classDef prediction fill:#fce4ec,stroke:#ad1457
+    classDef output fill:#f1f8e9,stroke:#558b2f
+    classDef changed fill:#c8e6c9,stroke:#2e7d32
+
+    class Input_q,Input_r,Tokens input
+    class Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq,Context_Seq_Pos,Value_Seq_Pos embedding
+    class Attn_Output,AddNorm_Ctx,FFN,AddNorm2,Encoder_Input_Context,Encoder_Input_Value,Encoder_Output_Ctx,Encoder_Output_Val attention
+    class Pred_Input_h,Pred_Input_v knowledge
+    class Pred_Input_s,Concat,MLP,Sigmoid prediction
+    class Predictions output
+    class AddNorm_Val,Encoder_Output_Val,Pred_Input_v,Concat changed
+```
+
 ### Workflow
 
 This diagram illustrates the end-to-end training workflow initiated by the `python examples/wandb_gainakt2_train.py` command.

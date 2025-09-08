@@ -85,7 +85,7 @@ class EncoderBlock(nn.Module):
 
     This block consists of a two-stream Multi-Head Attention layer followed by a 
     Position-wise Feed-Forward Network. Layer normalization and residual connections
-    are applied after each sub-layer.
+    are applied after each sub-layer. This version updates both context and value streams.
 
     Args:
         d_model (int): The dimensionality of the model.
@@ -103,8 +103,9 @@ class EncoderBlock(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(d_ff, d_model)
         )
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
+        self.norm1_ctx = nn.LayerNorm(d_model)
+        self.norm1_val = nn.LayerNorm(d_model)
+        self.norm2_ctx = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, context_sequence, value_sequence, mask=None):
@@ -119,20 +120,25 @@ class EncoderBlock(nn.Module):
             mask (torch.Tensor, optional): The attention mask.
 
         Returns:
-            torch.Tensor: The output sequence from the encoder block.
-                          Shape: [batch_size, seq_len, d_model]
+            tuple[torch.Tensor, torch.Tensor]: A tuple containing:
+                - The output context sequence. Shape: [batch_size, seq_len, d_model]
+                - The output value sequence. Shape: [batch_size, seq_len, d_model]
         """
         # Attention sub-layer
         attn_output = self.attn(context_sequence, value_sequence, mask)
-        # Residual connection and layer normalization
-        x = self.norm1(context_sequence + attn_output)
-        
+
+        # Update value sequence
+        new_value_sequence = self.norm1_val(value_sequence + attn_output)
+
+        # Update context sequence (first residual connection)
+        x = self.norm1_ctx(context_sequence + attn_output)
+
         # Feed-forward sub-layer
         ffn_output = self.ffn(x)
-        # Residual connection and layer normalization
-        x = self.norm2(x + self.dropout(ffn_output))
-        
-        return x
+        # Second residual connection for context
+        new_context_sequence = self.norm2_ctx(x + self.dropout(ffn_output))
+
+        return new_context_sequence, new_value_sequence
 
 class GainAKT2(nn.Module):
     """
@@ -178,7 +184,7 @@ class GainAKT2(nn.Module):
         
         # Final prediction head
         self.prediction_head = nn.Sequential(
-            nn.Linear(d_model * 2, d_ff), # Takes concatenated [knowledge_state, concept_embedding]
+            nn.Linear(d_model * 3, d_ff), # Takes concatenated [context_seq, value_seq, concept_embedding]
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, 1)
@@ -231,17 +237,16 @@ class GainAKT2(nn.Module):
         value_seq += pos_emb
         
         # 3. Pass sequences through the stack of encoder blocks
-        # The context sequence is updated at each block, while the value sequence remains the same.
-        encoded_seq = context_seq
+        # Both context and value sequences are updated at each block.
         for block in self.encoder_blocks:
-            encoded_seq = block(encoded_seq, value_seq, mask)
-            
+            context_seq, value_seq = block(context_seq, value_seq, mask)
+        
         # 4. Prepare inputs for the prediction head
         # Get the embedding for the target concept
         target_concept_emb = self.concept_embedding(target_concepts)
         
         # Concatenate the final knowledge state with the target concept embedding
-        concatenated = torch.cat([encoded_seq, target_concept_emb], dim=-1)
+        concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
         
         # 5. Generate predictions
         logits = self.prediction_head(concatenated)
@@ -250,4 +255,6 @@ class GainAKT2(nn.Module):
         if not qtest:
             return predictions
         else:
-            return predictions, encoded_seq
+            # For interpretability, we can return the context_seq, value_seq, or both.
+            # Returning context_seq as it represents the primary knowledge state.
+            return predictions, context_seq
