@@ -109,7 +109,7 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
             elif model_name in ["dkvmn","deep_irt", "skvmn","deep_irt"]:
                 y = model(cc.long(), cr.long())
                 y = y[:,1:]
-            elif model_name in ["kqn", "sakt"]:
+            elif model_name in ["kqn", "sakt", "gainsakt", "gainakt2"]:
                 y = model(c.long(), r.long(), cshft.long())
             elif model_name == "saint":
                 y = model(cq.long(), cc.long(), r.long())
