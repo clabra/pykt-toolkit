@@ -295,6 +295,8 @@ This encoder-only approach with learning gains represents a promising direction 
 
 ## To-Be Architectural Diagram Requirements
 
+The workflow reflecting the proposed approach is as follows: 
+
 ```mermaid
 flowchart TD
     %% Input Layer
@@ -477,152 +479,15 @@ We have explored in detail two possible directions:
 
 Finally, we decided to go with the fresh start direction since a first implementaion based on this obtained promising results. We think that none of the baseline available models in pykt framework is simple enough as to support a quick and suitable adaptation. 
 
-### Architecture Design
+## Architecture Design
 
 We have explored the options described in gainakt_phase1_alternatives_gainscomputation.md. Finally we decided to choose the one described in the "Option 4" section. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
 
-```mermaid
-graph TD
-    subgraph "Input Layer"
-        direction LR
-        Input_q["Input Questions (q)<br/>Shape: [B, L]"]
-        Input_r["Input Responses (r)<br/>Shape: [B, L]"]
-    end
 
-    subgraph "Tokenization & Embedding"
-        direction TB
-        
-        Tokens["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]
-        
-        Context_Emb["Context Embedding Table"]
-        Value_Emb["Value Embedding Table"]
-        Skill_Emb["Skill Embedding Table"]
 
-        Tokens --> Context_Emb
-        Tokens --> Value_Emb
-        Input_q --> Skill_Emb
+### Dynamic Value Stream
 
-        Context_Seq["Context Sequence<br/>Shape: [B, L, D]"]
-        Value_Seq["Value Sequence<br/>Shape: [B, L, D]"]
-        Pos_Emb["Positional Embeddings<br/>Shape: [B, L, D]"]
-        
-        Context_Emb --> Context_Seq
-        Value_Emb --> Value_Seq
-
-        Context_Seq_Pos["Context + Positional<br/>Shape: [B, L, D]"]
-        Value_Seq_Pos["Value + Positional<br/>Shape: [B, L, D]"]
-        
-        Context_Seq --"Add"--> Context_Seq_Pos
-        Pos_Emb --"Add"--> Context_Seq_Pos
-        Value_Seq --"Add"--> Value_Seq_Pos
-        Pos_Emb --"Add"--> Value_Seq_Pos
-    end
-
-    Input_q --> Tokens
-    Input_r --> Tokens
-
-    subgraph "Encoder (N Blocks)"
-        direction TB
-        
-        Encoder_Input_Context["Input: Context Sequence<br/>[B, L, D]"]
-        Encoder_Input_Value["Input: Value Sequence<br/>[B, L, D]"]
-
-        subgraph "Attention Mechanism"
-            direction TB
-            
-            Attn_Input_Context["Input: Context<br/>[B, L, D]"]
-            Attn_Input_Value["Input: Value<br/>[B, L, D]"]
-
-            Proj_Q["Q = Linear(Context)<br/>[B, H, L, Dk]"]
-            Proj_K["K = Linear(Context)<br/>[B, H, L, Dk]"]
-            Proj_V["V = Linear(Value)<br/>[B, H, L, Dk]"]
-            
-            Attn_Input_Context --> Proj_Q
-            Attn_Input_Context --> Proj_K
-            Attn_Input_Value --> Proj_V
-
-            Scores["Scores = (Q @ K.T) / sqrt(Dk)<br/>[B, H, L, L]"]
-            Proj_Q --> Scores
-            Proj_K --> Scores
-            
-            Weights["Weights = softmax(Scores)<br/>[B, H, L, L]"]
-            Scores --> Weights
-
-            Attn_Output_Heads["Attn Output (Heads)<br/>[B, H, L, Dk]"]
-            Weights --> Attn_Output_Heads
-            Proj_V --> Attn_Output_Heads
-
-            Attn_Output["Reshaped Attn Output<br/>[B, L, D]"]
-            Attn_Output_Heads --> Attn_Output
-        end
-
-        Encoder_Input_Context --> Attn_Input_Context
-        Encoder_Input_Value --> Attn_Input_Value
-
-        subgraph "Add & Norm, FFN"
-            AddNorm1["Add & Norm"]
-            Attn_Output --> AddNorm1
-            Encoder_Input_Context --"Residual"--> AddNorm1
-
-            FFN["Feed-Forward Network"]
-            AddNorm1 --> FFN
-            
-            AddNorm2["Add & Norm"]
-            FFN --> AddNorm2
-            AddNorm1 --"Residual"--> AddNorm2
-        end
-        
-        Encoder_Output["Output: Knowledge State (h)<br/>[B, L, D]"]
-        AddNorm2 --> Encoder_Output
-    end
-
-    Context_Seq_Pos --> Encoder_Input_Context
-    Value_Seq_Pos --> Encoder_Input_Value
-
-    subgraph "Prediction Head"
-        direction TB
-        
-        Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
-        Pred_Input_s["Input: Target Skill<br/>[B, L, D]"]
-
-        Concat["Concatenate<br/>[h, s]<br/>[B, L, 2*D]"]
-        MLP["MLP Head"]
-        Sigmoid["Sigmoid"]
-        
-        Pred_Input_h --> Concat
-        Pred_Input_s --> Concat
-        Concat --> MLP
-        MLP --> Sigmoid
-    end
-    
-    Encoder_Output --> Pred_Input_h
-    Skill_Emb --"Lookup"--> Pred_Input_s
-
-    subgraph "Final Output"
-        direction LR
-        Predictions["Predictions<br/>[B, L]"]
-    end
-
-    Sigmoid --> Predictions
-
-    classDef input fill:#e1f5fe,stroke:#01579b
-    classDef embedding fill:#f3e5f5,stroke:#4a148c
-    classDef attention fill:#fff3e0,stroke:#e65100
-    classDef knowledge fill:#e8f5e8,stroke:#2e7d32
-    classDef prediction fill:#fce4ec,stroke:#ad1457
-    classDef output fill:#f1f8e9,stroke:#558b2f
-
-    class Input_q,Input_r,Tokens input
-    class Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq,Context_Seq_Pos,Value_Seq_Pos embedding
-    class Attn_Input_Context,Attn_Input_Value,Proj_Q,Proj_K,Proj_V,Scores,Weights,Attn_Output_Heads,Attn_Output,AddNorm1,FFN,AddNorm2,Encoder_Input_Context,Encoder_Input_Value,Encoder_Output attention
-    class Pred_Input_h knowledge
-    class Pred_Input_s,Concat,MLP,Sigmoid prediction
-    class Predictions output
-```
-
-#### Dynamic Value Stream Architecture
-
-This version of the architecture modifies the encoder block to create a dynamic value stream, where the value representations are updated at each layer. The nodes highlighted in green represent the changes from the original architecture.
+This version of the architecture implements the To-Be requirements with a encoder-only attention-based architecture. It modifies the traditional structure of the encoder block, creating a dynamic value stream, where the value representations are updated at each layer. The nodes highlighted in green represent the changes from the original encoder-only Transformer architecture.
 
 ```mermaid
 graph TD
@@ -671,17 +536,42 @@ graph TD
         Encoder_Input_Value["Input: Value Sequence<br/>[B, L, D]"]
 
         subgraph "Attention Mechanism"
+            direction TB
+            
+            Attn_Input_Context["Input: Context<br/>[B, L, D]"]
+            Attn_Input_Value["Input: Value<br/>[B, L, D]"]
+
+            Proj_Q["Q = Linear(Context)<br/>[B, H, L, Dk]"]
+            Proj_K["K = Linear(Context)<br/>[B, H, L, Dk]"]
+            Proj_V["V = Linear(Value)<br/>[B, H, L, Dk]"]
+            
+            Attn_Input_Context --> Proj_Q
+            Attn_Input_Context --> Proj_K
+            Attn_Input_Value --> Proj_V
+
+            Scores["Scores = (Q @ K.T) / sqrt(Dk)<br/>[B, H, L, L]"]
+            Proj_Q --> Scores
+            Proj_K --> Scores
+            
+            Weights["Weights = softmax(Scores)<br/>[B, H, L, L]"]
+            Scores --> Weights
+
+            Attn_Output_Heads["Attn Output (Heads)<br/>[B, H, L, Dk]"]
+            Weights --> Attn_Output_Heads
+            Proj_V --> Attn_Output_Heads
+
             Attn_Output["Reshaped Attn Output<br/>[B, L, D]"]
+            Attn_Output_Heads --> Attn_Output
         end
 
-        Encoder_Input_Context -->|"Q, K"| Attn_Output
-        Encoder_Input_Value -->|"V"| Attn_Output
+        Encoder_Input_Context --> Attn_Input_Context
+        Encoder_Input_Value --> Attn_Input_Value
 
         AddNorm_Ctx["Add & Norm (Context)"]
         Attn_Output --> AddNorm_Ctx
         Encoder_Input_Context --"Residual"--> AddNorm_Ctx
 
-        AddNorm_Val["Add & Norm (Value)<br/>**NEW**"]
+        AddNorm_Val["Add & Norm (Value)<br/>"]
         Attn_Output --> AddNorm_Val
         Encoder_Input_Value --"Residual"--> AddNorm_Val
 
@@ -695,7 +585,7 @@ graph TD
         Encoder_Output_Ctx["Output: Context (h)<br/>[B, L, D]"]
         AddNorm2 --> Encoder_Output_Ctx
 
-        Encoder_Output_Val["Output: Value (v)<br/>[B, L, D]<br/>**NEW**"]
+        Encoder_Output_Val["Output: Value (v)<br/>[B, L, D]<br/>"]
         AddNorm_Val --> Encoder_Output_Val
     end
 
@@ -706,10 +596,10 @@ graph TD
         direction TB
         
         Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
-        Pred_Input_v["Input: Value State (v)<br/>[B, L, D]<br/>**NEW**"]
+        Pred_Input_v["Input: Value State (v)<br/>[B, L, D]<br/>"]
         Pred_Input_s["Input: Target Skill (s)<br/>[B, L, D]"]
 
-        Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]<br/>**NEW**"]
+        Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]<br/>"]
         MLP["MLP Head"]
         Sigmoid["Sigmoid"]
         
@@ -741,12 +631,39 @@ graph TD
 
     class Input_q,Input_r,Tokens input
     class Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq,Context_Seq_Pos,Value_Seq_Pos embedding
-    class Attn_Output,AddNorm_Ctx,FFN,AddNorm2,Encoder_Input_Context,Encoder_Input_Value,Encoder_Output_Ctx,Encoder_Output_Val attention
+    class Attn_Input_Context,Attn_Input_Value,Proj_Q,Proj_K,Proj_V,Scores,Weights,Attn_Output_Heads,Attn_Output,AddNorm_Ctx,FFN,AddNorm2,Encoder_Input_Context,Encoder_Input_Value,Encoder_Output_Ctx,Encoder_Output_Val attention
     class Pred_Input_h,Pred_Input_v knowledge
     class Pred_Input_s,Concat,MLP,Sigmoid prediction
     class Predictions output
     class AddNorm_Val,Encoder_Output_Val,Pred_Input_v,Concat changed
 ```
+
+### Why feeding the updated "Value" stream into the prediction head is a good idea
+
+1. It Creates a Richer, More Complete Picture of the Student
+
+    By using both the final context state and the final value state, we provide the prediction head with a more complete picture of the student's situation:
+
+    - Context State (h): Represents the student's accumulated knowledge at a certain point in time. It answers the question: "What does the student know?"
+    - Value State (v): Represents the dynamics or trajectory of the student's learning. It captures the learning gains from recent interactions and answers the question: "How is the student's knowledge changing?"
+    Two students might have the same overall knowledge level (same context state), but one might be on an upward trajectory of learning (high value state), while the other is struggling and making mistakes (low or negative value state). The dynamic value stream allows the model to distinguish between these two scenarios, leading to more nuanced and accurate predictions.
+
+2. It Models Learning as a Dynamic, Context-Aware Process
+
+    Learning isn't static. The understanding gained from an early interaction can be refined or changed by later experiences. The dynamic value stream architecture models this reality:
+
+    - Static Gains vs. Dynamic Gains: In a simpler model, the learning gain from an interaction is a fixed value. In this dynamic architecture, the "value" (gain) from an interaction is updated at each layer of the encoder.
+    - Contextual Refinement: This means the model can adjust the perceived learning gain of a past interaction based on what the student does next. For example, if a student answers a question correctly but then fails on several related questions, the model can dynamically reduce the "value" or "gain" it attributed to that first correct answer.
+
+3. It Enhances Interpretability
+
+    A key goal of the project is to build an interpretable model. The dynamic value stream is a significant step in that direction:
+
+    - Explicit Representation of Gains: The model learns an explicit representation of learning gains in the value stream. **We can inspect the value_seq vectors to see how the model quantifies the learning from each interaction**.
+    - Traceable Knowledge Evolution: **We can trace how the model's assessment of a student's knowledge and learning gains evolves as they move through the encoder stack**. This provides a powerful tool for understanding the model's reasoning.
+
+    In summary, the dynamic value stream architecture is a good idea because it moves beyond a static view of knowledge and embraces a more realistic, dynamic model of learning. It provides the prediction head with richer information, allows for more context-aware modeling of learning gains, and enhances the overall interpretability of the model, which are all central goals of the project. 
+
 
 ### Workflow
 
@@ -754,25 +671,45 @@ This diagram illustrates the end-to-end training workflow initiated by the `pyth
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant wandb_gainakt2_train.py
     participant wandb_train.py
     participant train_model.py
     participant GainAKT2
+    participant EncoderBlock
+    participant MultiHeadAttention
 
-    User->>wandb_gainakt2_train.py: python wandb_gainakt2_train.py --args
-    wandb_gainakt2_train.py->>wandb_train.py: main(params)
-    wandb_train.py->>wandb_train.py: Initialize wandb
-    wandb_train.py->>wandb_train.py: Load Dataset
-    wandb_train.py->>train_model.py: train(model, data, args)
-    train_model.py->>GainAKT2: __init__(...)
+    wandb_train.py->>train_model.py: train(model, data, args) - Start Training
+    train_model.py->>GainAKT2: __init__(...) - Initialize Model
     loop For each epoch
         train_model.py->>train_model.py: Get batch
-        train_model.py->>GainAKT2: forward(batch)
+        train_model.py->>GainAKT2: forward(q, r) - Process Batch
+        activate GainAKT2
+        GainAKT2->>GainAKT2: interaction_tokens = q + r * num_c - Create Interaction Tokens
+        GainAKT2->>GainAKT2: context_embedding(tokens), value_embedding(tokens) - Get Embeddings
+        GainAKT2->>GainAKT2: pos_embedding(positions) - Get Positional Embeddings
+        loop For each Encoder Block
+            GainAKT2->>EncoderBlock: forward(context_seq, value_seq) - Process through Encoder
+            activate EncoderBlock
+            EncoderBlock->>MultiHeadAttention: forward(context, value) - Attention Mechanism
+            activate MultiHeadAttention
+            MultiHeadAttention->>MultiHeadAttention: self.query_proj, self.key_proj, self.value_proj - Project Q, K, V
+            MultiHeadAttention->>MultiHeadAttention: scores = torch.matmul(Q, K.T) - Calculate Attention Scores
+            MultiHeadAttention->>MultiHeadAttention: F.softmax(scores) - Calculate Attention Weights
+            MultiHeadAttention->>MultiHeadAttention: output = torch.matmul(weights, V) - Apply Attention to V
+            MultiHeadAttention-->>EncoderBlock: attn_output
+            deactivate MultiHeadAttention
+            EncoderBlock->>EncoderBlock: self.norm1_val(value + attn) - Add & Norm (Value)
+            EncoderBlock->>EncoderBlock: self.norm1_ctx(context + attn) - Add & Norm (Context)
+            EncoderBlock->>EncoderBlock: self.ffn(context) - Feed-Forward Network
+            EncoderBlock-->>GainAKT2: new_context_seq, new_value_seq
+            deactivate EncoderBlock
+        end
+        GainAKT2->>GainAKT2: self.concept_embedding(target_concepts) - Get Target Skill Embedding
+        GainAKT2->>GainAKT2: torch.cat([context, value, concept]) - Concatenate for Prediction
+        GainAKT2->>GainAKT2: self.prediction_head(concatenated) - Prediction Head
+        GainAKT2->>GainAKT2: torch.sigmoid(logits) - Final Output
         GainAKT2-->>train_model.py: predictions
-        train_model.py->>train_model.py: Calculate loss
-        train_model.py->>train_model.py: loss.backward()
-        train_model.py->>train_model.py: optimizer.step()
+        deactivate GainAKT2
+        train_model.py->>train_model.py: loss.backward(), optimizer.step() - Backpropagation
     end
     train_model.py-->>wandb_train.py: trained_model
     wandb_train.py->>wandb_train.py: Save model

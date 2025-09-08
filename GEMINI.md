@@ -75,7 +75,7 @@ The code and scripts for existent models in the pykt framework mustn't be change
 - Code documentation should include usage examples with command-line arguments
 - Use markdown format for documentation files
 - Use an academic professional tone, avoiding the use of emojis, exclamations, informal language or marketing jargon.
-- Talk to the user in the second person (you) in documentation. 
+- Use "we" instead of "you" following the academy convention. 
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 
 ### Integration with Project
