@@ -6,11 +6,7 @@ The new model is an encoder-only with self-attention on interaction (S, R) tuple
 
 The fundamental innovation of this approach lies in the reformulation of the attention mechanism to directly compute and aggregate learning gains. It is described in sections below. 
 
-Below we explore in detail two possible directions: 
-- Start Fresh: define architecture requirements and implement them into a standard transformer architecture
-- Use a aseline model as starting point and evolve it to implement the requirements of our novel proposal. 
 
-Finally, we decided to go with the fresh start direction since a first implementaion based on this obtained promising results. We think that none of the baseline available models in pykt framework is simple enough as to support a quick and suitable adaptation. 
 
 
 ## Fresh Starting
@@ -2558,3 +2554,56 @@ GainAKT Compatibility:
 
 **Conclusion**: While DTransformer contains valuable innovations for knowledge tracing, its complex four-block architecture makes it unsuitable as a starting point for GainAKT's single-block design philosophy. The sophisticated features (temporal modeling, knowledge parameters, Rasch integration) are better preserved and selectively integrated into a simpler foundation after the core learning gains concept has been validated. This approach balances innovation potential with development efficiency and architectural consistency.
 
+## Metrics
+
+## simakt.py
+
+```
+Default parameters
+Epoch: 28, validauc: 0.6868, validacc: 0.7475, best epoch: 18, best auc: 0.6868, train loss: 0.529769870185798, emb_type: qid, model: gainsakt, save_dir: saved_model/assist2015_gainsakt_qid_saved_model_42_0_0.2_128_0.001_8_1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+fold    modelname       embtype testauc testacc window_testauc  window_testacc  validauc        validacc        best_epoch
+0       gainsakt        qid     -1      -1      -1      -1      0.686758830678621       0.7475401220449834      18
+end:2025-09-08 06:13:59.018062
+
+```
+
+## simakt2.py (implementation of Option 4)
+
+```
+Default parameters
+Epoch: 3, **validauc: 0.7184, validacc: 0.7507**, best epoch: 3, best auc: 0.7184, train loss: 0.5138106416820177, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+Improved version: 
+Epoch: 3, validauc: 0.7187, validacc: 0.7516, best epoch: 3, best auc: 0.7187, train loss: 0.5138521135311795, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+```
+
+```
+Tuned parameters
+python wandb_gainakt2_train.py \
+    --dataset_name=assist2015 \
+    --use_wandb=0 \
+    --learning_rate=2e-4 \
+    --d_model=256 \
+    --num_encoder_blocks=4 \
+    --d_ff=1024 \
+    --dropout=0.2
+
+Epoch: 1, validauc: 0.6934, validacc: 0.7452, best epoch: 1, best auc: 0.6934, train loss: 0.557500138811338, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+Epoch: 2, validauc: 0.7113, validacc: 0.7494, best epoch: 2, best auc: 0.7113, train loss: 0.5275374122159148, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+
+Epoch: 3, validauc: 0.7182, validacc: 0.7514, best epoch: 3, best auc: 0.7182, train loss: 0.5186076481321434, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+Epoch: 4, validauc: 0.7215, validacc: 0.7527, best epoch: 4, best auc: 0.7215, train loss: 0.5125869734824042, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+
+... 
+
+Epoch: 7, validauc: 0.7224, validacc: 0.7531, best epoch: 5, best auc: 0.7224, train loss: 0.49468506359101283, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+```

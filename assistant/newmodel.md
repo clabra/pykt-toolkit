@@ -1,34 +1,32 @@
-# GainAKT Architecture
+# New Model Architecture
 
-Guidelines for the design and implementation of a new model called GainAKT (Gains-based Attention for Knowledge Tracing). 
+## Introduction
 
-Approach: we start with a As-Is initial architecture for the GainAKT model and evolve it progresively towards a To-Be architecture.  
+We are looking to contribute a new Transformer attention-based model with good balance between performance (competive in terms of AUC with state of the art attention-based models) and interpretability. 
 
-## Requirements for the To-Be Architecture Design 
+We approach interpretability through the lens of causal explanations. The main contribution will be a model that learns the *learning gains* obtained by the student in each interaction in a context-dependent way. The model is able to output not only good predictions but also the progression of the knowledge state of the student along the learning path. 
 
-1. Goal
+The abstract of the paper is as follows: 
 
-To evolve an existent encoder-only Transformer architecture. 
+    Modeling the dynamic evolution of student knowledge states is essential for advancing personalized education. This paper introduces a novel Transformer-based model that leverages attention mechanisms to learn context-aware learning gains, i.e. how each specific interaction contributes to the evolution of the student knowledge state. This allows not only to predict the correctness of responses but also to track the evolution of skills mastery.
 
-Priorities to choose the starting model: 1) only attention-based Transformers from taxonomy.md, 2) architecture similarity to GainAKT (single block preferred), and 3) best performance among compliant models.
+    Our evaluation across multiple educational datasets demonstrates that the proposed model achieves competitive predictive performance compared to state-of-the-art Deep Knowledge Tracing models. More importantly, it offers significantly improved interpretability by explicitly modeling the evolution of knowledge states and the underlying causal mechanisms based on learning gains. This advancement enhances the explainability of predictions, making the model more transparent and actionable for educators and learners.
 
-2. Non-intrusive changes
+    This research contributes to the development of intelligent tutoring systems by enabling accurate and interpretable predictive modeling. It lays the groundwork for open learning models, where students can visualize their learning progress. Additionally, it provides a robust framework for personalized learning design and targeted educational interventions, empowering teachers to monitor student progress, deliver precise feedback, and design courses tailored to individual learning needs.
 
-We look for a non-intrusive approach that takes one model and change it as less as possible to implement the approach and improve performance disrupting existing arquitecture as less as possible.
+## From a As-Is to a To-Be architecture design 
 
-3. Guidelines
-
-We are creating a new model to contribute to the pykt framewotk. Follow guidelines in contribute.pdf and quickstart.pdf when it comes to create model code and evaluation scripts that follow pykt standards.   
+We start with a As-Is initial architecture and evolve it progresively towards a To-Be architecture.  
 
 
-## The Approach
+## The Gains Approach
 
 The new model is an encoder-only with self-attention on interaction (S, R) tuples to learn tuple learning gains. 
 
 The fundamental innovation of this approach lies in the reformulation of the attention mechanism to directly compute and aggregate learning gains. It is described in sections below. 
 
 
-## Architectural Design
+## Architectural Design Requirements
 
 ### Core Innovation
 
@@ -189,6 +187,49 @@ Where:
 - **No External Memory**: No need for student encoding banks or similarity computations
 - **Scalable**: Standard attention complexity O(n^2) with established optimization techniques
 
+## Key Innovation
+
+The fundamental innovation in this approach lies in the **semantic redefinition of attention mechanism components** to directly model educational learning processes:
+
+### Semantic Component Redefinition
+
+- **Traditional Attention**: Abstract importance weighting between sequence elements
+- **SimAKT Innovation**: Direct computation and aggregation of concrete learning gains from educational interactions
+
+### Novel Value Semantics
+
+- **Query (Q)**: Represents current learning context and knowledge state requirements
+- **Key (K)**: Represents historical interaction patterns and skill-based similarities  
+- **Value (V)**: **Explicitly models learning gains** induced by specific (S,R) interactions
+
+### Emergent Skill Similarity Learning
+
+- No hand-crafted similarity metrics required
+- Model learns to identify related skills through Q·K^T matching during training
+- Attention weights naturally emerge to represent educational relevance between interactions
+
+### Interpretability Benefits
+
+This architectural design provides interpretability for knowledge tracing models through multiple complementary mechanisms:
+
+#### Direct Learning Gain Interpretation
+
+- **Traceable Knowledge States**: Each component of the knowledge state vector can be directly attributed to specific learning gains from identifiable interactions
+- **Educational Semantics**: Values in the attention mechanism have clear educational meaning (actual learning increments)
+- **Quantifiable Impact**: The contribution of each past interaction to current predictions is explicitly computed and interpretable
+
+#### Causal Explanation Capabilities
+
+- **Interaction-Level Causality**: Model can explain which specific past interactions (S,R pairs) most influenced a prediction
+- **Skill Transfer Visualization**: Attention weights reveal how learning in one skill affects performance in related skills
+- **Learning Trajectory Analysis**: Complete learning progression can be reconstructed through the sequence of aggregated gains
+
+#### Educational Alignment
+
+- **Q-matrix Compatibility**: Natural integration with established knowledge component frameworks
+- **G-matrix Learning**: Learned gains approximate and extend traditional G-matrix concepts with data-driven insights
+- **Practitioner-Friendly**: Outputs align with familiar educational concepts (skills, mastery, learning gains)
+
 ## Theoretical Foundation
 
 ### Learning Gain Theory
@@ -216,7 +257,43 @@ This approach naturally aligns with established educational frameworks:
 - **G-matrix Learning**: The learned values (learning gains) approximate the G-matrix entries, but are learned from data rather than pre-specified
 - **Dynamic G-matrix**: Unlike static G-matrices, learned gains can capture individual differences and contextual effects
 
-## Requirements for a GainKT Architectural Diagram
+## Expected Contributions
+
+### 1. Methodological Contributions
+
+- Novel attention mechanism semantics for knowledge tracing
+- Direct modeling of learning gains in neural architectures
+- Unified framework for prediction and interpretation
+
+### 2. Educational Contributions
+
+- Interpretable knowledge state evolution modeling
+- Causal explanations for learning predictions
+- Alignment with established educational theory
+
+### 3. Technical Contributions
+
+- Efficient implementation of learning gain aggregation
+- Scalable architecture for large educational datasets
+- Framework for educational AI interpretability
+
+## Comparison with Previous Approaches
+
+### Versus Encoder-only with Inter-student Head
+
+- **Simplicity**: No need for external student encoding or memory banks
+- **End-to-end Learning**: All similarity learning happens through backpropagation
+- **Interpretability**: Direct learning gain interpretation vs. abstract similarity scores
+
+### Versus Decoder-only Trajectory Matching
+
+- **Complexity**: Simpler architecture with clearer educational semantics
+- **Alignment**: Better aligned with initial paper proposal focusing on learning gains
+- **Implementation**: More straightforward implementation path
+
+This encoder-only approach with learning gains represents a promising direction for SimAKT that balances predictive performance with interpretability requirements, providing a solid foundation for both research contributions and practical educational applications.
+
+## To-Be Architectural Diagram Requirements
 
 ```mermaid
 flowchart TD
@@ -292,51 +369,10 @@ flowchart TD
     
 ```
 
-## Key Innovation
-
-The fundamental innovation in this SimAKT approach lies in the **semantic redefinition of attention mechanism components** to directly model educational learning processes:
-
-### Semantic Component Redefinition
-
-- **Traditional Attention**: Abstract importance weighting between sequence elements
-- **SimAKT Innovation**: Direct computation and aggregation of concrete learning gains from educational interactions
-
-### Novel Value Semantics
-
-- **Query (Q)**: Represents current learning context and knowledge state requirements
-- **Key (K)**: Represents historical interaction patterns and skill-based similarities  
-- **Value (V)**: **Explicitly models learning gains** induced by specific (S,R) interactions
-
-### Emergent Skill Similarity Learning
-
-- No hand-crafted similarity metrics required
-- Model learns to identify related skills through Q·K^T matching during training
-- Attention weights naturally emerge to represent educational relevance between interactions
-
-## Interpretability Benefits
-
-This architectural design provides interpretability for knowledge tracing models through multiple complementary mechanisms:
-
-### Direct Learning Gain Interpretation
-
-- **Traceable Knowledge States**: Each component of the knowledge state vector can be directly attributed to specific learning gains from identifiable interactions
-- **Educational Semantics**: Values in the attention mechanism have clear educational meaning (actual learning increments)
-- **Quantifiable Impact**: The contribution of each past interaction to current predictions is explicitly computed and interpretable
-
-### Causal Explanation Capabilities
-
-- **Interaction-Level Causality**: Model can explain which specific past interactions (S,R pairs) most influenced a prediction
-- **Skill Transfer Visualization**: Attention weights reveal how learning in one skill affects performance in related skills
-- **Learning Trajectory Analysis**: Complete learning progression can be reconstructed through the sequence of aggregated gains
-
-### Educational Alignment
-
-- **Q-matrix Compatibility**: Natural integration with established knowledge component frameworks
-- **G-matrix Learning**: Learned gains approximate and extend traditional G-matrix concepts with data-driven insights
-- **Practitioner-Friendly**: Outputs align with familiar educational concepts (skills, mastery, learning gains)
-
 
 ## Typical Encoder
+
+The typical architecture of a standard, generic, encoder-only Transformer is illustrated in the diagram below. 
 
 ```mermaid
 graph TD
@@ -385,90 +421,7 @@ graph TD
     K --> L[Output: Sequence of Contextualized Embeddings]
 ```
 
-## Expected Contributions
 
-### 1. Methodological Contributions
-
-- Novel attention mechanism semantics for knowledge tracing
-- Direct modeling of learning gains in neural architectures
-- Unified framework for prediction and interpretation
-
-### 2. Educational Contributions
-
-- Interpretable knowledge state evolution modeling
-- Causal explanations for learning predictions
-- Alignment with established educational theory
-
-### 3. Technical Contributions
-
-- Efficient implementation of learning gain aggregation
-- Scalable architecture for large educational datasets
-- Framework for educational AI interpretability
-
-## Comparison with Previous Approaches
-
-### Versus Encoder-only with Inter-student Head
-
-- **Simplicity**: No need for external student encoding or memory banks
-- **End-to-end Learning**: All similarity learning happens through backpropagation
-- **Interpretability**: Direct learning gain interpretation vs. abstract similarity scores
-
-### Versus Decoder-only Trajectory Matching
-
-- **Complexity**: Simpler architecture with clearer educational semantics
-- **Alignment**: Better aligned with initial paper proposal focusing on learning gains
-- **Implementation**: More straightforward implementation path
-
-This encoder-only approach with learning gains represents a promising direction for SimAKT that balances predictive performance with interpretability requirements, providing a solid foundation for both research contributions and practical educational applications.
-
-
-
-
-
-
-## Metrics
-
-## simakt.py
-
-```
-Default parameters
-Epoch: 28, validauc: 0.6868, validacc: 0.7475, best epoch: 18, best auc: 0.6868, train loss: 0.529769870185798, emb_type: qid, model: gainsakt, save_dir: saved_model/assist2015_gainsakt_qid_saved_model_42_0_0.2_128_0.001_8_1_200_0_1
-            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
-fold    modelname       embtype testauc testacc window_testauc  window_testacc  validauc        validacc        best_epoch
-0       gainsakt        qid     -1      -1      -1      -1      0.686758830678621       0.7475401220449834      18
-end:2025-09-08 06:13:59.018062
-```
-
-## simakt2.py
-
-```
-Default parameters
-Epoch: 3, **validauc: 0.7184, validacc: 0.7507**, best epoch: 3, best auc: 0.7184, train loss: 0.5138106416820177, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_128_0.001_8_2_256_0.1_200_0_1
-            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
-```
-
-```
-Tuned parameters
-python wandb_gainakt2_train.py \
-    --dataset_name=assist2015 \
-    --use_wandb=0 \
-    --learning_rate=2e-4 \
-    --d_model=256 \
-    --num_encoder_blocks=4 \
-    --d_ff=1024 \
-    --dropout=0.2
-
-Epoch: 1, validauc: 0.6934, validacc: 0.7452, best epoch: 1, best auc: 0.6934, train loss: 0.557500138811338, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
-            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
-
-Epoch: 2, validauc: 0.7113, validacc: 0.7494, best epoch: 2, best auc: 0.7113, train loss: 0.5275374122159148, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
-
-Epoch: 3, validauc: 0.7182, validacc: 0.7514, best epoch: 3, best auc: 0.7182, train loss: 0.5186076481321434, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
-            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
-
-Epoch: 4, validauc: 0.7215, validacc: 0.7527, best epoch: 4, best auc: 0.7215, train loss: 0.5125869734824042, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
-            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
-```
 
 ## Baseline models
 ```
@@ -488,7 +441,7 @@ Other benchmarks:
 |-------|---------|----------|----------|-----------|-----------|------------|--------|
 | **GainSAKT** | ASSIST2015 | -1 | -1 | 0.6868 | 0.7475 | 18 | Early implementation |
 | **GainAKT2** | ASSIST2015 | -1 | -1 | 0.7184 | 0.7507 | 3 | Default parameters (quick) |
-| **GainAKT2** | ASSIST2015 | -1 | -1 | **0.7215** | **0.7527** | 3 | Tuned parameters (slow) |
+| **GainAKT2** | ASSIST2015 | -1 | -1 | **0.7224** | **0.7531** | 3 | Tuned parameters (slow) |
 
 | Model | AS2009 | AS2015 | AL2005 | BD2006 | NIPS34 | Notes |
 |-------|--------|--------|--------|--------|--------|--------|
@@ -516,3 +469,183 @@ Other benchmarks:
 
 The results show that the learning gains approach is viable and improving, with GainAKT2 demonstrating competitive performance against established baselines while maintaining the interpretability advantages of explicit learning gain modeling.
 
+## Architecture Design Decission
+
+We have explored in detail two possible directions: 
+- Start Fresh: define architecture requirements and implement them using a standard transformer architecture that complies with To-Be requirements. 
+- Use a baseline model as starting point and evolve it to implement the requirements of our novel proposal. 
+
+Finally, we decided to go with the fresh start direction since a first implementaion based on this obtained promising results. We think that none of the baseline available models in pykt framework is simple enough as to support a quick and suitable adaptation. 
+
+### Architecture Design
+
+We have explored the options described in gainakt_phase1_alternatives_gainscomputation.md. Finally we decided to choose the one described in the "Option 4" section. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
+
+```mermaid
+graph TD
+    subgraph "Input Layer"
+        direction LR
+        Input_q["Input Questions (q)<br/>Shape: [B, L]"]
+        Input_r["Input Responses (r)<br/>Shape: [B, L]"]
+    end
+
+    subgraph "Tokenization & Embedding"
+        direction TB
+        
+        Tokens["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]
+        
+        Context_Emb["Context Embedding Table"]
+        Value_Emb["Value Embedding Table"]
+        Skill_Emb["Skill Embedding Table"]
+
+        Tokens --> Context_Emb
+        Tokens --> Value_Emb
+        Input_q --> Skill_Emb
+
+        Context_Seq["Context Sequence<br/>Shape: [B, L, D]"]
+        Value_Seq["Value Sequence<br/>Shape: [B, L, D]"]
+        Pos_Emb["Positional Embeddings<br/>Shape: [B, L, D]"]
+        
+        Context_Emb --> Context_Seq
+        Value_Emb --> Value_Seq
+
+        Context_Seq_Pos["Context + Positional<br/>Shape: [B, L, D]"]
+        Value_Seq_Pos["Value + Positional<br/>Shape: [B, L, D]"]
+        
+        Context_Seq --"Add"--> Context_Seq_Pos
+        Pos_Emb --"Add"--> Context_Seq_Pos
+        Value_Seq --"Add"--> Value_Seq_Pos
+        Pos_Emb --"Add"--> Value_Seq_Pos
+    end
+
+    Input_q --> Tokens
+    Input_r --> Tokens
+
+    subgraph "Encoder (N Blocks)"
+        direction TB
+        
+        Encoder_Input_Context["Input: Context Sequence<br/>[B, L, D]"]
+        Encoder_Input_Value["Input: Value Sequence<br/>[B, L, D]"]
+
+        subgraph "Attention Mechanism"
+            direction TB
+            
+            Attn_Input_Context["Input: Context<br/>[B, L, D]"]
+            Attn_Input_Value["Input: Value<br/>[B, L, D]"]
+
+            Proj_Q["Q = Linear(Context)<br/>[B, H, L, Dk]"]
+            Proj_K["K = Linear(Context)<br/>[B, H, L, Dk]"]
+            Proj_V["V = Linear(Value)<br/>[B, H, L, Dk]"]
+            
+            Attn_Input_Context --> Proj_Q
+            Attn_Input_Context --> Proj_K
+            Attn_Input_Value --> Proj_V
+
+            Scores["Scores = (Q @ K.T) / sqrt(Dk)<br/>[B, H, L, L]"]
+            Proj_Q --> Scores
+            Proj_K --> Scores
+            
+            Weights["Weights = softmax(Scores)<br/>[B, H, L, L]"]
+            Scores --> Weights
+
+            Attn_Output_Heads["Attn Output (Heads)<br/>[B, H, L, Dk]"]
+            Weights --> Attn_Output_Heads
+            Proj_V --> Attn_Output_Heads
+
+            Attn_Output["Reshaped Attn Output<br/>[B, L, D]"]
+            Attn_Output_Heads --> Attn_Output
+        end
+
+        Encoder_Input_Context --> Attn_Input_Context
+        Encoder_Input_Value --> Attn_Input_Value
+
+        subgraph "Add & Norm, FFN"
+            AddNorm1["Add & Norm"]
+            Attn_Output --> AddNorm1
+            Encoder_Input_Context --"Residual"--> AddNorm1
+
+            FFN["Feed-Forward Network"]
+            AddNorm1 --> FFN
+            
+            AddNorm2["Add & Norm"]
+            FFN --> AddNorm2
+            AddNorm1 --"Residual"--> AddNorm2
+        end
+        
+        Encoder_Output["Output: Knowledge State (h)<br/>[B, L, D]"]
+        AddNorm2 --> Encoder_Output
+    end
+
+    Context_Seq_Pos --> Encoder_Input_Context
+    Value_Seq_Pos --> Encoder_Input_Value
+
+    subgraph "Prediction Head"
+        direction TB
+        
+        Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
+        Pred_Input_s["Input: Target Skill<br/>[B, L, D]"]
+
+        Concat["Concatenate<br/>[h, s]<br/>[B, L, 2*D]"]
+        MLP["MLP Head"]
+        Sigmoid["Sigmoid"]
+        
+        Pred_Input_h --> Concat
+        Pred_Input_s --> Concat
+        Concat --> MLP
+        MLP --> Sigmoid
+    end
+    
+    Encoder_Output --> Pred_Input_h
+    Skill_Emb --"Lookup"--> Pred_Input_s
+
+    subgraph "Final Output"
+        direction LR
+        Predictions["Predictions<br/>[B, L]"]
+    end
+
+    Sigmoid --> Predictions
+
+    classDef input fill:#e1f5fe,stroke:#01579b
+    classDef embedding fill:#f3e5f5,stroke:#4a148c
+    classDef attention fill:#fff3e0,stroke:#e65100
+    classDef knowledge fill:#e8f5e8,stroke:#2e7d32
+    classDef prediction fill:#fce4ec,stroke:#ad1457
+    classDef output fill:#f1f8e9,stroke:#558b2f
+
+    class Input_q,Input_r,Tokens input
+    class Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq,Context_Seq_Pos,Value_Seq_Pos embedding
+    class Attn_Input_Context,Attn_Input_Value,Proj_Q,Proj_K,Proj_V,Scores,Weights,Attn_Output_Heads,Attn_Output,AddNorm1,FFN,AddNorm2,Encoder_Input_Context,Encoder_Input_Value,Encoder_Output attention
+    class Pred_Input_h knowledge
+    class Pred_Input_s,Concat,MLP,Sigmoid prediction
+    class Predictions output
+```
+
+### Workflow
+
+This diagram illustrates the end-to-end training workflow initiated by the `python examples/wandb_gainakt2_train.py` command.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant wandb_gainakt2_train.py
+    participant wandb_train.py
+    participant train_model.py
+    participant GainAKT2
+
+    User->>wandb_gainakt2_train.py: python wandb_gainakt2_train.py --args
+    wandb_gainakt2_train.py->>wandb_train.py: main(params)
+    wandb_train.py->>wandb_train.py: Initialize wandb
+    wandb_train.py->>wandb_train.py: Load Dataset
+    wandb_train.py->>train_model.py: train(model, data, args)
+    train_model.py->>GainAKT2: __init__(...)
+    loop For each epoch
+        train_model.py->>train_model.py: Get batch
+        train_model.py->>GainAKT2: forward(batch)
+        GainAKT2-->>train_model.py: predictions
+        train_model.py->>train_model.py: Calculate loss
+        train_model.py->>train_model.py: loss.backward()
+        train_model.py->>train_model.py: optimizer.step()
+    end
+    train_model.py-->>wandb_train.py: trained_model
+    wandb_train.py->>wandb_train.py: Save model
+```

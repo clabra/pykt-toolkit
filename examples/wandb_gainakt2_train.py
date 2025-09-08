@@ -1,13 +1,21 @@
 """
-Test this parameters combination to try to improve AUC: 
-python wandb_gainakt2_train.py \
-    --dataset_name=assist2015 \
-    --use_wandb=0 \
-    --learning_rate=2e-4 \
-    --d_model=256 \
-    --num_encoder_blocks=4 \
-    --d_ff=1024 \
-    --dropout=0.2
+Train the GainAKT2 model using the generic training script.
+
+This script is the entry point for training the GainAKT2 model. It configures the
+hyperparameters and passes them to the main training function in `wandb_train.py`.
+
+Example of how to run this script:
+
+.. code-block:: bash
+
+    python examples/wandb_gainakt2_train.py \
+        --dataset_name=assist2015 \
+        --use_wandb=0 \
+        --learning_rate=2e-4 \
+        --d_model=256 \
+        --num_encoder_blocks=4 \
+        --d_ff=1024 \
+        --dropout=0.2
 """
 
 import argparse
