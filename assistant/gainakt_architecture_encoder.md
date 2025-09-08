@@ -1,6 +1,6 @@
 # GainKT Architectural Diagram - Exploration of Alternative Proposals
 
-## The Approach - Gains Computation
+## The Approach - Learning Gains
 
 The new model is an encoder-only with self-attention on interaction (S, R) tuples to learn tuple learning gains. 
 
@@ -2652,5 +2652,28 @@ ts.shape: (102749,), ps.shape: (102749,)
 Epoch: 7, validauc: 0.7213, validacc: 0.7525, best epoch: 4, best auc: 0.7213, train loss: 0.49434257880110116, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
             testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
 
+Dynamic version: 
 
+Epoch: 1, validauc: 0.6976, validacc: 0.7458, best epoch: 1, best auc: 0.6976, train loss: 0.5524171897023876, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 2, validauc: 0.7119, validacc: 0.7492, best epoch: 2, best auc: 0.7119, train loss: 0.52524950014041, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 3, validauc: 0.718, validacc: 0.7514, best epoch: 3, best auc: 0.718, train loss: 0.5171446064733052, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 4, validauc: 0.7217, validacc: 0.7522, best epoch: 4, best auc: 0.7217, train loss: 0.5112726707379149, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 5, validauc: 0.7229, validacc: 0.7528, best epoch: 5, best auc: 0.7229, train loss: 0.506417214619935, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 6, validauc: 0.7229, validacc: 0.7528, best epoch: 5, best auc: 0.7229, train loss: 0.501730393937935, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+ts.shape: (102749,), ps.shape: (102749,)
+Epoch: 7, validauc: 0.7229, validacc: 0.7528, best epoch: 5, best auc: 0.7229, train loss: 0.49676175284018625, emb_type: qid, model: gainakt2, save_dir: saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_1024_0.2_200_0_1
+            testauc: -1, testacc: -1, window_testauc: -1, window_testacc: -1
+            
 ```
+

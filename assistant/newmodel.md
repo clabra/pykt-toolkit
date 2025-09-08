@@ -714,3 +714,261 @@ sequenceDiagram
     train_model.py-->>wandb_train.py: trained_model
     wandb_train.py->>wandb_train.py: Save model
 ```
+
+### Towards Causal Explainability
+
+The main novel contribution of our model, and the core of the paper, is to provide causal explainability through exposing the learning gains associated to each interaction -i.e to each (S, R) tuple in the input sequence-. 
+
+To this end, we look for: 
+
+- Get the learning gains for each interaction or time step
+- Get the updated knowledge state of the student at each step. The knowledge state is conformed by a set of knowledge components whose values are incremented by knowledge adquistion produced by practice, i.e by interaction with learning material. Each student's knowledge component is a latent factor associated to a concept or skill. One interaction always has a concept or skill associated (see Q-matrix). Depending of the dataset, the interaction can have optionally also a problem id, usually denoted as pid. 
+
+### Using PyTorch Hooks for Post-Hoc Analysis
+
+To capture the intermediate knowledge states and learning gains without modifying the model's `forward` signature, we can use PyTorch's forward hooks. A hook is a function that gets executed when a module's `forward` method is called. This allows us to "peek" inside the model during execution.
+
+Here is a simple implementation of a class that manages the hooks and captures the activations:
+
+```python
+import torch
+import torch.nn as nn
+from collections import OrderedDict
+
+class ActivationExtractor:
+    """
+    A class to capture the output of specified modules in a PyTorch model.
+
+    Usage:
+        # Assuming 'model' is an instance of GainAKT2
+        module_names = [f"encoder_blocks.{i}" for i in range(model.num_encoder_blocks)]
+        extractor = ActivationExtractor(model, module_names)
+        
+        # Run the model
+        output = model(q_batch, r_batch)
+        
+        # Get the captured activations
+        activations = extractor.get_activations()
+        
+        # Don't forget to remove the hooks when you're done
+        extractor.remove_hooks()
+    """
+    def __init__(self, model: nn.Module, module_names: list[str]):
+        self.model = model
+        self.module_names = module_names
+        self.activations = OrderedDict()
+        self.hooks = []
+        self._register_hooks()
+
+    def _register_hooks(self):
+        for name, module in self.model.named_modules():
+            if name in self.module_names:
+                self.hooks.append(
+                    module.register_forward_hook(self._create_hook(name))
+                )
+
+    def _create_hook(self, name: str):
+        def hook(module, input, output):
+            # The output of an EncoderBlock is a tuple (context_seq, value_seq)
+            self.activations[name] = output
+        return hook
+
+    def get_activations(self) -> OrderedDict:
+        """Returns the captured activations."""
+        return self.activations
+
+    def remove_hooks(self):
+        """Remove all registered hooks."""
+        for hook in self.hooks:
+            hook.remove()
+```
+
+### Data Representation: Knowledge States & Learning Gains
+
+The **Knowledge State** represents the student's estimated knowledge at each step of the learning sequence.
+
+*   **Source:** This is the `context_seq` (the first element of the tuple) returned by each `EncoderBlock`.
+*   **Format:** A tensor of shape `[batch_size, seq_len, d_model]`.
+*   **Interpretation:**
+    *   The tensor `activations['encoder_blocks.0'][0]` would give you the knowledge states for all students in the batch, at all time steps, as computed by the *first* encoder block.
+    *   The vector `activations['encoder_blocks.0'][0][i, j, :]` is the **knowledge state vector** for the `i`-th student after their `j`-th interaction.
+    *   Each of the `d_model` dimensions in this vector is a learned feature representing an aspect of the student's knowledge. While not directly tied to a single skill, the vector as a whole is a rich representation of the student's understanding.
+
+The **Learning Gains** represent the impact of each interaction on the student's knowledge state.
+
+*   **Source:** This is the `value_seq` (the second element of the tuple) returned by each `EncoderBlock`.
+*   **Format:** A tensor of shape `[batch_size, seq_len, d_model]`.
+*   **Interpretation:**
+    *   The tensor `activations['encoder_blocks.0'][1]` would give you the learning gains for all students, at all time steps, as refined by the *first* encoder block.
+    *   The vector `activations['encoder_blocks.0'][1][i, j, :]` is the **learning gain vector** for the `i`-th student from their `j`-th interaction.
+    *   The magnitude and direction of this vector indicate the model's estimate of how much and in what way the student's knowledge state changed as a result of that interaction. A larger magnitude suggests a greater impact.
+
+### Inferring Individual Skill Mastery Levels
+
+#### The Problem: From Latent Space to Specific Skills
+
+The model's internal **knowledge state** (`context_seq`) is a rich, `d_model`-dimensional vector that represents the student's overall understanding. However, these dimensions are "latent," meaning they don't directly correspond one-to-one with the specific skills (e.g., "Algebra," "Geometry") defined in the dataset. The challenge is to translate this holistic, latent representation into an interpretable, per-skill mastery level.
+
+#### Proposed Approaches
+
+Here are two approaches to bridge this gap:
+
+##### Approach 1: "Probing" the Knowledge State (No Architectural Change)
+
+This method cleverly uses the existing prediction head to infer skill mastery without any modifications to the model's architecture.
+
+*   **How It Works:** The prediction head takes a knowledge state (`h`) and a target skill (`s`) to predict performance. We can leverage this by feeding the model the student's current knowledge state (`h_t`) and systematically providing the embedding for *every skill we want to query*. The resulting prediction can be interpreted as the model's belief about the student's mastery of that specific skill at that moment.
+*   **Pros:**
+    *   Requires no changes to the model architecture.
+    *   Provides an intuitive way to query the model's internal state.
+*   **Cons:**
+    *   Can be computationally slow, as it requires a separate forward pass through the prediction head for each skill being probed.
+
+##### Approach 2: "Skill Mastery" Projection Head (Principled, Architectural Approach)
+
+This is a more direct and efficient method, but it requires a small modification to the model's architecture.
+
+*   **How It Works:** We add a new linear layer to the `GainAKT2` model. This "projection head" takes the `d_model`-dimensional knowledge state vector as input and projects it down to a `num_skills`-dimensional vector. A `sigmoid` activation is then applied to this output, resulting in a vector where each element is the mastery probability for a specific skill.
+*   **Pros:**
+    *   **Explicit and Efficient:** Directly computes mastery levels for all skills in a single pass.
+    *   **Highly Interpretable:** The output is designed from the ground up to represent per-skill mastery.
+*   **Cons:**
+    *   **Requires Architectural Change:** You need to add a new layer to the model.
+    *   **Training Challenge:** This new head needs to be trained effectively, which might require a carefully designed auxiliary loss function to ensure it learns meaningful mastery representations.
+
+#### Recommended Steps
+
+To move forward, we propose the following two-step plan:
+
+1.  **Step 1: Implement and Evaluate the "Probing" Approach.** Start by implementing "Approach 1". This will serve as a valuable baseline and will help determine if the necessary skill-specific information is already present in the model's latent knowledge state.
+2.  **Step 2: Implement and Compare the "Projection Head" Approach.** After analyzing the results from the probing method, implement "Approach 2". This will allow for a direct comparison of the two methods in terms of both performance and the quality of the interpretability outputs. This comparison will be a key contribution to the project.
+
+### Inferring Per-Interaction Learning Gains
+
+#### How to Access Per-Interaction Learning Gains
+
+You can get the learning gain for each interaction using the same `ActivationExtractor` we discussed for knowledge states.
+
+1.  **Capture the Activations:** Use the `ActivationExtractor` to capture the output of the `EncoderBlock`s.
+2.  **Extract the Value Stream:** The learning gains are the *second* element in the tuple returned by each block. For example, `activations['encoder_blocks.0'][1]` will give you the learning gain tensors from the first encoder block.
+
+#### Interpreting the Learning Gain Vectors
+
+*   **Format:** The learning gains for a sequence will be a tensor of shape `[batch_size, seq_len, d_model]`.
+*   **Interpretation:** The vector `activations['encoder_blocks.0'][1][i, j, :]` is the **learning gain vector** for the `i`-th student from their `j`-th interaction. This `d_model`-dimensional vector represents the change that this specific interaction imparted on the student's knowledge state.
+
+#### Making the Gains Interpretable
+
+While the `d_model`-dimensional vector is the complete representation of the gain, it's not very human-readable. Here are two ways to make it more interpretable:
+
+##### Calculate the Gain Magnitude (Simple & Effective)
+
+You can calculate the L2 norm (magnitude) of each learning gain vector. This will give you a single scalar value for each interaction, representing the *overall size* of the learning gain.
+
+```python
+# After getting the value_seq from the ActivationExtractor
+# value_seq shape: [batch_size, seq_len, d_model]
+gain_magnitudes = torch.linalg.norm(value_seq, dim=-1)
+# gain_magnitudes shape: [batch_size, seq_len]
+```
+
+This `gain_magnitudes` tensor will show you exactly which interactions the model thinks are the most impactful.
+
+##### Project Gains onto Skill Space (Advanced & Powerful)
+
+Similar to the idea of a projection head for the knowledge state, you could create a projection head for the learning gains. This would be a linear layer that projects the `d_model`-dimensional gain vector onto the `num_skills`-dimensional space.
+
+```
+gain_vector (d_model) -> Linear(d_model, num_skills) -> per_skill_gain_vector (num_skills)
+```
+
+This is extremely powerful for explainability. It would allow to see, for example, how an interaction with an "Algebra" problem not only increases the "Algebra" skill, but might also have a positive (or even negative) effect on related skills like "Geometry" or "Calculus". This would be a direct way to visualize and quantify skill transfer.
+
+
+### Augmenting the Architecture for Interpretability
+
+This section outlines a incremental approach to enhancing the current `GainAKT2` model to improve interpretability and potentially performance. The strategy is to augment the existing architecture with modular, configurable components that allow for systematic experimentation and ablation studies, rather than designing a completely new model from scratch.
+
+#### Guiding Principle: Augment, Don't Replace
+
+The core idea is to add new, optional components to the `GainAKT2` model. These components will be responsible for computing and regularizing explicit skill mastery and learning gain representations, and can be enabled or disabled via configuration flags.
+
+#### Step 1: Add Interpretable "Projection Heads"
+
+This is the central component for making the latent states understandable. We can add two new, lightweight linear layers that "project" the internal latent representations into an explicit, per-skill space. These heads are *only used for calculating auxiliary losses* and do not need to affect the main prediction path of the model, making them perfectly modular.
+
+*   **Mastery Projection Head:**
+    *   **What it is:** A linear layer: `mastery_head = nn.Linear(d_model, num_skills)`.
+    *   **What it does:** Takes the `context_seq` (the knowledge state) from the final encoder block and projects it into a vector where each of the `num_skills` dimensions represents the mastery of a specific skill.
+*   **Gain Projection Head:**
+    *   **What it is:** A linear layer: `gain_head = nn.Linear(d_model, num_skills)`.
+    *   **What it does:** Takes the `value_seq` (the learning gain) from the final encoder block and projects it into a vector where each dimension represents the gain for a specific skill resulting from an interaction.
+
+
+We'll implement these as optional modules in `GainAKT2.__init__`, controlling their creation with flags like `use_mastery_head` and `use_gain_head`.
+
+#### Step 2: Implement Modular Auxiliary Loss Functions
+
+These loss functions will use the outputs of the new projection heads to enforce "Consistency Requirements". They can be added to the main training loss, with their influence controlled by tunable weight hyperparameters (e.g., `alpha`, `beta`).
+
+*   **Non-Negative Gain Loss:**
+    *   **Goal:** Enforce that learning gains are always `>= 0`.
+    *   **How:** After getting the `projected_gains` from the Gain Projection Head, we can apply a loss that penalizes any negative values.
+    *   **Loss Function:** `loss_non_negative = torch.mean(F.relu(-projected_gains))`
+    *   This simple loss is zero for all non-negative values and increases linearly for negative values. This directly encourages the model to produce non-negative gains, which also enforces **monotonicity of mastery**.
+
+*   **Mastery-Performance Consistency Loss:**
+    *   **Goal:** Ensure that the model's internal estimate of skill mastery aligns with its external prediction of performance.
+    *   **How:** For each interaction with skill `s_t`, we take the corresponding projected mastery for that skill, `projected_mastery[:, :, s_t]`, and penalize the model if it deviates from the final prediction for that interaction (to enforce that the model's internal, interpretable representation of "skill mastery" to be consistent with its final, external prediction of "student performance".).
+    *   **Loss Function:** `loss_consistency = MSELoss(projected_mastery_for_s_t, prediction)`
+
+We implement these losses in the training script (`wandb_train.py` or `train_model.py`), with hyperparameters like `consistency_loss_weight` to be set in the configuration, so we can easily turn them on/off and tune their impact.
+
+```
+A more detailed explanation of how the consitency penalty works:
+
+We want the model's internal, interpretable representation of "skill mastery" to be consistent with its final, external prediction of "student performance".
+
+Example: Imagine the model is processing an interaction where a student is answering an "Algebra" question.
+
+The Final Prediction: After the full forward pass, the model outputs a final prediction, let's say 0.9. This means the model is 90% confident the student will answer the Algebra question correctly. This is the model's "external statement".
+
+The Internal Belief: At the same time, we use our new Mastery Projection Head to look at the model's internal knowledge state (context_seq) and get its explicit belief about the student's mastery of all skills. Let's say the projected mastery for "Algebra" is 0.6. This is the model's "internal belief".
+
+The Deviation: We now have two numbers that should be telling the same story, but they are not:
+
+External Statement: 0.9 (Very confident)
+Internal Belief: 0.6 (Moderately confident) The model is being inconsistent. The "deviation" is the difference between these two values (0.9 - 0.6 = 0.3).
+Applying the Penalty: We use a loss function (like Mean Squared Error) to calculate a penalty based on this deviation. consistency_loss = (0.9 - 0.6)^2 = 0.09
+
+This loss is then added to the main prediction loss. During backpropagation, this penalty forces the model to adjust its weights to reduce this inconsistency. It effectively tells the model: "If you are going to predict that the student will get the answer right with 90% probability, then your internal, interpretable representation of their mastery for that skill should also be around 90%."
+
+By penalizing this deviation, we are training the projection head to produce a faithful and honest representation of what the main model has learned about the student's knowledge, making the entire system more interpretable and trustworthy.
+```
+
+
+#### Step 3: Leverage Inferred Knowledge via Gated Injection
+
+This is a more advanced idea for feeding the interpretable knowledge back into the model to potentially improve performance.
+
+*   **Goal:** Allow the model to use its explicit "per-skill mastery" estimate to help make the final prediction.
+*   **How:** We can use a **gating mechanism** to control the flow of this new information. Instead of just concatenating the projected mastery, we multiply it by a learnable gate.
+    1.  Get the `projected_mastery` from the Mastery Projection Head.
+    2.  Feed this into the prediction head, but control its influence with a gate:
+        `final_input = torch.cat([encoded_seq, target_concept_emb, gate * projected_mastery_for_s_t], dim=-1)`
+*   **The Gate:** The `gate` can be a simple learnable parameter or a small neural network. This allows the model to learn *how much* it should rely on its explicit mastery estimate. If the model learns to set the gate to zero, it effectively ignores this information, which is perfect for ablation studies.
+
+
+This is a more experimental idea. We should implement it as a configurable option in `GainAKT2` (e.g., `use_gated_mastery_injection`) and test it after evaluating the impact of the auxiliary losses to see if it improves performance. 
+
+#### Summary of Steps
+
+1.  **Modify `gainakt2.py`:** Add the optional `MasteryProjectionHead` and `GainProjectionHead` modules, controlled by flags.
+2.  **Update the Training Script:** Add the new auxiliary loss functions (`loss_non_negative`, `loss_consistency`) to the main training loop. Make their weights configurable hyperparameters.
+3.  **Run Experiments:**
+    *   Train the baseline `GainAKT2` model.
+    *   Train the model with only the non-negative gain loss.
+    *   Train the model with only the consistency loss.
+    *   Train the model with both losses.
+4.  **Analyze Results:** For each experiment, evaluate not only the AUC/ACC but also the interpretability. For example, check if the projected gains are indeed non-negative and if the projected mastery correlates with student performance.
+5.  **Explore Gated Injection:** Based on the results, implement and test the gated injection mechanism to see if it further improves performance.
