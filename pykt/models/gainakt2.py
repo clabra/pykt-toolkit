@@ -153,7 +153,8 @@ class GainAKT2(nn.Module):
     """
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
-                 d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768):
+                 d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
+                 use_mastery_head=False, use_gain_head=False, non_negative_loss_weight=0.0, consistency_loss_weight=0.0):
         super().__init__()
         self.model_name = "gainakt2"
         self.num_c = num_c
@@ -163,6 +164,10 @@ class GainAKT2(nn.Module):
         self.num_encoder_blocks = num_encoder_blocks
         self.dropout = dropout
         self.emb_type = emb_type
+        self.use_mastery_head = use_mastery_head
+        self.use_gain_head = use_gain_head
+        self.non_negative_loss_weight = non_negative_loss_weight
+        self.consistency_loss_weight = consistency_loss_weight
         
         # The pykt framework uses emb_type to distinguish embedding types.
         # We focus on the "qid" type, which is standard for this project.
@@ -190,6 +195,12 @@ class GainAKT2(nn.Module):
             nn.Linear(d_ff, 1)
         )
 
+        # Optional projection heads for interpretability
+        if self.use_mastery_head:
+            self.mastery_head = nn.Linear(self.d_model, self.num_c)
+        if self.use_gain_head:
+            self.gain_head = nn.Linear(self.d_model, self.num_c)
+
     def forward(self, q, r, qry=None, qtest=False):
         """
         Forward pass for the GainAKT2 model, following PyKT conventions.
@@ -202,19 +213,18 @@ class GainAKT2(nn.Module):
             qry (torch.Tensor, optional): A tensor of query questions for prediction.
                                           If None, `q` is used as the target.
                                           Shape: [batch_size, seq_len]
-            qtest (bool): If True, returns a tuple (predictions, encoded_sequence).
-                          Used for analysis and interpretability.
+            qtest (bool): If True, the output dictionary will include the final context sequence.
         
         Returns:
-            torch.Tensor or tuple: 
-            - If qtest is False, returns prediction probabilities.
-              Shape: [batch_size, seq_len]
-            - If qtest is True, returns a tuple (predictions, encoded_sequence).
+            dict: A dictionary containing the model's outputs, including:
+                - 'predictions': Response probabilities. Shape: [batch_size, seq_len]
+                - 'encoded_seq': Final context sequence (if qtest=True).
+                - 'projected_mastery': Projected mastery vectors (if use_mastery_head=True).
+                - 'projected_gains': Projected gain vectors (if use_gain_head=True).
         """
         batch_size, seq_len = q.size()
         
         # Create interaction tokens by combining question and response IDs.
-        # This is a standard encoding technique in the pykt framework.
         interaction_tokens = q + self.num_c * r
         
         # Determine the target concepts for prediction.
@@ -237,24 +247,29 @@ class GainAKT2(nn.Module):
         value_seq += pos_emb
         
         # 3. Pass sequences through the stack of encoder blocks
-        # Both context and value sequences are updated at each block.
         for block in self.encoder_blocks:
             context_seq, value_seq = block(context_seq, value_seq, mask)
         
         # 4. Prepare inputs for the prediction head
-        # Get the embedding for the target concept
         target_concept_emb = self.concept_embedding(target_concepts)
-        
-        # Concatenate the final knowledge state with the target concept embedding
         concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
         
         # 5. Generate predictions
         logits = self.prediction_head(concatenated)
         predictions = torch.sigmoid(logits.squeeze(-1))
         
-        if not qtest:
-            return predictions
-        else:
-            # For interpretability, we can return the context_seq, value_seq, or both.
-            # Returning context_seq as it represents the primary knowledge state.
-            return predictions, context_seq
+        # 6. Prepare output dictionary
+        output = {'predictions': predictions}
+        if qtest:
+            output['encoded_seq'] = context_seq
+
+        # 7. Compute projected mastery and gains if heads are enabled
+        if self.use_mastery_head:
+            projected_mastery = self.mastery_head(context_seq)
+            output['projected_mastery'] = projected_mastery
+        
+        if self.use_gain_head:
+            projected_gains = self.gain_head(value_seq)
+            output['projected_gains'] = projected_gains
+            
+        return output

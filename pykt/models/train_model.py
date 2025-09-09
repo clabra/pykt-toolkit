@@ -1,6 +1,7 @@
 import os, sys
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn.functional import one_hot, binary_cross_entropy, cross_entropy
 from torch.nn.utils.clip_grad import clip_grad_norm_
 import numpy as np
@@ -13,7 +14,7 @@ import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def cal_loss(model, ys, r, rshft, sm, preloss=[]):
+def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
     model_name = model.model_name
 
     if model_name in ["atdkt", "simplekt", "stablekt", "datakt", "sparsekt", "cskt", "hcgkt"]:
@@ -47,11 +48,27 @@ def cal_loss(model, ys, r, rshft, sm, preloss=[]):
             loss1 = loss1 + model.cl_weight * loss2
         loss =loss1
 
-    elif model_name in ["rkt","dimkt","dkt", "dkt_forget", "dkvmn","deep_irt", "kqn", "sakt", "gainsakt", "gainakt2", "saint", "atkt", "atktfix", "gkt", "skvmn", "hawkes"]:
+    elif model_name in ["rkt","dimkt","dkt", "dkt_forget", "dkvmn","deep_irt", "kqn", "sakt", "gainsakt", "saint", "atkt", "atktfix", "gkt", "skvmn", "hawkes"]:
 
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
         loss = binary_cross_entropy(y.double(), t.double())
+    elif model_name == "gainakt2":
+        output = ys[0]
+        y = torch.masked_select(output['predictions'], sm)
+        t = torch.masked_select(rshft, sm)
+        loss = binary_cross_entropy(y.double(), t.double())
+        if model.use_gain_head and hasattr(model, 'non_negative_loss_weight') and model.non_negative_loss_weight > 0:
+            projected_gains = output['projected_gains']
+            loss_non_negative = torch.mean(F.relu(-projected_gains))
+            loss += model.non_negative_loss_weight * loss_non_negative
+        if model.use_mastery_head and hasattr(model, 'consistency_loss_weight') and model.consistency_loss_weight > 0:
+            projected_mastery = output['projected_mastery']
+            predictions = output['predictions']
+            cshft_expanded = cshft.unsqueeze(-1)
+            projected_mastery_for_s_t = torch.gather(projected_mastery, 2, cshft_expanded.long()).squeeze(-1)
+            loss_consistency = F.mse_loss(torch.masked_select(projected_mastery_for_s_t, sm), y)
+            loss += model.consistency_loss_weight * loss_consistency
     elif model_name == "dkt+":
         y_curr = torch.masked_select(ys[1], sm)
         y_next = torch.masked_select(ys[0], sm)
@@ -211,9 +228,12 @@ def model_forward(model, data, rel=None):
     elif model_name in ["dkvmn","deep_irt", "skvmn"]:
         y = model(cc.long(), cr.long())
         ys.append(y[:,1:])
-    elif model_name in ["kqn", "sakt", "gainsakt", "gainakt2"]:
+    elif model_name in ["kqn", "sakt", "gainsakt"]:
         y = model(c.long(), r.long(), cshft.long())
         ys.append(y)
+    elif model_name in ["gainakt2"]:
+        output = model(c.long(), r.long(), cshft.long())
+        ys.append(output)
     elif model_name in ["saint"]:
         y = model(cq.long(), cc.long(), r.long())
         ys.append(y[:, 1:])
@@ -256,7 +276,7 @@ def model_forward(model, data, rel=None):
         ys.append(y) 
 
     if model_name not in ["atkt", "atktfix"]+que_type_models or model_name in ["lpkt", "rkt"]:
-        loss = cal_loss(model, ys, r, rshft, sm, preloss)
+        loss = cal_loss(model, ys, r, rshft, sm, cshft, preloss)
     if model_name in ["ukt"] and model.use_CL != 0:
         return loss,temp
     return loss

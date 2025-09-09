@@ -38,6 +38,13 @@ if __name__ == "__main__":
     parser.add_argument("--d_ff", type=int, default=256)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--seq_len", type=int, default=200)
+    parser.add_argument("--num_epochs", type=int, default=1)
+
+    # Interpretability enhancements
+    parser.add_argument("--use_gain_head", type=int, default=0)
+    parser.add_argument("--use_mastery_head", type=int, default=0)
+    parser.add_argument("--non_negative_loss_weight", type=float, default=0.0)
+    parser.add_argument("--consistency_loss_weight", type=float, default=0.0)
     
     # Wandb configuration
     parser.add_argument("--use_wandb", type=int, default=1)
