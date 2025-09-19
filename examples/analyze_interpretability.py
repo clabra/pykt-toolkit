@@ -32,27 +32,12 @@ def main(params):
     model_config['use_mastery_head'] = params.get('use_mastery_head', 0)
     model_config['use_gain_head'] = params.get('use_gain_head', 0)
 
-    model = None # Initialize model to None for debugging
-    try:
-        print("Attempting to initialize model...")
-        model = init_model(params["model_name"], model_config, data_config[params["dataset_name"]], params["emb_type"])
-        print(f"Model initialized: {model is not None}")
-        assert model is not None, "Model initialization failed: init_model returned None."
-        
-        print(f"Attempting to load state_dict from: {params['load_model_path']}")
-        net = torch.load(params["load_model_path"], map_location=device)
-        model.load_state_dict(net)
-        print("State dict loaded.")
-        
-        model.to(device)
-        model.eval()
-        print("Model moved to device and set to eval mode.")
-
-    except Exception as e:
-        print(f"Error during model initialization or loading: {e}")
-        import traceback
-        traceback.print_exc()
-        return # Exit if model loading fails
+    model = init_model(params["model_name"], model_config, data_config[params["dataset_name"]], params["emb_type"])
+    assert model is not None, "Model initialization failed: init_model returned None."
+    net = torch.load(params["load_model_path"], map_location=device)
+    model.load_state_dict(net)
+    model.to(device)
+    model.eval()
 
     # Load data
     train_loader, valid_loader = init_dataset4train(params["dataset_name"], params["model_name"], data_config, params["fold"], params["batch_size"])
