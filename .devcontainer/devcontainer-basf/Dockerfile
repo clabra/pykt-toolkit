@@ -6,9 +6,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     software-properties-common \
     gnupg \
-    ca-certificates \
     build-essential \
     curl \
     wget \
@@ -17,28 +17,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsof \
     sudo 
 
+
 # Download the corporate CA certificate
-#RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt --insecure
+RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt --insecure
 
 # Copy the certificate to /usr/local/share/ca-certificates/
-#RUN cp BASF_internal_and_public_ca_bundle.crt /usr/local/share/ca-certificates/
+RUN cp BASF_internal_and_public_ca_bundle.crt /usr/local/share/ca-certificates/
 
 # Update the CA certificates
-#RUN update-ca-certificates
+RUN update-ca-certificates
 
 # Verify certificate installation
-#RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt
+RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt
 
 # Set environment variables for CA certificates
-#ENV REQUESTS_CA_BUNDLE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
-#ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
-#ENV CURL_CA_BUNDLE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
+ENV REQUESTS_CA_BUNDLE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
+ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
+ENV CURL_CA_BUNDLE=/usr/local/share/ca-certificates/BASF_internal_and_public_ca_bundle.crt
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
 
 # Install Google Cloud CLI (required for Gemini)
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
-    apt-get update && \
-    apt-get install -y google-cloud-cli
+#RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/#sources.list.d/google-cloud-sdk.list && \
+#    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
+#    apt-get update && \
+#    apt-get install -y google-cloud-cli
 
 # Install Miniconda
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
@@ -59,10 +64,6 @@ RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkg
 
 # Create a conda environment with Python 3.7.5
 RUN conda create --name=pykt python=3.7.5 -y
-
-# Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs
 
 RUN npm install -g @anthropic-ai/claude-code --force --no-os-check
 
