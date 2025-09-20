@@ -1,56 +1,60 @@
 {
-  "name": "AIC-LocalBASF-Dev-Container",
-  "build": {
-      "dockerfile": "Dockerfile"
-  },
-  "runArgs": [
-      "-v",
-      "/var/run/docker.sock:/var/run/docker.sock"
-  ],
-  "postCreateCommand": "bash -c 'export PATH=/home/vscode/.local/bin:$PATH && source /opt/miniconda/etc/profile.d/conda.sh && conda activate pykt && pip install --no-warn-script-location -e .'",
-  "customizations": {
-      "vscode": {
-          "extensions": [
-            "ms-python.python",
-            "ms-vscode.cpptools",
-            "clemenspeters.format-json",
-            "davidanson.vscode-markdownlint",
-            "george-alisson.html-preview-vscode",
-            "github.copilot",
-            "github.copilot-chat",
-            "mhutchie.git-graph",
-            "likec4.likec4-vscode",
-            "ms-dotnettools.vscode-dotnet-runtime",
-            "ms-python.debugpy",
-            "ms-python.vscode-pylance",
-            "ms-toolsai.jupyter",
-            "ms-toolsai.jupyter-keymap",
-            "ms-toolsai.jupyter-renderers",
-            "ms-toolsai.vscode-ai",
-            "ms-toolsai.vscode-ai-remote",
-            "ms-toolsai.vscode-jupyter-cell-tags",
-            "ms-toolsai.vscode-jupyter-slideshow",
-            "ms-vscode.powershell",
-            "rangav.vscode-thunder-client",
-            "rapidapi.vscode-rapidapi-client",
-            "rapidapi.vscode-services",
-            "waderyan.gitblame",
-            "hediet.vscode-drawio",
-            "pomdtr.excalidraw-editor",
-            "charliermarsh.ruff",
-            "EditorConfig.EditorConfig",
-            "tamasfe.even-better-toml",
-            "redhat.vscode-yaml",
-            "googlecloudtools.cloudcode",
-            "google.geminicodeassist",
-            "ms-python.vscode-python-envs",
-            "Anthropic.claude-code"
-          ]
-      },
-      "settings": {
-          "terminal.integrated.shell.linux": "/bin/bash"
-      }
-  },
-  "forwardPorts": [3000],
-  "remoteUser": "vscode"
+    "name": "PyKT Toolkit CPU",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
+    "runArgs": [
+        "--shm-size=2g"
+    ],
+    "containerEnv": {
+        "NVIDIA_VISIBLE_DEVICES": "",
+        "CUDA_VISIBLE_DEVICES": ""
+    },
+    "postCreateCommand": "bash -c 'export PATH=/home/vscode/.pykt-env/bin:$PATH && source /home/vscode/.pykt-env/bin/activate && (pip install --no-warn-script-location --no-build-isolation -e . || (echo \"Fallback: using modern build tools\" && python -m build --wheel --no-isolation && pip install dist/*.whl)) && echo \"pykt-toolkit installation completed successfully\"'",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-vscode.cpptools",
+                "clemenspeters.format-json",
+                "davidanson.vscode-markdownlint",
+                "george-alisson.html-preview-vscode",
+                "github.copilot",
+                "github.copilot-chat",
+                "mhutchie.git-graph",
+                "likec4.likec4-vscode",
+                "ms-dotnettools.vscode-dotnet-runtime",
+                "ms-python.debugpy",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter",
+                "ms-toolsai.jupyter-keymap",
+                "ms-toolsai.jupyter-renderers",
+                "ms-toolsai.vscode-ai",
+                "ms-toolsai.vscode-ai-remote",
+                "ms-toolsai.vscode-jupyter-cell-tags",
+                "ms-toolsai.vscode-jupyter-slideshow",
+                "ms-vscode.powershell",
+                "rangav.vscode-thunder-client",
+                "rapidapi.vscode-rapidapi-client",
+                "rapidapi.vscode-services",
+                "waderyan.gitblame",
+                "hediet.vscode-drawio",
+                "pomdtr.excalidraw-editor",
+                "charliermarsh.ruff",
+                "EditorConfig.EditorConfig",
+                "tamasfe.even-better-toml",
+                "redhat.vscode-yaml",
+                "googlecloudtools.cloudcode",
+                "google.geminicodeassist",
+                "ms-python.vscode-python-envs",
+                "Anthropic.claude-code"
+            ]
+        },
+        "settings": {
+            "terminal.integrated.shell.linux": "/bin/bash"
+        }
+    },
+    "forwardPorts": [3000],
+    "remoteUser": "vscode"
 }
