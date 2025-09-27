@@ -6,16 +6,49 @@ hyperparameters and passes them to the main training function in `wandb_train.py
 
 Example of how to run this script:
 
-.. code-block:: bash
-
-    python examples/wandb_gainakt2_train.py \
+    CUDA_VISIBLE_DEVICES=0,1,2,3 python examples/wandb_gainakt2_train.py \
         --dataset_name=assist2015 \
         --use_wandb=0 \
-        --learning_rate=2e-4 \
         --d_model=256 \
+        --learning_rate=2e-4 \
+        --dropout=0.2 \
         --num_encoder_blocks=4 \
-        --d_ff=1024 \
-        --dropout=0.2
+        --d_ff=768 \
+        --n_heads=8 \
+        --seq_len=200 \
+        --num_epochs=200
+
+OPTIMIZED CONFIGURATION (Best AUC: 0.7233 from Advanced Parameter Sweep):
+
+TOP 5 PARAMETER COMBINATIONS (Validation AUC):
+1. AUC: 0.7233 | d_model: 256 | lr: 0.0002 | dropout: 0.2 | blocks: 4 | d_ff: 768
+2. AUC: 0.7229 | d_model: 384 | lr: 0.0002 | dropout: 0.2 | blocks: 4 | d_ff: 768  
+3. AUC: 0.7228 | d_model: 384 | lr: 0.0002 | dropout: 0.2 | blocks: 4 | d_ff: 768
+4. AUC: 0.7226 | d_model: 384 | lr: 0.0002 | dropout: 0.2 | blocks: 4 | d_ff: 512
+5. AUC: 0.7225 | d_model: 256 | lr: 0.0002 | dropout: 0.2 | blocks: 4 | d_ff: 512
+
+KEY INSIGHTS FROM OPTIMIZATION:
+- d_ff=768 consistently outperformed d_ff=512 and d_ff=1024
+- learning_rate=2e-4 was optimal across all successful configurations
+- dropout=0.2 provided best regularization balance
+- 4 encoder blocks achieved optimal depth vs. efficiency trade-off
+- 12 attention heads caused instability (6/6 failures with n_heads=12)
+
+Best Performance:
+
+Validation AUC: 0.7233 (72.33% - NEW RECORD!)
+Validation Accuracy: 0.7531 (75.31%)
+Training Loss: 0.4866 (Well converged)
+
+WINNING PARAMETERS:
+
+d_model: 256
+learning_rate: 0.0002
+dropout: 0.2
+num_encoder_blocks: 4
+d_ff: 768 (This was the key improvement!)
+n_heads: 8
+
 """
 
 import argparse

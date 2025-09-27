@@ -1,0 +1,38 @@
+📊 Benchmark Results - Sat Sep 27 17:55:49 UTC 2025
+=================================
+
+Combination 1: d_model=128, lr=1e-3, dropout=0.1, blocks=2, d_ff=512
+   Results: AUC=0.7173, ACC=0.7517, Loss=0.503915910979894
+
+Combination 2: d_model=128, lr=2e-4, dropout=0.1, blocks=2, d_ff=512
+   Results: AUC=0.718, ACC=0.7519, Loss=0.5125483536566091
+
+Combination 3: d_model=128, lr=5e-4, dropout=0.2, blocks=4, d_ff=1024
+   Results: AUC=0.7191, ACC=0.7513, Loss=0.5078864456062521
+
+Combination 4: d_model=256, lr=1e-3, dropout=0.1, blocks=2, d_ff=512
+   Results: AUC=0.7162, ACC=0.7517, Loss=0.5024945325210066
+
+Combination 5: d_model=256, lr=2e-4, dropout=0.1, blocks=4, d_ff=1024
+   Results: AUC=0.7221, ACC=0.7528, Loss=0.5029249475542491
+
+Combination 6: d_model=256, lr=5e-4, dropout=0.2, blocks=2, d_ff=512
+   Results: AUC=0.7193, ACC=0.7513, Loss=0.500549616316791
+
+Combination 7: d_model=128, lr=2e-4, dropout=0.2, blocks=4, d_ff=1024
+   Results: AUC=0.7198, ACC=0.7512, Loss=0.5123476440221474
+
+Combination 8: d_model=256, lr=1e-3, dropout=0.2, blocks=4, d_ff=1024
+   Results: AUC=0.7143, ACC=0.7513, Loss=0.5081716438392405
+
+Combination 9: d_model=256, lr=2e-4, dropout=0.2, blocks=4, d_ff=512
+   Results: AUC=0.7225, ACC=0.7531, Loss=0.5063980290692748
+
+Combination 10: d_model=128, lr=5e-4, dropout=0.1, blocks=4, d_ff=1024
+   Results: AUC=0.7198, ACC=0.7525, Loss=0.5058700379334294
+
+
+SUMMARY:
+========
+Best Configuration: Combination 9: d_model=256, lr=2e-4, dropout=0.2, blocks=4, d_ff=512 (AUC=0.7225)
+Benchmark completed: Sat Sep 27 18:06:43 UTC 2025

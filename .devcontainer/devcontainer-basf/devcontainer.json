@@ -1,17 +1,24 @@
 {
-    "name": "PyKT Toolkit CPU",
+    "name": "PyKT Toolkit GPU Enabled",
     "build": {
         "dockerfile": "Dockerfile",
-        "context": "."
+        "context": "../..",
+        "args": {
+            "USERNAME": "vscode",
+            "USER_UID": "1000",
+            "USER_GID": "1000"
+        }
     },
     "runArgs": [
-        "--shm-size=2g"
+        "--shm-size=4g",
+        "--gpus=all",
+        "--runtime=nvidia",
+        "--privileged"
     ],
-    "containerEnv": {
-        "NVIDIA_VISIBLE_DEVICES": "",
-        "CUDA_VISIBLE_DEVICES": ""
-    },
-    "postCreateCommand": "bash -c 'export PATH=/home/vscode/.pykt-env/bin:$PATH && source /home/vscode/.pykt-env/bin/activate && (pip install --no-warn-script-location --no-build-isolation -e . || (echo \"Fallback: using modern build tools\" && python -m build --wheel --no-isolation && pip install dist/*.whl)) && echo \"pykt-toolkit installation completed successfully\"'",
+    // This command installs the pykt-toolkit in editable mode after the container is created.
+    // The Dockerfile already configures the environment, so we can call pip directly.
+    // A fallback to 'python -m build' is included for robustness.
+    "postCreateCommand": "pip install --no-warn-script-location --no-build-isolation -e . || (echo 'Fallback: building wheel...' && python -m build --wheel --no-isolation && pip install dist/*.whl)",
     "customizations": {
         "vscode": {
             "extensions": [

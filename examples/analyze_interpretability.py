@@ -35,7 +35,7 @@ def main(params):
     model = init_model(params["model_name"], model_config, data_config[params["dataset_name"]], params["emb_type"])
     assert model is not None, "Model initialization failed: init_model returned None."
     net = torch.load(params["load_model_path"], map_location=device)
-    model.load_state_dict(net)
+    model.load_state_dict(net, strict=False)
     model.to(device)
     model.eval()
 

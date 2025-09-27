@@ -19,10 +19,13 @@ conda create --name=pykt python=3.7.5
 source activate pykt
 ```
 
-
 ```
 pip install -U pykt-toolkit -i  https://pypi.python.org/simple 
+```
 
+**Note for Ubuntu/Linux users:** If you encounter `ModuleNotFoundError: No module named 'tkinter'`, install the system tkinter package:
+```bash
+sudo apt update && sudo apt install python3-tk
 ```
 
 ## Hyper parameter tunning results
@@ -95,3 +98,4 @@ We now have a [paper](https://arxiv.org/abs/2206.11460?context=cs.CY) you can ci
   year={2022}
 }
 ```
+````

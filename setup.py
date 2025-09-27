@@ -23,5 +23,11 @@ setup(
     packages=find_packages(),
     python_requires=">=3.5",
     include_package_data=True,
-    install_requires=['numpy>=1.17.2','pandas>=1.1.5','scikit-learn','torch>=1.7.0','wandb>=0.12.9','entmax','tqdm', 'einops', 'matplotlib'],
+    # PyTorch is a prerequisite, but the version depends on the user's CUDA installation.
+    # To avoid installing a CPU-only version by default, we do not list it here.
+    # Users should install PyTorch separately by following the instructions at https://pytorch.org/
+    install_requires=['numpy>=1.17.2','pandas>=1.1.5','scikit-learn','wandb>=0.12.9','entmax','tqdm', 'einops', 'matplotlib'],
+    extras_require={
+        'gui': [],  # tkinter is standard library, but may need system installation: apt install python3-tk
+    },
 )

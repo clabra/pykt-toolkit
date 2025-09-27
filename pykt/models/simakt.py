@@ -281,13 +281,12 @@ class SimAKT(nn.Module):
 
         # hard negative
         s_flip = s.clone() if self.hard_neg else s_
-        for b in range(bs):
-            # manipulate score
-            idx = random.sample(
-                range(lens[b]), max(1, int(lens[b] * self.dropout_rate))
-            )
-            for i in idx:
-                s_flip[b, i] = 1 - s_flip[b, i]
+        # vectorized score manipulation
+        seq_mask = torch.arange(s.size(1), device=s.device)[None, :] < lens[:, None]
+        prob_mask = torch.rand_like(s, dtype=torch.float32) < self.dropout_rate
+        flip_mask = seq_mask & prob_mask
+        s_flip[flip_mask] = 1 - s_flip[flip_mask]
+
         if not self.hard_neg:
             s_ = s_flip
 

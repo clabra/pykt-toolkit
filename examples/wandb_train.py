@@ -3,7 +3,7 @@ import argparse
 import json
 
 import torch
-torch.set_num_threads(4) 
+torch.set_num_threads(32) 
 from torch.optim import SGD, Adam
 import copy
 
@@ -48,7 +48,7 @@ def main(params):
         if model_name in ["qdkt","qikt"] and dataset_name in ['algebra2005','bridge2algebra2006']:
             train_config["batch_size"] = 32 
         if model_name in ["dtransformer", "simakt"]:
-            train_config["batch_size"] = 32 ## because of OOM
+            train_config["batch_size"] = 1024 ## because of OOM
         model_config = copy.deepcopy(params)
         for key in ["model_name", "dataset_name", "emb_type", "save_dir", "fold", "seed"]:
             del model_config[key]
