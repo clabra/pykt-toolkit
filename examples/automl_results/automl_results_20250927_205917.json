@@ -1,0 +1,17 @@
+{
+  "optimization_summary": {
+    "total_time_seconds": 365.2091884613037,
+    "total_evaluations": 3,
+    "successful_runs": 3,
+    "baseline_auc": 0.7233,
+    "best_auc": 0.7238,
+    "improvement": 0.0004999999999999449,
+    "target_achieved": false
+  },
+  "best_result": {
+    "combination_id": 0,
+    "parameters": {
+      "d_model": 224,
+      "learning_rate": 0.0001940885918533256,
+      "dropout": 0.20651773406403778,
+      "num_encoder_blocks": 

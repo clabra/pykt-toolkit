@@ -41,6 +41,7 @@ from .robustkt import Robustkt
 from .simakt import SimAKT
 from .gainsakt import GainSAKT
 from .gainakt2 import GainAKT2
+from .gainakt2_enhanced import GainAKT2Enhanced
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
@@ -155,6 +156,11 @@ def init_model(model_name, model_config, data_config, emb_type):
         gainakt2_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
         model = GainAKT2(data_config["num_c"], **gainakt2_config, emb_type=emb_type, 
                         emb_path=data_config["emb_path"]).to(device)
+    elif model_name == "gainakt2_enhanced":
+        # Filter out training-specific parameters for enhanced model
+        enhanced_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
+        model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
+                               emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")
         return None

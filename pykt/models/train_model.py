@@ -69,6 +69,34 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
             projected_mastery_for_s_t = torch.gather(projected_mastery, 2, cshft_expanded.long()).squeeze(-1)
             loss_consistency = F.mse_loss(torch.masked_select(projected_mastery_for_s_t, sm), y)
             loss += model.consistency_loss_weight * loss_consistency
+    elif model_name == "gainakt2_enhanced":
+        output = ys[0]
+        y = torch.masked_select(output['predictions'], sm)
+        t = torch.masked_select(rshft, sm)
+        
+        # Main prediction loss
+        loss = binary_cross_entropy(y.double(), t.double())
+        
+        # Uncertainty regularization
+        if 'uncertainty' in output and output['uncertainty'] is not None:
+            uncertainty = torch.masked_select(output['uncertainty'], sm)
+            uncertainty_reg = 0.1 * uncertainty.mean()
+            loss = loss + uncertainty_reg
+        
+        # Knowledge tracking losses - fixed dimension handling
+        if output.get('learning_gains') is not None and hasattr(model, 'use_knowledge_tracking') and model.use_knowledge_tracking:
+            learning_gains = output['learning_gains']  # [batch_size, seq_len, num_concepts]
+            if learning_gains is not None:
+                # Get the learning gains for the concepts being predicted
+                batch_size, seq_len = sm.shape
+                concept_gains = torch.gather(learning_gains, 2, cshft.unsqueeze(-1)).squeeze(-1)  # [batch_size, seq_len]
+                
+                # Apply mask and get valid positions
+                valid_gains = torch.masked_select(concept_gains, sm)
+                
+                # Encourage positive learning gains for correct responses
+                gain_consistency = 0.05 * F.relu(-valid_gains * t).mean()
+                loss = loss + gain_consistency
     elif model_name == "dkt+":
         y_curr = torch.masked_select(ys[1], sm)
         y_next = torch.masked_select(ys[0], sm)
@@ -232,6 +260,9 @@ def model_forward(model, data, rel=None):
         y = model(c.long(), r.long(), cshft.long())
         ys.append(y)
     elif model_name in ["gainakt2"]:
+        output = model(c.long(), r.long(), cshft.long())
+        ys.append(output)
+    elif model_name in ["gainakt2_enhanced"]:
         output = model(c.long(), r.long(), cshft.long())
         ys.append(output)
     elif model_name in ["saint"]:

@@ -114,6 +114,9 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
             elif model_name == "gainakt2":
                 output = model(c.long(), r.long(), cshft.long())
                 y = output['predictions']
+            elif model_name == "gainakt2_enhanced":
+                output = model(c.long(), r.long(), cshft.long())
+                y = output['predictions']
             elif model_name == "saint":
                 y = model(cq.long(), cc.long(), r.long())
                 y = y[:, 1:]
@@ -436,7 +439,7 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                 y = y[:,1:]
             elif model_name in ["rekt"]:
                 y, h = model(dcurori, qtest=True, train=False)
-            elif model_name in ["akt","extrakt", "folibikt","fluckt","robustkt", "lefokt_akt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
+            elif model_name in ["akt","extrakt", "folibikt","fluckt","robustkt","lefokt_akt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
                 y, reg_loss, h = model(cc.long(), cr.long(), cq.long(), True)
                 y = y[:,1:]
             elif model_name in ["dtransformer", "simakt"]:
