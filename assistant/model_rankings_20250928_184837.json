@@ -1,0 +1,491 @@
+{
+  "benchmark_info": {
+    "start_time": "2025-09-28T18:48:37.175893",
+    "dataset": "assist2015",
+    "epochs": 5,
+    "gpus_used": 4,
+    "total_models_tested": 39,
+    "successful_models": 15,
+    "failed_models": 24
+  },
+  "successful_results": {
+    "dkt": {
+      "model": "dkt",
+      "script": "wandb_dkt_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.85,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7304069062632554,
+        "validacc": 0.755929498097305,
+        "best_epoch": 2,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 42,
+      "stderr_lines": 0
+    },
+    "dkvmn": {
+      "model": "dkvmn",
+      "script": "wandb_dkvmn_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 2.04,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7175439846935887,
+        "validacc": 0.7549757175252314,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 45,
+      "stderr_lines": 0
+    },
+    "akt": {
+      "model": "akt",
+      "script": "wandb_akt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 5.96,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7286711291860539,
+        "validacc": 0.7574574935035864,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 87,
+      "stderr_lines": 0
+    },
+    "dkt_plus": {
+      "model": "dkt_plus",
+      "script": "wandb_dkt_plus_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 8.41,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7322809069693883,
+        "validacc": 0.756172809467732,
+        "best_epoch": 3,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 42,
+      "stderr_lines": 0
+    },
+    "deep_irt": {
+      "model": "deep_irt",
+      "script": "wandb_deep_irt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 9.73,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.712737093171113,
+        "validacc": 0.7543333755073042,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 53,
+      "stderr_lines": 0
+    },
+    "gainakt2": {
+      "model": "gainakt2",
+      "script": "wandb_gainakt2_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.29,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7114227985077015,
+        "validacc": 0.7488832008097402,
+        "best_epoch": 1,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 57,
+      "stderr_lines": 0
+    },
+    "extrakt": {
+      "model": "extrakt",
+      "script": "wandb_extrakt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 7.34,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.6905526827438606,
+        "validacc": 0.7460218590935191,
+        "best_epoch": 1,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 87,
+      "stderr_lines": 0
+    },
+    "gainsakt": {
+      "model": "gainsakt",
+      "script": "wandb_gainsakt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 1.0,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.6849611109468265,
+        "validacc": 0.7473065431293735,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 73,
+      "stderr_lines": 0
+    },
+    "lefokt_akt": {
+      "model": "lefokt_akt",
+      "script": "wandb_lefokt_akt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 4.0,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7214530768104631,
+        "validacc": 0.7533309326611451,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 87,
+      "stderr_lines": 0
+    },
+    "folibikt": {
+      "model": "folibikt",
+      "script": "wandb_folibikt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 6.94,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7265778470639752,
+        "validacc": 0.7555012700853536,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 87,
+      "stderr_lines": 0
+    },
+    "saint": {
+      "model": "saint",
+      "script": "wandb_saint_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 3.06,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.6598253307730958,
+        "validacc": 0.743530350660347,
+        "best_epoch": 3,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 88,
+      "stderr_lines": 0
+    },
+    "sakt": {
+      "model": "sakt",
+      "script": "wandb_sakt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.51,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7088567592202325,
+        "validacc": 0.7524355468179739,
+        "best_epoch": 2,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 62,
+      "stderr_lines": 0
+    },
+    "fluckt": {
+      "model": "fluckt",
+      "script": "wandb_fluckt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 14.82,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.6422427515315886,
+        "validacc": 0.7402407809321745,
+        "best_epoch": 1,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 96,
+      "stderr_lines": 0
+    },
+    "robustkt": {
+      "model": "robustkt",
+      "script": "wandb_robustkt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 12.28,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.729570185725403,
+        "validacc": 0.7573504365005985,
+        "best_epoch": 5,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 94,
+      "stderr_lines": 0
+    },
+    "stablekt": {
+      "model": "stablekt",
+      "script": "wandb_stablekt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 8.92,
+      "status": "success",
+      "metrics": {
+        "validauc": 0.7316724195067532,
+        "validacc": 0.7570876602205374,
+        "best_epoch": 4,
+        "testauc": null,
+        "testacc": null
+      },
+      "stdout_lines": 72,
+      "stderr_lines": 0
+    }
+  },
+  "failed_results": {
+    "atkt": {
+      "model": "atkt",
+      "script": "wandb_atkt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.07,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:39 - main - said: load config files.\nStart init data\nassist2015 atkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_atkt_train.py\", line 29, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File \"/"
+    },
+    "datakt": {
+      "model": "datakt",
+      "script": "wandb_datakt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:44 - main - said: load config files.\nStart init data\nassist2015 datakt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 't",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_datakt_train.py\", line 36, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 106, in main\n    model = init_model(model_name, model_config, data_config[dataset_name], emb_type)\n  File \"/workspaces/pykt-toolkit/pykt/models/init_model.py\", line 122, in init_model\n    model = BAKTTime(data_config[\"num_c\"], data_config[\"num_q\"], data_config[\"num_rgap\"], data_config[\"num_sgap\"], data_config[\"num_pcount\"], **mod"
+    },
+    "cskt": {
+      "model": "cskt",
+      "script": "wandb_cskt_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.14,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:40 - main - said: load config files.\nStart init data\nassist2015 cskt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_cskt_train.py\", line 36, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 337, in train_model\n    for data in train_loader:\n  File \"/home/vsc"
+    },
+    "dimkt": {
+      "model": "dimkt",
+      "script": "wandb_dimkt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:48 - main - said: load config files.\nStart init data\nassist2015 dimkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tr",
+      "stderr_preview": "\n0it [00:00, ?it/s]\n0it [00:00, ?it/s]\nTraceback (most recent call last):\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/core/indexes/base.py\", line 3653, in get_loc\n    return self._engine.get_loc(casted_key)\n  File \"pandas/_libs/index.pyx\", line 147, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/index.pyx\", line 176, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/hashtable_class_helper.pxi\", line 7080, in pandas._libs.hashtable.PyObjectHashTa"
+    },
+    "atdkt": {
+      "model": "atdkt",
+      "script": "wandb_atdkt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 0.21,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:40 - main - said: load config files.\nStart init data\nassist2015 atdkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tr",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_atdkt_train.py\", line 31, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File \""
+    },
+    "dkt_forget": {
+      "model": "dkt_forget",
+      "script": "wandb_dkt_forget_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:48:52 - main - said: load config files.\nStart init data\nassist2015 dkt_forget {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_dkt_forget_train.py\", line 24, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 73, in main\n    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)\n  File \"/workspaces/pykt-toolkit/pykt/datasets/init_dataset.py\", line 136, in init_dataset4train\n    curvalid = DktForgetDataset(os.path.join(data_config[\"dpath\"], data_config[\"train_valid_file\"]), data"
+    },
+    "dtransformer": {
+      "model": "dtransformer",
+      "script": "wandb_dtransformer_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.2,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:51:45 - main - said: load config files.\nStart init data\nassist2015 dtransformer {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.cs",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_dtransformer_train.py\", line 46, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n "
+    },
+    "hawkes": {
+      "model": "hawkes",
+      "script": "wandb_hawkes_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.05,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:59:48 - main - said: load config files.\nStart init data\nassist2015 hawkes {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 't",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_hawkes_train.py\", line 25, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 110, in main\n    for name, p in filter(lambda x: x[1].requires_grad, model.named_parameters()):\nAttributeError: 'NoneType' object has no attribute 'named_parameters'\n"
+    },
+    "hcgkt": {
+      "model": "hcgkt",
+      "script": "wandb_hcgkt_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n2025-09-28 18:59:51 - main - said: load config files.\nStart init data\nassist2015 hcgkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file'",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_hcgkt_train.py\", line 45, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 106, in main\n    model = init_model(model_name, model_config, data_config[dataset_name], emb_type)\n  File \"/workspaces/pykt-toolkit/pykt/models/init_model.py\", line 142, in init_model\n    model = HCGKT(data_config[\"num_c\"], data_config[\"num_q\"], **model_config, emb_type=emb_type, emb_path=data_config[\"emb_path\"]).to(device)\n  File"
+    },
+    "iekt": {
+      "model": "iekt",
+      "script": "wandb_iekt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:59:55 - main - said: load config files.\nStart init data\nassist2015 iekt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_iekt_train.py\", line 32, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 73, in main\n    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)\n  File \"/workspaces/pykt-toolkit/pykt/datasets/init_dataset.py\", line 193, in init_dataset4train\n    curvalid = KTQueDataset(os.path.join(data_config[\"dpath\"], data_config[\"train_valid_file_quelevel\"]),\n  Fil"
+    },
+    "kqn": {
+      "model": "kqn",
+      "script": "wandb_kqn_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 0.08,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 18:59:58 - main - said: load config files.\nStart init data\nassist2015 kqn {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'trai",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_kqn_train.py\", line 27, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File \"/w"
+    },
+    "lpkt": {
+      "model": "lpkt",
+      "script": "wandb_lpkt_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.08,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:04:03 - main - said: load config files.\nStart init data\nassist2015 lpkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_lpkt_train.py\", line 25, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 73, in main\n    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)\n  File \"/workspaces/pykt-toolkit/pykt/datasets/init_dataset.py\", line 148, in init_dataset4train\n    curvalid = LPKTDataset(os.path.join(data_config[\"dpath\"], data_config[\"train_valid_file_quelevel\"]), at2idx"
+    },
+    "promptkt": {
+      "model": "promptkt",
+      "script": "wandb_promptkt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.05,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_promptkt_train.py\", line 2, in <module>\n    from wandb_train4promptkt import main\n  File \"/workspaces/pykt-toolkit/examples/wandb_train4promptkt.py\", line 27, in <module>\n    init_process()\n  File \"/workspaces/pykt-toolkit/examples/wandb_train4promptkt.py\", line 22, in init_process\n    rank = int(os.environ[\"RANK\"])\n  File \"/usr/lib/python3.8/os.py\", line 675, in __getitem__\n    raise KeyError(key) from None\nKeyError: 'RANK'\n"
+    },
+    "qdkt": {
+      "model": "qdkt",
+      "script": "wandb_qdkt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:04:11 - main - said: load config files.\nStart init data\nassist2015 qdkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_qdkt_train.py\", line 25, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 73, in main\n    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)\n  File \"/workspaces/pykt-toolkit/pykt/datasets/init_dataset.py\", line 193, in init_dataset4train\n    curvalid = KTQueDataset(os.path.join(data_config[\"dpath\"], data_config[\"train_valid_file_quelevel\"]),\n  Fil"
+    },
+    "qikt": {
+      "model": "qikt",
+      "script": "wandb_qikt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.05,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:04:14 - main - said: load config files.\nStart init data\nassist2015 qikt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_qikt_train.py\", line 48, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 73, in main\n    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)\n  File \"/workspaces/pykt-toolkit/pykt/datasets/init_dataset.py\", line 193, in init_dataset4train\n    curvalid = KTQueDataset(os.path.join(data_config[\"dpath\"], data_config[\"train_valid_file_quelevel\"]),\n  Fil"
+    },
+    "rekt": {
+      "model": "rekt",
+      "script": "wandb_rekt_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.07,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:04:16 - main - said: load config files.\nStart init data\nassist2015 rekt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'tra",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_rekt_train.py\", line 25, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File \"/"
+    },
+    "rkt": {
+      "model": "rkt",
+      "script": "wandb_rkt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:04:17 - main - said: load config files.\nStart init data\nassist2015 rkt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'trai",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_rkt_train.py\", line 32, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 106, in main\n    model = init_model(model_name, model_config, data_config[dataset_name], emb_type)\n  File \"/workspaces/pykt-toolkit/pykt/models/init_model.py\", line 134, in init_model\n    model = RKT(data_config[\"num_c\"], data_config[\"num_q\"], **model_config, emb_type=emb_type, emb_path=data_config[\"emb_path\"]).to(device) \nTypeError"
+    },
+    "saint_plus_plus": {
+      "model": "saint_plus_plus",
+      "script": "wandb_saint_plus_plus_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 0.06,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:07:24 - main - said: load config files.\nStart init data\nassist2015 saint++ {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', '",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_saint_plus_plus_train.py\", line 25, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 131, in main\n    opt = Adam(model.parameters(), learning_rate)\nAttributeError: 'NoneType' object has no attribute 'parameters'\n"
+    },
+    "simplekt": {
+      "model": "simplekt",
+      "script": "wandb_simplekt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.07,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:09:26 - main - said: load config files.\nStart init data\nassist2015 simplekt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', ",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_simplekt_train.py\", line 36, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  Fil"
+    },
+    "simakt": {
+      "model": "simakt",
+      "script": "wandb_simakt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 1.83,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:07:58 - main - said: load config files.\nStart init data\nassist2015 simakt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 't",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_simakt_train.py\", line 46, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File "
+    },
+    "sparsekt": {
+      "model": "sparsekt",
+      "script": "wandb_sparsekt_train.py",
+      "gpu_id": 0,
+      "duration_minutes": 0.08,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:09:48 - main - said: load config files.\nStart init data\nassist2015 sparsekt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', ",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_sparsekt_train.py\", line 39, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  Fil"
+    },
+    "ukt": {
+      "model": "ukt",
+      "script": "wandb_ukt_train.py",
+      "gpu_id": 2,
+      "duration_minutes": 0.08,
+      "status": "failed",
+      "error": "Process failed with return code 1",
+      "stdout_preview": "2025-09-28 19:16:37 - main - said: load config files.\nStart init data\nassist2015 ukt {'assist2015': {'dpath': '../data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'trai",
+      "stderr_preview": "Traceback (most recent call last):\n  File \"wandb_ukt_train.py\", line 42, in <module>\n    main(params)\n  File \"/workspaces/pykt-toolkit/examples/wandb_train.py\", line 145, in main\n    testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)\n  File \"/workspaces/pykt-toolkit/pykt/models/train_model.py\", line 348, in train_model\n    loss = model_forward(model, data)\n  File \"/w"
+    },
+    "gkt": {
+      "model": "gkt",
+      "script": "wandb_gkt_train.py",
+      "gpu_id": 1,
+      "duration_minutes": 30.0,
+      "status": "timeout",
+      "error": "Training timed out after 1800 seconds"
+    },
+    "skvmn": {
+      "model": "skvmn",
+      "script": "wandb_skvmn_train.py",
+      "gpu_id": 3,
+      "duration_minutes": 30.0,
+      "status": "timeout",
+      "error": "Training timed out after 1800 seconds"
+    }
+  }
+}

@@ -142,38 +142,38 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 def get_optimal_batch_size(manual_batch_size=None, resource_mode="conservative"):
-    """Calculate batch size based on resource mode or manual override"""
+    """Calculate batch size based on resource mode or manual override - MEMORY OPTIMIZED"""
     if manual_batch_size:
         return manual_batch_size
     
+    # Drastically reduced batch sizes for SimAKT memory constraints
     if resource_mode == "minimal":
-        return 16
+        return 4  # Very small for memory safety
     elif resource_mode == "conservative":
-        return 64
+        return 8  # Small batch size
     elif resource_mode == "moderate":
-        return 256
+        return 16  # Still small for SimAKT
     elif resource_mode == "aggressive":
-        return 1024
+        return 32  # Maximum safe size for SimAKT
     else:
-        return 64  # Default conservative
+        return 8  # Default very conservative
 
 def get_optimal_num_workers(manual_workers=None, resource_mode="conservative"):
-    """Calculate number of workers based on resource mode or manual override"""
+    """Calculate number of workers - MEMORY OPTIMIZED"""
     if manual_workers is not None:
         return manual_workers
     
-    total_cores = mp.cpu_count()
-    
+    # Reduce workers to save memory
     if resource_mode == "minimal":
-        return 0  # No multiprocessing
+        return 0  # No multiprocessing to save memory
     elif resource_mode == "conservative":
-        return min(2, total_cores)
+        return 1  # Minimal workers
     elif resource_mode == "moderate":
-        return min(8, total_cores // 2)
+        return 2  # Limited workers
     elif resource_mode == "aggressive":
-        return min(16, int(total_cores * 0.75))
+        return 4  # Still conservative for memory
     else:
-        return 2  # Default conservative
+        return 1  # Default very conservative
 
 def get_optimal_cpu_threads(manual_threads=None, resource_mode="conservative"):
     """Calculate CPU threads based on resource mode or manual override"""
