@@ -11,10 +11,10 @@ Instead of having latent `context` and `value` streams of size `d_model`, the mo
 To be considered interpretable and explainable, the model should adhere to the following consistency requirements:
 
 *   **Monotonicity of Mastery:** A student's mastery of a skill should not decrease over time. An interaction can result in zero gain, but never a negative gain.
-*   **Non-Negative Learning Gains:** The learning gain from any interaction should be greater than or equal to zero.
-*   **Mastery-Performance Correlation:** The predicted probability of correctly answering a question for a given skill should be positively correlated with the model's estimated mastery of that skill.
-*   **Gain-Performance Correlation:** A correct answer should, on average, lead to a higher learning gain than an incorrect answer for the same skill.
-*   **Sparsity of Gains (Desirable):** The learning gain from an interaction with a specific skill should primarily affect that skill and only a few closely related skills.
+*   **Non-Negative Learning Gains:** Skill mastery increases through cumulative learning gains resulting from interactions. Each learning must be greater than or equal to zero.
+*   **Mastery-Performance Correlation:** The likelihood of answering a question correctly increases with the model’s estimated mastery of the linked skills, as mapped by the Q-matrix.
+*   **Gain-Performance Correlation:** Correct answers should, on average, reflect greater learning gains for the linked skills than incorrect ones.
+*   **Sparsity of Gains (Desirable):** The learning gain from an interaction with a specific question should primarily involve only the skills linked to that question. 
 
 ## Architectural Modifications
 
