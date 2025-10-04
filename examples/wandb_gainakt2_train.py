@@ -49,13 +49,11 @@ KEY INSIGHTS FROM HYPERPARAMETER OPTIMIZATION:
 
 BEST PERFORMANCE ACHIEVED:
 
-Validation AUC: 0.7242 (72.42% - RECORD PERFORMANCE!)
-Validation Accuracy: 0.7535 (75.35%)
-Training Loss: 0.4823 (Well converged)
-Best Epoch: Typically around epoch 150-200
+Epoch: 5, validauc: 0.7242, validacc: 0.7538, best epoch: 3, best auc: 0.7242, train loss: 0.49494529969578915
 
 REPRODUCTION COMMAND:
-python wandb_gainakt2_train.py --dataset_name=assist2015 --d_model=256 --learning_rate=0.0002 --dropout=0.2 --num_encoder_blocks=4 --d_ff=768 --n_heads=8 --num_epochs=200 --use_wandb=0
+cd /workspaces/pykt-toolkit/examples
+python wandb_gainakt2_train.py --dataset_name=assist2015 --use_wandb=0
 
 """
 

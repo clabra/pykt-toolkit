@@ -33,15 +33,15 @@ from .stablekt import stableKT
 from .extrakt import extraKT
 from .rekt import ReKT
 from .cskt import CSKT
-from .fluckt import FlucKT
+# from .fluckt import FlucKT
 from .lefokt_akt import LEFOKT_AKT
 from .ukt import UKT
 from .hcgkt import HCGKT
 from .robustkt import Robustkt
-from .simakt import SimAKT
-from .gainsakt import GainSAKT
+# from .simakt import SimAKT
+# from .gainsakt import GainSAKT
 from .gainakt2 import GainAKT2
-from .gainakt2_enhanced import GainAKT2Enhanced
+# from .gainakt2_enhanced import GainAKT2Enhanced
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
@@ -134,8 +134,8 @@ def init_model(model_name, model_config, data_config, emb_type):
         model = RKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device) 
     elif model_name == "cskt":
         model = CSKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device) 
-    elif model_name == "fluckt":
-        model = FlucKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
+    # elif model_name == "fluckt":
+    #     model = FlucKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     elif model_name == "ukt":
         model = UKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     elif model_name == "hcgkt":
@@ -145,22 +145,22 @@ def init_model(model_name, model_config, data_config, emb_type):
     elif model_name == "dtransformer":
         model = DTransformer(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type,
                      emb_path=data_config["emb_path"]).to(device)      
-    elif model_name == "simakt":
-        model = SimAKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, 
-                      emb_path=data_config["emb_path"]).to(device)
-    elif model_name == "gainsakt":
-        model = GainSAKT(data_config["num_c"], **model_config, emb_type=emb_type, 
-                        emb_path=data_config["emb_path"]).to(device)
+    # elif model_name == "simakt":
+    #     model = SimAKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, 
+    #                   emb_path=data_config["emb_path"]).to(device)
+    # elif model_name == "gainsakt":
+    #     model = GainSAKT(data_config["num_c"], **model_config, emb_type=emb_type, 
+    #                     emb_path=data_config["emb_path"]).to(device)
     elif model_name == "gainakt2":
         # Filter out training-specific parameters
         gainakt2_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
         model = GainAKT2(data_config["num_c"], **gainakt2_config, emb_type=emb_type, 
                         emb_path=data_config["emb_path"]).to(device)
-    elif model_name == "gainakt2_enhanced":
-        # Filter out training-specific parameters for enhanced model
-        enhanced_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
-        model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
-                               emb_path=data_config["emb_path"]).to(device)
+    # elif model_name == "gainakt2_enhanced":
+    #     # Filter out training-specific parameters for enhanced model
+    #     enhanced_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
+    #     model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
+    #                            emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")
         return None

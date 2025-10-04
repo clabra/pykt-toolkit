@@ -39,7 +39,8 @@ pip install -e .
 - Do NOT modify files in `/data_original` directory
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
 - DO NOT modify existent models in pykt/models (only the new created model/s)
-- Put all new files under the appropiate folder under the 'clabra' dir (examples, models, saved_model, etc.). The oojective is maintain the original structure as similar as possible to that in the 'main' branch while isolating the changes in 'clabra' folder. This way it will be easier to main contributions to the upstream folder we forked to develop new models. 
+- Put all new files in the appropiate folder under the 'clabra' dir (examples, models, saved_model, etc.). The oojective is maintain the original structure as similar as possible to that in the 'main' branch while isolating the changes in 'clabra' folder. This way it will be easier to main contributions to the upstream folder we forked to develop new models. 
+- The 'assistant' folder contains documentation with context and guidelines for assistants.
 
 ## General Guidelines
 

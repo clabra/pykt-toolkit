@@ -1,9 +1,9 @@
 {
   "train_config": {
-    "batch_size": 32,
-    "num_epochs": 5,
+    "batch_size": 64,
+    "num_epochs": 200,
     "optimizer": "adam",
-    "seq_len": 100
+    "seq_len": 200
   },
   "dkt": {
     "learning_rate": 0.001,
