@@ -1,0 +1,1 @@
+gainakt_architecture_approach.md

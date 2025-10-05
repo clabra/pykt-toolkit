@@ -1,4 +1,4 @@
-# New Model Architecture
+# New Model Architecture Approach
 
 ## Introduction
 
@@ -105,9 +105,9 @@ During training, the model automatically learns to:
 - **Quantify learning impact**: Values learn to represent the actual learning gains from specific interactions
 - **Aggregate effectively**: Attention weights learn to combine learning gains optimally for prediction
 
-#### 3. Emergent Similarity
+#### 3. Learning Gains
 
-Unlike hand-crafted similarity metrics, the model develops an emergent understanding of skill similarity through the optimization process. When interactions with similar knowledge components consistently lead to similar learning outcomes, the model learns to give them high attention scores.
+The objective is that the model learns the learning gains produced by interactions given by the (S, R) tuple. When values and attention weights are properly learned, then the resulting values in the Z matrix can be interpreted as Knowledge States, i.e. mastery levels for skills, from which predictions can be calculated. Weights will be adjusted as to have Knowledge States tah allow to predict if the student is going to give a correct or incorrect response. 
 
 ## Mathematical Formulation
 
@@ -204,7 +204,6 @@ The fundamental innovation in this approach lies in the **semantic redefinition 
 
 ### Emergent Skill Similarity Learning
 
-- No hand-crafted similarity metrics required
 - Model learns to identify related skills through Q·K^T matching during training
 - Attention weights naturally emerge to represent educational relevance between interactions
 
@@ -481,7 +480,7 @@ Finally, we decided to go with the fresh start direction since a first implement
 
 ## Architecture Design
 
-We have explored the options described in gainakt_phase1_alternatives_gainscomputation.md. Finally we decided to choose the one described in the "Option 4" section. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
+We have explored the options described in gainakt_architecture_options.md. Finally we decided to choose the one described in the "Option 4" section. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
 
 
 
@@ -885,15 +884,14 @@ gain_vector (d_model) -> Linear(d_model, num_skills) -> per_skill_gain_vector (n
 This is extremely powerful for explainability. It would allow us to see, for example, how an interaction with an "Algebra" problem not only increases the "Algebra" skill, but might also have a positive (or even negative) effect on related skills like "Geometry" or "Calculus". This would be a direct way to visualize and quantify skill transfer.
 
 
-### Augmenting the Architecture for Interpretability
+## Augmenting the Architecture for Interpretability
 
 This section outlines a pragmatic approach to enhancing the current `GainAKT2` model to improve interpretability and potentially performance. The strategy is to augment the existing architecture with modular, configurable components that allow for systematic experimentation and ablation studies, rather than designing a completely new model from scratch.
 
-#### Guiding Principle: Augment, Don't Replace
+**Guiding Principle: Augment, Don't Replace**:
+The proposed approach is to add new, optional components to the `GainAKT2` model. These components will be responsible for computing and regularizing explicit skill mastery and learning gain representations, and can be enabled or disabled via configuration flags.
 
-The core idea is to add new, optional components to the `GainAKT2` model. These components will be responsible for computing and regularizing explicit skill mastery and learning gain representations, and can be enabled or disabled via configuration flags.
-
-#### Idea 1: Add Interpretable "Projection Heads"
+### Idea 1: Add Interpretable "Projection Heads"
 
 This is the central component for making the latent states understandable. We can add two new, lightweight linear layers that "project" the internal latent representations into an explicit, per-skill space. These heads are *only used for calculating auxiliary losses* and do not need to affect the main prediction path of the model, making them perfectly modular.
 
@@ -907,7 +905,7 @@ This is the central component for making the latent states understandable. We ca
 **Recommendation:**
 Implement these as optional modules in `GainAKT2.__init__`. We can control their creation with flags like `use_mastery_head` and `use_gain_head`.
 
-#### Idea 2: Implement Modular Auxiliary Loss Functions
+### Idea 2: Implement Modular Auxiliary Loss Functions
 
 These loss functions will use the outputs of the new projection heads to enforce the "Consistency Requirements". They can be added to the main training loss, with their influence controlled by tunable weight hyperparameters (e.g., `alpha`, `beta`).
 
@@ -925,7 +923,7 @@ These loss functions will use the outputs of the new projection heads to enforce
 **Recommendation:**
 Implement these losses in the training script (`wandb_train.py` or `train_model.py`). Add hyperparameters like `consistency_loss_weight` to the configuration, so we can easily turn them on/off and tune their impact.
 
-#### Idea 3: Leverage Inferred Knowledge via Gated Injection
+### Idea 3: Leverage Inferred Knowledge via Gated Injection
 
 This is a more advanced idea for feeding the interpretable knowledge back into the model to potentially improve performance.
 
@@ -939,7 +937,7 @@ This is a more advanced idea for feeding the interpretable knowledge back into t
 **Recommendation:**
 This is a more experimental idea. We should implement it as a configurable option in `GainAKT2` (e.g., `use_gated_mastery_injection`) and test it after evaluating the impact of the auxiliary losses.
 
-#### Summary of Recommendations
+### Summary of Recommendations
 
 1.  **Modify `gainakt2.py`:** Add the optional `MasteryProjectionHead` and `GainProjectionHead` modules, controlled by flags.
 2.  **Update the Training Script:** Add the new auxiliary loss functions (`loss_non_negative`, `loss_consistency`) to the main training loop. Make their weights configurable hyperparameters.
@@ -951,7 +949,7 @@ This is a more experimental idea. We should implement it as a configurable optio
 4.  **Analyze Results:** For each experiment, evaluate not only the AUC/ACC but also the interpretability. For example, check if the projected gains are indeed non-negative and if the projected mastery correlates with student performance.
 5.  **Explore Gated Injection:** Based on the results, implement and test the gated injection mechanism to see if it further improves performance.
 
-#### Augmented Architecture Design 
+## Augmented Architecture Design 
 
 ```mermaid
 graph TD
@@ -1216,7 +1214,7 @@ Interpretation: Measures how well the model adheres to the "mastery should not d
 
 This comprehensive evaluation framework will allow us to objectively compare models not just on predictive accuracy, but also on their adherence to fundamental educational principles, providing a more holistic view of their utility and trustworthiness.
 
-### Next Steps
+## Next Steps
 
 Our immediate goal is to successfully run the analyze_interpretability.py script to quantify the correlation between projected skill mastery and model predictions, as well as to compute gain-correctness correlation and the non-negativity violation rate. 
 

@@ -63,9 +63,14 @@ class MultiScaleAttention(nn.Module):
                 attn_out = self.w_o(attn_out)
                 
                 # Upsample back to original resolution
-                attn_out = F.interpolate(
-                    attn_out.transpose(1, 2), size=seq_len, mode='linear', align_corners=False
-                ).transpose(1, 2)
+                current_len = attn_out.size(1)
+                if current_len != seq_len:
+                    # Ensure correct dimensions for interpolation
+                    attn_out_transposed = attn_out.transpose(1, 2)  # (batch, d_model, current_len)
+                    attn_out = F.interpolate(
+                        attn_out_transposed, size=seq_len, mode='linear', align_corners=False
+                    ).transpose(1, 2)  # Back to (batch, seq_len, d_model)
+                # If lengths match, no need to interpolate
             else:
                 # For scale=1, use manual attention with mask
                 q_proj = self.w_q(query).view(batch_size, seq_len, self.n_heads, self.head_dim).transpose(1, 2)

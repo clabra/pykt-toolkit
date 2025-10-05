@@ -41,7 +41,7 @@ from .robustkt import Robustkt
 # from .simakt import SimAKT
 # from .gainsakt import GainSAKT
 from .gainakt2 import GainAKT2
-# from .gainakt2_enhanced import GainAKT2Enhanced
+#from .gainakt2_enhanced import GainAKT2Enhanced
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
@@ -153,12 +153,18 @@ def init_model(model_name, model_config, data_config, emb_type):
     #                     emb_path=data_config["emb_path"]).to(device)
     elif model_name == "gainakt2":
         # Filter out training-specific parameters
-        gainakt2_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
+        excluded_params = ['learning_rate', 'use_gain_head', 'use_mastery_head', 
+                          'non_negative_loss_weight', 'consistency_loss_weight', 
+                          'use_wandb', 'add_uuid', 'num_epochs']
+        gainakt2_config = {k: v for k, v in model_config.items() if k not in excluded_params}
         model = GainAKT2(data_config["num_c"], **gainakt2_config, emb_type=emb_type, 
                         emb_path=data_config["emb_path"]).to(device)
     # elif model_name == "gainakt2_enhanced":
-    #     # Filter out training-specific parameters for enhanced model
-    #     enhanced_config = {k: v for k, v in model_config.items() if k != 'learning_rate'}
+    #     # Filter out training-specific and legacy parameters for enhanced model
+    #     excluded_params = ['learning_rate', 'use_gain_head', 'use_mastery_head', 
+    #                       'non_negative_loss_weight', 'consistency_loss_weight', 
+    #                       'use_wandb', 'add_uuid', 'num_epochs']
+    #     enhanced_config = {k: v for k, v in model_config.items() if k not in excluded_params}
     #     model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
     #                            emb_path=data_config["emb_path"]).to(device)
     else:
