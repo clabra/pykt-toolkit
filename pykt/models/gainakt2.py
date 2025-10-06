@@ -154,7 +154,9 @@ class GainAKT2(nn.Module):
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
                  d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
-                 use_mastery_head=False, use_gain_head=False, non_negative_loss_weight=0.0, consistency_loss_weight=0.0):
+                 use_mastery_head=False, use_gain_head=False, non_negative_loss_weight=0.0, 
+                 monotonicity_loss_weight=0.0, mastery_performance_loss_weight=0.0,
+                 gain_performance_loss_weight=0.0, sparsity_loss_weight=0.0, consistency_loss_weight=0.0):
         super().__init__()
         self.model_name = "gainakt2"
         self.num_c = num_c
@@ -167,6 +169,10 @@ class GainAKT2(nn.Module):
         self.use_mastery_head = use_mastery_head
         self.use_gain_head = use_gain_head
         self.non_negative_loss_weight = non_negative_loss_weight
+        self.monotonicity_loss_weight = monotonicity_loss_weight
+        self.mastery_performance_loss_weight = mastery_performance_loss_weight
+        self.gain_performance_loss_weight = gain_performance_loss_weight
+        self.sparsity_loss_weight = sparsity_loss_weight
         self.consistency_loss_weight = consistency_loss_weight
         
         # The pykt framework uses emb_type to distinguish embedding types.

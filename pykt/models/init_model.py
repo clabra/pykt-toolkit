@@ -153,7 +153,7 @@ def init_model(model_name, model_config, data_config, emb_type):
     #                     emb_path=data_config["emb_path"]).to(device)
     elif model_name == "gainakt2":
         # Filter out training-specific parameters
-        excluded_params = ['learning_rate', 'use_gain_head', 'use_mastery_head', 
+        excluded_params = ['learning_rate', 
                           'non_negative_loss_weight', 'consistency_loss_weight', 
                           'use_wandb', 'add_uuid', 'num_epochs']
         gainakt2_config = {k: v for k, v in model_config.items() if k not in excluded_params}

@@ -2,7 +2,7 @@
 # coding=utf-8
 """
 This script analyzes the interpretability of a trained GainAKT2 model by calculating
-the correlation between the model's projected skill mastery and its predictions.
+metrics for four key consistency requirements.
 """
 
 import argparse
@@ -46,6 +46,8 @@ def main(params):
     all_predictions = []
     all_skills = []
     all_masks = []
+    all_gains = []
+    all_responses = []
 
     with torch.no_grad():
         for data in valid_loader:
@@ -56,51 +58,107 @@ def main(params):
             output = model(c.long(), r.long(), cshft.long())
 
             # Ensure the model output is as expected
-            if isinstance(output, dict) and 'predictions' in output and 'projected_mastery' in output:
-                predictions = output['predictions']
-                projected_mastery = torch.sigmoid(output['projected_mastery']) # Apply sigmoid to get probabilities
-
-                all_predictions.append(predictions.cpu().numpy())
-                all_projections.append(projected_mastery.cpu().numpy())
+            if isinstance(output, dict) and 'predictions' in output:
+                all_predictions.append(output['predictions'].cpu().numpy())
                 all_skills.append(cshft.cpu().numpy())
                 all_masks.append(sm.cpu().numpy())
+                all_responses.append(r.cpu().numpy())
+
+                if 'projected_mastery' in output:
+                    all_projections.append(torch.sigmoid(output['projected_mastery']).cpu().numpy())
+                
+                if 'projected_gains' in output:
+                    all_gains.append(output['projected_gains'].cpu().numpy())
             else:
                 print("Warning: Model output is not in the expected format. Skipping batch.")
                 continue
 
     # Process results
     all_predictions = np.concatenate(all_predictions, axis=0)
-    all_projections = np.concatenate(all_projections, axis=0)
     all_skills = np.concatenate(all_skills, axis=0)
     all_masks = np.concatenate(all_masks, axis=0)
+    all_responses = np.concatenate(all_responses, axis=0)
+    
+    if all_projections:
+        all_projections = np.concatenate(all_projections, axis=0)
+    if all_gains:
+        all_gains = np.concatenate(all_gains, axis=0)
 
-    num_skills = all_projections.shape[-1]
-    skill_correlations = {}
+    num_skills = data_config[params["dataset_name"]]["num_c"]
 
-    for skill_id in range(num_skills):
-        # Find all interactions where this skill was the target
-        skill_mask = (all_skills == skill_id) & (all_masks == 1)
-
-        if np.sum(skill_mask) > 1: # Need at least 2 data points to calculate correlation
-            skill_preds = all_predictions[skill_mask]
-            skill_projs = all_projections[skill_mask, skill_id]
-
-            # Calculate Pearson correlation
-            corr, _ = pearsonr(skill_preds, skill_projs)
-            skill_correlations[skill_id] = corr
-
-    # Print results
-    print("\n--- Mastery-Performance Correlation Analysis ---")
-    valid_correlations = [c for c in skill_correlations.values() if not np.isnan(c)]
-    if valid_correlations:
-        average_correlation = np.mean(valid_correlations)
-        print(f"Average correlation across all skills: {average_correlation:.4f}")
+    # Metric 1: Mastery-Performance Correlation
+    print("\n--- 1. Mastery-Performance Correlation Analysis ---")
+    if len(all_projections) > 0:
+        skill_correlations = {}
+        for skill_id in range(num_skills):
+            skill_mask = (all_skills == skill_id) & (all_masks == 1)
+            if np.sum(skill_mask) > 1:
+                skill_preds = all_predictions[skill_mask]
+                skill_projs = all_projections[skill_mask, skill_id]
+                corr, _ = pearsonr(skill_preds, skill_projs)
+                skill_correlations[skill_id] = corr
+        
+        valid_correlations = [c for c in skill_correlations.values() if not np.isnan(c)]
+        if valid_correlations:
+            average_correlation = np.mean(valid_correlations)
+            print(f"Average correlation across all skills: {average_correlation:.4f}")
+        else:
+            print("Could not calculate correlations for any skill.")
     else:
-        print("Could not calculate correlations for any skill.")
+        print("Skipping: 'projected_mastery' not found in model output.")
 
-    print("\nCorrelation for a few sample skills:")
-    for i, skill_id in enumerate(list(skill_correlations.keys())[:10]):
-        print(f"  Skill {skill_id}: {skill_correlations[skill_id]:.4f}")
+    # Metric 2: Gain-Performance Correlation
+    print("\n--- 2. Gain-Performance Correlation Analysis ---")
+    if len(all_gains) > 0:
+        gains_for_correct_responses = []
+        gains_for_incorrect_responses = []
+        
+        # We extract the gain for the specific skill practiced in each interaction
+        relevant_gains = all_gains[np.arange(all_gains.shape[0])[:, None], np.arange(all_gains.shape[1]), all_skills]
+        
+        # Apply the sequence mask
+        active_gains = relevant_gains[all_masks == 1]
+        active_responses = all_responses[all_masks == 1]
+
+        if len(active_gains) > 1:
+            gain_perf_corr, _ = pearsonr(active_gains, active_responses)
+            print(f"Correlation between learning gain and response correctness: {gain_perf_corr:.4f}")
+        else:
+            print("Not enough data to calculate gain-performance correlation.")
+    else:
+        print("Skipping: 'projected_gains' not found in model output.")
+
+    # Metric 3: Non-Negative Gains Violation Rate
+    print("\n--- 3. Non-Negative Gains Violation Rate ---")
+    if len(all_gains) > 0:
+        active_gains_all_skills = all_gains[all_masks == 1]
+        negative_gains = active_gains_all_skills[active_gains_all_skills < 0]
+        violation_rate = len(negative_gains) / active_gains_all_skills.size if active_gains_all_skills.size > 0 else 0
+        print(f"Percentage of projected learning gains that are negative: {violation_rate:.4%}")
+    else:
+        print("Skipping: 'projected_gains' not found in model output.")
+
+    # Metric 4: Mastery Monotonicity Violation Rate
+    print("\n--- 4. Mastery Monotonicity Violation Rate ---")
+    if len(all_projections) > 0:
+        # Compare mastery at step t with step t-1
+        mastery_t = all_projections[:, 1:, :]
+        mastery_t_minus_1 = all_projections[:, :-1, :]
+        
+        # Mask for valid transitions (where both t and t-1 are not padding)
+        mask_t = all_masks[:, 1:]
+        mask_t_minus_1 = all_masks[:, :-1]
+        valid_transitions_mask = (mask_t == 1) & (mask_t_minus_1 == 1)
+        
+        # Find violations where mastery decreases
+        mastery_diff = mastery_t - mastery_t_minus_1
+        violations = mastery_diff[valid_transitions_mask] < 0
+        
+        monotonicity_violation_rate = np.sum(violations) / violations.size if violations.size > 0 else 0
+        print(f"Percentage of instances where skill mastery decreases: {monotonicity_violation_rate:.4%}")
+    else:
+        print("Skipping: 'projected_mastery' not found in model output.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -1,0 +1,18 @@
+{
+  "student_id": "real_student_0_0",
+  "total_interactions": 20,
+  "skills_practiced": 1,
+  "overall_accuracy": 0.699999988079071,
+  "avg_final_mastery": 1.0171910524368286,
+  "mastery_growth": 1.0669673681259155,
+  "skill_breakdown": {
+    "skill_19": {
+      "interactions_count": 20,
+      "accuracy": 0.699999988079071,
+      "initial_mastery": 0.0,
+      "final_mastery": 1.0171910524368286,
+      "total_learning_gain": 3.360501527786255,
+      "avg_learning_gain": 0.16802507638931274
+    }
+  }
+}

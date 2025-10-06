@@ -4,7 +4,7 @@ Train the GainAKT2 model using the generic training script.
 This script is the entry point for training the GainAKT2 model. It configures the
 hyperparameters and passes them to the main training function in `wandb_train.py`.
 
-cd /workspaces/pykt-toolkit/examples && CUDA_VISIBLE_DEVICES=0 python wandb_gainakt2_train.py --dataset_name=assist2015 --use_wandb=0 --num_epochs=10
+cd /workspaces/pykt-toolkit/examples && CUDA_VISIBLE_DEVICES=0 python wandb_gainakt2_train.py --dataset_name=assist2015 --use_wandb=0 --num_epochs=10 --use_gain_head=1 --use_mastery_head=1
 
 OPTIMIZED CONFIGURATION (Best AUC: 0.7242 from Advanced Parameter Sweep):
 
