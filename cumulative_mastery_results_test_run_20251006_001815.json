@@ -1,0 +1,73 @@
+{
+  "experiment_name": "test_run",
+  "best_val_auc": 0.642062784609083,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.014934355991240789,
+    "gain_correlation": -0.014748926078028964
+  },
+  "train_history": {
+    "train_loss": [
+      0.6479504292570247,
+      0.6359907902506967
+    ],
+    "train_auc": [
+      0.6221447174530276,
+      0.6320955352550265
+    ],
+    "val_auc": [
+      0.6407863941045038,
+      0.642062784609083
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.045676747659865284,
+        "gain_correlation": -0.032061381923309415
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0451236437332621,
+        "gain_correlation": 0.056424663147714195
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "epochs": 2,
+    "batch_size": 16,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "enhanced_constraints": true,
+    "monitor_freq": 10,
+    "dataset": "assist2015",
+    "fold": 0,
+    "experiment_suffix": "test_run",
+    "use_wandb": false
+  },
+  "log_file": "logs/cumulative_mastery_full_test_run_20251006_001434.log",
+  "timestamp": "2025-10-06T00:18:15.168000"
+}

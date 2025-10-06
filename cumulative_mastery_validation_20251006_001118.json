@@ -1,0 +1,15 @@
+{
+  "monotonicity_violation_rate": 0.0,
+  "students_with_monotonicity_violations": 0.0,
+  "negative_gain_rate": 0.0,
+  "students_with_negative_gains": 0.0,
+  "mastery_bounds_violation_rate": 0.0,
+  "students_with_bounds_violations": 0.0,
+  "mean_mastery_performance_correlation": 0.04902967740221504,
+  "positive_mastery_correlations": 0.42424242424242425,
+  "mean_gain_performance_correlation": 0.07249463695790971,
+  "positive_gain_correlations": 0.6363636363636364,
+  "validation_timestamp": "2025-10-06T00:11:18.663659",
+  "model_type": "gainakt2_cumulative_mastery",
+  "students_analyzed": 50
+}

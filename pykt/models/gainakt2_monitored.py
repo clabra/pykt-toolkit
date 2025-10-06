@@ -110,9 +110,28 @@ class GainAKT2Monitored(GainAKT2):
         logits = self.prediction_head(concatenated)
         predictions = torch.sigmoid(logits.squeeze(-1))
         
-        # 5. Compute interpretability projections
-        projected_mastery = self.mastery_head(context_seq)
-        projected_gains = self.gain_head(value_seq)
+        # 5. Compute interpretability projections with proper constraints
+        # Apply ReLU to gains to ensure non-negativity
+        projected_gains_raw = self.gain_head(value_seq)  
+        projected_gains = torch.relu(projected_gains_raw)
+        
+        # Compute cumulative mastery to ENFORCE monotonicity
+        # Method: mastery[t] = mastery[t-1] + gains[t] (cumulative learning)
+        projected_mastery_raw = self.mastery_head(context_seq)
+        initial_mastery = torch.sigmoid(projected_mastery_raw)  # Base mastery estimates
+        
+        # Build cumulative mastery sequence (perfectly monotonic)
+        batch_size, seq_len, num_c = initial_mastery.shape
+        projected_mastery = torch.zeros_like(initial_mastery)
+        
+        # Initialize first timestep with base mastery
+        projected_mastery[:, 0, :] = initial_mastery[:, 0, :]
+        
+        # Accumulate learning gains to ensure monotonicity
+        for t in range(1, seq_len):
+            # Mastery = previous mastery + current gains, capped at 1.0
+            accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1  # Scale gains
+            projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
         
         # 6. Prepare output with internal states
         output = {

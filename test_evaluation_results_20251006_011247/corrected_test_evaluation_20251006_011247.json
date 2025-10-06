@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-10-06T01:17:16.705344",
+  "model_path": "saved_model/gainakt2_cumulative_mastery_quick_test/best_model.pth",
+  "evaluation_type": "FRESH_TEST_DATASET_CPU_ONLY",
+  "data_leakage_corrected": true,
+  "fresh_processing": true,
+  "performance_metrics": {
+    "test_auc": 0.7146178218668096,
+    "test_accuracy": 0.7474292677127913,
+    "validation_auc_original": 0.721,
+    "auc_difference": -0.006382178133190419,
+    "total_predictions": 134592,
+    "evaluation_time": 268.39317083358765
+  },
+  "consistency_metrics": {
+    "perfect_consistency_rate": 0.0,
+    "students_analyzed": 0,
+    "perfect_students": 0,
+    "violation_students": 0
+  },
+  "assessment": {
+    "performance_grade": "A",
+    "consistency_grade": "F",
+    "overall_verdict": "NEEDS_IMPROVEMENT",
+    "generalization_assessment": "EXCELLENT - Minimal overfitting"
+  },
+  "dataset_info": {
+    "test_sequences": 3866,
+    "test_batches": 242,
+    "device": "cpu",
+    "cuda_files_cleared": 2
+  }
+}
