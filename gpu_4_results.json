@@ -1,0 +1,62 @@
+[
+  {
+    "run_id": 17,
+    "gpu_id": 4,
+    "parameters": {
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.0007167917124173839,
+      "weight_decay": 0.0001452778589365336,
+      "patience": 20,
+      "enhanced_constraints": true
+    },
+    "status": "failed",
+    "error": "2025-10-06 10:45:16,980 - INFO - ================================================================================\n2025-10-06 10:45:16,980 - INFO - TRAINING GAINAKT2MONITORED WITH CUMULATIVE MASTERY\n2025-10-06 10:45:16,980 - INFO - ================================================================================\n2025-10-06 10:45:16,980 - INFO - Experiment: simple_sweep_run_17\n2025-10-06 10:45:16,980 - INFO - Epochs: 20\n2025-10-06 10:45:16,980 - INFO - Learning rate: 0.0007167917124173839\n2025-10-0",
+    "duration_minutes": 3.244917643070221
+  },
+  {
+    "run_id": 18,
+    "gpu_id": 4,
+    "parameters": {
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.000692544028058124,
+      "weight_decay": 0.00030270487123108515,
+      "patience": 20,
+      "enhanced_constraints": false
+    },
+    "status": "failed",
+    "error": "2025-10-06 10:48:31,606 - INFO - ================================================================================\n2025-10-06 10:48:31,607 - INFO - TRAINING GAINAKT2MONITORED WITH CUMULATIVE MASTERY\n2025-10-06 10:48:31,607 - INFO - ================================================================================\n2025-10-06 10:48:31,607 - INFO - Experiment: simple_sweep_run_18\n2025-10-06 10:48:31,607 - INFO - Epochs: 20\n2025-10-06 10:48:31,607 - INFO - Learning rate: 0.000692544028058124\n2025-10-06",
+    "duration_minutes": 8.058476690451304
+  },
+  {
+    "run_id": 19,
+    "gpu_id": 4,
+    "parameters": {
+      "epochs": 20,
+      "batch_size": 32,
+      "lr": 0.0008226815209631073,
+      "weight_decay": 0.00018014111672031035,
+      "patience": 20,
+      "enhanced_constraints": false
+    },
+    "results": {},
+    "status": "success",
+    "duration_minutes": 21.86900938351949
+  },
+  {
+    "run_id": 20,
+    "gpu_id": 4,
+    "parameters": {
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.00039196356256225514,
+      "weight_decay": 0.0006319761876257743,
+      "patience": 20,
+      "enhanced_constraints": true
+    },
+    "status": "failed",
+    "error": "2025-10-06 11:18:26,878 - INFO - ================================================================================\n2025-10-06 11:18:26,878 - INFO - TRAINING GAINAKT2MONITORED WITH CUMULATIVE MASTERY\n2025-10-06 11:18:26,878 - INFO - ================================================================================\n2025-10-06 11:18:26,878 - INFO - Experiment: simple_sweep_run_20\n2025-10-06 11:18:26,878 - INFO - Epochs: 20\n2025-10-06 11:18:26,878 - INFO - Learning rate: 0.00039196356256225514\n2025-10-",
+    "duration_minutes": 10.728076887130737
+  }
+]

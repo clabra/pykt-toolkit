@@ -1,0 +1,382 @@
+[
+  {
+    "run_id": 4,
+    "parameters": {
+      "gpu_id": 3,
+      "epochs": 25,
+      "batch_size": 128,
+      "lr": 0.0005211375031320268,
+      "weight_decay": 0.00040150541329157986,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.16954993267382856,
+      "sparsity_loss_weight": 0.3001449276637105,
+      "consistency_loss_weight": 0.4038121994338161
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08038912216822307,
+    "gpu_id": 3
+  },
+  {
+    "run_id": 5,
+    "parameters": {
+      "gpu_id": 4,
+      "epochs": 35,
+      "batch_size": 32,
+      "lr": 0.0008099661398363632,
+      "weight_decay": 0.0003167352073309083,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.22721454492973442,
+      "sparsity_loss_weight": 0.16519893235192928,
+      "consistency_loss_weight": 0.2242475822905315
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08191266854604086,
+    "gpu_id": 4
+  },
+  {
+    "run_id": 2,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 35,
+      "batch_size": 128,
+      "lr": 0.0006834313617029458,
+      "weight_decay": 0.00010736161054093747,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.13157734531855314,
+      "sparsity_loss_weight": 0.39158343515383287,
+      "consistency_loss_weight": 0.20212016511437225
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08430471817652384,
+    "gpu_id": 1
+  },
+  {
+    "run_id": 3,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 30,
+      "batch_size": 128,
+      "lr": 0.0011430444205436762,
+      "weight_decay": 9.965810432146347e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.08415467336204639,
+      "sparsity_loss_weight": 0.20636919294377157,
+      "consistency_loss_weight": 0.3177482069008585
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08613324960072835,
+    "gpu_id": 2
+  },
+  {
+    "run_id": 1,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 35,
+      "batch_size": 64,
+      "lr": 0.0015181418958547814,
+      "weight_decay": 0.00034039186623668877,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.14742032264838906,
+      "sparsity_loss_weight": 0.12487767926977833,
+      "consistency_loss_weight": 0.2775314229835236
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08747013807296752,
+    "gpu_id": 0
+  },
+  {
+    "run_id": 9,
+    "parameters": {
+      "gpu_id": 3,
+      "epochs": 35,
+      "batch_size": 32,
+      "lr": 0.001310049936506441,
+      "weight_decay": 0.00019225360071960902,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.08917072512893619,
+      "sparsity_loss_weight": 0.19363810685718047,
+      "consistency_loss_weight": 0.42545041085280183
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08848217328389486,
+    "gpu_id": 3
+  },
+  {
+    "run_id": 10,
+    "parameters": {
+      "gpu_id": 4,
+      "epochs": 30,
+      "batch_size": 64,
+      "lr": 0.0028094299276901426,
+      "weight_decay": 0.00015482184989158257,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.1398169092313607,
+      "sparsity_loss_weight": 0.4252345086035648,
+      "consistency_loss_weight": 0.26941020658064946
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08948680559794107,
+    "gpu_id": 4
+  },
+  {
+    "run_id": 7,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 20,
+      "batch_size": 128,
+      "lr": 0.002901332255958713,
+      "weight_decay": 0.00010786465886896971,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.05463795774212775,
+      "sparsity_loss_weight": 0.44873582475447893,
+      "consistency_loss_weight": 0.49573490030598694
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.09137862126032512,
+    "gpu_id": 1
+  },
+  {
+    "run_id": 6,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 25,
+      "batch_size": 128,
+      "lr": 0.0024742537483504155,
+      "weight_decay": 0.00010942241223026054,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.2650050182559637,
+      "sparsity_loss_weight": 0.49189575565019783,
+      "consistency_loss_weight": 0.48456476442093926
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.0914987325668335,
+    "gpu_id": 0
+  },
+  {
+    "run_id": 8,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 35,
+      "batch_size": 64,
+      "lr": 0.0009445081592600136,
+      "weight_decay": 8.76614631738019e-05,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.052467724923009065,
+      "sparsity_loss_weight": 0.21303516087390528,
+      "consistency_loss_weight": 0.2844662001593243
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.09224628607432048,
+    "gpu_id": 2
+  },
+  {
+    "run_id": 12,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 20,
+      "batch_size": 32,
+      "lr": 0.002408482801324299,
+      "weight_decay": 8.69863417953535e-05,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.2246022460328994,
+      "sparsity_loss_weight": 0.3388976408370813,
+      "consistency_loss_weight": 0.2896818234376943
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08894795576731364,
+    "gpu_id": 1
+  },
+  {
+    "run_id": 13,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 30,
+      "batch_size": 32,
+      "lr": 0.0012638476815650809,
+      "weight_decay": 0.00020946716657365024,
+      "patience": 10,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.08700369845435597,
+      "sparsity_loss_weight": 0.31208574244823617,
+      "consistency_loss_weight": 0.40613974807320374
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08891609509785971,
+    "gpu_id": 2
+  },
+  {
+    "run_id": 11,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 35,
+      "batch_size": 64,
+      "lr": 0.0005284663016043626,
+      "weight_decay": 9.968670132704076e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.10097707533498278,
+      "sparsity_loss_weight": 0.17207221356721242,
+      "consistency_loss_weight": 0.32752811790553904
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.09004254341125488,
+    "gpu_id": 0
+  },
+  {
+    "run_id": 14,
+    "parameters": {
+      "gpu_id": 3,
+      "epochs": 30,
+      "batch_size": 128,
+      "lr": 0.0013666604720983292,
+      "weight_decay": 0.00022028797226562334,
+      "patience": 20,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.22928724934032813,
+      "sparsity_loss_weight": 0.19896386231448943,
+      "consistency_loss_weight": 0.2409082618166538
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.09134345054626465,
+    "gpu_id": 3
+  },
+  {
+    "run_id": 15,
+    "parameters": {
+      "gpu_id": 4,
+      "epochs": 35,
+      "batch_size": 64,
+      "lr": 0.0022243584136171883,
+      "weight_decay": 5.033635326506314e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.09392308143584689,
+      "sparsity_loss_weight": 0.28209587411007014,
+      "consistency_loss_weight": 0.4929344880738074
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.09172953764597574,
+    "gpu_id": 4
+  },
+  {
+    "run_id": 18,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 20,
+      "batch_size": 32,
+      "lr": 0.0006117684091710725,
+      "weight_decay": 5.414170984928443e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.10597009563038533,
+      "sparsity_loss_weight": 0.1935835102661404,
+      "consistency_loss_weight": 0.39791190283730515
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08312551577885946,
+    "gpu_id": 2
+  },
+  {
+    "run_id": 19,
+    "parameters": {
+      "gpu_id": 3,
+      "epochs": 20,
+      "batch_size": 128,
+      "lr": 0.0009766845627894203,
+      "weight_decay": 8.971330913174992e-05,
+      "patience": 10,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.08581355425715366,
+      "sparsity_loss_weight": 0.16261281966415614,
+      "consistency_loss_weight": 0.32817406557322293
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08368368943532307,
+    "gpu_id": 3
+  },
+  {
+    "run_id": 17,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 30,
+      "batch_size": 32,
+      "lr": 0.0013004982027663375,
+      "weight_decay": 0.0001675689986809436,
+      "patience": 10,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.25073641605222263,
+      "sparsity_loss_weight": 0.18892269491189528,
+      "consistency_loss_weight": 0.3122047690723014
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08388367096583048,
+    "gpu_id": 1
+  },
+  {
+    "run_id": 16,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 25,
+      "batch_size": 32,
+      "lr": 0.0006494768413146191,
+      "weight_decay": 6.356944098813745e-05,
+      "patience": 10,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.2163092357101788,
+      "sparsity_loss_weight": 0.4089765477387094,
+      "consistency_loss_weight": 0.36995575992832086
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08667074044545492,
+    "gpu_id": 0
+  },
+  {
+    "run_id": 20,
+    "parameters": {
+      "gpu_id": 4,
+      "epochs": 20,
+      "batch_size": 32,
+      "lr": 0.0020167371450945707,
+      "weight_decay": 5.620723331368437e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "monotonicity_loss_weight": 0.07129744394742567,
+      "sparsity_loss_weight": 0.13726264612629333,
+      "consistency_loss_weight": 0.3504124699902273
+    },
+    "status": "failed",
+    "error": "usage: train_cumulative_mastery_full.py [-h] [--epochs EPOCHS]\n                                        [--batch_size BATCH_SIZE] [--lr LR]\n                                        [--weight_decay WEIGHT_DECAY]\n                                        [--patience PATIENCE]\n                                        [--enhanced_constraints ENHANCED_CONSTRAINTS]\n                                        [--monitor_freq MONITOR_FREQ]\n                                        [--dataset DATASET] [--fold FOLD]",
+    "duration_minutes": 0.08879370292027791,
+    "gpu_id": 4
+  }
+]

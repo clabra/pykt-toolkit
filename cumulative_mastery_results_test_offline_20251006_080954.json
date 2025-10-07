@@ -1,0 +1,103 @@
+{
+  "experiment_name": "test_offline",
+  "best_val_auc": 0.6419563137057268,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.01505365291658663,
+    "gain_correlation": 0.0008223765946564593
+  },
+  "train_history": {
+    "train_loss": [
+      0.6539234296645525,
+      0.6293835701720084,
+      0.6292643831183873,
+      0.6287344477954924,
+      0.6289005001591895
+    ],
+    "train_auc": [
+      0.6269928596234777,
+      0.635438109502134,
+      0.6367581659189201,
+      0.6373017159932665,
+      0.6372432628852149
+    ],
+    "val_auc": [
+      0.6404064269071232,
+      0.641337217452971,
+      0.6418131319846446,
+      0.6415675968180545,
+      0.6419563137057268
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.045676747659865305,
+        "gain_correlation": -0.09211033698841602
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.04567674765986538,
+        "gain_correlation": -0.09498433297822224
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.04567674765986537,
+        "gain_correlation": -0.060720364455490304
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.04567674765986529,
+        "gain_correlation": -0.06285508386941191
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.045676747659865284,
+        "gain_correlation": 0.01250265021272285
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "epochs": 5,
+    "batch_size": 64,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "enhanced_constraints": true,
+    "monitor_freq": 50,
+    "dataset": "assist2015",
+    "fold": 0,
+    "experiment_suffix": "test_offline",
+    "use_wandb": true
+  },
+  "log_file": "logs/cumulative_mastery_full_test_offline_20251006_080620.log",
+  "timestamp": "2025-10-06T08:09:54.041894"
+}

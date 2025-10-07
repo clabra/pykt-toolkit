@@ -1,0 +1,50 @@
+[
+  {
+    "run_id": 1,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 25,
+      "batch_size": 64,
+      "lr": 0.0008216851484712461,
+      "weight_decay": 9.370458588775972e-05,
+      "patience": 15,
+      "enhanced_constraints": true,
+      "dataset": "assist2015",
+      "fold": 0,
+      "monitor_freq": 50
+    },
+    "metrics": {
+      "best_val_auc": 0.7223,
+      "consistency_score": 1.0,
+      "correlation_score": 0.0,
+      "combined_objective": 0.5056
+    },
+    "status": "success",
+    "duration_minutes": 23.511295648415885,
+    "gpu_id": 0
+  },
+  {
+    "run_id": 2,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 20,
+      "batch_size": 32,
+      "lr": 0.0005384356563714937,
+      "weight_decay": 0.00015514629810311248,
+      "patience": 15,
+      "enhanced_constraints": false,
+      "dataset": "assist2015",
+      "fold": 0,
+      "monitor_freq": 50
+    },
+    "metrics": {
+      "best_val_auc": 0.7218,
+      "consistency_score": 1.0,
+      "correlation_score": 0.0,
+      "combined_objective": 0.5053
+    },
+    "status": "success",
+    "duration_minutes": 27.859187372525533,
+    "gpu_id": 1
+  }
+]

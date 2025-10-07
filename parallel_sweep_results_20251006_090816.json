@@ -1,0 +1,50 @@
+[
+  {
+    "run_id": 3,
+    "gpu_id": 2,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 20,
+      "batch_size": 128,
+      "lr": 0.0014178029726379339,
+      "weight_decay": 0.0003945335684729744,
+      "patience": 10,
+      "enhanced_constraints": true
+    },
+    "metrics": {},
+    "status": "success",
+    "duration_minutes": 12.39677817026774
+  },
+  {
+    "run_id": 4,
+    "gpu_id": 3,
+    "parameters": {
+      "gpu_id": 3,
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.001720498599920708,
+      "weight_decay": 0.00033255330905807283,
+      "patience": 15,
+      "enhanced_constraints": true
+    },
+    "metrics": {},
+    "status": "success",
+    "duration_minutes": 14.735268660386403
+  },
+  {
+    "run_id": 1,
+    "gpu_id": 0,
+    "parameters": {
+      "gpu_id": 0,
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.0029657304754017975,
+      "weight_decay": 0.00010292351457922967,
+      "patience": 10,
+      "enhanced_constraints": true
+    },
+    "metrics": {},
+    "status": "success",
+    "duration_minutes": 15.17128156820933
+  }
+]

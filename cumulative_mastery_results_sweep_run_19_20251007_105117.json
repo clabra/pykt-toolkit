@@ -1,0 +1,353 @@
+{
+  "experiment_name": "sweep_run_19",
+  "best_val_auc": 0.7206335386604169,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": -0.003644324609757692,
+    "gain_correlation": 0.05813254797044913
+  },
+  "train_history": {
+    "train_loss": [
+      0.6066264443755768,
+      0.5829875507811808,
+      0.5808268509843807,
+      0.5813345644294907,
+      0.5812087231967116,
+      0.5803465253330883,
+      0.5794636665848253,
+      0.5793923516347619,
+      0.5791698933574202,
+      0.5791771865879316,
+      0.5787930967276578,
+      0.5786296117645471,
+      0.5778626916939731,
+      0.5772244574338043,
+      0.5767666097595284,
+      0.5759642826769636,
+      0.5755189189330284,
+      0.5750445415473355,
+      0.5747186840352617,
+      0.5746311122271681,
+      0.5743891669369732,
+      0.5740912684813683,
+      0.5736010083108368,
+      0.5734703649665408,
+      0.5733669326095383,
+      0.5731594198108337,
+      0.5706611722707748,
+      0.5701012710215514,
+      0.5695924508756924,
+      0.5693096391895275
+    ],
+    "train_auc": [
+      0.6799155763076596,
+      0.7077788241786278,
+      0.7110255180516915,
+      0.7114236840302277,
+      0.7120723203104856,
+      0.7137866601027512,
+      0.7153152174340135,
+      0.7154682706641112,
+      0.7158201010188407,
+      0.7158579410676591,
+      0.7163045424328833,
+      0.7167485996800959,
+      0.7180086450219332,
+      0.7189437608824949,
+      0.7200415840696421,
+      0.7211339591219024,
+      0.722002842413481,
+      0.7227664243219686,
+      0.7233926537647148,
+      0.7237180552215946,
+      0.7240178408838968,
+      0.7245891644805893,
+      0.7252351712974068,
+      0.7253861520181412,
+      0.7256348323946192,
+      0.7259179894732942,
+      0.7298423374393004,
+      0.730743002665634,
+      0.7314357848179879,
+      0.7319177126701382
+    ],
+    "val_auc": [
+      0.7089353768771458,
+      0.711728056886839,
+      0.7128149534443522,
+      0.7120511326245513,
+      0.7133506712372542,
+      0.714118739070615,
+      0.715654179914785,
+      0.7160437440869578,
+      0.7155147080190369,
+      0.7155836878147548,
+      0.7151871470921509,
+      0.716459008811813,
+      0.716827138656547,
+      0.7181336868243678,
+      0.7182033666150134,
+      0.7183242334731654,
+      0.7189212409697268,
+      0.7185019671606222,
+      0.7196053121211127,
+      0.7202353627279874,
+      0.7191655685095996,
+      0.7199830145565793,
+      0.7197918785031857,
+      0.7202624580981485,
+      0.7193404413803484,
+      0.7191999034824728,
+      0.7203158729820239,
+      0.7205905914346797,
+      0.7205128934755355,
+      0.7206335386604169
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.05395014270486904,
+        "gain_correlation": 0.12053972299864393
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.02172610205858155,
+        "gain_correlation": 0.08509095605591276
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.011074072936433917,
+        "gain_correlation": 0.069658619955426
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.01102064880130279,
+        "gain_correlation": 0.047345720380127077
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0013343976621032652,
+        "gain_correlation": 0.02668953339687602
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.002443665726044861,
+        "gain_correlation": 0.022339508714140692
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0009467053979936546,
+        "gain_correlation": 0.011178543822434751
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.010326913976620573,
+        "gain_correlation": 0.052542762781216126
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.007003217846896356,
+        "gain_correlation": 0.06658245385497873
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0033708941169118,
+        "gain_correlation": 0.07887923315365686
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.003994186153842172,
+        "gain_correlation": 0.08221142797362957
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.011970376148080572,
+        "gain_correlation": 0.08648774369814982
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.011867881033837194,
+        "gain_correlation": 0.06394212747355256
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.0037009262868138086,
+        "gain_correlation": 0.10031595667656511
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.009380038624943726,
+        "gain_correlation": 0.10345297477805741
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.00504531549807137,
+        "gain_correlation": 0.09108745179726815
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.008531329385645483,
+        "gain_correlation": 0.09514306898289644
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.019998401094637144,
+        "gain_correlation": 0.12877723025191262
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.01059186567365209,
+        "gain_correlation": 0.12797997300944688
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.006121833963184503,
+        "gain_correlation": 0.12132888888987045
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.012821085480461415,
+        "gain_correlation": 0.12636516358223804
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.016419513800415016,
+        "gain_correlation": 0.1368281066994854
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.013726872151281735,
+        "gain_correlation": 0.1272527779204894
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.008617317315314333,
+        "gain_correlation": 0.12972455609169575
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.005206172731868951,
+        "gain_correlation": 0.10339966706323496
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.015426968752757085,
+        "gain_correlation": 0.10746918835763991
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.012495211539304569,
+        "gain_correlation": 0.12317866233096264
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.021376816311363254,
+        "gain_correlation": 0.1370588095255889
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.017825747668250774,
+        "gain_correlation": 0.12364995073677959
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.016835393178775915,
+        "gain_correlation": 0.12746854296767882
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "epochs": 30,
+    "batch_size": 32,
+    "lr": 0.0008057497689654765,
+    "weight_decay": 0.00036330017589545266,
+    "patience": 15,
+    "enhanced_constraints": true,
+    "monitor_freq": 50,
+    "dataset": "assist2015",
+    "fold": 0,
+    "experiment_suffix": "sweep_run_19",
+    "use_wandb": true
+  },
+  "log_file": "logs/cumulative_mastery_full_sweep_run_19_20251007_095835.log",
+  "timestamp": "2025-10-07T10:51:17.054815"
+}

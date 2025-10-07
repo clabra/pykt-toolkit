@@ -73,7 +73,7 @@ The code and scripts for existent models in the pykt framework mustn't be change
 - Reproducibility of experiments is a must, so all parameter values should be saved and read from a config file 
 - Code documentation should include usage examples with command-line arguments
 - Use markdown format for documentation files
-- Use an academic professional tone, avoiding the use of emojis, exclamations, informal language or marketing jargon.
+- Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon.
 - Use "we" instead of "you" following the academy convention. 
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 

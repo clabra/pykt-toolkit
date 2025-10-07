@@ -28,7 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     meld \
     git \
     lsof \
-    sudo
+    sudo \
+    poppler-utils
 
 # Download and install the corporate CA certificate
 RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt --insecure && \

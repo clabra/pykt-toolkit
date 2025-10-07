@@ -1,0 +1,44 @@
+program: train_cumulative_mastery_full.py
+method: bayes
+metric:
+  name: best_val_auc
+  goal: maximize
+early_terminate:
+  type: hyperband
+  min_iter: 5
+  max_iter: 50
+  s: 2
+  eta: 3
+
+parameters:
+  # Core Training Parameters (25 epochs focus)
+  epochs:
+    values: [20, 25, 30]
+  batch_size:
+    values: [32, 64, 128]
+  lr:
+    distribution: log_uniform_values
+    min: 0.0005
+    max: 0.002
+  weight_decay:
+    distribution: log_uniform_values
+    min: 0.00005
+    max: 0.0005
+
+  # Training Configuration  
+  patience:
+    values: [10, 15, 20]
+  enhanced_constraints:
+    values: [true, false]  # Test both modes
+  
+  # Dataset Configuration
+  dataset:
+    value: "assist2015"
+  fold:
+    value: 0
+  
+  # Experiment Configuration
+  experiment_suffix:
+    value: "sweep_run"
+  use_wandb:
+    value: false  # Force offline mode

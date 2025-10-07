@@ -1,0 +1,38 @@
+program: train_cumulative_mastery_full.py
+method: bayes
+metric:
+  name: best_val_auc
+  goal: maximize
+early_terminate:
+  type: hyperband
+  min_iter: 10
+  max_iter: 100
+  s: 2
+  eta: 3
+
+parameters:
+  # Core Training Parameters (ONLY SUPPORTED PARAMETERS)
+  epochs:
+    values: [20, 25, 30]
+  batch_size:
+    values: [32, 64, 128]
+  lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.005
+  weight_decay:
+    distribution: log_uniform_values
+    min: 0.00003
+    max: 0.0008
+  patience:
+    values: [10, 15, 20]
+  enhanced_constraints:
+    values: [true, false]
+
+  # Fixed Parameters
+  dataset:
+    value: "assist2015"
+  fold:
+    value: 0
+  monitor_freq:
+    value: 50

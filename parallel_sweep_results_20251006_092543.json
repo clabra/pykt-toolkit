@@ -1,0 +1,38 @@
+[
+  {
+    "run_id": 2,
+    "gpu_id": 1,
+    "parameters": {
+      "gpu_id": 1,
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.0007149776811625797,
+      "weight_decay": 6.209847900382664e-05,
+      "patience": 10,
+      "enhanced_constraints": true
+    },
+    "metrics": {
+      "best_val_auc": 35.0
+    },
+    "status": "success",
+    "duration_minutes": 9.86695567369461
+  },
+  {
+    "run_id": 3,
+    "gpu_id": 2,
+    "parameters": {
+      "gpu_id": 2,
+      "epochs": 20,
+      "batch_size": 64,
+      "lr": 0.0022078605220708625,
+      "weight_decay": 0.0004520181244114062,
+      "patience": 15,
+      "enhanced_constraints": true
+    },
+    "metrics": {
+      "best_val_auc": 40.0
+    },
+    "status": "success",
+    "duration_minutes": 14.743729917208354
+  }
+]
