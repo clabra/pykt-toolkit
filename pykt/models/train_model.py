@@ -69,6 +69,22 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
             projected_mastery_for_s_t = torch.gather(projected_mastery, 2, cshft_expanded.long()).squeeze(-1)
             loss_consistency = F.mse_loss(torch.masked_select(projected_mastery_for_s_t, sm), y)
             loss += model.consistency_loss_weight * loss_consistency
+    # elif model_name == "gainakt2exp":
+    #     output = ys[0]
+    #     y = torch.masked_select(output['predictions'], sm)
+    #     t = torch.masked_select(rshft, sm)
+    #     loss = binary_cross_entropy(y.double(), t.double())
+    #     if model.use_gain_head and hasattr(model, 'non_negative_loss_weight') and model.non_negative_loss_weight > 0:
+    #         projected_gains = output['projected_gains']
+    #         loss_non_negative = torch.mean(F.relu(-projected_gains))
+    #         loss += model.non_negative_loss_weight * loss_non_negative
+    #     if model.use_mastery_head and hasattr(model, 'consistency_loss_weight') and model.consistency_loss_weight > 0:
+    #         projected_mastery = output['projected_mastery']
+    #         predictions = output['predictions']
+    #         cshft_expanded = cshft.unsqueeze(-1)
+    #         projected_mastery_for_s_t = torch.gather(projected_mastery, 2, cshft_expanded.long()).squeeze(-1)
+    #         loss_consistency = F.mse_loss(torch.masked_select(projected_mastery_for_s_t, sm), y)
+    #         loss += model.consistency_loss_weight * loss_consistency
     elif model_name == "gainakt2_enhanced":
         output = ys[0]
         y = torch.masked_select(output['predictions'], sm)
@@ -259,7 +275,7 @@ def model_forward(model, data, rel=None):
     elif model_name in ["kqn", "sakt", "gainsakt"]:
         y = model(c.long(), r.long(), cshft.long())
         ys.append(y)
-    elif model_name in ["gainakt2"]:
+    elif model_name in ["gainakt2", "gainakt2exp"]:
         output = model(c.long(), r.long(), cshft.long())
         ys.append(output)
     elif model_name in ["gainakt2_enhanced"]:

@@ -12,7 +12,7 @@ import torch.nn as nn
 from .gainakt2 import GainAKT2
 
 
-class GainAKT2Monitored(GainAKT2):
+class GainAKT2Exp(GainAKT2):
     """
     Enhanced GainAKT2 model with training-time interpretability monitoring.
     
@@ -29,7 +29,7 @@ class GainAKT2Monitored(GainAKT2):
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, monitor_frequency=50):
         """
-        Initialize the monitored GainAKT2 model.
+        Initialize the monitored GainAKT2Exp model.
         
         Args:
             monitor_frequency (int): How often to compute interpretability metrics during training
@@ -253,17 +253,17 @@ class GainAKT2Monitored(GainAKT2):
         return total_loss
 
 
-def create_monitored_model(config):
+def create_exp_model(config):
     """
-    Factory function to create a GainAKT2Monitored model from config.
+    Factory function to create a GainAKT2Exp model from config.
     
     Args:
         config (dict): Model configuration parameters
         
     Returns:
-        GainAKT2Monitored: Configured model instance
+        GainAKT2Exp: Configured model instance
     """
-    return GainAKT2Monitored(
+    return GainAKT2Exp(
         num_c=config.get('num_c', 100),
         seq_len=config.get('seq_len', 200), 
         d_model=config.get('d_model', 256),

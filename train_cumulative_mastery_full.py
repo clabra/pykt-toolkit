@@ -108,9 +108,9 @@ import torch.multiprocessing as mp
 # Set multiprocessing start method to 'forkserver' to avoid process multiplication
 try:
     mp.set_start_method('forkserver', force=True)
-    print("✅ Multiprocessing start method set to 'forkserver'")
+    print("Multiprocessing start method set to 'forkserver'")
 except RuntimeError:
-    print("ℹ️ Multiprocessing context already set.")
+    print("Multiprocessing context already set.")
 
 # Add the project root to the Python path
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -343,7 +343,7 @@ def train_cumulative_mastery_model(args):
                 name=f"cumulative_mastery_{args.experiment_suffix}",
                 mode="offline",
             )
-            logger.info("✅ Wandb initialized in OFFLINE mode.")
+            logger.info("Wandb initialized in OFFLINE mode.")
         else:
             logger.info("WANDB_MODE is not 'offline'. Initializing wandb in online mode.")
             try:
@@ -352,7 +352,7 @@ def train_cumulative_mastery_model(args):
                     name=f"cumulative_mastery_{args.experiment_suffix}",
                     mode="online",
                 )
-                logger.info("✅ Wandb initialized in ONLINE mode.")
+                logger.info("Wandb initialized in ONLINE mode.")
             except wandb.errors.UsageError as e:
                 logger.error(f"Could not initialize wandb in online mode: {e}")
                 logger.info("Falling back to OFFLINE mode.")
@@ -361,7 +361,7 @@ def train_cumulative_mastery_model(args):
                     name=f"cumulative_mastery_{args.experiment_suffix}",
                     mode="offline",
                 )
-                logger.info("✅ Wandb initialized in OFFLINE mode (fallback).")
+                logger.info("Wandb initialized in OFFLINE mode (fallback).")
     
     # Load dataset
     dataset_name = args.dataset
@@ -385,8 +385,8 @@ def train_cumulative_mastery_model(args):
     model = model.to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
-    logger.info(f"✓ Model created with {total_params:,} parameters")
-    logger.info("✓ Perfect consistency guaranteed by architectural constraints")
+    logger.info(f"Model created with {total_params:,} parameters")
+    logger.info("Perfect consistency guaranteed by architectural constraints")
     
     # Training setup
     criterion = nn.BCELoss()
@@ -568,7 +568,7 @@ def train_cumulative_mastery_model(args):
             }
             
             torch.save(checkpoint, os.path.join(save_dir, "best_model.pth"))
-            logger.info(f"  ✓ New best model saved (Val AUC: {best_val_auc:.4f})")
+            logger.info(f"  New best model saved (Val AUC: {best_val_auc:.4f})")
         else:
             patience_counter += 1
         
@@ -621,12 +621,12 @@ def train_cumulative_mastery_model(args):
                 **{f'final_consistency_{k}': v for k, v in final_consistency.items()}
             })
             wandb.finish()
-            logger.info("✅ Wandb session finished (offline mode)")
+            logger.info("Wandb session finished (offline mode)")
         except Exception as e:
-            logger.warning(f"⚠️ Wandb finish failed (offline mode): {e}")
+            logger.warning(f"Wandb finish failed (offline mode): {e}")
     
     # Assessment
-    logger.info("\\n🎯 FINAL ASSESSMENT:")
+    logger.info("\\n FINAL ASSESSMENT:")
     perfect_consistency = (
         final_consistency['monotonicity_violation_rate'] == 0.0 and
         final_consistency['negative_gain_rate'] == 0.0 and
@@ -639,17 +639,17 @@ def train_cumulative_mastery_model(args):
     )
     
     if perfect_consistency:
-        logger.info("✅ PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!")
+        logger.info("PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!")
     else:
-        logger.info("⚠️  Some consistency violations detected")
+        logger.info("Some consistency violations detected")
     
     if strong_correlations:
-        logger.info("✅ STRONG PERFORMANCE CORRELATIONS ACHIEVED!")
+        logger.info("STRONG PERFORMANCE CORRELATIONS ACHIEVED!")
     else:
-        logger.info("⚠️  Correlations need improvement")
+        logger.info("Correlations need improvement")
     
     if perfect_consistency and strong_correlations:
-        logger.info("🎉 COMPLETE SUCCESS: Perfect consistency + Strong correlations!")
+        logger.info("SUCCESS: Perfect consistency + Strong correlations!")
     
     return final_results
 

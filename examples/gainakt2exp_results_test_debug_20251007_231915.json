@@ -1,0 +1,68 @@
+{
+  "experiment_name": "test_debug",
+  "best_val_auc": 0.7215572359079112,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.01657517700835655,
+    "gain_correlation": 0.012077650761320238
+  },
+  "train_history": {
+    "train_loss": [
+      0.6048060871776522,
+      0.5766890997096047
+    ],
+    "train_auc": [
+      0.6882141818234802,
+      0.7213310770704306
+    ],
+    "val_auc": [
+      0.7161174876412595,
+      0.7215572359079112
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.022761714955750904,
+        "gain_correlation": 0.034503235983367006
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.03742217041056712,
+        "gain_correlation": 0.03815284978701485
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 2,
+    "batch_size": 64,
+    "learning_rate": 0.0005,
+    "weight_decay": 5.857348235335391e-05,
+    "enhanced_constraints": true,
+    "fold": 0
+  },
+  "timestamp": "2025-10-07T23:19:15.759751"
+}

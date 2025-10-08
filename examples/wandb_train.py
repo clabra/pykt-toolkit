@@ -103,9 +103,18 @@ def main(params):
         
     debug_print(text = "init_model",fuc_name="main")
     print(f"model_name:{model_name}")
-    model = init_model(model_name, model_config, data_config[dataset_name], emb_type)
-    print(f"model is {model}")
-    if model_name == "hawkes":
+    
+    if model_name == "gainakt2exp":
+        # gainakt2exp uses its own model creation, skip init_model
+        model = None
+        print("gainakt2exp model will be created by train_gainakt2exp_model")
+    else:
+        model = init_model(model_name, model_config, data_config[dataset_name], emb_type)
+        print(f"model is {model}")
+    if model_name == "gainakt2exp":
+        # gainakt2exp handles optimizer creation internally
+        opt = None
+    elif model_name == "hawkes":
         weight_p, bias_p = [], []
         for name, p in filter(lambda x: x[1].requires_grad, model.named_parameters()):
             if 'bias' in name:
@@ -117,10 +126,10 @@ def main(params):
     elif model_name == "iekt":
         opt = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-6)
     elif model_name == "dtransformer":
-        print(f"dtransformer weight_decay = 1e-5")
+        print("dtransformer weight_decay = 1e-5")
         opt = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     elif model_name == "simakt":
-        print(f"simakt weight_decay = 1e-5")
+        print("simakt weight_decay = 1e-5")
         opt = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     elif model_name == "dimkt":
         opt = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=params['weight_decay'])
@@ -138,20 +147,53 @@ def main(params):
     
     debug_print(text = "train model",fuc_name="main")
     
-    if model_name == "rkt":
+    if model_name == "gainakt2exp":
+        # Use specialized training function for gainakt2exp model
+        from train_gainakt2exp import train_gainakt2exp_model
+        import argparse
+        
+        # Convert params to args object that train_gainakt2exp_model expects
+        args = argparse.Namespace()
+        args.epochs = num_epochs
+        args.batch_size = batch_size
+        args.lr = learning_rate
+        args.weight_decay = params.get('weight_decay', params.get('l2', 1e-5))
+        args.patience = params.get('patience', 20)
+        args.enhanced_constraints = params.get('enhanced_constraints', True)
+        args.monitor_freq = params.get('monitor_freq', 50)
+        args.dataset = dataset_name
+        args.fold = fold
+        args.experiment_suffix = params.get('experiment_suffix', 'wandb')
+        args.use_wandb = params.get('use_wandb', 0)
+        
+        # Call the specialized training function
+        results = train_gainakt2exp_model(args)
+        
+        # Extract results in the format expected by wandb_train
+        validauc = results['best_val_auc']
+        validacc = 0.0  # Not tracked in gainakt2exp training
+        best_epoch = len(results['train_history']['val_auc'])  # Last epoch with best performance
+        testauc, testacc, window_testauc, window_testacc = -1, -1, -1, -1  # Not computed
+        
+    elif model_name == "rkt":
         testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = \
             train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model, data_config[dataset_name], fold)
     else:
         testauc, testacc, window_testauc, window_testacc, validauc, validacc, best_epoch = train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, None, None, save_model)
     
-    if save_model:
+    if save_model and model_name != "gainakt2exp":
         best_model = init_model(model_name, model_config, data_config[dataset_name], emb_type)
         net = torch.load(os.path.join(ckpt_path, emb_type+"_model.ckpt"))
         best_model.load_state_dict(net)
 
     print("fold\tmodelname\tembtype\ttestauc\ttestacc\twindow_testauc\twindow_testacc\tvalidauc\tvalidacc\tbest_epoch")
     print(str(fold) + "\t" + model_name + "\t" + emb_type + "\t" + str(round(testauc, 4)) + "\t" + str(round(testacc, 4)) + "\t" + str(round(window_testauc, 4)) + "\t" + str(round(window_testacc, 4)) + "\t" + str(validauc) + "\t" + str(validacc) + "\t" + str(best_epoch))
-    model_save_path = os.path.join(ckpt_path, emb_type+"_model.ckpt")
+    
+    if model_name == "gainakt2exp":
+        model_save_path = f"saved_model/gainakt2exp_{params.get('experiment_suffix', 'wandb')}/best_model.pth"
+    else:
+        model_save_path = os.path.join(ckpt_path, emb_type+"_model.ckpt")
+    
     print(f"end:{datetime.datetime.now()}")
     
     if params['use_wandb']==1:
