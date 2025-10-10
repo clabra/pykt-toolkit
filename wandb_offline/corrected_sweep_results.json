@@ -1,0 +1,58 @@
+[
+  {
+    "job_id": "1",
+    "gpu_id": "0",
+    "log_file": "/workspaces/pykt-toolkit/wandb_offline/job_1_gpu_0.log",
+    "final_auc": 0.7236,
+    "best_auc": 0.7236,
+    "latest_auc": 0.7236,
+    "epoch_aucs": [
+      0.7152,
+      0.7236
+    ]
+  },
+  {
+    "job_id": "2",
+    "gpu_id": "1",
+    "log_file": "/workspaces/pykt-toolkit/wandb_offline/job_2_gpu_1.log",
+    "final_auc": 0.7152,
+    "best_auc": 0.7152,
+    "latest_auc": 0.7152,
+    "epoch_aucs": [
+      0.7152
+    ]
+  },
+  {
+    "job_id": "3",
+    "gpu_id": "2",
+    "log_file": "/workspaces/pykt-toolkit/wandb_offline/job_3_gpu_2.log",
+    "final_auc": 0.7152,
+    "best_auc": 0.7152,
+    "latest_auc": 0.7152,
+    "epoch_aucs": [
+      0.7152
+    ]
+  },
+  {
+    "job_id": "4",
+    "gpu_id": "3",
+    "log_file": "/workspaces/pykt-toolkit/wandb_offline/job_4_gpu_3.log",
+    "final_auc": 0.7152,
+    "best_auc": 0.7152,
+    "latest_auc": 0.7152,
+    "epoch_aucs": [
+      0.7152
+    ]
+  },
+  {
+    "job_id": "5",
+    "gpu_id": "4",
+    "log_file": "/workspaces/pykt-toolkit/wandb_offline/job_5_gpu_4.log",
+    "final_auc": 0.7152,
+    "best_auc": 0.7152,
+    "latest_auc": 0.7152,
+    "epoch_aucs": [
+      0.7152
+    ]
+  }
+]

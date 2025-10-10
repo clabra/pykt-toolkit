@@ -168,6 +168,14 @@ def train_gainakt2exp_model(args):
     experiment_suffix = getattr(args, 'experiment_suffix', 'optimal_v1')
     use_wandb = getattr(args, 'use_wandb', False)
     
+    # Individual constraint weights - OPTIMAL values from parameter sweep
+    non_negative_loss_weight = getattr(args, 'non_negative_loss_weight', 0.0)
+    monotonicity_loss_weight = getattr(args, 'monotonicity_loss_weight', 0.1)
+    mastery_performance_loss_weight = getattr(args, 'mastery_performance_loss_weight', 0.8)
+    gain_performance_loss_weight = getattr(args, 'gain_performance_loss_weight', 0.8)
+    sparsity_loss_weight = getattr(args, 'sparsity_loss_weight', 0.2)
+    consistency_loss_weight = getattr(args, 'consistency_loss_weight', 0.3)
+    
     # Setup logging using standard Python logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
@@ -180,6 +188,13 @@ def train_gainakt2exp_model(args):
     logger.info(f"Learning rate: {learning_rate}")
     logger.info(f"Batch size: {batch_size}")
     logger.info(f"Enhanced constraints: {enhanced_constraints}")
+    logger.info("Constraint weights:")
+    logger.info(f"  Non-negative loss: {non_negative_loss_weight}")
+    logger.info(f"  Monotonicity loss: {monotonicity_loss_weight}")
+    logger.info(f"  Mastery performance loss: {mastery_performance_loss_weight}")
+    logger.info(f"  Gain performance loss: {gain_performance_loss_weight}")
+    logger.info(f"  Sparsity loss: {sparsity_loss_weight}")
+    logger.info(f"  Consistency loss: {consistency_loss_weight}")
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -234,7 +249,11 @@ def train_gainakt2exp_model(args):
         'monitor_frequency': 50
     }
     
-    if enhanced_constraints:
+    # Use individual constraint parameters (override enhanced_constraints preset)
+    if enhanced_constraints and not any(hasattr(args, param) for param in [
+        'non_negative_loss_weight', 'monotonicity_loss_weight', 'mastery_performance_loss_weight',
+        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight']):
+        # Use enhanced_constraints preset only if no individual parameters are provided
         model_config.update({
             'non_negative_loss_weight': 0.0,
             'monotonicity_loss_weight': 0.1,
@@ -244,13 +263,14 @@ def train_gainakt2exp_model(args):
             'consistency_loss_weight': 0.3
         })
     else:
+        # Use individual constraint parameters (allows for sweep optimization)
         model_config.update({
-            'non_negative_loss_weight': 0.1,
-            'monotonicity_loss_weight': 0.1,
-            'mastery_performance_loss_weight': 0.3,
-            'gain_performance_loss_weight': 0.3,
-            'sparsity_loss_weight': 0.1,
-            'consistency_loss_weight': 0.1
+            'non_negative_loss_weight': non_negative_loss_weight,
+            'monotonicity_loss_weight': monotonicity_loss_weight,
+            'mastery_performance_loss_weight': mastery_performance_loss_weight,
+            'gain_performance_loss_weight': gain_performance_loss_weight,
+            'sparsity_loss_weight': sparsity_loss_weight,
+            'consistency_loss_weight': consistency_loss_weight
         })
     
     logger.info("Creating GainAKT2Exp with CUMULATIVE MASTERY...")
@@ -395,10 +415,24 @@ def train_gainakt2exp_model(args):
             model, valid_loader, device, logger, max_students=50
         )
         
-        # Log epoch results
-        logger.info(f"  Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
+        # Log epoch results with enhanced formatting
+        logger.info("=" * 60)
+        logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
+        logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
                    f"Constraint: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
-        logger.info(f"  Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
+        logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
+        
+        # Add AUC progress tracking
+        if len(train_history['val_auc']) > 1:
+            prev_auc = train_history['val_auc'][-2] if len(train_history['val_auc']) > 1 else 0
+            auc_change = val_auc - prev_auc
+            change_indicator = "📈" if auc_change > 0 else "📉" if auc_change < 0 else "➡️"
+            logger.info(f"  {change_indicator} AUC Change: {auc_change:+.4f} (Current: {val_auc:.4f}, Previous: {prev_auc:.4f})")
+        
+        # Show current best
+        current_best = max(train_history['val_auc']) if train_history['val_auc'] else 0
+        logger.info(f"  🏆 Current Best AUC: {current_best:.4f}")
+        logger.info("=" * 60)
         
         # Update history
         train_history['train_loss'].append(train_loss)
@@ -443,7 +477,7 @@ def train_gainakt2exp_model(args):
             }
             
             torch.save(checkpoint, os.path.join(save_dir, "best_model.pth"))
-            logger.info(f"  New best model saved (Val AUC: {best_val_auc:.4f})")
+            logger.info(f"  🎉 NEW BEST MODEL SAVED! Val AUC: {best_val_auc:.4f} (Epoch {epoch + 1})")
         else:
             patience_counter += 1
         
@@ -486,7 +520,15 @@ def train_gainakt2exp_model(args):
             'learning_rate': learning_rate,
             'weight_decay': weight_decay,
             'enhanced_constraints': enhanced_constraints,
-            'fold': fold
+            'fold': fold,
+            'constraint_weights': {
+                'non_negative_loss_weight': non_negative_loss_weight,
+                'monotonicity_loss_weight': monotonicity_loss_weight,
+                'mastery_performance_loss_weight': mastery_performance_loss_weight,
+                'gain_performance_loss_weight': gain_performance_loss_weight,
+                'sparsity_loss_weight': sparsity_loss_weight,
+                'consistency_loss_weight': consistency_loss_weight
+            }
         },
         'timestamp': datetime.now().isoformat()
     }

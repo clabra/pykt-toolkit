@@ -1,0 +1,136 @@
+{
+  "experiment_name": "enhanced_v1",
+  "best_val_auc": 0.7260371465485588,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.01706484013337308,
+    "gain_correlation": -0.009290468066541449
+  },
+  "train_history": {
+    "train_loss": [
+      0.6170134059218473,
+      0.5789951155352038,
+      0.5695300328639127,
+      0.5614131037579027,
+      0.5522430400515712,
+      0.539405090402263,
+      0.520906868600106,
+      0.49721689487612525
+    ],
+    "train_auc": [
+      0.6815586333454027,
+      0.7201555797201219,
+      0.7334460317906937,
+      0.7446945580824714,
+      0.7568085125661667,
+      0.7730363881434105,
+      0.7942945941903483,
+      0.8186063191149778
+    ],
+    "val_auc": [
+      0.7151583953300517,
+      0.7235933987394603,
+      0.7260371465485588,
+      0.7240831956828531,
+      0.7178150647489643,
+      0.7076972040759251,
+      0.6951702955886463,
+      0.6849662488406303
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.02187767581992238,
+        "gain_correlation": -0.052996838628456125
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.022808478260844624,
+        "gain_correlation": -0.043354754455342176
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.01272739731788426,
+        "gain_correlation": -0.03238409387080275
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.00640940504416206,
+        "gain_correlation": -0.030153061287462084
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.003261826949130338,
+        "gain_correlation": -0.034405755628551686
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.02519109560045249,
+        "gain_correlation": -0.03441990500686664
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.023146264220057215,
+        "gain_correlation": -0.035035205907375105
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.040592712270200476,
+        "gain_correlation": -0.035109133586469846
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 200,
+    "batch_size": 96,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": false,
+    "fold": 0,
+    "constraint_weights": {
+      "non_negative_loss_weight": 0.0,
+      "monotonicity_loss_weight": 0.1,
+      "mastery_performance_loss_weight": 0.8,
+      "gain_performance_loss_weight": 0.8,
+      "sparsity_loss_weight": 0.2,
+      "consistency_loss_weight": 0.3
+    }
+  },
+  "timestamp": "2025-10-08T11:10:04.586233"
+}
