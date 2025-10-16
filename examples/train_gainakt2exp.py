@@ -244,21 +244,35 @@ def train_gainakt2exp_model(args):
         'monitor_frequency': 50
     }
     
-    # Use individual constraint parameters (override enhanced_constraints preset)
-    if enhanced_constraints and not any(hasattr(args, param) for param in [
+    # Constraint resolution logic:
+    # 1. If enhanced_constraints == False => PURE BCE (all weights forced to 0.0)
+    # 2. If enhanced_constraints == True and no individual weights explicitly provided => use preset
+    # 3. Otherwise use individually supplied weights
+    individual_params = [
         'non_negative_loss_weight', 'monotonicity_loss_weight', 'mastery_performance_loss_weight',
-        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight']):
-        # Use enhanced_constraints preset only if no individual parameters are provided
+        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight'
+    ]
+    if not enhanced_constraints:
         model_config.update({
             'non_negative_loss_weight': 0.0,
+            'monotonicity_loss_weight': 0.0,
+            'mastery_performance_loss_weight': 0.0,
+            'gain_performance_loss_weight': 0.0,
+            'sparsity_loss_weight': 0.0,
+            'consistency_loss_weight': 0.0
+        })
+        logger.info("PURE BCE baseline: all constraint weights forced to 0.0")
+    elif enhanced_constraints and not any(hasattr(args, p) for p in individual_params):
+        model_config.update({
+            'non_negative_loss_weight': 0.0,  # enforced architecturally
             'monotonicity_loss_weight': 0.1,
             'mastery_performance_loss_weight': 0.8,
             'gain_performance_loss_weight': 0.8,
             'sparsity_loss_weight': 0.2,
             'consistency_loss_weight': 0.3
         })
+        logger.info("Enhanced constraints preset applied (no individual overrides provided)")
     else:
-        # Use individual constraint parameters (allows for sweep optimization)
         model_config.update({
             'non_negative_loss_weight': non_negative_loss_weight,
             'monotonicity_loss_weight': monotonicity_loss_weight,
@@ -267,6 +281,16 @@ def train_gainakt2exp_model(args):
             'sparsity_loss_weight': sparsity_loss_weight,
             'consistency_loss_weight': consistency_loss_weight
         })
+        logger.info("Using individually supplied constraint weights")
+
+    # Explicit logging of resolved weights for auditability
+    logger.info("Resolved constraint weights (final): "
+                f"non_neg={model_config['non_negative_loss_weight']} | "
+                f"mono={model_config['monotonicity_loss_weight']} | "
+                f"mastery_perf={model_config['mastery_performance_loss_weight']} | "
+                f"gain_perf={model_config['gain_performance_loss_weight']} | "
+                f"sparsity={model_config['sparsity_loss_weight']} | "
+                f"consistency={model_config['consistency_loss_weight']}")
     
     logger.info("Creating GainAKT2Exp with CUMULATIVE MASTERY...")
     model = create_exp_model(model_config)

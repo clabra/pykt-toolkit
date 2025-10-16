@@ -8,7 +8,6 @@ This is an enhanced version of the GainAKT2 model that includes:
 """
 
 import torch
-import torch.nn as nn
 from .gainakt2 import GainAKT2
 
 
@@ -249,6 +248,15 @@ class GainAKT2Exp(GainAKT2):
             non_relevant_gains = projected_gains[~skill_masks]
             sparsity_loss = torch.abs(non_relevant_gains).mean()
             total_loss += self.sparsity_loss_weight * sparsity_loss
+
+        # 6. Consistency between mastery increments and gains (architectural scaling factor 0.1)
+        #    Penalize deviation between actual mastery change and scaled gains.
+        if self.consistency_loss_weight > 0 and seq_len > 1:
+            mastery_delta = projected_mastery[:, 1:, :] - projected_mastery[:, :-1, :]
+            scaled_gains = projected_gains[:, 1:, :] * 0.1
+            consistency_residual = torch.abs(mastery_delta - scaled_gains)
+            consistency_loss = consistency_residual.mean()
+            total_loss += self.consistency_loss_weight * consistency_loss
 
         return total_loss
 

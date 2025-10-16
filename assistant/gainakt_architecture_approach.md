@@ -14,6 +14,23 @@ The abstract of the paper is as follows:
 
     This research contributes to the development of intelligent tutoring systems by enabling accurate and interpretable predictive modeling. It lays the groundwork for open learning models, where students can visualize their learning progress. Additionally, it provides a robust framework for personalized learning design and targeted educational interventions, empowering teachers to monitor student progress, deliver precise feedback, and design courses tailored to individual learning needs.
 
+## Some Terms and Concepts
+
+- **item**: A problem in the dataset
+- **learning path**: Student's sequence of interactions with problems 
+- **relevant knowledge components**: Knowledge Components (KC) related with a given item or problem according to the q-matrix
+- **relevant skills**: Skills that problems are designed to develop/assess. The relevant KC indicate the skills that the student will develop by working with the problem. 
+- **interaction**: A student's attempt at solving a problem
+- **mastery**: Probability that a student has mastered a knowledge component
+- **Q-matrix**: Binary matrix linking problems and knowledge components (KCs)
+- **G-matrix**: Matrix with the same shape than the Q-matrix. Each value is a real number between 0 and 1 that indicates to what extent the interaction of the student with a problem will develop the relevant knowledge compponents.
+- **learning gain**: Value of a cell in the G-matrix, indicating the expected increase in mastery for a knowledge component after an interaction with the corresponding problem. The value of a skill is the sum of the learning gains after all interactions with the problems related to that skill.
+- **gain signature**: A vector of learning gains for all knowledge components
+- **gain token**: A token representing the gain signature, used as input to the Transformer
+- **(S, R) tuple**: Represents a interaction of the student with a item, given by the skill (S) and the correctnes of the response (R). In datasets where a problem is related to various skills, the tuple should be (P, R) where P is the problem id. 
+- A complete description of concepts in assistment datasets can be found in the `assist09.md` file.
+
+
 ## From a As-Is to a To-Be architecture design 
 
 We start with a As-Is initial architecture and evolve it progresively towards a To-Be architecture.  
@@ -107,7 +124,7 @@ During training, the model automatically learns to:
 
 #### 3. Learning Gains
 
-The objective is that the model learns the learning gains produced by interactions given by the (S, R) tuple. When values and attention weights are properly learned, then the resulting values in the Z matrix can be interpreted as Knowledge States, i.e. mastery levels for skills, from which predictions can be calculated. Weights will be adjusted as to have Knowledge States tah allow to predict if the student is going to give a correct or incorrect response. 
+The objective is that the model learns the learning gains produced by interactions given by the (S, R) tuple. When values and attention weights are properly learned, then the resulting values in the Z matrix can be interpreted as related to Knowledge States, i.e. mastery levels for skills, from which predictions can be calculated. Weights will be adjusted as to have Knowledge States that allow to predict if the student is going to give a correct or incorrect response. 
 
 ## Mathematical Formulation
 
