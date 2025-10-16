@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score, accuracy_score
 import json
 from datetime import datetime
-from tqdm import tqdm
+# tqdm removed for cleaner output - only epoch results shown
 import wandb
 # Add the project root to the Python path
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -200,15 +200,10 @@ def train_gainakt2exp_model(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logger.info(f"Using device: {device}")
     
-    # Initialize wandb if requested  
+    # Initialize wandb if requested (force offline mode for clean operation)
     if use_wandb:
-        if os.environ.get('WANDB_MODE') == 'offline':
-            wandb.init(project="pykt-cumulative-mastery", name=f"gainakt2exp_{experiment_suffix}", mode="offline")
-        else:
-            try:
-                wandb.init(project="pykt-cumulative-mastery", name=f"gainakt2exp_{experiment_suffix}", mode="online")
-            except Exception:
-                wandb.init(project="pykt-cumulative-mastery", name=f"gainakt2exp_{experiment_suffix}", mode="offline")
+        # Always use offline mode for clean operation and network independence
+        wandb.init(project="pykt-cumulative-mastery", name=f"gainakt2exp_{experiment_suffix}", mode="offline")
     
     # Use standard PyKT data configuration
     data_config = {
@@ -322,9 +317,8 @@ def train_gainakt2exp_model(args):
         total_predictions = []
         total_targets = []
         
-        pbar = tqdm(train_loader, desc=f'Training Epoch {epoch+1}')
-        
-        for batch_idx, batch in enumerate(pbar):
+        # Disable progress bar for cleaner output - only show epoch results
+        for batch_idx, batch in enumerate(train_loader):
             questions = batch['cseqs'].to(device)
             responses = batch['rseqs'].to(device)
             questions_shifted = batch['shft_cseqs'].to(device)
@@ -357,19 +351,17 @@ def train_gainakt2exp_model(args):
             # Track metrics
             total_loss += total_batch_loss.item()
             total_main_loss += main_loss.item()
-            total_interpretability_loss += interpretability_loss.item()
+            # Handle case where interpretability_loss might be a float (when constraints disabled)
+            if isinstance(interpretability_loss, torch.Tensor):
+                total_interpretability_loss += interpretability_loss.item()
+            else:
+                total_interpretability_loss += float(interpretability_loss)
             
             with torch.no_grad():
                 total_predictions.extend(valid_predictions.cpu().numpy())
                 total_targets.extend(valid_targets.cpu().numpy())
             
-            # Update progress bar
-            pbar.set_postfix({
-                'Loss': f'{total_batch_loss.item():.4f}',
-                'Main': f'{main_loss.item():.4f}',
-                'Constraint': f'{interpretability_loss.item():.4f}',
-                'LR': f'{optimizer.param_groups[0]["lr"]:.2e}'
-            })
+            # Progress tracking removed for cleaner output
         
         # Compute training metrics
         train_loss = total_loss / len(train_loader)
@@ -385,7 +377,7 @@ def train_gainakt2exp_model(args):
         val_loss = 0.0
         
         with torch.no_grad():
-            for batch in tqdm(valid_loader, desc='Validation'):
+            for batch in valid_loader:
                 questions = batch['cseqs'].to(device)
                 responses = batch['rseqs'].to(device)
                 questions_shifted = batch['shft_cseqs'].to(device)

@@ -106,7 +106,7 @@ def main_wrapper():
     parser.add_argument('--patience', type=int, default=5, help='Early stopping patience (OPTIMAL)')
     
     # Enhanced constraints - individual weight parameters
-    parser.add_argument('--enhanced_constraints', type=bool, default=False, 
+    parser.add_argument('--enhanced_constraints', action='store_true', default=False, 
                        help='Enable enhanced constraint framework')
     parser.add_argument('--non_negative_loss_weight', type=float, default=0.0,
                        help='Non-negative constraint loss weight (OPTIMAL)')

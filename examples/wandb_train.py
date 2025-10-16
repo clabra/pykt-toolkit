@@ -28,7 +28,9 @@ def main(params):
 
     if params['use_wandb']==1:
         import wandb
-        wandb.init()
+        # For gainakt2exp, let the specialized training function handle W&B initialization
+        if params["model_name"] != "gainakt2exp":
+            wandb.init()
 
     set_seed(params["seed"])
     model_name, dataset_name, fold, emb_type, save_dir = params["model_name"], params["dataset_name"], \
@@ -166,6 +168,14 @@ def main(params):
         args.experiment_suffix = params.get('experiment_suffix', 'wandb')
         args.use_wandb = params.get('use_wandb', 0)
         
+        # Pass through individual constraint parameters for ablation studies
+        args.non_negative_loss_weight = params.get('non_negative_loss_weight', 0.0)
+        args.monotonicity_loss_weight = params.get('monotonicity_loss_weight', 0.05)
+        args.mastery_performance_loss_weight = params.get('mastery_performance_loss_weight', 0.5)
+        args.gain_performance_loss_weight = params.get('gain_performance_loss_weight', 0.5)
+        args.sparsity_loss_weight = params.get('sparsity_loss_weight', 0.1)
+        args.consistency_loss_weight = params.get('consistency_loss_weight', 0.3)
+        
         # Call the specialized training function
         results = train_gainakt2exp_model(args)
         
@@ -196,6 +206,6 @@ def main(params):
     
     print(f"end:{datetime.datetime.now()}")
     
-    if params['use_wandb']==1:
+    if params['use_wandb']==1 and params["model_name"] != "gainakt2exp":
         wandb.log({ 
                     "validauc": validauc, "validacc": validacc, "best_epoch": best_epoch,"model_save_path":model_save_path})
