@@ -54,10 +54,19 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
             responses_shifted = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device)
             
-            outputs = model.forward_with_states(
-                q=questions, r=responses, qry=questions_shifted
-            )
-            
+            outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+
+            # If interpretability heads are disabled, skip detailed consistency checks
+            if 'projected_mastery' not in outputs or 'projected_gains' not in outputs:
+                logger.debug("Consistency check: interpretability heads disabled; returning neutral metrics.")
+                return {
+                    'monotonicity_violation_rate': 0.0,
+                    'negative_gain_rate': 0.0,
+                    'bounds_violation_rate': 0.0,
+                    'mastery_correlation': 0.0,
+                    'gain_correlation': 0.0
+                }
+
             skill_mastery = outputs['projected_mastery']
             skill_gains = outputs['projected_gains']
             batch_size_actual = questions.size(0)
@@ -241,7 +250,10 @@ def train_gainakt2exp_model(args):
         'd_ff': 1024,
         'dropout': 0.2,
         'emb_type': 'qid',
-        'monitor_frequency': 50
+        'monitor_frequency': 50,
+        # Allow disabling heads for pure predictive baseline
+        'use_mastery_head': getattr(args, 'use_mastery_head', True),
+        'use_gain_head': getattr(args, 'use_gain_head', True)
     }
     
     # Constraint resolution logic:
@@ -292,7 +304,8 @@ def train_gainakt2exp_model(args):
                 f"sparsity={model_config['sparsity_loss_weight']} | "
                 f"consistency={model_config['consistency_loss_weight']}")
     
-    logger.info("Creating GainAKT2Exp with CUMULATIVE MASTERY...")
+    logger.info("Creating GainAKT2Exp (mastery_head=%s, gain_head=%s) with CUMULATIVE MASTERY..." % (
+        model_config['use_mastery_head'], model_config['use_gain_head']) )
     model = create_exp_model(model_config)
     monitor = InterpretabilityMonitor(model, log_frequency=args.monitor_freq)
     model.set_monitor(monitor)

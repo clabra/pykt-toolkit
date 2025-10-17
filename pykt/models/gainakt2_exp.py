@@ -34,12 +34,12 @@ class GainAKT2Exp(GainAKT2):
             monitor_frequency (int): How often to compute interpretability metrics during training
             Other args: Same as base GainAKT2 model
         """
-        # Force interpretability heads to be enabled for monitoring
+        # Allow disabling heads for a pure predictive baseline; otherwise enable.
         super().__init__(
             num_c=num_c, seq_len=seq_len, d_model=d_model, n_heads=n_heads,
             num_encoder_blocks=num_encoder_blocks, d_ff=d_ff, dropout=dropout,
             emb_type=emb_type, emb_path=emb_path, pretrain_dim=pretrain_dim,
-            use_mastery_head=True, use_gain_head=True, 
+            use_mastery_head=use_mastery_head, use_gain_head=use_gain_head, 
             non_negative_loss_weight=non_negative_loss_weight,
             monotonicity_loss_weight=monotonicity_loss_weight,
             mastery_performance_loss_weight=mastery_performance_loss_weight,
@@ -109,42 +109,42 @@ class GainAKT2Exp(GainAKT2):
         logits = self.prediction_head(concatenated)
         predictions = torch.sigmoid(logits.squeeze(-1))
         
-        # 5. Compute interpretability projections with proper constraints
-        # Apply ReLU to gains to ensure non-negativity
-        projected_gains_raw = self.gain_head(value_seq)  
-        projected_gains = torch.relu(projected_gains_raw)
-        
-        # Compute cumulative mastery to ENFORCE monotonicity
-        # Method: mastery[t] = mastery[t-1] + gains[t] (cumulative learning)
-        projected_mastery_raw = self.mastery_head(context_seq)
-        initial_mastery = torch.sigmoid(projected_mastery_raw)  # Base mastery estimates
-        
-        # Build cumulative mastery sequence (perfectly monotonic)
-        batch_size, seq_len, num_c = initial_mastery.shape
-        projected_mastery = torch.zeros_like(initial_mastery)
-        
-        # Initialize first timestep with base mastery
-        projected_mastery[:, 0, :] = initial_mastery[:, 0, :]
-        
-        # Accumulate learning gains to ensure monotonicity
-        for t in range(1, seq_len):
-            # Mastery = previous mastery + current gains, capped at 1.0
-            accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1  # Scale gains
-            projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
-        
+        # 5. Optionally compute interpretability projections
+        if self.use_gain_head and self.use_mastery_head:
+            projected_gains_raw = self.gain_head(value_seq)  
+            projected_gains = torch.relu(projected_gains_raw)  # enforce non-negativity
+
+            projected_mastery_raw = self.mastery_head(context_seq)
+            initial_mastery = torch.sigmoid(projected_mastery_raw)
+
+            batch_size, seq_len, num_c = initial_mastery.shape
+            projected_mastery = torch.zeros_like(initial_mastery)
+            projected_mastery[:, 0, :] = initial_mastery[:, 0, :]
+            for t in range(1, seq_len):
+                accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+                projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+        else:
+            projected_mastery = None
+            projected_gains = None
+
         # 6. Prepare output with internal states
         output = {
             'predictions': predictions,
             'context_seq': context_seq,
-            'value_seq': value_seq,
-            'projected_mastery': projected_mastery,
-            'projected_gains': projected_gains
+            'value_seq': value_seq
         }
+        if projected_mastery is not None:
+            output['projected_mastery'] = projected_mastery
+        if projected_gains is not None:
+            output['projected_gains'] = projected_gains
         
         # 7. Compute interpretability loss
-        interpretability_loss = self.compute_interpretability_loss(
-            projected_mastery, projected_gains, predictions, q, r
-        )
+        if (projected_mastery is not None) and (projected_gains is not None):
+            interpretability_loss = self.compute_interpretability_loss(
+                projected_mastery, projected_gains, predictions, q, r
+            )
+        else:
+            interpretability_loss = torch.tensor(0.0, device=q.device)
         output['interpretability_loss'] = interpretability_loss
         
         # 8. Call interpretability monitor if enabled and at right frequency
@@ -280,6 +280,8 @@ def create_exp_model(config):
         d_ff=config.get('d_ff', 768),
         dropout=config.get('dropout', 0.2),
         emb_type=config.get('emb_type', 'qid'),
+        use_mastery_head=config.get('use_mastery_head', True),
+        use_gain_head=config.get('use_gain_head', True),
         non_negative_loss_weight=config.get('non_negative_loss_weight', 0.1),
         monotonicity_loss_weight=config.get('monotonicity_loss_weight', 0.1),
         mastery_performance_loss_weight=config.get('mastery_performance_loss_weight', 0.1),

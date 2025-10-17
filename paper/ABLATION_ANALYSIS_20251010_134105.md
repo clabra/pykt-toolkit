@@ -3,6 +3,10 @@
 **Study Period**: 20251010_134105 to 20251010_135404  
 **Dataset**: ASSIST2015  
 
+> **Erratum (Added October 16, 2025)**  
+> A later audit (see redo report dated 2025-10-16) determined the configuration labeled *"Traditional BCE"* here did **not** actually disable interpretability constraint weights due to a logic issue in the training script. Both variants effectively optimized with the same non-zero auxiliary weights (consistency term was declared but not implemented), leading to indistinguishable AUC. A corrected pure BCE baseline (all auxiliary weights = 0.0) has since been run. See the *Post-hoc Configuration Clarification* section appended at the end of this document.  
+> Cross-reference: See corrected re-run report `ABLATION_ANALYSIS_20251016_225557_REDO.md` in the `paper/` directory.
+
 ## Executive Summary
 
 This ablation study compared two versions of the GainAKT2Exp model on the ASSIST2015 dataset:
@@ -139,6 +143,34 @@ The AUC difference (0.0001) is well within measurement error and should be consi
 ---
 
 *Analysis generated from ablation study logs 20251010_134105*
+
+---
+## Post-hoc Configuration Clarification (Added October 16, 2025)
+
+### Misconfiguration Summary
+Original "Traditional BCE" baseline unintentionally retained non-zero auxiliary weights; thus this report did not compare a true pure BCE model.
+
+### Resolved Weight States
+| Variant (Original Label) | Intended (Reported) | Actual (Discovered) | Corrected Re-run Baseline |
+|--------------------------|---------------------|---------------------|---------------------------|
+| Enhanced Constraints     | 0.0 / 0.05 / 0.5 / 0.5 / 0.1 / 0.3 | Same (consistency inactive) | Same |
+| "Traditional BCE"       | 0 / 0 / 0 / 0 / 0 / 0 | 0.0 / 0.05 / 0.5 / 0.5 / 0.1 / 0.3 | 0 / 0 / 0 / 0 / 0 / 0 |
+
+Order: non_negative / monotonicity / mastery_performance / gain_performance / sparsity / consistency.
+
+### Key Corrections Implemented
+1. Added explicit pure BCE branch forcing all auxiliary weights to zero.
+2. Implemented missing consistency loss term.
+3. Logged resolved weights at run start for auditability.
+4. Added unit tests validating zero vs non-zero interpretability loss behavior.
+5. Re-ran ablation producing a valid baseline (separate redo report).
+
+### Revised Interpretation
+The original negligible AUC delta does **not** establish that constraints carry no performance cost; it reflected a misconfigured baseline. Use the corrected re-run for publication claims.
+
+### Cross-reference
+For full corrected metrics and weight resolutions see: `paper/ABLATION_ANALYSIS_20251016_225557_REDO.md`.
+
 
 ---
 

@@ -79,6 +79,56 @@ def test_consistency_loss_effect():
     assert cons_loss.item() > 0.0, "Consistency loss should contribute when weight > 0"
 
 
+def test_compute_interpretability_loss_direct():
+    """Directly exercise compute_interpretability_loss to distinguish zero vs non-zero weight behavior."""
+    num_c = 8
+    q, r = _make_dummy(num_c=num_c, seq_len=6)
+
+    # Model with all zero weights
+    zero_model = GainAKT2Exp(
+        num_c=num_c,
+        seq_len=20,
+        non_negative_loss_weight=0.0,
+        monotonicity_loss_weight=0.0,
+        mastery_performance_loss_weight=0.0,
+        gain_performance_loss_weight=0.0,
+        sparsity_loss_weight=0.0,
+        consistency_loss_weight=0.0,
+    )
+    out_zero = zero_model.forward_with_states(q, r)
+    loss_zero = zero_model.compute_interpretability_loss(
+        out_zero['projected_mastery'],
+        out_zero['projected_gains'],
+        out_zero['predictions'],
+        q,
+        r,
+    )
+    # With all weights zero, loss should be a float (implementation starts at 0.0) or zero tensor
+    assert float(loss_zero) == 0.0
+
+    # Model with selective non-zero weights
+    weighted_model = GainAKT2Exp(
+        num_c=num_c,
+        seq_len=20,
+        non_negative_loss_weight=0.0,
+        monotonicity_loss_weight=0.05,
+        mastery_performance_loss_weight=0.1,
+        gain_performance_loss_weight=0.1,
+        sparsity_loss_weight=0.02,
+        consistency_loss_weight=0.05,
+    )
+    out_w = weighted_model.forward_with_states(q, r)
+    loss_w = weighted_model.compute_interpretability_loss(
+        out_w['projected_mastery'],
+        out_w['projected_gains'],
+        out_w['predictions'],
+        q,
+        r,
+    )
+    assert isinstance(loss_w, torch.Tensor), "Expected tensor loss when any weight > 0"
+    assert loss_w.item() > 0.0, "Non-zero weights should yield positive interpretability loss"
+
+
 if __name__ == '__main__':
     test_interpretability_loss_all_zero_weights()
     test_interpretability_loss_nonzero_components()
