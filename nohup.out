@@ -1,0 +1,2175 @@
+[MP] Start method set to spawn (was None).
+
+=== Starting run: heads_off_seed84 ===
+2025-10-17 00:50:37,500 - INFO - ================================================================================
+2025-10-17 00:50:37,500 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:50:37,500 - INFO - ================================================================================
+2025-10-17 00:50:37,500 - INFO - Dataset: assist2015
+2025-10-17 00:50:37,500 - INFO - Epochs: 12
+2025-10-17 00:50:37,500 - INFO - Learning rate: 0.000174
+2025-10-17 00:50:37,500 - INFO - Batch size: 96
+2025-10-17 00:50:37,500 - INFO - Enhanced constraints: False
+2025-10-17 00:50:37,500 - INFO - Constraint weights:
+2025-10-17 00:50:37,500 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:50:37,501 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:50:37,501 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:50:37,501 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:50:37,501 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:50:37,501 - INFO -   Consistency loss: 0.3
+2025-10-17 00:50:37,501 - INFO - Using device: cuda
+2025-10-17 00:50:37,501 - INFO - Loading dataset: assist2015
+2025-10-17 00:50:37,547 - INFO - Dataset loaded successfully
+2025-10-17 00:50:37,547 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:50:37,547 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:50:37,547 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+
+=== Starting run: heads_off_seed105 ===
+2025-10-17 00:50:37,730 - INFO - ================================================================================
+2025-10-17 00:50:37,731 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:50:37,731 - INFO - ================================================================================
+2025-10-17 00:50:37,731 - INFO - Dataset: assist2015
+2025-10-17 00:50:37,731 - INFO - Epochs: 12
+2025-10-17 00:50:37,731 - INFO - Learning rate: 0.000174
+2025-10-17 00:50:37,731 - INFO - Batch size: 96
+2025-10-17 00:50:37,731 - INFO - Enhanced constraints: False
+2025-10-17 00:50:37,731 - INFO - Constraint weights:
+2025-10-17 00:50:37,731 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:50:37,731 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:50:37,731 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:50:37,731 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:50:37,731 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:50:37,731 - INFO -   Consistency loss: 0.3
+2025-10-17 00:50:37,731 - INFO - Using device: cuda
+2025-10-17 00:50:37,731 - INFO - Loading dataset: assist2015
+
+=== Starting run: heads_off_seed63 ===
+2025-10-17 00:50:37,743 - INFO - ================================================================================
+2025-10-17 00:50:37,743 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:50:37,743 - INFO - ================================================================================
+2025-10-17 00:50:37,743 - INFO - Dataset: assist2015
+2025-10-17 00:50:37,743 - INFO - Epochs: 12
+2025-10-17 00:50:37,743 - INFO - Learning rate: 0.000174
+2025-10-17 00:50:37,743 - INFO - Batch size: 96
+2025-10-17 00:50:37,743 - INFO - Enhanced constraints: False
+2025-10-17 00:50:37,743 - INFO - Constraint weights:
+2025-10-17 00:50:37,743 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:50:37,743 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:50:37,743 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:50:37,743 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:50:37,744 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:50:37,744 - INFO -   Consistency loss: 0.3
+2025-10-17 00:50:37,744 - INFO - Using device: cuda
+2025-10-17 00:50:37,744 - INFO - Loading dataset: assist2015
+
+=== Starting run: heads_off_seed21 ===
+2025-10-17 00:50:37,768 - INFO - ================================================================================
+2025-10-17 00:50:37,768 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:50:37,768 - INFO - ================================================================================
+2025-10-17 00:50:37,768 - INFO - Dataset: assist2015
+2025-10-17 00:50:37,768 - INFO - Epochs: 12
+2025-10-17 00:50:37,768 - INFO - Learning rate: 0.000174
+2025-10-17 00:50:37,768 - INFO - Batch size: 96
+2025-10-17 00:50:37,768 - INFO - Enhanced constraints: False
+2025-10-17 00:50:37,768 - INFO - Constraint weights:
+2025-10-17 00:50:37,769 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:50:37,769 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:50:37,769 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:50:37,769 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:50:37,769 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:50:37,769 - INFO -   Consistency loss: 0.3
+2025-10-17 00:50:37,769 - INFO - Using device: cuda
+2025-10-17 00:50:37,769 - INFO - Loading dataset: assist2015
+
+=== Starting run: heads_off_seed42 ===
+2025-10-17 00:50:37,778 - INFO - ================================================================================
+2025-10-17 00:50:37,778 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:50:37,778 - INFO - ================================================================================
+2025-10-17 00:50:37,778 - INFO - Dataset loaded successfully
+2025-10-17 00:50:37,778 - INFO - Dataset: assist2015
+2025-10-17 00:50:37,778 - INFO - Epochs: 12
+2025-10-17 00:50:37,778 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:50:37,778 - INFO - Learning rate: 0.000174
+2025-10-17 00:50:37,778 - INFO - Batch size: 96
+2025-10-17 00:50:37,778 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:50:37,778 - INFO - Enhanced constraints: False
+2025-10-17 00:50:37,778 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:50:37,778 - INFO - Constraint weights:
+2025-10-17 00:50:37,778 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:50:37,778 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:50:37,779 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:50:37,779 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:50:37,779 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:50:37,779 - INFO -   Consistency loss: 0.3
+2025-10-17 00:50:37,779 - INFO - Using device: cuda
+2025-10-17 00:50:37,779 - INFO - Loading dataset: assist2015
+2025-10-17 00:50:37,790 - INFO - Dataset loaded successfully
+2025-10-17 00:50:37,790 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:50:37,790 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:50:37,790 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:50:37,815 - INFO - Dataset loaded successfully
+2025-10-17 00:50:37,815 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:50:37,815 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:50:37,815 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:50:37,824 - INFO - Dataset loaded successfully
+2025-10-17 00:50:37,824 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:50:37,824 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:50:37,824 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:50:37,888 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:50:37,889 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:50:37,889 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:50:37,889 - INFO - \nEpoch 1/12
+2025-10-17 00:50:37,889 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:50:38,413 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:50:38,425 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:50:38,427 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:50:38,435 - INFO - \nEpoch 1/12
+2025-10-17 00:50:38,435 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:50:38,470 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:50:38,471 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:50:38,472 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:50:38,473 - INFO - \nEpoch 1/12
+2025-10-17 00:50:38,474 - INFO - --------------------------------------------------
+2025-10-17 00:50:38,474 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:50:38,475 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:50:38,475 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:50:38,476 - INFO - \nEpoch 1/12
+2025-10-17 00:50:38,476 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:50:38,606 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:50:38,606 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:50:38,607 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:50:38,607 - INFO - \nEpoch 1/12
+2025-10-17 00:50:38,607 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+[MP] Start method set to spawn (was None).
+
+=== Starting run: heads_off_seed21 ===
+2025-10-17 00:51:51,066 - INFO - ================================================================================
+2025-10-17 00:51:51,066 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:51:51,066 - INFO - ================================================================================
+2025-10-17 00:51:51,066 - INFO - Dataset: assist2015
+2025-10-17 00:51:51,066 - INFO - Epochs: 12
+2025-10-17 00:51:51,066 - INFO - Learning rate: 0.000174
+2025-10-17 00:51:51,066 - INFO - Batch size: 96
+2025-10-17 00:51:51,066 - INFO - Enhanced constraints: False
+2025-10-17 00:51:51,066 - INFO - Constraint weights:
+2025-10-17 00:51:51,066 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:51:51,066 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:51:51,066 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:51:51,066 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:51:51,066 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:51:51,066 - INFO -   Consistency loss: 0.3
+2025-10-17 00:51:51,067 - INFO - Using device: cuda
+2025-10-17 00:51:51,067 - INFO - Loading dataset: assist2015
+2025-10-17 00:51:51,113 - INFO - Dataset loaded successfully
+2025-10-17 00:51:51,113 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:51:51,113 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:51:51,113 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+
+=== Starting run: heads_off_seed105 ===
+2025-10-17 00:51:51,345 - INFO - ================================================================================
+2025-10-17 00:51:51,345 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:51:51,345 - INFO - ================================================================================
+2025-10-17 00:51:51,345 - INFO - Dataset: assist2015
+2025-10-17 00:51:51,345 - INFO - Epochs: 12
+2025-10-17 00:51:51,345 - INFO - Learning rate: 0.000174
+2025-10-17 00:51:51,345 - INFO - Batch size: 96
+2025-10-17 00:51:51,345 - INFO - Enhanced constraints: False
+2025-10-17 00:51:51,345 - INFO - Constraint weights:
+2025-10-17 00:51:51,345 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:51:51,345 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:51:51,345 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:51:51,345 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:51:51,345 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:51:51,345 - INFO -   Consistency loss: 0.3
+2025-10-17 00:51:51,345 - INFO - Using device: cuda
+2025-10-17 00:51:51,345 - INFO - Loading dataset: assist2015
+
+=== Starting run: heads_off_seed84 ===
+
+=== Starting run: heads_off_seed42 ===
+2025-10-17 00:51:51,362 - INFO - ================================================================================
+2025-10-17 00:51:51,362 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:51:51,362 - INFO - ================================================================================
+2025-10-17 00:51:51,362 - INFO - Dataset: assist2015
+2025-10-17 00:51:51,362 - INFO - Epochs: 12
+2025-10-17 00:51:51,362 - INFO - ================================================================================
+2025-10-17 00:51:51,362 - INFO - Learning rate: 0.000174
+2025-10-17 00:51:51,362 - INFO - Batch size: 96
+2025-10-17 00:51:51,362 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:51:51,362 - INFO - Enhanced constraints: False
+2025-10-17 00:51:51,362 - INFO - ================================================================================
+2025-10-17 00:51:51,362 - INFO - Constraint weights:
+2025-10-17 00:51:51,362 - INFO - Dataset: assist2015
+2025-10-17 00:51:51,362 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:51:51,362 - INFO - Epochs: 12
+2025-10-17 00:51:51,362 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:51:51,362 - INFO - Learning rate: 0.000174
+2025-10-17 00:51:51,362 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:51:51,362 - INFO - Batch size: 96
+2025-10-17 00:51:51,362 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:51:51,362 - INFO - Enhanced constraints: False
+2025-10-17 00:51:51,362 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:51:51,362 - INFO - Constraint weights:
+2025-10-17 00:51:51,362 - INFO -   Consistency loss: 0.3
+2025-10-17 00:51:51,362 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:51:51,362 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:51:51,362 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:51:51,362 - INFO - Using device: cuda
+2025-10-17 00:51:51,363 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:51:51,363 - INFO - Loading dataset: assist2015
+2025-10-17 00:51:51,363 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:51:51,363 - INFO -   Consistency loss: 0.3
+2025-10-17 00:51:51,363 - INFO - Using device: cuda
+2025-10-17 00:51:51,363 - INFO - Loading dataset: assist2015
+2025-10-17 00:51:51,391 - INFO - Dataset loaded successfully
+2025-10-17 00:51:51,391 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:51:51,391 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:51:51,391 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+
+=== Starting run: heads_off_seed63 ===
+2025-10-17 00:51:51,395 - INFO - ================================================================================
+2025-10-17 00:51:51,395 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:51:51,395 - INFO - ================================================================================
+2025-10-17 00:51:51,395 - INFO - Dataset: assist2015
+2025-10-17 00:51:51,395 - INFO - Epochs: 12
+2025-10-17 00:51:51,395 - INFO - Learning rate: 0.000174
+2025-10-17 00:51:51,395 - INFO - Batch size: 96
+2025-10-17 00:51:51,395 - INFO - Enhanced constraints: False
+2025-10-17 00:51:51,395 - INFO - Constraint weights:
+2025-10-17 00:51:51,395 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:51:51,395 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:51:51,395 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:51:51,395 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:51:51,395 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:51:51,395 - INFO -   Consistency loss: 0.3
+2025-10-17 00:51:51,395 - INFO - Using device: cuda
+2025-10-17 00:51:51,395 - INFO - Loading dataset: assist2015
+2025-10-17 00:51:51,409 - INFO - Dataset loaded successfully
+2025-10-17 00:51:51,410 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:51:51,410 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:51:51,410 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:51:51,418 - INFO - Dataset loaded successfully
+2025-10-17 00:51:51,418 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:51:51,418 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:51:51,418 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:51:51,441 - INFO - Dataset loaded successfully
+2025-10-17 00:51:51,441 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:51:51,441 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:51:51,441 - INFO - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-10-17 00:51:52,600 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:51:52,601 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:51:52,602 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:51:52,603 - INFO - \nEpoch 1/12
+2025-10-17 00:51:52,603 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:51:53,108 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:51:53,110 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:51:53,111 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:51:53,112 - INFO - \nEpoch 1/12
+2025-10-17 00:51:53,112 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:51:53,119 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:51:53,120 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:51:53,122 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:51:53,122 - INFO - \nEpoch 1/12
+2025-10-17 00:51:53,123 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:51:53,153 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:51:53,153 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:51:53,154 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:51:53,155 - INFO - \nEpoch 1/12
+2025-10-17 00:51:53,155 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:51:53,286 - INFO - Model created with 14,556,161 parameters
+2025-10-17 00:51:53,287 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:51:53,289 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:51:53,289 - INFO - \nEpoch 1/12
+2025-10-17 00:51:53,289 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+
+=== Starting run: arch_only_seed21 ===
+2025-10-17 00:52:31,468 - INFO - ================================================================================
+2025-10-17 00:52:31,468 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:52:31,468 - INFO - ================================================================================
+2025-10-17 00:52:31,468 - INFO - Dataset: assist2015
+2025-10-17 00:52:31,469 - INFO - Epochs: 12
+2025-10-17 00:52:31,469 - INFO - Learning rate: 0.000174
+2025-10-17 00:52:31,469 - INFO - Batch size: 96
+2025-10-17 00:52:31,469 - INFO - Enhanced constraints: False
+2025-10-17 00:52:31,469 - INFO - Constraint weights:
+2025-10-17 00:52:31,469 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:52:31,469 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:52:31,469 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:52:31,469 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:52:31,469 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:52:31,469 - INFO -   Consistency loss: 0.3
+2025-10-17 00:52:31,469 - INFO - Using device: cuda
+2025-10-17 00:52:31,469 - INFO - Loading dataset: assist2015
+2025-10-17 00:52:31,515 - INFO - Dataset loaded successfully
+2025-10-17 00:52:31,515 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:52:31,516 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:52:31,516 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: arch_only_seed63 ===
+2025-10-17 00:52:31,555 - INFO - ================================================================================
+2025-10-17 00:52:31,555 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:52:31,555 - INFO - ================================================================================
+2025-10-17 00:52:31,555 - INFO - Dataset: assist2015
+2025-10-17 00:52:31,555 - INFO - Epochs: 12
+2025-10-17 00:52:31,555 - INFO - Learning rate: 0.000174
+2025-10-17 00:52:31,555 - INFO - Batch size: 96
+2025-10-17 00:52:31,555 - INFO - Enhanced constraints: False
+2025-10-17 00:52:31,555 - INFO - Constraint weights:
+2025-10-17 00:52:31,555 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:52:31,555 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:52:31,555 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:52:31,555 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:52:31,555 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:52:31,555 - INFO -   Consistency loss: 0.3
+2025-10-17 00:52:31,555 - INFO - Using device: cuda
+2025-10-17 00:52:31,555 - INFO - Loading dataset: assist2015
+2025-10-17 00:52:31,601 - INFO - Dataset loaded successfully
+2025-10-17 00:52:31,601 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:52:31,601 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:52:31,601 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: arch_only_seed42 ===
+2025-10-17 00:52:31,706 - INFO - ================================================================================
+2025-10-17 00:52:31,706 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:52:31,706 - INFO - ================================================================================
+2025-10-17 00:52:31,706 - INFO - Dataset: assist2015
+2025-10-17 00:52:31,706 - INFO - Epochs: 12
+2025-10-17 00:52:31,706 - INFO - Learning rate: 0.000174
+2025-10-17 00:52:31,706 - INFO - Batch size: 96
+2025-10-17 00:52:31,707 - INFO - Enhanced constraints: False
+2025-10-17 00:52:31,707 - INFO - Constraint weights:
+2025-10-17 00:52:31,707 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:52:31,707 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:52:31,707 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:52:31,707 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:52:31,707 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:52:31,707 - INFO -   Consistency loss: 0.3
+2025-10-17 00:52:31,707 - INFO - Using device: cuda
+2025-10-17 00:52:31,707 - INFO - Loading dataset: assist2015
+2025-10-17 00:52:31,755 - INFO - Dataset loaded successfully
+2025-10-17 00:52:31,755 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:52:31,755 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:52:31,755 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: arch_only_seed84 ===
+2025-10-17 00:52:31,766 - INFO - ================================================================================
+2025-10-17 00:52:31,766 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:52:31,766 - INFO - ================================================================================
+2025-10-17 00:52:31,766 - INFO - Dataset: assist2015
+2025-10-17 00:52:31,766 - INFO - Epochs: 12
+2025-10-17 00:52:31,766 - INFO - Learning rate: 0.000174
+2025-10-17 00:52:31,766 - INFO - Batch size: 96
+2025-10-17 00:52:31,766 - INFO - Enhanced constraints: False
+2025-10-17 00:52:31,766 - INFO - Constraint weights:
+2025-10-17 00:52:31,766 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:52:31,766 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:52:31,766 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:52:31,766 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:52:31,766 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:52:31,766 - INFO -   Consistency loss: 0.3
+2025-10-17 00:52:31,766 - INFO - Using device: cuda
+2025-10-17 00:52:31,766 - INFO - Loading dataset: assist2015
+2025-10-17 00:52:31,812 - INFO - Dataset loaded successfully
+2025-10-17 00:52:31,812 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:52:31,812 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:52:31,812 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: arch_only_seed105 ===
+2025-10-17 00:52:31,900 - INFO - ================================================================================
+2025-10-17 00:52:31,901 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:52:31,901 - INFO - ================================================================================
+2025-10-17 00:52:31,901 - INFO - Dataset: assist2015
+2025-10-17 00:52:31,901 - INFO - Epochs: 12
+2025-10-17 00:52:31,901 - INFO - Learning rate: 0.000174
+2025-10-17 00:52:31,901 - INFO - Batch size: 96
+2025-10-17 00:52:31,901 - INFO - Enhanced constraints: False
+2025-10-17 00:52:31,901 - INFO - Constraint weights:
+2025-10-17 00:52:31,901 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:52:31,901 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:52:31,901 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:52:31,901 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:52:31,901 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:52:31,901 - INFO -   Consistency loss: 0.3
+2025-10-17 00:52:31,901 - INFO - Using device: cuda
+2025-10-17 00:52:31,901 - INFO - Loading dataset: assist2015
+2025-10-17 00:52:31,948 - INFO - Dataset loaded successfully
+2025-10-17 00:52:31,948 - INFO - PURE BCE baseline: all constraint weights forced to 0.0
+2025-10-17 00:52:31,948 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.0 | mastery_perf=0.0 | gain_perf=0.0 | sparsity=0.0 | consistency=0.0
+2025-10-17 00:52:31,949 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+2025-10-17 00:52:33,104 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:52:33,105 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:52:33,106 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:52:33,106 - INFO - \nEpoch 1/12
+2025-10-17 00:52:33,106 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:52:33,158 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:52:33,159 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:52:33,160 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:52:33,160 - INFO - \nEpoch 1/12
+2025-10-17 00:52:33,160 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:52:33,365 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:52:33,366 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:52:33,367 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:52:33,367 - INFO - \nEpoch 1/12
+2025-10-17 00:52:33,367 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:52:33,429 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:52:33,430 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:52:33,432 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:52:33,436 - INFO - \nEpoch 1/12
+2025-10-17 00:52:33,436 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:52:33,622 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:52:33,623 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:52:33,625 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:52:33,627 - INFO - \nEpoch 1/12
+2025-10-17 00:52:33,628 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+
+=== Starting run: full_seed42 ===
+2025-10-17 00:53:17,577 - INFO - ================================================================================
+2025-10-17 00:53:17,577 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:53:17,577 - INFO - ================================================================================
+2025-10-17 00:53:17,577 - INFO - Dataset: assist2015
+2025-10-17 00:53:17,577 - INFO - Epochs: 12
+2025-10-17 00:53:17,577 - INFO - Learning rate: 0.000174
+2025-10-17 00:53:17,577 - INFO - Batch size: 96
+2025-10-17 00:53:17,577 - INFO - Enhanced constraints: True
+2025-10-17 00:53:17,577 - INFO - Constraint weights:
+2025-10-17 00:53:17,577 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:53:17,577 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:53:17,578 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:53:17,578 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:53:17,578 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:53:17,578 - INFO -   Consistency loss: 0.3
+2025-10-17 00:53:17,578 - INFO - Using device: cuda
+2025-10-17 00:53:17,578 - INFO - Loading dataset: assist2015
+2025-10-17 00:53:17,625 - INFO - Dataset loaded successfully
+2025-10-17 00:53:17,626 - INFO - Using individually supplied constraint weights
+2025-10-17 00:53:17,626 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-10-17 00:53:17,626 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: full_seed63 ===
+2025-10-17 00:53:17,730 - INFO - ================================================================================
+2025-10-17 00:53:17,730 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:53:17,730 - INFO - ================================================================================
+2025-10-17 00:53:17,730 - INFO - Dataset: assist2015
+2025-10-17 00:53:17,730 - INFO - Epochs: 12
+2025-10-17 00:53:17,730 - INFO - Learning rate: 0.000174
+2025-10-17 00:53:17,730 - INFO - Batch size: 96
+2025-10-17 00:53:17,730 - INFO - Enhanced constraints: True
+2025-10-17 00:53:17,730 - INFO - Constraint weights:
+2025-10-17 00:53:17,730 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:53:17,730 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:53:17,730 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:53:17,730 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:53:17,730 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:53:17,731 - INFO -   Consistency loss: 0.3
+2025-10-17 00:53:17,731 - INFO - Using device: cuda
+2025-10-17 00:53:17,731 - INFO - Loading dataset: assist2015
+2025-10-17 00:53:17,778 - INFO - Dataset loaded successfully
+2025-10-17 00:53:17,779 - INFO - Using individually supplied constraint weights
+2025-10-17 00:53:17,779 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-10-17 00:53:17,779 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+
+=== Starting run: full_seed21 ===
+2025-10-17 00:53:17,825 - INFO - ================================================================================
+2025-10-17 00:53:17,825 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:53:17,825 - INFO - ================================================================================
+2025-10-17 00:53:17,825 - INFO - Dataset: assist2015
+2025-10-17 00:53:17,826 - INFO - Epochs: 12
+2025-10-17 00:53:17,826 - INFO - Learning rate: 0.000174
+2025-10-17 00:53:17,826 - INFO - Batch size: 96
+
+=== Starting run: full_seed84 ===
+2025-10-17 00:53:17,826 - INFO - Enhanced constraints: True
+2025-10-17 00:53:17,826 - INFO - Constraint weights:
+2025-10-17 00:53:17,826 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:53:17,826 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:53:17,826 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:53:17,826 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:53:17,826 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:53:17,826 - INFO -   Consistency loss: 0.3
+2025-10-17 00:53:17,826 - INFO - Using device: cuda
+2025-10-17 00:53:17,826 - INFO - ================================================================================
+2025-10-17 00:53:17,826 - INFO - Loading dataset: assist2015
+2025-10-17 00:53:17,826 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:53:17,826 - INFO - ================================================================================
+2025-10-17 00:53:17,826 - INFO - Dataset: assist2015
+2025-10-17 00:53:17,826 - INFO - Epochs: 12
+2025-10-17 00:53:17,826 - INFO - Learning rate: 0.000174
+2025-10-17 00:53:17,826 - INFO - Batch size: 96
+2025-10-17 00:53:17,826 - INFO - Enhanced constraints: True
+2025-10-17 00:53:17,826 - INFO - Constraint weights:
+2025-10-17 00:53:17,826 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:53:17,826 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:53:17,826 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:53:17,826 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:53:17,826 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:53:17,826 - INFO -   Consistency loss: 0.3
+2025-10-17 00:53:17,826 - INFO - Using device: cuda
+2025-10-17 00:53:17,826 - INFO - Loading dataset: assist2015
+2025-10-17 00:53:17,871 - INFO - Dataset loaded successfully
+2025-10-17 00:53:17,872 - INFO - Dataset loaded successfully
+2025-10-17 00:53:17,872 - INFO - Using individually supplied constraint weights
+2025-10-17 00:53:17,872 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-10-17 00:53:17,872 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+2025-10-17 00:53:17,872 - INFO - Using individually supplied constraint weights
+2025-10-17 00:53:17,874 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-10-17 00:53:17,874 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+2025-10-17 00:53:18,058 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:53:18,058 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:53:18,059 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:53:18,059 - INFO - \nEpoch 1/12
+2025-10-17 00:53:18,059 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+
+=== Starting run: full_seed105 ===
+2025-10-17 00:53:18,137 - INFO - ================================================================================
+2025-10-17 00:53:18,137 - INFO - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-10-17 00:53:18,137 - INFO - ================================================================================
+2025-10-17 00:53:18,137 - INFO - Dataset: assist2015
+2025-10-17 00:53:18,137 - INFO - Epochs: 12
+2025-10-17 00:53:18,137 - INFO - Learning rate: 0.000174
+2025-10-17 00:53:18,137 - INFO - Batch size: 96
+2025-10-17 00:53:18,137 - INFO - Enhanced constraints: True
+2025-10-17 00:53:18,137 - INFO - Constraint weights:
+2025-10-17 00:53:18,137 - INFO -   Non-negative loss: 0.0
+2025-10-17 00:53:18,137 - INFO -   Monotonicity loss: 0.1
+2025-10-17 00:53:18,137 - INFO -   Mastery performance loss: 0.8
+2025-10-17 00:53:18,137 - INFO -   Gain performance loss: 0.8
+2025-10-17 00:53:18,137 - INFO -   Sparsity loss: 0.2
+2025-10-17 00:53:18,137 - INFO -   Consistency loss: 0.3
+2025-10-17 00:53:18,137 - INFO - Using device: cuda
+2025-10-17 00:53:18,137 - INFO - Loading dataset: assist2015
+2025-10-17 00:53:18,186 - INFO - Dataset loaded successfully
+2025-10-17 00:53:18,186 - INFO - Using individually supplied constraint weights
+2025-10-17 00:53:18,186 - INFO - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-10-17 00:53:18,186 - INFO - Creating GainAKT2Exp (mastery_head=True, gain_head=True) with CUMULATIVE MASTERY...
+2025-10-17 00:53:18,239 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:53:18,240 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:53:18,241 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:53:18,241 - INFO - \nEpoch 1/12
+2025-10-17 00:53:18,241 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:53:18,804 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:53:18,837 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:53:18,838 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:53:18,839 - INFO - \nEpoch 1/12
+2025-10-17 00:53:18,839 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:53:19,275 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:53:19,289 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:53:19,290 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:53:19,292 - INFO - \nEpoch 1/12
+2025-10-17 00:53:19,292 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:53:21,135 - INFO - Model created with 14,658,761 parameters
+2025-10-17 00:53:21,135 - INFO - Perfect consistency guaranteed by architectural constraints
+2025-10-17 00:53:21,136 - INFO - \nStarting training for 12 epochs...
+2025-10-17 00:53:21,136 - INFO - \nEpoch 1/12
+2025-10-17 00:53:21,136 - INFO - --------------------------------------------------
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-10-17 00:53:35,976 - INFO -   Running consistency validation...
+2025-10-17 00:53:56,648 - INFO - ============================================================
+2025-10-17 00:53:56,650 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:53:56,650 - INFO -   🚂 Train - Loss: 0.5343 (Main: 0.5343, Constraint: 0.0000), AUC: 0.6880, Acc: 0.7394
+2025-10-17 00:53:56,651 - INFO -   ✅ Valid - Loss: 0.5159, AUC: 0.7176, Acc: 0.7509
+2025-10-17 00:53:56,651 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:53:56,651 - INFO - ============================================================
+2025-10-17 00:53:57,250 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7176 (Epoch 1)
+2025-10-17 00:53:57,251 - INFO - \nEpoch 2/12
+2025-10-17 00:53:57,251 - INFO - --------------------------------------------------
+2025-10-17 00:54:03,676 - INFO -   Running consistency validation...
+2025-10-17 00:54:10,446 - INFO -   Running consistency validation...
+2025-10-17 00:54:14,942 - INFO - ============================================================
+2025-10-17 00:54:14,943 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:54:14,944 - INFO -   🚂 Train - Loss: 0.5337 (Main: 0.5337, Constraint: 0.0000), AUC: 0.6887, Acc: 0.7410
+2025-10-17 00:54:14,944 - INFO -   ✅ Valid - Loss: 0.5154, AUC: 0.7174, Acc: 0.7506
+2025-10-17 00:54:14,945 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:54:14,946 - INFO - ============================================================
+2025-10-17 00:54:15,681 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7174 (Epoch 1)
+2025-10-17 00:54:15,681 - INFO - \nEpoch 2/12
+2025-10-17 00:54:15,681 - INFO - --------------------------------------------------
+2025-10-17 00:54:16,817 - INFO -   Running consistency validation...
+2025-10-17 00:54:17,163 - INFO -   Running consistency validation...
+2025-10-17 00:54:28,875 - INFO - ============================================================
+2025-10-17 00:54:28,877 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:54:28,877 - INFO -   🚂 Train - Loss: 0.5346 (Main: 0.5346, Constraint: 0.0000), AUC: 0.6872, Acc: 0.7394
+2025-10-17 00:54:28,877 - INFO -   ✅ Valid - Loss: 0.5165, AUC: 0.7162, Acc: 0.7501
+2025-10-17 00:54:28,878 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:54:28,878 - INFO - ============================================================
+2025-10-17 00:54:29,317 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7162 (Epoch 1)
+2025-10-17 00:54:29,318 - INFO - \nEpoch 2/12
+2025-10-17 00:54:29,318 - INFO - --------------------------------------------------
+2025-10-17 00:54:37,797 - INFO - ============================================================
+2025-10-17 00:54:37,797 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:54:37,798 - INFO -   🚂 Train - Loss: 0.5338 (Main: 0.5338, Constraint: 0.0000), AUC: 0.6889, Acc: 0.7403
+2025-10-17 00:54:37,799 - INFO -   ✅ Valid - Loss: 0.5164, AUC: 0.7164, Acc: 0.7502
+2025-10-17 00:54:37,799 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:54:37,800 - INFO - ============================================================
+2025-10-17 00:54:37,957 - INFO - ============================================================
+2025-10-17 00:54:37,958 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:54:37,958 - INFO -   🚂 Train - Loss: 0.5332 (Main: 0.5332, Constraint: 0.0000), AUC: 0.6896, Acc: 0.7419
+2025-10-17 00:54:37,958 - INFO -   ✅ Valid - Loss: 0.5157, AUC: 0.7171, Acc: 0.7503
+2025-10-17 00:54:37,958 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:54:37,958 - INFO - ============================================================
+2025-10-17 00:54:38,201 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7164 (Epoch 1)
+2025-10-17 00:54:38,202 - INFO - \nEpoch 2/12
+2025-10-17 00:54:38,202 - INFO - --------------------------------------------------
+2025-10-17 00:54:38,452 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7171 (Epoch 1)
+2025-10-17 00:54:38,457 - INFO - \nEpoch 2/12
+2025-10-17 00:54:38,457 - INFO - --------------------------------------------------
+2025-10-17 00:55:06,839 - INFO -   Running consistency validation...
+2025-10-17 00:55:07,580 - INFO -   Running consistency validation...
+2025-10-17 00:55:07,976 - INFO -   Running consistency validation...
+2025-10-17 00:55:17,496 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:55:30,213 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:55:30,215 - INFO -   Correlations - Mastery: 0.011, Gains: -0.031
+2025-10-17 00:55:30,215 - INFO - ============================================================
+2025-10-17 00:55:30,216 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:55:30,216 - INFO -   🚂 Train - Loss: 0.6169 (Main: 0.5378, Constraint: 0.0791), AUC: 0.6804, Acc: 0.7385
+2025-10-17 00:55:30,217 - INFO -   ✅ Valid - Loss: 0.5176, AUC: 0.7132, Acc: 0.7499
+2025-10-17 00:55:30,217 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:55:30,217 - INFO - ============================================================
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:55:30,250 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:55:30,251 - INFO -   Correlations - Mastery: 0.011, Gains: -0.035
+2025-10-17 00:55:30,251 - INFO - ============================================================
+2025-10-17 00:55:30,252 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:55:30,252 - INFO -   🚂 Train - Loss: 0.6168 (Main: 0.5367, Constraint: 0.0800), AUC: 0.6827, Acc: 0.7394
+2025-10-17 00:55:30,252 - INFO -   ✅ Valid - Loss: 0.5171, AUC: 0.7135, Acc: 0.7499
+2025-10-17 00:55:30,253 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:55:30,254 - INFO - ============================================================
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:55:30,336 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:55:30,337 - INFO -   Correlations - Mastery: 0.021, Gains: -0.001
+2025-10-17 00:55:30,338 - INFO - ============================================================
+2025-10-17 00:55:30,338 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:55:30,338 - INFO -   🚂 Train - Loss: 0.6151 (Main: 0.5365, Constraint: 0.0787), AUC: 0.6827, Acc: 0.7410
+2025-10-17 00:55:30,339 - INFO -   ✅ Valid - Loss: 0.5165, AUC: 0.7143, Acc: 0.7503
+2025-10-17 00:55:30,339 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:55:30,339 - INFO - ============================================================
+2025-10-17 00:55:30,553 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7132 (Epoch 1)
+2025-10-17 00:55:30,554 - INFO - \nEpoch 2/12
+2025-10-17 00:55:30,555 - INFO - --------------------------------------------------
+2025-10-17 00:55:30,633 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7135 (Epoch 1)
+2025-10-17 00:55:30,634 - INFO - \nEpoch 2/12
+2025-10-17 00:55:30,634 - INFO - --------------------------------------------------
+2025-10-17 00:55:30,684 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7143 (Epoch 1)
+2025-10-17 00:55:30,685 - INFO - \nEpoch 2/12
+2025-10-17 00:55:30,685 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:55:34,800 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:55:34,802 - INFO -   Correlations - Mastery: 0.020, Gains: -0.051
+2025-10-17 00:55:34,802 - INFO - ============================================================
+2025-10-17 00:55:34,803 - INFO - 📊 EPOCH 1/12 RESULTS:
+2025-10-17 00:55:34,803 - INFO -   🚂 Train - Loss: 0.6175 (Main: 0.5372, Constraint: 0.0803), AUC: 0.6815, Acc: 0.7391
+2025-10-17 00:55:34,803 - INFO -   ✅ Valid - Loss: 0.5167, AUC: 0.7151, Acc: 0.7502
+2025-10-17 00:55:34,804 - INFO -   🏆 Current Best AUC: 0.0000
+2025-10-17 00:55:34,804 - INFO - ============================================================
+2025-10-17 00:55:35,267 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7151 (Epoch 1)
+2025-10-17 00:55:35,268 - INFO - \nEpoch 2/12
+2025-10-17 00:55:35,268 - INFO - --------------------------------------------------
+2025-10-17 00:55:44,006 - INFO -   Running consistency validation...
+2025-10-17 00:55:54,526 - INFO - ============================================================
+2025-10-17 00:55:54,526 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:55:54,526 - INFO -   🚂 Train - Loss: 0.5138 (Main: 0.5138, Constraint: 0.0000), AUC: 0.7247, Acc: 0.7519
+2025-10-17 00:55:54,526 - INFO -   ✅ Valid - Loss: 0.5111, AUC: 0.7244, Acc: 0.7546
+2025-10-17 00:55:54,526 - INFO -   🏆 Current Best AUC: 0.7176
+2025-10-17 00:55:54,526 - INFO - ============================================================
+2025-10-17 00:55:54,886 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7244 (Epoch 2)
+2025-10-17 00:55:54,886 - INFO - \nEpoch 3/12
+2025-10-17 00:55:54,887 - INFO - --------------------------------------------------
+2025-10-17 00:56:39,304 - INFO -   Running consistency validation...
+2025-10-17 00:56:47,770 - INFO -   Running consistency validation...
+2025-10-17 00:56:57,214 - INFO -   Running consistency validation...
+2025-10-17 00:56:57,294 - INFO -   Running consistency validation...
+2025-10-17 00:56:57,464 - INFO - ============================================================
+2025-10-17 00:56:57,465 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:56:57,466 - INFO -   🚂 Train - Loss: 0.5136 (Main: 0.5136, Constraint: 0.0000), AUC: 0.7248, Acc: 0.7518
+2025-10-17 00:56:57,466 - INFO -   ✅ Valid - Loss: 0.5113, AUC: 0.7241, Acc: 0.7539
+2025-10-17 00:56:57,466 - INFO -   🏆 Current Best AUC: 0.7174
+2025-10-17 00:56:57,467 - INFO - ============================================================
+2025-10-17 00:56:58,934 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7241 (Epoch 2)
+2025-10-17 00:56:58,935 - INFO - \nEpoch 3/12
+2025-10-17 00:56:58,936 - INFO - --------------------------------------------------
+2025-10-17 00:57:11,438 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:57:14,235 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:57:14,235 - INFO -   Correlations - Mastery: 0.018, Gains: -0.006
+2025-10-17 00:57:14,235 - INFO - ============================================================
+2025-10-17 00:57:14,236 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:57:14,236 - INFO -   🚂 Train - Loss: 0.5792 (Main: 0.5167, Constraint: 0.0625), AUC: 0.7198, Acc: 0.7495
+2025-10-17 00:57:14,236 - INFO -   ✅ Valid - Loss: 0.5119, AUC: 0.7228, Acc: 0.7537
+2025-10-17 00:57:14,236 - INFO -   🏆 Current Best AUC: 0.7132
+2025-10-17 00:57:14,236 - INFO - ============================================================
+2025-10-17 00:57:17,361 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7228 (Epoch 2)
+2025-10-17 00:57:17,369 - INFO - \nEpoch 3/12
+2025-10-17 00:57:17,369 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:57:25,916 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:57:25,917 - INFO -   Correlations - Mastery: 0.021, Gains: -0.048
+2025-10-17 00:57:25,917 - INFO - ============================================================
+2025-10-17 00:57:25,917 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:57:25,917 - INFO -   🚂 Train - Loss: 0.5792 (Main: 0.5166, Constraint: 0.0626), AUC: 0.7200, Acc: 0.7499
+2025-10-17 00:57:25,917 - INFO -   ✅ Valid - Loss: 0.5139, AUC: 0.7236, Acc: 0.7519
+2025-10-17 00:57:25,917 - INFO -   🏆 Current Best AUC: 0.7151
+2025-10-17 00:57:25,917 - INFO - ============================================================
+2025-10-17 00:57:26,493 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7236 (Epoch 2)
+2025-10-17 00:57:26,494 - INFO - \nEpoch 3/12
+2025-10-17 00:57:26,494 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:57:29,444 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:57:29,445 - INFO -   Correlations - Mastery: 0.029, Gains: 0.024
+2025-10-17 00:57:29,446 - INFO - ============================================================
+2025-10-17 00:57:29,446 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:57:29,446 - INFO -   🚂 Train - Loss: 0.5790 (Main: 0.5164, Constraint: 0.0626), AUC: 0.7203, Acc: 0.7503
+2025-10-17 00:57:29,447 - INFO -   ✅ Valid - Loss: 0.5129, AUC: 0.7229, Acc: 0.7531
+2025-10-17 00:57:29,447 - INFO -   🏆 Current Best AUC: 0.7143
+2025-10-17 00:57:29,447 - INFO - ============================================================
+2025-10-17 00:57:31,881 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7229 (Epoch 2)
+2025-10-17 00:57:31,882 - INFO - \nEpoch 3/12
+2025-10-17 00:57:31,882 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:57:32,185 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:57:32,187 - INFO -   Correlations - Mastery: 0.017, Gains: -0.022
+2025-10-17 00:57:32,187 - INFO - ============================================================
+2025-10-17 00:57:32,188 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:57:32,188 - INFO -   🚂 Train - Loss: 0.5791 (Main: 0.5164, Constraint: 0.0626), AUC: 0.7202, Acc: 0.7502
+2025-10-17 00:57:32,189 - INFO -   ✅ Valid - Loss: 0.5136, AUC: 0.7220, Acc: 0.7523
+2025-10-17 00:57:32,189 - INFO -   🏆 Current Best AUC: 0.7135
+2025-10-17 00:57:32,189 - INFO - ============================================================
+2025-10-17 00:57:33,197 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7220 (Epoch 2)
+2025-10-17 00:57:33,199 - INFO - \nEpoch 3/12
+2025-10-17 00:57:33,199 - INFO - --------------------------------------------------
+2025-10-17 00:57:40,581 - INFO -   Running consistency validation...
+2025-10-17 00:57:59,005 - INFO -   Running consistency validation...
+2025-10-17 00:57:59,130 - INFO -   Running consistency validation...
+2025-10-17 00:58:01,298 - INFO - ============================================================
+2025-10-17 00:58:01,309 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:58:01,310 - INFO -   🚂 Train - Loss: 0.5141 (Main: 0.5141, Constraint: 0.0000), AUC: 0.7241, Acc: 0.7511
+2025-10-17 00:58:01,321 - INFO -   ✅ Valid - Loss: 0.5114, AUC: 0.7245, Acc: 0.7541
+2025-10-17 00:58:01,322 - INFO -   🏆 Current Best AUC: 0.7162
+2025-10-17 00:58:01,322 - INFO - ============================================================
+2025-10-17 00:58:02,386 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7245 (Epoch 2)
+2025-10-17 00:58:02,387 - INFO - \nEpoch 3/12
+2025-10-17 00:58:02,388 - INFO - --------------------------------------------------
+2025-10-17 00:58:05,687 - INFO -   Running consistency validation...
+2025-10-17 00:58:19,132 - INFO - ============================================================
+2025-10-17 00:58:19,133 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:58:19,134 - INFO -   🚂 Train - Loss: 0.5135 (Main: 0.5135, Constraint: 0.0000), AUC: 0.7249, Acc: 0.7517
+2025-10-17 00:58:19,134 - INFO -   ✅ Valid - Loss: 0.5113, AUC: 0.7242, Acc: 0.7533
+2025-10-17 00:58:19,134 - INFO -   🏆 Current Best AUC: 0.7164
+2025-10-17 00:58:19,134 - INFO - ============================================================
+2025-10-17 00:58:19,628 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7242 (Epoch 2)
+2025-10-17 00:58:19,628 - INFO - \nEpoch 3/12
+2025-10-17 00:58:19,628 - INFO - --------------------------------------------------
+2025-10-17 00:58:19,680 - INFO - ============================================================
+2025-10-17 00:58:19,680 - INFO - 📊 EPOCH 2/12 RESULTS:
+2025-10-17 00:58:19,680 - INFO -   🚂 Train - Loss: 0.5133 (Main: 0.5133, Constraint: 0.0000), AUC: 0.7255, Acc: 0.7518
+2025-10-17 00:58:19,680 - INFO -   ✅ Valid - Loss: 0.5110, AUC: 0.7244, Acc: 0.7542
+2025-10-17 00:58:19,680 - INFO -   🏆 Current Best AUC: 0.7171
+2025-10-17 00:58:19,680 - INFO - ============================================================
+2025-10-17 00:58:20,336 - INFO - ============================================================
+2025-10-17 00:58:20,336 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:58:20,336 - INFO -   🚂 Train - Loss: 0.5053 (Main: 0.5053, Constraint: 0.0000), AUC: 0.7376, Acc: 0.7566
+2025-10-17 00:58:20,337 - INFO -   ✅ Valid - Loss: 0.5100, AUC: 0.7258, Acc: 0.7546
+2025-10-17 00:58:20,337 - INFO -   📈 AUC Change: +0.0081 (Current: 0.7258, Previous: 0.7176)
+2025-10-17 00:58:20,337 - INFO -   🏆 Current Best AUC: 0.7244
+2025-10-17 00:58:20,337 - INFO - ============================================================
+2025-10-17 00:58:20,455 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7244 (Epoch 2)
+2025-10-17 00:58:20,455 - INFO - \nEpoch 3/12
+2025-10-17 00:58:20,455 - INFO - --------------------------------------------------
+2025-10-17 00:58:21,697 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7258 (Epoch 3)
+2025-10-17 00:58:21,734 - INFO - \nEpoch 4/12
+2025-10-17 00:58:21,735 - INFO - --------------------------------------------------
+2025-10-17 00:58:56,773 - INFO -   Running consistency validation...
+2025-10-17 00:59:03,605 - INFO -   Running consistency validation...
+2025-10-17 00:59:12,208 - INFO -   Running consistency validation...
+2025-10-17 00:59:16,371 - INFO -   Running consistency validation...
+2025-10-17 00:59:16,688 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:59:24,653 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:59:24,655 - INFO -   Correlations - Mastery: 0.015, Gains: 0.008
+2025-10-17 00:59:24,657 - INFO - ============================================================
+2025-10-17 00:59:24,657 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:59:24,658 - INFO -   🚂 Train - Loss: 0.5706 (Main: 0.5088, Constraint: 0.0618), AUC: 0.7322, Acc: 0.7541
+2025-10-17 00:59:24,658 - INFO -   ✅ Valid - Loss: 0.5119, AUC: 0.7261, Acc: 0.7544
+2025-10-17 00:59:24,658 - INFO -   📈 AUC Change: +0.0128 (Current: 0.7261, Previous: 0.7132)
+2025-10-17 00:59:24,658 - INFO -   🏆 Current Best AUC: 0.7228
+2025-10-17 00:59:24,658 - INFO - ============================================================
+2025-10-17 00:59:25,500 - INFO - ============================================================
+2025-10-17 00:59:25,501 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:59:25,502 - INFO -   🚂 Train - Loss: 0.5051 (Main: 0.5051, Constraint: 0.0000), AUC: 0.7379, Acc: 0.7566
+2025-10-17 00:59:25,502 - INFO -   ✅ Valid - Loss: 0.5111, AUC: 0.7249, Acc: 0.7534
+2025-10-17 00:59:25,502 - INFO -   📈 AUC Change: +0.0074 (Current: 0.7249, Previous: 0.7174)
+2025-10-17 00:59:25,503 - INFO -   🏆 Current Best AUC: 0.7241
+2025-10-17 00:59:25,503 - INFO - ============================================================
+2025-10-17 00:59:25,521 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7261 (Epoch 3)
+2025-10-17 00:59:25,522 - INFO - \nEpoch 4/12
+2025-10-17 00:59:25,522 - INFO - --------------------------------------------------
+2025-10-17 00:59:26,215 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7249 (Epoch 3)
+2025-10-17 00:59:26,222 - INFO - \nEpoch 4/12
+2025-10-17 00:59:26,222 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:59:39,856 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:59:39,857 - INFO -   Correlations - Mastery: 0.011, Gains: -0.043
+2025-10-17 00:59:39,857 - INFO - ============================================================
+2025-10-17 00:59:39,857 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:59:39,858 - INFO -   🚂 Train - Loss: 0.5697 (Main: 0.5081, Constraint: 0.0616), AUC: 0.7333, Acc: 0.7547
+2025-10-17 00:59:39,858 - INFO -   ✅ Valid - Loss: 0.5122, AUC: 0.7260, Acc: 0.7532
+2025-10-17 00:59:39,858 - INFO -   📈 AUC Change: +0.0109 (Current: 0.7260, Previous: 0.7151)
+2025-10-17 00:59:39,858 - INFO -   🏆 Current Best AUC: 0.7236
+2025-10-17 00:59:39,858 - INFO - ============================================================
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:59:40,435 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:59:40,438 - INFO -   Correlations - Mastery: 0.032, Gains: 0.033
+2025-10-17 00:59:40,441 - INFO - ============================================================
+2025-10-17 00:59:40,442 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:59:40,442 - INFO -   🚂 Train - Loss: 0.5695 (Main: 0.5078, Constraint: 0.0617), AUC: 0.7337, Acc: 0.7549
+2025-10-17 00:59:40,443 - INFO -   ✅ Valid - Loss: 0.5114, AUC: 0.7253, Acc: 0.7551
+2025-10-17 00:59:40,443 - INFO -   📈 AUC Change: +0.0110 (Current: 0.7253, Previous: 0.7143)
+2025-10-17 00:59:40,445 - INFO -   🏆 Current Best AUC: 0.7229
+2025-10-17 00:59:40,445 - INFO - ============================================================
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 00:59:40,494 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 00:59:40,496 - INFO -   Correlations - Mastery: 0.006, Gains: -0.020
+2025-10-17 00:59:40,496 - INFO - ============================================================
+2025-10-17 00:59:40,497 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 00:59:40,497 - INFO -   🚂 Train - Loss: 0.5698 (Main: 0.5081, Constraint: 0.0617), AUC: 0.7333, Acc: 0.7545
+2025-10-17 00:59:40,497 - INFO -   ✅ Valid - Loss: 0.5126, AUC: 0.7245, Acc: 0.7537
+2025-10-17 00:59:40,498 - INFO -   📈 AUC Change: +0.0110 (Current: 0.7245, Previous: 0.7135)
+2025-10-17 00:59:40,498 - INFO -   🏆 Current Best AUC: 0.7220
+2025-10-17 00:59:40,498 - INFO - ============================================================
+2025-10-17 00:59:40,696 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7260 (Epoch 3)
+2025-10-17 00:59:40,697 - INFO - \nEpoch 4/12
+2025-10-17 00:59:40,697 - INFO - --------------------------------------------------
+2025-10-17 00:59:41,196 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7253 (Epoch 3)
+2025-10-17 00:59:41,197 - INFO - \nEpoch 4/12
+2025-10-17 00:59:41,198 - INFO - --------------------------------------------------
+2025-10-17 00:59:41,498 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7245 (Epoch 3)
+2025-10-17 00:59:41,498 - INFO - \nEpoch 4/12
+2025-10-17 00:59:41,499 - INFO - --------------------------------------------------
+2025-10-17 01:00:36,891 - INFO -   Running consistency validation...
+2025-10-17 01:00:37,242 - INFO -   Running consistency validation...
+2025-10-17 01:00:49,200 - INFO -   Running consistency validation...
+2025-10-17 01:00:53,466 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:01:02,145 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:01:02,146 - INFO -   Correlations - Mastery: 0.009, Gains: -0.039
+2025-10-17 01:01:02,147 - INFO - ============================================================
+2025-10-17 01:01:02,147 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:01:02,147 - INFO -   🚂 Train - Loss: 0.5616 (Main: 0.5005, Constraint: 0.0611), AUC: 0.7445, Acc: 0.7591
+2025-10-17 01:01:02,147 - INFO -   ✅ Valid - Loss: 0.5132, AUC: 0.7239, Acc: 0.7534
+2025-10-17 01:01:02,147 - INFO -   📈 AUC Change: +0.0003 (Current: 0.7239, Previous: 0.7236)
+2025-10-17 01:01:02,147 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:01:02,148 - INFO - ============================================================
+2025-10-17 01:01:02,148 - INFO - \nEpoch 5/12
+2025-10-17 01:01:02,148 - INFO - --------------------------------------------------
+2025-10-17 01:01:05,655 - INFO - ============================================================
+2025-10-17 01:01:05,657 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 01:01:05,657 - INFO -   🚂 Train - Loss: 0.5059 (Main: 0.5059, Constraint: 0.0000), AUC: 0.7368, Acc: 0.7561
+2025-10-17 01:01:05,658 - INFO -   ✅ Valid - Loss: 0.5104, AUC: 0.7262, Acc: 0.7547
+2025-10-17 01:01:05,658 - INFO -   📈 AUC Change: +0.0101 (Current: 0.7262, Previous: 0.7162)
+2025-10-17 01:01:05,659 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:01:05,659 - INFO - ============================================================
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:01:06,177 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:01:06,178 - INFO -   Correlations - Mastery: 0.019, Gains: 0.014
+2025-10-17 01:01:06,180 - INFO - ============================================================
+2025-10-17 01:01:06,180 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:01:06,180 - INFO -   🚂 Train - Loss: 0.5630 (Main: 0.5016, Constraint: 0.0614), AUC: 0.7430, Acc: 0.7584
+2025-10-17 01:01:06,182 - INFO -   ✅ Valid - Loss: 0.5120, AUC: 0.7260, Acc: 0.7549
+2025-10-17 01:01:06,182 - INFO -   📈 AUC Change: +0.0032 (Current: 0.7260, Previous: 0.7228)
+2025-10-17 01:01:06,182 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:01:06,183 - INFO - ============================================================
+2025-10-17 01:01:06,183 - INFO - \nEpoch 5/12
+2025-10-17 01:01:06,184 - INFO - --------------------------------------------------
+2025-10-17 01:01:08,169 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7262 (Epoch 3)
+2025-10-17 01:01:08,170 - INFO - \nEpoch 4/12
+2025-10-17 01:01:08,170 - INFO - --------------------------------------------------
+2025-10-17 01:01:13,468 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:01:25,518 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:01:25,518 - INFO -   Correlations - Mastery: 0.026, Gains: 0.039
+2025-10-17 01:01:25,519 - INFO - ============================================================
+2025-10-17 01:01:25,519 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:01:25,519 - INFO -   🚂 Train - Loss: 0.5618 (Main: 0.5007, Constraint: 0.0611), AUC: 0.7443, Acc: 0.7591
+2025-10-17 01:01:25,519 - INFO -   ✅ Valid - Loss: 0.5122, AUC: 0.7237, Acc: 0.7546
+2025-10-17 01:01:25,519 - INFO -   📈 AUC Change: +0.0009 (Current: 0.7237, Previous: 0.7229)
+2025-10-17 01:01:25,519 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:01:25,519 - INFO - ============================================================
+2025-10-17 01:01:25,519 - INFO - \nEpoch 5/12
+2025-10-17 01:01:25,519 - INFO - --------------------------------------------------
+2025-10-17 01:01:41,178 - INFO -   Running consistency validation...
+2025-10-17 01:01:47,832 - INFO -   Running consistency validation...
+2025-10-17 01:01:48,925 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:01:51,767 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:01:51,768 - INFO -   Correlations - Mastery: 0.004, Gains: -0.024
+2025-10-17 01:01:51,768 - INFO - ============================================================
+2025-10-17 01:01:51,768 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:01:51,768 - INFO -   🚂 Train - Loss: 0.5616 (Main: 0.5004, Constraint: 0.0612), AUC: 0.7445, Acc: 0.7590
+2025-10-17 01:01:51,768 - INFO -   ✅ Valid - Loss: 0.5145, AUC: 0.7228, Acc: 0.7536
+2025-10-17 01:01:51,768 - INFO -   📈 AUC Change: +0.0007 (Current: 0.7228, Previous: 0.7220)
+2025-10-17 01:01:51,768 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:01:51,768 - INFO - ============================================================
+2025-10-17 01:01:51,768 - INFO - \nEpoch 5/12
+2025-10-17 01:01:51,768 - INFO - --------------------------------------------------
+2025-10-17 01:01:58,764 - INFO -   Running consistency validation...
+2025-10-17 01:02:01,714 - INFO - ============================================================
+2025-10-17 01:02:01,716 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 01:02:01,716 - INFO -   🚂 Train - Loss: 0.5052 (Main: 0.5052, Constraint: 0.0000), AUC: 0.7377, Acc: 0.7564
+2025-10-17 01:02:01,716 - INFO -   ✅ Valid - Loss: 0.5109, AUC: 0.7251, Acc: 0.7543
+2025-10-17 01:02:01,717 - INFO -   📈 AUC Change: +0.0087 (Current: 0.7251, Previous: 0.7164)
+2025-10-17 01:02:01,717 - INFO -   🏆 Current Best AUC: 0.7242
+2025-10-17 01:02:01,717 - INFO - ============================================================
+2025-10-17 01:02:04,668 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7251 (Epoch 3)
+2025-10-17 01:02:04,670 - INFO - \nEpoch 4/12
+2025-10-17 01:02:04,677 - INFO - --------------------------------------------------
+2025-10-17 01:02:09,492 - INFO - ============================================================
+2025-10-17 01:02:09,494 - INFO - 📊 EPOCH 3/12 RESULTS:
+2025-10-17 01:02:09,494 - INFO -   🚂 Train - Loss: 0.5050 (Main: 0.5050, Constraint: 0.0000), AUC: 0.7381, Acc: 0.7567
+2025-10-17 01:02:09,494 - INFO -   ✅ Valid - Loss: 0.5104, AUC: 0.7252, Acc: 0.7553
+2025-10-17 01:02:09,495 - INFO -   📈 AUC Change: +0.0081 (Current: 0.7252, Previous: 0.7171)
+2025-10-17 01:02:09,495 - INFO -   🏆 Current Best AUC: 0.7244
+2025-10-17 01:02:09,496 - INFO - ============================================================
+2025-10-17 01:02:10,102 - INFO -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7252 (Epoch 3)
+2025-10-17 01:02:10,103 - INFO - \nEpoch 4/12
+2025-10-17 01:02:10,104 - INFO - --------------------------------------------------
+2025-10-17 01:02:14,638 - INFO - ============================================================
+2025-10-17 01:02:14,638 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:02:14,639 - INFO -   🚂 Train - Loss: 0.4972 (Main: 0.4972, Constraint: 0.0000), AUC: 0.7494, Acc: 0.7611
+2025-10-17 01:02:14,642 - INFO -   ✅ Valid - Loss: 0.5130, AUC: 0.7220, Acc: 0.7536
+2025-10-17 01:02:14,643 - INFO -   📉 AUC Change: -0.0024 (Current: 0.7220, Previous: 0.7244)
+2025-10-17 01:02:14,643 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:02:14,643 - INFO - ============================================================
+2025-10-17 01:02:14,644 - INFO - \nEpoch 5/12
+2025-10-17 01:02:14,644 - INFO - --------------------------------------------------
+2025-10-17 01:02:27,092 - INFO - ============================================================
+2025-10-17 01:02:27,093 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:02:27,093 - INFO -   🚂 Train - Loss: 0.4971 (Main: 0.4971, Constraint: 0.0000), AUC: 0.7495, Acc: 0.7610
+2025-10-17 01:02:27,094 - INFO -   ✅ Valid - Loss: 0.5139, AUC: 0.7219, Acc: 0.7530
+2025-10-17 01:02:27,094 - INFO -   📉 AUC Change: -0.0022 (Current: 0.7219, Previous: 0.7241)
+2025-10-17 01:02:27,094 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:02:27,095 - INFO - ============================================================
+2025-10-17 01:02:27,095 - INFO - \nEpoch 5/12
+2025-10-17 01:02:27,095 - INFO - --------------------------------------------------
+2025-10-17 01:02:44,025 - INFO -   Running consistency validation...
+2025-10-17 01:02:53,564 - INFO -   Running consistency validation...
+2025-10-17 01:02:59,659 - INFO -   Running consistency validation...
+2025-10-17 01:03:00,840 - INFO - ============================================================
+2025-10-17 01:03:00,846 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:03:00,846 - INFO -   🚂 Train - Loss: 0.4981 (Main: 0.4981, Constraint: 0.0000), AUC: 0.7482, Acc: 0.7602
+2025-10-17 01:03:00,846 - INFO -   ✅ Valid - Loss: 0.5118, AUC: 0.7241, Acc: 0.7543
+2025-10-17 01:03:00,851 - INFO -   📉 AUC Change: -0.0004 (Current: 0.7241, Previous: 0.7245)
+2025-10-17 01:03:00,851 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:03:00,851 - INFO - ============================================================
+2025-10-17 01:03:00,851 - INFO - \nEpoch 5/12
+2025-10-17 01:03:00,853 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:03:07,802 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:03:07,804 - INFO -   Correlations - Mastery: -0.002, Gains: -0.046
+2025-10-17 01:03:07,805 - INFO - ============================================================
+2025-10-17 01:03:07,806 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:03:07,806 - INFO -   🚂 Train - Loss: 0.5526 (Main: 0.4921, Constraint: 0.0605), AUC: 0.7565, Acc: 0.7635
+2025-10-17 01:03:07,807 - INFO -   ✅ Valid - Loss: 0.5188, AUC: 0.7176, Acc: 0.7519
+2025-10-17 01:03:07,807 - INFO -   📉 AUC Change: -0.0084 (Current: 0.7176, Previous: 0.7260)
+2025-10-17 01:03:07,807 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:03:07,808 - INFO - ============================================================
+2025-10-17 01:03:07,808 - INFO - \nEpoch 6/12
+2025-10-17 01:03:07,808 - INFO - --------------------------------------------------
+2025-10-17 01:03:16,460 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:03:20,732 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:03:20,733 - INFO -   Correlations - Mastery: 0.012, Gains: 0.009
+2025-10-17 01:03:20,733 - INFO - ============================================================
+2025-10-17 01:03:20,733 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:03:20,734 - INFO -   🚂 Train - Loss: 0.5547 (Main: 0.4936, Constraint: 0.0610), AUC: 0.7544, Acc: 0.7628
+2025-10-17 01:03:20,734 - INFO -   ✅ Valid - Loss: 0.5149, AUC: 0.7214, Acc: 0.7533
+2025-10-17 01:03:20,734 - INFO -   📉 AUC Change: -0.0047 (Current: 0.7214, Previous: 0.7261)
+2025-10-17 01:03:20,734 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:03:20,734 - INFO - ============================================================
+2025-10-17 01:03:20,734 - INFO - \nEpoch 6/12
+2025-10-17 01:03:20,734 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:03:32,925 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:03:32,925 - INFO -   Correlations - Mastery: 0.011, Gains: 0.028
+2025-10-17 01:03:32,926 - INFO - ============================================================
+2025-10-17 01:03:32,926 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:03:32,926 - INFO -   🚂 Train - Loss: 0.5529 (Main: 0.4923, Constraint: 0.0606), AUC: 0.7561, Acc: 0.7636
+2025-10-17 01:03:32,926 - INFO -   ✅ Valid - Loss: 0.5180, AUC: 0.7174, Acc: 0.7524
+2025-10-17 01:03:32,926 - INFO -   📉 AUC Change: -0.0080 (Current: 0.7174, Previous: 0.7253)
+2025-10-17 01:03:32,926 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:03:32,926 - INFO - ============================================================
+2025-10-17 01:03:32,926 - INFO - \nEpoch 6/12
+2025-10-17 01:03:32,926 - INFO - --------------------------------------------------
+2025-10-17 01:03:36,363 - INFO -   Running consistency validation...
+terminate called without an active exception
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+Exception ignored in: <function _MultiProcessingDataLoaderIter.__del__ at 0x7ff2e59a1700>
+Traceback (most recent call last):
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1478, in __del__
+    self._shutdown_workers()
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1442, in _shutdown_workers
+    w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 149, in join
+    res = self._popen.wait(timeout)
+  File "/usr/lib/python3.8/multiprocessing/popen_fork.py", line 44, in wait
+    if not wait([self.sentinel], timeout):
+  File "/usr/lib/python3.8/multiprocessing/connection.py", line 931, in wait
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.8/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/utils/data/_utils/signal_handling.py", line 66, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 1028903) is killed by signal: Aborted. 
+2025-10-17 01:03:44,865 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:03:44,866 - INFO -   Correlations - Mastery: -0.010, Gains: -0.033
+2025-10-17 01:03:44,867 - INFO - ============================================================
+2025-10-17 01:03:44,867 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:03:44,867 - INFO -   🚂 Train - Loss: 0.5518 (Main: 0.4912, Constraint: 0.0606), AUC: 0.7576, Acc: 0.7642
+2025-10-17 01:03:44,867 - INFO -   ✅ Valid - Loss: 0.5210, AUC: 0.7160, Acc: 0.7511
+2025-10-17 01:03:44,868 - INFO -   📉 AUC Change: -0.0086 (Current: 0.7160, Previous: 0.7245)
+2025-10-17 01:03:44,868 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:03:44,869 - INFO - ============================================================
+2025-10-17 01:03:44,869 - INFO - \nEpoch 6/12
+2025-10-17 01:03:44,870 - INFO - --------------------------------------------------
+2025-10-17 01:04:07,172 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:04:16,582 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:04:16,586 - INFO -   Correlations - Mastery: 0.020, Gains: -0.045
+2025-10-17 01:04:16,586 - INFO - ============================================================
+2025-10-17 01:04:16,587 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:04:16,587 - INFO -   🚂 Train - Loss: 0.5399 (Main: 0.4799, Constraint: 0.0600), AUC: 0.7727, Acc: 0.7705
+2025-10-17 01:04:16,587 - INFO -   ✅ Valid - Loss: 0.5295, AUC: 0.7073, Acc: 0.7477
+2025-10-17 01:04:16,588 - INFO -   📉 AUC Change: -0.0167 (Current: 0.7073, Previous: 0.7239)
+2025-10-17 01:04:16,588 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:04:16,588 - INFO - ============================================================
+2025-10-17 01:04:16,589 - INFO - \nEpoch 7/12
+2025-10-17 01:04:16,589 - INFO - --------------------------------------------------
+2025-10-17 01:04:26,102 - INFO -   Running consistency validation...
+2025-10-17 01:04:39,975 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:04:42,277 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:04:42,278 - INFO -   Correlations - Mastery: 0.009, Gains: 0.001
+2025-10-17 01:04:42,279 - INFO - ============================================================
+2025-10-17 01:04:42,279 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:04:42,279 - INFO -   🚂 Train - Loss: 0.5437 (Main: 0.4831, Constraint: 0.0606), AUC: 0.7684, Acc: 0.7691
+2025-10-17 01:04:42,279 - INFO -   ✅ Valid - Loss: 0.5223, AUC: 0.7128, Acc: 0.7489
+2025-10-17 01:04:42,280 - INFO -   📉 AUC Change: -0.0132 (Current: 0.7128, Previous: 0.7260)
+2025-10-17 01:04:42,280 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:04:42,280 - INFO - ============================================================
+2025-10-17 01:04:42,280 - INFO - \nEpoch 7/12
+2025-10-17 01:04:42,280 - INFO - --------------------------------------------------
+2025-10-17 01:05:08,885 - INFO -   Running consistency validation...
+2025-10-17 01:05:09,229 - INFO -   Running consistency validation...
+2025-10-17 01:05:12,295 - INFO -   Running consistency validation...
+2025-10-17 01:05:12,496 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:05:14,240 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:05:14,241 - INFO -   Correlations - Mastery: 0.020, Gains: 0.021
+2025-10-17 01:05:14,242 - INFO - ============================================================
+2025-10-17 01:05:14,242 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:05:14,242 - INFO -   🚂 Train - Loss: 0.5407 (Main: 0.4808, Constraint: 0.0599), AUC: 0.7712, Acc: 0.7705
+2025-10-17 01:05:14,242 - INFO -   ✅ Valid - Loss: 0.5289, AUC: 0.7070, Acc: 0.7472
+2025-10-17 01:05:14,242 - INFO -   📉 AUC Change: -0.0167 (Current: 0.7070, Previous: 0.7237)
+2025-10-17 01:05:14,243 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:05:14,243 - INFO - ============================================================
+2025-10-17 01:05:14,243 - INFO - \nEpoch 7/12
+2025-10-17 01:05:14,244 - INFO - --------------------------------------------------
+2025-10-17 01:05:15,622 - INFO -   Running consistency validation...
+2025-10-17 01:05:31,084 - INFO - ============================================================
+2025-10-17 01:05:31,085 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:05:31,086 - INFO -   🚂 Train - Loss: 0.4873 (Main: 0.4873, Constraint: 0.0000), AUC: 0.7630, Acc: 0.7663
+2025-10-17 01:05:31,086 - INFO -   ✅ Valid - Loss: 0.5203, AUC: 0.7139, Acc: 0.7502
+2025-10-17 01:05:31,086 - INFO -   📉 AUC Change: -0.0119 (Current: 0.7139, Previous: 0.7258)
+2025-10-17 01:05:31,087 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:05:31,087 - INFO - ============================================================
+2025-10-17 01:05:31,087 - INFO - \nEpoch 6/12
+2025-10-17 01:05:31,088 - INFO - --------------------------------------------------
+2025-10-17 01:05:33,539 - INFO -   Running consistency validation...
+2025-10-17 01:05:46,782 - INFO - ============================================================
+2025-10-17 01:05:46,784 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:05:46,785 - INFO -   🚂 Train - Loss: 0.4866 (Main: 0.4866, Constraint: 0.0000), AUC: 0.7639, Acc: 0.7666
+2025-10-17 01:05:46,785 - INFO -   ✅ Valid - Loss: 0.5231, AUC: 0.7137, Acc: 0.7503
+2025-10-17 01:05:46,786 - INFO -   📉 AUC Change: -0.0112 (Current: 0.7137, Previous: 0.7249)
+2025-10-17 01:05:46,786 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:05:46,786 - INFO - ============================================================
+2025-10-17 01:05:46,787 - INFO - \nEpoch 6/12
+2025-10-17 01:05:46,787 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:05:47,617 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:05:47,618 - INFO -   Correlations - Mastery: -0.022, Gains: -0.017
+2025-10-17 01:05:47,618 - INFO - ============================================================
+2025-10-17 01:05:47,618 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:05:47,619 - INFO -   🚂 Train - Loss: 0.5386 (Main: 0.4785, Constraint: 0.0601), AUC: 0.7743, Acc: 0.7711
+2025-10-17 01:05:47,619 - INFO -   ✅ Valid - Loss: 0.5325, AUC: 0.7052, Acc: 0.7478
+2025-10-17 01:05:47,619 - INFO -   📉 AUC Change: -0.0176 (Current: 0.7052, Previous: 0.7228)
+2025-10-17 01:05:47,619 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:05:47,619 - INFO - ============================================================
+2025-10-17 01:05:47,619 - INFO - \nEpoch 7/12
+2025-10-17 01:05:47,620 - INFO - --------------------------------------------------
+2025-10-17 01:05:48,154 - INFO - ============================================================
+2025-10-17 01:05:48,155 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:05:48,156 - INFO -   🚂 Train - Loss: 0.4971 (Main: 0.4971, Constraint: 0.0000), AUC: 0.7496, Acc: 0.7611
+2025-10-17 01:05:48,156 - INFO -   ✅ Valid - Loss: 0.5137, AUC: 0.7207, Acc: 0.7532
+2025-10-17 01:05:48,156 - INFO -   📉 AUC Change: -0.0037 (Current: 0.7207, Previous: 0.7244)
+2025-10-17 01:05:48,156 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:05:48,157 - INFO - ============================================================
+2025-10-17 01:05:48,157 - INFO - \nEpoch 5/12
+2025-10-17 01:05:48,157 - INFO - --------------------------------------------------
+2025-10-17 01:05:49,373 - INFO - ============================================================
+2025-10-17 01:05:49,374 - INFO - 📊 EPOCH 4/12 RESULTS:
+2025-10-17 01:05:49,375 - INFO -   🚂 Train - Loss: 0.4970 (Main: 0.4970, Constraint: 0.0000), AUC: 0.7494, Acc: 0.7613
+2025-10-17 01:05:49,375 - INFO -   ✅ Valid - Loss: 0.5141, AUC: 0.7213, Acc: 0.7526
+2025-10-17 01:05:49,375 - INFO -   📉 AUC Change: -0.0029 (Current: 0.7213, Previous: 0.7242)
+2025-10-17 01:05:49,376 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:05:49,376 - INFO - ============================================================
+2025-10-17 01:05:49,376 - INFO - \nEpoch 5/12
+2025-10-17 01:05:49,377 - INFO - --------------------------------------------------
+2025-10-17 01:05:58,440 - INFO -   Running consistency validation...
+2025-10-17 01:06:02,167 - INFO - ============================================================
+2025-10-17 01:06:02,168 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:06:02,169 - INFO -   🚂 Train - Loss: 0.4885 (Main: 0.4885, Constraint: 0.0000), AUC: 0.7615, Acc: 0.7663
+2025-10-17 01:06:02,169 - INFO -   ✅ Valid - Loss: 0.5192, AUC: 0.7159, Acc: 0.7512
+2025-10-17 01:06:02,170 - INFO -   📉 AUC Change: -0.0103 (Current: 0.7159, Previous: 0.7262)
+2025-10-17 01:06:02,170 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:06:02,170 - INFO - ============================================================
+2025-10-17 01:06:02,171 - INFO - \nEpoch 6/12
+2025-10-17 01:06:02,171 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:06:12,776 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:06:12,776 - INFO -   Correlations - Mastery: 0.018, Gains: -0.039
+2025-10-17 01:06:12,777 - INFO - ============================================================
+2025-10-17 01:06:12,777 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:06:12,777 - INFO -   🚂 Train - Loss: 0.5215 (Main: 0.4622, Constraint: 0.0593), AUC: 0.7938, Acc: 0.7802
+2025-10-17 01:06:12,778 - INFO -   ✅ Valid - Loss: 0.5460, AUC: 0.6947, Acc: 0.7427
+2025-10-17 01:06:12,778 - INFO -   📉 AUC Change: -0.0229 (Current: 0.6947, Previous: 0.7176)
+2025-10-17 01:06:12,778 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:06:12,784 - INFO - ============================================================
+2025-10-17 01:06:12,785 - INFO - \nEpoch 8/12
+2025-10-17 01:06:12,785 - INFO - --------------------------------------------------
+2025-10-17 01:06:29,896 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:06:37,225 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:06:37,225 - INFO -   Correlations - Mastery: 0.010, Gains: 0.008
+2025-10-17 01:06:37,226 - INFO - ============================================================
+2025-10-17 01:06:37,226 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:06:37,226 - INFO -   🚂 Train - Loss: 0.5281 (Main: 0.4679, Constraint: 0.0602), AUC: 0.7871, Acc: 0.7774
+2025-10-17 01:06:37,226 - INFO -   ✅ Valid - Loss: 0.5402, AUC: 0.7000, Acc: 0.7441
+2025-10-17 01:06:37,226 - INFO -   📉 AUC Change: -0.0214 (Current: 0.7000, Previous: 0.7214)
+2025-10-17 01:06:37,226 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:06:37,226 - INFO - ============================================================
+2025-10-17 01:06:37,226 - INFO - \nEpoch 8/12
+2025-10-17 01:06:37,226 - INFO - --------------------------------------------------
+2025-10-17 01:06:53,801 - INFO -   Running consistency validation...
+2025-10-17 01:07:04,756 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:07:06,215 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:07:06,217 - INFO -   Correlations - Mastery: 0.049, Gains: 0.031
+2025-10-17 01:07:06,217 - INFO - ============================================================
+2025-10-17 01:07:06,218 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:07:06,218 - INFO -   🚂 Train - Loss: 0.5236 (Main: 0.4645, Constraint: 0.0591), AUC: 0.7910, Acc: 0.7796
+2025-10-17 01:07:06,218 - INFO -   ✅ Valid - Loss: 0.5487, AUC: 0.6943, Acc: 0.7411
+2025-10-17 01:07:06,219 - INFO -   📉 AUC Change: -0.0230 (Current: 0.6943, Previous: 0.7174)
+2025-10-17 01:07:06,219 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:07:06,219 - INFO - ============================================================
+2025-10-17 01:07:06,220 - INFO - \nEpoch 8/12
+2025-10-17 01:07:06,220 - INFO - --------------------------------------------------
+2025-10-17 01:07:17,541 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:07:21,506 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:07:21,506 - INFO -   Correlations - Mastery: -0.012, Gains: -0.031
+2025-10-17 01:07:21,507 - INFO - ============================================================
+2025-10-17 01:07:21,507 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:07:21,507 - INFO -   🚂 Train - Loss: 0.5205 (Main: 0.4611, Constraint: 0.0594), AUC: 0.7951, Acc: 0.7811
+2025-10-17 01:07:21,507 - INFO -   ✅ Valid - Loss: 0.5553, AUC: 0.6915, Acc: 0.7420
+2025-10-17 01:07:21,507 - INFO -   📉 AUC Change: -0.0245 (Current: 0.6915, Previous: 0.7160)
+2025-10-17 01:07:21,507 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:07:21,508 - INFO - ============================================================
+2025-10-17 01:07:21,508 - INFO - \nEpoch 8/12
+2025-10-17 01:07:21,508 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:07:30,726 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:07:30,727 - INFO -   Correlations - Mastery: 0.039, Gains: -0.048
+2025-10-17 01:07:30,727 - INFO - ============================================================
+2025-10-17 01:07:30,727 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:07:30,727 - INFO -   🚂 Train - Loss: 0.4978 (Main: 0.4392, Constraint: 0.0586), AUC: 0.8183, Acc: 0.7934
+2025-10-17 01:07:30,727 - INFO -   ✅ Valid - Loss: 0.5726, AUC: 0.6837, Acc: 0.7399
+2025-10-17 01:07:30,727 - INFO -   📉 AUC Change: -0.0235 (Current: 0.6837, Previous: 0.7073)
+2025-10-17 01:07:30,727 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:07:30,727 - INFO - ============================================================
+2025-10-17 01:07:30,727 - INFO - \nEpoch 9/12
+2025-10-17 01:07:30,727 - INFO - --------------------------------------------------
+2025-10-17 01:07:39,648 - INFO -   Running consistency validation...
+2025-10-17 01:07:46,700 - INFO -   Running consistency validation...
+2025-10-17 01:07:49,934 - INFO - ============================================================
+2025-10-17 01:07:49,936 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:07:49,936 - INFO -   🚂 Train - Loss: 0.4725 (Main: 0.4725, Constraint: 0.0000), AUC: 0.7818, Acc: 0.7749
+2025-10-17 01:07:49,937 - INFO -   ✅ Valid - Loss: 0.5333, AUC: 0.7020, Acc: 0.7448
+2025-10-17 01:07:49,937 - INFO -   📉 AUC Change: -0.0200 (Current: 0.7020, Previous: 0.7220)
+2025-10-17 01:07:49,937 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:07:49,937 - INFO - ============================================================
+2025-10-17 01:07:49,938 - INFO - \nEpoch 7/12
+2025-10-17 01:07:49,938 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:07:56,615 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:07:56,617 - INFO -   Correlations - Mastery: 0.007, Gains: 0.014
+2025-10-17 01:07:56,617 - INFO - ============================================================
+2025-10-17 01:07:56,617 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:07:56,618 - INFO -   🚂 Train - Loss: 0.5067 (Main: 0.4470, Constraint: 0.0597), AUC: 0.8101, Acc: 0.7893
+2025-10-17 01:07:56,618 - INFO -   ✅ Valid - Loss: 0.5703, AUC: 0.6848, Acc: 0.7390
+2025-10-17 01:07:56,618 - INFO -   📉 AUC Change: -0.0280 (Current: 0.6848, Previous: 0.7128)
+2025-10-17 01:07:56,618 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:07:56,618 - INFO - ============================================================
+2025-10-17 01:07:56,618 - INFO - \nEpoch 9/12
+2025-10-17 01:07:56,618 - INFO - --------------------------------------------------
+2025-10-17 01:08:14,464 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:08:31,822 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:08:31,823 - INFO -   Correlations - Mastery: 0.061, Gains: 0.037
+2025-10-17 01:08:31,823 - INFO - ============================================================
+2025-10-17 01:08:31,823 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:08:31,823 - INFO -   🚂 Train - Loss: 0.5009 (Main: 0.4426, Constraint: 0.0584), AUC: 0.8144, Acc: 0.7920
+2025-10-17 01:08:31,823 - INFO -   ✅ Valid - Loss: 0.5798, AUC: 0.6802, Acc: 0.7352
+2025-10-17 01:08:31,823 - INFO -   📉 AUC Change: -0.0268 (Current: 0.6802, Previous: 0.7070)
+2025-10-17 01:08:31,824 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:08:31,824 - INFO - ============================================================
+2025-10-17 01:08:31,824 - INFO - \nEpoch 9/12
+2025-10-17 01:08:31,824 - INFO - --------------------------------------------------
+2025-10-17 01:08:37,167 - INFO -   Running consistency validation...
+2025-10-17 01:08:38,727 - INFO -   Running consistency validation...
+2025-10-17 01:08:45,824 - INFO -   Running consistency validation...
+2025-10-17 01:09:01,679 - INFO - ============================================================
+2025-10-17 01:09:01,679 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:09:01,680 - INFO -   🚂 Train - Loss: 0.4718 (Main: 0.4718, Constraint: 0.0000), AUC: 0.7825, Acc: 0.7754
+2025-10-17 01:09:01,680 - INFO -   ✅ Valid - Loss: 0.5382, AUC: 0.7020, Acc: 0.7444
+2025-10-17 01:09:01,680 - INFO -   📉 AUC Change: -0.0199 (Current: 0.7020, Previous: 0.7219)
+2025-10-17 01:09:01,680 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:09:01,681 - INFO - ============================================================
+2025-10-17 01:09:01,681 - INFO - \nEpoch 7/12
+2025-10-17 01:09:01,681 - INFO - --------------------------------------------------
+2025-10-17 01:09:06,085 - INFO -   Running consistency validation...
+2025-10-17 01:09:07,662 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:09:09,805 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:09:09,806 - INFO -   Correlations - Mastery: -0.009, Gains: -0.037
+2025-10-17 01:09:09,806 - INFO - ============================================================
+2025-10-17 01:09:09,807 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:09:09,807 - INFO -   🚂 Train - Loss: 0.4969 (Main: 0.4383, Constraint: 0.0587), AUC: 0.8192, Acc: 0.7939
+2025-10-17 01:09:09,807 - INFO -   ✅ Valid - Loss: 0.5947, AUC: 0.6768, Acc: 0.7372
+2025-10-17 01:09:09,807 - INFO -   📉 AUC Change: -0.0284 (Current: 0.6768, Previous: 0.7052)
+2025-10-17 01:09:09,808 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:09:09,808 - INFO - ============================================================
+2025-10-17 01:09:09,808 - INFO - \nEpoch 9/12
+2025-10-17 01:09:09,808 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:09:11,792 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:09:11,795 - INFO -   Correlations - Mastery: 0.040, Gains: -0.018
+2025-10-17 01:09:11,795 - INFO - ============================================================
+2025-10-17 01:09:11,796 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:09:11,796 - INFO -   🚂 Train - Loss: 0.4691 (Main: 0.4112, Constraint: 0.0579), AUC: 0.8445, Acc: 0.8085
+2025-10-17 01:09:11,796 - INFO -   ✅ Valid - Loss: 0.6159, AUC: 0.6752, Acc: 0.7399
+2025-10-17 01:09:11,797 - INFO -   📉 AUC Change: -0.0196 (Current: 0.6752, Previous: 0.6947)
+2025-10-17 01:09:11,797 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:09:11,797 - INFO - ============================================================
+2025-10-17 01:09:11,798 - INFO - \nEpoch 10/12
+2025-10-17 01:09:11,798 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:09:17,991 - INFO -   Running consistency validation...
+2025-10-17 01:09:31,638 - INFO -   Running consistency validation...
+2025-10-17 01:09:36,972 - INFO - ============================================================
+2025-10-17 01:09:36,973 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:09:36,974 - INFO -   🚂 Train - Loss: 0.4868 (Main: 0.4868, Constraint: 0.0000), AUC: 0.7636, Acc: 0.7671
+2025-10-17 01:09:36,974 - INFO -   ✅ Valid - Loss: 0.5228, AUC: 0.7120, Acc: 0.7498
+2025-10-17 01:09:36,975 - INFO -   📉 AUC Change: -0.0132 (Current: 0.7120, Previous: 0.7252)
+2025-10-17 01:09:36,975 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:09:36,976 - INFO - ============================================================
+2025-10-17 01:09:36,976 - INFO - \nEpoch 6/12
+2025-10-17 01:09:36,976 - INFO - --------------------------------------------------
+2025-10-17 01:09:42,952 - INFO - ============================================================
+2025-10-17 01:09:42,953 - INFO - 📊 EPOCH 5/12 RESULTS:
+2025-10-17 01:09:42,954 - INFO -   🚂 Train - Loss: 0.4861 (Main: 0.4861, Constraint: 0.0000), AUC: 0.7644, Acc: 0.7672
+2025-10-17 01:09:42,954 - INFO -   ✅ Valid - Loss: 0.5233, AUC: 0.7129, Acc: 0.7496
+2025-10-17 01:09:42,954 - INFO -   📉 AUC Change: -0.0123 (Current: 0.7129, Previous: 0.7251)
+2025-10-17 01:09:42,955 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:09:42,955 - INFO - ============================================================
+2025-10-17 01:09:42,955 - INFO - \nEpoch 6/12
+2025-10-17 01:09:42,956 - INFO - --------------------------------------------------
+2025-10-17 01:09:44,181 - INFO - ============================================================
+2025-10-17 01:09:44,183 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:09:44,183 - INFO -   🚂 Train - Loss: 0.4514 (Main: 0.4514, Constraint: 0.0000), AUC: 0.8057, Acc: 0.7870
+2025-10-17 01:09:44,183 - INFO -   ✅ Valid - Loss: 0.5590, AUC: 0.6858, Acc: 0.7359
+2025-10-17 01:09:44,184 - INFO -   📉 AUC Change: -0.0281 (Current: 0.6858, Previous: 0.7139)
+2025-10-17 01:09:44,184 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:09:44,184 - INFO - ============================================================
+2025-10-17 01:09:44,184 - INFO - \nEpoch 8/12
+2025-10-17 01:09:44,185 - INFO - --------------------------------------------------
+2025-10-17 01:09:45,511 - INFO -   Running consistency validation...
+2025-10-17 01:09:46,594 - INFO - ============================================================
+2025-10-17 01:09:46,596 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:09:46,596 - INFO -   🚂 Train - Loss: 0.4748 (Main: 0.4748, Constraint: 0.0000), AUC: 0.7788, Acc: 0.7742
+2025-10-17 01:09:46,597 - INFO -   ✅ Valid - Loss: 0.5311, AUC: 0.7042, Acc: 0.7463
+2025-10-17 01:09:46,597 - INFO -   📉 AUC Change: -0.0199 (Current: 0.7042, Previous: 0.7241)
+2025-10-17 01:09:46,597 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:09:46,598 - INFO - ============================================================
+2025-10-17 01:09:46,598 - INFO - \nEpoch 7/12
+2025-10-17 01:09:46,598 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:10:06,503 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:10:06,506 - INFO -   Correlations - Mastery: 0.049, Gains: -0.002
+2025-10-17 01:10:06,506 - INFO - ============================================================
+2025-10-17 01:10:06,507 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:10:06,507 - INFO -   🚂 Train - Loss: 0.4801 (Main: 0.4208, Constraint: 0.0592), AUC: 0.8354, Acc: 0.8036
+2025-10-17 01:10:06,507 - INFO -   ✅ Valid - Loss: 0.6308, AUC: 0.6699, Acc: 0.7401
+2025-10-17 01:10:06,508 - INFO -   📉 AUC Change: -0.0301 (Current: 0.6699, Previous: 0.7000)
+2025-10-17 01:10:06,508 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:10:06,508 - INFO - ============================================================
+2025-10-17 01:10:06,509 - INFO - \nEpoch 10/12
+2025-10-17 01:10:06,509 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:10:22,843 - INFO -   Running consistency validation...
+2025-10-17 01:10:23,523 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:10:38,325 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:10:38,326 - INFO -   Correlations - Mastery: 0.048, Gains: 0.043
+2025-10-17 01:10:38,326 - INFO - ============================================================
+2025-10-17 01:10:38,326 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:10:38,326 - INFO -   🚂 Train - Loss: 0.4732 (Main: 0.4155, Constraint: 0.0576), AUC: 0.8402, Acc: 0.8074
+2025-10-17 01:10:38,326 - INFO -   ✅ Valid - Loss: 0.6301, AUC: 0.6695, Acc: 0.7364
+2025-10-17 01:10:38,326 - INFO -   📉 AUC Change: -0.0248 (Current: 0.6695, Previous: 0.6943)
+2025-10-17 01:10:38,326 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:10:38,326 - INFO - ============================================================
+2025-10-17 01:10:38,326 - INFO - \nEpoch 10/12
+2025-10-17 01:10:38,326 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:10:41,300 - INFO - ============================================================
+2025-10-17 01:10:41,300 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:10:41,300 - INFO -   🚂 Train - Loss: 0.4513 (Main: 0.4513, Constraint: 0.0000), AUC: 0.8055, Acc: 0.7878
+2025-10-17 01:10:41,301 - INFO -   ✅ Valid - Loss: 0.5656, AUC: 0.6875, Acc: 0.7367
+2025-10-17 01:10:41,301 - INFO -   📉 AUC Change: -0.0262 (Current: 0.6875, Previous: 0.7137)
+2025-10-17 01:10:41,301 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:10:41,301 - INFO - ============================================================
+2025-10-17 01:10:41,301 - INFO - \nEpoch 8/12
+2025-10-17 01:10:41,301 - INFO - --------------------------------------------------
+2025-10-17 01:10:46,331 - INFO -   Running consistency validation...
+2025-10-17 01:10:49,014 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:11:00,193 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:11:00,193 - INFO -   Correlations - Mastery: 0.011, Gains: -0.037
+2025-10-17 01:11:00,194 - INFO - ============================================================
+2025-10-17 01:11:00,194 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:11:00,194 - INFO -   🚂 Train - Loss: 0.4704 (Main: 0.4124, Constraint: 0.0580), AUC: 0.8432, Acc: 0.8084
+2025-10-17 01:11:00,194 - INFO -   ✅ Valid - Loss: 0.6385, AUC: 0.6649, Acc: 0.7355
+2025-10-17 01:11:00,194 - INFO -   📉 AUC Change: -0.0265 (Current: 0.6649, Previous: 0.6915)
+2025-10-17 01:11:00,194 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:11:00,194 - INFO - ============================================================
+2025-10-17 01:11:00,194 - INFO - \nEpoch 10/12
+2025-10-17 01:11:00,194 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:11:00,233 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:11:00,233 - INFO -   Correlations - Mastery: 0.037, Gains: -0.003
+2025-10-17 01:11:00,233 - INFO - ============================================================
+2025-10-17 01:11:00,233 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:11:00,233 - INFO -   🚂 Train - Loss: 0.4278 (Main: 0.3705, Constraint: 0.0573), AUC: 0.8771, Acc: 0.8319
+2025-10-17 01:11:00,233 - INFO -   ✅ Valid - Loss: 0.6350, AUC: 0.6659, Acc: 0.7009
+2025-10-17 01:11:00,233 - INFO -   📉 AUC Change: -0.0178 (Current: 0.6659, Previous: 0.6837)
+2025-10-17 01:11:00,234 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:11:00,234 - INFO - ============================================================
+2025-10-17 01:11:00,234 - INFO - \nEpoch 11/12
+2025-10-17 01:11:00,234 - INFO - --------------------------------------------------
+2025-10-17 01:11:17,894 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:11:25,230 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:11:25,231 - INFO -   Correlations - Mastery: 0.051, Gains: 0.017
+2025-10-17 01:11:25,231 - INFO - ============================================================
+2025-10-17 01:11:25,231 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:11:25,231 - INFO -   🚂 Train - Loss: 0.4389 (Main: 0.3802, Constraint: 0.0587), AUC: 0.8692, Acc: 0.8265
+2025-10-17 01:11:25,231 - INFO -   ✅ Valid - Loss: 0.6319, AUC: 0.6670, Acc: 0.7132
+2025-10-17 01:11:25,231 - INFO -   📉 AUC Change: -0.0179 (Current: 0.6670, Previous: 0.6848)
+2025-10-17 01:11:25,231 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:11:25,231 - INFO - ============================================================
+2025-10-17 01:11:25,231 - INFO - \nEpoch 11/12
+2025-10-17 01:11:25,231 - INFO - --------------------------------------------------
+2025-10-17 01:11:41,169 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:11:50,187 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:11:50,188 - INFO -   Correlations - Mastery: 0.042, Gains: 0.042
+2025-10-17 01:11:50,189 - INFO - ============================================================
+2025-10-17 01:11:50,189 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:11:50,189 - INFO -   🚂 Train - Loss: 0.4316 (Main: 0.3746, Constraint: 0.0571), AUC: 0.8739, Acc: 0.8295
+2025-10-17 01:11:50,190 - INFO -   ✅ Valid - Loss: 0.6230, AUC: 0.6654, Acc: 0.7125
+2025-10-17 01:11:50,190 - INFO -   📉 AUC Change: -0.0148 (Current: 0.6654, Previous: 0.6802)
+2025-10-17 01:11:50,191 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:11:50,192 - INFO - ============================================================
+2025-10-17 01:11:50,192 - INFO - \nEpoch 11/12
+2025-10-17 01:11:50,192 - INFO - --------------------------------------------------
+2025-10-17 01:12:03,740 - INFO -   Running consistency validation...
+2025-10-17 01:12:08,971 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:12:22,733 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:12:22,735 - INFO -   Correlations - Mastery: 0.045, Gains: 0.007
+2025-10-17 01:12:22,735 - INFO - ============================================================
+2025-10-17 01:12:22,736 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:12:22,736 - INFO -   🚂 Train - Loss: 0.4011 (Main: 0.3441, Constraint: 0.0569), AUC: 0.8957, Acc: 0.8455
+2025-10-17 01:12:22,736 - INFO -   ✅ Valid - Loss: 0.7408, AUC: 0.6430, Acc: 0.6943
+2025-10-17 01:12:22,738 - INFO -   📉 AUC Change: -0.0322 (Current: 0.6430, Previous: 0.6752)
+2025-10-17 01:12:22,738 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:12:22,738 - INFO - ============================================================
+2025-10-17 01:12:22,739 - INFO - \nEpoch 12/12
+2025-10-17 01:12:22,739 - INFO - --------------------------------------------------
+2025-10-17 01:12:31,835 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:12:37,265 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:12:37,266 - INFO -   Correlations - Mastery: -0.008, Gains: -0.027
+2025-10-17 01:12:37,267 - INFO - ============================================================
+2025-10-17 01:12:37,267 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:12:37,268 - INFO -   🚂 Train - Loss: 0.4281 (Main: 0.3706, Constraint: 0.0575), AUC: 0.8773, Acc: 0.8312
+2025-10-17 01:12:37,268 - INFO -   ✅ Valid - Loss: 0.6717, AUC: 0.6579, Acc: 0.7020
+2025-10-17 01:12:37,268 - INFO -   📉 AUC Change: -0.0189 (Current: 0.6579, Previous: 0.6768)
+2025-10-17 01:12:37,269 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:12:37,269 - INFO - ============================================================
+2025-10-17 01:12:37,269 - INFO - \nEpoch 11/12
+2025-10-17 01:12:37,270 - INFO - --------------------------------------------------
+2025-10-17 01:12:39,508 - INFO -   Running consistency validation...
+2025-10-17 01:12:50,019 - INFO -   Running consistency validation...
+2025-10-17 01:12:56,465 - INFO -   Running consistency validation...
+2025-10-17 01:12:59,376 - INFO -   Running consistency validation...
+2025-10-17 01:13:03,287 - INFO - ============================================================
+2025-10-17 01:13:03,288 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:13:03,289 - INFO -   🚂 Train - Loss: 0.4243 (Main: 0.4243, Constraint: 0.0000), AUC: 0.8324, Acc: 0.8015
+2025-10-17 01:13:03,289 - INFO -   ✅ Valid - Loss: 0.6025, AUC: 0.6726, Acc: 0.7315
+2025-10-17 01:13:03,289 - INFO -   📉 AUC Change: -0.0294 (Current: 0.6726, Previous: 0.7020)
+2025-10-17 01:13:03,290 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:13:03,290 - INFO - ============================================================
+2025-10-17 01:13:03,290 - INFO - \nEpoch 9/12
+2025-10-17 01:13:03,291 - INFO - --------------------------------------------------
+2025-10-17 01:13:03,658 - INFO -   Running consistency validation...
+2025-10-17 01:13:09,161 - INFO - ============================================================
+2025-10-17 01:13:09,169 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:13:09,169 - INFO -   🚂 Train - Loss: 0.4725 (Main: 0.4725, Constraint: 0.0000), AUC: 0.7815, Acc: 0.7749
+2025-10-17 01:13:09,169 - INFO -   ✅ Valid - Loss: 0.5374, AUC: 0.6999, Acc: 0.7440
+2025-10-17 01:13:09,169 - INFO -   📉 AUC Change: -0.0208 (Current: 0.6999, Previous: 0.7207)
+2025-10-17 01:13:09,169 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:13:09,170 - INFO - ============================================================
+2025-10-17 01:13:09,170 - INFO - \nEpoch 7/12
+2025-10-17 01:13:09,170 - INFO - --------------------------------------------------
+2025-10-17 01:13:22,031 - INFO - ============================================================
+2025-10-17 01:13:22,032 - INFO - 📊 EPOCH 6/12 RESULTS:
+2025-10-17 01:13:22,032 - INFO -   🚂 Train - Loss: 0.4710 (Main: 0.4710, Constraint: 0.0000), AUC: 0.7834, Acc: 0.7757
+2025-10-17 01:13:22,033 - INFO -   ✅ Valid - Loss: 0.5349, AUC: 0.7024, Acc: 0.7439
+2025-10-17 01:13:22,033 - INFO -   📉 AUC Change: -0.0189 (Current: 0.7024, Previous: 0.7213)
+2025-10-17 01:13:22,033 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:13:22,034 - INFO - ============================================================
+2025-10-17 01:13:22,034 - INFO - \nEpoch 7/12
+2025-10-17 01:13:22,034 - INFO - --------------------------------------------------
+2025-10-17 01:13:26,079 - INFO - ============================================================
+2025-10-17 01:13:26,079 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:13:26,080 - INFO -   🚂 Train - Loss: 0.4242 (Main: 0.4242, Constraint: 0.0000), AUC: 0.8321, Acc: 0.8027
+2025-10-17 01:13:26,080 - INFO -   ✅ Valid - Loss: 0.6020, AUC: 0.6747, Acc: 0.7305
+2025-10-17 01:13:26,080 - INFO -   📉 AUC Change: -0.0273 (Current: 0.6747, Previous: 0.7020)
+2025-10-17 01:13:26,080 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:13:26,080 - INFO - ============================================================
+2025-10-17 01:13:26,080 - INFO - \nEpoch 9/12
+2025-10-17 01:13:26,080 - INFO - --------------------------------------------------
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:13:30,974 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:13:30,975 - INFO -   Correlations - Mastery: 0.046, Gains: 0.016
+2025-10-17 01:13:30,976 - INFO - ============================================================
+2025-10-17 01:13:30,976 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:13:30,977 - INFO -   🚂 Train - Loss: 0.4095 (Main: 0.3512, Constraint: 0.0583), AUC: 0.8902, Acc: 0.8420
+2025-10-17 01:13:30,977 - INFO -   ✅ Valid - Loss: 0.6874, AUC: 0.6560, Acc: 0.7039
+2025-10-17 01:13:30,977 - INFO -   📉 AUC Change: -0.0139 (Current: 0.6560, Previous: 0.6699)
+2025-10-17 01:13:30,979 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:13:30,979 - INFO - ============================================================
+2025-10-17 01:13:30,979 - INFO - \nEpoch 12/12
+2025-10-17 01:13:30,980 - INFO - --------------------------------------------------
+2025-10-17 01:13:32,031 - INFO - ============================================================
+2025-10-17 01:13:32,033 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:13:32,033 - INFO -   🚂 Train - Loss: 0.4553 (Main: 0.4553, Constraint: 0.0000), AUC: 0.8011, Acc: 0.7848
+2025-10-17 01:13:32,033 - INFO -   ✅ Valid - Loss: 0.5608, AUC: 0.6902, Acc: 0.7425
+2025-10-17 01:13:32,033 - INFO -   📉 AUC Change: -0.0257 (Current: 0.6902, Previous: 0.7159)
+2025-10-17 01:13:32,033 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:13:32,033 - INFO - ============================================================
+2025-10-17 01:13:32,033 - INFO - \nEpoch 8/12
+2025-10-17 01:13:32,033 - INFO - --------------------------------------------------
+2025-10-17 01:13:42,042 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:13:54,072 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:13:54,073 - INFO -   Correlations - Mastery: 0.036, Gains: 0.048
+2025-10-17 01:13:54,073 - INFO - ============================================================
+2025-10-17 01:13:54,073 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:13:54,074 - INFO -   🚂 Train - Loss: 0.4039 (Main: 0.3473, Constraint: 0.0566), AUC: 0.8931, Acc: 0.8442
+2025-10-17 01:13:54,074 - INFO -   ✅ Valid - Loss: 0.7008, AUC: 0.6469, Acc: 0.7030
+2025-10-17 01:13:54,074 - INFO -   📉 AUC Change: -0.0226 (Current: 0.6469, Previous: 0.6695)
+2025-10-17 01:13:54,075 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:13:54,075 - INFO - ============================================================
+2025-10-17 01:13:54,075 - INFO - \nEpoch 12/12
+2025-10-17 01:13:54,075 - INFO - --------------------------------------------------
+2025-10-17 01:13:59,049 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:14:09,988 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:14:09,988 - INFO -   Correlations - Mastery: 0.043, Gains: -0.001
+2025-10-17 01:14:09,989 - INFO - ============================================================
+2025-10-17 01:14:09,989 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:14:09,989 - INFO -   🚂 Train - Loss: 0.3761 (Main: 0.3196, Constraint: 0.0566), AUC: 0.9109, Acc: 0.8575
+2025-10-17 01:14:09,989 - INFO -   ✅ Valid - Loss: 0.8883, AUC: 0.6268, Acc: 0.7080
+2025-10-17 01:14:09,989 - INFO -   📉 AUC Change: -0.0391 (Current: 0.6268, Previous: 0.6659)
+2025-10-17 01:14:09,989 - INFO -   🏆 Current Best AUC: 0.7260
+2025-10-17 01:14:09,989 - INFO - ============================================================
+2025-10-17 01:14:09,989 - INFO - \n================================================================================
+2025-10-17 01:14:09,989 - INFO - TRAINING COMPLETED!
+2025-10-17 01:14:09,989 - INFO - ================================================================================
+2025-10-17 01:14:09,991 - INFO - Best validation AUC: 0.7260
+2025-10-17 01:14:09,992 - INFO - \nRunning final consistency validation...
+2025-10-17 01:14:14,651 - INFO -   Running consistency validation...
+2025-10-17 01:14:19,625 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:14:19,626 - INFO -   Correlations - Mastery: 0.026, Gains: 0.002
+2025-10-17 01:14:19,628 - INFO - \n📄 Final results saved to: gainakt2exp_results_full_seed42_20251017_011419.json
+2025-10-17 01:14:19,629 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:14:19,629 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:14:19,629 - INFO - Correlations need improvement
+=== Completed run: full_seed42 | Best Val AUC: 0.7260 ===
+
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:14:23,245 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:14:23,246 - INFO -   Correlations - Mastery: 0.009, Gains: -0.020
+2025-10-17 01:14:23,246 - INFO - ============================================================
+2025-10-17 01:14:23,246 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:14:23,246 - INFO -   🚂 Train - Loss: 0.3987 (Main: 0.3416, Constraint: 0.0571), AUC: 0.8975, Acc: 0.8468
+2025-10-17 01:14:23,246 - INFO -   ✅ Valid - Loss: 0.7764, AUC: 0.6426, Acc: 0.7015
+2025-10-17 01:14:23,246 - INFO -   📉 AUC Change: -0.0224 (Current: 0.6426, Previous: 0.6649)
+2025-10-17 01:14:23,246 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:14:23,246 - INFO - ============================================================
+2025-10-17 01:14:23,247 - INFO - \nEpoch 12/12
+2025-10-17 01:14:23,247 - INFO - --------------------------------------------------
+2025-10-17 01:14:40,747 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:14:50,684 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:14:50,685 - INFO -   Correlations - Mastery: 0.037, Gains: 0.007
+2025-10-17 01:14:50,685 - INFO - ============================================================
+2025-10-17 01:14:50,685 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:14:50,685 - INFO -   🚂 Train - Loss: 0.3844 (Main: 0.3265, Constraint: 0.0579), AUC: 0.9060, Acc: 0.8541
+2025-10-17 01:14:50,686 - INFO -   ✅ Valid - Loss: 0.7630, AUC: 0.6460, Acc: 0.7060
+2025-10-17 01:14:50,702 - INFO -   📉 AUC Change: -0.0210 (Current: 0.6460, Previous: 0.6670)
+2025-10-17 01:14:50,702 - INFO -   🏆 Current Best AUC: 0.7261
+2025-10-17 01:14:50,703 - INFO - ============================================================
+2025-10-17 01:14:50,703 - INFO - \n================================================================================
+2025-10-17 01:14:50,703 - INFO - TRAINING COMPLETED!
+2025-10-17 01:14:50,704 - INFO - ================================================================================
+2025-10-17 01:14:50,708 - INFO - Best validation AUC: 0.7261
+2025-10-17 01:14:50,708 - INFO - \nRunning final consistency validation...
+2025-10-17 01:14:58,870 - INFO -   Running consistency validation...
+2025-10-17 01:15:02,021 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:15:02,037 - INFO -   Correlations - Mastery: 0.017, Gains: 0.006
+2025-10-17 01:15:02,039 - INFO - \n📄 Final results saved to: gainakt2exp_results_full_seed84_20251017_011502.json
+2025-10-17 01:15:02,039 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:15:02,040 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:15:02,040 - INFO - Correlations need improvement
+=== Completed run: full_seed84 | Best Val AUC: 0.7261 ===
+
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:15:09,877 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:15:09,878 - INFO -   Correlations - Mastery: 0.048, Gains: 0.061
+2025-10-17 01:15:09,879 - INFO - ============================================================
+2025-10-17 01:15:09,879 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:15:09,880 - INFO -   🚂 Train - Loss: 0.3786 (Main: 0.3224, Constraint: 0.0563), AUC: 0.9087, Acc: 0.8569
+2025-10-17 01:15:09,880 - INFO -   ✅ Valid - Loss: 0.7780, AUC: 0.6356, Acc: 0.7072
+2025-10-17 01:15:09,880 - INFO -   📉 AUC Change: -0.0298 (Current: 0.6356, Previous: 0.6654)
+2025-10-17 01:15:09,880 - INFO -   🏆 Current Best AUC: 0.7253
+2025-10-17 01:15:09,880 - INFO - ============================================================
+2025-10-17 01:15:09,881 - INFO - \n================================================================================
+2025-10-17 01:15:09,881 - INFO - TRAINING COMPLETED!
+2025-10-17 01:15:09,881 - INFO - ================================================================================
+2025-10-17 01:15:09,884 - INFO - Best validation AUC: 0.7253
+2025-10-17 01:15:09,885 - INFO - \nRunning final consistency validation...
+2025-10-17 01:15:20,731 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:15:20,732 - INFO -   Correlations - Mastery: 0.030, Gains: 0.016
+2025-10-17 01:15:20,733 - INFO - \n📄 Final results saved to: gainakt2exp_results_full_seed63_20251017_011520.json
+2025-10-17 01:15:20,733 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:15:20,733 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:15:20,733 - INFO - Correlations need improvement
+=== Completed run: full_seed63 | Best Val AUC: 0.7253 ===
+
+2025-10-17 01:15:24,114 - INFO -   Running consistency validation...
+2025-10-17 01:15:25,014 - INFO -   Running consistency validation...
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2854: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/home/vscode/.pykt-env/lib/python3.8/site-packages/numpy/lib/function_base.py:2855: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+2025-10-17 01:15:34,044 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:15:34,047 - INFO -   Correlations - Mastery: 0.008, Gains: -0.022
+2025-10-17 01:15:34,048 - INFO - ============================================================
+2025-10-17 01:15:34,048 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:15:34,048 - INFO -   🚂 Train - Loss: 0.3730 (Main: 0.3162, Constraint: 0.0568), AUC: 0.9130, Acc: 0.8589
+2025-10-17 01:15:34,049 - INFO -   ✅ Valid - Loss: 0.9179, AUC: 0.6310, Acc: 0.7092
+2025-10-17 01:15:34,049 - INFO -   📉 AUC Change: -0.0270 (Current: 0.6310, Previous: 0.6579)
+2025-10-17 01:15:34,049 - INFO -   🏆 Current Best AUC: 0.7245
+2025-10-17 01:15:34,049 - INFO - ============================================================
+2025-10-17 01:15:34,049 - INFO - \n================================================================================
+2025-10-17 01:15:34,049 - INFO - TRAINING COMPLETED!
+2025-10-17 01:15:34,049 - INFO - ================================================================================
+2025-10-17 01:15:34,055 - INFO - Best validation AUC: 0.7245
+2025-10-17 01:15:34,055 - INFO - \nRunning final consistency validation...
+2025-10-17 01:15:35,360 - INFO - ============================================================
+2025-10-17 01:15:35,361 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:15:35,362 - INFO -   🚂 Train - Loss: 0.3950 (Main: 0.3950, Constraint: 0.0000), AUC: 0.8578, Acc: 0.8177
+2025-10-17 01:15:35,362 - INFO -   ✅ Valid - Loss: 0.6422, AUC: 0.6600, Acc: 0.7256
+2025-10-17 01:15:35,362 - INFO -   📉 AUC Change: -0.0258 (Current: 0.6600, Previous: 0.6858)
+2025-10-17 01:15:35,363 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:15:35,363 - INFO - ============================================================
+2025-10-17 01:15:35,363 - INFO - \nEpoch 10/12
+2025-10-17 01:15:35,364 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:15:44,148 - INFO -   Consistency Check - Monotonicity: 0.0%, Negative gains: 0.0%, Bounds: 0.0%
+2025-10-17 01:15:44,148 - INFO -   Correlations - Mastery: 0.011, Gains: -0.030
+2025-10-17 01:15:44,150 - INFO - \n📄 Final results saved to: gainakt2exp_results_full_seed105_20251017_011544.json
+2025-10-17 01:15:44,150 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:15:44,150 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:15:44,150 - INFO - Correlations need improvement
+=== Completed run: full_seed105 | Best Val AUC: 0.7245 ===
+
+2025-10-17 01:16:08,346 - INFO -   Running consistency validation...
+2025-10-17 01:16:16,404 - INFO -   Running consistency validation...
+2025-10-17 01:16:18,784 - INFO -   Running consistency validation...
+2025-10-17 01:16:22,255 - INFO - ============================================================
+2025-10-17 01:16:22,256 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:16:22,257 - INFO -   🚂 Train - Loss: 0.4522 (Main: 0.4522, Constraint: 0.0000), AUC: 0.8045, Acc: 0.7869
+2025-10-17 01:16:22,257 - INFO -   ✅ Valid - Loss: 0.5649, AUC: 0.6856, Acc: 0.7373
+2025-10-17 01:16:22,257 - INFO -   📉 AUC Change: -0.0264 (Current: 0.6856, Previous: 0.7120)
+2025-10-17 01:16:22,257 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:16:22,258 - INFO - ============================================================
+2025-10-17 01:16:22,258 - INFO - \nEpoch 8/12
+2025-10-17 01:16:22,258 - INFO - --------------------------------------------------
+2025-10-17 01:16:29,094 - INFO - ============================================================
+2025-10-17 01:16:29,095 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:16:29,096 - INFO -   🚂 Train - Loss: 0.3925 (Main: 0.3925, Constraint: 0.0000), AUC: 0.8593, Acc: 0.8196
+2025-10-17 01:16:29,096 - INFO -   ✅ Valid - Loss: 0.6683, AUC: 0.6613, Acc: 0.7250
+2025-10-17 01:16:29,096 - INFO -   📉 AUC Change: -0.0262 (Current: 0.6613, Previous: 0.6875)
+2025-10-17 01:16:29,097 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:16:29,097 - INFO - ============================================================
+2025-10-17 01:16:29,097 - INFO - \nEpoch 10/12
+2025-10-17 01:16:29,098 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:16:36,970 - INFO -   Running consistency validation...
+2025-10-17 01:16:38,082 - INFO - ============================================================
+2025-10-17 01:16:38,083 - INFO - 📊 EPOCH 7/12 RESULTS:
+2025-10-17 01:16:38,083 - INFO -   🚂 Train - Loss: 0.4503 (Main: 0.4503, Constraint: 0.0000), AUC: 0.8066, Acc: 0.7875
+2025-10-17 01:16:38,083 - INFO -   ✅ Valid - Loss: 0.5604, AUC: 0.6881, Acc: 0.7362
+2025-10-17 01:16:38,084 - INFO -   📉 AUC Change: -0.0248 (Current: 0.6881, Previous: 0.7129)
+2025-10-17 01:16:38,084 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:16:38,084 - INFO - ============================================================
+2025-10-17 01:16:38,084 - INFO - \nEpoch 8/12
+2025-10-17 01:16:38,084 - INFO - --------------------------------------------------
+2025-10-17 01:16:50,304 - INFO - ============================================================
+2025-10-17 01:16:50,305 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:16:50,306 - INFO -   🚂 Train - Loss: 0.4292 (Main: 0.4292, Constraint: 0.0000), AUC: 0.8274, Acc: 0.7996
+2025-10-17 01:16:50,306 - INFO -   ✅ Valid - Loss: 0.5970, AUC: 0.6767, Acc: 0.7359
+2025-10-17 01:16:50,306 - INFO -   📉 AUC Change: -0.0276 (Current: 0.6767, Previous: 0.7042)
+2025-10-17 01:16:50,307 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:16:50,307 - INFO - ============================================================
+2025-10-17 01:16:50,307 - INFO - \nEpoch 9/12
+2025-10-17 01:16:50,307 - INFO - --------------------------------------------------
+2025-10-17 01:17:05,747 - INFO -   Running consistency validation...
+2025-10-17 01:17:13,023 - INFO - ============================================================
+2025-10-17 01:17:13,024 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:17:13,024 - INFO -   🚂 Train - Loss: 0.3508 (Main: 0.3508, Constraint: 0.0000), AUC: 0.8911, Acc: 0.8418
+2025-10-17 01:17:13,024 - INFO -   ✅ Valid - Loss: 0.7054, AUC: 0.6542, Acc: 0.6990
+2025-10-17 01:17:13,024 - INFO -   📉 AUC Change: -0.0184 (Current: 0.6542, Previous: 0.6726)
+2025-10-17 01:17:13,024 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:17:13,024 - INFO - ============================================================
+2025-10-17 01:17:13,024 - INFO - \nEpoch 11/12
+2025-10-17 01:17:13,024 - INFO - --------------------------------------------------
+2025-10-17 01:19:12,864 - INFO -   Running consistency validation...
+2025-10-17 01:19:15,259 - INFO -   Running consistency validation...
+2025-10-17 01:19:32,598 - INFO - ============================================================
+2025-10-17 01:19:32,599 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:19:32,600 - INFO -   🚂 Train - Loss: 0.4254 (Main: 0.4254, Constraint: 0.0000), AUC: 0.8313, Acc: 0.8015
+2025-10-17 01:19:32,600 - INFO -   ✅ Valid - Loss: 0.6003, AUC: 0.6706, Acc: 0.7337
+2025-10-17 01:19:32,600 - INFO -   📉 AUC Change: -0.0293 (Current: 0.6706, Previous: 0.6999)
+2025-10-17 01:19:32,601 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:19:32,601 - INFO - ============================================================
+2025-10-17 01:19:32,601 - INFO - \nEpoch 9/12
+2025-10-17 01:19:32,602 - INFO - --------------------------------------------------
+2025-10-17 01:19:33,490 - INFO - ============================================================
+2025-10-17 01:19:33,491 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:19:33,491 - INFO -   🚂 Train - Loss: 0.3507 (Main: 0.3507, Constraint: 0.0000), AUC: 0.8906, Acc: 0.8425
+2025-10-17 01:19:33,491 - INFO -   ✅ Valid - Loss: 0.6936, AUC: 0.6604, Acc: 0.7031
+2025-10-17 01:19:33,492 - INFO -   📉 AUC Change: -0.0144 (Current: 0.6604, Previous: 0.6747)
+2025-10-17 01:19:33,492 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:19:33,492 - INFO - ============================================================
+2025-10-17 01:19:33,492 - INFO - \nEpoch 11/12
+2025-10-17 01:19:33,492 - INFO - --------------------------------------------------
+2025-10-17 01:19:39,204 - INFO -   Running consistency validation...
+2025-10-17 01:19:50,704 - INFO -   Running consistency validation...
+2025-10-17 01:19:51,493 - INFO -   Running consistency validation...
+2025-10-17 01:19:52,403 - INFO - ============================================================
+2025-10-17 01:19:52,404 - INFO - 📊 EPOCH 8/12 RESULTS:
+2025-10-17 01:19:52,405 - INFO -   🚂 Train - Loss: 0.4234 (Main: 0.4234, Constraint: 0.0000), AUC: 0.8331, Acc: 0.8027
+2025-10-17 01:19:52,405 - INFO -   ✅ Valid - Loss: 0.6008, AUC: 0.6730, Acc: 0.7293
+2025-10-17 01:19:52,405 - INFO -   📉 AUC Change: -0.0293 (Current: 0.6730, Previous: 0.7024)
+2025-10-17 01:19:52,405 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:19:52,406 - INFO - ============================================================
+2025-10-17 01:19:52,406 - INFO - \nEpoch 9/12
+2025-10-17 01:19:52,406 - INFO - --------------------------------------------------
+2025-10-17 01:20:03,180 - INFO - ============================================================
+2025-10-17 01:20:03,182 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:20:03,183 - INFO -   🚂 Train - Loss: 0.3204 (Main: 0.3204, Constraint: 0.0000), AUC: 0.9103, Acc: 0.8571
+2025-10-17 01:20:03,183 - INFO -   ✅ Valid - Loss: 0.8520, AUC: 0.6332, Acc: 0.6903
+2025-10-17 01:20:03,184 - INFO -   📉 AUC Change: -0.0268 (Current: 0.6332, Previous: 0.6600)
+2025-10-17 01:20:03,184 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:20:03,185 - INFO - ============================================================
+2025-10-17 01:20:03,185 - INFO - \nEpoch 12/12
+2025-10-17 01:20:03,186 - INFO - --------------------------------------------------
+2025-10-17 01:20:07,237 - INFO - ============================================================
+2025-10-17 01:20:07,239 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:20:07,239 - INFO -   🚂 Train - Loss: 0.3988 (Main: 0.3988, Constraint: 0.0000), AUC: 0.8543, Acc: 0.8160
+2025-10-17 01:20:07,239 - INFO -   ✅ Valid - Loss: 0.6372, AUC: 0.6639, Acc: 0.7252
+2025-10-17 01:20:07,240 - INFO -   📉 AUC Change: -0.0264 (Current: 0.6639, Previous: 0.6902)
+2025-10-17 01:20:07,240 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:20:07,240 - INFO - ============================================================
+2025-10-17 01:20:07,240 - INFO - \nEpoch 10/12
+2025-10-17 01:20:07,241 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:22:30,818 - INFO -   Running consistency validation...
+2025-10-17 01:22:38,004 - INFO - ============================================================
+2025-10-17 01:22:38,005 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:22:38,005 - INFO -   🚂 Train - Loss: 0.3212 (Main: 0.3212, Constraint: 0.0000), AUC: 0.9093, Acc: 0.8574
+2025-10-17 01:22:38,006 - INFO -   ✅ Valid - Loss: 0.7783, AUC: 0.6432, Acc: 0.6998
+2025-10-17 01:22:38,006 - INFO -   📉 AUC Change: -0.0181 (Current: 0.6432, Previous: 0.6613)
+2025-10-17 01:22:38,006 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:22:38,007 - INFO - ============================================================
+2025-10-17 01:22:38,007 - INFO - \nEpoch 12/12
+2025-10-17 01:22:38,007 - INFO - --------------------------------------------------
+2025-10-17 01:22:40,025 - INFO -   Running consistency validation...
+2025-10-17 01:22:50,737 - INFO - ============================================================
+2025-10-17 01:22:50,738 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:22:50,738 - INFO -   🚂 Train - Loss: 0.3954 (Main: 0.3954, Constraint: 0.0000), AUC: 0.8574, Acc: 0.8182
+2025-10-17 01:22:50,739 - INFO -   ✅ Valid - Loss: 0.6424, AUC: 0.6617, Acc: 0.7355
+2025-10-17 01:22:50,739 - INFO -   📉 AUC Change: -0.0239 (Current: 0.6617, Previous: 0.6856)
+2025-10-17 01:22:50,739 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:22:50,739 - INFO - ============================================================
+2025-10-17 01:22:50,739 - INFO - \nEpoch 10/12
+2025-10-17 01:22:50,739 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:23:08,770 - INFO -   Running consistency validation...
+2025-10-17 01:23:16,151 - INFO - ============================================================
+2025-10-17 01:23:16,152 - INFO - 📊 EPOCH 9/12 RESULTS:
+2025-10-17 01:23:16,152 - INFO -   🚂 Train - Loss: 0.3935 (Main: 0.3935, Constraint: 0.0000), AUC: 0.8586, Acc: 0.8192
+2025-10-17 01:23:16,152 - INFO -   ✅ Valid - Loss: 0.6424, AUC: 0.6594, Acc: 0.7242
+2025-10-17 01:23:16,152 - INFO -   📉 AUC Change: -0.0287 (Current: 0.6594, Previous: 0.6881)
+2025-10-17 01:23:16,152 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:23:16,152 - INFO - ============================================================
+2025-10-17 01:23:16,153 - INFO - \nEpoch 10/12
+2025-10-17 01:23:16,153 - INFO - --------------------------------------------------
+Epoch 00009: reducing learning rate of group 0 to 8.7000e-05.
+2025-10-17 01:23:20,922 - INFO -   Running consistency validation...
+2025-10-17 01:23:24,280 - INFO -   Running consistency validation...
+2025-10-17 01:23:31,291 - INFO - ============================================================
+2025-10-17 01:23:31,293 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:23:31,294 - INFO -   🚂 Train - Loss: 0.2957 (Main: 0.2957, Constraint: 0.0000), AUC: 0.9243, Acc: 0.8691
+2025-10-17 01:23:31,294 - INFO -   ✅ Valid - Loss: 1.0018, AUC: 0.6211, Acc: 0.7070
+2025-10-17 01:23:31,294 - INFO -   📉 AUC Change: -0.0332 (Current: 0.6211, Previous: 0.6542)
+2025-10-17 01:23:31,294 - INFO -   🏆 Current Best AUC: 0.7258
+2025-10-17 01:23:31,295 - INFO - ============================================================
+2025-10-17 01:23:31,295 - INFO - \n================================================================================
+2025-10-17 01:23:31,295 - INFO - TRAINING COMPLETED!
+2025-10-17 01:23:31,295 - INFO - ================================================================================
+2025-10-17 01:23:31,298 - INFO - Best validation AUC: 0.7258
+2025-10-17 01:23:31,298 - INFO - \nRunning final consistency validation...
+2025-10-17 01:23:34,878 - INFO - ============================================================
+2025-10-17 01:23:34,880 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:23:34,880 - INFO -   🚂 Train - Loss: 0.3541 (Main: 0.3541, Constraint: 0.0000), AUC: 0.8883, Acc: 0.8402
+2025-10-17 01:23:34,880 - INFO -   ✅ Valid - Loss: 0.6749, AUC: 0.6624, Acc: 0.7074
+2025-10-17 01:23:34,881 - INFO -   📉 AUC Change: -0.0142 (Current: 0.6624, Previous: 0.6767)
+2025-10-17 01:23:34,881 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:23:34,881 - INFO - ============================================================
+2025-10-17 01:23:34,881 - INFO - \nEpoch 11/12
+2025-10-17 01:23:34,881 - INFO - --------------------------------------------------
+2025-10-17 01:23:40,933 - INFO - \n📄 Final results saved to: gainakt2exp_results_heads_off_seed42_20251017_012340.json
+2025-10-17 01:23:40,934 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:23:40,934 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:23:40,935 - INFO - Correlations need improvement
+=== Completed run: heads_off_seed42 | Best Val AUC: 0.7258 ===
+
+2025-10-17 01:25:02,042 - INFO -   Running consistency validation...
+2025-10-17 01:25:09,045 - INFO - ============================================================
+2025-10-17 01:25:09,046 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:25:09,046 - INFO -   🚂 Train - Loss: 0.2951 (Main: 0.2951, Constraint: 0.0000), AUC: 0.9241, Acc: 0.8702
+2025-10-17 01:25:09,046 - INFO -   ✅ Valid - Loss: 0.9045, AUC: 0.6289, Acc: 0.7063
+2025-10-17 01:25:09,046 - INFO -   📉 AUC Change: -0.0315 (Current: 0.6289, Previous: 0.6604)
+2025-10-17 01:25:09,046 - INFO -   🏆 Current Best AUC: 0.7249
+2025-10-17 01:25:09,046 - INFO - ============================================================
+2025-10-17 01:25:09,046 - INFO - \n================================================================================
+2025-10-17 01:25:09,047 - INFO - TRAINING COMPLETED!
+2025-10-17 01:25:09,047 - INFO - ================================================================================
+2025-10-17 01:25:09,049 - INFO - Best validation AUC: 0.7249
+2025-10-17 01:25:09,049 - INFO - \nRunning final consistency validation...
+2025-10-17 01:25:17,360 - INFO - \n📄 Final results saved to: gainakt2exp_results_heads_off_seed21_20251017_012517.json
+2025-10-17 01:25:17,360 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:25:17,361 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:25:17,361 - INFO - Correlations need improvement
+=== Completed run: heads_off_seed21 | Best Val AUC: 0.7249 ===
+
+2025-10-17 01:25:31,914 - INFO -   Running consistency validation...
+2025-10-17 01:25:44,318 - INFO - ============================================================
+2025-10-17 01:25:44,319 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:25:44,319 - INFO -   🚂 Train - Loss: 0.3532 (Main: 0.3532, Constraint: 0.0000), AUC: 0.8892, Acc: 0.8409
+2025-10-17 01:25:44,319 - INFO -   ✅ Valid - Loss: 0.6703, AUC: 0.6598, Acc: 0.7045
+2025-10-17 01:25:44,319 - INFO -   📉 AUC Change: -0.0108 (Current: 0.6598, Previous: 0.6706)
+2025-10-17 01:25:44,319 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:25:44,319 - INFO - ============================================================
+2025-10-17 01:25:44,319 - INFO - \nEpoch 11/12
+2025-10-17 01:25:44,319 - INFO - --------------------------------------------------
+2025-10-17 01:25:49,527 - INFO -   Running consistency validation...
+2025-10-17 01:25:57,664 - INFO -   Running consistency validation...
+2025-10-17 01:25:59,046 - INFO - ============================================================
+2025-10-17 01:25:59,047 - INFO - 📊 EPOCH 10/12 RESULTS:
+2025-10-17 01:25:59,047 - INFO -   🚂 Train - Loss: 0.3526 (Main: 0.3526, Constraint: 0.0000), AUC: 0.8896, Acc: 0.8410
+2025-10-17 01:25:59,048 - INFO -   ✅ Valid - Loss: 0.6824, AUC: 0.6577, Acc: 0.7070
+2025-10-17 01:25:59,048 - INFO -   📉 AUC Change: -0.0154 (Current: 0.6577, Previous: 0.6730)
+2025-10-17 01:25:59,048 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:25:59,048 - INFO - ============================================================
+2025-10-17 01:25:59,049 - INFO - \nEpoch 11/12
+2025-10-17 01:25:59,049 - INFO - --------------------------------------------------
+2025-10-17 01:26:08,800 - INFO - ============================================================
+2025-10-17 01:26:08,801 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:26:08,801 - INFO -   🚂 Train - Loss: 0.3235 (Main: 0.3235, Constraint: 0.0000), AUC: 0.9078, Acc: 0.8561
+2025-10-17 01:26:08,801 - INFO -   ✅ Valid - Loss: 0.7603, AUC: 0.6473, Acc: 0.6980
+2025-10-17 01:26:08,801 - INFO -   📉 AUC Change: -0.0165 (Current: 0.6473, Previous: 0.6639)
+2025-10-17 01:26:08,801 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:26:08,801 - INFO - ============================================================
+2025-10-17 01:26:08,801 - INFO - \nEpoch 12/12
+2025-10-17 01:26:08,801 - INFO - --------------------------------------------------
+2025-10-17 01:27:49,503 - INFO -   Running consistency validation...
+2025-10-17 01:27:56,686 - INFO - ============================================================
+2025-10-17 01:27:56,687 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:27:56,687 - INFO -   🚂 Train - Loss: 0.3218 (Main: 0.3218, Constraint: 0.0000), AUC: 0.9092, Acc: 0.8570
+2025-10-17 01:27:56,688 - INFO -   ✅ Valid - Loss: 0.7785, AUC: 0.6416, Acc: 0.7035
+2025-10-17 01:27:56,688 - INFO -   📉 AUC Change: -0.0201 (Current: 0.6416, Previous: 0.6617)
+2025-10-17 01:27:56,688 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:27:56,689 - INFO - ============================================================
+2025-10-17 01:27:56,689 - INFO - \nEpoch 12/12
+2025-10-17 01:27:56,689 - INFO - --------------------------------------------------
+2025-10-17 01:28:19,624 - INFO -   Running consistency validation...
+2025-10-17 01:28:23,113 - INFO -   Running consistency validation...
+2025-10-17 01:28:29,968 - INFO - ============================================================
+2025-10-17 01:28:29,970 - INFO - 📊 EPOCH 11/12 RESULTS:
+2025-10-17 01:28:29,970 - INFO -   🚂 Train - Loss: 0.3222 (Main: 0.3222, Constraint: 0.0000), AUC: 0.9088, Acc: 0.8572
+2025-10-17 01:28:29,970 - INFO -   ✅ Valid - Loss: 0.7789, AUC: 0.6428, Acc: 0.7070
+2025-10-17 01:28:29,970 - INFO -   📉 AUC Change: -0.0166 (Current: 0.6428, Previous: 0.6594)
+2025-10-17 01:28:29,971 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:28:29,971 - INFO - ============================================================
+2025-10-17 01:28:29,971 - INFO - \nEpoch 12/12
+2025-10-17 01:28:29,971 - INFO - --------------------------------------------------
+2025-10-17 01:28:32,723 - INFO - ============================================================
+2025-10-17 01:28:32,723 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:28:32,723 - INFO -   🚂 Train - Loss: 0.2989 (Main: 0.2989, Constraint: 0.0000), AUC: 0.9220, Acc: 0.8678
+2025-10-17 01:28:32,723 - INFO -   ✅ Valid - Loss: 0.8420, AUC: 0.6334, Acc: 0.7084
+2025-10-17 01:28:32,723 - INFO -   📉 AUC Change: -0.0291 (Current: 0.6334, Previous: 0.6624)
+2025-10-17 01:28:32,723 - INFO -   🏆 Current Best AUC: 0.7262
+2025-10-17 01:28:32,724 - INFO - ============================================================
+2025-10-17 01:28:32,724 - INFO - \n================================================================================
+2025-10-17 01:28:32,724 - INFO - TRAINING COMPLETED!
+2025-10-17 01:28:32,724 - INFO - ================================================================================
+2025-10-17 01:28:32,726 - INFO - Best validation AUC: 0.7262
+2025-10-17 01:28:32,726 - INFO - \nRunning final consistency validation...
+2025-10-17 01:28:41,410 - INFO - \n📄 Final results saved to: gainakt2exp_results_heads_off_seed84_20251017_012841.json
+2025-10-17 01:28:41,411 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:28:41,411 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:28:41,411 - INFO - Correlations need improvement
+=== Completed run: heads_off_seed84 | Best Val AUC: 0.7262 ===
+
+2025-10-17 01:29:34,186 - INFO -   Running consistency validation...
+2025-10-17 01:29:41,087 - INFO - ============================================================
+2025-10-17 01:29:41,088 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:29:41,088 - INFO -   🚂 Train - Loss: 0.2944 (Main: 0.2944, Constraint: 0.0000), AUC: 0.9247, Acc: 0.8702
+2025-10-17 01:29:41,088 - INFO -   ✅ Valid - Loss: 0.9255, AUC: 0.6266, Acc: 0.7117
+2025-10-17 01:29:41,088 - INFO -   📉 AUC Change: -0.0332 (Current: 0.6266, Previous: 0.6598)
+2025-10-17 01:29:41,088 - INFO -   🏆 Current Best AUC: 0.7252
+2025-10-17 01:29:41,088 - INFO - ============================================================
+2025-10-17 01:29:41,089 - INFO - \n================================================================================
+2025-10-17 01:29:41,089 - INFO - TRAINING COMPLETED!
+2025-10-17 01:29:41,089 - INFO - ================================================================================
+2025-10-17 01:29:41,093 - INFO - Best validation AUC: 0.7252
+2025-10-17 01:29:41,093 - INFO - \nRunning final consistency validation...
+2025-10-17 01:29:48,826 - INFO - \n📄 Final results saved to: gainakt2exp_results_heads_off_seed63_20251017_012948.json
+2025-10-17 01:29:48,826 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:29:48,826 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:29:48,826 - INFO - Correlations need improvement
+=== Completed run: heads_off_seed63 | Best Val AUC: 0.7252 ===
+
+2025-10-17 01:29:59,906 - INFO -   Running consistency validation...
+2025-10-17 01:30:06,844 - INFO - ============================================================
+2025-10-17 01:30:06,845 - INFO - 📊 EPOCH 12/12 RESULTS:
+2025-10-17 01:30:06,845 - INFO -   🚂 Train - Loss: 0.2967 (Main: 0.2967, Constraint: 0.0000), AUC: 0.9231, Acc: 0.8694
+2025-10-17 01:30:06,845 - INFO -   ✅ Valid - Loss: 0.9180, AUC: 0.6303, Acc: 0.7154
+2025-10-17 01:30:06,845 - INFO -   📉 AUC Change: -0.0274 (Current: 0.6303, Previous: 0.6577)
+2025-10-17 01:30:06,845 - INFO -   🏆 Current Best AUC: 0.7251
+2025-10-17 01:30:06,845 - INFO - ============================================================
+2025-10-17 01:30:06,845 - INFO - \n================================================================================
+2025-10-17 01:30:06,845 - INFO - TRAINING COMPLETED!
+2025-10-17 01:30:06,845 - INFO - ================================================================================
+2025-10-17 01:30:06,848 - INFO - Best validation AUC: 0.7251
+2025-10-17 01:30:06,848 - INFO - \nRunning final consistency validation...
+2025-10-17 01:30:13,753 - INFO - \n📄 Final results saved to: gainakt2exp_results_heads_off_seed105_20251017_013013.json
+2025-10-17 01:30:13,754 - INFO - \n FINAL ASSESSMENT:
+2025-10-17 01:30:13,754 - INFO - PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!
+2025-10-17 01:30:13,754 - INFO - Correlations need improvement
+=== Completed run: heads_off_seed105 | Best Val AUC: 0.7251 ===
+

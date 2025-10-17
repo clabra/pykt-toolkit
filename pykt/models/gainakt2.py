@@ -63,11 +63,23 @@ class MultiHeadAttention(nn.Module):
         
         # 2) Compute attention scores
         # scores shape: [batch_size, n_heads, seq_len, seq_len]
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
+        # Compute attention scores; keep computation in float32 for stability under AMP
+        # then cast back to original dtype (usually fp16) after masking.
+        orig_dtype = Q.dtype
+        scores = torch.matmul(Q.to(torch.float32), K.transpose(-2, -1).to(torch.float32)) / math.sqrt(self.d_k)
         
         if mask is not None:
             # The mask shape [seq_len, seq_len] is broadcast to the scores tensor.
-            scores = scores.masked_fill(mask, -1e9)
+            # Use a dtype-dependent large negative value that will not overflow in fp16.
+            if orig_dtype == torch.float16:
+                neg_fill = -1e4  # within fp16 range (~-65504)
+            elif orig_dtype == torch.bfloat16:
+                neg_fill = -1e30  # bfloat16 min ~ -3.39e38, safe large negative
+            else:
+                neg_fill = -1e9
+            scores = scores.masked_fill(mask, neg_fill)
+        # Cast back to original dtype if needed
+        scores = scores.to(orig_dtype)
             
         attention_weights = F.softmax(scores, dim=-1)
         

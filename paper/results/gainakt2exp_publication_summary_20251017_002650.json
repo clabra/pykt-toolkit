@@ -1,0 +1,84 @@
+{
+  "source_bundle": "tmp/gainakt2exp_baseline_compare_20251017_002650.json",
+  "timestamp": "2025-10-17T00:26:50.508439",
+  "dataset": "assist2015",
+  "epochs": 1,
+  "seeds": [
+    42,
+    43
+  ],
+  "variants": [
+    "heads_off",
+    "arch_only",
+    "full"
+  ],
+  "aggregates": {
+    "heads_off": {
+      "num_seeds": 2,
+      "mean_auc": 0.7166008859856982,
+      "std_auc": 0.0005741558148609771,
+      "per_seed_auc": {
+        "42": 0.7171750418005591,
+        "43": 0.7160267301708372
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.7158051466242122,
+        "high": 0.7173966253471841
+      }
+    },
+    "arch_only": {
+      "num_seeds": 2,
+      "mean_auc": 0.7166008859856982,
+      "std_auc": 0.0005741558148609771,
+      "per_seed_auc": {
+        "42": 0.7171750418005591,
+        "43": 0.7160267301708372
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.029386195229188353,
+        "gain_correlation": -0.01632980054781712,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.7158051466242122,
+        "high": 0.7173966253471841
+      }
+    },
+    "full": {
+      "num_seeds": 2,
+      "mean_auc": 0.7171120252621224,
+      "std_auc": 0.0005362549811276929,
+      "per_seed_auc": {
+        "42": 0.71764828024325,
+        "43": 0.7165757702809946
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.016831880106392846,
+        "gain_correlation": -0.0043494737956361424,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.7163688137762655,
+        "high": 0.7178552367479792
+      }
+    }
+  },
+  "criteria_evaluation": {
+    "predictive_delta_full": 0.0005111392764242106,
+    "predictive_parity_pass": true,
+    "stability_pass": true,
+    "arch_only_delta": 0.0,
+    "constraints_incremental_delta": 0.0005111392764242106
+  }
+}

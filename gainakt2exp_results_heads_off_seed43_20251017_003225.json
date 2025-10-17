@@ -1,0 +1,68 @@
+{
+  "experiment_name": "heads_off_seed43",
+  "best_val_auc": 0.7160267301708372,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.0,
+    "gain_correlation": 0.0
+  },
+  "train_history": {
+    "train_loss": [
+      0.5298836809520276
+    ],
+    "train_auc": [
+      0.6950503053929572
+    ],
+    "val_auc": [
+      0.7160267301708372
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "use_mastery_head": false,
+    "use_gain_head": false,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.0,
+    "gain_performance_loss_weight": 0.0,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 1,
+    "batch_size": 32,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": false,
+    "fold": 0,
+    "constraint_weights": {
+      "non_negative_loss_weight": 0.0,
+      "monotonicity_loss_weight": 0.1,
+      "mastery_performance_loss_weight": 0.8,
+      "gain_performance_loss_weight": 0.8,
+      "sparsity_loss_weight": 0.2,
+      "consistency_loss_weight": 0.3
+    }
+  },
+  "timestamp": "2025-10-17T00:32:25.844508"
+}

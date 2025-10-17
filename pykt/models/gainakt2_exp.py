@@ -106,8 +106,9 @@ class GainAKT2Exp(GainAKT2):
         # 4. Generate predictions
         target_concept_emb = self.concept_embedding(target_concepts)
         concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
-        logits = self.prediction_head(concatenated)
-        predictions = torch.sigmoid(logits.squeeze(-1))
+        logits = self.prediction_head(concatenated).squeeze(-1)
+        # Defer sigmoid until evaluation to allow using BCEWithLogitsLoss safely under AMP
+        predictions = torch.sigmoid(logits)
         
         # 5. Optionally compute interpretability projections
         if self.use_gain_head and self.use_mastery_head:
@@ -130,6 +131,7 @@ class GainAKT2Exp(GainAKT2):
         # 6. Prepare output with internal states
         output = {
             'predictions': predictions,
+            'logits': logits,
             'context_seq': context_seq,
             'value_seq': value_seq
         }

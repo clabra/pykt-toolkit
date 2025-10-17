@@ -1,0 +1,95 @@
+{
+  "timestamp": "2025-10-17T15:01:19.157525",
+  "dataset": "assist2015",
+  "epochs": 12,
+  "seeds": [
+    21,
+    42,
+    63,
+    84,
+    105
+  ],
+  "variants": [
+    "heads_off",
+    "arch_only",
+    "full"
+  ],
+  "aggregates": {
+    "heads_off": {
+      "num_seeds": 5,
+      "mean_auc": 0.6405789274305308,
+      "std_auc": 0.003696796323015224,
+      "per_seed_auc": {
+        "21": 0.6404302976701091,
+        "42": 0.6371606132351622,
+        "63": 0.6397789563308139,
+        "84": 0.6379431720965214,
+        "105": 0.6475815978200473
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.6373385425826553,
+        "high": 0.6438193122784063
+      }
+    },
+    "arch_only": {
+      "num_seeds": 5,
+      "mean_auc": 0.6405789274305308,
+      "std_auc": 0.003696796323015224,
+      "per_seed_auc": {
+        "21": 0.6404302976701091,
+        "42": 0.6371606132351622,
+        "63": 0.6397789563308139,
+        "84": 0.6379431720965214,
+        "105": 0.6475815978200473
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.03218511925256072,
+        "gain_correlation": -0.009379647555939305,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.6373385425826553,
+        "high": 0.6438193122784063
+      }
+    },
+    "full": {
+      "num_seeds": 5,
+      "mean_auc": 0.6520436623338557,
+      "std_auc": 0.0022735969774378825,
+      "per_seed_auc": {
+        "21": 0.6519762802605504,
+        "42": 0.649930903210056,
+        "63": 0.6511635016674338,
+        "84": 0.6507524201634973,
+        "105": 0.6563952063677411
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.02510125487700162,
+        "gain_correlation": -0.005445215429393182,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.6500507667150199,
+        "high": 0.6540365579526914
+      }
+    }
+  },
+  "criteria_evaluation": {
+    "predictive_delta_full": 0.011464734903324891,
+    "predictive_parity_pass": true,
+    "stability_pass": true,
+    "arch_only_delta": 0.0,
+    "constraints_incremental_delta": 0.011464734903324891
+  }
+}

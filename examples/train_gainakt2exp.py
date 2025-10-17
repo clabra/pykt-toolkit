@@ -176,6 +176,7 @@ def train_gainakt2exp_model(args):
     fold = getattr(args, 'fold', 0)
     experiment_suffix = getattr(args, 'experiment_suffix', 'optimal_v1')
     use_wandb = getattr(args, 'use_wandb', False)
+    use_amp = getattr(args, 'use_amp', False)
     
     # Individual constraint weights - OPTIMAL values from parameter sweep
     non_negative_loss_weight = getattr(args, 'non_negative_loss_weight', 0.0)
@@ -208,6 +209,10 @@ def train_gainakt2exp_model(args):
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logger.info(f"Using device: {device}")
+    if use_amp and device.type == 'cuda':
+        logger.info("Mixed precision (AMP) enabled")
+    elif use_amp:
+        logger.info("AMP requested but CUDA not available; running in full precision")
     
     # Initialize wandb if requested (force offline mode for clean operation)
     if use_wandb:
@@ -316,12 +321,16 @@ def train_gainakt2exp_model(args):
     logger.info("Perfect consistency guaranteed by architectural constraints")
     
     # Training setup
-    criterion = nn.BCELoss()
+    # Use BCEWithLogitsLoss for AMP safety; model now returns both logits and sigmoid outputs.
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(
         model.parameters(), 
         lr=learning_rate, 
         weight_decay=weight_decay
     )
+
+    # AMP scaler
+    scaler = torch.cuda.amp.GradScaler(enabled=use_amp and device.type == 'cuda')
     
     # Learning rate scheduler
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -363,27 +372,39 @@ def train_gainakt2exp_model(args):
             mask = batch['masks'].to(device)
             
             optimizer.zero_grad()
-            
-            # Forward pass with interpretability monitoring
-            outputs = model.forward_with_states(
-                q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx
-            )
-            
-            predictions = outputs['predictions']
-            interpretability_loss = outputs['interpretability_loss']
-            
-            # Compute main prediction loss
-            valid_mask = mask.bool()
-            valid_predictions = predictions[valid_mask]
-            valid_targets = responses_shifted[valid_mask].float()
-            
-            main_loss = criterion(valid_predictions, valid_targets)
-            total_batch_loss = main_loss + interpretability_loss
-            
-            # Backward pass
-            total_batch_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+            try:
+                with torch.cuda.amp.autocast(enabled=use_amp and device.type == 'cuda'):
+                    # Forward pass with interpretability monitoring
+                    outputs = model.forward_with_states(
+                        q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx
+                    )
+                        # predictions = outputs['predictions']  # Removed unused assignment
+                    logits = outputs['logits']
+                    interpretability_loss = outputs['interpretability_loss']
+                    # Main prediction loss
+                    valid_mask = mask.bool()
+                    valid_predictions = logits[valid_mask]
+                    valid_targets = responses_shifted[valid_mask].float()
+                    main_loss = criterion(valid_predictions, valid_targets)
+                    total_batch_loss = main_loss + interpretability_loss
+
+                # Backward pass (AMP aware)
+                if use_amp and device.type == 'cuda':
+                    scaler.scale(total_batch_loss).backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    total_batch_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    optimizer.step()
+            except RuntimeError as oom:
+                if 'out of memory' in str(oom).lower():
+                    logger.warning("OOM encountered; clearing CUDA cache and skipping batch")
+                    torch.cuda.empty_cache()
+                    continue
+                else:
+                    raise
             
             # Track metrics
             total_loss += total_batch_loss.item()
@@ -395,7 +416,9 @@ def train_gainakt2exp_model(args):
                 total_interpretability_loss += float(interpretability_loss)
             
             with torch.no_grad():
-                total_predictions.extend(valid_predictions.cpu().numpy())
+                # For AUC/Acc we need probabilities; apply sigmoid to logits here.
+                probs = torch.sigmoid(valid_predictions)
+                total_predictions.extend(probs.cpu().numpy())
                 total_targets.extend(valid_targets.cpu().numpy())
             
             # Progress tracking removed for cleaner output
@@ -420,18 +443,24 @@ def train_gainakt2exp_model(args):
                 questions_shifted = batch['shft_cseqs'].to(device)
                 responses_shifted = batch['shft_rseqs'].to(device)
                 mask = batch['masks'].to(device)
-                
-                outputs = model(q=questions, r=responses, qry=questions_shifted)
-                predictions = outputs['predictions']
+
+                # Use forward_with_states to ensure logits are present for BCEWithLogitsLoss
+                outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                logits = outputs.get('logits')
+                if logits is None:
+                    # Fallback: if logits absent (legacy path), approximate by inverse sigmoid of predictions
+                    preds = outputs['predictions']
+                    eps = 1e-6
+                    logits = torch.log(preds.clamp(eps, 1 - eps) / (1 - preds.clamp(eps, 1 - eps)))
                 
                 valid_mask = mask.bool()
-                valid_predictions = predictions[valid_mask]
+                valid_predictions = logits[valid_mask]
                 valid_targets = responses_shifted[valid_mask].float()
                 
                 loss = criterion(valid_predictions, valid_targets)
                 val_loss += loss.item()
                 
-                val_predictions.extend(valid_predictions.cpu().numpy())
+                val_predictions.extend(torch.sigmoid(valid_predictions).cpu().numpy())
                 val_targets.extend(valid_targets.cpu().numpy())
         
         val_loss = val_loss / len(valid_loader)
@@ -450,6 +479,10 @@ def train_gainakt2exp_model(args):
         logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
                    f"Constraint: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
         logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
+        if device.type == 'cuda':
+            peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            logger.info(f"  🧠 Peak GPU memory this epoch: {peak_mem:.1f} MiB")
+            torch.cuda.reset_peak_memory_stats()
         
         # Add AUC progress tracking
         if len(train_history['val_auc']) > 1:
