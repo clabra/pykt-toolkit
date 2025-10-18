@@ -1,8 +1,7 @@
-import os, sys
-import json
+import os
+import sys
 
 from torch.utils.data import DataLoader
-import numpy as np
 from .data_loader import KTDataset
 from .dkt_forget_dataloader import DktForgetDataset
 from .atdkt_dataloader import ATDKTDataset
@@ -27,7 +26,7 @@ def init_test_datasets(data_config, model_name, batch_size, diff_level=None, arg
             test_question_dataset = DktForgetDataset(os.path.join(data_config["dpath"], data_config["test_question_file"]), data_config["input_type"], {-1}, True)
             test_question_window_dataset = DktForgetDataset(os.path.join(data_config["dpath"], data_config["test_question_window_file"]), data_config["input_type"], {-1}, True)
     elif model_name in ["lpkt"]:
-        print(f"model_name in lpkt")
+        print("model_name in lpkt")
         at2idx, it2idx = generate_time2idx(data_config)
         test_dataset = LPKTDataset(os.path.join(data_config["dpath"], data_config["test_file_quelevel"]), at2idx, it2idx, data_config["input_type"], {-1})
         test_window_dataset = LPKTDataset(os.path.join(data_config["dpath"], data_config["test_window_file_quelevel"]), at2idx, it2idx, data_config["input_type"], {-1})
@@ -111,11 +110,11 @@ def init_test_datasets(data_config, model_name, batch_size, diff_level=None, arg
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
     test_window_loader = DataLoader(test_window_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
     if "test_question_file" in data_config:
-        print(f"has test_question_file!")
+        print("has test_question_file!")
         test_question_loader,test_question_window_loader = None,None
-        if not test_question_dataset is None:
+    if test_question_dataset is not None:
             test_question_loader = DataLoader(test_question_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
-        if not test_question_window_dataset is None:
+    if test_question_window_dataset is not None:
             test_question_window_loader = DataLoader(test_question_window_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
 
     return test_loader, test_window_loader, test_question_loader, test_question_window_loader
@@ -157,16 +156,16 @@ def init_dataset4train(dataset_name, model_name, data_config, i, batch_size, dif
             if args.train_mode == "pretrain":
                 dpath = os.path.join(
                     data_config["dpath"],
-                    f"train_valid_sequences_quelevel_pretrain_nomapping.csv",
+                    "train_valid_sequences_quelevel_pretrain_nomapping.csv",
                 )
             else:
                 dpath = os.path.join(
                     data_config["dpath"],
-                    f"train_valid_sequences_quelevel.csv",
+                    "train_valid_sequences_quelevel.csv",
                 )
             print(f"train_data_path:{dpath}")
             if not os.path.exists(dpath) and args.train_mode == "pretrain":
-                print(f"loading pretrain data")
+                print("loading pretrain data")
 
                 get_pretrain_data(data_config)
             curvalid = KTQueDataset_promptKT(
@@ -205,8 +204,15 @@ def init_dataset4train(dataset_name, model_name, data_config, i, batch_size, dif
     else:
         curvalid = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i})
         curtrain = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i})
-    train_loader = DataLoader(curtrain, batch_size=batch_size, num_workers=32, pin_memory=True)
-    valid_loader = DataLoader(curvalid, batch_size=batch_size, num_workers=32, pin_memory=True)
+    # Dynamic DataLoader workers (multi-GPU friendly): allow override via env var PYKT_NUM_WORKERS
+    try:
+        nw = int(os.getenv('PYKT_NUM_WORKERS', '32'))
+        if nw < 0:
+            nw = 0
+    except Exception:
+        nw = 32
+    train_loader = DataLoader(curtrain, batch_size=batch_size, num_workers=nw, pin_memory=True)
+    valid_loader = DataLoader(curvalid, batch_size=batch_size, num_workers=nw, pin_memory=True)
     
     try:
         if model_name in ["dkt_forget", "bakt_time"]:
@@ -224,7 +230,7 @@ def init_dataset4train(dataset_name, model_name, data_config, i, batch_size, dif
     #     else:
     #         test_dataset = KTDataset(os.path.join(data_config["dpath"], data_config["test_file"]), data_config["input_type"], {-1})
     #         # test_window_dataset = KTDataset(os.path.join(data_config["dpath"], data_config["test_window_file"]), data_config["input_type"], {-1})
-    except:
+    except Exception:
         pass
     
     if model_name in ["dkt_forget", "bakt_time"]:

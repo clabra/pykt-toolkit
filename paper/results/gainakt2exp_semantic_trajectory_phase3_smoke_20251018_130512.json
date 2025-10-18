@@ -1,0 +1,36 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "mastery_correlation": 0.08179392493303443,
+      "gain_correlation": 0.007702338046993415,
+      "warmup_scale": 0.125,
+      "alignment_corr_mastery": 0.008869060315191746,
+      "alignment_corr_gain": 0.102706678211689,
+      "global_alignment_mastery_corr": 0.07035792726494644,
+      "global_alignment_gain_corr": 0.020866176454340652,
+      "effective_alignment_weight": 0.03125,
+      "peak_mastery_corr": 0.07035792726494644,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9187457670134228,
+        "constraint_total": 0.08125423200633031,
+        "alignment": -0.0016381541744061028,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.02935395710208873,
+      "min_mastery_variance": 0.019287109375,
+      "max_mastery_variance": 0.0343017578125,
+      "per_lag_correlations": []
+    }
+  ],
+  "experiment_name": "phase3_smoke",
+  "best_val_auc": 0.6716160909001492,
+  "timestamp": "2025-10-18T13:05:55.163501",
+  "warmup_constraint_epochs": 8
+}

@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "seed": 21,
+      "best_val_auc": 0.6582626283038117,
+      "final_mastery_corr": 0.025261686747992375,
+      "final_gain_corr": -0.009756373207786096,
+      "alignment_corr_last_epoch_mastery": 0.07644990086555481,
+      "alignment_corr_last_epoch_gain": 0.024787161499261856
+    },
+    {
+      "seed": 42,
+      "best_val_auc": 0.6541401554671493,
+      "final_mastery_corr": 0.023247296572896484,
+      "final_gain_corr": -0.012711397133829077,
+      "alignment_corr_last_epoch_mastery": 0.07786695659160614,
+      "alignment_corr_last_epoch_gain": 0.012757115997374058
+    }
+  ]
+}

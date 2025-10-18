@@ -33,6 +33,7 @@ Reference Documents:
 # Install dependencies and create virtual environment
 pip install -e .
 ```
+The machine has 8 GPUs. Use 5 GPUs to run commands as default. 
 
 ### Important Constraints
 - Always work within the activated conda pykt virtual environment (`.pykt-env`)
