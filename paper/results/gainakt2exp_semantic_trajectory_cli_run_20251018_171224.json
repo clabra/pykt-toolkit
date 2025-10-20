@@ -1,0 +1,36 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "mastery_correlation": 0.003331545678825704,
+      "gain_correlation": 0.07204106054533889,
+      "warmup_scale": 1.0,
+      "alignment_corr_mastery": 0.11867357790470123,
+      "alignment_corr_gain": 0.3057774603366852,
+      "global_alignment_mastery_corr": null,
+      "global_alignment_gain_corr": null,
+      "effective_alignment_weight": 0.03125,
+      "peak_mastery_corr": 0.0,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.8923708202662218,
+        "constraint_total": 0.10762918097453668,
+        "alignment": -0.011901465395597235,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.01509074388322821,
+      "min_mastery_variance": 0.012197092175483704,
+      "max_mastery_variance": 0.0322878398001194,
+      "per_lag_correlations": []
+    }
+  ],
+  "experiment_name": "cli_run",
+  "best_val_auc": 0.7176336069505624,
+  "timestamp": "2025-10-18T17:13:22.289679",
+  "warmup_constraint_epochs": 1
+}

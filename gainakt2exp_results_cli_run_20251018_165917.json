@@ -1,0 +1,131 @@
+{
+  "experiment_name": "cli_run",
+  "best_val_auc": 0.7159122630200054,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": -0.02366995604614826,
+    "gain_correlation": 0.05291041143790171
+  },
+  "train_history": {
+    "train_loss": [
+      0.5944230717080863
+    ],
+    "train_auc": [
+      0.6929735490819852
+    ],
+    "val_auc": [
+      0.7159122630200054
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0006368482987693472,
+        "gain_correlation": 0.10909210014043252
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.0006368482987693472,
+        "gain_correlation": 0.10909210014043252,
+        "warmup_scale": 1.0,
+        "alignment_corr_mastery": 0.13184964656829834,
+        "alignment_corr_gain": 0.31049832701683044,
+        "global_alignment_mastery_corr": null,
+        "global_alignment_gain_corr": null,
+        "effective_alignment_weight": 0.03125,
+        "peak_mastery_corr": 0.0,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.892964129079092,
+          "constraint_total": 0.10703586645710543,
+          "alignment": -0.012051110469249726,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.015164649449385356,
+        "min_mastery_variance": 0.012134482152760029,
+        "max_mastery_variance": 0.030400607734918594,
+        "per_lag_correlations": []
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 1,
+    "batch_size": 32,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": true,
+    "fold": 0,
+    "constraint_weights": {
+      "non_negative_loss_weight": 0.0,
+      "monotonicity_loss_weight": 0.1,
+      "mastery_performance_loss_weight": 0.8,
+      "gain_performance_loss_weight": 0.8,
+      "sparsity_loss_weight": 0.2,
+      "consistency_loss_weight": 0.3
+    },
+    "alignment": {
+      "enable_alignment_loss": true,
+      "alignment_weight": 0.25,
+      "alignment_warmup_epochs": 8,
+      "adaptive_alignment": true,
+      "alignment_min_correlation": 0.05
+    },
+    "global_alignment": {
+      "enable_global_alignment_pass": false,
+      "alignment_global_students": 600,
+      "use_residual_alignment": false,
+      "alignment_residual_window": 5
+    },
+    "refinement": {
+      "enable_retention_loss": true,
+      "retention_delta": 0.01,
+      "retention_weight": 0.1,
+      "enable_lag_gain_loss": true,
+      "lag_gain_weight": 0.06,
+      "lag_max_lag": 3,
+      "lag_l1_weight": 0.5,
+      "lag_l2_weight": 0.3,
+      "lag_l3_weight": 0.2,
+      "enable_cosine_perf_schedule": false,
+      "consistency_rebalance_epoch": 8,
+      "consistency_rebalance_threshold": 0.1,
+      "consistency_rebalance_new_weight": 0.2,
+      "variance_floor": 0.0001,
+      "variance_floor_patience": 3,
+      "variance_floor_reduce_factor": 0.5,
+      "alignment_share_cap": 0.08,
+      "alignment_share_decay_factor": 0.7
+    }
+  },
+  "timestamp": "2025-10-18T16:59:17.612261"
+}
