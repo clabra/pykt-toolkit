@@ -397,7 +397,7 @@ def train_gainakt2exp_model(args):
     
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model created with {total_params:,} parameters")
-    logger.info("Perfect consistency guaranteed by architectural constraints")
+    logger.info("Perfect consistency guaranteed by architectural constraints.")
     
     # Training setup
     # Use BCEWithLogitsLoss for AMP safety; model now returns both logits and sigmoid outputs.
@@ -452,7 +452,14 @@ def train_gainakt2exp_model(args):
         'prev_prev_global_mastery_corr': None,
         'prev_prev_global_gain_corr': None,
         'effective_alignment_weight_last': alignment_weight,
-        'alignment_weight_current': alignment_weight  # dynamic decay under share cap
+        'alignment_weight_current': alignment_weight,
+        # Instrumentation counters
+        'aligncap_decay_events': 0,
+        'adaptive_decay_events': 0,
+        'lag_schedule_events': 0,
+        'weight_decay_probe_events': 0,
+        # Alignment weight changes timeline
+        'alignment_weight_history': []
     }
     retention_state = {
         'peak_mastery_corr': 0.0,
@@ -655,12 +662,14 @@ def train_gainakt2exp_model(args):
                                         except Exception:
                                             pass
                         
+                        # Support dynamic lag gain weight schedule
+                        effective_lag_gain_weight = global_alignment_state.get('lag_gain_weight_current', lag_gain_weight)
                         total_w = lag_l1_weight + lag_l2_weight + lag_l3_weight  # Phase 3: all lags
                         if lag_terms and total_w > 0:
                             mean_lag_corr = weighted_corr_sum / total_w
                             lag_corr_count = len(lag_terms)
                             # Phase 3: Standard lag correlation loss (no positive-only clamp)
-                            lag_loss = - mean_lag_corr * lag_gain_weight
+                            lag_loss = - mean_lag_corr * effective_lag_gain_weight
                             lag_corr_count = len(lag_terms)
                             activation_counters['lag_active_epochs'] += 1
                     if 'projected_mastery' in outputs and outputs['projected_mastery'].var().item() < variance_floor:
@@ -910,7 +919,7 @@ def train_gainakt2exp_model(args):
             global_alignment_state['prev_prev_global_gain_corr'] = global_alignment_state['prev_global_gain_corr']
             global_alignment_state['prev_global_mastery_corr'] = global_mastery_corr
             global_alignment_state['prev_global_gain_corr'] = global_gain_corr
-            logger.info(f"  🌐 Global Alignment - Mastery Corr: {global_mastery_corr:.4f}, Gain Corr: {global_gain_corr:.4f}, Eff Align Wt(last): {global_alignment_state['effective_alignment_weight_last']:.4f}")
+            logger.info(f"  Global Alignment - mastery_corr={global_mastery_corr:.4f}, gain_corr={global_gain_corr:.4f}, effective_alignment_weight_last={global_alignment_state['effective_alignment_weight_last']:.4f}")
             # Retention peak tracking
             if enable_retention_loss and global_mastery_corr is not None:
                 if global_mastery_corr > retention_state['peak_mastery_corr']:
@@ -939,30 +948,7 @@ def train_gainakt2exp_model(args):
             else:
                 retention_loss_value = 0.0
         
-        # Log epoch results with enhanced formatting
-        logger.info("=" * 60)
-        logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
-        logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
-                   f"Constraint: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
-        logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
-        if device.type == 'cuda':
-            peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
-            logger.info(f"  🧠 Peak GPU memory this epoch: {peak_mem:.1f} MiB")
-            torch.cuda.reset_peak_memory_stats()
-        
-        # Add AUC progress tracking
-        if len(train_history['val_auc']) > 1:
-            prev_auc = train_history['val_auc'][-2] if len(train_history['val_auc']) > 1 else 0
-            auc_change = val_auc - prev_auc
-            change_indicator = "📈" if auc_change > 0 else "📉" if auc_change < 0 else "➡️"
-            logger.info(f"  {change_indicator} AUC Change: {auc_change:+.4f} (Current: {val_auc:.4f}, Previous: {prev_auc:.4f})")
-        
-        # Show current best
-        current_best = max(train_history['val_auc']) if train_history['val_auc'] else 0
-        logger.info(f"  🏆 Current Best AUC: {current_best:.4f}")
-        logger.info("=" * 60)
-        
-        # Update history
+        # Update history BEFORE logging so current epoch included in progress computations
         train_history['train_loss'].append(train_loss)
         train_history['train_auc'].append(train_auc)
         train_history['val_auc'].append(val_auc)
@@ -996,6 +982,34 @@ def train_gainakt2exp_model(args):
             'per_lag_correlations': epoch_lag_corrs
         })
 
+        # Best model tracking (simple AUC-based)
+        if val_auc > best_val_auc + 1e-8:  # small tolerance
+            best_val_auc = val_auc
+            try:
+                # store CPU clone for safety
+                best_model_state = {k: v.detach().cpu().clone() for k, v in model_core.state_dict().items()}
+                logger.info(f"[BestModel] New best AUC: {best_val_auc:.4f} (epoch {epoch+1}) model state captured")
+            except Exception as _bm_e:
+                logger.warning(f"[BestModel] Failed to capture best model state: {_bm_e}")
+
+        # Log epoch results with enhanced formatting (now includes current epoch in history)
+        logger.info("=" * 60)
+        logger.info(f"  Train - loss={train_loss:.4f} (main={train_main_loss:.4f}, constraint={train_constraint_loss:.4f}), AUC={train_auc:.4f}, Acc={train_acc:.4f}")
+        logger.info(f"  Valid - loss={val_loss:.4f}, AUC={val_auc:.4f}, Acc={val_acc:.4f}")
+        if device.type == 'cuda':
+            peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            logger.info(f"  Peak GPU memory this epoch: {peak_mem:.1f} MiB")
+            torch.cuda.reset_peak_memory_stats()
+        if len(train_history['val_auc']) > 1:
+            prev_auc = train_history['val_auc'][-2]
+            auc_change = val_auc - prev_auc
+            direction = 'increase' if auc_change > 0 else 'decrease' if auc_change < 0 else 'stable'
+            logger.info(f"  AUC change: {auc_change:+.4f} ({direction}; current={val_auc:.4f}, previous={prev_auc:.4f})")
+        # Local best including this epoch
+        current_best_local = max(train_history['val_auc']) if train_history['val_auc'] else 0.0
+        logger.info(f"  Current best AUC (this run): {current_best_local:.4f}")
+        logger.info("=" * 60)
+
         # Alignment share cap enforcement (post logging so share recorded) with decay
         if enable_alignment_loss and alignment_loss_share is not None and abs(alignment_loss_share) > alignment_share_cap:
             # Plateau detection: only decay if mastery correlation improvement < 0.005 epoch-over-epoch
@@ -1004,71 +1018,124 @@ def train_gainakt2exp_model(args):
             corr_improvement = None
             if prev_prev is not None and prev_curr is not None:
                 corr_improvement = prev_curr - prev_prev
+            old_w = global_alignment_state['alignment_weight_current']
             if corr_improvement is None or corr_improvement < 0.005:
-                old_w = global_alignment_state['alignment_weight_current']
-                new_w = max(0.05, old_w * alignment_share_decay_factor)  # floor to avoid starvation
-                global_alignment_state['alignment_weight_current'] = new_w
-                logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > {alignment_share_cap:.2f} and plateau (Δcorr={corr_improvement}); decay {old_w:.4f} -> {new_w:.4f}")
+                new_w = max(0.05, old_w * alignment_share_decay_factor)
+                if new_w < old_w - 1e-8:
+                    global_alignment_state['alignment_weight_current'] = new_w
+                    global_alignment_state['aligncap_decay_events'] += 1
+                    global_alignment_state.setdefault('alignment_weight_history', []).append({
+                        'epoch': epoch + 1,
+                        'reason': 'aligncap_plateau',
+                        'old_weight': old_w,
+                        'new_weight': new_w,
+                        'corr_improvement': corr_improvement,
+                        'alignment_loss_share': alignment_loss_share
+                    })
+                    logger.info(f"[AlignCap] alignment_loss_share={alignment_loss_share:.4f} > cap={alignment_share_cap:.2f} plateau (delta_mastery_corr={corr_improvement}); decay {old_w:.4f}->{new_w:.4f}")
+                else:
+                    logger.info(f"[AlignCap] alignment_loss_share={alignment_loss_share:.4f} > cap but min floor prevents decay (current_weight={old_w:.4f})")
             else:
-                logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > cap but corr improving (Δcorr={corr_improvement:.4f}); no decay applied.")
-        
-        # Wandb logging
-        if args.use_wandb:
-            wandb.log({
+                logger.info(f"[AlignCap] alignment_loss_share={alignment_loss_share:.4f} > cap but correlation improving (delta_mastery_corr={corr_improvement:.4f}); no decay applied.")
+
+        # (Adaptive instrumentation now handled inside original adaptive block below; removed duplicate block)
+        # (Lag schedule instrumentation handled in adaptive block below; removed duplicate block)
+
+        # Epoch metrics dump (JSONL) AFTER potential alignment weight decay so events appear
+        try:
+            dump_dir = os.path.join('logs', 'epoch_dumps')
+            os.makedirs(dump_dir, exist_ok=True)
+            dump_file = os.path.join(dump_dir, f'epoch_metrics_{experiment_suffix}.jsonl')
+            # Overfitting diagnostics
+            train_val_loss_ratio = train_loss / (val_loss + 1e-8)
+            early_epoch_reference = 5
+            early_val_auc = train_history['val_auc'][early_epoch_reference - 1] if len(train_history['val_auc']) >= early_epoch_reference else None
+            delta_from_early_auc = (val_auc - early_val_auc) if early_val_auc is not None else None
+            epoch_dump = {
                 'epoch': epoch + 1,
                 'train_loss': train_loss,
                 'train_main_loss': train_main_loss,
                 'train_constraint_loss': train_constraint_loss,
-                'train_auc': train_auc,
-                'train_acc': train_acc,
                 'val_loss': val_loss,
                 'val_auc': val_auc,
-                'val_acc': val_acc,
-                'learning_rate': optimizer.param_groups[0]['lr'],
-                **{f'consistency_{k}': v for k, v in consistency_metrics.items()}
-            })
-        
-        # Model saving and early stopping
-        if val_auc > best_val_auc:
-            best_val_auc = val_auc
-            best_model_state = model.state_dict().copy()
-            patience_counter = 0
-            
-            # Save best model
-            save_dir = f"saved_model/gainakt2exp_{experiment_suffix}"
-            os.makedirs(save_dir, exist_ok=True)
-            
-            checkpoint = {
-                'epoch': epoch + 1,
-                'model_state_dict': best_model_state,
-                'model_config': model_config,
-                'optimizer_state_dict': optimizer.state_dict(),
-                'best_val_auc': best_val_auc,
-                'consistency_metrics': consistency_metrics,
-                'train_history': train_history
+                'train_auc': train_auc,
+                'mastery_corr': consistency_metrics.get('mastery_correlation'),
+                'gain_corr': consistency_metrics.get('gain_correlation'),
+                'global_mastery_corr': global_mastery_corr,
+                'global_gain_corr': global_gain_corr,
+                'alignment_weight_effective': global_alignment_state.get('effective_alignment_weight_last'),
+                'lag_gain_weight_effective': global_alignment_state.get('lag_gain_weight_current', lag_gain_weight),
+                'lr': optimizer.param_groups[0]['lr'],
+                'loss_shares': {
+                    'main': main_loss_share,
+                    'constraint_total': constraint_loss_share,
+                    'alignment': alignment_loss_share,
+                    'lag': lag_loss_share,
+                    'retention': retention_loss_share
+                },
+                'train_val_loss_ratio': train_val_loss_ratio,
+                'early_val_auc': early_val_auc,
+                'delta_from_early_auc': delta_from_early_auc,
+                'best_val_auc_so_far': best_val_auc,
+                'mean_mastery_variance': mean_mastery_variance,
+                'min_mastery_variance': min_mastery_variance,
+                'max_mastery_variance': max_mastery_variance
             }
-            
-            torch.save(checkpoint, os.path.join(save_dir, "best_model.pth"))
-            logger.info(f"  🎉 NEW BEST MODEL SAVED! Val AUC: {best_val_auc:.4f} (Epoch {epoch + 1})")
-        else:
-            patience_counter += 1
-        
-        # Learning rate scheduling
-        scheduler.step(val_auc)
-        
-        # Early stopping
-        patience = getattr(args, 'patience', 20)
-        if patience_counter >= patience:
-            logger.info(f"  Early stopping triggered (patience: {patience})")
-            break
+            # Coherence index calculation (robust to missing previous AUC)
+            try:
+                eps_ci = 1e-6
+                prev_val_auc_ci = train_history['val_auc'][-2] if len(train_history['val_auc']) > 1 else val_auc
+                delta_auc_ci = abs(val_auc - prev_val_auc_ci)
+                acm = float(alignment_corr_mastery.detach().cpu()) if 'alignment_corr_mastery' in locals() else None
+                acg = float(alignment_corr_gain.detach().cpu()) if 'alignment_corr_gain' in locals() else None
+                if acm is not None and acg is not None:
+                    epoch_dump['coherence_index'] = (acm * acg) / (delta_auc_ci + eps_ci)
+                else:
+                    epoch_dump['coherence_index'] = None
+            except Exception:
+                epoch_dump['coherence_index'] = None
+            # Instrumentation counters & events (after potential updates this epoch)
+            current_counters = {
+                'aligncap_decay_events_so_far': global_alignment_state.get('aligncap_decay_events', 0),
+                'adaptive_decay_events_so_far': global_alignment_state.get('adaptive_decay_events', 0),
+                'lag_schedule_events_so_far': global_alignment_state.get('lag_schedule_events', 0),
+                'weight_decay_probe_events_so_far': global_alignment_state.get('weight_decay_probe_events', 0)
+            }
+            prev_counters = global_alignment_state.get('prev_epoch_counters', {
+                'aligncap_decay_events_so_far': 0,
+                'adaptive_decay_events_so_far': 0,
+                'lag_schedule_events_so_far': 0,
+                'weight_decay_probe_events_so_far': 0
+            })
+            events = []
+            for k, v in current_counters.items():
+                if v > prev_counters.get(k, 0):
+                    if k.startswith('aligncap'):
+                        events.append('aligncap_decay')
+                    elif k.startswith('adaptive'):
+                        events.append('adaptive_alignment_decay')
+                    elif k.startswith('lag_schedule'):
+                        events.append('lag_gain_schedule')
+                    elif k.startswith('weight_decay_probe'):
+                        events.append('weight_decay_probe')
+            epoch_dump['instrumentation'] = current_counters
+            epoch_dump['events'] = events
+            global_alignment_state['prev_epoch_counters'] = current_counters
+            with open(dump_file, 'a') as df:
+                df.write(json.dumps(epoch_dump) + '\n')
+        except Exception as e:
+            logger.warning(f"Epoch dump failed (post-decay): {e}")
     
     # Final evaluation
     logger.info("\\n" + "=" * 80)
     logger.info("TRAINING COMPLETED!")
     logger.info("=" * 80)
     
-    # Load best model for final evaluation
-    model.load_state_dict(best_model_state)
+    # Load best model for final evaluation (guard for cases with no recorded improvement in very short runs)
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+    else:
+        logger.warning("No best_model_state captured; skipping state_dict restore.")
     
     logger.info(f"Best validation AUC: {best_val_auc:.4f}")
     
@@ -1135,7 +1202,15 @@ def train_gainakt2exp_model(args):
                 'alignment_share_decay_factor': alignment_share_decay_factor
             }
         },
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'instrumentation_summary': {
+            'aligncap_decay_events': global_alignment_state.get('aligncap_decay_events', 0),
+            'adaptive_decay_events': global_alignment_state.get('adaptive_decay_events', 0),
+            'lag_schedule_events': global_alignment_state.get('lag_schedule_events', 0),
+            'weight_decay_probe_events': global_alignment_state.get('weight_decay_probe_events', 0),
+            'final_alignment_weight': global_alignment_state.get('alignment_weight_current', alignment_weight),
+            'alignment_weight_history': global_alignment_state.get('alignment_weight_history', [])
+        }
     }
     
     results_file = f"gainakt2exp_results_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -1239,12 +1314,19 @@ if __name__ == "__main__":
     # Alignment / semantic emergence flags
     parser.add_argument('--enable_alignment_loss', action='store_true')
     parser.add_argument('--alignment_weight', type=float, default=0.25)
+    # Adaptive tuning additions
+    parser.add_argument('--adaptive_gain_corr_min', type=float, default=0.06, help='Minimum gain correlation target for adaptive decay decisions.')
+    parser.add_argument('--adaptive_mastery_corr_min', type=float, default=0.02, help='Minimum mastery correlation target for adaptive decay decisions.')
+    parser.add_argument('--adaptive_patience', type=int, default=5, help='Epochs without val AUC improvement before adaptive alignment decay / lag schedule considered.')
+    parser.add_argument('--adaptive_decay_factor', type=float, default=0.9, help='Multiplicative decay factor for alignment weight when adaptive trigger fires.')
+    parser.add_argument('--lag_gain_schedule_enable', action='store_true', help='Enable post-plateau lag gain weight schedule to boost temporal signal.')
+    parser.add_argument('--lag_gain_schedule_increase', type=float, default=1.2, help='Multiplicative increase applied to lag_gain_weight_current when schedule fires.')
+    parser.add_argument('--lag_gain_schedule_cap', type=float, default=0.06, help='Upper cap for lag gain weight under schedule.')
+    parser.add_argument('--lag_gain_schedule_min_gain_corr', type=float, default=0.055, help='Only schedule lag increase if current gain_corr below this threshold.')
+    parser.add_argument('--weight_decay_probe_enable', action='store_true', help='Enable weight decay probe after lag schedule triggers.')
+    parser.add_argument('--weight_decay_probe_value', type=float, default=3.0e-05, help='New weight decay value to apply when probe triggers.')
+    parser.add_argument('--plateau_delta_auc', type=float, default=0.0005, help='Delta AUC threshold to define plateau.')
     parser.add_argument('--alignment_warmup_epochs', type=int, default=8)
-    parser.add_argument('--adaptive_alignment', action='store_true', default=True)
-    parser.add_argument('--alignment_min_correlation', type=float, default=0.05)
-    parser.add_argument('--enable_global_alignment_pass', action='store_true')
-    # Phase 3: expanded global sampling default increased to 600 for stronger sequence-level signal
-    parser.add_argument('--alignment_global_students', type=int, default=600)
     parser.add_argument('--use_residual_alignment', action='store_true')
     parser.add_argument('--alignment_residual_window', type=int, default=5)
     # Retention & lag objectives
@@ -1253,13 +1335,14 @@ if __name__ == "__main__":
     parser.add_argument('--retention_weight', type=float, default=0.1)
     parser.add_argument('--enable_lag_gain_loss', action='store_true')
     parser.add_argument('--lag_gain_weight', type=float, default=0.06)
-    parser.add_argument('--lag_max_lag', type=int, default=3)
+    parser.add_argument('--lag_max_lag', type=int, default=3, help='Maximum temporal lag to consider in lag gain loss.')
     parser.add_argument('--lag_l1_weight', type=float, default=0.5)
     parser.add_argument('--lag_l2_weight', type=float, default=0.3)
     parser.add_argument('--lag_l3_weight', type=float, default=0.2)
     # Alignment share cap
     parser.add_argument('--alignment_share_cap', type=float, default=0.08)
     parser.add_argument('--alignment_share_decay_factor', type=float, default=0.7)
+    parser.add_argument('--alignment_global_students', type=int, default=600, help='Number of students considered in global alignment sampling phase.')
     # Performance alignment scheduling
     parser.add_argument('--warmup_constraint_epochs', type=int, default=8)
     parser.add_argument('--enable_cosine_perf_schedule', action='store_true')

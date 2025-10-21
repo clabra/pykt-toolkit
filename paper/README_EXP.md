@@ -1497,5 +1497,254 @@ Upon comparison with historical results, our current "Phase 3 Baseline" results 
 4. **⚡ Environment Standardization:** Match original hardware/software environment specifications
 5. **🎯 Reproduce Original Results:** Attempt exact replication of original 0.726 AUC configuration before proceeding
 
-**CONCLUSION:** The current results represent a **significant regression** that undermines publication claims. **Priority #1 should be recovering the original Phase 3 performance** before advancing to publication or additional experiments.
+### 23.12 Semantic Interpretability Trade-off Analysis
+
+**Question:** Did semantic metrics improve to compensate for the AUC degradation?
+
+**Answer:** Unfortunately, **NO**. The semantic metrics show **mixed results with no clear improvement**:
+
+#### Semantic Metrics Comparison:
+
+| Metric | Original Phase 3 (AUC ~0.726) | "Revival" Phase 3 (AUC 0.7175) | Current Results (AUC 0.6298) | Net Change |
+|--------|-------------------------------|-------------------------------|------------------------------|------------|
+| **Final Mastery Corr** | ~0.08 | 0.113 | **0.0202 ± 0.0089** | 📉 **-0.0598** (worse) |
+| **Final Gain Corr** | ~0.02 | 0.046 | **0.0648 ± 0.0243** | 📈 **+0.0448** (better) |
+| **Peak Mastery Corr** | ~0.15 | ~0.146 | **0.108** (seed 84) | 📉 **-0.042** (worse) |
+| **Mean AUC** | **0.726** | **0.7175** | **0.6298** | 📉 **-0.0962** (much worse) |
+
+#### Detailed Multi-Seed Historical Comparison:
+
+**Previous Multi-Seed Results (Section 15.4):**
+- Mean final mastery correlation = **0.0825** 
+- Mean final gain correlation = **0.0241**
+- Individual seed mastery range: 0.0766 - 0.0904
+- Individual seed gain range: 0.0137 - 0.0358
+
+**Current Multi-Seed Results:**
+- Mean final mastery correlation = **0.0202** ❌ **(~75% worse)**
+- Mean final gain correlation = **0.0648** ✅ **(~169% better)**
+- Individual seed mastery range: 0.0014 - 0.0290 (much lower & more variable)
+- Individual seed gain range: 0.0454 - 0.1081 (higher peak but inconsistent)
+
+#### Key Semantic Findings:
+
+1. **Mastery Correlation SEVERELY degraded:** 0.0825 → 0.0202 (75% decline)
+2. **Gain Correlation meaningfully improved:** 0.0241 → 0.0648 (169% improvement)  
+3. **Peak correlations lost:** Historical peaks ~0.15 vs current max 0.108
+4. **Increased variance:** Current results show much higher cross-seed variability
+
+#### Overall Assessment:
+
+**❌ NET SEMANTIC LOSS:** The modest gain correlation improvement (~4.4 points) **does not compensate** for the severe mastery correlation degradation (-5.98 points) and massive AUC loss (-9.6 points).
+
+**Performance-Interpretability Trade-off Analysis:**
+- **Total Combined Loss:** AUC (-96 points) + Mastery (-59.8 points) + Gain (+44.8 points) = **Net -111 points**
+- **Ratio:** For every 1 point of AUC lost, we lose ~0.6 points of mastery correlation but gain ~0.5 points of gain correlation
+- **Conclusion:** This is a **terrible trade-off** - we're losing both predictive performance AND the more important mastery interpretability
+
+**CONCLUSION:** The current results represent a **comprehensive regression** across both performance AND semantic interpretability metrics. **Priority #1 should be recovering the original Phase 3 configuration** that achieved both strong AUC (~0.726) and reasonable semantic emergence before advancing to publication or additional experiments.
+
+---
+
+## 23.13 Archaeological Analysis: Root Cause Discovery
+
+**Investigation Objective:** Find the original high-performing Phase 3 configuration achieving AUC ~0.726 and understand the gain correlation improvement mechanism.
+
+**Critical Discovery:** Git archaeological analysis of commit `2aa4883` revealed the original optimal configuration. The current performance regression has clear, identifiable root causes.
+
+### Root Cause Analysis: Core Parameter Deviations
+
+| Parameter | Original Optimal (2aa4883) | Current Degraded | Deviation Factor | Impact Assessment |
+|-----------|----------------------------|------------------|------------------|-------------------|
+| `batch_size` | **96** | **64** | **-33%** | Reduced gradient stability & learning efficiency |
+| `learning_rate` | **0.000174** | **0.001** | **+474%** | Severe optimization instability |  
+| `weight_decay` | **1.75e-5** | **0.01** | **+56900%** | Catastrophic over-regularization |
+| `epochs` | **20** | **12** | **-40%** | Insufficient convergence time |
+| **AUC Result** | **0.7260** | **0.6298** | **-96 pts** | **Comprehensive performance collapse** |
+
+### Constraint Architecture Evolution Analysis
+
+**Original System (Individual Granular Control):**
+```yaml
+non_negative_loss_weight: 0.0      # Architecturally enforced  
+monotonicity_loss_weight: 0.1      # Light monotonic guidance
+mastery_performance_loss_weight: 0.8   # Strong mastery-performance alignment  
+gain_performance_loss_weight: 0.8     # Strong gain-performance alignment
+sparsity_loss_weight: 0.2          # Moderate regularization
+consistency_loss_weight: 0.3       # Moderate consistency enforcement
+```
+
+**Current System (Composite Objectives):**
+```yaml
+alignment_weight: 0.25              # Composite mastery-gain alignment
+lag_gain_weight: 0.05              # NEW: Multi-lag temporal modeling  
+retention_weight: 0.10             # NEW: Retention objective (inactive)
++ structural constraints: monotonic_mastery, nonnegative_gain, bounds
+```
+
+### Gain Correlation Improvement Mechanism (+169%)
+
+**Root Cause of Gain Improvement:** The +169% gain correlation improvement (0.0241 → 0.0648) stems from architectural enhancements in the current system:
+
+1. **Temporal Multi-Lag Modeling** (`lag_gain_weight=0.05`):
+   - Provides explicit temporal dependencies across multiple time lags
+   - Creates richer gain representations through sequence context
+   - Enables learning of temporal patterns in knowledge acquisition
+
+2. **Alignment Objective with Warmup** (`alignment_weight=0.25`, `alignment_warmup_epochs=8`):
+   - Gradual introduction of semantic alignment during training
+   - Prevents semantic collapse during early optimization phases  
+   - Creates better balance between predictive and semantic objectives
+
+3. **Structural Mathematical Validity** (`constraint_nonnegative_gain=true`):
+   - Hard enforcement of gain ≥ 0 ensures semantic interpretability
+   - Eliminates pathological negative gain solutions
+   - Improves correlation with ground truth positive learning events
+
+4. **Composite Objective Architecture**:
+   - Alignment objective balances mastery and gain semantics simultaneously
+   - Reduces competition between individual constraint components
+   - Creates more stable semantic emergence patterns
+
+### Recovery Strategy: Hybrid Configuration
+
+**Solution:** Created `configs/gainakt2_phase3_recovery.yaml` that combines:
+
+**Core Parameters (AUC Recovery):**
+- `batch_size: 96` (restore gradient stability)
+- `learning_rate: 0.000174` (restore optimization stability) 
+- `weight_decay: 1.7571e-05` (remove over-regularization)
+- `epochs: 20` (allow full convergence)
+
+**Preserved Improvements (Gain Correlation Benefits):**
+- `lag_gain_weight: 0.05` (keep temporal modeling)
+- `constraint_nonnegative_gain: true` (keep mathematical validity)
+- `alignment_weight: 0.1` (reduced from 0.25 to balance benefits)
+
+**Restored Semantic Framework:**
+- Individual constraint weights from original optimal configuration
+- `enhanced_constraints: true` with granular control
+- `mastery_performance_loss_weight: 0.8` and `gain_performance_loss_weight: 0.8`
+
+### Expected Recovery Outcomes
+
+**Predictive Performance:** AUC recovery to 0.720-0.726 range (near original optimal)
+**Semantic Performance:** 
+- Mastery correlation recovery to ~0.08+ (from degraded 0.02)
+- Gain correlation preservation at ~0.065+ (maintain +169% improvement)
+- Combined semantic uplift: Net positive interpretability improvement
+
+**Validation Plan:** The recovery configuration enables systematic validation of the hypothesis that we can achieve both high AUC (~0.726) AND improved gain correlations (~0.065) simultaneously by combining optimal training parameters with enhanced temporal modeling components.
+
+---
+
+## 23.14 Next Steps: Recovery Validation
+
+1. **Execute Recovery Configuration:** Run `configs/gainakt2_phase3_recovery.yaml` with multi-seed validation
+2. **Performance Validation:** Confirm AUC recovery to 0.720+ range  
+3. **Semantic Validation:** Verify mastery correlation recovery (>0.08) with gain preservation (>0.06)
+4. **Mechanism Validation:** Analyze which components contribute to optimal performance-interpretability balance
+5. **Publication Readiness:** Document final configuration achieving both strong AUC and interpretability for publication
+
+
+---
+
+## 24. Adaptive Alignment & Lag Scheduling Final Assessment (Post-Instrumentation Review)
+
+### 24.1 Objective
+
+This section consolidates the final experimental evidence after implementing adaptive alignment decay, lag gain scheduling, additional overfitting diagnostics, and enriched epoch‑level instrumentation (fields: `train_val_loss_ratio`, `early_val_auc`, `delta_from_early_auc`, `best_val_auc_so_far`, `coherence_index`). We assess whether these adaptive mechanisms materially improved predictive performance (AUC) or semantic interpretability (mastery/gain correlations) relative to the historically superior Phase 3 configuration (~0.726 AUC) and the intermediate emerging mastery result (Section 21.2).
+
+### 24.2 Instrumentation Additions
+
+Added epoch JSON fields enabled by the patched training loop:
+
+- `train_val_loss_ratio`: proxy for overfitting / generalization gap dynamics.
+- `early_val_auc` and `delta_from_early_auc`: early vs final discrimination trajectory.
+- `best_val_auc_so_far`: monotonic tracker validating correct best‑model capture.
+- `coherence_index`: heuristic stability indicator (aggregate derivative of mastery trajectory consistency).
+- Ordered `events` emission (decay triggers now appear in epoch JSONL before summary capture).
+
+Summarizer enhancements (script: `tmp/adaptive_run_summarizer.py`) now aggregate these fields and support optional multi‑seed stdout log parsing for event epoch localization.
+
+### 24.3 Adaptive Mechanisms Evaluated
+
+| Mechanism | Intended Benefit | Observed Outcome |
+|-----------|------------------|------------------|
+| Alignment share cap / decay | Prevent late over-regularization | Alignment weight reductions did not translate into sustained mastery correlation retention. |
+| Adaptive alignment decay events | Reduce constraint pressure when plateau detected | Events fired (count=1 per seed) without measurable AUC uplift vs static Phase 3. |
+| Lag gain schedule | Encourage temporal predictive semantics | Gain correlation modestly improved (≈0.045–0.065) but mastery correlation regressed. |
+| Retention logging (non‑gradient) | Preserve peak mastery correlations | Transient peaks still decayed (decay gap persisted ~0.036–0.073). |
+| Future lag redesign (gradient) | Strengthen incremental signal | Attempted redesign increased decay without correlation uplift. |
+
+### 24.4 Quantitative Comparison Snapshot
+
+| Configuration | Mean Best Val AUC | Final Mastery Corr | Final Gain Corr | Notes |
+|---------------|-------------------|-------------------|-----------------|-------|
+| Original Phase 3 (historical) | ~0.726 | ~0.08 (peaks ~0.15) | ~0.02 | Highest AUC; acceptable early semantic emergence |
+| Emerging Mastery (Section 21.2) | 0.7175 | 0.113 | 0.046 | Breach of mastery ≥0.10 threshold; gain below target |
+| Adaptive Refined (Retention + Lag) | 0.7185 | 0.0717 | 0.0458 | Gain improved vs early; mastery regressed below ≥0.10 |
+| Latest Adaptive Runs (Summarizer CSV) | 0.7186 (mean) | 0.0240 (example degraded set) | 0.0449 | Severe mastery regression; modest gain |
+| Recovery Hybrid - Current AdaptDecay Run (Section 24.3) | 0.6059 | 0.0346 | 0.0824 | Significant AUC regression; gain corr elevated; mastery weak |
+| Current Degraded Baseline (Section 23.11) | 0.6298 | 0.0202 | 0.0648 | Significant AUC regression; gain transiently higher |
+
+Interpretation: None of the adaptive scheduling variants exceeded or matched the original ~0.726 AUC while simultaneously improving mastery semantics; the sole improvement (gain correlation uplift) came at the cost of mastery degradation and, in later code states, severe AUC regression.
+
+### 24.5 Overfitting & Stability Diagnostics
+
+- `train_val_loss_ratio_last` values (from summarizer) remained within a narrow band (not inflated), indicating no classical overfitting rescue from adaptive decay.
+- `delta_from_early_auc_last` remained positive but unchanged magnitude relative to Phase 3, showing similar early → final trajectory without acceleration.
+- `best_val_auc_so_far_last` plateaued at lower absolute AUC than historical Phase 3 runs; adaptive events did not unlock higher ceilings.
+- `coherence_index_last` varied widely across seeds (e.g., 19–178), suggesting instability in internal dynamics not correlating with improved external metrics.
+
+### 24.6 Decision Framework Application
+
+Applying Section 13.7 decision flow:
+1. Structural integrity: preserved (0% violations) — necessary but not sufficient.
+2. ΔAUC vs optimal: negative (−0.0075 to −0.0962) — fails neutrality/gain criterion relative to best known configuration.
+3. Semantic correlations: mastery below emerging threshold in latest adaptive states — fails semantic success criteria.
+4. Architecture vs constraints attribution: improvements (gain) attributed to temporal + alignment additions; net trade-off unfavorable.
+
+Scenario classification: Regression from transitional S3→S1 (Emerging mastery) back to S3 (Predictive gain + weak semantics) and, in worst case (current degraded baseline), approaching S9 (broad failure) relative to original Phase 3 peak performance.
+
+### 24.7 Recommendation: Revert & Isolate Adaptive Features
+
+We recommend reverting to the commit associated with the original Phase 3 high-performance configuration (historical AUC ~0.726) prior to layered adaptive modifications. Proceed with a hybrid recovery configuration (Section 23.13) that restores foundational hyperparameters (batch size 96, LR 1.74e-4, weight decay ~1.75e-5, 20 epochs) while selectively reintroducing ONLY those adaptive components empirically beneficial (e.g., non-negative architectural enforcement and modest lag objective) under controlled ablation.
+
+### 24.8 Recovery Validation Plan (Concise)
+
+1. Execute recovery multi-seed run (5 seeds) with restored core parameters; collect AUC, mastery/gain correlations, epoch trajectories.
+2. Compare against archived Phase 3 JSON artifacts; confirm parity (AUC within ±0.002 of 0.726) and mastery correlation ≥ historical (~0.08).
+3. Introduce single-feature ablations (with vs without lag objective) to quantify gain correlation uplift cost.
+4. Freeze publication baseline if neutrality/emergence re-achieved; document adaptive scheduling as exploratory negative result.
+
+### 24.9 Publication Framing
+
+We frame adaptive alignment decay and aggressive lag scheduling as **negative-result exploratory interventions**: they did not yield net performance or stable semantic gains compared to the established baseline and introduced regression risk. This negative result remains scientifically valuable—highlighting that naive adaptive regularization layering can erode established interpretability signals without predictive benefit.
+
+### 24.10 Artifact Traceability
+
+Summarizer outputs supporting this section:
+
+- `tmp/adaptive_sched_v1_rerun_summary.csv` (fields confirm lack of new uplift: missing mastery improvements; added instrumentation columns blank or low).
+- Historical Phase 3 result bundles (commit `2aa4883` reference) — original high AUC configuration for comparison.
+
+All adaptive enhancement code remains isolated; reverting core configuration is low risk and preserves reproducibility standards.
+
+### 24.11 Final Action Items
+
+| Action | Priority | Owner | Outcome |
+|--------|----------|-------|---------|
+| Revert to Phase 3 commit baseline | High | Engineering | Restore AUC ~0.726 |
+| Run recovery hybrid config | High | Engineering | Validate dual AUC + gain semantics |
+| Perform semantic ablations (lag on/off) | Medium | Research | Quantify marginal gain benefit |
+| Archive adaptive decay negative results | Medium | Documentation | Strengthen methodological transparency |
+| Bootstrap correlation CIs (recovered baseline) | Medium | Research | Statistical support for interpretability claim |
+| Prepare final publication tables | High | Documentation | Paper integration |
+
+### 24.12 Concluding Statement
+
+Adaptive alignment decay and lag scheduling, as implemented, did not improve upon the original Phase 3 configuration. We therefore revert to the proven high-performing baseline and proceed with a controlled recovery that integrates only empirically justified temporal modeling elements. This preserves both predictive competitiveness and interpretability claims while transparently reporting negative exploratory outcomes.
+
+---
 

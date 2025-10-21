@@ -1,0 +1,97 @@
+# Phase 3 Recovery Configuration for GainAKT2Exp
+# Combines optimal AUC parameters (batch_size=96, lr=0.000174) with gain correlation improvements
+# Target: Restore AUC 0.726+ while preserving +169% gain correlation improvement
+# Based on archaeological analysis of commit 2aa4883 vs current implementation
+
+experiment_name: gainakt2_phase3_recovery
+model_name: gainakt2exp
+
+# Data settings
+max_seq_len: 512
+shuffle: true
+
+# CRITICAL: Restore optimal training schedule from commit 2aa4883
+epochs: 20                    # Original optimal (vs degraded 12)
+batch_size: 96               # Original optimal (vs degraded 64) - CRITICAL for stability
+amp: true
+seed_list: [21, 42, 63, 84, 105]
+
+# Adaptive / scheduling (added)
+adaptive_patience: 5               # Epochs on plateau before adaptive decay considered
+adaptive_decay_factor: 0.90        # Multiplicative decay for alignment weight
+adaptive_gain_corr_min: 0.06       # Minimum gain correlation target
+adaptive_mastery_corr_min: 0.02    # Minimum mastery correlation target
+plateau_delta_auc: 0.0005          # AUC change threshold to define plateau
+alignment_share_cap: 0.08          # Max share of total loss for alignment before cap decay logic
+alignment_share_decay_factor: 0.70 # Share-cap decay factor
+lag_gain_schedule_enable: false    # Set true to enable lag gain schedule boosts
+lag_gain_schedule_min_gain_corr: 0.055  # Trigger threshold for lag schedule
+lag_gain_schedule_increase: 1.20   # Multiplicative increase when schedule fires
+lag_gain_schedule_cap: 0.06        # Upper bound for lag gain weight under schedule
+weight_decay_probe_enable: false   # If true, apply probe after lag schedule
+weight_decay_probe_value: 3.0e-05  # Probe value for weight decay
+
+# CRITICAL: Restore optimal optimizer settings from commit 2aa4883  
+optimizer: adamw
+learning_rate: 0.000174      # Original optimal (vs degraded 0.001) - 5.7x reduction CRITICAL
+weight_decay: 1.7571e-05     # Original optimal (vs degraded 0.01) - 569x reduction CRITICAL
+scheduler: cosine
+warmup_epochs: 2
+
+# PRESERVE: Alignment objective for gain correlation benefits (REDUCED from 0.25 to balance)
+alignment_weight: 0.1        # Reduced from 0.25 to preserve AUC while keeping gain benefits
+alignment_warmup_epochs: 8   
+alignment_global_validation_sample: 600
+alignment_dynamic_cap: false
+
+# PRESERVE: Lag gain objective for temporal modeling (+169% gain correlation)
+lag_gain_weight: 0.05        # Keep for temporal modeling benefits
+lag_max_lag: 3
+lag_normalized: false
+lag_activation_delay_epochs: 0
+
+# RESTORE: Individual constraint weights from original optimal configuration
+# These replace the composite alignment system for AUC recovery
+enhanced_constraints: true
+non_negative_loss_weight: 0.0      # Original optimal
+monotonicity_loss_weight: 0.1      # Original optimal  
+mastery_performance_loss_weight: 0.8  # Original optimal - CRITICAL for mastery semantics
+gain_performance_loss_weight: 0.8     # Original optimal - CRITICAL for gain semantics  
+sparsity_loss_weight: 0.2          # Original optimal
+consistency_loss_weight: 0.3       # Original optimal
+
+# PRESERVE: Structural constraints for mathematical validity (helps gain correlations)
+constraint_monotonic_mastery: true
+constraint_nonnegative_gain: true  
+constraint_bounds_mastery: [0.0, 1.0]
+constraint_bounds_gain: [0.0, 1.0]
+
+# Disable retention (currently inactive anyway)
+retention_logging_only: true
+retention_delta: 0.01
+retention_weight: 0.0              # Set to 0.0 explicitly
+
+# Target thresholds (adjusted for recovery expectations)
+threshold_mastery_corr: 0.15       # Slightly higher than phase 3 (0.10)
+threshold_gain_corr: 0.15          # Higher to preserve gain improvement  
+threshold_auc: 0.720               # Target near original 0.726
+
+# Instrumentation toggles (for downstream analysis pipeline)
+instrumentation_enable: true
+semantic_trajectory_enable: true
+coherence_index_enable: true
+
+# Logging / artifacts
+save_checkpoints: true
+save_best_by: auc
+stream_partial: true
+publish_summary: true
+summary_prefix: recovery_phase3
+
+# Recovery Strategy Notes:
+# 1. Core parameters restored to commit 2aa4883 optimal values
+# 2. Lag gain objective preserved for +169% gain correlation benefit
+# 3. Alignment weight reduced (0.25→0.1) to balance AUC recovery with gain benefits
+# 4. Individual constraint weights restored for semantic consistency
+# 5. Structural constraints kept for mathematical validity
+# 6. Expected outcome: AUC 0.720+ with preserved gain correlation improvements

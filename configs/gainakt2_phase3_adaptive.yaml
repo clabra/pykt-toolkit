@@ -1,0 +1,62 @@
+experiment_name: gainakt2_phase3_adaptive
+model_name: gainakt2exp
+
+# Base data / model selection (inherit from recovery; can override if needed)
+dataset_name: assist2009_updated
+max_seq_len: 200
+feature_type: default
+
+# Core training hyperparameters
+epochs: 20
+batch_size: 96
+amp: true
+seed_list: [21, 42, 63, 84, 105]
+learning_rate: 0.000174
+weight_decay: 1.7571e-05
+
+# Interpretability objective weights
+alignment_weight: 0.10
+alignment_warmup_epochs: 8
+alignment_global_validation_sample: 600
+lag_gain_weight: 0.05
+lag_max_lag: 3
+lag_normalized: false
+lag_activation_delay_epochs: 0
+
+# Adaptive alignment decay
+adaptive_patience: 5
+adaptive_decay_factor: 0.90
+adaptive_gain_corr_min: 0.06
+adaptive_mastery_corr_min: 0.02
+plateau_delta_auc: 0.0005
+alignment_share_cap: 0.08
+alignment_share_decay_factor: 0.70
+
+# Lag gain schedule (enabled for this adaptive config)
+lag_gain_schedule_enable: true
+lag_gain_schedule_min_gain_corr: 0.055
+lag_gain_schedule_increase: 1.20
+lag_gain_schedule_cap: 0.06
+
+# Weight decay probe disabled for now (kept baseline stability)
+weight_decay_probe_enable: false
+weight_decay_probe_value: 3.0e-05
+
+# Constraint weights
+non_negative_loss_weight: 0.05
+monotonicity_loss_weight: 0.05
+mastery_performance_loss_weight: 0.05
+gain_performance_loss_weight: 0.05
+sparsity_loss_weight: 0.05
+consistency_loss_weight: 0.10
+
+# Target metrics / thresholds
+threshold_auc: 0.720
+
+# Instrumentation toggles
+instrumentation_enable: true
+semantic_trajectory_enable: true
+coherence_index_enable: true
+
+# Optional experiment suffix used by launcher (--experiment_suffix)
+experiment_suffix: adaptive_sched_v1
