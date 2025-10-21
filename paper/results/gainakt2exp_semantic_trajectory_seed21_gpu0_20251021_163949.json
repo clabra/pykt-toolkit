@@ -1,0 +1,64 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "mastery_correlation": 0.02268969911370328,
+      "gain_correlation": 0.10028254212873201,
+      "warmup_scale": 0.125,
+      "alignment_corr_mastery": 0.051596593111753464,
+      "alignment_corr_gain": 0.1094738245010376,
+      "global_alignment_mastery_corr": null,
+      "global_alignment_gain_corr": null,
+      "effective_alignment_weight": 0.25,
+      "peak_mastery_corr": 0.0,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9409354540538986,
+        "constraint_total": 0.05906454694436602,
+        "alignment": -0.044179498575256174,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.010616628617202679,
+      "min_mastery_variance": 0.0028476715087890625,
+      "max_mastery_variance": 0.0330810546875,
+      "per_lag_correlations": []
+    },
+    {
+      "epoch": 2,
+      "mastery_correlation": 0.028249779555927713,
+      "gain_correlation": 0.09943797765289486,
+      "warmup_scale": 0.25,
+      "alignment_corr_mastery": 0.05492166057229042,
+      "alignment_corr_gain": 0.12426682561635971,
+      "global_alignment_mastery_corr": null,
+      "global_alignment_gain_corr": null,
+      "effective_alignment_weight": 0.25,
+      "peak_mastery_corr": 0.0,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9157051402604605,
+        "constraint_total": 0.08429486104267882,
+        "alignment": -0.05629323703724617,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.007378039582405683,
+      "min_mastery_variance": 0.00388336181640625,
+      "max_mastery_variance": 0.010894775390625,
+      "per_lag_correlations": []
+    }
+  ],
+  "experiment_name": "seed21_gpu0",
+  "best_val_auc": 0.5,
+  "timestamp": "2025-10-21T16:40:51.458361",
+  "warmup_constraint_epochs": 8
+}

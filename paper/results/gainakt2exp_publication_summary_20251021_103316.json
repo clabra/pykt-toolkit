@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-10-21T10:33:16.151925",
+  "dataset": "assist2015",
+  "epochs": 3,
+  "seeds": [
+    42,
+    63,
+    84
+  ],
+  "variants": [
+    "full"
+  ],
+  "aggregates": {
+    "full": {
+      "num_seeds": 3,
+      "mean_auc": 0.6856032478372205,
+      "std_auc": 0.0005049045092475679,
+      "per_seed_auc": {
+        "42": 0.6856055259816319,
+        "63": 0.6849837327040847,
+        "84": 0.6862204848259448
+      },
+      "consistency_means": {
+        "mastery_correlation": 0.08886523512649207,
+        "gain_correlation": 0.001839675655973163,
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0
+      },
+      "auc_ci_95": {
+        "low": 0.6850318945987354,
+        "high": 0.6861746010757056
+      }
+    }
+  },
+  "criteria_evaluation": {
+    "predictive_delta_full": null,
+    "predictive_parity_pass": null,
+    "stability_pass": null,
+    "arch_only_delta": null,
+    "constraints_incremental_delta": null
+  }
+}

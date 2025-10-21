@@ -1,0 +1,92 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "mastery_correlation": 0.07887077017249795,
+      "gain_correlation": 0.004389911888420659,
+      "warmup_scale": 0.125,
+      "alignment_corr_mastery": 0.007061070296913385,
+      "alignment_corr_gain": 0.08451840281486511,
+      "global_alignment_mastery_corr": 0.06851233948938405,
+      "global_alignment_gain_corr": 0.02471767656172839,
+      "effective_alignment_weight": 0.0275,
+      "peak_mastery_corr": 0.06851233948938405,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9181136478443975,
+        "constraint_total": 0.08188634876185101,
+        "alignment": -0.0012968209811153335,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.029340912023356543,
+      "min_mastery_variance": 0.019287109375,
+      "max_mastery_variance": 0.0343017578125,
+      "per_lag_correlations": []
+    },
+    {
+      "epoch": 2,
+      "mastery_correlation": 0.12149262955999558,
+      "gain_correlation": -0.02279848833855664,
+      "warmup_scale": 0.25,
+      "alignment_corr_mastery": 0.013313532806932926,
+      "alignment_corr_gain": 0.15709933638572693,
+      "global_alignment_mastery_corr": 0.08979643781048556,
+      "global_alignment_gain_corr": 0.015109145941047852,
+      "effective_alignment_weight": 0.055,
+      "peak_mastery_corr": 0.08979643781048556,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9714644382751921,
+        "constraint_total": 0.028535565002033594,
+        "alignment": -0.012243156900114956,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.019970434317317032,
+      "min_mastery_variance": 0.0157623291015625,
+      "max_mastery_variance": 0.0299224853515625,
+      "per_lag_correlations": []
+    },
+    {
+      "epoch": 3,
+      "mastery_correlation": 0.12446696112671278,
+      "gain_correlation": -0.026274474213731747,
+      "warmup_scale": 0.375,
+      "alignment_corr_mastery": 0.01434023305773735,
+      "alignment_corr_gain": 0.16410677134990692,
+      "global_alignment_mastery_corr": 0.09349822186108213,
+      "global_alignment_gain_corr": 0.0192448234159383,
+      "effective_alignment_weight": 0.0825,
+      "peak_mastery_corr": 0.09349822186108213,
+      "retention_loss_value": 0.0,
+      "mean_lag_corr": 0.0,
+      "lag_corr_count": 0,
+      "consistency_loss_weight_current": 0.3,
+      "sparsity_loss_weight_current": 0.2,
+      "loss_shares": {
+        "main": 0.9702459885201459,
+        "constraint_total": 0.02975401096330067,
+        "alignment": -0.021658800216684874,
+        "lag": 0.0,
+        "retention": 0.0
+      },
+      "mean_mastery_variance": 0.016692324623542747,
+      "min_mastery_variance": 0.01470184326171875,
+      "max_mastery_variance": 0.0182647705078125,
+      "per_lag_correlations": []
+    }
+  ],
+  "experiment_name": "full_seed42",
+  "best_val_auc": 0.6813692712108474,
+  "timestamp": "2025-10-21T10:22:18.108446",
+  "warmup_constraint_epochs": 8
+}

@@ -459,6 +459,14 @@ def train_gainakt2exp_model(args):
         'low_variance_epochs': 0,
         'pending_penalty': 0.0
     }
+    # Activation tracking counters (epoch-level)
+    activation_counters = {
+        'alignment_active_epochs': 0,
+        'retention_active_epochs': 0,
+        'lag_active_epochs': 0,
+        'alignment_weight_sum': 0.0,
+        'alignment_weight_count': 0,
+    }
     
     for epoch in range(num_epochs):
         logger.info(f"\nEpoch {epoch + 1}/{args.epochs}")
@@ -503,7 +511,7 @@ def train_gainakt2exp_model(args):
         if enable_retention_loss and pending_retention_penalty > 0:
             logger.info(f"[Retention] APPLYING GRADIENT retention penalty this epoch: {pending_retention_penalty:.5f}")
         elif enable_retention_loss:
-            logger.info(f"[Retention] No retention penalty (no decay detected)")
+            logger.info("[Retention] No retention penalty (no decay detected)")
         num_batches = len(train_loader)
 
         for batch_idx, batch in enumerate(train_loader):
@@ -590,94 +598,100 @@ def train_gainakt2exp_model(args):
                                 factor = min(3.0, 1.0 + (alignment_min_correlation - float(reference_corr)) * 4.0)
                                 effective_weight = effective_weight * factor
                         global_alignment_state['effective_alignment_weight_last'] = float(effective_weight)
-                        # Multi-lag predictive emergence objective
-                        lag_loss = torch.zeros(1, device=device)
-                        mean_lag_corr = torch.zeros(1, device=device)
-                        lag_corr_count = 0
-                        if enable_lag_gain_loss and lag_max_lag > 0 and (epoch + 1) >= (warmup_constraint_epochs + 2):
-                            # Phase 4 Redesigned lag objective: stricter activation gate and improved per-student normalization
-                            # to promote genuine incremental predictive semantics (Gain_t -> Correct_{t+lag}).
-                            gains_mean_time = gains_mean  # B x T
-                            perf_time = perf.float()      # B x T
-                            weights_map = {1: lag_l1_weight, 2: lag_l2_weight, 3: lag_l3_weight}
-                            weighted_corr_sum = torch.zeros(1, device=device)
-                            lag_terms = []
+                        # Alignment activation counted once per epoch (after effective weight computed)
+                        activation_counters['alignment_active_epochs'] += 1
+                        activation_counters['alignment_weight_sum'] += float(effective_weight)
+                        activation_counters['alignment_weight_count'] += 1
+                    # Multi-lag predictive emergence objective
+                    lag_loss = torch.zeros(1, device=device)
+                    mean_lag_corr = torch.zeros(1, device=device)
+                    lag_corr_count = 0
+                    if enable_lag_gain_loss and lag_max_lag > 0 and (epoch + 1) >= (warmup_constraint_epochs + 2):
+                        # Phase 4 Redesigned lag objective: stricter activation gate and improved per-student normalization
+                        # to promote genuine incremental predictive semantics (Gain_t -> Correct_{t+lag}).
+                        gains_mean_time = gains_mean  # B x T
+                        perf_time = perf.float()      # B x T
+                        weights_map = {1: lag_l1_weight, 2: lag_l2_weight, 3: lag_l3_weight}
+                        weighted_corr_sum = torch.zeros(1, device=device)
+                        lag_terms = []
+                        
+                        # Phase 3: Simpler batch-level lag correlation (safer implementation)
+                        for lag in range(1, min(lag_max_lag + 1, 4)):
+                            # Collect aligned gain-performance pairs
+                            aligned_pairs = []
                             
-                            # Phase 3: Simpler batch-level lag correlation (safer implementation)
-                            for lag in range(1, min(lag_max_lag + 1, 4)):
-                                # Collect aligned gain-performance pairs
-                                aligned_pairs = []
+                            for student_idx in range(gains_mean_time.size(0)):
+                                student_gains = gains_mean_time[student_idx]  # T
+                                student_perf = perf_time[student_idx]         # T
+                                student_valid = student_mask[student_idx]     # T
                                 
-                                for student_idx in range(gains_mean_time.size(0)):
-                                    student_gains = gains_mean_time[student_idx]  # T
-                                    student_perf = perf_time[student_idx]         # T
-                                    student_valid = student_mask[student_idx]     # T
+                                if student_valid.sum() < 4:  # minimum sequence length
+                                    continue
                                     
-                                    if student_valid.sum() < 4:  # minimum sequence length
-                                        continue
-                                        
-                                    T = student_gains.size(0)
-                                    if T <= lag:  # need enough positions for lag
-                                        continue
-                                    
-                                    # Simple approach: iterate through valid aligned positions
-                                    for t in range(T - lag):
-                                        if student_valid[t] and (t + lag < T) and student_valid[t + lag]:
-                                            gain_val = float(student_gains[t].detach().cpu())
-                                            perf_val = float(student_perf[t + lag].detach().cpu())
-                                            aligned_pairs.append((gain_val, perf_val))
+                                T = student_gains.size(0)
+                                if T <= lag:  # need enough positions for lag
+                                    continue
                                 
-                                if len(aligned_pairs) >= 10:  # minimum batch size for correlation
-                                    gains_list, perfs_list = zip(*aligned_pairs)
-                                    gains_tensor = torch.tensor(gains_list, device=device)
-                                    perfs_tensor = torch.tensor(perfs_list, device=device)
-                                    
-                                    if gains_tensor.std() > 1e-6 and perfs_tensor.std() > 1e-6:
-                                        corr_lag = corr_fn(gains_tensor, perfs_tensor)
-                                        w_lag = weights_map.get(lag, 0.0)
-                                        if w_lag > 0 and not torch.isnan(corr_lag):
-                                            weighted_corr_sum += w_lag * corr_lag
-                                            lag_terms.append((lag, corr_lag.detach(), w_lag))
-                                            try:
-                                                epoch_lag_corrs.append({'lag': lag, 'corr': float(corr_lag.detach().cpu()), 'weight': w_lag})
-                                            except Exception:
-                                                pass
+                                # Simple approach: iterate through valid aligned positions
+                                for t in range(T - lag):
+                                    if student_valid[t] and (t + lag < T) and student_valid[t + lag]:
+                                        gain_val = float(student_gains[t].detach().cpu())
+                                        perf_val = float(student_perf[t + lag].detach().cpu())
+                                        aligned_pairs.append((gain_val, perf_val))
                             
-                            total_w = lag_l1_weight + lag_l2_weight + lag_l3_weight  # Phase 3: all lags
-                            if lag_terms and total_w > 0:
-                                mean_lag_corr = weighted_corr_sum / total_w
-                                lag_corr_count = len(lag_terms)
-                                # Phase 3: Standard lag correlation loss (no positive-only clamp)
-                                lag_loss = - mean_lag_corr * lag_gain_weight
-                        if 'projected_mastery' in outputs and outputs['projected_mastery'].var().item() < variance_floor:
-                            alignment_loss = torch.zeros(1, device=device)
-                        else:
-                            alignment_loss = - (alignment_corr_mastery + alignment_corr_gain) * effective_weight + lag_loss
-                        # accumulate alignment & lag losses separately for share reporting
-                        total_alignment_loss += float((- (alignment_corr_mastery + alignment_corr_gain) * effective_weight).detach().cpu())
-                        total_lag_loss += float(lag_loss.detach().cpu())
-
-                    # Variance floor tracking & sparsity adjustment
-                    if enable_alignment_loss and 'projected_mastery' in outputs:
-                        mastery_variance = outputs['projected_mastery'].var().item()
-                        batch_mastery_variances.append(mastery_variance)
-                        if mastery_variance < variance_floor:
-                            retention_state['low_variance_epochs'] += 1
-                        else:
-                            retention_state['low_variance_epochs'] = 0
-                        if retention_state['low_variance_epochs'] >= variance_floor_patience:
-                            old_sparsity = getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight)
-                            model_core.sparsity_loss_weight = old_sparsity * variance_floor_reduce_factor
-                            logger.info(f"[VarianceFloor] Reduced sparsity_loss_weight from {old_sparsity:.3f} to {model_core.sparsity_loss_weight:.3f}")
-                    # Compose total batch loss (Phase 3: retention logging-only)
-                    retention_component = torch.zeros(1, device=device)
-                    if enable_retention_loss and pending_retention_penalty > 0:
-                        # Phase 3: Log retention penalty but don't apply to gradients
-                        total_retention_component += pending_retention_penalty / max(1, num_batches)
-                    if enable_alignment_loss:
-                        total_batch_loss = main_loss + interpretability_loss + alignment_loss
+                            if len(aligned_pairs) >= 10:  # minimum batch size for correlation
+                                gains_list, perfs_list = zip(*aligned_pairs)
+                                gains_tensor = torch.tensor(gains_list, device=device)
+                                perfs_tensor = torch.tensor(perfs_list, device=device)
+                                
+                                if gains_tensor.std() > 1e-6 and perfs_tensor.std() > 1e-6:
+                                    corr_lag = corr_fn(gains_tensor, perfs_tensor)
+                                    w_lag = weights_map.get(lag, 0.0)
+                                    if w_lag > 0 and not torch.isnan(corr_lag):
+                                        weighted_corr_sum += w_lag * corr_lag
+                                        lag_terms.append((lag, corr_lag.detach(), w_lag))
+                                        try:
+                                            epoch_lag_corrs.append({'lag': lag, 'corr': float(corr_lag.detach().cpu()), 'weight': w_lag})
+                                        except Exception:
+                                            pass
+                        
+                        total_w = lag_l1_weight + lag_l2_weight + lag_l3_weight  # Phase 3: all lags
+                        if lag_terms and total_w > 0:
+                            mean_lag_corr = weighted_corr_sum / total_w
+                            lag_corr_count = len(lag_terms)
+                            # Phase 3: Standard lag correlation loss (no positive-only clamp)
+                            lag_loss = - mean_lag_corr * lag_gain_weight
+                            lag_corr_count = len(lag_terms)
+                            activation_counters['lag_active_epochs'] += 1
+                    if 'projected_mastery' in outputs and outputs['projected_mastery'].var().item() < variance_floor:
+                        alignment_loss = torch.zeros(1, device=device)
                     else:
-                        total_batch_loss = main_loss + interpretability_loss
+                        alignment_loss = - (alignment_corr_mastery + alignment_corr_gain) * effective_weight + lag_loss
+                    # accumulate alignment & lag losses separately for share reporting
+                    total_alignment_loss += float((- (alignment_corr_mastery + alignment_corr_gain) * effective_weight).detach().cpu())
+                    total_lag_loss += float(lag_loss.detach().cpu())
+
+                # Variance floor tracking & sparsity adjustment
+                if enable_alignment_loss and 'projected_mastery' in outputs:
+                    mastery_variance = outputs['projected_mastery'].var().item()
+                    batch_mastery_variances.append(mastery_variance)
+                    if mastery_variance < variance_floor:
+                        retention_state['low_variance_epochs'] += 1
+                    else:
+                        retention_state['low_variance_epochs'] = 0
+                    if retention_state['low_variance_epochs'] >= variance_floor_patience:
+                        old_sparsity = getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight)
+                        model_core.sparsity_loss_weight = old_sparsity * variance_floor_reduce_factor
+                        logger.info(f"[VarianceFloor] Reduced sparsity_loss_weight from {old_sparsity:.3f} to {model_core.sparsity_loss_weight:.3f}")
+                # Compose total batch loss (Phase 3: retention logging-only)
+                retention_component = torch.zeros(1, device=device)
+                if enable_retention_loss and pending_retention_penalty > 0:
+                    # Phase 3: Log retention penalty but don't apply to gradients
+                    total_retention_component += pending_retention_penalty / max(1, num_batches)
+                if enable_alignment_loss:
+                    total_batch_loss = main_loss + interpretability_loss + alignment_loss
+                else:
+                    total_batch_loss = main_loss + interpretability_loss
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
@@ -920,10 +934,10 @@ def train_gainakt2exp_model(args):
             decay_gap = retention_state['peak_mastery_corr'] - global_mastery_corr - retention_delta
             if decay_gap > 0:
                 retention_loss_value = decay_gap * retention_weight
-                retention_state['pending_penalty'] = retention_loss_value
-                logger.info(f"[Retention] Scheduled gradient retention penalty {retention_loss_value:.5f} for next epoch (peak={retention_state['peak_mastery_corr']:.4f}, current={global_mastery_corr:.4f})")
+                total_retention_component += retention_loss_value
+                activation_counters['retention_active_epochs'] += 1
             else:
-                retention_state['pending_penalty'] = 0.0
+                retention_loss_value = 0.0
         
         # Log epoch results with enhanced formatting
         logger.info("=" * 60)

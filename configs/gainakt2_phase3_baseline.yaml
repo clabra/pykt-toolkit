@@ -1,0 +1,65 @@
+# Phase 3 baseline configuration for GainAKT2Exp
+# This file captures the reproducible settings used for the publication baseline.
+# We preserve predictive neutrality while achieving emerging mastery semantics.
+# All parameters should be logged into publication summary artifacts.
+
+experiment_name: gainakt2_phase3_baseline
+model_name: gainakt2exp
+
+# Data settings
+max_seq_len: 512
+shuffle: true
+
+# Training schedule
+epochs: 12
+batch_size: 64
+amp: true
+seed_list: [21, 42, 63, 84, 105]
+
+# Optimizer / LR
+optimizer: adamw
+learning_rate: 1e-3
+weight_decay: 0.01
+scheduler: cosine
+warmup_epochs: 2
+
+# Alignment objective
+alignment_weight: 0.25
+alignment_warmup_epochs: 8   # Alignment active after warm-up
+alignment_global_validation_sample: 600  # Stratified sample size
+alignment_dynamic_cap: false
+
+# Retention (logging-only; no gradient penalty)
+retention_logging_only: true
+retention_delta: 0.01
+retention_weight: 0.10  # Placeholder (inactive when logging-only true)
+
+# Lag gain objective (original form)
+lag_gain_weight: 0.05
+lag_max_lag: 3
+lag_normalized: false
+lag_activation_delay_epochs: 0
+
+# Structural constraints
+constraint_monotonic_mastery: true
+constraint_nonnegative_gain: true
+constraint_bounds_mastery: [0.0, 1.0]
+constraint_bounds_gain: [0.0, 1.0]
+
+# Evaluation thresholds (for publication criteria)
+threshold_mastery_corr: 0.10
+threshold_gain_corr: 0.06
+threshold_auc: 0.718
+
+# Logging / artifacts
+save_checkpoints: true
+save_best_by: auc
+stream_partial: true
+publish_summary: true
+summary_prefix: publication_summary_phase3
+
+# Device mapping will be handled by the execution script (seed-parallel launcher)
+
+# Notes:
+# - Retention and lag objectives are limited to instrumentation; semantic uplift focuses on mastery emergence.
+# - Future work will activate gradient retention and normalized lag gain objective.
