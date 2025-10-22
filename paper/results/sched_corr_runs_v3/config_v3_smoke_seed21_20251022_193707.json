@@ -1,0 +1,33 @@
+{
+  "dataset": "assist2015",
+  "fold": 0,
+  "epochs": 1,
+  "batch_size": 64,
+  "lr": 0.000174,
+  "weight_decay": 1.7571e-05,
+  "seed": 21,
+  "constraint_warmup_epochs": 0,
+  "constraint_ramp_epochs": 1,
+  "enable_constraints": true,
+  "staging_scale_threshold": 0.5,
+  "performance_delay_scale": 0.35,
+  "variance_floor": 0.001,
+  "variance_floor_weight": 0.05,
+  "sparsity_ramp_start": 0.4,
+  "sparsity_ramp_end": 0.8,
+  "corr_regularizer_weight": 0.3,
+  "corr_weight_boost": 0.1,
+  "decay_patience": 2,
+  "corr_start_epoch": 1,
+  "corr_targets": [
+    0.08,
+    0.09,
+    0.1
+  ],
+  "target_margin": 0.01,
+  "corr_promote_epochs": 2,
+  "union_sampling": true,
+  "global_students": 120,
+  "device": "auto",
+  "output_suffix": "v3_smoke_seed21"
+}

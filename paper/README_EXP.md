@@ -398,10 +398,7 @@ Add logging hooks per epoch:
  - Compute and record mastery/gain correlations, regression statistics, calibration aggregates.
  - Record peak GPU memory and epoch wall-clock for efficiency overhead quantification.
 
-Flags to add (example):
- - `--log_semantic_samples`
- - `--max_semantic_students 200`
- - `--warmup_constraint_epochs 3` (linear ramp of constraint weights)
+---
 
 #### 13.9.5 Warm-Up Strategy
 If correlations remain <0.05 through epochs 1–3, apply constraint warm-up: effective_weight(epoch) = base_weight * min(1, epoch / warmup_epochs). Prevents early suppression of predictive signals.
@@ -963,5 +960,56 @@ Implement gain scaling flag and run sensitivity test (seed 21) before reformulat
 Commit anchor: `cf4f4017` (`configs/gainakt2_phase3_semantic.yaml`).
 
 ---
+
+## 24. Phase 3 Semantic Recovery Attempts (Mastery Correlation Restoration)
+
+This section documents the iterative efforts undertaken to reproduce the previously observed "semantic breakthrough" state (legacy mastery–performance correlation ≈ 0.113) which has not been recovered under the current GainAKT2Exp training regime. We explored progressively more elaborate scheduling, variance preservation, and correlation regularization strategies. Despite stabilizing latent representation variance (VarMean) in later iterations, the mastery correlation plateaued near ~0.055 and did not ascend toward the target threshold (>0.10).
+
+### 24.1 Target and Evaluation Context
+| Metric | Legacy Reference | Recovery Target | Achieved (Best) |
+|--------|------------------|-----------------|-----------------|
+| Mastery–Performance Correlation (Global) | ~0.113 | ≥0.10 sustained post scale ≥0.5 | ~0.0573 (transient, v3c) / ~0.0552 (stable, v3e) |
+| Gain–Performance Correlation | ~0.046 | ≥0.04 | ~0.04–0.055 (varied, not focus) |
+| Validation AUC | ~0.7175 | ≥0.70 with improved semantics | 0.6457 (v3e final epoch) |
+| Mastery Variance Mean (VarMean) | Non-collapsing (>0.002) | ≥0.002 during ramp | Collapsed (v3d), Preserved (v3e ≈0.0096–0.0100) |
+
+### 24.2 Attempt Trajectory Summary
+| Attempt | Key Strategy Elements | Variance Behavior | Peak MCorr | Post-Ramp MCorr Trajectory | Outcome Assessment |
+|---------|-----------------------|-------------------|-----------|----------------------------|--------------------|
+| Baseline (unscheduled) | Standard constraints, no correlation scheduling | Mild early compression | ~0.03 | Decline / flat | Insufficient semantic alignment |
+| Scheduled v2 | Warm-up + ramp, dynamic target ladder, variance instrumentation | Collapse mid-ramp | ~0.056 | Decay after mid-ramp | Temporary uplift; unstable |
+| v3c | Gating + mixed variance penalties + restoration noise (light) | Severe collapse (VarMean → 1e-5) | ~0.0565 | Unsustained; forced early stop | Variance safeguards inadequate |
+| v3d | Stronger penalties, recovery freeze, promotion guard, batch noise | Collapse persists (early stop epoch 7) | ~0.0573 | Aborted pre full ramp | Stability not achieved; penalties inactive (VarPen=0) |
+| v3e | Hard variance gate, health streak, delayed correlation (corr_min_scale), adaptive escalation (unused due to stability) | Stable (VarMean ≈ 0.0096–0.0100) | ~0.0552 | Plateau ~0.055 (target 0.08 unmet) | Stability success; semantic growth failure |
+
+### 24.3 Diagnostic Insights
+1. Early correlation application prior to variance consolidation increased representational compression leading to catastrophic variance collapse (v3c–v3d).
+2. Batch-level variance penalties often did not activate because VarMean dropped precipitously under no_grad manipulations or gating prevented regularizer gradients from flowing; redesign in v3e avoided collapse without needing penalty activation.
+3. Once variance was preserved (v3e), mastery correlation remained pinned ~0.055; hinge-style regularizer with static targets did not induce further semantic differentiation despite healthy variance.
+4. Promotion to higher correlation targets (0.08+) in v3e lacked upward response, indicating either (a) insufficient gradient signal for semantic separation or (b) architectural bottlenecks limiting attainable correlation under current constraint weighting.
+5. Validation AUC trade-off: stronger constraint activation coincided with monotonic decrease in VAUC (0.7172 → 0.6457), suggesting over-regularization relative to predictive neutrality objectives.
+
+### 24.4 Reasons for Abandonment of Current Recovery Path
+| Limitation | Evidence | Implication |
+|------------|----------|-------------|
+| Correlation Plateau | MCorr stable ≈0.055 across epochs 6–12 in v3e | Scheduling + gating insufficient to drive target semantics |
+| Diminishing Returns | Added complexity (freeze, noise, escalation logic) produced no MCorr improvement | Further engineering cost unlikely to yield step-change |
+| Predictive Degradation | VAUC fell below neutrality threshold (<0.70) while correlations stagnated | Trade-off unfavorable for publication claims |
+| Unused Penalties | Variance penalties / spread regularizer never activated in stable regime | Design complexity not leveraged |
+| Architectural Ceiling Hypothesis | Recurrent plateau across variants despite variance stability | May require architectural innovation, not further scheduling tweaks |
+
+### 24.5 Alternative Future Directions (Not Pursued Here)
+- Architectural modification: Introduce per-concept calibration layers or contrastive temporal alignment instead of scalar correlation hinge.
+- Metric reshaping: Replace Pearson hinge with differentiable rank-based or mutual information estimators for richer gradient signal.
+- Adaptive gain-to-mastery scaling: Learn scaling coefficient (currently fixed at 0.1) to allow dynamic temporal sensitivity.
+- Per-batch correlation curriculum: Begin with local (short-window) alignment before global sequence-level correlations.
+
+### 24.6 Final Status
+The stability objective (preserving latent variance through the constraint ramp) was achieved in the v3e configuration; however, the originally reported semantic breakthrough mastery correlation (>0.10) was not recovered. Correlation improvements plateaued at approximately half the target despite multiple intervention layers. Further incremental schedule / penalty adjustments are assessed as low expected value relative to architectural overhaul.
+
+> **Abandonment Notice (Phase 3 Recovery):** After extensive iterative experimentation (baseline, v2 scheduling, v3c/v3d variance-preservation attempts, and v3e stabilized regime) we were not able to reproduce the legacy semantic breakthrough (mastery–performance correlation > 0.10). We therefore formally discontinue this specific recovery approach and will redirect effort toward architectural and metric design alternatives rather than further schedule or penalty tuning.
+
+**Document version update:** 2025-10-22 (Phase 3 recovery attempt summary relocated to end.)
+
 
 

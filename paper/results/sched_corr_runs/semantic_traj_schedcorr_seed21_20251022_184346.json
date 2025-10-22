@@ -1,0 +1,213 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "train_loss": 0.5340567122596179,
+      "train_auc": 0.6879068716780063,
+      "val_auc": 0.7171803166391834,
+      "global_alignment_mastery_corr": 0.05541576825748298,
+      "global_alignment_gain_corr": -0.006728240509526853,
+      "constraint_scale": 0.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.5139815366083338,
+      "train_auc": 0.724283499651584,
+      "val_auc": 0.7242592884955006,
+      "global_alignment_mastery_corr": 0.05540629071469237,
+      "global_alignment_gain_corr": -0.0082838148066078,
+      "constraint_scale": 0.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5055091642132101,
+      "train_auc": 0.7373175491157224,
+      "val_auc": 0.7251409190527491,
+      "global_alignment_mastery_corr": 0.0551857163085718,
+      "global_alignment_gain_corr": -0.011370962489042777,
+      "constraint_scale": 0.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.5263569646103438,
+      "train_auc": 0.7470723285669889,
+      "val_auc": 0.7226100657172085,
+      "global_alignment_mastery_corr": 0.044169763137840344,
+      "global_alignment_gain_corr": -0.02699847168283636,
+      "constraint_scale": 0.2,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.523166641015415,
+      "train_auc": 0.7613383380370655,
+      "val_auc": 0.7145644247572964,
+      "global_alignment_mastery_corr": 0.05026453667582591,
+      "global_alignment_gain_corr": 0.003780287724635794,
+      "constraint_scale": 0.4,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.5199662703414296,
+      "train_auc": 0.7791250682481154,
+      "val_auc": 0.7037697051958801,
+      "global_alignment_mastery_corr": 0.054171844234316174,
+      "global_alignment_gain_corr": 0.02087987408164936,
+      "constraint_scale": 0.6,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.5122531412183776,
+      "train_auc": 0.8012898680718594,
+      "val_auc": 0.6895067023923191,
+      "global_alignment_mastery_corr": 0.04873435721835513,
+      "global_alignment_gain_corr": 0.024052909603879364,
+      "constraint_scale": 0.8,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.498178923314856,
+      "train_auc": 0.8271280352091852,
+      "val_auc": 0.6774243603880092,
+      "global_alignment_mastery_corr": 0.03912287037347322,
+      "global_alignment_gain_corr": 0.027455994880658446,
+      "constraint_scale": 1.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.46716940010240837,
+      "train_auc": 0.8541937265213273,
+      "val_auc": 0.6628656769684196,
+      "global_alignment_mastery_corr": 0.03874873112682769,
+      "global_alignment_gain_corr": 0.022584293868161333,
+      "constraint_scale": 1.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.4371472222860469,
+      "train_auc": 0.8762357359942492,
+      "val_auc": 0.6652652305164822,
+      "global_alignment_mastery_corr": 0.03928790642105619,
+      "global_alignment_gain_corr": 0.017760099505898644,
+      "constraint_scale": 1.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.4176300985868587,
+      "train_auc": 0.8893208451711361,
+      "val_auc": 0.6549665802668001,
+      "global_alignment_mastery_corr": 0.041735406083919624,
+      "global_alignment_gain_corr": 0.018282778614528414,
+      "constraint_scale": 1.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.39142555783885397,
+      "train_auc": 0.9056263093685214,
+      "val_auc": 0.6414259830659059,
+      "global_alignment_mastery_corr": 0.03850869867950981,
+      "global_alignment_gain_corr": 0.018287914339495077,
+      "constraint_scale": 1.0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 3457,
+        "final_gain_count": 3457
+      }
+    }
+  ],
+  "best_val_auc": 0.7251409190527491,
+  "best_epoch": 3,
+  "union_sampling": true,
+  "constraint_warmup_epochs": 3,
+  "constraint_ramp_epochs": 5
+}

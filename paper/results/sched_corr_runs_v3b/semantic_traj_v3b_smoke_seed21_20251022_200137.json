@@ -1,0 +1,34 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "train_loss": 0.6271592285966626,
+      "train_auc": 0.6871309471014948,
+      "val_auc": 0.7145696286604741,
+      "global_alignment_mastery_corr": 0.04504472674248034,
+      "global_alignment_gain_corr": -0.008259637133315265,
+      "constraint_scale": 1.0,
+      "current_corr_target": 0.08,
+      "effective_corr_target": 0.08,
+      "corr_weight_effective": 0.35,
+      "mastery_variance_mean": 0.0009124900435520244,
+      "mastery_variance_std": 0.0018994322842841907,
+      "variance_floor_weight": 0.2,
+      "variance_floor_penalty": 2.3653558107469558e-07,
+      "promote_counter": 0,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 120,
+        "strat_gain_count": 120,
+        "final_mastery_count": 2977,
+        "final_gain_count": 2977
+      }
+    }
+  ],
+  "corr_targets": [
+    0.08,
+    0.09,
+    0.1
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "train_loss": 0.5325938708732783,
+      "train_auc": 0.691344189145771,
+      "val_auc": 0.7182173034598356,
+      "global_alignment_mastery_corr": 0.036122812924901763,
+      "global_alignment_gain_corr": -0.0005008405037369812,
+      "counts": {
+        "acc_mastery_count": 2857,
+        "acc_gain_count": 2857,
+        "strat_mastery_count": 600,
+        "strat_gain_count": 600,
+        "final_mastery_count": 600,
+        "final_gain_count": 600
+      }
+    }
+  ],
+  "best_val_auc": 0.7182173034598356,
+  "best_epoch": 1,
+  "union_sampling": false,
+  "legacy_unbiased_corr": false,
+  "constraints_enabled": false,
+  "gain_scale": 0.2
+}

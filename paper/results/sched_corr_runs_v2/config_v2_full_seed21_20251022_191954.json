@@ -1,0 +1,27 @@
+{
+  "dataset": "assist2015",
+  "fold": 0,
+  "epochs": 15,
+  "batch_size": 96,
+  "lr": 0.000174,
+  "weight_decay": 1.7571e-05,
+  "seed": 21,
+  "constraint_warmup_epochs": 3,
+  "constraint_ramp_epochs": 8,
+  "enable_constraints": true,
+  "staging_scale_threshold": 0.5,
+  "union_sampling": true,
+  "global_students": 600,
+  "corr_regularizer_weight": 0.3,
+  "corr_start_epoch": 4,
+  "corr_targets": [
+    0.08,
+    0.09,
+    0.1
+  ],
+  "corr_promote_epochs": 2,
+  "device": "auto",
+  "early_stop_patience": 3,
+  "regression_drop_pct": 0.15,
+  "output_suffix": "v2_full_seed21"
+}

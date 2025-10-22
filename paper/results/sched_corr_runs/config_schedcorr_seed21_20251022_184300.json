@@ -1,0 +1,19 @@
+{
+  "dataset": "assist2015",
+  "fold": 0,
+  "epochs": 12,
+  "batch_size": 96,
+  "lr": 0.000174,
+  "weight_decay": 1.7571e-05,
+  "seed": 21,
+  "constraint_warmup_epochs": 3,
+  "constraint_ramp_epochs": 5,
+  "enable_constraints": true,
+  "union_sampling": true,
+  "global_students": 600,
+  "corr_regularizer_weight": 0.15,
+  "corr_start_epoch": 4,
+  "corr_target": 0.1,
+  "device": "auto",
+  "output_suffix": "schedcorr_seed21"
+}
