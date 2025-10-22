@@ -1,0 +1,53 @@
+{
+  "checkpoint": "saved_model/gainakt2exp_phase3semantic_global_retention_seed21/best_model.pth",
+  "seed": 21,
+  "dataset": "assist2015",
+  "target_students": 600,
+  "modes": [
+    {
+      "mode": "accumulated_then_stratified_replace",
+      "acc_mastery_count": 2857,
+      "acc_gain_count": 2857,
+      "strat_mastery_count": 600,
+      "strat_gain_count": 600,
+      "final_mastery_mean": 0.002347945756531165,
+      "final_gain_mean": 0.05288697325750642,
+      "final_mastery_std": 0.26938769336131585,
+      "final_gain_std": 0.2619956370818108
+    },
+    {
+      "mode": "accumulated_then_stratified_union",
+      "acc_mastery_count": 2857,
+      "acc_gain_count": 2857,
+      "strat_mastery_count": 600,
+      "strat_gain_count": 600,
+      "final_mastery_mean": -0.0009173033405239469,
+      "final_gain_mean": 0.03970606694981498,
+      "final_mastery_std": 0.2580241930742556,
+      "final_gain_std": 0.25718825777960735
+    },
+    {
+      "mode": "pure_accumulated",
+      "acc_mastery_count": 2857,
+      "acc_gain_count": 2857,
+      "strat_mastery_count": 0,
+      "strat_gain_count": 0,
+      "final_mastery_mean": -0.001603039937735381,
+      "final_gain_mean": 0.036937938218763226,
+      "final_mastery_std": 0.2555682501174661,
+      "final_gain_std": 0.2560810083314248
+    },
+    {
+      "mode": "pure_stratified",
+      "acc_mastery_count": 2857,
+      "acc_gain_count": 2857,
+      "strat_mastery_count": 600,
+      "strat_gain_count": 600,
+      "final_mastery_mean": 0.002347945756531165,
+      "final_gain_mean": 0.05288697325750642,
+      "final_mastery_std": 0.26938769336131585,
+      "final_gain_std": 0.2619956370818108
+    }
+  ],
+  "timestamp": "2025-10-22T08:39:04.853803Z"
+}

@@ -1,0 +1,201 @@
+{
+  "trajectory": [
+    {
+      "epoch": 1,
+      "train_loss": 0.6107995905406735,
+      "train_auc": 0.6871309471014948,
+      "val_auc": 0.7145696286604741,
+      "global_alignment_mastery_corr": 0.04401855742254449,
+      "global_alignment_gain_corr": -0.007735261738630954,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.5777171984546543,
+      "train_auc": 0.7218720756029693,
+      "val_auc": 0.7226036206900195,
+      "global_alignment_mastery_corr": 0.04749759176721976,
+      "global_alignment_gain_corr": 0.0034639216596861594,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5689965329021988,
+      "train_auc": 0.7340546953179208,
+      "val_auc": 0.724694651104277,
+      "global_alignment_mastery_corr": 0.0463359359856156,
+      "global_alignment_gain_corr": 0.008524392724743785,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.5606799897752277,
+      "train_auc": 0.7453436553720033,
+      "val_auc": 0.7220492651011382,
+      "global_alignment_mastery_corr": 0.041659032513911204,
+      "global_alignment_gain_corr": 0.0068158415358420335,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.5503252139363264,
+      "train_auc": 0.7586059479392828,
+      "val_auc": 0.714283816692146,
+      "global_alignment_mastery_corr": 0.03759394830684023,
+      "global_alignment_gain_corr": 0.006171646756915044,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.5354775425065984,
+      "train_auc": 0.7763326320734552,
+      "val_auc": 0.7027927041474493,
+      "global_alignment_mastery_corr": 0.04114930370881363,
+      "global_alignment_gain_corr": 0.009122387990074024,
+      "counts": {
+        "acc_mastery_count": 2501,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 521,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3022,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.5156606270550447,
+      "train_auc": 0.7981244855845573,
+      "val_auc": 0.6887428500456532,
+      "global_alignment_mastery_corr": 0.03822023027998117,
+      "global_alignment_gain_corr": 0.008506884916481968,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.4904423922763587,
+      "train_auc": 0.823136613766972,
+      "val_auc": 0.672014916581565,
+      "global_alignment_mastery_corr": 0.03414144508456339,
+      "global_alignment_gain_corr": 0.009508007598183871,
+      "counts": {
+        "acc_mastery_count": 2503,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 523,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3026,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.46024000598358983,
+      "train_auc": 0.849752015159832,
+      "val_auc": 0.6609950282084409,
+      "global_alignment_mastery_corr": 0.03812107716798407,
+      "global_alignment_gain_corr": 0.014820474413256958,
+      "counts": {
+        "acc_mastery_count": 2501,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 521,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3022,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.43174697914271776,
+      "train_auc": 0.8718375600599224,
+      "val_auc": 0.6579994117382528,
+      "global_alignment_mastery_corr": 0.04123653661617792,
+      "global_alignment_gain_corr": 0.015567956921902491,
+      "counts": {
+        "acc_mastery_count": 2502,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 522,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3024,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.4095294789020262,
+      "train_auc": 0.8870291222990875,
+      "val_auc": 0.6585668458037923,
+      "global_alignment_mastery_corr": 0.040441955556190574,
+      "global_alignment_gain_corr": 0.016006842147785066,
+      "counts": {
+        "acc_mastery_count": 2502,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 522,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3024,
+        "final_gain_count": 3026
+      }
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.38571748044824355,
+      "train_auc": 0.9025136672228662,
+      "val_auc": 0.6500733273011603,
+      "global_alignment_mastery_corr": 0.03740488104429258,
+      "global_alignment_gain_corr": 0.0189536754608009,
+      "counts": {
+        "acc_mastery_count": 2502,
+        "acc_gain_count": 2503,
+        "strat_mastery_count": 522,
+        "strat_gain_count": 523,
+        "final_mastery_count": 3024,
+        "final_gain_count": 3026
+      }
+    }
+  ],
+  "best_val_auc": 0.724694651104277,
+  "best_epoch": 3,
+  "union_sampling": true,
+  "legacy_unbiased_corr": true,
+  "constraints_enabled": true
+}

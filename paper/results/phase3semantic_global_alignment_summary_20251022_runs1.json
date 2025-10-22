@@ -1,0 +1,49 @@
+{
+  "runs": [
+    {
+      "file": "paper/results/gainakt2exp_semantic_trajectory_phase3semantic_global_seed105_run20251022_1.json",
+      "seed": 105,
+      "best_val_auc": 0.7242818055737144,
+      "epoch_selected": 12,
+      "global_alignment_mastery_corr": 0.011263606954792825,
+      "global_alignment_gain_corr": 0.02077225842619858
+    },
+    {
+      "file": "paper/results/gainakt2exp_semantic_trajectory_phase3semantic_global_seed21_run20251022_1.json",
+      "seed": 21,
+      "best_val_auc": 0.7240382782743481,
+      "epoch_selected": 12,
+      "global_alignment_mastery_corr": 0.034809148613033664,
+      "global_alignment_gain_corr": 0.029077434557014687
+    },
+    {
+      "file": "paper/results/gainakt2exp_semantic_trajectory_phase3semantic_global_seed42_run20251022_1.json",
+      "seed": 42,
+      "best_val_auc": 0.7246267006114453,
+      "epoch_selected": 12,
+      "global_alignment_mastery_corr": 0.01815783570918332,
+      "global_alignment_gain_corr": 0.03807168128027115
+    },
+    {
+      "file": "paper/results/gainakt2exp_semantic_trajectory_phase3semantic_global_seed63_run20251022_1.json",
+      "seed": 63,
+      "best_val_auc": 0.7240824528310932,
+      "epoch_selected": 12,
+      "global_alignment_mastery_corr": 0.013744686159722429,
+      "global_alignment_gain_corr": 0.03287176375519872
+    },
+    {
+      "file": "paper/results/gainakt2exp_semantic_trajectory_phase3semantic_global_seed84_run20251022_1.json",
+      "seed": 84,
+      "best_val_auc": 0.7242163405308526,
+      "epoch_selected": 12,
+      "global_alignment_mastery_corr": -0.001071105924784206,
+      "global_alignment_gain_corr": 0.026854614674230105
+    }
+  ],
+  "mastery_mean": 0.015380834302389606,
+  "mastery_std": 0.01162296014603477,
+  "gain_mean": 0.02952955053858265,
+  "gain_std": 0.005799797283944254,
+  "count": 5
+}

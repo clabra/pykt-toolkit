@@ -404,7 +404,7 @@ Flags to add (example):
  - `--warmup_constraint_epochs 3` (linear ramp of constraint weights)
 
 #### 13.9.5 Warm-Up Strategy
-If correlations remain <0.05 through epochs 1–3, apply constraint warm-up: effective_weight(epoch) = base_weight * min(1, epoch / warmup_epochs). Prevents early suppression of predictive signals (addresses S4 scenario).
+If correlations remain <0.05 through epochs 1–3, apply constraint warm-up: effective_weight(epoch) = base_weight * min(1, epoch / warmup_epochs). Prevents early suppression of predictive signals.
 
 #### 13.9.6 Interpretation Thresholds (Refining Section 8)
  - Mastery correlation ≥0.25 with CI excluding 0: moderate alignment.
@@ -502,17 +502,10 @@ Also partially resembles S6 (constraints uniquely beneficial) in predictive term
 
 Discarded scenarios: S1 (neutral + strong correlations), S2 (gain + strong correlations), S5 (architecture-only gain), S18 (constraints sharpen semantics). No degradation scenarios (S8/S9) apply.
 
-### 14.7 Bootstrap Confidence Intervals for Correlations (Planned)
+### 14.7 Bootstrap CI (Single Seed Snapshot Limitation)
+Current bootstrap file (seed105 only) produced trivial CIs (single value) and is not representative. Need multi-file aggregation including all seeds for meaningful CIs. Next action: extend bootstrap script to ingest multiple per-seed final global correlations instead of a single matching glob pattern.
 
-“Bootstrap CIs for correlations” refers to estimating confidence intervals for mastery-performance and gain-performance correlations via resampling students with replacement:
-
-1. Compute per-student correlation (filter sequences length ≥3).
-2. Perform B resamples (e.g., B=1000), each time sampling N students with replacement and recomputing the mean correlation.
-3. Sort bootstrap estimates; 95% CI = [2.5th percentile, 97.5th percentile].
-4. CI excluding 0 → statistically supported alignment; CI covering 0 → alignment not yet established.
-
-Rationale: Non-normal, bounded correlation distributions; protects against skew and small-sample distortion.  
-Interpretation: Narrow CI → stable alignment; wide CI → need more seeds/students.
+Planned fix: rerun bootstrap with pattern `gainakt2exp_results_full_seed*_20251018_07*.json` capturing all seed JSONs sharing final timestamp window, or explicitly enumerate file list.
 
 ### 14.8 Strategic Paths Forward
 
@@ -695,7 +688,7 @@ Planned fix: rerun bootstrap with pattern `gainakt2exp_results_full_seed*_202510
 | Metric | Observed | Target | Status |
 |--------|----------|--------|--------|
 | Final Mastery Corr (mean) | 0.0825 | ≥0.10 | Not met |
-| Final Gain Corr (mean) | 0.0241 | ≥0.06 | Not met |
+| Final Gain Corr (mean) | 0.0241 | ≥0.06 | Not met (improved) |
 | Peak Mastery Corr (transient) | ~0.15 | ≥0.10 | Met transiently (not retained) |
 | Gain Corr Recovery (final positivity) | Mild | Sustained ≥0.06 | Not met |
 | Performance Δ vs Baseline | Positive (needs baseline reference) | ≥0.000 | Presumed met (prior baseline 0.6406) |
@@ -715,7 +708,7 @@ Given time constraints, we either:
 - Publish Tier A + partial Tier B attempt (documenting transient peak semantics not retained) and position retention + lag alignment as future work, OR
 - Execute one more refinement cycle focusing on retention + lag gains (estimated +6 hours total runtime) to attempt sustained mastery_corr ≥0.10.
 
-Recommended: Perform one refinement cycle (low-risk modifications) before locking claims; if no uplift, finalize Tier A structural + performance narrative.
+Recommended: Perform one refinement cycle (low-risk modifications) before locking claims; if no uplift, finalize Tier A narrative.
 
 ### 16.15 Summary Statement
 “Alignment-enabled GainAKT2Exp maintains structural interpretability and improves predictive performance over prior baselines while producing transient mastery correctness correlations (~0.15 mid-training) that decay by epoch end and low final gain correlations. We identify retention and lag-predictive alignment objectives as the next leverage points to convert transient local alignment into stable global semantic interpretability.”
@@ -750,25 +743,23 @@ Assess whether introducing (i) a retention penalty to preserve peak mastery corr
 python tmp/run_gainakt2exp_baseline_compare_resumable.py \
   --dataset assist2015 --epochs 12 --batch_size 64 \
   --seeds 21 42 63 84 105 --variants full \
-  --use_amp --resume --auto_postprocess \
-  --alignment_weight 0.25 --alignment_warmup_epochs 4 \
+  --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 4 \
   --enable_global_alignment_pass --alignment_global_students 300 \
   --use_residual_alignment \
   --enable_retention_loss --retention_delta 0.01 --retention_weight 0.1 \
   --enable_lag_gain_loss --lag_gain_weight 0.05 --lag_max_lag 3 \
-  --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.10 --consistency_rebalance_new_weight 0.2 \
-  --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 \
-  --results_dir paper/results --progress_path tmp/gainakt2exp_progress_refine.json
+  --warmup_constraint_epochs 8 --use_amp \
+  --devices 0 1 2 3 4 --max_workers 5 \
+  --output_dir tmp --progress_path tmp/gainakt2exp_progress_refine.json
 ```
-
 
 ### 17.5 Final Performance Metrics
 
 | Metric | Mean | Std | 95% CI (t, df=4) | Notes |
 |--------|------|-----|------------------|-------|
-| Best Val AUC | 0.71851 | 0.00070 | [0.71789, 0.71912] | Improved vs prior alignment run (0.7057) |
+| Best Val AUC | 0.71851 | 0.00070 | [0.71789, 0.71912] | Improved vs prior alignment (0.7057) |
 | ΔAUC vs Section 16 | +0.01270 | — | — | Clear positive gain (CI excludes prior mean) |
-| Mean Best Epoch | 11.8 | — | — | Later convergence (epochs 11–12) |
+| Mean Best Epoch | 11.8 | — | — | Late stabilization (epochs 11–12) |
 | Seeds (n) | 5 | — | — | 21,42,63,84,105 |
 
 Interpretation: Performance not only neutral but improved; late best-epoch suggests auxiliary objectives delay AUC peak relative to early plateaus observed previously.
@@ -805,8 +796,6 @@ This section defines the planned regularization balance instrumentation to be ca
 
 | Component                | Epochs 1–4 Mean Share | Epochs 9–12 Mean Share | Target / Expectation | Interpretation |
 |-------------------------|-----------------------|------------------------|----------------------|----------------|
-| Component                | Early (1–4) Planned Target | Late (9–12) Planned Target | Threshold / Expectation | Interpretation |
-|-------------------------|----------------------------|---------------------------|------------------------|----------------|
 | Main BCE                | >50%                       | >50%                      | Dominant anchor        | Core predictive objective remains anchor |
 | Constraint Total        | ≤25%                       | ≤25% or ↓                 | Balance                | Excess indicates over‑regularization risk |
 | Alignment (corr only)   | Gradual ramp (≤15%)        | Stable 8–15%              | Avoid spikes           | High early share may suppress variance |
@@ -854,7 +843,7 @@ Plain summary: Performance improved, but the mastery and gain curves still do no
 | Neither improves | Restore longer alignment warm-up (8), reduce alignment_weight to 0.15, consider batch_size 96 |
 | AUC drop > 0.01 | Delay alignment activation (later epochs) |
 
-Chosen action: Because mastery (0.07168) and gain (0.04582) correlations remain below emerging targets (0.10 / 0.06) despite improved AUC, we will run one additional refinement iteration before broadening datasets. This iteration enables gradient retention, extends alignment warm-up to 8 epochs, increases global alignment sampling to 600 students, and instruments lag correlations (ℓ=1..3). Isolation ablations (A–E) are deferred until we evaluate uplift from these changes.
+Chosen action: Because mastery (0.07168) and gain (0.04582) correlations remain below emerging targets (0.10 / 0.06) despite improved AUC, we will run one additional refinement iteration before broadening datasets. This iteration enables gradient retention, redesigns the lag objective, extends alignment warm-up, increases global sampling, and instruments lag correlations (ℓ=1..3). Isolation ablations (A–E) are deferred until we evaluate uplift from these changes.
 
 ### 17.13 Open Questions
 
@@ -898,588 +887,80 @@ Target outcome metrics for this iteration:
 - Final Mastery Corr ≥ 0.10 (CI excluding 0)
 - Final Gain Corr ≥ 0.06 (CI excluding 0)
 - Mean Lag Corr (ℓ=1..3) positive and > 0.05 for at least one lag
-- No AUC regression (mean AUC ≥ 0.7185)
+- No AUC regression (mean AUC ≥ 0.718) and ΔAUC vs baseline |Δ| ≤ 0.002.
 
 If uplift criteria fail, we will proceed to Isolation Ablations (Experiments A–E) to attribute component effects before deciding on further semantic optimization or publication with structural interpretability focus.
 
 See Section 17.15 for forthcoming empirical loss share outcomes once this refinement run completes.
 
-> NOTE (variant reuse): If we want to reintroduce `heads_off` and `arch_only` variants for comparative attribution, we simply append them to the `--variants` list in the resumable command. The alignment flags can remain present; they are ignored automatically for those variants because the interpretability heads or constraints are disabled. Removing the alignment flags is optional and has no effect on heads-off or arch-only behavior.
-
 ---
- 
-### 17.15 Loss Share Outcomes (Post-Refinement)
-
-Observed early (epochs 1–4) and late (epochs 9–12) mean loss shares (proportion of total batch loss). Negative alignment share denotes a net subtractive/reward effect.
-
-| Component | Early Mean Share | Late Mean Share | Planned Target | Status | Notes |
-|-----------|------------------|-----------------|----------------|--------|-------|
-| Main BCE | 0.9631 (96.31%) | 0.9799 (97.99%) | >50% | Met | Dominant predictive anchor |
-| Constraint Total | 0.0369 (3.69%) | 0.0201 (2.01%) | ≤25% | Met (very low) | Possibly under-leveraged semantics |
-| Alignment | -0.0199 (−1.99%) | -0.0973 (−9.73%) | ≤15% | Late magnitude high | Strong subtractive influence without final corr gains |
-| Lag | 0.0000 (0.00%) | 0.0007 (0.07%) | ≤8% | Met (inactive) | Minimal impact; formulation underpowered |
-| Retention | 0.0000 (0.00%) | 0.0000 (0.00%) | ≤5% | Met (inactive) | Logging-only; no gradient preservation |
-| Consistency | Included in Constraint Total | Included | 5–15% (implicit) | Low | Share subsumed; may be under-leveraged |
-| Sparsity | Included in Constraint Total | Included | 5–10% (implicit) | Low | Potential variance preservation; risk of under-focus |
-
-Derived Metrics:
-1. Gain propagation efficiency: 0.6526 (global/local translation gap).
-2. Late lag correlation: -0.0157 (negative; redesign needed).
-3. Retention decay gap mean: 0.0115 (decay not penalized).
-4. Final mastery corr: 0.0733 (below ≥0.10 target); final gain corr: 0.0457 (below ≥0.06 target).
-
-Interpretation: 
-
-Predictive dominance (≈98% main loss late) ensures neutrality but limits semantic gradient budget; growing negative alignment share (reward-like) fails to raise correlations, indicating optimization–evaluation mismatch. Lag and retention objectives remain inert; structural constraints too weak late to sustain mastery variance. Next iteration will activate gradient retention, redesign lag loss, extend warm-up, cap alignment magnitude, and expand global sampling to translate transient peaks into sustained semantic alignment.
-
-## 18. Semantic Plateau & Performance Recovery (Historical 0.726 → ~0.67 → 0.7185)
-
-This section updates the prior degradation diagnosis: the latest refinement recovered validation AUC to 0.7185 (mean best) after an earlier dip (~0.67) while semantic correlations (mastery, gain) remain below emerging targets. We now shift focus from pure performance recovery to sustained semantic uplift.
-
-### 18.1 Evolution Summary
-
-| Aspect | Original High Baseline | Degraded Phase | Current Refined Run | Net Status |
-|--------|-----------------------|----------------|---------------------|-----------|
-| Mean Best Val AUC | ~0.726 (batch 96, no heavy alignment) | ~0.67 (early strong alignment & lag) | 0.7185 (batch 64, alignment+retention+lag) | Recovered (−0.0075 vs peak) |
-| Final Mastery Corr | ~0.08 (transient peaks ~0.15) | ~0.06 | 0.0717 | Plateau below 0.10 target |
-| Final Gain Corr | ~0.02 | ~0.02 | 0.0458 | Improved, still below 0.06 target |
-| Peak Mastery Corr | ~0.15 mid-epoch | ~0.12 | ~0.146 | Peaks recur, decay persists |
-| Lag Corr (late) | Not instrumented | Negative | -0.0157 | Objective ineffective |
-| Alignment Share (late |abs|) | N/A | ~0.05 | ~0.097 | High subtractive magnitude without uplift |
-| Constraint Total Share (late) | ~0.06–0.08 | ~0.03 | 0.0201 | Under-activated semantics |
-| Retention Penalty | Absent | Logging-only | Logging-only (0%) | Inactive (no gradient) |
-
-### 18.2 Current Observed Effects
-
-1. Performance neutrality/gain achieved: AUC recovered close to original high baseline despite smaller batch size (64 vs 96).
-2. Semantic plateau: Final mastery/gain correlations remain sub-threshold while transient peaks indicate potential but lack retention.
-3. Alignment inefficiency: Rising |alignment_share| (≈10% late) not translating into higher correlations; suggests optimization metric mismatch.
-4. Lag objective non-impactful: Near-zero share and negative late lag correlation indicate formulation failure (noise, insufficient normalization, premature activation).
-5. Structural constraints safe (0% violations) but low aggregate share implies insufficient shaping pressure for semantics.
-
-### 18.3 Root Causes of Plateau (Updated Mechanistic Factors)
-
-| Cause | Evidence | Effect on Semantics | Adjustment Direction |
-|-------|----------|---------------------|----------------------|
-| Early variance suppression | Mastery variance declines before correlations consolidate | Limits attainable peak retention | Extend warm-up, reduce early alignment intensity |
-| Non-gradient retention | Decay gap logged (mean 0.0115) without counter-force | Peak mastery corr not preserved | Activate gradient retention penalty |
-| Lag loss design | Negative late lag corr, minimal share | Gains lack temporal predictive semantics | Redesign lag objective with normalized correlation |
-| Alignment targeting mismatch | High local/global alignment gain corr, low sequence-level corr | Signal not transferring | Increase global sampling + stratified selection; dynamic weight cap |
-| Underused structural constraints | Constraint_total late 2% | Weak semantic shaping | Slightly elevate consistency after variance recovery |
-| Batch size reduction | More gradient noise (64 vs 96) | Harder to stabilize correlations | Consider batch size ↑ or gradient accumulation |
-
-### 18.4 Refined Experiment Plan (Isolation + Uplift)
-
-| Exp | Added / Removed Components | Goal | Success Signal |
-|-----|----------------------------|------|----------------|
-| A | Activate gradient retention only | Test mastery decay preservation | Final mastery corr ≥0.09 (+Δ ≥0.015) |
-| B | A + redesigned normalized lag objective (ℓ=1..3) | Add incremental gain semantics | Gain corr ≥0.06; positive lag corr ℓ=1 ≥0.05 |
-| C | B + dynamic alignment cap (|share| ≤0.08) | Reduce alignment inefficiency | Alignment_share stabilized; correlations non-decreasing late |
-| D | C + stratified global sampling (600) | Improve translation of alignment signal | Gain propagation efficiency ≥0.75 |
-| E | C + learnable α scaling (adaptive gain→mastery) | Enhance temporal coherence | Consistency residual ↓; mastery corr ↑ without variance collapse |
-
-### 18.5 Updated Recommended Adjustments
-
-1. Gradient Retention (weight 0.12–0.15, δ=0.005) post warm-up.
-2. Lag Objective Redesign: corr_z(Gain_t, Correct_{t+ℓ}) with per-student z‑score normalization; lag weights {ℓ=1:0.5, ℓ=2:0.3, ℓ=3:0.2}; start epoch warmup+2.
-3. Dynamic Alignment Cap: If |alignment_share| > 0.08 and mastery_corr gain <0.005 over last 2 epochs → reduce alignment_weight ×0.7.
-4. Stratified Global Sampling: 600 students across sequence length deciles; optional per-concept normalization.
-5. Adaptive α (learnable scalar constrained [0.05,0.2]) + mild L2 penalty to prevent drift.
-6. Consistency Rebalance: Conditional increase (0.2→0.25) only if mastery variance high but corr stagnant (<0.09 at epoch 10).
-7. Batch Size Strategy: Attempt batch 96 with AMP; if OOM, keep 64 and add gradient accumulation (acc_steps=2) to mimic effective size.
-
-### 18.6 Phase Sequencing (Revised)
-
-- Phase 0: Instrument (lag correlations, mastery variance, bootstrap CIs).
-
-- Phase 1 (Exp A–B): Introduce retention + redesigned lag; evaluate uplift vs current run.
-
-- Phase 2 (Exp C–D): Add alignment cap + stratified sampling; monitor gain propagation efficiency.
-
-- Phase 3 (Exp E): Integrate adaptive α; test coherence improvements.
-
-- Phase 4: Multi-dataset replication (assist2015 + second dataset) if semantics thresholds met.
-
-### 18.7 Success Metrics (Emerging Stage)
-
-| Metric | Emerging Threshold | Target Threshold |
-|--------|--------------------|------------------|
-| Final Mastery Corr | ≥0.10 | ≥0.25 (full) |
-| Final Gain Corr | ≥0.06 | ≥0.20 (full) |
-| Lag Corr (ℓ=1) | ≥0.05 | ≥0.10 |
-| Gain Propagation Efficiency | ≥0.70 | ≥0.80 |
-| Δ Peak→Final Mastery Corr | ≤15% relative decay | ≤10% |
-| Mean Val AUC | ≥0.718 | ≥0.72 |
-| Alignment | |share| ≤0.08 late | |share| ≤0.10 sustained |
-
-### 18.8 Risks & Mitigations (Updated)
-
-| Risk | New Trigger | Mitigation |
-|------|------------|-----------|
-| Retention freezing | Mastery variance < threshold & corr flat | Anneal retention weight; raise δ |
-| Lag noise persists | Lag corr negative after 4 active epochs | Lower lag weights; increase start epoch |
-| Alignment starvation | alignment_share <2% & correlations plateau | Temporarily lift cap for 2 epochs |
-| α drift instability | α hits bounds repeatedly | Reduce α lr; tighten clamp range |
-| OOM with batch 96 | Memory spike | Revert to 64 + accumulation |
-
-### 18.9 Implementation Checklist (Revised)
-
-1. Add gradient retention loss function & scheduling.
-2. Implement normalized multi-lag gain correlation objective.
-3. Add alignment share monitor + dynamic cap logic.
-4. Stratified global sampling procedure (length decile buckets).
-5. Learnable α parameter in model (optional flag `--learn_alpha`).
-6. Logging: mastery variance, per-lag correlations, peak vs final, gain propagation efficiency per epoch.
-7. Bootstrap script update for correlations & lag metrics.
-8. Gradient accumulation option for larger effective batch size.
-
-### 18.10 Summary
-
-We have recovered predictive performance while semantic correlations remain below emerging thresholds. Transient mid-epoch mastery peaks demonstrate attainable semantic signal that current loss formulation fails to retain. 
-
-The proposed next iteration concentrates on 
-
-- (i) converting retention from passive monitoring to active preservation
-
-- (ii) redesigning the lag objective to supply genuine incremental learning semantics
-
-- (iii) improving translation efficiency of alignment gradients via dynamic capping and stratified global sampling. Success will be marked first by emerging thresholds (mastery ≥0.10, gain ≥0.06, lag corr ℓ=1 ≥0.05) without sacrificing AUC neutrality, then by progressive elevation toward full semantic criteria.
-
-## 19. Next Steps Roadmap (Post Semantic Plateau Assessment)
-
-This section consolidates and prioritizes concrete actions derived from Section 18 to transition from the current semantic plateau (S3 scenario: predictive gain + weak sustained semantics) toward emerging semantic success (mastery ≥0.10, gain ≥0.06, lag corr ℓ=1 ≥0.05).
-
-### 19.1 Strategic Objectives
-1. Sustain and elevate mastery correlation (retain transient peaks).
-2. Establish incremental gain semantics (positive forward lag correlation).
-3. Improve alignment signal translation efficiency (local/global → sequence-level).
-4. Preserve or improve validation AUC (avoid performance regression).
-5. Produce statistically grounded interpretability claims (bootstrap CIs, calibration).
-
-### 19.2 Priority Actions (Execution Order)
-
-| Phase | Action | Description | Success Indicator | Time Cost (Est.) | Risk |
-|-------|--------|-------------|-------------------|------------------|------|
-| 0 | Instrumentation Completion | Add mastery variance, per-lag correlations, bootstrap utilities | Logs present; CI script runs | 0.5h | Low |
-| 1 | Gradient Retention Activation | Implement L_ret with δ=0.005, weight 0.12–0.15 post warm-up | Final mastery corr ≥0.09; decay gap ≤0.005 | 1h | Medium (over-freeze) |
-| 1 | Lag Objective Redesign | Normalized multi-lag corr_z aggregation, start epoch warmup+2 | Gain corr ≥0.05; lag ℓ=1 corr ≥0.05 | 1.5h | Medium (noise) |
-| 2 | Dynamic Alignment Cap | Monitor alignment_share; decay weight if |share| >0.08 + flat corr | Late |alignment_share| ≤0.08 & non-decreasing correlations | 0.75h | Low |
-| 2 | Stratified Global Sampling | 600 validation students across length deciles | Gain propagation efficiency ≥0.70 | 0.75h | Low |
-| 3 | Adaptive α Scaling | Introduce learnable α (bounded) with mild L2 penalty | Consistency residual ↓; mastery corr +0.01 | 1h | Medium (instability) |
-| 4 | Gradient Accumulation (Optional) | Effective batch size increase (64×2) if variance too noisy | Reduced corr variance; stable AUC | 0.5h | Low (compute) |
-| 5 | Per-Concept Calibration Logging | Concept-level mastery vs success rate correlations | Pearson/Spearman ≥0.30 emerging | 1h | Medium (data volume) |
-| 6 | Ablation Suite (Contingent) | Isolate retention, lag, cap, α effects if targets unmet | Attribution table | 2–3h runtime | Medium (run length) |
-
-### 19.3 Detailed Implementation Notes
-1. Retention Loss: Track running peak mastery_corr per seed; compute gap = peak − current − δ; apply ReLU(gap) × retention_weight after warm-up. Avoid applying when mastery variance < variance_floor to prevent locking collapsed states.
-2. Normalized Lag Correlation: For each student sequence, z-score gains and future correctness windows; compute Pearson for ℓ=1..3; aggregate weighted sum; backprop (use differentiable approximation via covariance / std; detach correctness targets). Gate activation epoch to warmup+2.
-3. Alignment Cap: After each epoch, if |alignment_share| > cap AND (mastery_corr_epoch − mastery_corr_prev) < 0.005, multiply alignment_weight by 0.7; minimum floor to avoid starvation (e.g., 0.05).
-4. Stratified Sampling: Partition validation students into deciles by sequence length; sample proportional counts (e.g., 60 per decile) for global alignment computation to avoid length bias.
-5. Adaptive α: Introduce parameter α (initialized 0.1) with clamp [0.05, 0.2]; apply α in consistency residual; include regularization λ(α−0.1)^2 (λ small, e.g., 1e-3).
-6. Bootstrap: Post-run script draws B=1000 resamples of students (length ≥3), stores CI for mastery/gain and lag ℓ=1 correlation; CIs must exclude 0 for emerging claim.
-7. Calibration: Maintain running concept attempt counts; after training produce scatter data (mastery_mean vs empirical correctness) for concepts with ≥ min_attempts (e.g., 30).
-
-### 19.4 Emerging Success Gate (Go/No-Go Criteria)
-Proceed to multi-dataset replication only if ALL:
-- Final mastery corr ≥0.10 (CI excludes 0)
-- Final gain corr ≥0.06 (CI excludes 0)
-- Lag ℓ=1 corr ≥0.05 (CI excludes 0)
-- AUC ≥0.718 (neutral/improved) and ΔAUC vs earlier refined run ≥ -0.003.
-If any semantic metric below threshold but AUC improved, publish S3 narrative + roadmap (Sections 18–19) and mark semantic stabilization as future work.
-
-### 19.5 Fallback Paths
-| Failure Mode | Fallback |
-|--------------|----------|
-| Retention freezes representation | Reduce retention_weight by 50%; increase δ to 0.01 |
-| Lag objective introduces noise (negative corr) | Delay activation further; lower lag_gain_weight to 0.05; restrict to ℓ=1 |
-| Alignment cap lowers AUC | Raise cap to 0.10 temporarily; restore original weight schedule |
-| Adaptive α oscillates | Freeze α (stop gradient) for 3 epochs; resume with lower lr |
-| Calibration correlations weak | Increase epochs; cluster concepts; consider group-lasso sparsity |
-
-### 19.6 Publication Integration Plan
-If emerging thresholds met:
-- Add Section 20 (Results: Emerging Semantic Alignment) with performance + semantics table (including CIs and lag correlations).
-- Provide figure: mastery/gain correlation trajectories epoch 1–12.
-- Include calibration scatter (optionally in appendix) and bootstrap CI summary.
-If thresholds not met:
-- Strengthen discussion of structural interpretability & predictive gain.
-- Present diagnostic plots (peak vs final mastery corr decay) to justify future retention work.
-
-### 19.7 Resource & Timeline Estimate
-| Phase | GPU Hours (5 GPUs parallel) | Wall-Clock |
-|-------|-----------------------------|-----------|
-| Instrument + Code Mods | ~0.1 | <1h |
-| Exp A–B | ~2.5 | ~0.6h |
-| Exp C–D | ~2.5 | ~0.6h |
-| Exp E | ~2.5 | ~0.6h |
-| Bootstrap & Calibration | CPU/GPU negligible | <0.3h |
-Total | ~9.6 GPU-hours | ~3h active + monitoring |
-
-### 19.8 Summary
-We recommend executing Phases 0–2 immediately (retention + lag redesign + alignment cap + stratified sampling) to pursue emerging semantic thresholds while monitoring AUC. Adaptive α and calibration logging (Phases 3-5) follow contingent on initial uplift. Section 19 formalizes a structured path from the current S3 plateau toward evidence-backed semantic interpretability with minimal performance risk.
-
-Aftter try earlier phases, we'll analyze the Phase 6 - Ablation Suite (Contingent). 
-
-## 20. Phase 0–2 Multi-Seed Refinement Run Summary (Retention + Multi-Lag + Alignment Cap & Sampling)
-
-### 20.1 Purpose
-Phase 0–2 implemented four targeted modifications intended to convert transient mid‑epoch semantic signals (mastery peaks ~0.15; modest gain positivity) into sustained final alignment while preserving or improving predictive AUC:
-1. Gradient-based retention penalty (preserve peak mastery correlation).
-2. Multi-lag gain correctness objective (ℓ=1..3) with weighted correlations (0.5/0.3/0.2).
-3. Dynamic alignment weight decay (incipient cap) and enlarged stratified global sampling (initially 300 students; plan for 600).
-4. Mastery variance instrumentation (min/mean/max) and variance floor gating.
-
-Result objective: reach emerging semantic thresholds (mastery ≥ 0.10, gain ≥ 0.06, lag ℓ=1 ≥ 0.05) while maintaining AUC neutrality or gain (AUC ≥ 0.718).
-
-### 20.2 Execution Command
-Executed (timestamp 2025‑10‑18) using 5 GPUs (AMP enabled):
-
-```bash
-python tmp/run_gainakt2exp_baseline_compare_resumable.py \
-  --dataset assist2015 --epochs 12 --batch_size 64 \
-  --seeds 21 42 63 84 105 --variants full \
-  --use_amp --resume --auto_postprocess \
-  --alignment_weight 0.25 --alignment_warmup_epochs 4 \
-  --enable_global_alignment_pass --alignment_global_students 300 \
-  --use_residual_alignment \
-  --enable_retention_loss --retention_delta 0.01 --retention_weight 0.1 \
-  --enable_lag_gain_loss --lag_gain_weight 0.05 --lag_max_lag 3 \
-  --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.10 --consistency_rebalance_new_weight 0.2 \
-  --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 \
-  --results_dir paper/results --progress_path tmp/gainakt2exp_progress_refine.json
-```
-
-### 20.3 Generated Artifacts
-| Artifact | Path (prefix) | Description |
-|----------|---------------|-------------|
-| Base summary MD | `tmp/gainakt2exp_resumable_summary_<ts>.md` | Aggregate AUC snapshot |
-| Raw JSON bundle | `tmp/gainakt2exp_resumable_raw_<ts>.json` | Per-seed metrics & trajectories |
-| Publication summary MD | `paper/results/gainakt2exp_publication_summary_<ts>.md` | Formatted performance & interpretability overview |
-| Publication summary JSON | `paper/results/gainakt2exp_publication_summary_<ts>.json` | Structured aggregates + criteria evaluation |
-| (Planned) Semantic lag trajectory | `paper/results/gainakt2exp_lag_semantics_<ts>.json` | To be added in next iteration (not present this run) |
-
-### 20.4 Performance & Semantic Outcomes
-| Metric | Phase 16 (Prior Alignment Run) | Phase 17 (Retention + Lag) | Δ | Emerging Threshold | Status |
-|--------|--------------------------------|----------------------------|----|--------------------|--------|
-| Mean Best Val AUC | 0.7057 | 0.71851 | +0.01281 | ≥ 0.718 | Met |
-| Final Mastery Corr | 0.0825 | 0.07168 | -0.01082 | ≥ 0.10 | Not Met |
-| Final Gain Corr | 0.0241 | 0.04582 | +0.02172 | ≥ 0.06 | Not Met (Improved) |
-| Peak Mastery Corr (mid-epoch) | ~0.150 | ~0.146 | - | ≥ 0.15 (transient) | Near / transient |
-| Retention Decay Gap (mean) | Not logged | -0.05935 | - | ≤ 0 | Satisfied (logging-only) |
-| Global Align Gain Corr (peak) | >0.13 | >0.13 | ≈0 | ≥ 0.06 | Strong local/global (translation weak) |
-| Alignment Share (late |abs|) | ~0.05 | ~0.097 | +0.047 | ≤ 0.08 | Slightly High |
-
-Interpretation: Predictive performance improved beyond emerging AUC criterion. Gain correlation increased substantially but remains below emerging semantic threshold. Mastery correlation declined slightly and remains below threshold; transient peaks still observed without retention into final epoch. Scenario classification remains S3 (predictive gain + weak sustained semantics).
-
-### 20.5 Loss Share Diagnostics (Condensed)
-Early vs late mean shares (epochs 1–4 vs 9–12):
-| Component | Early | Late | Comment |
-|-----------|-------|------|---------|
-| Main BCE | 96.31% | 97.99% | Predictive anchor dominant; semantics under-resourced |
-| Constraint Total | 3.69% | 2.01% | Very low shaping pressure late |
-| Alignment (net) | -1.99% | -9.73% | Increasing subtractive influence without correlation uplift |
-| Lag | 0.00% | 0.07% | Essentially inert (needs redesign) |
-| Retention | 0.00% | 0.00% | Logging-only; no gradient effect |
-
-Inference: Excessive dominance of primary loss coupled with high late negative alignment share suggests optimization–evaluation metric mismatch; lag and retention still ineffective in shaping final semantics.
-
-### 20.6 Diagnostic Gaps
-| Gap | Evidence | Impact |
-|-----|----------|--------|
-| Lack of lag correlation logging | No per-lag metrics recorded | Cannot assess incremental predictive semantics |
-| Retention non-gradient | Decay gap negative but final corr low | Peaks not preserved |
-| Alignment translation inefficiency | High local/global gain corr; low sequence-level gain corr | Semantic signal not propagating |
-| Underpowered structural constraints | Constraint share <3% late | Insufficient semantic shaping pressure |
-| Absence of adaptive α | Fixed scaling may miscalibrate mastery updates | Possible mastery corr suppression |
-
-### 20.7 Immediate Next Actions (Phase 3 Initiation)
-| Action | Parameter Plan | Objective |
-|--------|----------------|----------|
-| Activate gradient retention | weight 0.12–0.15, δ=0.005 | Preserve mastery peak → final uplift |
-| Redesign lag objective | Z-scored corr(Gain_t, Correct_{t+ℓ}), ℓ=1..3 | Elicit incremental gain semantics |
-| Expand global sampling | 300 → 600 stratified | Improve alignment translation efficiency |
-| Introduce alignment cap | |alignment_share| ≤ 0.08 with adaptive decay | Prevent late over-influence |
-| Add per-lag logging | lag_corr_ℓ metrics + mean_lag_corr | Quantify temporal semantic signal |
-| Optional adaptive α | Clamp [0.05,0.2], mild L2 | Calibrate mastery-gain temporal coherence |
-
-### 20.8 Success Gate (Emerging Semantic Uplift)
-Proceed to multi-dataset replication only if after Phase 3:
-1. Final mastery corr ≥ 0.10 (CI excludes 0)
-2. Final gain corr ≥ 0.06 (CI excludes 0)
-3. Lag ℓ=1 corr ≥ 0.05 (CI excludes 0)
-4. Mean AUC ≥ 0.718 (no degradation)
-
-### 20.9 Scenario & Publication Positioning
-Current Scenario: S3 (performance gain without sustained semantics). Publication options:
-| Path | Narrative | Requirement |
-|------|-----------|-------------|
-| Structural + Performance (Tier A) | “Predictive improvement with enforced structural interpretability.” | Accept plateau; frame semantics as future work |
-| Emerging Semantics (Tier B+) | “Demonstrated improvement in gain + mastery correlations post retention/lag redesign.” | Requires hitting emerging thresholds |
-
-### 20.10 Risk Mitigations
-| Risk | Mitigation |
-|------|-----------|
-| Retention over-freezes variance | Variance gating + annealed retention weight |
-| Lag noise reduces AUC | Delay activation (start epoch ≥ warmup+3); reduce lag_gain_weight |
-| Alignment starvation under cap | Temporary cap relaxation if correlations still rising |
-| Adaptive α instability | Gradient clipping + narrower clamp [0.07,0.18] |
-
-### 20.11 Requirements Coverage (Phase 0–2)
-| Requirement | Status | Notes |
-|------------|--------|-------|
-| Performance neutrality/gain | Done | AUC improved (+0.0128) |
-| Structural integrity (violations) | Done | 0% all seeds |
-| Emerging mastery corr ≥0.10 | Not Done | Final 0.0717; transient peaks only |
-| Emerging gain corr ≥0.06 | Not Done | Final 0.0458 (improved) |
-| Lag semantics instrumentation | Deferred | Logging to be added next |
-| Retention gradient activation | Deferred | Logging-only in Phase 0–2 |
-| Alignment share control | Partial | Decay logic present; cap formalization pending |
-| Stratified sampling ≥600 | Deferred | Currently 300 |
-| Bootstrap CIs (mastery/gain/lag) | Deferred | Planned post Phase 3 |
-| Calibration curves | Deferred | To follow semantic uplift attempt |
-
-### 20.12 Concise Summary
-Phase 0–2 increased validation AUC and partially improved gain correlation but failed to elevate or retain mastery correlation beyond transient peaks; semantic thresholds for emerging interpretability remain unmet. We will proceed with Phase 3 focusing on gradient retention, lag objective redesign, expanded global sampling, and alignment capping to attempt uplift from scenario S3 toward emerging semantic alignment without sacrificing predictive gains.
-
----
-
-## 21. Phase 3 Multi-Seed Evaluation Results (Gradient Retention + Expanded Sampling + Lag Objective)
-
-### 21.1 Approach
-
-Phase 3 implemented the complete suite of semantic emergence mechanisms identified in Section 19 to address the persistent S3 scenario (predictive gain + weak sustained semantics). The key modifications included:
-
-1. **Gradient Retention Logic**: Active monitoring of peak mastery correlation decay with scheduled retention penalty distribution across batches (though implemented as logging-only in this run).
-2. **Multi-Lag Gain Objective**: Z-scored correlation computation between gains at time t and correctness at t+ℓ for ℓ=1,2,3 with weighted aggregation (0.5/0.3/0.2).
-3. **Expanded Global Sampling**: Increased stratified validation sampling from 300 to 600 students across sequence length deciles for robust global alignment estimation.
-4. **Alignment Share Monitoring**: Dynamic tracking of alignment loss contribution with decay logic when |alignment_share| exceeds 0.08 and correlation improvement stagnates.
-5. **Enhanced Instrumentation**: Per-lag correlation logging, mastery variance tracking, loss share decomposition, and semantic trajectory persistence.
-
-### 21.2 Execution Command
-
-```bash
-python tmp/run_gainakt2exp_baseline_compare_resumable.py \
-  --dataset assist2015 --epochs 12 --batch_size 64 \
-  --seeds 21 42 63 84 105 --variants full \
-  --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 \
-  --enable_global_alignment_pass --alignment_global_students 600 \
-  --use_residual_alignment \
-  --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 \
-  --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 \
-  --warmup_constraint_epochs 8 --use_amp \
-  --output_dir tmp --progress_path tmp/gainakt2exp_progress_phase3_full.json \
-  --auto_postprocess
-```
-
-### 21.3 Results Obtained
-
-#### 21.3.1 Performance Metrics
-| Metric | Value | 95% CI | Target | Status |
-|--------|-------|--------|--------|--------|
-| Mean Best Val AUC | 0.7175 | [0.7170, 0.7179] | ≥0.718 | Near Miss (-0.0005) |
-| AUC Standard Deviation | 0.0005 | — | <0.004 | Excellent Stability |
-| Mean Best Epoch | 11.2 | — | — | Late convergence pattern |
-
-#### 21.3.2 Semantic Correlation Metrics
-| Metric | Mean | Std | Emerging Target | Status |
-|--------|------|-----|-----------------|--------|
-| **Final Mastery Correlation** | 0.113 | 0.001 | ≥0.10 | **✓ Met** |
-| **Final Gain Correlation** | 0.046 | 0.013 | ≥0.06 | ✗ Not Met |
-| Peak Mastery Correlation | 0.149 | 0.002 | ≥0.15 | Near Miss |
-| Mastery Decay Gap | 0.036 | 0.002 | ≤0.02 | Excessive Decay |
-
-#### 21.3.3 Lag Objective Analysis
-| Lag | Mean Correlation | Std | n | Target | Status |
-|-----|------------------|-----|---|--------|--------|
-| ℓ=1 | 0.023 | 0.041 | 2,895 | ≥0.05 | ✗ Below Threshold |
-| ℓ=2 | 0.039 | 0.042 | 2,895 | Positive | ✓ Positive |
-| ℓ=3 | -0.010 | 0.042 | 2,895 | Positive | ✗ Negative |
-
-#### 21.3.4 Alignment Efficiency & Retention Analysis
-- **Gain Propagation Efficiency**: 0.973 ± 0.344 (ratio of sequence-level to global alignment gain correlation)
-- **Peak Global Mastery Range**: 0.106–0.133 across seeds
-- **Retention Decay Gaps**: 0.000–0.048 (retention penalty logged but not gradient-applied)
-- **Late Alignment Share**: 0.063 ± 0.003 (within cap threshold of 0.08)
-
-#### 21.3.5 Structural Integrity
-- **Monotonicity Violations**: 0.0% (perfect)
-- **Negative Gain Rate**: 0.0% (perfect)
-- **Bounds Violations**: 0.0% (perfect)
-
-### 21.4 What These Results Mean
-
-#### 21.4.1 Partial Success in Semantic Emergence
-**Mastery Correlation Breakthrough**: For the first time, **final mastery correlation (0.113) exceeded the emerging threshold of 0.10, representing a significant step toward semantic interpretability**. This indicates that the cumulative mastery trajectories now demonstrate meaningful alignment with student correctness patterns.
-
-**Gain Correlation Plateau**: Despite improved gain positivity and lag objective activation, final gain correlation (0.046) remains below the emerging threshold (0.06). The lag correlations are predominantly weak or negative, suggesting the temporal predictive semantics are not yet established.
-
-#### 21.4.2 Retention and Peak Preservation Challenges
-**Transient Peak Pattern**: Mastery correlations consistently peak around epochs 6-8 (~0.15) before decaying to final levels (~0.11). The retention mechanism, implemented as logging-only rather than gradient-applied, failed to preserve these peaks.
-
-**Decay Gap Analysis**: Mean decay gap of 0.036 exceeds the target threshold (≤0.02), indicating that the model's semantic alignment weakens in late training phases despite structural constraint maintenance.
-
-#### 21.4.3 Alignment Translation Efficiency
-**Mixed Propagation Results**: Gain propagation efficiency (0.973) suggests that global alignment signals partially translate to sequence-level semantics, but the translation remains incomplete for gains compared to mastery.
-
-**Alignment Share Control**: Late alignment share (0.063) stayed within the intended cap (0.08), indicating the dynamic weight management successfully prevented alignment dominance while allowing semantic gradient influence.
-
-### 21.5 Current Options to Improve the Model
-
-#### 21.5.1 Immediate Priority Actions (Phase 4)
-
-| Action | Description | Expected Benefit | Risk Level |
-|--------|-------------|------------------|------------|
-| **Activate Gradient Retention** | Convert retention penalty from logging-only to actual gradient application | Preserve mastery correlation peaks; reduce decay gap to ≤0.02 | Medium (potential over-freezing) |
-| **Redesign Lag Objective** | Implement normalized per-student z-score correlations with stricter activation gates (epoch ≥ warmup+3) | Establish positive lag ℓ=1 correlation ≥0.05 | Medium (noise introduction) |
-| **Extend Warm-up to 10 Epochs** | Further delay constraint pressure to allow variance consolidation | Increase peak mastery correlation sustainability | Low |
-| **Batch Size Increase** | Use batch_size=96 with gradient accumulation if OOM | Reduce gradient noise; stabilize late-epoch semantics | Low (memory) |
-
-#### 21.5.2 Advanced Semantic Enhancement (Phase 5)
-
-| Enhancement | Implementation | Target Improvement |
-|-------------|----------------|-------------------|
-| **Adaptive α Scaling** | Introduce learnable temporal coherence parameter (α ∈ [0.05, 0.2]) | Calibrate mastery-gain balance; reduce inconsistency |
-| **Cosine Performance Alignment** | Apply cosine schedule to mastery/gain performance weights post warm-up | Prevent late variance collapse; maintain correlation plateau |
-| **Concept-Level Calibration** | Add per-concept mastery vs success rate correlation monitoring | Validate semantic alignment at granular level |
-| **Bootstrap Confidence Intervals** | Implement multi-seed correlation CI computation (B=1000 resamples) | Establish statistical significance of semantic claims |
-
-#### 21.5.3 Experimental Isolation (Phase 6)
-
-| Experiment | Configuration | Purpose |
-|------------|---------------|---------|
-| **Retention-Only** | Enable gradient retention; disable lag/alignment cap | Isolate retention effect on mastery preservation |
-| **Lag-Only** | Enable redesigned lag objective; disable retention | Assess incremental gain semantics without retention interference |
-| **Sampling-Only** | Increase global sampling to 1000; disable other modifications | Evaluate alignment translation efficiency improvement |
-| **Constraint Rebalance** | Reduce consistency_loss_weight to 0.15 throughout | Test whether constraint pressure limits semantic variance |
-
-### 21.6 Recommendations
-
-#### 21.6.1 Strategic Decision Path
-
-**Option A: Incremental Refinement (Recommended)**
-- Execute Phase 4 with gradient retention activation and lag objective redesign
-- Target: Final mastery correlation ≥0.12, gain correlation ≥0.06, lag ℓ=1 correlation ≥0.05
-- Timeline: ~3 GPU hours for 5-seed run
-- Publication positioning: Emerging semantic alignment with retention-based peak preservation
-
-**Option B: Comprehensive Validation (If Time Permits)**
-- Execute full Phase 4-6 sequence including bootstrap CIs and concept-level calibration
-- Target: Statistical significance testing for semantic claims (CI excludes 0)
-- Timeline: ~8 GPU hours + analysis
-- Publication positioning: Validated semantic interpretability with statistical grounding
-
-**Option C: Current Results Publication (Fallback)**
-- Proceed with existing Phase 3 results emphasizing structural interpretability + mastery correlation breakthrough
-- Narrative: "Demonstrates emerging mastery alignment (0.113 > 0.10) with architectural constraint perfect compliance"
-- Future work: Explicitly scope retention activation and lag semantics enhancement
-
-#### 21.6.2 Technical Implementation Priority
-
-1. **Immediate (Next Run)**: Activate gradient retention with δ=0.005, weight=0.14; implement robust lag correlation computation with per-student normalization
-2. **Short-term**: Add adaptive alignment weight scaling based on correlation plateau detection; extend warm-up scheduling
-3. **Medium-term**: Integrate bootstrap CI computation and concept-level calibration monitoring for publication-grade statistical claims
-
-#### 21.6.3 Scenario Classification Update
-
-Current classification: **Transitional S3→S1** (Predictive gain + emerging mastery semantics, gain semantics pending)
-
-The Phase 3 results represent the first successful breach of emerging semantic thresholds for mastery correlation while maintaining perfect structural integrity and achieving strong predictive performance (AUC 0.7175). This positions the model at the threshold between S3 (weak semantics) and S1 (neutral + strong correlations), with gain correlation and lag semantics requiring targeted refinement to complete the transition.
-
-**Success Criteria Progress**: 3/4 met (structural integrity ✓, performance neutrality ✓, mastery correlation ✓, gain correlation pending)
-
----
-
-## 22. Phase 4 Implementation: Incremental Refinement (Option A)
-
-### 22.1 Approach
-
-Following the recommendations in Section 21.6.1, we implement **Option A: Incremental Refinement** to address the remaining semantic gaps while building on the Phase 3 mastery correlation breakthrough. The key modifications focus on:
-
-#### 22.1.1 Gradient Retention Activation
-- **Change**: Convert retention penalty from logging-only to active gradient application
-- **Implementation**: Retention component now contributes to `total_batch_loss` when decay gap > δ=0.005
-- **Target**: Preserve mastery correlation peaks (~0.15) to achieve final mastery correlation ≥0.12
-
-#### 22.1.2 Redesigned Lag Objective  
-- **Change**: Per-student normalization with stricter activation gate (epoch ≥ warmup+3 instead of warmup+2)
-- **Implementation**: Individual student gain-future correctness correlations with z-score normalization
-- **Focus**: Emphasis on lag ℓ=1,2 with positive-only reward (`torch.clamp(min=0.0)`)
-- **Target**: Achieve lag ℓ=1 correlation ≥0.05 and overall gain correlation ≥0.06
-
-#### 22.1.3 Multi-GPU Acceleration
-- **Configuration**: 5 GPUs parallel execution (`--devices 0 1 2 3 4 --max_workers 5`)
-- **Benefit**: Reduce wall-clock time from ~3 hours to ~0.6 hours for 5-seed, 12-epoch run
-
-### 22.2 Execution Command
-
-```bash
-python tmp/run_gainakt2exp_baseline_compare_resumable.py \
-  --dataset assist2015 --epochs 12 --batch_size 64 \
-  --seeds 21 42 63 84 105 --variants full \
-  --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 \
-  --enable_global_alignment_pass --alignment_global_students 600 \
-  --use_residual_alignment \
-  --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 \
-  --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 \
-  --warmup_constraint_epochs 8 --use_amp \
-  --devices 0 1 2 3 4 --max_workers 5 \
-  --output_dir tmp --progress_path tmp/gainakt2exp_progress_phase4_full.json \
-  --auto_postprocess
-```
-
-### 22.3 Expected Improvements
-
-| Metric | Phase 3 Result | Phase 4 Target | Improvement Strategy |
-|--------|----------------|-----------------|----------------------|
-| Final Mastery Correlation | 0.113 | ≥0.12 | Gradient retention prevents late decay |
-| Final Gain Correlation | 0.046 | ≥0.06 | Per-student lag normalization + positive-only reward |
-| Lag ℓ=1 Correlation | 0.023 | ≥0.05 | Stricter activation gate + focused lag 1-2 emphasis |
-| Peak Mastery Preservation | 36% decay | ≤20% decay | Active gradient retention vs logging-only |
-| Validation AUC | 0.7175 | ≥0.718 | Maintain or improve predictive performance |
-
-### 22.4 Technical Modifications Summary
-
-#### 22.4.1 Retention Loss Enhancement
-```python
-# Phase 4: Active gradient application instead of logging-only
-if enable_retention_loss and pending_retention_penalty > 0:
-    retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
-    total_batch_loss = main_loss + interpretability_loss + alignment_loss + retention_component
-```
-
-#### 22.4.2 Lag Objective Redesign
-```python
-# Phase 4: Per-student normalization with positive-only reward
-for student_idx in range(gains_mean_time.size(0)):
-    # Per-student z-score normalization for cleaner lag signal
-    gm_z = (gm_window - gm_window.mean()) / (gm_window.std(unbiased=False) + 1e-6)
-    pt_z = (pt_window - pt_window.mean()) / (pt_window.std(unbiased=False) + 1e-6)
-    corr_lag = corr_fn(gm_z, pt_z)
-    
-# Only reward positive correlations
-lag_loss = - torch.clamp(mean_lag_corr, min=0.0) * lag_gain_weight
-```
-
-### 22.5 Success Criteria (Phase 4)
-
-**Go/No-Go Decision**: Proceed to Phase 5 (bootstrap CIs + concept calibration) only if ALL targets met:
-
-1. **Final mastery correlation ≥0.12** (CI excludes 0)
-2. **Final gain correlation ≥0.06** (CI excludes 0) 
-3. **Lag ℓ=1 correlation ≥0.05** (CI excludes 0)
-4. **AUC ≥0.718** (no degradation vs Phase 3)
-5. **Peak retention improved** (decay gap ≤0.02)
-
-**Fallback**: If targets unmet, document Phase 4 as incremental progress and proceed with current results publication emphasizing structural interpretability + partial semantic emergence.
-
-### 22.6 Multi-GPU Execution Status
-
-The Phase 4 training command is ready for execution across 5 GPUs. Upon completion, results will be collected from:
-- **Publication Summary**: `paper/results/gainakt2exp_publication_summary_<timestamp>.json`
-- **Semantic Trajectories**: `paper/results/gainakt2exp_semantic_trajectory_full_seed*_<timestamp>.json`
-- **Raw Results**: `tmp/gainakt2exp_resumable_raw_<timestamp>.json`
-
-Analysis will focus on retention effectiveness (peak vs final mastery correlation), lag semantics emergence (per-lag correlation breakdown), and overall progress toward the transitional S3→S1 scenario completion.
+## 23.1 Forensic Analysis: Legacy Phase 3 Semantic Emergence vs Current Runs
+
+### Summary of Divergence
+Legacy Phase 3 semantic emergence (commit `cf4f4017`) reported a final global mastery–performance correlation of ≈0.113 (AUC ≈0.7175). Current reproductions using nominally equivalent settings yield substantially lower global mastery correlations (≈0.02–0.04 under the adaptive training script; ≈0.056 under a stripped helper without constraints). Gain correlation remains below the legacy ≈0.046 mark.
+
+### Investigated Factors and Findings
+| Factor | Legacy Behavior (Inferred) | Current Behavior | Effect on Mastery Corr | Conclusion |
+|--------|----------------------------|------------------|------------------------|------------|
+| Sampling (accumulate + stratified replace) | Present | Identical | Neutral | Not causal |
+| Correlation function | Pearson-like | Same (+ unbiased variant) | Small inflation only | Not causal |
+| Alignment decay | Static weight | Adaptive decay (can disable) | Minor uplift when disabled | Secondary |
+| Warm-up scheduling | 8 epochs | Tested 4 & 8 | Limited effect | Not primary |
+| Variance floor & sparsity | Absent (legacy) | Present (can freeze) | Freeze lifts peak to ~0.04 | Insufficient |
+| Constraints (performance + consistency) | Active | Active; OFF tests performed | OFF increases corr to ~0.056 | Constraints currently suppress |
+| Mastery accumulation scaling (gain * 0.1) | Assumed | Confirmed | May reduce variance | Possible minor contributor |
+| Architecture (512/6/1024) | Used | Matched | Neutral | Not causal |
+| Retention mechanism | Disabled | Enabled/disabled tests | Negligible | Not causal |
+
+### Hypotheses
+1. Legacy performance alignment loss formulation differed (e.g., direct correlation penalty) producing higher mastery-performance coupling.
+2. Dynamic or larger effective gain scaling previously preserved more mastery variance.
+3. Preprocessing differences altered sequence length / variance characteristics exploited by projection heads.
+4. Current joint performance + consistency constraints over-regularize early epochs, damping correlation growth.
+
+### Key Experiments (Seed 21)
+| Experiment | Setup | Peak Mastery Corr | Final | Best Val AUC | Observation |
+|-----------|-------|-------------------|-------|--------------|-------------|
+| Adaptive baseline (freeze sparsity) | Constraints ON | ~0.029 | 0.022 | 0.724 | Low plateau |
+| Alignment weight 0.4 | Constraints ON | ~0.031 | 0.015 | 0.723 | Higher weight ineffective |
+| Warm-up 4 + freeze | Constraints ON | 0.0399 | 0.0399 | 0.724 | Highest adaptive peak |
+| Helper, constraints OFF, union | Pure BCE | 0.0572 | 0.0561 | 0.724 | Variance boost without constraints |
+| Helper, constraints ON, union | Full weights | 0.0475 | 0.0374 | 0.725 | Constraints reduce corr |
+| Helper, constraints ON, replace | Full weights | 0.0501 | 0.0362 | 0.725 | Sampling mode not decisive |
+
+### Interpretation
+Constraint formulations presently reduce alignment instead of enhancing it; legacy correlation magnitude likely required a different auxiliary shaping or gain accumulation dynamic. Removing constraints partially restores variance but not to legacy level, implying structural/optimization differences beyond constraint presence.
+
+### Recovery Plan
+1. Introduce `--gain_scale` sweep (0.05–0.2) to test variance sensitivity.
+2. Prototype correlation-based performance alignment loss replacing clamp/hinge.
+3. Implement linear warm-up for performance & consistency weights (epochs 1–6) to preserve early variance.
+4. Log concept-level mastery vs correctness correlations and mastery variance trajectories.
+5. Reconstruct historical loss (if source diff unobtainable) using correlation + variance encouragement.
+6. Multi-seed evaluation across variants; target mean global mastery corr ≥0.09 without AUC degradation.
+
+### Reproducibility Additions
+Record in results JSON: `gain_scale`, `loss_variant`, `constraint_schedule`, concept-level alignment CSV path, mastery variance stats.
+
+### Success Criteria (Recovery)
+| Metric | Target |
+|--------|--------|
+| Global mastery corr (mean ± std) | ≥0.09 |
+| Global gain corr | ≥0.04 |
+| ΔAUC vs baseline | |Δ| ≤ 0.002 |
+| Structural violations | 0% |
+| Epoch time overhead | ≤15% |
+
+### Immediate Next Action (Outside This Doc)
+Implement gain scaling flag and run sensitivity test (seed 21) before reformulating alignment loss.
+
+### Referenced Artifacts
+`paper/results/gainakt2exp_semantic_trajectory_warmup4_freezesparsity_seed21.json`  
+`paper/results/legacy_phase3_semantic_trajectory_seed21_union_unbiased.json`  
+`paper/results/legacy_phase3_semantic_trajectory_seed21_union_unbiased_constrained.json`  
+`paper/results/legacy_phase3_semantic_trajectory_seed21_replace_unbiased_constrained.json`
+
+Commit anchor: `cf4f4017` (`configs/gainakt2_phase3_semantic.yaml`).
 
 ---
 

@@ -1,0 +1,41 @@
+# Phase 3 Semantic Breakthrough Configuration (Reproducibility Freeze)
+# Commit: cf4f4017cb2e969204fa3fbfcb536aff388541e3
+# Purpose: Reproduce Section 21.2 / 21.3 emerging mastery result (AUC ~0.7175, mastery corr ~0.113, gain corr ~0.046)
+
+# Core training parameters
+batch_size: 64            # Phase 3 used 64 (semantic emergence run)
+epochs: 12                 # 12-epoch run
+learning_rate: 0.000174    # Optimal LR
+weight_decay: 1.7571e-05   # Optimal WD
+
+# Constraint weights (enhanced constraints preset)
+non_negative_loss_weight: 0.0
+monotonicity_loss_weight: 0.1
+mastery_performance_loss_weight: 0.8
+gain_performance_loss_weight: 0.8
+sparsity_loss_weight: 0.2
+consistency_loss_weight: 0.3
+
+enhanced_constraints: true
+
+# Alignment (enabled Phase 3)
+alignment_weight: 0.25
+alignment_warmup_epochs: 8
+alignment_global_validation_sample: 600   # maps to --alignment_global_students
+
+# Lag objective OFF in Phase 3 emerging mastery run (keep disabled)
+lag_max_lag: 0
+lag_gain_weight: 0.0
+
+# Retention / adaptive / lag scheduling disabled in Phase 3 baseline
+adaptive_patience: 0
+adaptive_decay_factor: 0
+lag_gain_schedule_enable: false
+retention_logging_only: true
+
+# Mixed precision (if used in original; set false to be conservative)
+amp: false
+
+# Notes:
+# - Do NOT enable enable_lag_gain_loss when lag_gain_weight == 0.0
+# - Multi-seed runner will append --enable_alignment_loss automatically because alignment_weight present

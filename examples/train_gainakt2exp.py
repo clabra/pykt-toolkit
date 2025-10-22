@@ -503,7 +503,7 @@ def train_gainakt2exp_model(args):
         if enable_retention_loss and pending_retention_penalty > 0:
             logger.info(f"[Retention] APPLYING GRADIENT retention penalty this epoch: {pending_retention_penalty:.5f}")
         elif enable_retention_loss:
-            logger.info(f"[Retention] No retention penalty (no decay detected)")
+            logger.info("[Retention] No retention penalty (no decay detected)")
         num_batches = len(train_loader)
 
         for batch_idx, batch in enumerate(train_loader):
@@ -661,9 +661,12 @@ def train_gainakt2exp_model(args):
                         else:
                             retention_state['low_variance_epochs'] = 0
                         if retention_state['low_variance_epochs'] >= variance_floor_patience:
-                            old_sparsity = getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight)
-                            model_core.sparsity_loss_weight = old_sparsity * variance_floor_reduce_factor
-                            logger.info(f"[VarianceFloor] Reduced sparsity_loss_weight from {old_sparsity:.3f} to {model_core.sparsity_loss_weight:.3f}")
+                            if getattr(args, 'freeze_sparsity', False):
+                                logger.info(f"[VarianceFloor] freeze_sparsity active; NOT reducing sparsity_loss_weight (var={mastery_variance:.6f})")
+                            else:
+                                old_sparsity = getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight)
+                                model_core.sparsity_loss_weight = old_sparsity * variance_floor_reduce_factor
+                                logger.info(f"[VarianceFloor] Reduced sparsity_loss_weight from {old_sparsity:.3f} to {model_core.sparsity_loss_weight:.3f}")
                     # Compose total batch loss
                     retention_component = torch.zeros(1, device=device)
                     if enable_retention_loss and pending_retention_penalty > 0:
@@ -1252,6 +1255,7 @@ if __name__ == "__main__":
     parser.add_argument('--variance_floor', type=float, default=1e-4)
     parser.add_argument('--variance_floor_patience', type=int, default=3)
     parser.add_argument('--variance_floor_reduce_factor', type=float, default=0.5)
+    parser.add_argument('--freeze_sparsity', action='store_true', help='Disable variance-floor induced sparsity weight reduction.')
     # Semantic trajectory sampling
     parser.add_argument('--max_semantic_students', type=int, default=50)
     parser.add_argument('--semantic_trajectory_path', type=str, default=None,

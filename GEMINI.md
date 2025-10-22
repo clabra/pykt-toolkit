@@ -50,6 +50,18 @@ The machine has 8 GPUs. Use 5 GPUs to run commands as default.
 - Most scripts are in `examples` folder
 - New files and scripts that don't adhere to the standard guidelines described in `contribute.pdf` and `quickstart.pdf` should be created in the `tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `tmp` folder. This way it will be easier to main contributions to the upstream folder we forked to develop new models.  
 
+### Operational standards
+
+- Avoid monitoring commands that interrupt scripts running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions). Launch this kind of commands in such a way that terminating ongoing processes is avoided. 
+- Launch scripts in such a way that we leverage around 60% of available GPUs (in current machine, for instance, we should GPUs 0 to 5) and less than 60% of CPU power. 
+
+### Reproducibility
+
+- The scripts used to train and evaluate the models should be ready for experiment reproduction. Create config files and log mechanisms that guarantees easy reproducibility. 
+- To guarantee reproducibility is mandatory that all parameter values used in the experiment are properly recorded in a config file to be used to set the parameter values in a later run. 
+- When asked to document experiments in README files, include files sucha as config, logs, etc. and the command that is needed to exactly reproduce the experiment again
+
+
 ### Code and Style Guidelines
 - Scripts should accept command-line arguments for flexibility. Include default parameter values in script documentation
 - Reproducibility of experiments is a must, so all parameter values should be saved and read from a config file 
