@@ -57,9 +57,11 @@ The machine has 8 GPUs. Use 5 GPUs to run commands as default.
 
 ### Reproducibility
 
-- The scripts used to train and evaluate the models should be ready for experiment reproduction. Create config files and log mechanisms that guarantees easy reproducibility. 
-- To guarantee reproducibility is mandatory that all parameter values used in the experiment are properly recorded in a config file to be used to set the parameter values in a later run. 
-- When asked to document experiments in README files, include files sucha as config, logs, etc. and the command that is needed to exactly reproduce the experiment again
+- Each training (or evaluation) of a model should be considered a experiment. 
+- An experiment should be reproducible, i.e. it can be run again using the same exact conditions. To guarantee reproducibility is mandatory that all parameter values used in the experiment are properly recorded in a config file to set the parameter values in a later run. This includes those parameter values that are nos specified in the input, but set by default. The config file should include as well the command used to launch the experiment. 
+- A results file will be created after each experiment finishes. It contains results by epoch including validation/evaluation metrics such as AUCC , accuracy, loss, etc.
+- The config file, logs and results of the experiment have to be saved in a folder with the name of the experiment created in `examples/experiments`. This experiment folder contains all the necessary to launch the experiment again using exactly the same conditions to get the same results.  
+- When asked to document a experiment, include the name of the experiment folder where all the reproducibility info can be found. 
 
 
 ### Code and Style Guidelines
