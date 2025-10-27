@@ -1,0 +1,62 @@
+{
+  "command": "python examples/train_gainakt2exp_repro.py --dataset assist2015 --epochs 2 --batch_size 32 --learning_rate 1e-4 --seeds 21 42 --devices 0 1 --ablation_mode both_lag --experiment_title smoke_temporal --max_semantic_students 10 --alignment_global_students 50 --enable_alignment_loss --enable_retention_loss --enable_lag_gain_loss --use_amp",
+  "config_md5": "675b220852fc2db8353acfeb498afa32",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "ablation_mode": "both_lag",
+    "experiment_suffix": "smoke_temporal",
+    "id": "20251026_094546_gainakt2exp_smoke_temporal",
+    "model": "gainakt2exp",
+    "purpose": "Multi-seed reproducible training run",
+    "short_title": "smoke_temporal"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1
+    ],
+    "threads": 8
+  },
+  "interpretability": {
+    "alignment_weight": 0.25,
+    "consistency_loss_weight": 0.3,
+    "enable_alignment_loss": true,
+    "enable_lag_gain_loss": true,
+    "enable_retention_loss": true,
+    "enhanced_constraints": true,
+    "gain_performance_loss_weight": 0.8,
+    "lag_gain_weight": 0.06,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "non_negative_loss_weight": 0.0,
+    "retention_weight": 0.14,
+    "sparsity_loss_weight": 0.2,
+    "warmup_constraint_epochs": 8
+  },
+  "output_dir": "examples/experiments/20251026_094546_gainakt2exp_smoke_temporal",
+  "sampling": {
+    "alignment_global_students": 50,
+    "max_semantic_students": 10
+  },
+  "seeds": {
+    "all": [
+      21,
+      42
+    ],
+    "primary": 21
+  },
+  "timestamp": "2025-10-26T09:45:46.022551Z",
+  "training": {
+    "batch_size": 32,
+    "epochs": 2,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.0001,
+    "mixed_precision": true,
+    "optimizer": "Adam",
+    "patience": 20,
+    "weight_decay": 1.7571e-05
+  }
+}

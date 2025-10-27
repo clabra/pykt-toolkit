@@ -22,7 +22,6 @@ sys.path.insert(0, '/workspaces/pykt-toolkit')
 
 from pykt.datasets import init_dataset4train
 from pykt.models.gainakt2_exp import create_exp_model
-from pykt.metrics_utils import fisher_z_ci
 from examples.interpretability_monitor import InterpretabilityMonitor
 
 
@@ -137,14 +136,8 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
     else:
         mono_rate = neg_rate = bounds_rate = 0.0
     
-    mastery_samples = len(correlations['mastery_performance'])
-    gain_samples = len(correlations['gain_performance'])
-    mastery_corr = np.mean(correlations['mastery_performance']) if mastery_samples else 0.0
-    gain_corr = np.mean(correlations['gain_performance']) if gain_samples else 0.0
-
-    # Fisher z confidence intervals (95%) if sufficient samples (n>=4)
-    mastery_ci_low, mastery_ci_high = fisher_z_ci(mastery_corr, mastery_samples)
-    gain_ci_low, gain_ci_high = fisher_z_ci(gain_corr, gain_samples)
+    mastery_corr = np.mean(correlations['mastery_performance']) if correlations['mastery_performance'] else 0.0
+    gain_corr = np.mean(correlations['gain_performance']) if correlations['gain_performance'] else 0.0
     
     logger.info(f"  Consistency Check - Monotonicity: {mono_rate:.1%}, "
                 f"Negative gains: {neg_rate:.1%}, Bounds: {bounds_rate:.1%}")
@@ -155,13 +148,7 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
         'negative_gain_rate': neg_rate,
         'bounds_violation_rate': bounds_rate,
         'mastery_correlation': mastery_corr,
-        'gain_correlation': gain_corr,
-        'mastery_correlation_n': mastery_samples,
-        'gain_correlation_n': gain_samples,
-        'mastery_correlation_ci_low': mastery_ci_low,
-        'mastery_correlation_ci_high': mastery_ci_high,
-        'gain_correlation_ci_low': gain_ci_low,
-        'gain_correlation_ci_high': gain_ci_high
+        'gain_correlation': gain_corr
     }
 
 
@@ -193,13 +180,6 @@ def train_gainakt2exp_model(args):
     experiment_suffix = getattr(args, 'experiment_suffix', 'optimal_v1')
     use_wandb = getattr(args, 'use_wandb', False)
     use_amp = getattr(args, 'use_amp', False)
-    # New training control parameters (added for explicit reproducibility)
-    gradient_clip = getattr(args, 'gradient_clip', 1.0)
-    scheduler_name = getattr(args, 'scheduler', 'reduce_on_plateau')
-    scheduler_factor = float(getattr(args, 'scheduler_factor', 0.5))
-    scheduler_patience = int(getattr(args, 'scheduler_patience', 5))
-    scheduler_mode = getattr(args, 'scheduler_mode', 'max')
-    output_dir = getattr(args, 'output_dir', f"saved_model/gainakt2exp_{experiment_suffix}")
     # Alignment / semantic emergence new arguments (may be absent in older runs)
     enable_alignment_loss = getattr(args, 'enable_alignment_loss', False)
     alignment_weight = float(getattr(args, 'alignment_weight', 0.1))
@@ -261,10 +241,6 @@ def train_gainakt2exp_model(args):
     logger.info(f"Learning rate: {learning_rate}")
     logger.info(f"Batch size: {batch_size}")
     logger.info(f"Enhanced constraints: {enhanced_constraints}")
-    logger.info(f"Gradient clip: {gradient_clip}")
-    logger.info(f"Scheduler: {scheduler_name} (mode={scheduler_mode}, factor={scheduler_factor}, patience={scheduler_patience})")
-    logger.info(f"Output dir: {output_dir}")
-    logger.info(f"Freeze sparsity: {getattr(args,'freeze_sparsity', False)}")
     logger.info("Constraint weights:")
     logger.info(f"  Non-negative loss: {non_negative_loss_weight}")
     logger.info(f"  Monotonicity loss: {monotonicity_loss_weight}")
@@ -320,8 +296,6 @@ def train_gainakt2exp_model(args):
         }
     }
     
-    # Ensure output directory exists early for artifact writing
-    os.makedirs(output_dir, exist_ok=True)
     model_name = "gainakt2exp"
     logger.info(f"Loading dataset: {dataset_name}")
     train_loader, valid_loader = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
@@ -438,48 +412,9 @@ def train_gainakt2exp_model(args):
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp and device.type == 'cuda')
     
     # Learning rate scheduler
-    if scheduler_name.lower() != 'none':
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode=scheduler_mode, factor=scheduler_factor, patience=scheduler_patience, verbose=True
-        )
-    else:
-        scheduler = None
-
-    # Environment metadata emission
-    try:
-        import platform
-        import subprocess
-        import hashlib
-        py_ver = platform.python_version()
-        torch_ver = torch.__version__
-        cuda_ver = torch.version.cuda if torch.cuda.is_available() else 'None'
-        gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
-        # Git metadata (best-effort)
-        git_commit = subprocess.check_output(['git','rev-parse','HEAD']).decode().strip()
-        git_branch = subprocess.check_output(['git','rev-parse','--abbrev-ref','HEAD']).decode().strip()
-        env_txt_path = os.path.join(output_dir, 'environment.txt')
-        with open(env_txt_path, 'w') as envf:
-            envf.write(f"timestamp: {datetime.now().isoformat()}\n")
-            envf.write(f"python_version: {py_ver}\n")
-            envf.write(f"torch_version: {torch_ver}\n")
-            envf.write(f"cuda_version: {cuda_ver}\n")
-            envf.write(f"gpu_count: {gpu_count}\n")
-            envf.write(f"git_branch: {git_branch}\n")
-            envf.write(f"git_commit: {git_commit}\n")
-        logger.info(f"Environment metadata written to {env_txt_path}")
-    except Exception as e:
-        logger.warning(f"Failed to write environment.txt: {e}")
-
-    # Initialize metrics_epoch.csv header
-    metrics_csv_path = os.path.join(output_dir, 'metrics_epoch.csv')
-    if not os.path.exists(metrics_csv_path):
-        with open(metrics_csv_path, 'w') as mf:
-            mf.write(
-                'epoch,train_loss,val_loss,train_auc,val_auc,val_acc,mastery_corr,mastery_ci_low,mastery_ci_high,'
-                'gain_corr,gain_ci_low,gain_ci_high,mean_mastery_variance,min_mastery_variance,max_mastery_variance,'
-                'main_loss_share,constraint_loss_share,alignment_loss_share,lag_loss_share,retention_loss_share,'
-                'learning_rate,best_val_auc_so_far,freeze_sparsity,scheduler\n'
-            )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='max', factor=0.5, patience=5, verbose=True
+    )
     
     # Training tracking
     best_val_auc = 0.0
@@ -493,51 +428,16 @@ def train_gainakt2exp_model(args):
         'consistency_metrics': [],
         'semantic_trajectory': []
     }
-
-    # Resume support: load existing checkpoint & history if --resume provided
-    resume_path = getattr(args, 'resume', None)
-    if resume_path and os.path.exists(resume_path):
-        try:
-            ckpt = torch.load(resume_path, map_location=device)
-            if 'model_state_dict' in ckpt:
-                model.load_state_dict(ckpt['model_state_dict'])
-                model_core = model.module if isinstance(model, torch.nn.DataParallel) else model
-                logger.info(f"[Resume] Loaded model state from {resume_path}")
-            best_val_auc = ckpt.get('best_val_auc', 0.0)
-            best_model_state = ckpt.get('model_state_dict', None)
-            # Merge history (append to allow continuation)
-            old_hist = ckpt.get('train_history', {})
-            for k in train_history.keys():
-                if k in old_hist and isinstance(old_hist[k], list):
-                    train_history[k].extend(old_hist[k])
-            start_epoch_offset = len(train_history['train_loss'])
-            logger.info(f"[Resume] Restored history length: {start_epoch_offset} epochs; best_val_auc={best_val_auc:.4f}")
-        except Exception as e:
-            logger.warning(f"[Resume] Failed to load checkpoint {resume_path}: {e}")
-            resume_path = None
-    else:
-        start_epoch_offset = 0
     
     logger.info(f"\\nStarting training for {num_epochs} epochs...")
     # Tier B semantic emergence parameters
     warmup_constraint_epochs = getattr(args, 'warmup_constraint_epochs', 4)
     max_semantic_students = getattr(args, 'max_semantic_students', 50)
-    final_consistency_max_students = getattr(args, 'final_consistency_max_students', 200)
-    # Always set a default semantic trajectory path if not provided, inside a standard artifacts directory.
-    semantic_trajectory_path = getattr(args, 'semantic_trajectory_path', None)
-    if semantic_trajectory_path is None:
-        # Prefer experiment output directory location for trajectory artifact (repro folder)
-        exp_out = getattr(args, 'output_dir', f"saved_model/gainakt2exp_{experiment_suffix}")
-        default_artifacts_dir = os.path.join(exp_out, 'artifacts')
-        os.makedirs(default_artifacts_dir, exist_ok=True)
-        semantic_trajectory_path = os.path.join(
-            default_artifacts_dir,
-            f"semantic_trajectory_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        )
-        try:
-            setattr(args, 'semantic_trajectory_path', semantic_trajectory_path)
-        except Exception:
-            pass
+    semantic_trajectory_path = getattr(
+        args,
+        'semantic_trajectory_path',
+        f"paper/results/gainakt2exp_semantic_trajectory_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
     logger.info(f"Warm-up constraint epochs: {warmup_constraint_epochs}")
     logger.info(f"Max semantic students per consistency sample: {max_semantic_students}")
     logger.info(f"Semantic trajectory path (will be written at end): {semantic_trajectory_path}")
@@ -560,16 +460,7 @@ def train_gainakt2exp_model(args):
         'pending_penalty': 0.0
     }
     
-    # Graceful interrupt handling: write resume_state.json
-    interrupted = {'flag': False}
-    import signal
-    def _handle_interrupt(signum, frame):
-        interrupted['flag'] = True
-        logger.warning("Interrupt signal received; will finalize current epoch then exit.")
-    signal.signal(signal.SIGINT, _handle_interrupt)
-    signal.signal(signal.SIGTERM, _handle_interrupt)
-
-    for epoch in range(start_epoch_offset, num_epochs):
+    for epoch in range(num_epochs):
         logger.info(f"\nEpoch {epoch + 1}/{args.epochs}")
         logger.info("-" * 50)
         # Epoch-level warm-up scaling
@@ -788,14 +679,12 @@ def train_gainakt2exp_model(args):
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
-                    if gradient_clip is not None:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=gradient_clip)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     scaler.step(optimizer)
                     scaler.update()
                 else:
                     total_batch_loss.backward()
-                    if gradient_clip is not None:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=gradient_clip)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     optimizer.step()
             except RuntimeError as oom:
                 if 'out of memory' in str(oom).lower():
@@ -1061,19 +950,11 @@ def train_gainakt2exp_model(args):
         train_history['train_loss'].append(train_loss)
         train_history['train_auc'].append(train_auc)
         train_history['val_auc'].append(val_auc)
-        # Store per-epoch validation accuracy for reproducible export
-        if 'val_acc' not in train_history:
-            train_history['val_acc'] = []
-        train_history['val_acc'].append(val_acc)
         train_history['consistency_metrics'].append(consistency_metrics)
         train_history['semantic_trajectory'].append({
             'epoch': epoch + 1,
             'mastery_correlation': consistency_metrics['mastery_correlation'],
             'gain_correlation': consistency_metrics['gain_correlation'],
-            'mastery_correlation_ci_low': consistency_metrics.get('mastery_correlation_ci_low'),
-            'mastery_correlation_ci_high': consistency_metrics.get('mastery_correlation_ci_high'),
-            'gain_correlation_ci_low': consistency_metrics.get('gain_correlation_ci_low'),
-            'gain_correlation_ci_high': consistency_metrics.get('gain_correlation_ci_high'),
             'warmup_scale': scale,
             'alignment_corr_mastery': float(alignment_corr_mastery.detach().cpu()) if 'alignment_corr_mastery' in locals() else None,
             'alignment_corr_gain': float(alignment_corr_gain.detach().cpu()) if 'alignment_corr_gain' in locals() else None,
@@ -1098,27 +979,6 @@ def train_gainakt2exp_model(args):
             'max_mastery_variance': max_mastery_variance,
             'per_lag_correlations': epoch_lag_corrs
         })
-
-        # Append metrics to CSV
-        try:
-            best_so_far = max(train_history['val_auc']) if train_history['val_auc'] else val_auc
-            line = (
-                f"{epoch + 1},{train_loss:.6f},{val_loss:.6f},{train_auc:.6f},{val_auc:.6f},{val_acc:.6f},"
-                f"{consistency_metrics['mastery_correlation']:.6f},{consistency_metrics.get('mastery_correlation_ci_low', '')},{consistency_metrics.get('mastery_correlation_ci_high', '')},"
-                f"{consistency_metrics['gain_correlation']:.6f},{consistency_metrics.get('gain_correlation_ci_low', '')},{consistency_metrics.get('gain_correlation_ci_high', '')},"
-                f"{mean_mastery_variance if mean_mastery_variance is not None else ''},{min_mastery_variance if min_mastery_variance is not None else ''},{max_mastery_variance if max_mastery_variance is not None else ''},"
-                f"{main_loss_share:.6f},{constraint_loss_share:.6f},{alignment_loss_share:.6f},{lag_loss_share:.6f},{retention_loss_share:.6f},"
-                f"{optimizer.param_groups[0]['lr']:.8f},{best_so_far:.6f},{getattr(args,'freeze_sparsity', False)},{scheduler_name}\n"
-            )
-            # Atomic append: read existing, append, write temp then replace
-            tmp_path = metrics_csv_path + '.tmp'
-            with open(metrics_csv_path, 'r') as orig, open(tmp_path, 'w') as tmp:
-                content = orig.read()
-                tmp.write(content)
-                tmp.write(line)
-            os.replace(tmp_path, metrics_csv_path)
-        except Exception as e:
-            logger.warning(f"Failed atomic write to metrics_epoch.csv: {e}")
 
         # Alignment share cap enforcement (post logging so share recorded) with decay
         if enable_alignment_loss and alignment_loss_share is not None and abs(alignment_loss_share) > alignment_share_cap:
@@ -1159,7 +1019,7 @@ def train_gainakt2exp_model(args):
             patience_counter = 0
             
             # Save best model
-            save_dir = output_dir
+            save_dir = f"saved_model/gainakt2exp_{experiment_suffix}"
             os.makedirs(save_dir, exist_ok=True)
             
             checkpoint = {
@@ -1178,41 +1038,12 @@ def train_gainakt2exp_model(args):
             patience_counter += 1
         
         # Learning rate scheduling
-        if scheduler is not None:
-            scheduler.step(val_auc)
+        scheduler.step(val_auc)
         
         # Early stopping
         patience = getattr(args, 'patience', 20)
         if patience_counter >= patience:
             logger.info(f"  Early stopping triggered (patience: {patience})")
-            break
-
-        # Write resume_state.json each epoch for reproducibility and crash recovery
-        try:
-            resume_state = {
-                'epoch_completed': epoch + 1,
-                'best_val_auc': best_val_auc,
-                'model_state_dict': best_model_state,
-                'optimizer_state_dict': optimizer.state_dict(),
-                'train_history': train_history,
-                'timestamp': datetime.now().isoformat(),
-                'config_md5': None
-            }
-            # Include hash of current partial config for auditing
-            try:
-                import hashlib
-                partial_json = json.dumps(resume_state['train_history'], sort_keys=True, separators=(',', ':'))
-                resume_state['config_md5'] = hashlib.md5(partial_json.encode('utf-8')).hexdigest()
-            except Exception:
-                pass
-            with open(os.path.join(output_dir, 'resume_state.json.tmp'), 'wb') as rs_tmp:
-                torch.save(resume_state, rs_tmp)
-            os.replace(os.path.join(output_dir, 'resume_state.json.tmp'), os.path.join(output_dir, 'resume_state.json'))
-        except Exception as e:
-            logger.warning(f"Failed to write resume_state.json: {e}")
-
-        if interrupted['flag']:
-            logger.info("Graceful interrupt: stopping after epoch save.")
             break
     
     # Final evaluation
@@ -1228,30 +1059,13 @@ def train_gainakt2exp_model(args):
     # Final comprehensive consistency check
     logger.info("\\nRunning final consistency validation...")
     final_consistency = validate_model_consistency(
-        model, valid_loader, device, logger, max_students=final_consistency_max_students
+        model, valid_loader, device, logger, max_students=200
     )
     
     # Save final results
-    best_epoch = int(np.argmax(train_history['val_auc'])) + 1 if train_history['val_auc'] else None
-    best_semantic = None
-    if best_epoch is not None:
-        for entry in train_history.get('semantic_trajectory', []):
-            if entry.get('epoch') == best_epoch:
-                best_semantic = entry
-                break
-    best_mastery_corr = best_semantic.get('mastery_correlation') if best_semantic else None
-    best_gain_corr = best_semantic.get('gain_correlation') if best_semantic else None
-    best_mastery_ci = [best_semantic.get('mastery_correlation_ci_low'), best_semantic.get('mastery_correlation_ci_high')] if best_semantic and best_semantic.get('mastery_correlation_ci_low') is not None else None
-    best_gain_ci = [best_semantic.get('gain_correlation_ci_low'), best_semantic.get('gain_correlation_ci_high')] if best_semantic and best_semantic.get('gain_correlation_ci_low') is not None else None
-
     final_results = {
         'experiment_name': experiment_suffix,
         'best_val_auc': best_val_auc,
-        'best_epoch': best_epoch,
-        'best_mastery_corr': best_mastery_corr,
-        'best_gain_corr': best_gain_corr,
-        'best_mastery_corr_ci': best_mastery_ci,
-        'best_gain_corr_ci': best_gain_ci,
         'final_consistency_metrics': final_consistency,
         'train_history': train_history,
         'model_config': model_config,
@@ -1263,19 +1077,6 @@ def train_gainakt2exp_model(args):
             'weight_decay': weight_decay,
             'enhanced_constraints': enhanced_constraints,
             'fold': fold,
-            'gradient_clip': gradient_clip,
-            'scheduler': scheduler_name,
-            'scheduler_params': {
-                'mode': scheduler_mode,
-                'factor': scheduler_factor,
-                'patience': scheduler_patience
-            },
-            'patience': getattr(args, 'patience', 20),
-            'seed': getattr(args, 'seed', 42),
-            'use_wandb': use_wandb,
-            'output_dir': output_dir,
-            'freeze_sparsity': getattr(args,'freeze_sparsity', False),
-            'final_consistency_max_students': final_consistency_max_students,
             'constraint_weights': {
                 'non_negative_loss_weight': non_negative_loss_weight,
                 'monotonicity_loss_weight': monotonicity_loss_weight,
@@ -1321,29 +1122,7 @@ def train_gainakt2exp_model(args):
         'timestamp': datetime.now().isoformat()
     }
     
-    # Ensure output directory exists and write canonical config snapshot
-    os.makedirs(output_dir, exist_ok=True)
-    resolved_config_path = os.path.join(output_dir, 'config.json')
-    # Compute config MD5 hash (sorted keys) for integrity audit
-    try:
-        import hashlib
-        canonical_json = json.dumps(final_results, sort_keys=True, separators=(',', ':'))
-        config_md5 = hashlib.md5(canonical_json.encode('utf-8')).hexdigest()
-        final_results['config_md5'] = config_md5
-    except Exception as e:
-        logger.warning(f"Failed to compute config MD5: {e}")
-    try:
-        with open(resolved_config_path, 'w') as cf:
-            json.dump(final_results, cf, indent=2)
-        logger.info(f"Canonical config snapshot written to: {resolved_config_path}")
-        # Write hash file
-        if 'config_md5' in final_results:
-            with open(os.path.join(output_dir, 'config_hash.txt'), 'w') as hf:
-                hf.write(f"config_md5={final_results['config_md5']}\n")
-        logger.info("Config hash file written")
-    except Exception as e:
-        logger.warning(f"Failed to write canonical config snapshot or hash: {e}")
-    results_file = os.path.join(output_dir, f"results_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    results_file = f"gainakt2exp_results_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(results_file, 'w') as f:
         json.dump(final_results, f, indent=2)
     
@@ -1358,21 +1137,7 @@ def train_gainakt2exp_model(args):
                 'experiment_name': experiment_suffix,
                 'best_val_auc': best_val_auc,
                 'timestamp': datetime.now().isoformat(),
-                'warmup_constraint_epochs': warmup_constraint_epochs,
-                'config': {
-                    'learning_rate': learning_rate,
-                    'weight_decay': weight_decay,
-                    'batch_size': batch_size,
-                    'enhanced_constraints': enhanced_constraints,
-                    'constraint_weights': {
-                        'non_negative': non_negative_loss_weight,
-                        'monotonicity': monotonicity_loss_weight,
-                        'mastery_performance': mastery_performance_loss_weight,
-                        'gain_performance': gain_performance_loss_weight,
-                        'sparsity': sparsity_loss_weight,
-                        'consistency': consistency_loss_weight
-                    }
-                }
+                'warmup_constraint_epochs': warmup_constraint_epochs
             }, traj_f, indent=2)
         logger.info(f"🧪 Semantic trajectory saved to: {semantic_trajectory_path}")
     except Exception as e:
@@ -1441,11 +1206,6 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--learning_rate', '--lr', dest='learning_rate', type=float, default=0.000174)
     parser.add_argument('--weight_decay', type=float, default=1.7571e-05)
-    parser.add_argument('--gradient_clip', type=float, default=1.0)
-    parser.add_argument('--scheduler', type=str, default='reduce_on_plateau', choices=['reduce_on_plateau', 'none'])
-    parser.add_argument('--scheduler_factor', type=float, default=0.5)
-    parser.add_argument('--scheduler_patience', type=int, default=5)
-    parser.add_argument('--scheduler_mode', type=str, default='max', choices=['max','min'])
     parser.add_argument('--enhanced_constraints', action='store_true', default=True)
     parser.add_argument('--experiment_suffix', type=str, default='cli_run')
     parser.add_argument('--seed', type=int, default=42)
@@ -1453,9 +1213,6 @@ if __name__ == "__main__":
     parser.add_argument('--use_amp', action='store_true')
     parser.add_argument('--monitor_freq', type=int, default=50)
     parser.add_argument('--patience', type=int, default=20)
-    parser.add_argument('--output_dir', type=str, default=None, help='Base directory for checkpoints & artifacts.')
-    parser.add_argument('--final_consistency_max_students', type=int, default=200)
-    parser.add_argument('--resume', type=str, default=None, help='Path to checkpoint (.pth) to resume training from.')
     # Constraint weights (optional overrides)
     parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
     parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)

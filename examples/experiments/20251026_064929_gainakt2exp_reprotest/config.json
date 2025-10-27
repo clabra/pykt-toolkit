@@ -1,0 +1,59 @@
+{
+  "command": "python examples/train_gainakt2exp_repro.py --experiment_title reprotest --epochs 1 --batch_size 32 --alignment_global_students 100",
+  "config_md5": "f429fc4b147f87672c751f44bfd4dda0",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "id": "20251026_064929_gainakt2exp_reprotest",
+    "model": "gainakt2exp",
+    "purpose": "Baseline reproducible training run",
+    "short_title": "reprotest"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threads": 8
+  },
+  "interpretability": {
+    "alignment_weight": 0.25,
+    "consistency_loss_weight": 0.3,
+    "enable_alignment_loss": false,
+    "enable_lag_gain_loss": false,
+    "enable_retention_loss": false,
+    "enhanced_constraints": true,
+    "gain_performance_loss_weight": 0.8,
+    "lag_gain_weight": 0.06,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "non_negative_loss_weight": 0.0,
+    "retention_weight": 0.14,
+    "sparsity_loss_weight": 0.2,
+    "warmup_constraint_epochs": 8
+  },
+  "output_dir": "examples/experiments/20251026_064929_gainakt2exp_reprotest",
+  "sampling": {
+    "alignment_global_students": 100,
+    "max_semantic_students": 50
+  },
+  "seeds": {
+    "primary": 42
+  },
+  "timestamp": "2025-10-26T06:49:29.910607Z",
+  "training": {
+    "batch_size": 32,
+    "epochs": 1,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.000174,
+    "mixed_precision": false,
+    "optimizer": "Adam",
+    "patience": 20,
+    "weight_decay": 1.7571e-05
+  }
+}

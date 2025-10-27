@@ -1,0 +1,60 @@
+{
+  "command": "python examples/train_gainakt2exp_repro.py --experiment_title enh8 --experiment_suffix enhanced_v1 --epochs 8 --batch_size 96 --learning_rate 0.000174 --weight_decay 1.7571e-05 --enhanced_constraints --warmup_constraint_epochs 4 --seed 42 --devices 0 1 2 3 4",
+  "config_md5": "379a528e5efe8c36d7d164b56e69a3f6",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "experiment_suffix": "enhanced_v1",
+    "id": "20251026_081659_gainakt2exp_enh8",
+    "model": "gainakt2exp",
+    "purpose": "Baseline reproducible training run",
+    "short_title": "enh8"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threads": 8
+  },
+  "interpretability": {
+    "alignment_weight": 0.25,
+    "consistency_loss_weight": 0.3,
+    "enable_alignment_loss": false,
+    "enable_lag_gain_loss": false,
+    "enable_retention_loss": false,
+    "enhanced_constraints": true,
+    "gain_performance_loss_weight": 0.8,
+    "lag_gain_weight": 0.06,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "non_negative_loss_weight": 0.0,
+    "retention_weight": 0.14,
+    "sparsity_loss_weight": 0.2,
+    "warmup_constraint_epochs": 4
+  },
+  "output_dir": "examples/experiments/20251026_081659_gainakt2exp_enh8",
+  "sampling": {
+    "alignment_global_students": 600,
+    "max_semantic_students": 50
+  },
+  "seeds": {
+    "primary": 42
+  },
+  "timestamp": "2025-10-26T08:16:59.666776Z",
+  "training": {
+    "batch_size": 96,
+    "epochs": 8,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.000174,
+    "mixed_precision": false,
+    "optimizer": "Adam",
+    "patience": 20,
+    "weight_decay": 1.7571e-05
+  }
+}

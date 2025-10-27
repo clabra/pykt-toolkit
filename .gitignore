@@ -1,67 +1,139 @@
-examples/__pycache__/
-examples/all_bestmodel/
-examples/all_start.sh
-examples/pkls/
-examples/pred_wandbs/
-examples/saved_model/
-examples/start_predict.sh
-examples/wandb/
-dist/
-*.egg-info/
-*.pyc
-*.pkl
-saved_model
-build/
-.vscode/
-data/assist*
-data/assist2012
-data/algebra2005
-data/bridge2algebra2006
-data/statics2011
-data/nips_task34
-data/assist2017
-data/poj
-data/slepemapy
-data/junyi2015
-data/ednet
-.ipynb_checkpoints
-dev_tools
-tmp*
-configs/wandb.json
-examples/nohup.out
-*.log
-start_sweep_*.sh
-wandb/*
-*tiaocan*
-examples/assist2009_dkt_que_mt_iekt
-examples/assist2009_*
-examples/aaai_dkt_improve_v1
-tabchen
-examples/aaai2023/
-examples/all_wandbs/
-data_old
-examples/nips2022/
-examples/results/wandb_result/
-examples/*.pred
-examples/nips_task34/
+#############################################
+# pykt-toolkit .gitignore (updated)
+#
+# Goal: Track source & curated experiment summaries while excluding
+# heavy, transient, reproducibility/regeneration artifacts.
+#
+# Sections:
+#  1. Python caches & build outputs
+#  2. IDE/editor artifacts
+#  3. Data (raw + processed) & large experiment outputs
+#  4. Experiment run artifacts (logs, checkpoints, wandb)
+#  5. Legacy / archive directories
+#  6. Temporary / scratch files
+#  7. Whitelists (negated patterns) for curated artifacts
+#############################################
+
+###############
+# 1. Python / build
+###############
 __pycache__/
-log.*
-*.swp
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+*.pkl
 *.bak
-logs/
-examples/best_model_path
-examples/all_wandbs_pred/
-examples/best_model_path_1002
-examples/pred_wandbs_all_best_models_lqq
+*.swp
+
+###############
+# 2. IDE/editor
+###############
+.vscode/
+.idea/
+.DS_Store
+
+###############
+# 3. Data (do not version large datasets)
+###############
+data/**
+!data/README.md          # allow dataset documentation if present
+data_old/
+data_original/**         # raw datasets explicitly excluded
+
+###############
+# 4. Experiment artifacts & heavy outputs
+###############
+examples/experiments/**/artifacts/
+examples/experiments/**/stdout.log
+examples/experiments/**/stderr.log
+examples/experiments/**/metrics_epoch.csv
+examples/experiments/**/model_last.pth
+examples/experiments/**/model_best.pth
+examples/experiments/**/model_last_seed*.pth
+examples/experiments/**/model_best_seed*.pth
+examples/experiments/**/best_model*.pth
+examples/experiments/**/checkpoint*.pth
+examples/experiments/**/results*.json
+examples/experiments/**/config_postrun.json
+examples/experiments/**/config_postrun_diff.*
+examples/experiments/**/overrides_applied.txt
+examples/experiments/**/environment.txt
+examples/experiments/**/SEED_INFO.md
+examples/experiments/**/reproduction_report.json
+examples/experiments/**/resume_state.json
+examples/experiments/**/hash_*.txt
+saved_model/
+examples/saved_model/
+wandb/
+wandb_offline/
+examples/wandb/
 examples/wandb_tmp/
+logs/
+log.*
+*.log
+
+###############
+# 5. Legacy / archive / benchmark dirs
+###############
 examples/archive/
-data/peiyou
+examples/all_bestmodel/
+examples/all_wandbs/
+examples/all_wandbs_pred/
+examples/pred_wandbs/
+examples/pred_wandbs_all_best_models_lqq/
+examples/results/wandb_result/
+examples/models/
+examples/aaai2023/
+examples/nips2022*/
+examples/assist2009_*/
+examples/assist2009_dkt_que_mt_iekt/
+dev_tools/
+TSMini/
+tabchen/
+
+###############
+# 6. Temporary / scratch
+###############
+tmp*
+tmp/**
+BORRAR/**
+start_sweep_*.sh
+*tiaocan*
+examples/*.txt
+examples/*.pred
+examples/nohup.out
+
+###############
+# 7. Whitelists (retain minimal curated experiment metadata)
+###############
+!examples/experiments/RESULTS.csv        # global aggregated results table
+# Keep per-experiment README + config.json ONLY if desired:
+!examples/experiments/**/README.md
+!examples/experiments/**/config.json
+
+###############
+# 8. Config exceptions
+###############
+configs/wandb.json
+
+###############
+# 9. Jupyter checkpoints
+###############
+.ipynb_checkpoints/
+
+###############
+# 10. Misc exclusions
+###############
+examples/all_start.sh
+examples/start_predict.sh
+examples/best_model_path*
 examples/iekt_ab/
 examples/qikt_improve/
-examples/*.txt
-examples/nips2022-peiyou/
-examples/nips2022-ednet/
-examples/models/
-data_original/*
+data/peiyou/
 
-TSMini/
+# End of .gitignore

@@ -1119,6 +1119,8 @@ The current implementation achieves **excellent performance (AUC: 0.7253) with s
 
 ## Augmented Architecture Design ✅ IMPLEMENTED
 
+### Architecture Diagram 
+
 The following diagram shows the **complete implemented architecture** of `GainAKT2Monitored` including all 5 auxiliary loss functions and training-time monitoring integration:
 
 ```mermaid
@@ -1127,7 +1129,7 @@ graph TD
         direction LR
         Input_q["Input Questions (q)<br/>Shape: [B, L]"]
         Input_r["Input Responses (r)<br/>Shape: [B, L]"]
-        Ground_Truth["Ground Truth Responses<br/>**NEW**"]
+        Ground_Truth["Ground Truth Responses"]
     end
 
     subgraph "Tokenization & Embedding"
@@ -1256,8 +1258,8 @@ graph TD
 
     subgraph "Augmented Components for Interpretability"
         direction TB
-        Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)<br/>**NEW**"]
-        Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)<br/>**NEW**"]
+        Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)"]
+        Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)"]
         
         Encoder_Output_Ctx --> Proj_Mastery
         Encoder_Output_Val --> Proj_Gain
@@ -1269,33 +1271,37 @@ graph TD
         Proj_Gain --> Projected_Gain_Output
     end
 
-    subgraph "Loss Calculation - ✅ IMPLEMENTED"
+    subgraph "Loss Functions"
         direction TB
         
-        BCE_Loss["BCE Loss<br/>(Predictions, Ground Truth)"]
+    BCE_Loss["BCE Loss (predictions, ground truth)"]
         Predictions --> BCE_Loss
         Ground_Truth --> BCE_Loss
         
         %% Auxiliary Loss Functions (All 5 Implemented)
-        NonNeg_Loss["1. Non-Negativity Loss<br/>mean(relu(-gains))<br/>✅ IMPLEMENTED"]
-        Projected_Gain_Output --> NonNeg_Loss
-        
-        Monotonicity_Loss["2. Monotonicity Loss<br/>mean(relu(mastery[t-1] - mastery[t]))<br/>✅ IMPLEMENTED"] 
-        Projected_Mastery_Output --> Monotonicity_Loss
-        
-        Mastery_Perf_Loss["3. Mastery-Performance Loss<br/>penalize(low_mastery→correct)<br/>+ penalize(high_mastery→incorrect)<br/>✅ IMPLEMENTED"]
-        Projected_Mastery_Output --> Mastery_Perf_Loss
+    %% Introduce colored flow junctions instead of styling raw edges (more robust in markdown renderers)
+    Mastery_Flow{Mastery Flow}
+    Gain_Flow{Gain Flow}
+        Projected_Mastery_Output --> Mastery_Flow
+        Projected_Gain_Output --> Gain_Flow
+
+    Monotonicity_Loss["Monotonicity"] 
+        Mastery_Flow --> Monotonicity_Loss
+    Mastery_Perf_Loss["Mastery-Perf"]
+        Mastery_Flow --> Mastery_Perf_Loss
         Predictions --> Mastery_Perf_Loss
         
-        Gain_Perf_Loss["4. Gain-Performance Loss<br/>hinge(incorrect_gains - correct_gains)<br/>✅ IMPLEMENTED"]
-        Projected_Gain_Output --> Gain_Perf_Loss
+    Gain_Perf_Loss["Gain-Perf"]
+        Gain_Flow --> Gain_Perf_Loss
         Predictions --> Gain_Perf_Loss
         
-        Sparsity_Loss["5. Sparsity Loss<br/>mean(abs(non_relevant_gains))<br/>✅ IMPLEMENTED"]
-        Projected_Gain_Output --> Sparsity_Loss
+    Sparsity_Loss["Sparsity"]
+        Gain_Flow --> Sparsity_Loss
+    NonNeg_Loss["NonNeg Gain"]
+        Gain_Flow --> NonNeg_Loss
         
         %% Total Loss Computation
-        Total_Loss["Total Loss = BCE +<br/>w1×NonNeg + w2×Monotonicity +<br/>w3×Mastery_Perf + w4×Gain_Perf +<br/>w5×Sparsity<br/>✅ ALL WEIGHTS CONFIGURABLE"]
+    Total_Loss["Total"]
         BCE_Loss --> Total_Loss
         NonNeg_Loss --> Total_Loss
         Monotonicity_Loss --> Total_Loss
@@ -1304,9 +1310,9 @@ graph TD
         Sparsity_Loss --> Total_Loss
     end
     
-    subgraph "Monitoring Integration - ✅ IMPLEMENTED"
+    subgraph "Monitoring Integration"
         direction TB
-        Monitor_Hook["Interpretability Monitor<br/>Real-time constraint analysis<br/>Configurable frequency<br/>✅ IMPLEMENTED"]
+    Monitor_Hook["Interpretability monitor (real-time constraints, configurable frequency)"]
         
         Projected_Mastery_Output --> Monitor_Hook
         Projected_Gain_Output --> Monitor_Hook
@@ -1315,16 +1321,131 @@ graph TD
 
     classDef new_component fill:#c8e6c9,stroke:#2e7d32
     classDef implemented_component fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef mastery_flow fill:#e0f2f1,stroke:#00796b,stroke-width:2px
+    classDef gain_flow fill:#fff3e0,stroke:#e65100,stroke-width:2px
 
     class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth new_component
     class BCE_Loss,NonNeg_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Total_Loss,Monitor_Hook implemented_component
+    class Mastery_Flow mastery_flow
+    class Gain_Flow gain_flow
+
+    %% Remove linkStyle (fragile) and instead apply class-based node coloring for flow differentiation
 ```
 
-### Architecture Legend
 
-- 🟢 **Green Components** (`implemented_component`): Fully implemented and validated auxiliary loss functions and monitoring
-- 🔵 **Teal Components** (`new_component`): Interpretability projection heads added to base GainAKT2 architecture
-- ⚪ **White Components**: Standard transformer architecture components (base GainAKT2)
+
+### Heads and Loss Functions 
+
+1.  **Mastery and Gain Heads** ✅ Fully implemented in `gainakt2_monitored.py`
+    - `mastery_head`: Projects context sequences to skill mastery estimates  
+    - `gain_head`: Projects value sequences to learning gain estimates
+    - Both heads are always enabled for interpretability monitoring
+
+2.  **Comprehensive Auxiliary Loss Functions** ✅ All 5 losses implemented and validated:
+    - ✅ Non-negative gain loss (`non_negative_loss_weight=0.1`)
+
+
+
+The following focused diagram isolates the projection heads and auxiliary losses, applying explicit color coding to differentiate semantic sources:
+
+- Teal solid edges: flows from `Projected Mastery` into mastery-dependent losses (Monotonicity, Mastery-Performance)
+- Orange dotted edges: flows from `Projected Gains` into gain-dependent losses (Non-negativity, Gain-Performance, Sparsity)
+
+```mermaid
+graph TB
+    subgraph Projections
+        PM[Projected Mastery]
+        PG[Projected Gains]
+        PRED[Predictions]
+    end
+
+    subgraph Losses
+        L_bce["BCE<br>Primary performance loss<br>σ(logits) vs ground truth"]
+        L_nonneg["NonNeg Gain<br>Penalize negative projected gains<br>mean(clamp(-g,0))"]
+        L_mono["Monotonicity<br>Prevent mastery decrease over time<br>mean(clamp(m_t- m_{t+1},0))"]
+        L_mperf["Mastery-Performance<br>Align mastery with correctness<br>low m on correct / high m on incorrect"]
+        L_gperf["Gain-Performance<br>Correct > Incorrect gain margin<br>clamp(μ_g_inc - μ_g_cor + δ,0)"]
+        L_sparse["Sparsity<br>Limit gains to relevant skills<br>mean(|g_irrelevant|)"]
+        L_total["Total Loss<br>Weighted sum of all components"]
+    end
+
+    %% Edges from predictions
+    PRED --> L_bce
+    PRED --> L_mperf
+    PRED --> L_gperf
+
+    %% Mastery edges (to mastery-related losses)
+    PM --> L_mono
+    PM --> L_mperf
+
+    %% Gain edges (to gain-related losses)
+    PG --> L_nonneg
+    PG --> L_gperf
+    PG --> L_sparse
+
+    %% Aggregation
+    L_bce --> L_total
+    L_nonneg --> L_total
+    L_mono --> L_total
+    L_mperf --> L_total
+    L_gperf --> L_total
+    L_sparse --> L_total
+
+    %% Node styling
+    classDef proj fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef pred fill:#e3f2fd,stroke:#1565c0
+    classDef loss fill:#fbe9e7,stroke:#e65100
+    classDef total fill:#fff8e1,stroke:#ff8f00,stroke-width:2px
+
+    class PM,PG proj
+    class PRED pred
+    class L_bce,L_nonneg,L_mono,L_mperf,L_gperf,L_sparse loss
+    class L_total total
+
+    %% Edge styling with precise indices (count order within this small diagram)
+    %% Edge index order as declared:
+    %% 0: PRED->L_bce
+    %% 1: PRED->L_mperf
+    %% 2: PRED->L_gperf
+    %% 3: PM->L_mono
+    %% 4: PM->L_mperf
+    %% 5: PG->L_nonneg
+    %% 6: PG->L_gperf
+    %% 7: PG->L_sparse
+    %% 8: L_bce->L_total
+    %% 9: L_nonneg->L_total
+    %%10: L_mono->L_total
+    %%11: L_mperf->L_total
+    %%12: L_gperf->L_total
+    %%13: L_sparse->L_total
+
+    %% Mastery edges (3,4)
+    linkStyle 3 stroke:#00796b,stroke-width:2px
+    linkStyle 4 stroke:#00796b,stroke-width:2px
+    %% Gain edges (5,6,7) dotted orange
+    linkStyle 5 stroke:#e65100,stroke-width:2px,stroke-dasharray:4 4
+    linkStyle 6 stroke:#e65100,stroke-width:2px,stroke-dasharray:4 4
+    linkStyle 7 stroke:#e65100,stroke-width:2px,stroke-dasharray:4 4
+```
+
+This compact view improves visual separation of semantic influences on auxiliary objectives; edge indices are stable unless node ordering changes.
+    - ✅ Monotonicity loss (`monotonicity_loss_weight=0.1`) 
+    - ✅ Mastery-performance correlation loss (`mastery_performance_loss_weight=0.1`)
+    - ✅ Gain-performance correlation loss (`gain_performance_loss_weight=0.1`)
+    - ✅ Sparsity loss (`sparsity_loss_weight=0.1`)
+
+3.  **Experimental Validation** ✅ Comprehensive testing completed:
+    - ✅ Baseline model training successful
+    - ✅ Multi-GPU hyperparameter optimization (8x Tesla V100)
+    - ✅ Enhanced regularization training achieving **AUC: 0.7253**
+    - ✅ Overfitting control with gap reduced to **0.0145**
+    - ✅ All interpretability constraints validated during training
+
+4.  **Performance and Interpretability Analysis** ✅ Comprehensive evaluation:
+    - ✅ Predictive performance: Exceeds target AUC (0.7250+)  
+    - ✅ Interpretability metrics: All auxiliary losses converging properly
+    - ✅ Educational constraints: Non-negative gains, monotonic mastery verified
+    - ✅ Training-time monitoring: Real-time interpretability analysis integrated
 
 ### Key Implementation Highlights
 
@@ -1345,44 +1466,15 @@ graph TD
    - **Generalization:** Overfitting gap 0.0145 (excellent control)
    - **Dependencies:** All verified and documented
 
-### Summary of Implementation Status ✅ COMPLETED
 
-The architecture described in this document has been **successfully implemented** in `GainAKT2Monitored`:
 
-#### ✅ **Completed Implementation:**
-
-1.  **Mastery and Gain Heads** ✅ Fully implemented in `gainakt2_monitored.py`
-    - `mastery_head`: Projects context sequences to skill mastery estimates  
-    - `gain_head`: Projects value sequences to learning gain estimates
-    - Both heads are always enabled for interpretability monitoring
-
-2.  **Comprehensive Auxiliary Loss Functions** ✅ All 5 losses implemented and validated:
-    - ✅ Non-negative gain loss (`non_negative_loss_weight=0.1`)
-    - ✅ Monotonicity loss (`monotonicity_loss_weight=0.1`) 
-    - ✅ Mastery-performance correlation loss (`mastery_performance_loss_weight=0.1`)
-    - ✅ Gain-performance correlation loss (`gain_performance_loss_weight=0.1`)
-    - ✅ Sparsity loss (`sparsity_loss_weight=0.1`)
-
-3.  **Experimental Validation** ✅ Comprehensive testing completed:
-    - ✅ Baseline model training successful
-    - ✅ Multi-GPU hyperparameter optimization (8x Tesla V100)
-    - ✅ Enhanced regularization training achieving **AUC: 0.7253**
-    - ✅ Overfitting control with gap reduced to **0.0145**
-    - ✅ All interpretability constraints validated during training
-
-4.  **Performance and Interpretability Analysis** ✅ Comprehensive evaluation:
-    - ✅ Predictive performance: Exceeds target AUC (0.7250+)  
-    - ✅ Interpretability metrics: All auxiliary losses converging properly
-    - ✅ Educational constraints: Non-negative gains, monotonic mastery verified
-    - ✅ Training-time monitoring: Real-time interpretability analysis integrated
-
-#### 🚀 **Production Ready Status:**
+### **Production Ready Status:**
 The `GainAKT2Monitored` model with enhanced regularization represents the **optimal configuration** ready for deployment:
 - **Model File:** `saved_model/gainakt2_enhanced_auc_0.7253/model.pth`
 - **Training Script:** `quick_launch_enhanced_regularization.py`  
 - **All Dependencies:** Verified and documented in `TRAINING_FILE_DEPENDENCIES.md`
 
-#### 🔬 **Future Research Directions:**
+### **Future Research Directions:**
 - **Gated Injection:** Advanced mechanism for leveraging interpretable knowledge (experimental)
 - **Extended Monitoring:** Real-time educational intervention recommendations
 - **Multi-Dataset Validation:** Broader educational dataset evaluation

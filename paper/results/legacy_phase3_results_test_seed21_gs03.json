@@ -1,6 +1,0 @@
-{
-  "best_val_auc": 0.7156105947626359,
-  "best_epoch": 1,
-  "final_mastery_corr": 0.046514508484991286,
-  "final_gain_corr": -0.00862560610306294
-}
