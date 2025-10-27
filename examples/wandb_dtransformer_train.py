@@ -17,6 +17,10 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default="dtransformer")
     parser.add_argument("--emb_type", type=str, default="qid_cl")
     parser.add_argument("--save_dir", type=str, default="saved_model")
+    # Memory / training control overrides (added for OOM mitigation)
+    parser.add_argument("--batch_size", type=int, default=None, help="Override default batch size (dtransformer defaults to 1024 internally; reduce this to avoid CUDA OOM).")
+    parser.add_argument("--num_epochs", type=int, default=None, help="Optional override for number of training epochs.")
+    parser.add_argument("--seq_len", type=int, default=None, help="Optional override for sequence length; if set, will truncate sequences to this length (may reduce memory).")
     
     parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--fold", type=int, default=0)
@@ -43,4 +47,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params = vars(args)
+    # Remove None entries so downstream logic can decide whether to override
+    if params.get("batch_size") is None:
+        del params["batch_size"]
+    if params.get("num_epochs") is None:
+        del params["num_epochs"]
+    if params.get("seq_len") is None:
+        del params["seq_len"]
     main(params)

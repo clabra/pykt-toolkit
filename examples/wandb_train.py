@@ -111,6 +111,9 @@ def main(params):
         model = None
         print("gainakt2exp model will be created by train_gainakt2exp_model")
     else:
+        # Remove training-only keys that some model constructors (e.g., DTransformer) don't accept
+        if 'seq_len' in model_config:
+            model_config.pop('seq_len')
         model = init_model(model_name, model_config, data_config[dataset_name], emb_type)
         print(f"model is {model}")
     if model_name == "gainakt2exp":
