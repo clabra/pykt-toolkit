@@ -1,0 +1,1 @@
+epoch,train_loss,constraint_loss,val_auc,val_accuracy,mastery_corr,gain_corr,mastery_corr_macro,gain_corr_macro,monotonicity_violation_rate,retention_violation_rate,gain_future_alignment,peer_influence_share,alignment_share,sparsity_share,consistency_share,retention_share,lag_gain_share

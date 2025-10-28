@@ -1,0 +1,36 @@
+{
+  "config_md5": "d2f84b1c28abbb459d0519738f71de10",
+  "data": {
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 200,
+    "num_c": 100,
+    "seq_len": 200
+  },
+  "experiment": {
+    "dataset": "assist2015",
+    "epochs": 50,
+    "fold": 0,
+    "id": "20251028_182057_gainakt3_assist2015_e50_baseline",
+    "lr": 0.0005,
+    "model": "gainakt3"
+  },
+  "hardware": {
+    "batch_size": 64,
+    "device": "cuda"
+  },
+  "model": {
+    "alignment_weight": 0.0,
+    "beta_difficulty": 1.0,
+    "consistency_weight": 0.0,
+    "lag_gain_weight": 0.0,
+    "peer_K": 8,
+    "retention_weight": 0.0,
+    "sparsity_weight": 0.0,
+    "warmup_constraint_epochs": 0
+  },
+  "seeds": {
+    "primary": 42
+  }
+}

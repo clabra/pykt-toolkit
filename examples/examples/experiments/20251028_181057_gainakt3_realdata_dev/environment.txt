@@ -1,0 +1,4 @@
+python_version=3.8.10
+torch_version=2.0.1+cu118
+cuda_available=True
+cuda_device_count=8

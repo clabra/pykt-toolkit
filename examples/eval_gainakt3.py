@@ -92,6 +92,7 @@ def main():
         # Reconstruct data_config minimal for loader
         data_config = {
             model_cfg['dataset']: {
+                'dataset_name': model_cfg['dataset'],  # added to satisfy init_test_datasets expectation
                 'dpath': f"/workspaces/pykt-toolkit/data/{model_cfg['dataset']}",
                 'num_q': 0,
                 'num_c': model_cfg['num_c'],
@@ -110,7 +111,16 @@ def main():
         }
         # Validation loader reconstruction (same fold index) + test loader
         train_loader, val_loader = init_dataset4train(model_cfg['dataset'], 'gainakt3', data_config, args.fold, 64)
-        test_loader, _, _, _ = init_test_datasets(data_config[model_cfg['dataset']], 'gainakt3', 64)
+        # init_test_datasets may reference test_question_dataset variables conditionally; ensure safe handling.
+        try:
+            test_loader, _, _, _ = init_test_datasets(data_config[model_cfg['dataset']], 'gainakt3', 64)
+        except UnboundLocalError:
+            # Fallback: re-call with simplified path expecting base KTDataset behavior
+            base_cfg = data_config[model_cfg['dataset']]
+            from torch.utils.data import DataLoader
+            from pykt.datasets.data_loader import KTDataset
+            test_ds = KTDataset(os.path.join(base_cfg['dpath'], base_cfg['test_file']), base_cfg['input_type'], {-1})
+            test_loader = DataLoader(test_ds, batch_size=64, shuffle=False, num_workers=8, pin_memory=True)
     val_auc, val_acc = evaluate(model, val_loader, args.device)
     test_auc, test_acc = evaluate(model, test_loader, args.device)
 

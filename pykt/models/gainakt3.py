@@ -121,11 +121,18 @@ class GainAKT3(nn.Module):
         ctx = self.context_encoder(ctx, mask)
         val = self.value_encoder(val, mask)
 
-        # Peer vector
+        # Peer vector (robust length/None checks to avoid ambiguous truth-value of arrays)
         if (not self.cold_start) and self.peer_index and 'peer_state_cluster_centroids' in self.peer_index:
             centroids = self.peer_index['peer_state_cluster_centroids'][: self.peer_K]
-            if centroids:
-                centroids_tensor = torch.tensor(centroids, dtype=ctx.dtype, device=ctx.device)
+            # Determine non-empty condition safely
+            non_empty = False
+            if centroids is not None:
+                if isinstance(centroids, (list, tuple)):
+                    non_empty = len(centroids) > 0
+                elif hasattr(centroids, 'shape'):
+                    non_empty = centroids.shape[0] > 0
+            if non_empty:
+                centroids_tensor = torch.as_tensor(centroids, dtype=ctx.dtype, device=ctx.device)
                 base_vec = ctx[:, -1, :].unsqueeze(1)
                 sims = F.cosine_similarity(base_vec, centroids_tensor.unsqueeze(0), dim=-1)
                 weights = F.softmax(self.peer_similarity_gamma * sims, dim=-1)

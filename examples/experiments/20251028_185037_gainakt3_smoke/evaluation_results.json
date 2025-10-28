@@ -1,0 +1,13 @@
+{
+  "val_auc": 0.7597309733287598,
+  "val_accuracy": 0.7674235272362748,
+  "test_auc": 0.7492340688147949,
+  "test_accuracy": 0.7582397170708511,
+  "interpretability": {
+    "peer_influence_share": 0.4472433924674988,
+    "difficulty_adjustment_magnitude": 3.696134567260742,
+    "peer_hash": "2dfdaf0fbd2d9090",
+    "difficulty_hash": "e5ab11a146b9c0e1",
+    "cold_start": false
+  }
+}
