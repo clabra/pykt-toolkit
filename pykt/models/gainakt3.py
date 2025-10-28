@@ -171,16 +171,25 @@ class GainAKT3(nn.Module):
         logits = base_logits - self.beta_difficulty * difficulty_logit.unsqueeze(1)
         preds = torch.sigmoid(logits)
 
-        out = {'predictions': preds}
+        out = {
+            'predictions': preds,
+            # expose raw difficulty logit per final state (before scaling & broadcasting)
+            'difficulty_logit': difficulty_logit.detach(),
+            # fusion gate raw values for interpretability (peer gate g_p, difficulty gate g_d)
+            'fusion_gates': torch.cat([g_p, g_d], dim=-1).detach()
+        }
         if qtest:
             out['encoded_seq'] = ctx
         if self.use_mastery_head:
             mastery_raw = self.mastery_head(ctx)
             mastery_proj = torch.sigmoid(mastery_raw)
+            # expose both raw (pre-sigmoid) and projected mastery sequence
+            out['mastery_raw'] = mastery_raw.detach()
             out['projected_mastery'] = mastery_proj
         if self.use_gain_head:
             gains_raw = self.gain_head(val)
             gains = torch.relu(gains_raw)
+            out['gains_raw'] = gains_raw.detach()
             out['projected_gains'] = gains
         # Interpretability extras
         out['peer_influence_share'] = g_p.mean().detach()

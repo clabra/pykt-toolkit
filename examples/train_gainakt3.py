@@ -106,10 +106,24 @@ def train_epoch(model, loader, device, optimizer, num_c):
 
 def evaluate(model, loader, device):
     """Masked evaluation over validation loader.
-    Computes AUC/Accuracy on active positions only.
+    Computes AUC/Accuracy and semantic interpretability metrics.
+    Interpretability metrics (first-pass, coarse):
+      - mastery_corr: correlation between projected mastery final-step concept probs and empirical correctness.
+      - gain_corr: correlation between projected gains increments and mastery increments (recomputed independent of constraint loss)
+      - monotonicity_violation_rate: fraction of negative mastery deltas.
+      - retention_violation_rate: same as monotonicity (alias) for now; later differentiate forgetting vs noise.
+      - gain_future_alignment: correlation between gains at t and mastery increment at t+1.
     """
     model.eval()
     all_preds, all_targets = [], []
+    mastery_incs_all, gains_all, gains_future_all, mastery_incs_future_all = [], [], [], []
+    mastery_last_probs, correctness_empirical = [], []
+    negative_deltas, total_deltas = 0, 0
+    # Per-concept correlation accumulation
+    per_concept_mastery = {}
+    per_concept_correct = {}
+    per_concept_gain_incs = {}
+    per_concept_mastery_incs = {}
     with torch.no_grad():
         for batch in loader:
             c_seqs = batch['cseqs'].to(device)
@@ -123,16 +137,105 @@ def evaluate(model, loader, device):
                 continue
             all_preds.append(preds[active].cpu().numpy())
             all_targets.append(shft_r[active].cpu().numpy())
+            # Interpretability sequences
+            if 'projected_mastery' in out and 'projected_gains' in out:
+                mastery_seq = out['projected_mastery']  # [B,L,C]
+                gains_seq = out['projected_gains']      # [B,L,C]
+                # Mastery increments
+                mastery_deltas = mastery_seq[:,1:,:] - mastery_seq[:,:-1,:]
+                negative_deltas += (mastery_deltas < 0).sum().item()
+                total_deltas += mastery_deltas.numel()
+                mastery_inc_pos = mastery_deltas.clamp(min=0)
+                # Gains (exclude first timestep to align)
+                gains_pos = gains_seq[:,1:,:]
+                # Flatten for correlation (avoid all-zero edge cases)
+                mastery_incs_all.append(mastery_inc_pos.reshape(-1).cpu().numpy())
+                gains_all.append(gains_pos.reshape(-1).cpu().numpy())
+                # Future alignment: gains t vs mastery_inc t+1
+                if gains_seq.size(1) > 2:
+                    mastery_future = mastery_inc_pos[:,1:,:]
+                    gains_trim = gains_pos[:,:mastery_future.size(1),:]
+                    mastery_incs_future_all.append(mastery_future.reshape(-1).cpu().numpy())
+                    gains_future_all.append(gains_trim.reshape(-1).cpu().numpy())
+                # mastery last-step probability vs empirical correctness at next step for active positions
+                # We approximate empirical correctness via shifted responses
+                last_mastery = mastery_seq[:,-1,:]  # [B,C]
+                last_concepts = c_seqs[:,-1]        # [B]
+                gathered_mastery = torch.gather(last_mastery, 1, last_concepts.unsqueeze(-1)).squeeze(-1)  # [B]
+                mastery_last_probs.append(gathered_mastery.detach().cpu().numpy())
+                correctness_empirical.append(shft_r[:,-1].float().detach().cpu().numpy())
+                # Per-concept accumulation (use final step mastery vs next correctness)
+                for i in range(last_concepts.size(0)):
+                    cid = int(last_concepts[i].item())
+                    per_concept_mastery.setdefault(cid, []).append(float(gathered_mastery[i].item()))
+                    per_concept_correct.setdefault(cid, []).append(float(shft_r[i,-1].item()))
+                # Gains/mastery increments per concept across sequence
+                # Flatten sequence positions excluding first for increments
+                bsz, steps, num_c = mastery_seq.size()
+                mastery_deltas_full = mastery_seq[:,1:,:] - mastery_seq[:,:-1,:]  # [B,L-1,C]
+                gains_steps = gains_seq[:,1:,:]                                   # [B,L-1,C]
+                for cidx in range(num_c):
+                    mvals = mastery_deltas_full[:,:,cidx].detach().cpu().numpy().ravel()
+                    gvals = gains_steps[:,:,cidx].detach().cpu().numpy().ravel()
+                    # Filter zeros to avoid artificial correlation inflation; keep pairs where either non-zero
+                    mask_nonzero = (np.abs(mvals) + np.abs(gvals)) > 1e-8
+                    if mask_nonzero.any():
+                        per_concept_mastery_incs.setdefault(cidx, []).extend(mvals[mask_nonzero].tolist())
+                        per_concept_gain_incs.setdefault(cidx, []).extend(gvals[mask_nonzero].tolist())
     if not all_preds:
-        return float('nan'), float('nan')
-    y_true = np.concatenate(all_targets)
-    y_score = np.concatenate(all_preds)
-    try:
-        auc = roc_auc_score(y_true, y_score)
-    except ValueError:
-        auc = float('nan')
-    acc = accuracy_score(y_true > 0.5, y_score > 0.5)
-    return auc, acc
+        base_metrics = (float('nan'), float('nan'))
+    else:
+        y_true = np.concatenate(all_targets)
+        y_score = np.concatenate(all_preds)
+        try:
+            auc = roc_auc_score(y_true, y_score)
+        except ValueError:
+            auc = float('nan')
+        acc = accuracy_score(y_true > 0.5, y_score > 0.5)
+        base_metrics = (auc, acc)
+    # Compute interpretability metrics
+    def safe_corr(a, b):
+        if len(a) < 2:
+            return float('nan')
+        a = np.array(a)
+        b = np.array(b)
+        if np.std(a) < 1e-8 or np.std(b) < 1e-8:
+            return float('nan')
+        return float(np.corrcoef(a, b)[0,1])
+    if mastery_incs_all and gains_all:
+        mastery_flat = np.concatenate(mastery_incs_all)
+        gains_flat = np.concatenate(gains_all)
+        gain_corr = safe_corr(mastery_flat, gains_flat)
+    else:
+        gain_corr = float('nan')
+    if gains_future_all and mastery_incs_future_all:
+        gain_future_alignment = safe_corr(np.concatenate(gains_future_all), np.concatenate(mastery_incs_future_all))
+    else:
+        gain_future_alignment = float('nan')
+    mastery_corr = safe_corr(np.concatenate(mastery_last_probs) if mastery_last_probs else [],
+                             np.concatenate(correctness_empirical) if correctness_empirical else [])
+    monotonicity_violation_rate = (negative_deltas / total_deltas) if total_deltas > 0 else float('nan')
+    retention_violation_rate = monotonicity_violation_rate  # placeholder alias
+    # Per-concept correlations (mastery vs correctness; mastery_inc vs gains_inc)
+    def per_concept_corr(map_a, map_b):
+        corrs = {}
+        for cid, avals in map_a.items():
+            bvals = map_b.get(cid, [])
+            if len(avals) > 1 and len(bvals) == len(avals):
+                if np.std(avals) > 1e-8 and np.std(bvals) > 1e-8:
+                    corrs[cid] = float(np.corrcoef(avals, bvals)[0,1])
+                else:
+                    corrs[cid] = float('nan')
+        return corrs
+    per_concept_mastery_corr = per_concept_corr(per_concept_mastery, per_concept_correct)
+    per_concept_gain_corr = per_concept_corr(per_concept_mastery_incs, per_concept_gain_incs)
+    # Macro averages (exclude NaNs)
+    def macro_avg(corrs):
+        vals = [v for v in corrs.values() if not np.isnan(v)]
+        return float(np.mean(vals)) if vals else float('nan')
+    mastery_corr_macro = macro_avg(per_concept_mastery_corr)
+    gain_corr_macro = macro_avg(per_concept_gain_corr)
+    return base_metrics + (mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, monotonicity_violation_rate, retention_violation_rate, gain_future_alignment, per_concept_mastery_corr, per_concept_gain_corr)
 
 
 def main():
@@ -268,7 +371,7 @@ def main():
     # Prepare metrics CSV header (extended)
     import csv
     metrics_path = os.path.join(exp_path, 'metrics_epoch.csv')
-    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share']
+    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','mastery_corr','gain_corr','mastery_corr_macro','gain_corr_macro','monotonicity_violation_rate','retention_violation_rate','gain_future_alignment','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share']
     with open(metrics_path, 'w', newline='') as fcsv:
         writer = csv.writer(fcsv)
         writer.writerow(header)
@@ -285,7 +388,7 @@ def main():
             probe_out = model(c_probe.long(), r_probe.long())
         constraint_total = float(probe_out['total_constraint_loss'].detach().cpu())
         train_loss = perf_loss + constraint_total
-        val_auc, val_acc = evaluate(model, val_loader, args.device)
+        (val_auc, val_acc, mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mono_rate, ret_rate, gain_future_alignment, per_concept_mastery_corr, per_concept_gain_corr) = evaluate(model, val_loader, args.device)
         with torch.no_grad():
             probe = model(
                 torch.randint(0, num_c, (1, seq_len)).to(args.device),
@@ -300,13 +403,24 @@ def main():
         consistency_share = float(closses.get('consistency_loss', 0.0)) / (constraint_total + eps)
         retention_share = float(closses.get('retention_loss', 0.0)) / (constraint_total + eps)
         lag_gain_share = float(closses.get('lag_gain_loss', 0.0)) / (constraint_total + eps)
-        rows.append({'epoch': epoch, 'train_loss': train_loss, 'constraint_loss': constraint_total, 'val_auc': val_auc, 'val_accuracy': val_acc, 'peer_influence_share': peer_share,
+        rows.append({'epoch': epoch, 'train_loss': train_loss, 'constraint_loss': constraint_total,
+                     'val_auc': val_auc, 'val_accuracy': val_acc,
+                     'mastery_corr': mastery_corr, 'gain_corr': gain_corr,
+                     'mastery_corr_macro': mastery_corr_macro, 'gain_corr_macro': gain_corr_macro,
+                     'monotonicity_violation_rate': mono_rate, 'retention_violation_rate': ret_rate,
+                     'gain_future_alignment': gain_future_alignment, 'peer_influence_share': peer_share,
                      'alignment_share': alignment_share, 'sparsity_share': sparsity_share, 'consistency_share': consistency_share, 'retention_share': retention_share, 'lag_gain_share': lag_gain_share})
-        print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f}")
+        print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f} mastery_corr={mastery_corr:.3f} gain_corr={gain_corr:.3f} mastery_macro={mastery_corr_macro:.3f} gain_macro={gain_corr_macro:.3f} mono_rate={mono_rate:.3f} gain_future_align={gain_future_alignment:.3f}")
+        # Persist per-concept correlations
+        artifacts_dir = os.path.join(exp_path, 'artifacts')
+        os.makedirs(artifacts_dir, exist_ok=True)
+        with open(os.path.join(artifacts_dir, f'per_concept_corr_epoch{epoch}.json'), 'w') as jf:
+            json.dump({'mastery_corr': per_concept_mastery_corr, 'gain_corr': per_concept_gain_corr}, jf, indent=2)
         with open(metrics_path, 'a', newline='') as fcsv:
             writer = csv.writer(fcsv)
-            writer.writerow([epoch, train_loss, constraint_total, val_auc, val_acc, peer_share,
-                             alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share])
+            writer.writerow([epoch, train_loss, constraint_total, val_auc, val_acc,
+                             mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mono_rate, ret_rate, gain_future_alignment,
+                             peer_share, alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share])
 
     with open(os.path.join(exp_path, 'results.json'), 'w') as f:
         json.dump({'config_md5': config_md5, 'epochs': rows}, f, indent=2)
@@ -320,7 +434,17 @@ def main():
         f.write(f"# Experiment {os.path.basename(exp_path)}\n\n")
         f.write("GainAKT3 training on real dataset split (assist2015) with masked losses.\n\n")
         f.write("## Summary\n")
-        f.write(f"Best epoch: {best['epoch']} val_auc={best['val_auc']:.4f} val_acc={best['val_accuracy']:.4f}\n")
+        f.write(f"Best epoch: {best['epoch']} val_auc={best['val_auc']:.4f} val_acc={best['val_accuracy']:.4f} mastery_corr={best.get('mastery_corr', float('nan')):.4f} gain_corr={best.get('gain_corr', float('nan')):.4f} mastery_corr_macro={best.get('mastery_corr_macro', float('nan')):.4f} gain_corr_macro={best.get('gain_corr_macro', float('nan')):.4f}\n")
+        f.write("\n## Interpretability Metrics (best epoch)\n")
+        f.write("| Metric | Value |\n|--------|-------|\n")
+        f.write(f"| Mastery Correlation (global) | {best.get('mastery_corr', float('nan')):.4f} |\n")
+        f.write(f"| Gain Correlation (global) | {best.get('gain_corr', float('nan')):.4f} |\n")
+        f.write(f"| Mastery Correlation (macro) | {best.get('mastery_corr_macro', float('nan')):.4f} |\n")
+        f.write(f"| Gain Correlation (macro) | {best.get('gain_corr_macro', float('nan')):.4f} |\n")
+        f.write(f"| Monotonicity Violation Rate | {best.get('monotonicity_violation_rate', float('nan')):.4f} |\n")
+        f.write(f"| Retention Violation Rate | {best.get('retention_violation_rate', float('nan')):.4f} |\n")
+        f.write(f"| Gain Future Alignment | {best.get('gain_future_alignment', float('nan')):.4f} |\n")
+        f.write(f"| Peer Influence Share | {best.get('peer_influence_share', float('nan')):.4f} |\n")
         f.write("\nReproducibility Checklist (partial)\n")
         f.write("- Config saved with MD5\n- Environment captured\n- Seeds recorded\n- Train/validation loaded via init_dataset4train\n")
         f.write(f"- Artifact hashes logged (peer={model.peer_hash}, difficulty={model.diff_hash}, cold_start={model.cold_start})\n")

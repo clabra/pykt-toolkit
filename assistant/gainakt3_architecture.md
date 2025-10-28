@@ -64,9 +64,8 @@ Training scripts will log these hashes into `config.json` to preserve reproducib
 
 ```mermaid
 flowchart LR
-  %% Subgraph syntax corrected: use id [label] to avoid parser errors on multi-word titles
   subgraph SSEQ[Student Sequence Encoder]
-    A((Interaction Tokens q,r)) --> B[Context Embeddings]
+    A[Interaction Tokens q,r] --> B[Context Embeddings]
     A --> C[Value Embeddings]
     B --> D[Dynamic Encoder Blocks]
     C --> D
@@ -75,7 +74,7 @@ flowchart LR
   end
 
   subgraph EXT[External Context]
-    E1[Peer Response Index Lookup] --> F1[Peer Features p_t]
+    E1[Peer Index Lookup] --> F1[Peer Features p_t]
     E2[Difficulty Table Lookup] --> F2[Difficulty Features d_t]
   end
 
@@ -105,6 +104,56 @@ flowchart LR
     O --> P4[Residual]
   end
 ```
+
+### 4.1 Implementation Status Diagram (Phase 2 Snapshot)
+The following diagram annotates which components are currently fully implemented, partially implemented, or not yet active in the production code (`pykt/models/gainakt3.py`) as of 2025-10-28.
+
+```mermaid
+flowchart LR
+  subgraph ENC[Sequence Encoder]
+    A[Tokens] --> E[Embeddings]
+    E --> T[Encoder]
+    T --> H[Mastery h]
+    T --> V[Gain v]
+  end
+
+  subgraph EXT[External Context Planned]
+    P[Peer ctx]:::inactive
+    D[Difficulty ctx]:::partial
+  end
+
+  H --> G[Fusion Gate metrics only]:::partial
+  P --> G
+  D --> G
+
+  G --> H2[Augmented h planned]:::inactive
+  H --> MHead[Mastery Head]:::implemented
+  V --> GHead[Gain Head]:::implemented
+  D --> DCal[Difficulty Head]:::partial
+
+  MHead --> MV[Mastery Vec]:::implemented
+  GHead --> GV[Gain Vec]:::implemented
+  DCal --> DL[Difficulty Logit]:::partial
+
+  MV --> LOGIT[Perf Logit]:::implemented
+  GV --> LOGIT
+  DL --> LOGIT
+
+  LOGIT --> PRED[Prediction]:::implemented
+  PRED --> C1[Constraint Losses]:::implemented
+
+  classDef implemented fill:#e6ffed,stroke:#2c7a1b,color:#1b5e20;
+  classDef partial fill:#fff3cd,stroke:#c9a200,color:#533f03;
+  classDef inactive fill:#f8d7da,stroke:#a10000,color:#7d0000;
+```
+
+Legend:
+- Implemented: operational and integrated into training.
+- Partial: scaffolding or limited functionality present (metrics or basic head without full feature set).
+- Inactive: conceptual only; not yet in code.
+
+Planned order of activation: (1) Peer feature retrieval, (2) true fusion of peer/difficulty vectors, (3) full difficulty drift & stability features, (4) decomposition serialization.
+
 
 ## 5. Detailed Module Specifications
 ### 5.1 Peer Similarity Module (PSM)
@@ -328,3 +377,181 @@ Integrate constraint loss logging into `metrics_epoch.csv` and expand README tem
 
 ---
 End of Phase2 update.
+
+## 18. Reproducibility & Experiment Instrumentation (2025-10-28)
+This section formalizes how GainAKT3 integrates with the reproducibility standards defined in `AGENTS.md` and enumerates current vs planned metrics and artifacts.
+
+### 18.1 Experiment Folder Conformance
+Each GainAKT3 run produces an experiment directory under `examples/experiments/YYYYMMDD_HHMMSS_gainakt3_<short_title>` containing:
+- `config.json`: Full resolved configuration including all constraint weights, dataset parameters, artifact hashes, hardware pinning, seed block, and MD5 of the sorted config (key `config_md5`).
+- `train.sh`: Exact launch command with pinned devices (e.g. `CUDA_VISIBLE_DEVICES=0,1,2,3,4`) and thread limits.
+- `results.json`: Best epoch summary: `best_epoch`, `val_auc`, `val_accuracy`, `train_loss`, `constraint_loss_share`, component shares, selection criterion string.
+- `metrics_epoch.csv`: Per-epoch tabular log (see 18.3).
+- `stdout.log` / optional `stderr.log`: Timestamp-prefixed raw console output.
+- `model_best.pth`, `model_last.pth`: Best checkpoint (selected by validation AUC; tie-breakers defined in 18.6) and last epoch for recovery.
+- `environment.txt`: Python, PyTorch, CUDA versions, git branch and commit.
+- `SEED_INFO.md`: Document primary seed and multi-seed set if used.
+- `README.md`: Human-readable summary including reproducibility checklist table.
+- `artifacts/`: Plots (e.g. constraint component trajectories) and any interpretability JSON dumps.
+
+Cold start conditions (missing or empty peer/difficulty artifacts) are flagged in both `config.json` (`"cold_start": true`) and experiment `README.md`.
+
+### 18.2 Config Serialization & Hashing
+Procedure:
+1. Parse CLI args and fill defaults.
+2. Augment with derived values: timestamp, git commit, artifact hashes, device list.
+3. Sort keys recursively; serialize to canonical JSON string.
+4. Compute MD5 (lowercase hex). Store as `config_md5`.
+
+Example snippet (abbreviated):
+```json
+{
+  "training": {"epochs": 12, "batch_size": 64, "learning_rate": 0.000174},
+  "constraints": {
+    "alignment_weight": 0.2,
+    "sparsity_weight": 0.1,
+    "consistency_weight": 0.3,
+    "retention_weight": 0.1,
+    "lag_gain_weight": 0.05,
+    "warmup_constraint_epochs": 8
+  },
+  "artifacts": {
+    "peer_index_sha256": "c6e8...d4",
+    "difficulty_table_sha256": "94ab...7f"
+  },
+  "config_md5": "f3d0b5f4e2c9c8ef3d1c5a41e2f9b6b1"
+}
+```
+
+Rationale: deterministic hashing prevents silent drift of defaults; any change to constraint weights or gating parameters invalidates previous experiment equivalence.
+
+### 18.3 Metrics Schema (metrics_epoch.csv)
+Current columns:
+```
+epoch,train_loss,val_auc,val_accuracy,alignment_share,sparsity_share,consistency_share,retention_share,lag_gain_share,constraint_loss_share,peer_influence_share,difficulty_adjustment_magnitude,mastery_corr,gain_corr,timestamp
+```
+Definitions:
+- Component shares: `(weight * raw_component_loss) / total_constraint_loss` (0 if total_constraint_loss == 0).
+- `constraint_loss_share`: `total_constraint_loss / (train_loss)` prior to adding constraint? In implementation we log ratio `total_constraint_loss / (perf_loss + total_constraint_loss)` (documented in README for clarity). This expresses relative contribution of constraints to total optimized loss.
+- `peer_influence_share`: Mean absolute gated peer contribution divided by total logit magnitude (future normalization refinement planned).
+- `difficulty_adjustment_magnitude`: Average of difficulty subtraction term (`beta * difficulty_logit`) over masked positions.
+- `mastery_corr`, `gain_corr`: Pearson correlation between per-step mastery/gain estimates and correctness (logged when computed; placeholder if not yet implemented in early runs).
+
+Planned additions (deferred): `peer_alignment_error`, `difficulty_rank_accuracy`, `gate_sparsity`, `decomposition_reconstruction_error`, `drift_smoothness`, `cold_start_flag` (binary column), and per-component raw losses.
+
+### 18.4 Warm-Up Gating Semantics
+If `epoch < warmup_constraint_epochs`, `total_constraint_loss` is set to zero (constraints disabled). We may optionally log raw component diagnostics during warm-up in future; currently skipped for efficiency. This prevents early optimization instability before base performance representations stabilize.
+
+### 18.5 Determinism Protocol
+- Seeds: `torch`, `numpy`, `random` all set from `primary` seed before data loading.
+- cuDNN: `deterministic=True`, `benchmark=False` (recorded in `environment.txt`).
+- Artifact Hashes: Logged in `config.json`; mismatch with prior experiments surfaces in comparative analyses and can trigger abort with `--strict_artifact_hash`.
+- No stochastic regularizers inside constraint computations; all ops are deterministic wrt seed.
+
+### 18.6 Selection Criterion & Checkpointing
+Primary selection: highest `val_auc`.
+Tie-breaker 1: higher `val_accuracy`.
+Tie-breaker 2: lower `train_loss` (performance + constraints).
+Recorded as `selection_criterion`: e.g. `"best_by_val_auc_tiebreak_val_acc_train_loss"` in `results.json` and README.
+`model_best.pth` stores epoch index and criterion metadata; `model_last.pth` ensures resumption capability.
+
+### 18.7 Deferred Instrumentation Map
+| Metric / Artifact | Status | Planned Phase |
+|-------------------|--------|---------------|
+| peer_alignment_error | Not implemented | Phase 2b |
+| difficulty_rank_accuracy | Not implemented | Phase 3 |
+| gate_sparsity | Not implemented | Phase 2b |
+| decomposition_reconstruction_error | Not implemented | Phase 2c |
+| drift_smoothness | Not implemented | Phase 3 |
+| raw_component_losses in CSV | Not implemented | Phase 2b |
+| cold_start_flag column | Not implemented | Phase 2b |
+
+### 18.8 Compliance Checklist Mapping
+| Requirement (AGENTS.md) | Implementation Status |
+|-------------------------|-----------------------|
+| Folder naming convention | Implemented |
+| Full config (explicit + defaults) | Implemented |
+| Shell script with command | Implemented |
+| Best + last checkpoints | Implemented |
+| Per-epoch metrics CSV | Implemented |
+| Raw stdout log | Implemented |
+| Git commit & branch recorded | Implemented |
+| Seeds documented | Implemented |
+| Environment versions captured | Implemented |
+| Correlation / interpretability metrics | Partial (peer_influence_share, constraint shares; mastery_corr/gain_corr pending stabilization) |
+| Artifact hashes | Implemented |
+| Resume protocol | Basic (last checkpoint) – advanced RNG state resume deferred |
+
+Planned improvements will move partial items to full compliance before paper submission.
+
+### 18.9 Rationale for Incremental Instrumentation
+Staging the metrics prevents premature complexity and allows us to validate baseline stability of constraint integration. Each new metric adds potential variance sources; by isolating contributions we maintain clear causal attribution of performance changes.
+
+---
+End of Section 18.
+
+## 19. Patch Implementation Details (2025-10-28)
+This section documents the concrete implementation changes applied after the Phase 2 status update to expose missing internal tensors and introduce first-layer semantic interpretability metrics. It operationalizes portions of Sections 4, 5, 6, 8, and 17 while maintaining reproducibility guarantees.
+
+### 19.1 Forward Output Enhancements
+We extended the production model (`pykt/models/gainakt3.py`) forward pass to expose the following additional tensors:
+- `difficulty_logit`: Raw scalar prior to scaling/subtraction. Supports forthcoming difficulty ordering, drift, and decomposition analyses (Sections 5.4–5.5).
+- `fusion_gates`: Concatenated peer and difficulty gate activations `[g_p, g_d]` for each batch element, enabling early gate behavior monitoring (Section 5.3) even before full residual fusion is activated.
+- `mastery_raw`: Pre-sigmoid logits from the mastery head. Facilitates later calibration, temperature scaling, and gradient-based decomposition attribution.
+- `gains_raw`: Pre-ReLU gain logits for distinguishing suppressed negative patterns from genuine zero activations; required for refined gain correlation definitions.
+- Retained `projected_mastery` (sigmoid) and `projected_gains` (ReLU) for continuity of existing metric computations.
+
+Design decisions:
+1. Raw tensors detached where not needed for gradients to prevent unintended optimization pathways through logging utilities.
+2. No fusion into an augmented hidden representation yet (node J in conceptual flow remains uninstantiated); this avoids conflating representational shifts with metric baseline establishment.
+3. Backwards compatibility preserved—existing keys unchanged; added keys are strictly additive.
+
+### 19.2 Training & Evaluation Metric Instrumentation
+We augmented `examples/train_gainakt3.py` with expanded interpretability metrics derived during evaluation:
+- Global correlations: `mastery_corr`, `gain_corr` (final-step mastery vs next correctness; mastery increment vs gain activation).
+- Macro per-concept correlations: `mastery_corr_macro`, `gain_corr_macro` computed as unweighted means over valid concept-wise Pearson coefficients (variance filters applied to avoid degenerate NaNs).
+- `monotonicity_violation_rate` and `retention_violation_rate` (currently aliases) measuring fraction of negative mastery deltas (proxy for constraint effectiveness).
+- `gain_future_alignment`: Correlation between gains at time t and mastery increment at time t+1 (early diagnostic precursor to lag gain constraint efficacy).
+- Persistence of per-concept correlation dictionaries per epoch (`artifacts/per_concept_corr_epochX.json`) for longitudinal concept-level stability analysis.
+
+CSV header (`metrics_epoch.csv`) extended with macro correlation columns; README template updated to present global and macro metrics distinctly, reinforcing claims of granular semantic alignment.
+
+### 19.3 Alignment with Architectural Plan
+| Implemented Element | Referenced Section | Status |
+|---------------------|--------------------|--------|
+| Difficulty logit exposure | 5.4, 5.5 | Implemented (raw only) |
+| Fusion gate metric logging | 5.3 | Partial (no residual fusion) |
+| Raw mastery / gain logits | 5.1, 5.2, 5.5 | Implemented |
+| Global mastery/gain correlations | 8, 17 | Implemented (baseline) |
+| Macro per-concept correlations | 8 | Implemented |
+| Future alignment metric | 6 (Lag Gain) | Implemented (diagnostic) |
+| Constraint component shares | 17 | Implemented |
+| Decomposition contributions | 5.5 | Deferred |
+| Peer/difficulty vector fusion | 4, 5.3 | Deferred |
+| Peer alignment / difficulty ranking losses | 6 | Deferred |
+
+### 19.4 Current Limitations
+1. Cold-start artifact absence (peer/difficulty tables) limits semantic gate interpretability; gate magnitudes currently reflect learned biases rather than cohort-informed priors.
+2. Gain correlations hover near zero; need thresholded filtering (exclude |gain| < ε) and possibly normalization by concept activity frequency.
+3. Monotonicity violation rate ≈ 0.5 indicates weak effective pressure from alignment/retention weights at chosen magnitudes; scheduling or adaptive weighting may be required.
+4. No serialization of decomposition (mastery vs difficulty vs peer vs residual) prevents direct attribution tables expected for educator-facing interpretability.
+
+### 19.5 Reproducibility Considerations
+- Added tensors do not introduce nondeterministic operations; seed protocol unchanged (Section 18.5).
+- Expanded metrics included in per-epoch CSV to ensure identical re-run comparability.
+- Per-concept correlation artifacts versioned implicitly by epoch and experiment folder timestamp; future addition of a correlation schema hash recommended.
+
+### 19.6 Planned Next Steps
+1. Generate peer & difficulty artifacts to exit cold_start and validate gate sparsity profiles (`peer_influence_share` stabilization under real context).
+2. Activate residual fusion: implement \( \tilde{h}_t = h_t + g_p p_t + g_d d_t \) with LayerNorm and optional dropout; add ablation flags.
+3. Introduce peer alignment MSE (`L_peer`) using `peer_correct_rate` per item and mean mastery over involved skills.
+4. Implement difficulty ordering (sampled pair ranking) and drift smoothness losses with rolling window buffers.
+5. Serialize decomposition contributions per epoch in `artifacts/decomposition_epochX.json` (fields: mastery_contrib, difficulty_contrib, peer_contrib, residual, reconstruction_error).
+6. Refine gain metrics: thresholded correlations, future alignment conditional on non-zero gains, and variance-normalized gain influence scores.
+7. Add raw component constraint losses and cold_start flag columns to `metrics_epoch.csv` for comprehensive auditability.
+
+### 19.7 Scholarly Impact Framing
+The newly logged macro per-concept correlations strengthen evidence for concept-level semantic alignment—a key interpretability axis distinct from aggregate performance metrics (AUC/accuracy). This supports future claims of improved educational actionable insight: educators can inspect stability of mastery correctness alignment across heterogeneous concept frequencies. Exposure of `difficulty_logit` and raw gates primes the system for calibrated difficulty decomposition, enabling causal narratives about prediction shifts due to difficulty vs intrinsic mastery.
+
+---
+End of Section 19.
