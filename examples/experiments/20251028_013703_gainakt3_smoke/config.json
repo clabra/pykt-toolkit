@@ -1,0 +1,30 @@
+{
+  "config_md5": "12b449c65bb73ab7252cce0682f24533",
+  "data": {
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 200,
+    "num_c": 100,
+    "seq_len": 200
+  },
+  "experiment": {
+    "dataset": "assist2015",
+    "epochs": 20,
+    "fold": 0,
+    "id": "20251028_013703_gainakt3_smoke",
+    "lr": 0.001,
+    "model": "gainakt3"
+  },
+  "hardware": {
+    "batch_size": 8,
+    "device": "cuda"
+  },
+  "model": {
+    "beta_difficulty": 1.0,
+    "peer_K": 8
+  },
+  "seeds": {
+    "primary": 42
+  }
+}
