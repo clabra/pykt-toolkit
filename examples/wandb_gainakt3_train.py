@@ -191,6 +191,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--disable_difficulty_penalty', action='store_true')
     p.add_argument('--fusion_for_heads_only', action='store_true', default=True)
     p.add_argument('--gate_init_bias', type=float, default=-2.0)
+    p.add_argument('--broadcast_last_context', action='store_true', help='Broadcast final fused context across sequence instead of using full temporal ctx (baseline keeps it disabled).')
     # Artifacts
     p.add_argument('--artifact_base', type=str, default='data')
     p.add_argument('--peer_artifact_path', type=str, default='')
@@ -344,6 +345,7 @@ def build_config(args: argparse.Namespace, exp_id: str, exp_path: str, seeds: Li
     cfg['raw_args']['persistent_workers'] = bool(getattr(args,'persistent_workers', False))
     cfg['raw_args']['data_loader_debug'] = bool(getattr(args,'data_loader_debug', False))
     cfg['raw_args']['probe_reuse'] = bool(getattr(args,'probe_reuse', False))
+    cfg['raw_args']['broadcast_last_context'] = bool(getattr(args,'broadcast_last_context', False))
     for k in cfg['raw_args'].keys():
         flat_keys.add(k)
     missing = [k for k in vars(args).keys() if k not in flat_keys and k not in exclude]
@@ -747,6 +749,7 @@ def main():
             'disable_difficulty_penalty': args.disable_difficulty_penalty,
             'fusion_for_heads_only': args.fusion_for_heads_only,
             'gate_init_bias': args.gate_init_bias,
+            'broadcast_last_context': args.broadcast_last_context,
         }
         model = create_gainakt3_model(model_cfg)
         # DDP wrap (single seed only for now)

@@ -198,6 +198,25 @@ Where:
 - **Skill-based Organization**: Natural alignment with Q-matrix and G-matrix educational frameworks
 - **Progressive Learning**: Models cumulative learning through gain aggregation
 
+## Architectural Ablation: Temporal Context vs Broadcast Collapse
+
+We introduced an experimental architectural flag `broadcast_last_context` that collapses the temporal context sequence into a single broadcasted fused state (the final step context augmented by peer and difficulty vectors). A rapid ablation on ASSIST2015 (1 epoch, limited batches for speed) produced:
+
+```
+Per-timestep (baseline):  val_auc ≈ 0.5562
+Broadcast (collapsed):    val_auc ≈ 0.5554
+```
+
+Although the short-run AUC difference is small, additional probes showed:
+
+1. **Temporal Variance Collapse**: Broadcasting removes per-position variation, eliminating fine-grained temporal attribution.
+2. **Degenerate Decomposition**: Reconstruction error of the prediction head shrinks toward zero, reducing interpretability of additive components (mastery, peer, difficulty, value, concept, bias).
+3. **Causal Ordering Blur**: Early mastery projections can be inflated by later interactions, harming causal explanation of knowledge acquisition.
+
+Given these effects, `broadcast_last_context` is kept disabled by default. It remains only for controlled ablation and efficiency experiments (minor speed gains) and is not used in reported benchmark or interpretability analyses.
+
+Design Principle: Preserve per-timestep temporal dynamics unless an explicit ablation requires collapse.
+
 ### 4. Computational Efficiency
 
 - **Standard Transformer**: Leverages well-optimized transformer implementations

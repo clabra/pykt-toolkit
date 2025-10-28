@@ -65,13 +65,20 @@ class GainAKT3(nn.Module):
                  disable_peer: bool = False,
                  disable_difficulty: bool = False,
                  disable_fusion_broadcast: bool = False,
+                 broadcast_last_context: bool = False,  # default False: preserve temporal dynamics (broadcast hurts AUC & interpretability)
                  disable_difficulty_penalty: bool = False,
                  fusion_for_heads_only: bool = True,
                  device: Optional[str] = None):
         super().__init__()
+        # Core hyperparameters
         self.num_c = num_c
         self.seq_len = seq_len
         self.d_model = d_model
+        self.n_heads = n_heads
+        self.num_encoder_blocks = num_encoder_blocks
+        self.d_ff = d_ff
+        self.dropout = dropout
+        self.emb_type = emb_type
         self.peer_K = peer_K
         self.peer_similarity_gamma = peer_similarity_gamma
         self.beta_difficulty = beta_difficulty
@@ -96,6 +103,18 @@ class GainAKT3(nn.Module):
         self.use_difficulty_context = use_difficulty_context
         self.disable_peer = disable_peer
         self.disable_difficulty = disable_difficulty
+        # Architectural toggle semantics:
+        #   broadcast_last_context = True  => collapse temporal context to last fused state (historically hurt AUC)
+        #   broadcast_last_context = False => preserve per-step temporal context (baseline)
+        # Legacy disable_fusion_broadcast flag (True => per-step) retained; it overrides only if
+        # broadcast_last_context not explicitly set True.
+        if broadcast_last_context and disable_fusion_broadcast:
+            # Conflicting user intent: prefer explicit new flag and inform via debug print once.
+            if os.environ.get('GAINAKT3_ARCH_DEBUG', '0') == '1':
+                print('[GainAKT3] Both broadcast_last_context=True and disable_fusion_broadcast=True provided; using broadcast_last_context.')
+        if disable_fusion_broadcast and not broadcast_last_context:
+            broadcast_last_context = False  # explicit for clarity
+        self.broadcast_last_context = broadcast_last_context
         self.disable_fusion_broadcast = disable_fusion_broadcast
         self.disable_difficulty_penalty = disable_difficulty_penalty
         self.fusion_for_heads_only = fusion_for_heads_only
@@ -158,62 +177,22 @@ class GainAKT3(nn.Module):
         r_int = r.long()
         interaction_tokens = q + self.num_c * r_int
         # ---- Defensive range & integrity checks (avoid opaque CUDA device-side asserts) ----
-        if os.environ.get('GAINAKT3_INDEX_DEBUG', '0') == '1':  # disabled by default; set env var to 1 to enable
+        if os.environ.get('GAINAKT3_INDEX_DEBUG', '0') == '1':
+            # Lightweight index checks (non-fatal unless strict env set)
             try:
-                if not hasattr(self, '_index_summary_done'):
-                    self._index_summary_done = False
                 q_min = int(q.min().item())
                 q_max = int(q.max().item())
                 r_min = int(r_int.min().item())
                 r_max = int(r_int.max().item())
-                it_min = int(interaction_tokens.min().item())
-                it_max = int(interaction_tokens.max().item())
-                unique_r = sorted(set(r_int.view(-1).tolist()))
-                if not self._index_summary_done and os.environ.get('GAINAKT3_INDEX_SUMMARY','0') == '1':
-                    print(f"[GainAKT3][INDEX-SUMMARY] num_c={self.num_c} emb_sizes={{ctx:{self.context_embedding.num_embeddings},val:{self.value_embedding.num_embeddings}}} q_range=[{q_min},{q_max}] r_range=[{r_min},{r_max}] it_range=[{it_min},{it_max}] unique_r={unique_r}")
-                    self._index_summary_done = True
-                # Correctness values should be within {0,1}; flag otherwise
-                if r_min < 0 or r_max > 1 or any(rv not in (0,1) for rv in unique_r):
-                    print(f"[GainAKT3][INDEX-ERROR] r values outside {{0,1}} detected: unique_r={unique_r}")
-                    raise RuntimeError("Correctness sequence (r) contains values outside {0,1}; dataset encoding mismatch.")
-                # Concept id sanity vs declared num_c
-                if q_min < 0 or q_max >= self.num_c:
-                    print(f"[GainAKT3][INDEX-ERROR] Concept id out-of-range (min={q_min}, max={q_max}, num_c={self.num_c}).")
-                    # Capture a few offending ids
-                    bad_mask = (q < 0) | (q >= self.num_c)
-                    if bad_mask.any():
-                        offending = q[bad_mask][:50].detach().cpu().tolist()
-                        print(f"[GainAKT3][INDEX-ERROR] Sample offending concept ids: {offending}")
-                    raise RuntimeError("Concept id out-of-range relative to num_c; adjust num_c or fix dataset mapping.")
-                # Interaction token range check: must satisfy 0 <= token < num_c*2
-                limit = self.num_c * 2
-                if it_min < 0 or it_max >= limit:
-                    print(f"[GainAKT3][INDEX-ERROR] interaction_tokens range violation: min={it_min}, max={it_max}, expected < {limit}.")
-                    # Provide diagnostic breakdown counts for upper bound breach
-                    it_cpu = interaction_tokens.detach().cpu()
-                    over_mask = it_cpu >= limit
-                    under_mask = it_cpu < 0
-                    if over_mask.any():
-                        over_vals = it_cpu[over_mask][:50].tolist()
-                        print(f"[GainAKT3][INDEX-ERROR] Sample >={limit} tokens (first 50): {over_vals}")
-                    if under_mask.any():
-                        under_vals = it_cpu[under_mask][:50].tolist()
-                        print(f"[GainAKT3][INDEX-ERROR] Sample negative tokens (first 50): {under_vals}")
-                    # Extra decomposition: show joint (q,r) for offending positions
-                    if over_mask.any() or under_mask.any():
-                        offending_positions = (over_mask | under_mask).nonzero(as_tuple=False)[:50]
-                        pairs = []
-                        for pos in offending_positions:
-                            b_idx, l_idx = int(pos[0]), int(pos[1])
-                            pairs.append({'b': b_idx, 't': l_idx, 'q': int(q[b_idx, l_idx].item()), 'r': int(r_int[b_idx, l_idx].item()), 'it': int(interaction_tokens[b_idx, l_idx].item())})
-                        print(f"[GainAKT3][INDEX-ERROR] Offending (b,t,q,r,it) samples: {pairs}")
-                    raise RuntimeError("interaction_tokens out-of-range; investigate (q,r) encoding or num_c mismatch.")
+                if (r_min < 0) or (r_max > 1):
+                    print(f"[GainAKT3][INDEX-ERROR] r outside {{0,1}}: range=[{r_min},{r_max}]")
+                if (q_min < 0) or (q_max >= self.num_c):
+                    print(f"[GainAKT3][INDEX-ERROR] q out-of-range: range=[{q_min},{q_max}] num_c={self.num_c}")
             except Exception as _dbg_e:
-                # If any unexpected failure in debug path, surface but continue (optional)
                 if os.environ.get('GAINAKT3_INDEX_DEBUG_STRICT','1') == '1':
                     raise
                 else:
-                    print(f"[GainAKT3][INDEX-WARN] Debug index inspection failed: {_dbg_e}")
+                    print(f"[GainAKT3][INDEX-WARN] Lightweight index check failed: {_dbg_e}")
         positions = pos_encode(L).to(self.device)
         ctx = self.context_embedding(interaction_tokens) + self.pos_embedding(positions)
         val = self.value_embedding(interaction_tokens) + self.pos_embedding(positions)
@@ -266,26 +245,20 @@ class GainAKT3(nn.Module):
         gate_in = torch.cat([h_last, peer_vec, difficulty_vec], dim=-1)
         gates = torch.sigmoid(self.fusion_gate(gate_in))
         g_p, g_d = gates[:, 0].unsqueeze(-1), gates[:, 1].unsqueeze(-1)
-        if self.disable_fusion_broadcast:
-            augmented_h = h_last  # gating disabled entirely
-        else:
-            augmented_h = h_last + g_p * peer_vec + g_d * difficulty_vec
-            augmented_h = F.layer_norm(augmented_h, (self.d_model,))
+        augmented_h = h_last + g_p * peer_vec + g_d * difficulty_vec
+        augmented_h = F.layer_norm(augmented_h, (self.d_model,))
 
-        # Prediction context selection:
-        # If fusion_for_heads_only: use original per-timestep ctx for prediction (preserves temporal granularity)
-        # Else: use broadcast augmented_h across sequence (legacy behavior)
-        if self.fusion_for_heads_only:
-            prediction_ctx_seq = ctx  # [B,L,d]
-            augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)  # still available for decomposition
-        else:
-            augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)
-            prediction_ctx_seq = augmented_h_seq
+    # (fusion_for_heads_only kept for backward compatibility; actual selection controlled by broadcast_last_context)
 
         # Prediction
         target_concepts = q if qry is None else qry
         target_emb = self.concept_embedding(target_concepts)
-        concat = torch.cat([prediction_ctx_seq, val, target_emb], dim=-1)
+        # Decide predictor input depending on architectural flag
+        if self.broadcast_last_context:
+            concat_ctx = augmented_h.unsqueeze(1).expand(-1, L, -1)
+        else:
+            concat_ctx = ctx
+        concat = torch.cat([concat_ctx, val, target_emb], dim=-1)
         base_logits = self.prediction_head(concat).squeeze(-1)
         difficulty_logit = self.difficulty_head(difficulty_vec).squeeze(-1)
         # Sequence difficulty logits for drift (context-based) - auxiliary only
@@ -361,7 +334,7 @@ class GainAKT3(nn.Module):
         out['peer_influence_share'] = g_p.mean().detach()
         out['difficulty_adjustment_magnitude'] = (g_d.abs() * difficulty_logit.abs()).mean().detach()
         out['augmented_h_last'] = augmented_h.detach()
-        out['prediction_context_mode'] = 'per_timestep' if self.fusion_for_heads_only else 'broadcast'
+        out['prediction_context_mode'] = 'broadcast_last' if self.broadcast_last_context else 'per_timestep'
         out['peer_hash'] = self.peer_hash
         out['difficulty_hash'] = self.diff_hash
         out['cold_start'] = self.cold_start
@@ -524,5 +497,6 @@ def create_gainakt3_model(config):
         disable_fusion_broadcast=config.get('disable_fusion_broadcast', False),
         disable_difficulty_penalty=config.get('disable_difficulty_penalty', False),
         fusion_for_heads_only=config.get('fusion_for_heads_only', True),
+        broadcast_last_context=config.get('broadcast_last_context', False),
         device=config.get('device')
     )

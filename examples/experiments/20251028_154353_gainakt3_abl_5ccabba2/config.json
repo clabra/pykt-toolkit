@@ -1,0 +1,130 @@
+{
+  "artifacts": {
+    "cold_start": false,
+    "difficulty_table_path": "data/difficulty/assist2015/difficulty_table.parquet",
+    "difficulty_table_sha256": "e5ab11a146b9c0e168dc440cde70c665e36539d3ed4b269a2028642b04321bd4",
+    "peer_index_path": "data/peer_index/assist2015/peer_index.pkl",
+    "peer_index_sha256": "2dfdaf0fbd2d9090cdecd36ffab2761948fc389031480c7ebfeecab2874a7267"
+  },
+  "config_md5": "2abc471c74d8b3e63b1debc4d723e08f",
+  "context": {
+    "disable_difficulty_penalty": false,
+    "disable_fusion_broadcast": false,
+    "fusion_for_heads_only": true,
+    "hardware": {
+      "requested_devices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "visible_devices_env": "0,1,2,3,4"
+    },
+    "peer_K": 8,
+    "use_difficulty_context": false,
+    "use_peer_context": false
+  },
+  "data": {
+    "batch_size": 64,
+    "concept_max_id": 99,
+    "concept_min_id": 0,
+    "concept_unique_count": 100,
+    "dataset": "assist2015",
+    "fold": 0,
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 200,
+    "num_c": 100,
+    "num_c_requested": 100,
+    "num_c_resolved": 100
+  },
+  "distributed": {
+    "local_rank_env": "0",
+    "multi_gpu_enabled": true,
+    "multi_gpu_mode": "dataparallel",
+    "rank_env": "0",
+    "world_size_env": "1"
+  },
+  "experiment": {
+    "id": "20251028_154353_gainakt3_abl_5ccabba2",
+    "model": "gainakt3",
+    "purpose": "Ablation paw0.0_dow0.0_dsw0.0_ack5.0",
+    "short_title": "abl_5ccabba2"
+  },
+  "git": {
+    "branch": "v0.0.9-gainakt3",
+    "commit": "782f7201848403f5c9c58028400198246f0d634b"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "gpu_count": 5,
+    "num_workers": 0,
+    "threads": 8
+  },
+  "heads": {
+    "use_gain_head": true,
+    "use_mastery_head": true
+  },
+  "hyperparams": {
+    "attempt_confidence_k": 5.0,
+    "beta_difficulty": 0.5,
+    "gain_threshold": 0.01,
+    "gate_init_bias": -2.0,
+    "mastery_temperature": 1.0
+  },
+  "missing_params": [],
+  "raw_args": {
+    "artifact_base": "data",
+    "auto_num_c": false,
+    "data_loader_debug": false,
+    "difficulty_artifact_path": "",
+    "grad_clip": 1.0,
+    "lr": 0.0003,
+    "multi_gpu": true,
+    "no_multi_gpu": false,
+    "peer_artifact_path": "",
+    "persistent_workers": false,
+    "probe_reuse": false,
+    "report_concept_stats": true,
+    "strict_artifact_hash": false,
+    "use_synthetic": false
+  },
+  "runtime": {
+    "command": "python examples/wandb_gainakt3_train.py --dataset assist2015 --epochs 2 --batch_size 64 --seed 21 --devices 0 --num_workers 0 --short_title abl_5ccabba2 --purpose Ablation paw0.0_dow0.0_dsw0.0_ack5.0 --alignment_weight 0.05 --consistency_weight 0.2 --retention_weight 0.0 --lag_gain_weight 0.05 --sparsity_weight 0.0 --peer_alignment_weight 0.0 --difficulty_ordering_weight 0.0 --drift_smoothness_weight 0.0 --attempt_confidence_k 5.0 --report_concept_stats",
+    "timestamp": "2025-10-28T15:43:53.203675Z"
+  },
+  "schema_version": 1,
+  "seeds": {
+    "all": [
+      21
+    ],
+    "primary": 21
+  },
+  "training": {
+    "epochs": 2,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.0003,
+    "mixed_precision": true,
+    "optimizer": "Adam",
+    "warmup_constraint_epochs": 3,
+    "weight_decay": 0.0
+  },
+  "weights": {
+    "alignment_weight": 0.05,
+    "consistency_weight": 0.2,
+    "difficulty_ordering_weight": 0.0,
+    "drift_smoothness_weight": 0.0,
+    "lag_gain_weight": 0.05,
+    "peer_alignment_weight": 0.0,
+    "retention_weight": 0.0,
+    "sparsity_weight": 0.0
+  }
+}
