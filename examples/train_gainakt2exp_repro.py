@@ -12,6 +12,9 @@ import argparse
 import datetime
 import torch
 import numpy as np
+import hashlib
+import json
+from pathlib import Path
 from typing import Dict, Any, List
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -27,25 +30,36 @@ EPOCH_HEADER = [
 ]
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Multi-seed reproducible GainAKT2Exp training")
+    p = argparse.ArgumentParser(description="Unified GainAKT2Exp training, reproduction, and comparison")
+    # existing args (modified description):
     p.add_argument('--ablation_mode', type=str, default='both_lag', choices=['baseline','align','retention','both','both_lag'],
                    help='Preset enabling alignment/retention/lag objectives unless explicitly overridden by flags.')
     p.add_argument('--dataset', '--dataset_name', dest='dataset', default='assist2015')
     p.add_argument('--fold', type=int, default=0)
-    p.add_argument('--epochs', '--num_epochs', dest='epochs', type=int, default=12)
+    p.add_argument('--epochs', '--num_epochs', dest='epochs', type=int, default=40)
     p.add_argument('--batch_size', type=int, default=64)
-    p.add_argument('--learning_rate', '--lr', dest='learning_rate', type=float, default=0.000174)
+    p.add_argument('--learning_rate', '--lr', dest='learning_rate', type=float, default=0.00016)
     p.add_argument('--weight_decay', type=float, default=1.7571e-05)
     p.add_argument('--enhanced_constraints', action='store_true', default=True)
-    p.add_argument('--experiment_title', type=str, default='baseline')
+    p.add_argument('--experiment_title', '--short-title', dest='experiment_title', type=str, default='baseline')
     p.add_argument('--experiment_suffix', type=str, default=None)
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--seeds', type=int, nargs='*', default=None)
-    p.add_argument('--use_amp', action='store_true')
+    p.add_argument('--no_amp', action='store_true', help='Disable mixed precision (AMP). Enabled by default.')
     p.add_argument('--use_wandb', action='store_true')
     p.add_argument('--devices', type=int, nargs='*', default=[0,1,2,3,4])
     p.add_argument('--monitor_freq', type=int, default=50)
-    p.add_argument('--patience', type=int, default=20)
+    p.add_argument('--patience', type=int, default=10)
+    # Reproduction / comparison / overrides
+    p.add_argument('--experiment_dir', type=str, default=None, help='Explicit experiment directory id or absolute path to use/reuse.')
+    p.add_argument('--force', action='store_true', help='Allow reuse of existing non-empty experiment directory.')
+    p.add_argument('--set', action='append', default=[], help='Override config value using dot-path key=val (repeatable).')
+    p.add_argument('--reproduce_from', type=str, default=None, help='Source experiment folder to reproduce (creates *_reproduce).')
+    p.add_argument('--compare_only', action='store_true', help='Compare two experiments without training.')
+    p.add_argument('--source_exp', type=str, default=None, help='Source experiment id or path for compare-only.')
+    p.add_argument('--target_exp', type=str, default=None, help='Target experiment id or path for compare-only.')
+    p.add_argument('--manifest', action='store_true', help='Write reproduction_manifest.json summarizing reproduction or comparison.')
+    p.add_argument('--strict_schema', action='store_true', help='Abort reproduction if schema_version differs.')
     # Constraint weights
     p.add_argument('--non_negative_loss_weight', type=float, default=0.0)
     p.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
@@ -55,7 +69,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--consistency_loss_weight', type=float, default=0.3)
     # Alignment / semantic emergence
     p.add_argument('--enable_alignment_loss', action='store_true')
-    p.add_argument('--alignment_weight', type=float, default=0.25)
+    # Increased alignment weight back to previously stable baseline
+    p.add_argument('--alignment_weight', type=float, default=0.30)
     p.add_argument('--alignment_warmup_epochs', type=int, default=8)
     p.add_argument('--adaptive_alignment', action='store_true', default=True)
     p.add_argument('--alignment_min_correlation', type=float, default=0.05)
@@ -66,16 +81,19 @@ def parse_args() -> argparse.Namespace:
     # Retention & lag objectives
     p.add_argument('--enable_retention_loss', action='store_true')
     p.add_argument('--retention_delta', type=float, default=0.005)
-    p.add_argument('--retention_weight', type=float, default=0.14)
+    # Restore retention weight to baseline value
+    p.add_argument('--retention_weight', type=float, default=0.12)
     p.add_argument('--enable_lag_gain_loss', action='store_true')
-    p.add_argument('--lag_gain_weight', type=float, default=0.06)
+    # Restore lag gain weight to baseline value
+    p.add_argument('--lag_gain_weight', type=float, default=0.05)
     p.add_argument('--lag_max_lag', type=int, default=3)
     p.add_argument('--lag_l1_weight', type=float, default=0.5)
     p.add_argument('--lag_l2_weight', type=float, default=0.3)
     p.add_argument('--lag_l3_weight', type=float, default=0.2)
     # Share cap & scheduling
-    p.add_argument('--alignment_share_cap', type=float, default=0.08)
-    p.add_argument('--alignment_share_decay_factor', type=float, default=0.7)
+    # Restore alignment share scheduling parameters
+    p.add_argument('--alignment_share_cap', type=float, default=0.10)
+    p.add_argument('--alignment_share_decay_factor', type=float, default=0.75)
     p.add_argument('--warmup_constraint_epochs', type=int, default=8)
     p.add_argument('--enable_cosine_perf_schedule', action='store_true')
     p.add_argument('--consistency_rebalance_epoch', type=int, default=8)
@@ -93,9 +111,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--use_mastery_head', action='store_true', default=True)
     p.add_argument('--use_gain_head', action='store_true', default=True)
     # Output base
-    p.add_argument('--output_base', type=str, default='examples/experiments')
+    # Use absolute path anchored at project root to avoid duplication when launching from within examples/
+    p.add_argument('--output_base', type=str, default=None,
+                   help='Base directory for experiment folders. Defaults to <project_root>/examples/experiments if not set.')
     p.add_argument('--resume', type=str, default=None)
     args = p.parse_args()
+    setattr(args, 'use_amp', not getattr(args, 'no_amp', False))
     def flag_present(flag: str) -> bool:
         return any(a == flag for a in sys.argv)
     if args.ablation_mode != 'baseline':
@@ -119,7 +140,10 @@ def parse_args() -> argparse.Namespace:
     return args
 
 def build_config(args: argparse.Namespace, exp_id: str, exp_path: str, seeds: List[int]) -> Dict[str,Any]:
+    # Collect all args for completeness
+    args_dict = vars(args)
     cfg = {
+        'schema_version': 2,
         'experiment': {
             'id': exp_id,
             'model': 'gainakt2exp',
@@ -137,7 +161,8 @@ def build_config(args: argparse.Namespace, exp_id: str, exp_path: str, seeds: Li
             'optimizer': 'Adam',
             'patience': args.patience,
             'mixed_precision': bool(args.use_amp),
-            'gradient_clip': 1.0
+            'gradient_clip': 1.0,
+            'monitor_freq': args.monitor_freq
         },
         'interpretability': {
             'enhanced_constraints': bool(args.enhanced_constraints),
@@ -149,26 +174,236 @@ def build_config(args: argparse.Namespace, exp_id: str, exp_path: str, seeds: Li
             'consistency_loss_weight': args.consistency_loss_weight,
             'warmup_constraint_epochs': args.warmup_constraint_epochs,
             'alignment_weight': args.alignment_weight,
-            'enable_alignment_loss': bool(args.enable_alignment_loss),
             'retention_weight': args.retention_weight,
-            'enable_retention_loss': bool(args.enable_retention_loss),
             'lag_gain_weight': args.lag_gain_weight,
+            'enable_alignment_loss': bool(args.enable_alignment_loss),
+            'enable_retention_loss': bool(args.enable_retention_loss),
             'enable_lag_gain_loss': bool(args.enable_lag_gain_loss)
         },
-        'sampling': {
-            'max_semantic_students': args.max_semantic_students,
-            'alignment_global_students': args.alignment_global_students
+        'alignment': {
+            'alignment_warmup_epochs': args.alignment_warmup_epochs,
+            'adaptive_alignment': bool(args.adaptive_alignment),
+            'alignment_min_correlation': args.alignment_min_correlation,
+            'enable_global_alignment_pass': bool(args.enable_global_alignment_pass),
+            'alignment_global_students': args.alignment_global_students,
+            'use_residual_alignment': bool(args.use_residual_alignment),
+            'alignment_residual_window': args.alignment_residual_window,
+            'alignment_share_cap': args.alignment_share_cap,
+            'alignment_share_decay_factor': args.alignment_share_decay_factor
         },
-        'seeds': {'primary': seeds[0], 'all': seeds},
-        'hardware': {'devices': args.devices, 'threads': int(os.environ.get('OMP_NUM_THREADS','8'))},
-        'command': 'python examples/train_gainakt2exp_repro.py ' + ' '.join(sys.argv[1:]),
-        'timestamp': datetime.datetime.utcnow().isoformat() + 'Z'
+        'retention_lag': {
+            'retention_delta': args.retention_delta,
+            'lag_max_lag': args.lag_max_lag,
+            'lag_l1_weight': args.lag_l1_weight,
+            'lag_l2_weight': args.lag_l2_weight,
+            'lag_l3_weight': args.lag_l3_weight
+        },
+        'scheduling': {
+            'enable_cosine_perf_schedule': bool(args.enable_cosine_perf_schedule),
+            'consistency_rebalance_epoch': args.consistency_rebalance_epoch,
+            'consistency_rebalance_threshold': args.consistency_rebalance_threshold,
+            'consistency_rebalance_new_weight': args.consistency_rebalance_new_weight
+        },
+        'stability_controls': {
+            'variance_floor': args.variance_floor,
+            'variance_floor_patience': args.variance_floor_patience,
+            'variance_floor_reduce_factor': args.variance_floor_reduce_factor,
+            'freeze_sparsity': bool(args.freeze_sparsity)
+        },
+        'heads': {
+            'use_mastery_head': bool(args.use_mastery_head),
+            'use_gain_head': bool(args.use_gain_head)
+        },
+        'sampling': {
+            'max_semantic_students': args.max_semantic_students
+        },
+        'paths': {
+            'semantic_trajectory_path': args.semantic_trajectory_path,
+            'output_dir': exp_path
+        },
+        'runtime': {
+            'resume': args.resume,
+            'devices': args.devices,
+            'threads': int(os.environ.get('OMP_NUM_THREADS','8')),
+            'command': 'python examples/train_gainakt2exp_repro.py ' + ' '.join(sys.argv[1:]),
+            'timestamp': datetime.datetime.utcnow().isoformat() + 'Z'
+        },
+        'seeds': {'primary': seeds[0], 'all': seeds}
     }
+    # Determine missing args (those parsed but not yet represented). Flatten cfg keys for comparison.
+    serialized_keys = set()
+    def collect(d):
+        for k,v in d.items():
+            if isinstance(v, dict):
+                collect(v)
+            else:
+                serialized_keys.add(k)
+    collect(cfg)
+    args_dict = vars(args)
+    # CLI-only flags or alias names intentionally not serialized (represented indirectly)
+    exclude = {
+        'experiment_title',  # stored as experiment.short_title
+        'seed',               # seeds.primary covers it
+        'seeds',              # represented under seeds.all
+        'no_amp',             # reflected by training.mixed_precision
+        'use_amp',            # same as above (derived)
+        'use_wandb',          # external logging not serialized
+        'experiment_dir',     # folder path chosen externally
+        'force',              # control flag, not part of spec
+        'set',                # override list applied pre-hash
+        'reproduce_from',     # reproduction metadata stored separately
+        'compare_only',       # mode flag (no training)
+        'source_exp',         # comparison source
+        'target_exp',         # comparison target
+        'manifest',           # optional artifact creation
+        'strict_schema',      # reproduction check behavior
+        'output_base',        # base directory (not part of spec content)
+        'devices',            # serialized under runtime.devices
+        'resume',             # serialized under runtime.resume if provided
+    }
+    missing = [k for k in args_dict.keys() if k not in serialized_keys and k not in exclude]
+    cfg['missing_params'] = missing
+    assert len(missing) == 0, f"Unserialized parameters found (unexpected): {missing}"
     cfg['config_md5'] = compute_config_hash(cfg)
-    cfg['output_dir'] = exp_path
     return cfg
 
-def write_readme(exp_path: str, cfg: Dict[str,Any], multi_seed_summary: Dict[str,Any] = None):
+# Override helpers
+_DEF_BOOL = {'true': True, 'false': False}
+
+def _coerce_value(raw: str):
+    r = raw.strip()
+    lr = r.lower()
+    if lr in _DEF_BOOL:
+        return _DEF_BOOL[lr]
+    try:
+        if '.' in r:
+            return float(r)
+        return int(r)
+    except ValueError:
+        if ',' in r:
+            parts = [p.strip() for p in r.split(',') if p.strip()]
+            coerced = []
+            for p in parts:
+                cp = _coerce_value(p)
+                coerced.append(cp)
+            return coerced
+        return r
+
+def apply_overrides_to_args(args: argparse.Namespace, overrides: list) -> list:
+    logs = []
+    for ov in overrides:
+        if '=' not in ov:
+            print(f"[WARN] Ignoring malformed override '{ov}' (missing '=')")
+            continue
+        key, val = ov.split('=',1)
+        value = _coerce_value(val)
+        original = None
+        # Map common prefixes to args attribute names
+        if key.startswith('training.'):
+            sub = key.split('.',1)[1]
+            attr_map = {'epochs':'epochs','batch_size':'batch_size','learning_rate':'learning_rate','weight_decay':'weight_decay','seeds':'seeds'}
+            if sub in attr_map:
+                original = getattr(args, attr_map[sub], None)
+                if sub == 'seeds':
+                    if isinstance(value, list):
+                        value = [int(x) for x in value]
+                setattr(args, attr_map[sub], value)
+        elif key.startswith('interpretability.'):
+            sub = key.split('.',1)[1]
+            if hasattr(args, sub):
+                original = getattr(args, sub)
+                setattr(args, sub, value)
+        elif key.startswith('alignment.'):
+            sub = key.split('.',1)[1]
+            name = 'alignment_' + sub if not sub.startswith('alignment_') else sub
+            if hasattr(args, name):
+                original = getattr(args, name)
+                setattr(args, name, value)
+        elif key.startswith('retention_lag.'):
+            sub = key.split('.',1)[1]
+            if sub.startswith('lag_') or sub in ['retention_delta']:
+                if hasattr(args, sub):
+                    original = getattr(args, sub)
+                    setattr(args, sub, value)
+        elif key.startswith('heads.'):
+            sub = key.split('.',1)[1]
+            name = 'use_' + sub if sub in ['mastery_head','gain_head'] else sub
+            if hasattr(args, name):
+                original = getattr(args, name)
+                setattr(args, name, value)
+        elif key.startswith('sampling.'):
+            sub = key.split('.',1)[1]
+            if hasattr(args, sub):
+                original = getattr(args, sub)
+                setattr(args, sub, value)
+        else:
+            # Unmapped override; record but not applied to args
+            original = None
+        logs.append(f"{key}:{original}->{value}")
+    return logs
+
+# Results MD5 helper
+
+def file_md5(path: str) -> str:
+    try:
+        with open(path,'rb') as f:
+            return hashlib.md5(f.read()).hexdigest()
+    except Exception:
+        return None
+
+# Comparison logic
+
+def compare_experiments(source: str, target: str) -> dict:
+    def resolve(p: str) -> str:
+        base = '/workspaces/pykt-toolkit/examples/experiments'
+        abs_path = p if os.path.isabs(p) else os.path.join(base, p)
+        return abs_path
+    sdir = resolve(source)
+    tdir = resolve(target)
+    report = {'source': sdir, 'target': tdir, 'exists_source': os.path.isdir(sdir), 'exists_target': os.path.isdir(tdir)}
+    if not (os.path.isdir(sdir) and os.path.isdir(tdir)):
+        return report
+    def load_results(d):
+        rjson = os.path.join(d,'results.json')
+        if os.path.exists(rjson):
+            with open(rjson) as f:
+                return json.load(f)
+        return {}
+    sres = load_results(sdir)
+    tres = load_results(tdir)
+    report['source_config_md5'] = sres.get('config_md5')
+    report['target_config_md5'] = tres.get('config_md5')
+    report['config_md5_match'] = (report['source_config_md5'] == report['target_config_md5'] and report['source_config_md5'] is not None)
+    report['source_best_epoch_auc'] = sres.get('best_epoch_auc')
+    report['target_best_epoch_auc'] = tres.get('best_epoch_auc')
+    if report['source_best_epoch_auc'] is not None and report['target_best_epoch_auc'] is not None:
+        report['best_auc_abs_diff'] = abs(report['source_best_epoch_auc'] - report['target_best_epoch_auc'])
+    report['source_mastery_corr'] = sres.get('best_mastery_corr')
+    report['target_mastery_corr'] = tres.get('best_mastery_corr')
+    if report['source_mastery_corr'] is not None and report['target_mastery_corr'] is not None:
+        report['mastery_corr_abs_diff'] = abs(report['source_mastery_corr'] - report['target_mastery_corr'])
+    report['source_gain_corr'] = sres.get('best_gain_corr')
+    report['target_gain_corr'] = tres.get('best_gain_corr')
+    if report['source_gain_corr'] is not None and report['target_gain_corr'] is not None:
+        report['gain_corr_abs_diff'] = abs(report['source_gain_corr'] - report['target_gain_corr'])
+    s_md5 = file_md5(os.path.join(sdir,'results.json'))
+    t_md5 = file_md5(os.path.join(tdir,'results.json'))
+    report['source_results_md5'] = s_md5
+    report['target_results_md5'] = t_md5
+    report['results_md5_match'] = (s_md5 == t_md5 and s_md5 is not None)
+    # Tolerance assessment
+    tol_auc = 0.002
+    tol_corr = 0.01
+    report['within_tolerance'] = (
+        (report.get('best_auc_abs_diff',0) <= tol_auc) and
+        (report.get('mastery_corr_abs_diff',0) <= tol_corr) and
+        (report.get('gain_corr_abs_diff',0) <= tol_corr)
+    )
+    return report
+
+# Augment write_readme to include reproduction/comparison metadata
+
+def write_readme(exp_path: str, cfg: Dict[str,Any], multi_seed_summary: Dict[str,Any] = None, reproduction_meta: Dict[str,Any] = None):
     checklist = [
         ('Folder naming convention followed','✅'),
         ('config.json contains all params','✅'),
@@ -187,6 +422,7 @@ def write_readme(exp_path: str, cfg: Dict[str,Any], multi_seed_summary: Dict[str
         f"Model: {cfg['experiment']['model']}",
         f"Short title: {cfg['experiment']['short_title']}",
         f"Ablation mode: {cfg['experiment'].get('ablation_mode')}",
+        f"Schema version: {cfg.get('schema_version','N/A')}",
         "",
         '# Reproducibility Checklist',
         "",
@@ -195,6 +431,12 @@ def write_readme(exp_path: str, cfg: Dict[str,Any], multi_seed_summary: Dict[str
     ]
     for item, status in checklist:
         lines.append(f"| {item} | {status} |")
+    if reproduction_meta:
+        lines.append("\n## Reproduction Metadata")
+        lines.append('| Field | Value |')
+        lines.append('|-------|-------|')
+        for k,v in reproduction_meta.items():
+            lines.append(f"| {k} | {v} |")
     if multi_seed_summary:
         lines.append("\n## Multi-seed Stability Summary")
         lines.append('Seeds: ' + ', '.join(str(s) for s in multi_seed_summary['seeds']))
@@ -214,24 +456,122 @@ def write_readme(exp_path: str, cfg: Dict[str,Any], multi_seed_summary: Dict[str
         lines.append("- Retention penalty count/mean/peak describe correlation decay events; high peak + high count may signal over-regularization or instability.")
         lines.append("- Divergence between global vs local mastery variance can motivate adjusting alignment sampling or weight.")
         lines.append("- If slopes negative post warm-up, investigate alignment decay or excessive retention penalty.")
+    lines.append("\n## Parameter Scenario Quick Reference")
+    lines.append("Comprehensive (defaults): --ablation_mode both_lag (alignment+retention+lag) warmup=8 alignment_weight=0.30 retention_weight=0.12 lag_gain_weight=0.05")
+    lines.append("Predictive baseline: --ablation_mode baseline (all interpretability losses disabled, heads optional)")
+    lines.append("Alignment-only: --ablation_mode align (retention & lag disabled) to observe correlation decay")
+    lines.append("Retention stress: increase --retention_weight (e.g., 0.18) and decrease --retention_delta (e.g., 0.003) to test decay resistance")
+    lines.append("Variance recovery: extend --warmup_constraint_epochs (e.g., 10) and reduce performance loss weights (0.8→0.7) to boost head variance")
+    lines.append("Mastery-only: --use_gain_head False to isolate mastery semantics")
+    lines.append("Disable AMP: add --no_amp (AMP enabled by default)")
+    lines.append("See paper/README_gainakt2exp.md for full parameter tables & tuning guidelines.")
     with open(os.path.join(exp_path,'README.md'),'w') as f:
         f.write('\n'.join(lines))
 
+# Main updated to handle reproduction & comparison modes
+
 def main():
     args = parse_args()
+    # Comparison mode early exit
+    if args.compare_only:
+        if not (args.source_exp and args.target_exp):
+            print('[ERROR] --compare_only requires --source_exp and --target_exp')
+            sys.exit(1)
+        report = compare_experiments(args.source_exp, args.target_exp)
+        # Write report to target experiment folder if exists else current path
+        target_dir = report.get('target') if os.path.isdir(report.get('target','')) else os.getcwd()
+        out_path = os.path.join(target_dir,'reproduction_report.json')
+        atomic_write_json(report, out_path)
+        print(f"Comparison report written: {out_path}")
+        sys.exit(0)
+    # Apply overrides to args BEFORE config construction
+    override_logs = apply_overrides_to_args(args, args.set)
     if args.experiment_suffix is None:
         args.experiment_suffix = args.experiment_title
     seeds = args.seeds if args.seeds else [args.seed]
     seeds = list(dict.fromkeys(seeds))
     if args.devices:
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
-    exp_path = make_experiment_dir('gainakt2exp', args.experiment_title, base_dir=args.output_base)
-    exp_id = os.path.basename(exp_path)
+    project_root = Path(__file__).resolve().parent.parent
+    if args.output_base is None:
+        base_dir = project_root / 'examples' / 'experiments'
+    else:
+        supplied = Path(args.output_base)
+        base_dir = supplied if supplied.is_absolute() else project_root / supplied
+    base_dir.mkdir(parents=True, exist_ok=True)
+    source_repro_dir = None
+    reproduction_meta = None
+    # Reproduction path
+    if args.reproduce_from:
+        source_repro_dir = Path(args.reproduce_from)
+        if not source_repro_dir.is_absolute():
+            source_repro_dir = base_dir / args.reproduce_from
+        if not source_repro_dir.exists():
+            print(f"[ERROR] Source reproduction folder does not exist: {source_repro_dir}")
+            sys.exit(1)
+        # Load source config for baseline args (schema/version check optional)
+        source_cfg_path = source_repro_dir / 'config.json'
+        if not source_cfg_path.exists():
+            print('[ERROR] Source config.json missing for reproduction.')
+            sys.exit(1)
+        with open(source_cfg_path) as f:
+            source_cfg = json.load(f)
+        if args.strict_schema and source_cfg.get('schema_version') != 2:
+            print('[ERROR] Schema version mismatch. Aborting reproduction.')
+            sys.exit(1)
+        # Create new folder with _reproduce suffix
+        short_title = source_cfg['experiment']['short_title'] + '_reproduce'
+        exp_path = make_experiment_dir('gainakt2exp', short_title, base_dir=str(base_dir))
+        exp_id = os.path.basename(exp_path)
+        # Build config from current args (overrides may differ) then tag reproduction metadata
+        cfg = build_config(args, exp_id, exp_path, seeds)
+        cfg['reproduction'] = {
+            'mode': 'reproduce',
+            'source_experiment': source_cfg['experiment']['id'],
+            'source_config_md5': source_cfg.get('config_md5'),
+            'applied_overrides': override_logs
+        }
+        reproduction_meta = {
+            'source_experiment': source_cfg['experiment']['id'],
+            'source_config_md5': source_cfg.get('config_md5'),
+            'new_config_md5': cfg.get('config_md5'),
+            'override_count': len(override_logs)
+        }
+    else:
+        # New or explicit experiment dir reuse
+        if args.experiment_dir:
+            exp_dir_candidate = Path(args.experiment_dir)
+            if not exp_dir_candidate.is_absolute():
+                exp_dir_candidate = base_dir / args.experiment_dir
+            if exp_dir_candidate.exists():
+                if not args.force:
+                    print('[ERROR] experiment_dir exists; use --force to reuse.')
+                    sys.exit(1)
+                exp_path = str(exp_dir_candidate)
+            else:
+                exp_dir_candidate.parent.mkdir(parents=True, exist_ok=True)
+                exp_path = str(exp_dir_candidate)
+                os.makedirs(exp_path, exist_ok=True)
+                os.makedirs(os.path.join(exp_path,'artifacts'), exist_ok=True)
+            exp_id = os.path.basename(exp_path)
+        else:
+            exp_path = make_experiment_dir('gainakt2exp', args.experiment_title, base_dir=str(base_dir))
+            exp_id = os.path.basename(exp_path)
+        cfg = build_config(args, exp_id, exp_path, seeds)
     logger = timestamped_logger(exp_id, os.path.join(exp_path,'stdout.log'))
     logger.info(f"Created experiment folder: {exp_path}")
-    cfg = build_config(args, exp_id, exp_path, seeds)
     atomic_write_json(cfg, os.path.join(exp_path,'config.json'))
     capture_environment(os.path.join(exp_path,'environment.txt'))
+    # Write override audit
+    audit_list = override_logs
+    write_path = os.path.join(exp_path,'overrides_applied.txt')
+    with open(write_path,'a') as auditf:
+        auditf.write(f"timestamp: {datetime.datetime.utcnow().isoformat()}Z\n")
+        auditf.write(f"experiment_id: {exp_id}\n")
+        auditf.write(f"override_count: {len(audit_list)}\n")
+        for ov in audit_list:
+            auditf.write(f"override: {ov}\n")
+        auditf.write("---\n")
     metrics_csv = os.path.join(exp_path,'metrics_epoch.csv')
     artifacts_dir = os.path.join(exp_path,'artifacts')
     os.makedirs(artifacts_dir, exist_ok=True)
@@ -244,14 +584,13 @@ def main():
         np.random.seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
-        seed_suffix = f"{base_suffix}_s{seed}"
+        seed_suffix = f"{base_suffix}_s{seed}" if base_suffix else f"s{seed}"
         args.experiment_suffix = seed_suffix
         args.semantic_trajectory_path = os.path.join(artifacts_dir, f'semantic_trajectory_seed{seed}.json')
         results = train_gainakt2exp_model(args)
         history = results.get('train_history', {})
         semantic = history.get('semantic_trajectory', [])
         consistency_list = history.get('consistency_metrics', [])
-        # Temporal stability extraction
         mastery_corrs = [e.get('mastery_correlation') for e in semantic if e.get('mastery_correlation') is not None]
         gain_corrs = [e.get('gain_correlation') for e in semantic if e.get('gain_correlation') is not None]
         global_mastery_corrs = [e.get('global_alignment_mastery_corr') for e in semantic if e.get('global_alignment_mastery_corr') is not None]
@@ -261,6 +600,7 @@ def main():
                 return 0.0
             x = np.arange(len(vals), dtype=float)
             y = np.array(vals, dtype=float)
+            # slope computation separated for readability
             xm = x.mean()
             ym = y.mean()
             denom = ((x - xm)**2).sum() + 1e-8
@@ -278,7 +618,6 @@ def main():
         for idx, epoch_entry in enumerate(semantic):
             epoch_num = epoch_entry.get('epoch', idx+1)
             consistency = consistency_list[idx] if idx < len(consistency_list) else {}
-            # CI values (per-epoch consistency metrics already contain them if present)
             mastery_ci_low = consistency.get('mastery_correlation_ci_low')
             mastery_ci_high = consistency.get('mastery_correlation_ci_high')
             gain_ci_low = consistency.get('gain_correlation_ci_low')
@@ -320,7 +659,6 @@ def main():
                 shutil.copy2(best_src, os.path.join(exp_path,f'model_best_seed{seed}.pth'))
                 logger.info(f'Copied best checkpoint for seed {seed}.')
         torch.save({'note':'placeholder last checkpoint','seed':seed}, os.path.join(exp_path,f'model_last_seed{seed}.pth'))
-
     def _stats(vals: List[float]) -> Dict[str,float]:
         arr = np.array(vals, dtype=float)
         return {'mean': float(arr.mean()) if arr.size else 0.0,
@@ -376,8 +714,26 @@ def main():
         'best_gain_corr': primary['final_consistency'].get('gain_correlation')
     }
     atomic_write_json(legacy, os.path.join(exp_path,'results.json'))
-    write_readme(exp_path, cfg, multi_seed_summary=multi_seed_summary)
-    logger.info('Experiment complete (multi-seed aggregation).')
+    # Reproduction report (if reproduction mode)
+    if reproduction_meta:
+        source_dir = source_repro_dir
+        rep = compare_experiments(str(source_dir.name), os.path.basename(exp_path)) if source_dir else {}
+        rep.update({'mode':'reproduce','source_experiment': reproduction_meta['source_experiment']})
+        atomic_write_json(rep, os.path.join(exp_path,'reproduction_report.json'))
+    # Optional manifest
+    if args.manifest:
+        manifest = {
+            'experiment_id': cfg['experiment']['id'],
+            'schema_version': cfg.get('schema_version'),
+            'config_md5': cfg.get('config_md5'),
+            'seeds': seeds,
+            'reproduction_mode': bool(reproduction_meta),
+            'override_count': len(override_logs),
+            'results_md5': file_md5(os.path.join(exp_path,'results.json'))
+        }
+        atomic_write_json(manifest, os.path.join(exp_path,'reproduction_manifest.json'))
+    write_readme(exp_path, cfg, multi_seed_summary=multi_seed_summary, reproduction_meta=reproduction_meta)
+    logger.info('Unified experiment complete.')
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,104 @@
+{
+  "alignment": {
+    "adaptive_alignment": true,
+    "alignment_global_students": 600,
+    "alignment_min_correlation": 0.05,
+    "alignment_residual_window": 5,
+    "alignment_share_cap": 0.1,
+    "alignment_share_decay_factor": 0.75,
+    "alignment_warmup_epochs": 8,
+    "enable_global_alignment_pass": true,
+    "use_residual_alignment": false
+  },
+  "config_md5": "fc9d7415cc9a2c8d0104f1e88a8354f8",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "ablation_mode": "both_lag",
+    "experiment_suffix": "repro",
+    "id": "20251028_003355_gainakt2exp_repro",
+    "model": "gainakt2exp",
+    "purpose": "Multi-seed reproducible training run",
+    "short_title": "repro"
+  },
+  "heads": {
+    "use_gain_head": true,
+    "use_mastery_head": true
+  },
+  "interpretability": {
+    "alignment_weight": 0.3,
+    "consistency_loss_weight": 0.3,
+    "enable_alignment_loss": true,
+    "enable_lag_gain_loss": true,
+    "enable_retention_loss": true,
+    "enhanced_constraints": true,
+    "gain_performance_loss_weight": 0.8,
+    "lag_gain_weight": 0.05,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "non_negative_loss_weight": 0.0,
+    "retention_weight": 0.12,
+    "sparsity_loss_weight": 0.2,
+    "warmup_constraint_epochs": 8
+  },
+  "missing_params": [],
+  "paths": {
+    "output_dir": "/workspaces/pykt-toolkit/examples/experiments/20251028_003355_gainakt2exp_repro",
+    "semantic_trajectory_path": null
+  },
+  "retention_lag": {
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "lag_max_lag": 3,
+    "retention_delta": 0.005
+  },
+  "runtime": {
+    "command": "python examples/train_gainakt2exp_repro.py --experiment_title repro --devices 0 1 2 3 4",
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "resume": null,
+    "threads": 8,
+    "timestamp": "2025-10-28T00:33:55.067772Z"
+  },
+  "sampling": {
+    "max_semantic_students": 50
+  },
+  "scheduling": {
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_new_weight": 0.2,
+    "consistency_rebalance_threshold": 0.1,
+    "enable_cosine_perf_schedule": false
+  },
+  "schema_version": 2,
+  "seeds": {
+    "all": [
+      42
+    ],
+    "primary": 42
+  },
+  "stability_controls": {
+    "freeze_sparsity": false,
+    "variance_floor": 0.0001,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5
+  },
+  "training": {
+    "batch_size": 64,
+    "epochs": 40,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.00016,
+    "mixed_precision": true,
+    "monitor_freq": 50,
+    "optimizer": "Adam",
+    "patience": 10,
+    "weight_decay": 1.7571e-05
+  }
+}

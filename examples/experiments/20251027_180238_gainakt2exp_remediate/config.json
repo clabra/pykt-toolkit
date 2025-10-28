@@ -1,0 +1,66 @@
+{
+  "command": "python examples/train_gainakt2exp_repro.py --experiment_title remediate --seeds 21 42 63 --devices 0 1 2 3 4 --ablation_mode both_lag --use_amp",
+  "config_md5": "83f844f9446d3fab89eaa4dc0fe874e2",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "ablation_mode": "both_lag",
+    "experiment_suffix": "remediate",
+    "id": "20251027_180238_gainakt2exp_remediate",
+    "model": "gainakt2exp",
+    "purpose": "Multi-seed reproducible training run",
+    "short_title": "remediate"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threads": 8
+  },
+  "interpretability": {
+    "alignment_weight": 0.3,
+    "consistency_loss_weight": 0.3,
+    "enable_alignment_loss": true,
+    "enable_lag_gain_loss": true,
+    "enable_retention_loss": true,
+    "enhanced_constraints": true,
+    "gain_performance_loss_weight": 0.8,
+    "lag_gain_weight": 0.05,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "non_negative_loss_weight": 0.0,
+    "retention_weight": 0.12,
+    "sparsity_loss_weight": 0.2,
+    "warmup_constraint_epochs": 8
+  },
+  "output_dir": "examples/experiments/20251027_180238_gainakt2exp_remediate",
+  "sampling": {
+    "alignment_global_students": 600,
+    "max_semantic_students": 50
+  },
+  "seeds": {
+    "all": [
+      21,
+      42,
+      63
+    ],
+    "primary": 21
+  },
+  "timestamp": "2025-10-27T18:02:38.419520Z",
+  "training": {
+    "batch_size": 64,
+    "epochs": 20,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.00016,
+    "mixed_precision": true,
+    "optimizer": "Adam",
+    "patience": 20,
+    "weight_decay": 1.7571e-05
+  }
+}

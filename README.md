@@ -7,6 +7,18 @@
 
 pyKT is a Python library built upon PyTorch to train deep learning based knowledge tracing models. The library provides a standardized set of integrated preprocessing procedures on more than seven popular datasets across different domains, five detailed prediction scenarios, and more than ten frequently compared DLKT approaches for transparent and extensive experiments. More details are available at our [website](https://pykt.org/) and [documentation](https://pykt-toolkit.readthedocs.io/en/latest/quick_start.html).
 
+For experimental interpretability extensions (e.g., GainAKT2Exp) see the consolidated parameter definitions and recommended scenarios in `paper/PARAMETERS.md`. Mixed precision (AMP) is now enabled by default; use `--no_amp` to disable.
+
+Quick reference scenarios:
+
+- Comprehensive interpretability: `--ablation_mode both_lag` (alignment + retention + lag) with default weights.
+- Predictive baseline: `--ablation_mode baseline` and all constraint weights set to 0.
+- Alignment-only: `--ablation_mode align` (retention and lag disabled) to inspect correlation decay.
+- Retention stress test: increase `--retention_weight` (e.g., 0.18) and reduce `--retention_delta` (e.g., 0.003) to probe decay resistance.
+
+
+Refer to the full document for tuning guidelines (variance recovery, stability stress, mastery-only) and reproducibility notes (config hashing, multi-seed aggregation).
+
 ## Installation
 
 We recommend using a dedicated conda environment followed by installation from PyPI:
