@@ -105,8 +105,8 @@ flowchart LR
   end
 ```
 
-### 4.1 Implementation Status Diagram (Phase 2 Snapshot)
-The following diagram annotates which components are currently fully implemented, partially implemented, or not yet active in the production code (`pykt/models/gainakt3.py`) as of 2025-10-28.
+### 4.1 Implementation Status Diagram (Phase 2b Snapshot)
+The diagram below (updated 2025-10-28, Phase 2b) reflects activation of residual fusion, decomposition serialization, and newly added auxiliary losses (peer alignment, difficulty ordering, drift smoothness). Difficulty context remains partial (drift uncertainty features pending); peer context retrieval implemented with confidence scaling. 
 
 ```mermaid
 flowchart LR
@@ -117,17 +117,17 @@ flowchart LR
     T --> V[Gain v]
   end
 
-  subgraph EXT[External Context Planned]
-    P[Peer ctx]:::inactive
+  subgraph EXT[External Context]
+    P[Peer ctx]:::implemented
     D[Difficulty ctx]:::partial
   end
 
-  H --> G[Fusion Gate metrics only]:::partial
+  H --> G[Fusion Gate]:::implemented
   P --> G
   D --> G
 
-  G --> H2[Augmented h planned]:::inactive
-  H --> MHead[Mastery Head]:::implemented
+  G --> H2[Augmented h]:::implemented
+  H2 --> MHead[Mastery Head]:::implemented
   V --> GHead[Gain Head]:::implemented
   D --> DCal[Difficulty Head]:::partial
 
@@ -138,9 +138,12 @@ flowchart LR
   MV --> LOGIT[Perf Logit]:::implemented
   GV --> LOGIT
   DL --> LOGIT
+  P --> PEERCONTR[Peer Prior Contribution]:::implemented
+  D --> DIFFCONTR[Difficulty Contribution]:::partial
 
   LOGIT --> PRED[Prediction]:::implemented
-  PRED --> C1[Constraint Losses]:::implemented
+  PRED --> DECOMP[Decomposition Serialization]:::implemented
+  PRED --> C1[Constraint & Aux Losses]:::implemented
 
   classDef implemented fill:#e6ffed,stroke:#2c7a1b,color:#1b5e20;
   classDef partial fill:#fff3cd,stroke:#c9a200,color:#533f03;
@@ -300,8 +303,8 @@ Interpretability improvement claim centered on reduced peer_alignment_error and 
 ---
 We will proceed with Phase 1 upon confirmation.
 
-\n## 17. Phase2 Implementation Status (2025-10-28)
-The production model file `pykt/models/gainakt3.py` has been extended to include auxiliary interpretability constraint losses. These are implemented directly in the forward pass and exposed for the training script to incorporate.
+\n## 17. Phase2 Implementation Status (2025-10-28, Historical)
+Historical snapshot before activation of residual fusion, decomposition logging, and advanced auxiliary losses. Superseded by Section 20.
 
 \n### Implemented Auxiliary Losses
 \n| Loss | Purpose | Formula (Simplified) | Config Weight |
@@ -347,14 +350,8 @@ The chosen subset balances computational simplicity (O(B·L·C)) and immediate i
 - Cold start artifacts: peer vector defaults to zero; difficulty subtraction still applied with learned head.
 - Constraint weights set to zero disable term entirely (no unnecessary tensor ops).
 
-### Pending Enhancements
-| Feature | Status | Planned Action |
-|---------|--------|----------------|
-| Peer alignment MSE | Not implemented | Add after verifying centroid stability |
-| Difficulty ordering ranking | Not implemented | Introduce sampled pair ranking module |
-| Drift smoothness | Not implemented | Maintain circular buffer of recent difficulty logits |
-| Decomposition reconstruction | Not implemented | Implement component isolation and recomposition head |
-| Gate-based representation fusion | Partial (metrics only) | Replace reporting-only with actual residual integration |
+### Pending Enhancements (Historical)
+Items below have since been implemented (see Section 20). Remaining work now targets advanced difficulty drift uncertainty modeling and centroid temporal weighting.
 
 ### Configuration Additions (create_gainakt3_model)
 New keys exposed for reproducibility:
@@ -555,3 +552,66 @@ The newly logged macro per-concept correlations strengthen evidence for concept-
 
 ---
 End of Section 19.
+
+## 20. Phase 2b / 2c Update (2025-10-28)
+This section records enhancements after Phase 2: residual fusion activation, performance logit decomposition serialization, and integration of peer alignment, difficulty ordering, and drift smoothness auxiliary losses.
+
+### 20.1 Residual Fusion Activation
+Activated residual fusion with LayerNorm:
+\[
+	ilde{h}_t = \text{LayerNorm}\big(h_t + g_p \odot p_t + g_d \odot d_t\big)
+\]
+Fusion precedes mastery head projection, enabling direct attribution of peer and difficulty contributions in decomposition artifacts.
+
+### 20.2 Decomposition Serialization
+Per-epoch artifact (`artifacts/decomposition_epochX.json`) stores mean contributions:
+- `mastery_contrib_mean`
+- `peer_prior_contrib_mean`
+- `difficulty_fused_contrib_mean`
+- `value_stream_contrib_mean`
+- `concept_contrib_mean`
+- `bias_contrib_mean`
+- `difficulty_penalty_contrib_mean`
+- `reconstruction_error` (norm of residual after summing contributions)
+
+### 20.3 Advanced Auxiliary Losses Implemented
+| Loss | Purpose | Simplified Form | Flag |
+|------|---------|-----------------|------|
+| Peer Alignment | Align mastery with cohort correctness | MSE(mean(mastery_skills), peer_correct_rate) * a/(a+k) | `peer_alignment_weight` |
+| Difficulty Ordering | Maintain ordering consistency | mean(ReLU(margin - (p_j - p_i))) sampled pairs | `difficulty_ordering_weight` |
+| Drift Smoothness | Reduce volatility in difficulty calibration | mean(|d_t - 2d_{t-1} + d_{t-2}|) | `drift_smoothness_weight` |
+
+Existing constraint losses retained (alignment, retention, sparsity, consistency, lag gain).
+
+### 20.4 Confidence Scaling
+Peer alignment loss scaled by attempt count: scale = a/(a + k) with hyperparameter `attempt_confidence_k` mitigating noisy low-attempt items.
+
+### 20.5 Metric Extensions
+- Updated `peer_influence_share` to reflect post-fusion gated contribution magnitude.
+- Added `reconstruction_error` to monitor additive decomposition fidelity.
+- Difficulty adjustment magnitude now includes fused difficulty contribution and penalty term.
+
+### 20.6 Impact on Interpretability
+Fusion and decomposition enable direct causal narratives: prediction shifts can be audited as mastery-driven vs difficulty or peer prior-driven. Ordering and drift losses stabilize difficulty semantics; peer alignment grounds mastery scale in cohort performance statistics.
+
+### 20.7 Remaining Deferred Work
+| Feature | Status | Planned Enhancement |
+|---------|--------|---------------------|
+| Drift uncertainty modeling | Not implemented | Integrate variance-based adaptive smoothing |
+| Temporal centroid weighting | Partial | Add time-bucket similarity weighting |
+| Decomposition reconstruction loss | Not implemented | Add explicit penalty (`decomposition_weight`) |
+| Gate sparsity L1 | Not implemented | Introduce `peer_gate_sparsity_weight` |
+| Gain thresholded correlations | Partial | Add `gain_threshold` CLI flag |
+
+### 20.8 Reproducibility Integration
+New weights (`peer_alignment_weight`, `difficulty_ordering_weight`, `drift_smoothness_weight`, `attempt_confidence_k`) serialized in `config.json`; decomposition artifacts deterministic under fixed seeds; artifact hashing protocol unchanged.
+
+### 20.9 Scholarly Framing Update
+Interpretability claims now rest on:
+1. Component Attribution Fidelity: Low reconstruction error validates additive decomposition.
+2. Cohort & Difficulty Grounding: Auxiliary losses tangibly align mastery and predicted success with external cohort statistics and difficulty hierarchy.
+
+These augment semantic correlation metrics, providing multi-layer interpretability (structural decomposition + statistical alignment).
+
+---
+End of Section 20.

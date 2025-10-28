@@ -239,7 +239,7 @@ def evaluate(model, loader, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train GainAKT3 (real dataset integration)')
+    parser = argparse.ArgumentParser(description='Train GainAKT3 (real dataset integration + artifact context loading)')
     parser.add_argument('--model_name', default='gainakt3')
     parser.add_argument('--short_title', default='realdata_dev')
     parser.add_argument('--dataset', default='assist2015')
@@ -251,7 +251,12 @@ def main():
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--peer_K', type=int, default=8)
     parser.add_argument('--beta_difficulty', type=float, default=1.0)
-    parser.add_argument('--artifact_base', default='data')
+    parser.add_argument('--artifact_base', default='data', help='Root directory containing peer_index/ and difficulty/ subdirs.')
+    parser.add_argument('--use_peer_context', action='store_true', help='Enable peer context retrieval (requires peer_index artifact).')
+    parser.add_argument('--use_difficulty_context', action='store_true', help='Enable difficulty context retrieval (requires difficulty_table artifact).')
+    parser.add_argument('--peer_artifact_path', default='', help='Optional explicit path to peer_index.pkl (overrides default).')
+    parser.add_argument('--difficulty_artifact_path', default='', help='Optional explicit path to difficulty_table.parquet (overrides default).')
+    parser.add_argument('--strict_artifact_hash', action='store_true', help='Abort if artifact hashes are MISSING when corresponding context is enabled.')
     parser.add_argument('--use_synthetic', action='store_true', help='Use synthetic data instead of real loader (debug)')
     # Constraint weights (Phase2)
     parser.add_argument('--alignment_weight', type=float, default=0.0)
@@ -260,6 +265,10 @@ def main():
     parser.add_argument('--retention_weight', type=float, default=0.0)
     parser.add_argument('--lag_gain_weight', type=float, default=0.0)
     parser.add_argument('--warmup_constraint_epochs', type=int, default=0, help='Epochs before constraints activate')
+    parser.add_argument('--peer_alignment_weight', type=float, default=0.0)
+    parser.add_argument('--difficulty_ordering_weight', type=float, default=0.0)
+    parser.add_argument('--drift_smoothness_weight', type=float, default=0.0)
+    parser.add_argument('--attempt_confidence_k', type=float, default=10.0)
     args = parser.parse_args()
 
     set_seeds(args.seed)
@@ -287,6 +296,26 @@ def main():
     num_c = data_config[args.dataset]['num_c']
     seq_len = data_config[args.dataset]['maxlen']
 
+    # Artifact paths and hashes
+    def sha256_file(path: str) -> str:
+        if not os.path.exists(path):
+            return 'MISSING'
+        h = hashlib.sha256()
+        with open(path, 'rb') as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                h.update(chunk)
+        return h.hexdigest()
+    peer_default = os.path.join(args.artifact_base, 'peer_index', args.dataset, 'peer_index.pkl')
+    diff_default = os.path.join(args.artifact_base, 'difficulty', args.dataset, 'difficulty_table.parquet')
+    peer_path = args.peer_artifact_path or peer_default
+    diff_path = args.difficulty_artifact_path or diff_default
+    peer_hash = sha256_file(peer_path)
+    diff_hash = sha256_file(diff_path)
+    cold_start = ((args.use_peer_context and peer_hash == 'MISSING') or (args.use_difficulty_context and diff_hash == 'MISSING'))
+    if (args.strict_artifact_hash and cold_start):
+        print('[ABORT] Strict artifact hash enabled but required artifact missing.', file=sys.stderr)
+        sys.exit(2)
+
     config = {
         'experiment': {
             'id': os.path.basename(exp_path),
@@ -310,7 +339,20 @@ def main():
             'consistency_weight': args.consistency_weight,
             'retention_weight': args.retention_weight,
             'lag_gain_weight': args.lag_gain_weight,
-            'warmup_constraint_epochs': args.warmup_constraint_epochs
+            'warmup_constraint_epochs': args.warmup_constraint_epochs,
+            'peer_alignment_weight': args.peer_alignment_weight,
+            'difficulty_ordering_weight': args.difficulty_ordering_weight,
+            'drift_smoothness_weight': args.drift_smoothness_weight,
+            'attempt_confidence_k': args.attempt_confidence_k,
+            'use_peer_context': args.use_peer_context,
+            'use_difficulty_context': args.use_difficulty_context
+        },
+        'artifacts': {
+            'peer_index_path': peer_path,
+            'peer_index_sha256': peer_hash,
+            'difficulty_table_path': diff_path,
+            'difficulty_table_sha256': diff_hash,
+            'cold_start': cold_start
         },
         'seeds': {
             'primary': args.seed
@@ -318,6 +360,9 @@ def main():
         'hardware': {
             'device': args.device,
             'batch_size': args.batch_size
+        },
+        'flags': {
+            'strict_artifact_hash': args.strict_artifact_hash
         }
     }
     config_md5 = md5_of_dict(config)
@@ -341,12 +386,19 @@ def main():
         'consistency_weight': args.consistency_weight,
         'retention_weight': args.retention_weight,
         'lag_gain_weight': args.lag_gain_weight,
-        'warmup_constraint_epochs': args.warmup_constraint_epochs
+        'warmup_constraint_epochs': args.warmup_constraint_epochs,
+        'peer_alignment_weight': args.peer_alignment_weight,
+        'difficulty_ordering_weight': args.difficulty_ordering_weight,
+        'drift_smoothness_weight': args.drift_smoothness_weight,
+        'attempt_confidence_k': args.attempt_confidence_k,
+        'use_peer_context': args.use_peer_context,
+        'use_difficulty_context': args.use_difficulty_context
     }
     model = create_gainakt3_model(model_cfg)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    # Artifact hashes already in config; still emit a lightweight file for quick diffing if desired
     with open(os.path.join(exp_path, 'artifact_hashes.json'), 'w') as f:
-        json.dump({'peer_hash': model.peer_hash, 'difficulty_hash': model.diff_hash, 'cold_start': model.cold_start}, f, indent=2)
+        json.dump({'peer_hash': peer_hash, 'difficulty_hash': diff_hash, 'cold_start': cold_start}, f, indent=2)
 
     rows = []
     # Initialize real dataset loaders unless synthetic flag used
@@ -371,7 +423,7 @@ def main():
     # Prepare metrics CSV header (extended)
     import csv
     metrics_path = os.path.join(exp_path, 'metrics_epoch.csv')
-    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','mastery_corr','gain_corr','mastery_corr_macro','gain_corr_macro','monotonicity_violation_rate','retention_violation_rate','gain_future_alignment','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share']
+    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','mastery_corr','gain_corr','mastery_corr_macro','gain_corr_macro','monotonicity_violation_rate','retention_violation_rate','gain_future_alignment','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share','peer_alignment_share','difficulty_ordering_share','drift_smoothness_share','reconstruction_error']
     with open(metrics_path, 'w', newline='') as fcsv:
         writer = csv.writer(fcsv)
         writer.writerow(header)
@@ -395,6 +447,9 @@ def main():
                 torch.randint(0, 2, (1, seq_len)).to(args.device)
             )
         peer_share = float(probe['peer_influence_share'])
+        # Decomposition aggregation (mean over probe sequence for logging; full epoch dump below uses validation batch)
+        decomp = probe.get('decomposition', {})
+        reconstruction_error = float(decomp.get('reconstruction_error', float('nan')))
         # Component shares relative to total constraint (add epsilon to avoid divide-by-zero)
         eps = 1e-8
         closses = probe_out['constraint_losses']
@@ -403,13 +458,33 @@ def main():
         consistency_share = float(closses.get('consistency_loss', 0.0)) / (constraint_total + eps)
         retention_share = float(closses.get('retention_loss', 0.0)) / (constraint_total + eps)
         lag_gain_share = float(closses.get('lag_gain_loss', 0.0)) / (constraint_total + eps)
-        rows.append({'epoch': epoch, 'train_loss': train_loss, 'constraint_loss': constraint_total,
-                     'val_auc': val_auc, 'val_accuracy': val_acc,
-                     'mastery_corr': mastery_corr, 'gain_corr': gain_corr,
-                     'mastery_corr_macro': mastery_corr_macro, 'gain_corr_macro': gain_corr_macro,
-                     'monotonicity_violation_rate': mono_rate, 'retention_violation_rate': ret_rate,
-                     'gain_future_alignment': gain_future_alignment, 'peer_influence_share': peer_share,
-                     'alignment_share': alignment_share, 'sparsity_share': sparsity_share, 'consistency_share': consistency_share, 'retention_share': retention_share, 'lag_gain_share': lag_gain_share})
+        peer_alignment_share = float(closses.get('peer_alignment_loss', 0.0)) / (constraint_total + eps)
+        difficulty_ordering_share = float(closses.get('difficulty_ordering_loss', 0.0)) / (constraint_total + eps)
+        drift_smoothness_share = float(closses.get('drift_smoothness_loss', 0.0)) / (constraint_total + eps)
+        rows.append({
+            'epoch': epoch,
+            'train_loss': train_loss,
+            'constraint_loss': constraint_total,
+            'val_auc': val_auc,
+            'val_accuracy': val_acc,
+            'mastery_corr': mastery_corr,
+            'gain_corr': gain_corr,
+            'mastery_corr_macro': mastery_corr_macro,
+            'gain_corr_macro': gain_corr_macro,
+            'monotonicity_violation_rate': mono_rate,
+            'retention_violation_rate': ret_rate,
+            'gain_future_alignment': gain_future_alignment,
+            'peer_influence_share': peer_share,
+            'reconstruction_error': reconstruction_error,
+            'alignment_share': alignment_share,
+            'sparsity_share': sparsity_share,
+            'consistency_share': consistency_share,
+            'retention_share': retention_share,
+            'lag_gain_share': lag_gain_share,
+            'peer_alignment_share': peer_alignment_share,
+            'difficulty_ordering_share': difficulty_ordering_share,
+            'drift_smoothness_share': drift_smoothness_share
+        })
         print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f} mastery_corr={mastery_corr:.3f} gain_corr={gain_corr:.3f} mastery_macro={mastery_corr_macro:.3f} gain_macro={gain_corr_macro:.3f} mono_rate={mono_rate:.3f} gain_future_align={gain_future_alignment:.3f}")
         # Persist per-concept correlations
         artifacts_dir = os.path.join(exp_path, 'artifacts')
@@ -420,7 +495,45 @@ def main():
             writer = csv.writer(fcsv)
             writer.writerow([epoch, train_loss, constraint_total, val_auc, val_acc,
                              mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mono_rate, ret_rate, gain_future_alignment,
-                             peer_share, alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share])
+                             peer_share, alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share,
+                             peer_alignment_share, difficulty_ordering_share, drift_smoothness_share, reconstruction_error])
+        # Serialize decomposition based on first validation batch for representative contributions
+        with torch.no_grad():
+            val_probe = val_loader[0] if isinstance(val_loader, list) else next(iter(val_loader))
+            vp_c = val_probe['cseqs'].to(args.device)
+            vp_r = val_probe['rseqs'].to(args.device)
+            vp_out = model(vp_c.long(), vp_r.long())
+            dcmp = vp_out.get('decomposition', {})
+            artifacts_dir = os.path.join(exp_path, 'artifacts')
+            os.makedirs(artifacts_dir, exist_ok=True)
+            # Compute mean contributions over active mask positions
+            mask_v = val_probe['masks'].to(args.device).float()
+            active_v = mask_v > 0
+            def mean_active(t):
+                if not torch.is_tensor(t):
+                    return float('nan')
+                if t.dim() == 2:
+                    # If second dimension matches sequence length, apply mask; else aggregate over batch directly
+                    if t.size(1) == active_v.size(1):
+                        vals = t[active_v]
+                    else:
+                        vals = t.mean(dim=1)  # collapse sequence-like singleton
+                else:
+                    vals = t
+                return float(vals.mean().detach().cpu()) if vals.numel() > 0 else float('nan')
+            decomp_summary = {
+                'epoch': epoch,
+                'mastery_contrib_mean': mean_active(dcmp.get('mastery_contrib')),
+                'peer_prior_contrib_mean': mean_active(dcmp.get('peer_prior_contrib')),
+                'difficulty_fused_contrib_mean': mean_active(dcmp.get('difficulty_fused_contrib')),
+                'value_stream_contrib_mean': mean_active(dcmp.get('value_stream_contrib')),
+                'concept_contrib_mean': mean_active(dcmp.get('concept_contrib')),
+                'bias_contrib_mean': mean_active(dcmp.get('bias_contrib')),
+                'difficulty_penalty_contrib_mean': mean_active(dcmp.get('difficulty_penalty_contrib')),
+                'reconstruction_error': float(dcmp.get('reconstruction_error', float('nan')))
+            }
+            with open(os.path.join(artifacts_dir, f'decomposition_epoch{epoch}.json'), 'w') as df:
+                json.dump(decomp_summary, df, indent=2)
 
     with open(os.path.join(exp_path, 'results.json'), 'w') as f:
         json.dump({'config_md5': config_md5, 'epochs': rows}, f, indent=2)

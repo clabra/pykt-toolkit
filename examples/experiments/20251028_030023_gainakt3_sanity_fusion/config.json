@@ -1,0 +1,48 @@
+{
+  "artifacts": {
+    "cold_start": false,
+    "difficulty_table_path": "data/difficulty/assist2015/difficulty_table.parquet",
+    "difficulty_table_sha256": "e5ab11a146b9c0e168dc440cde70c665e36539d3ed4b269a2028642b04321bd4",
+    "peer_index_path": "data/peer_index/assist2015/peer_index.pkl",
+    "peer_index_sha256": "2dfdaf0fbd2d9090cdecd36ffab2761948fc389031480c7ebfeecab2874a7267"
+  },
+  "config_md5": "ec915fdda5a9a40a0f38c081f2d2edfa",
+  "data": {
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 200,
+    "num_c": 100,
+    "seq_len": 200
+  },
+  "experiment": {
+    "dataset": "assist2015",
+    "epochs": 1,
+    "fold": 0,
+    "id": "20251028_030023_gainakt3_sanity_fusion",
+    "lr": 0.001,
+    "model": "gainakt3"
+  },
+  "flags": {
+    "strict_artifact_hash": false
+  },
+  "hardware": {
+    "batch_size": 16,
+    "device": "cuda"
+  },
+  "model": {
+    "alignment_weight": 0.0,
+    "beta_difficulty": 1.0,
+    "consistency_weight": 0.0,
+    "lag_gain_weight": 0.0,
+    "peer_K": 8,
+    "retention_weight": 0.0,
+    "sparsity_weight": 0.0,
+    "use_difficulty_context": true,
+    "use_peer_context": true,
+    "warmup_constraint_epochs": 0
+  },
+  "seeds": {
+    "primary": 42
+  }
+}

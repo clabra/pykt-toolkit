@@ -54,7 +54,15 @@ class GainAKT3(nn.Module):
                  consistency_weight: float = 0.0,
                  retention_weight: float = 0.0,
                  lag_gain_weight: float = 0.0,
+                 peer_alignment_weight: float = 0.0,
+                 difficulty_ordering_weight: float = 0.0,
+                 drift_smoothness_weight: float = 0.0,
+                 attempt_confidence_k: float = 10.0,
                  warmup_constraint_epochs: int = 0,
+                 use_peer_context: bool = False,
+                 use_difficulty_context: bool = False,
+                 disable_peer: bool = False,
+                 disable_difficulty: bool = False,
                  device: Optional[str] = None):
         super().__init__()
         self.num_c = num_c
@@ -73,8 +81,16 @@ class GainAKT3(nn.Module):
         self.consistency_weight = consistency_weight
         self.retention_weight = retention_weight
         self.lag_gain_weight = lag_gain_weight
+        self.peer_alignment_weight = peer_alignment_weight
+        self.difficulty_ordering_weight = difficulty_ordering_weight
+        self.drift_smoothness_weight = drift_smoothness_weight
+        self.attempt_confidence_k = attempt_confidence_k
         self.warmup_constraint_epochs = warmup_constraint_epochs
         self.current_epoch = 0  # externally adjustable by trainer
+        self.use_peer_context = use_peer_context
+        self.use_difficulty_context = use_difficulty_context
+        self.disable_peer = disable_peer
+        self.disable_difficulty = disable_difficulty
 
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -138,45 +154,94 @@ class GainAKT3(nn.Module):
         ctx = self.context_encoder(ctx, mask)
         val = self.value_encoder(val, mask)
 
-        # Peer vector
-        if (not self.cold_start) and self.peer_index and 'peer_state_cluster_centroids' in self.peer_index:
-            centroids = self.peer_index['peer_state_cluster_centroids'][: self.peer_K]
-            if centroids:
-                centroids_tensor = torch.tensor(centroids, dtype=ctx.dtype, device=ctx.device)
-                base_vec = ctx[:, -1, :].unsqueeze(1)
-                sims = F.cosine_similarity(base_vec, centroids_tensor.unsqueeze(0), dim=-1)
-                weights = F.softmax(self.peer_similarity_gamma * sims, dim=-1)
-                peer_vec = (weights.unsqueeze(-1) * centroids_tensor.unsqueeze(0)).sum(dim=1)
+        # Peer vector retrieval (optional)
+        if self.use_peer_context and (not self.disable_peer):
+            if (not self.cold_start) and self.peer_index and 'peer_state_cluster_centroids' in self.peer_index:
+                centroids = self.peer_index['peer_state_cluster_centroids'][: self.peer_K]
+                if centroids is not None and len(centroids) > 0:
+                    centroids_tensor = torch.tensor(centroids, dtype=ctx.dtype, device=ctx.device)
+                    base_vec = ctx[:, -1, :].unsqueeze(1)
+                    sims = F.cosine_similarity(base_vec, centroids_tensor.unsqueeze(0), dim=-1)
+                    weights = F.softmax(self.peer_similarity_gamma * sims, dim=-1)
+                    peer_vec = (weights.unsqueeze(-1) * centroids_tensor.unsqueeze(0)).sum(dim=1)
+                else:
+                    peer_vec = torch.zeros(B, self.d_model, device=ctx.device)
             else:
                 peer_vec = torch.zeros(B, self.d_model, device=ctx.device)
         else:
             peer_vec = torch.zeros(B, self.d_model, device=ctx.device)
 
-        # Difficulty vec (placeholder last value state)
-        difficulty_vec = val[:, -1, :]
+        # Difficulty vector (currently simple last value state) optionally used
+        if self.use_difficulty_context and (not self.disable_difficulty):
+            difficulty_vec = val[:, -1, :]
+        else:
+            difficulty_vec = torch.zeros(B, self.d_model, device=ctx.device)
 
-        # Fusion
+        # Fusion (residual augmentation of last context state)
         h_last = ctx[:, -1, :]
         gate_in = torch.cat([h_last, peer_vec, difficulty_vec], dim=-1)
         gates = torch.sigmoid(self.fusion_gate(gate_in))
         g_p, g_d = gates[:, 0].unsqueeze(-1), gates[:, 1].unsqueeze(-1)
-        # (Optional fused representation was removed for cleanliness.)
+        augmented_h = h_last + g_p * peer_vec + g_d * difficulty_vec
+        augmented_h = F.layer_norm(augmented_h, (self.d_model,))
 
         # Prediction
         target_concepts = q if qry is None else qry
         target_emb = self.concept_embedding(target_concepts)
-        concat = torch.cat([ctx, val, target_emb], dim=-1)
+        augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)
+        concat = torch.cat([augmented_h_seq, val, target_emb], dim=-1)
         base_logits = self.prediction_head(concat).squeeze(-1)
         difficulty_logit = self.difficulty_head(difficulty_vec).squeeze(-1)
+        # Sequence difficulty logits for drift (context-based) - auxiliary only
+        difficulty_logits_seq = self.difficulty_head(ctx).squeeze(-1)  # [B,L]
         logits = base_logits - self.beta_difficulty * difficulty_logit.unsqueeze(1)
         preds = torch.sigmoid(logits)
+
+        # ---------------- Decomposition Components ----------------
+        # Separate prediction_head weight into 3 segments (augmented_h, value, target_emb)
+        W_full = self.prediction_head.weight.view(-1)  # [3*d_model]
+        W_h = W_full[: self.d_model]
+        W_v = W_full[self.d_model: 2 * self.d_model]
+        W_t = W_full[2 * self.d_model:]
+        bias_term = self.prediction_head.bias.detach() if self.prediction_head.bias is not None else torch.tensor(0.0, device=ctx.device)
+
+        # Decompose augmented_h into intrinsic + peer + difficulty gated parts
+        h_intrinsic = h_last  # original context
+        h_peer_component = g_p * peer_vec    # [B,d]
+        h_diff_component = g_d * difficulty_vec  # [B,d]
+
+        # Broadcast components over sequence length
+        h_intrinsic_seq = h_intrinsic.unsqueeze(1).expand(-1, L, -1)
+        h_peer_seq = h_peer_component.unsqueeze(1).expand(-1, L, -1)
+        h_diff_seq = h_diff_component.unsqueeze(1).expand(-1, L, -1)
+
+        mastery_contrib = (h_intrinsic_seq * W_h.unsqueeze(0).unsqueeze(0)).sum(-1)
+        peer_prior_contrib = (h_peer_seq * W_h.unsqueeze(0).unsqueeze(0)).sum(-1)
+        difficulty_fused_contrib = (h_diff_seq * W_h.unsqueeze(0).unsqueeze(0)).sum(-1)
+        value_stream_contrib = (val * W_v.unsqueeze(0).unsqueeze(0)).sum(-1)
+        concept_contrib = (target_emb * W_t.unsqueeze(0).unsqueeze(0)).sum(-1)
+        bias_contrib = bias_term.view(1,1).expand_as(base_logits)
+        difficulty_penalty_contrib = - self.beta_difficulty * difficulty_logit.unsqueeze(1)
+        reconstructed_base = mastery_contrib + peer_prior_contrib + difficulty_fused_contrib + value_stream_contrib + concept_contrib + bias_contrib
+        reconstruction_error = (base_logits - reconstructed_base).abs().mean().detach()
 
         out = {
             'predictions': preds,
             # expose raw difficulty logit per final state (before scaling & broadcasting)
             'difficulty_logit': difficulty_logit.detach(),
+            'difficulty_logits_seq': difficulty_logits_seq.detach(),
             # fusion gate raw values for interpretability (peer gate g_p, difficulty gate g_d)
-            'fusion_gates': torch.cat([g_p, g_d], dim=-1).detach()
+            'fusion_gates': torch.cat([g_p, g_d], dim=-1).detach(),
+            'decomposition': {
+                'mastery_contrib': mastery_contrib.detach(),
+                'peer_prior_contrib': peer_prior_contrib.detach(),
+                'difficulty_fused_contrib': difficulty_fused_contrib.detach(),
+                'value_stream_contrib': value_stream_contrib.detach(),
+                'concept_contrib': concept_contrib.detach(),
+                'bias_contrib': bias_contrib.detach(),
+                'difficulty_penalty_contrib': difficulty_penalty_contrib.detach(),
+                'reconstruction_error': reconstruction_error
+            }
         }
         if qtest:
             out['encoded_seq'] = ctx
@@ -194,6 +259,7 @@ class GainAKT3(nn.Module):
         # Interpretability extras
         out['peer_influence_share'] = g_p.mean().detach()
         out['difficulty_adjustment_magnitude'] = (g_d.abs() * difficulty_logit.abs()).mean().detach()
+        out['augmented_h_last'] = augmented_h.detach()
         out['peer_hash'] = self.peer_hash
         out['difficulty_hash'] = self.diff_hash
         out['cold_start'] = self.cold_start
@@ -238,6 +304,60 @@ class GainAKT3(nn.Module):
             else:
                 lag_penalty = torch.tensor(0.0, device=q.device)
             constraint_losses['lag_gain_loss'] = lag_penalty * self.lag_gain_weight
+        # Peer alignment loss (uses last-step mastery vs peer_correct_rate)
+        if self.use_mastery_head and self.peer_alignment_weight > 0 and self.use_peer_context and (not self.cold_start) and self.peer_index is not None:
+            if 'peer_correct_rate' in self.peer_index and isinstance(self.peer_index['peer_correct_rate'], dict):
+                last_concepts = q[:, -1]
+                last_mastery = out.get('projected_mastery', torch.sigmoid(self.mastery_head(ctx)))[:, -1, :]  # [B,C]
+                gathered_mastery = torch.gather(last_mastery, 1, last_concepts.unsqueeze(-1)).squeeze(-1)  # [B]
+                peer_rates = []
+                confidences = []
+                for cid in last_concepts.tolist():
+                    pr = self.peer_index['peer_correct_rate'].get(int(cid), 0.5)
+                    ac = self.peer_index.get('peer_attempt_count', {}).get(int(cid), 0)
+                    peer_rates.append(pr)
+                    # confidence scaling: ac/(ac + k)
+                    confidences.append(ac / (ac + self.attempt_confidence_k))
+                peer_rates_t = torch.tensor(peer_rates, device=q.device, dtype=gathered_mastery.dtype)
+                conf_t = torch.tensor(confidences, device=q.device, dtype=gathered_mastery.dtype)
+                peer_align_mse = ((gathered_mastery - peer_rates_t) ** 2 * conf_t).mean()
+                constraint_losses['peer_alignment_loss'] = peer_align_mse * self.peer_alignment_weight
+        # Difficulty ordering loss (batch-level pairwise ranking using last-step predictions)
+        if self.difficulty_ordering_weight > 0:
+            preds_last = preds[:, -1]  # [B]
+            diff_last = difficulty_logit  # [B]
+            Bsz = preds_last.size(0)
+            if Bsz > 1:
+                # Sample up to P pairs (P = min(64, combinations))
+                P = min(64, Bsz * (Bsz - 1) // 2)
+                # Generate all pairs indices then randomly pick P
+                pairs = []
+                for i in range(Bsz):
+                    for j in range(i+1, Bsz):
+                        pairs.append((i,j))
+                import random as _rnd
+                _rnd.shuffle(pairs)
+                pairs = pairs[:P]
+                margin = 0.0
+                ranking_losses = []
+                for i,j in pairs:
+                    di = diff_last[i]
+                    dj = diff_last[j]
+                    pi = preds_last[i]
+                    pj = preds_last[j]
+                    if di > dj:  # harder i should have lower probability
+                        ranking_losses.append(F.relu(margin - (pj - pi)))
+                    elif dj > di:
+                        ranking_losses.append(F.relu(margin - (pi - pj)))
+                if ranking_losses:
+                    ranking_loss = torch.stack(ranking_losses).mean()
+                    constraint_losses['difficulty_ordering_loss'] = ranking_loss * self.difficulty_ordering_weight
+        # Drift smoothness loss (second difference over sequence difficulty logits)
+        if self.drift_smoothness_weight > 0 and difficulty_logits_seq.size(1) > 2:
+            diff_seq = difficulty_logits_seq  # [B,L]
+            second_diff = diff_seq[:,2:] - 2*diff_seq[:,1:-1] + diff_seq[:,:-2]
+            drift_penalty = second_diff.abs().mean()
+            constraint_losses['drift_smoothness_loss'] = drift_penalty * self.drift_smoothness_weight
         # Aggregate constraint loss (respect warmup)
         if constraint_losses and (self.current_epoch >= self.warmup_constraint_epochs):
             total_constraint = sum(constraint_losses.values())
@@ -270,6 +390,10 @@ def create_gainakt3_model(config):
         consistency_weight=config.get('consistency_weight', 0.0),
         retention_weight=config.get('retention_weight', 0.0),
         lag_gain_weight=config.get('lag_gain_weight', 0.0),
+        peer_alignment_weight=config.get('peer_alignment_weight', 0.0),
+        difficulty_ordering_weight=config.get('difficulty_ordering_weight', 0.0),
+        drift_smoothness_weight=config.get('drift_smoothness_weight', 0.0),
+        attempt_confidence_k=config.get('attempt_confidence_k', 10.0),
         warmup_constraint_epochs=config.get('warmup_constraint_epochs', 0),
         device=config.get('device')
     )
