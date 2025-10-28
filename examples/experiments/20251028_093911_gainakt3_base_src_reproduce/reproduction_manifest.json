@@ -1,0 +1,11 @@
+{
+  "config_md5_new": "dec70edb839fb52546e021c3b0ff5276",
+  "config_md5_source": "bd94b21338e2a6a80f30ebcf5aea1d7a",
+  "experiment_id": "20251028_093911_gainakt3_base_src_reproduce",
+  "schema_version": 1,
+  "seeds": [
+    21
+  ],
+  "source_experiment": "20251028_093235_gainakt3_base_src",
+  "within_tolerance": true
+}

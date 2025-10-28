@@ -81,7 +81,7 @@ def train_epoch(model, loader, device, optimizer, num_c):
     # shft_c not used currently (future: concept-shift specific losses)
     # shft_c = batch['shft_cseqs'].to(device)   # [B, L]
         shft_r = batch['shft_rseqs'].to(device)   # [B, L]
-        mask = batch['masks'].to(device).float()  # [B, L]
+        mask = batch['masks'].to(device).bool()  # [B, L] boolean mask for transformer efficiency
 
         # Model expects q (concept ids) and r (responses) aligned; predictions returned for each position.
         out = model(c_seqs.long(), r_seqs.long())
@@ -89,7 +89,7 @@ def train_epoch(model, loader, device, optimizer, num_c):
         # Targets are shifted responses (next interaction correctness)
         targets = shft_r.float()
         # Apply mask (only valid positions)
-    # To avoid dividing by extra zeros, select positions where mask==1
+        # To avoid dividing by extra zeros, select positions where mask==1
         active = mask > 0
         preds_active = preds[active]
         targets_active = targets[active]
@@ -104,7 +104,7 @@ def train_epoch(model, loader, device, optimizer, num_c):
     return float(np.mean(losses) if losses else float('nan'))
 
 
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, gain_threshold: float = 0.0):
     """Masked evaluation over validation loader.
     Computes AUC/Accuracy and semantic interpretability metrics.
     Interpretability metrics (first-pass, coarse):
@@ -124,12 +124,18 @@ def evaluate(model, loader, device):
     per_concept_correct = {}
     per_concept_gain_incs = {}
     per_concept_mastery_incs = {}
+    peer_gate_vals = []
+    diff_gate_vals = []
+    mastery_var_components = []  # per batch mean variance over sequence per concept
+    second_diff_components = []  # per batch mean abs second diff
+    gain_sparsity_counts = 0
+    gain_total_counts = 0
     with torch.no_grad():
         for batch in loader:
             c_seqs = batch['cseqs'].to(device)
             r_seqs = batch['rseqs'].to(device)
             shft_r = batch['shft_rseqs'].to(device)
-            mask = batch['masks'].to(device).float()
+            mask = batch['masks'].to(device).bool()
             out = model(c_seqs.long(), r_seqs.long())
             preds = out['predictions']
             active = mask > 0
@@ -141,6 +147,7 @@ def evaluate(model, loader, device):
             if 'projected_mastery' in out and 'projected_gains' in out:
                 mastery_seq = out['projected_mastery']  # [B,L,C]
                 gains_seq = out['projected_gains']      # [B,L,C]
+                B,L,C = mastery_seq.size()
                 # Mastery increments
                 mastery_deltas = mastery_seq[:,1:,:] - mastery_seq[:,:-1,:]
                 negative_deltas += (mastery_deltas < 0).sum().item()
@@ -151,6 +158,21 @@ def evaluate(model, loader, device):
                 # Flatten for correlation (avoid all-zero edge cases)
                 mastery_incs_all.append(mastery_inc_pos.reshape(-1).cpu().numpy())
                 gains_all.append(gains_pos.reshape(-1).cpu().numpy())
+                # Temporal variance: variance across time per (B,C), then mean
+                var_per_bc = mastery_seq.var(dim=1)  # [B,C]
+                mastery_var_components.append(var_per_bc.mean().detach().cpu().item())
+                # Second difference metric (requires L>2)
+                if L > 2:
+                    second_diff = mastery_seq[:,2:,:] - 2*mastery_seq[:,1:-1,:] + mastery_seq[:,:-2,:]  # [B,L-2,C]
+                    second_diff_components.append(second_diff.abs().mean().detach().cpu().item())
+                # Gain sparsity index (fraction below threshold)
+                gains_flat = gains_seq[:,1:,:].reshape(-1).detach().cpu().numpy()
+                gain_total_counts += gains_flat.size
+                if gain_threshold > 0.0:
+                    gain_sparsity_counts += np.sum(np.abs(gains_flat) < gain_threshold)
+                else:
+                    # Default threshold: treat near-zero (<1e-6) as sparse if no threshold provided
+                    gain_sparsity_counts += np.sum(np.abs(gains_flat) < 1e-6)
                 # Future alignment: gains t vs mastery_inc t+1
                 if gains_seq.size(1) > 2:
                     mastery_future = mastery_inc_pos[:,1:,:]
@@ -182,6 +204,11 @@ def evaluate(model, loader, device):
                     if mask_nonzero.any():
                         per_concept_mastery_incs.setdefault(cidx, []).extend(mvals[mask_nonzero].tolist())
                         per_concept_gain_incs.setdefault(cidx, []).extend(gvals[mask_nonzero].tolist())
+            # Fusion gate statistics (per batch)
+            if 'fusion_gates' in out:
+                g = out['fusion_gates']  # [B,2]
+                peer_gate_vals.append(float(g[:,0].mean().detach().cpu().item()))
+                diff_gate_vals.append(float(g[:,1].mean().detach().cpu().item()))
     if not all_preds:
         base_metrics = (float('nan'), float('nan'))
     else:
@@ -205,17 +232,39 @@ def evaluate(model, loader, device):
     if mastery_incs_all and gains_all:
         mastery_flat = np.concatenate(mastery_incs_all)
         gains_flat = np.concatenate(gains_all)
+        if gain_threshold > 0.0:
+            mask_thr = np.abs(gains_flat) >= gain_threshold
+            mastery_flat = mastery_flat[mask_thr]
+            gains_flat = gains_flat[mask_thr]
         gain_corr = safe_corr(mastery_flat, gains_flat)
     else:
         gain_corr = float('nan')
     if gains_future_all and mastery_incs_future_all:
-        gain_future_alignment = safe_corr(np.concatenate(gains_future_all), np.concatenate(mastery_incs_future_all))
+        gf = np.concatenate(gains_future_all)
+        mf = np.concatenate(mastery_incs_future_all)
+        if gain_threshold > 0.0:
+            mask_thr_f = np.abs(gf) >= gain_threshold
+            gf = gf[mask_thr_f]
+            mf = mf[mask_thr_f]
+        gain_future_alignment = safe_corr(gf, mf)
     else:
         gain_future_alignment = float('nan')
-    mastery_corr = safe_corr(np.concatenate(mastery_last_probs) if mastery_last_probs else [],
+    mastery_array = np.concatenate(mastery_last_probs) if mastery_last_probs else []
+    if hasattr(model, 'mastery_temperature') and model.mastery_temperature and model.mastery_temperature != 1.0 and len(mastery_array) > 0:
+        t = float(model.mastery_temperature)
+        ma = np.clip(mastery_array, 1e-6, 1-1e-6)
+        logits = np.log(ma/(1-ma)) / t
+        mastery_array = 1.0/(1.0+np.exp(-logits))
+    mastery_corr = safe_corr(mastery_array,
                              np.concatenate(correctness_empirical) if correctness_empirical else [])
     monotonicity_violation_rate = (negative_deltas / total_deltas) if total_deltas > 0 else float('nan')
     retention_violation_rate = monotonicity_violation_rate  # placeholder alias
+    mastery_monotonicity_rate = (1.0 - monotonicity_violation_rate) if not np.isnan(monotonicity_violation_rate) else float('nan')
+    mastery_temporal_variance = float(np.mean(mastery_var_components)) if mastery_var_components else float('nan')
+    mastery_second_diff_mean = float(np.mean(second_diff_components)) if second_diff_components else float('nan')
+    gain_sparsity_index = (gain_sparsity_counts / gain_total_counts) if gain_total_counts > 0 else float('nan')
+    peer_gate_mean = float(np.mean(peer_gate_vals)) if peer_gate_vals else float('nan')
+    difficulty_gate_mean = float(np.mean(diff_gate_vals)) if diff_gate_vals else float('nan')
     # Per-concept correlations (mastery vs correctness; mastery_inc vs gains_inc)
     def per_concept_corr(map_a, map_b):
         corrs = {}
@@ -227,7 +276,19 @@ def evaluate(model, loader, device):
                 else:
                     corrs[cid] = float('nan')
         return corrs
-    per_concept_mastery_corr = per_concept_corr(per_concept_mastery, per_concept_correct)
+    if hasattr(model, 'mastery_temperature') and model.mastery_temperature and model.mastery_temperature != 1.0:
+        t = float(model.mastery_temperature)
+        scaled_per_concept_mastery = {}
+        for cid, avals in per_concept_mastery.items():
+            if len(avals) == 0:
+                continue
+            ma = np.clip(np.array(avals), 1e-6, 1-1e-6)
+            logits = np.log(ma/(1-ma)) / t
+            scaled = 1.0/(1.0+np.exp(-logits))
+            scaled_per_concept_mastery[cid] = scaled.tolist()
+        per_concept_mastery_corr = per_concept_corr(scaled_per_concept_mastery if scaled_per_concept_mastery else per_concept_mastery, per_concept_correct)
+    else:
+        per_concept_mastery_corr = per_concept_corr(per_concept_mastery, per_concept_correct)
     per_concept_gain_corr = per_concept_corr(per_concept_mastery_incs, per_concept_gain_incs)
     # Macro averages (exclude NaNs)
     def macro_avg(corrs):
@@ -235,7 +296,28 @@ def evaluate(model, loader, device):
         return float(np.mean(vals)) if vals else float('nan')
     mastery_corr_macro = macro_avg(per_concept_mastery_corr)
     gain_corr_macro = macro_avg(per_concept_gain_corr)
-    return base_metrics + (mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, monotonicity_violation_rate, retention_violation_rate, gain_future_alignment, per_concept_mastery_corr, per_concept_gain_corr)
+    def weighted_macro(corrs, sample_map):
+        weights, vals = [], []
+        for cid, val in corrs.items():
+            if not np.isnan(val):
+                w = len(sample_map.get(cid, []))
+                if w > 0:
+                    weights.append(w)
+                    vals.append(val)
+        if not weights:
+            return float('nan')
+        weights = np.array(weights, dtype=float)
+        vals = np.array(vals, dtype=float)
+        return float(np.sum(weights * vals) / np.sum(weights))
+    mastery_corr_macro_weighted = weighted_macro(per_concept_mastery_corr, per_concept_mastery)
+    gain_corr_macro_weighted = weighted_macro(per_concept_gain_corr, per_concept_mastery_incs)
+    return base_metrics + (
+        mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mastery_corr_macro_weighted, gain_corr_macro_weighted,
+        monotonicity_violation_rate, retention_violation_rate, gain_future_alignment,
+        mastery_monotonicity_rate, mastery_temporal_variance, mastery_second_diff_mean, gain_sparsity_index,
+        peer_gate_mean, difficulty_gate_mean,
+        per_concept_mastery_corr, per_concept_gain_corr
+    )
 
 
 def main():
@@ -245,12 +327,16 @@ def main():
     parser.add_argument('--dataset', default='assist2015')
     parser.add_argument('--fold', type=int, default=0, help='Validation fold index')
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--epochs', type=int, default=5)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    # Refined defaults (2025-10-28) based on initial sweep Section 23 results:
+    # Epochs increased to 10 for more stable interpretability metrics.
+    # LR lowered to 3e-4 (balanced AUC + mastery_corr region).
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--lr', type=float, default=3e-4)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--peer_K', type=int, default=8)
-    parser.add_argument('--beta_difficulty', type=float, default=1.0)
+    # Difficulty scaling beta refined to 0.5 (marginal AUC stability + reduced over-penalization).
+    parser.add_argument('--beta_difficulty', type=float, default=0.5)
     parser.add_argument('--artifact_base', default='data', help='Root directory containing peer_index/ and difficulty/ subdirs.')
     parser.add_argument('--use_peer_context', action='store_true', help='Enable peer context retrieval (requires peer_index artifact).')
     parser.add_argument('--use_difficulty_context', action='store_true', help='Enable difficulty context retrieval (requires difficulty_table artifact).')
@@ -259,16 +345,30 @@ def main():
     parser.add_argument('--strict_artifact_hash', action='store_true', help='Abort if artifact hashes are MISSING when corresponding context is enabled.')
     parser.add_argument('--use_synthetic', action='store_true', help='Use synthetic data instead of real loader (debug)')
     # Constraint weights (Phase2)
-    parser.add_argument('--alignment_weight', type=float, default=0.0)
+    # Activate moderate alignment weight (improved mastery_corr without harming AUC).
+    parser.add_argument('--alignment_weight', type=float, default=0.05)
     parser.add_argument('--sparsity_weight', type=float, default=0.0)
-    parser.add_argument('--consistency_weight', type=float, default=0.0)
+    # Consistency weight enabled (observed neutral AUC impact; potential stability over longer epochs).
+    parser.add_argument('--consistency_weight', type=float, default=0.2)
     parser.add_argument('--retention_weight', type=float, default=0.0)
-    parser.add_argument('--lag_gain_weight', type=float, default=0.0)
-    parser.add_argument('--warmup_constraint_epochs', type=int, default=0, help='Epochs before constraints activate')
-    parser.add_argument('--peer_alignment_weight', type=float, default=0.0)
+    # Lag gain weight modest activation to encourage future alignment dynamics.
+    parser.add_argument('--lag_gain_weight', type=float, default=0.05)
+    # Warm-up constraints for first 3 epochs to reduce early optimization interference.
+    parser.add_argument('--warmup_constraint_epochs', type=int, default=3, help='Epochs before constraints activate')
+    # Peer alignment turned on (0.05) balancing mastery_corr gains against minimal gain_corr suppression.
+    parser.add_argument('--peer_alignment_weight', type=float, default=0.05)
     parser.add_argument('--difficulty_ordering_weight', type=float, default=0.0)
     parser.add_argument('--drift_smoothness_weight', type=float, default=0.0)
-    parser.add_argument('--attempt_confidence_k', type=float, default=10.0)
+    # Peer attempt confidence smoothing reduced (k=5.0) for sharper differentiation among peer priors.
+    parser.add_argument('--attempt_confidence_k', type=float, default=5.0)
+    # Exclude negligible gain activations below 0.01 when computing gain-related correlations.
+    parser.add_argument('--gain_threshold', type=float, default=0.01, help='Minimum absolute gain value to include in gain-related correlation metrics.')
+    parser.add_argument('--mastery_temperature', type=float, default=1.0, help='Temperature scaling for mastery probs when computing correlation metrics.')
+    # Ablation flags
+    parser.add_argument('--disable_fusion_broadcast', action='store_true', help='Use per-timestep context (no broadcast of fused last state).')
+    parser.add_argument('--disable_difficulty_penalty', action='store_true', help='Disable subtraction of difficulty logit from base logits.')
+    parser.add_argument('--fusion_for_heads_only', action='store_true', default=True, help='Use fused state only for heads/decomposition; prediction uses per-timestep context.')
+    parser.add_argument('--gate_init_bias', type=float, default=-2.0, help='Initial bias for fusion gates (negative closes gates early for stability).')
     args = parser.parse_args()
 
     set_seeds(args.seed)
@@ -344,8 +444,14 @@ def main():
             'difficulty_ordering_weight': args.difficulty_ordering_weight,
             'drift_smoothness_weight': args.drift_smoothness_weight,
             'attempt_confidence_k': args.attempt_confidence_k,
+            'gain_threshold': args.gain_threshold,
+            'mastery_temperature': args.mastery_temperature,
             'use_peer_context': args.use_peer_context,
-            'use_difficulty_context': args.use_difficulty_context
+            'use_difficulty_context': args.use_difficulty_context,
+            'disable_fusion_broadcast': args.disable_fusion_broadcast,
+            'disable_difficulty_penalty': args.disable_difficulty_penalty,
+            'fusion_for_heads_only': args.fusion_for_heads_only,
+            'gate_init_bias': args.gate_init_bias,
         },
         'artifacts': {
             'peer_index_path': peer_path,
@@ -391,10 +497,17 @@ def main():
         'difficulty_ordering_weight': args.difficulty_ordering_weight,
         'drift_smoothness_weight': args.drift_smoothness_weight,
         'attempt_confidence_k': args.attempt_confidence_k,
+        'gain_threshold': args.gain_threshold,
+        'mastery_temperature': args.mastery_temperature,
         'use_peer_context': args.use_peer_context,
-        'use_difficulty_context': args.use_difficulty_context
+        'use_difficulty_context': args.use_difficulty_context,
+        'disable_fusion_broadcast': args.disable_fusion_broadcast,
+        'disable_difficulty_penalty': args.disable_difficulty_penalty,
+        'fusion_for_heads_only': args.fusion_for_heads_only,
+        'gate_init_bias': args.gate_init_bias,
     }
     model = create_gainakt3_model(model_cfg)
+    model.mastery_temperature = args.mastery_temperature
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     # Artifact hashes already in config; still emit a lightweight file for quick diffing if desired
     with open(os.path.join(exp_path, 'artifact_hashes.json'), 'w') as f:
@@ -413,7 +526,7 @@ def main():
                 'rseqs': r.long(),
                 'shft_cseqs': q.long(),  # synthetic alignment placeholder
                 'shft_rseqs': y.long(),  # treat y as next-step correctness
-                'masks': torch.ones_like(q).long(),
+                'masks': torch.ones_like(q, dtype=torch.bool),
             }
         train_loader = [tuple_to_dict(t) for t in train_loader]
         val_loader = [tuple_to_dict(t) for t in val_loader]
@@ -423,7 +536,7 @@ def main():
     # Prepare metrics CSV header (extended)
     import csv
     metrics_path = os.path.join(exp_path, 'metrics_epoch.csv')
-    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','mastery_corr','gain_corr','mastery_corr_macro','gain_corr_macro','monotonicity_violation_rate','retention_violation_rate','gain_future_alignment','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share','peer_alignment_share','difficulty_ordering_share','drift_smoothness_share','reconstruction_error']
+    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','mastery_corr','gain_corr','mastery_corr_macro','gain_corr_macro','mastery_corr_macro_weighted','gain_corr_macro_weighted','monotonicity_violation_rate','retention_violation_rate','gain_future_alignment','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share','peer_alignment_share','difficulty_ordering_share','drift_smoothness_share','reconstruction_error','difficulty_penalty_contrib_mean','alignment_loss_raw','sparsity_loss_raw','consistency_loss_raw','retention_loss_raw','lag_gain_loss_raw','peer_alignment_loss_raw','difficulty_ordering_loss_raw','drift_smoothness_loss_raw','cold_start_flag']
     with open(metrics_path, 'w', newline='') as fcsv:
         writer = csv.writer(fcsv)
         writer.writerow(header)
@@ -439,8 +552,9 @@ def main():
             r_probe = probe_batch['rseqs'].to(args.device)
             probe_out = model(c_probe.long(), r_probe.long())
         constraint_total = float(probe_out['total_constraint_loss'].detach().cpu())
+        prediction_context_mode = probe_out.get('prediction_context_mode', 'unknown')
         train_loss = perf_loss + constraint_total
-        (val_auc, val_acc, mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mono_rate, ret_rate, gain_future_alignment, per_concept_mastery_corr, per_concept_gain_corr) = evaluate(model, val_loader, args.device)
+        (val_auc, val_acc, mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mastery_corr_macro_weighted, gain_corr_macro_weighted, mono_rate, ret_rate, gain_future_alignment, per_concept_mastery_corr, per_concept_gain_corr) = evaluate(model, val_loader, args.device, args.gain_threshold)
         with torch.no_grad():
             probe = model(
                 torch.randint(0, num_c, (1, seq_len)).to(args.device),
@@ -450,17 +564,26 @@ def main():
         # Decomposition aggregation (mean over probe sequence for logging; full epoch dump below uses validation batch)
         decomp = probe.get('decomposition', {})
         reconstruction_error = float(decomp.get('reconstruction_error', float('nan')))
+        difficulty_penalty_contrib_mean = float(decomp.get('difficulty_penalty_contrib', torch.tensor(float('nan'))).mean().item()) if 'difficulty_penalty_contrib' in decomp and torch.is_tensor(decomp['difficulty_penalty_contrib']) else float('nan')
         # Component shares relative to total constraint (add epsilon to avoid divide-by-zero)
         eps = 1e-8
         closses = probe_out['constraint_losses']
-        alignment_share = float(closses.get('alignment_loss', 0.0)) / (constraint_total + eps)
-        sparsity_share = float(closses.get('sparsity_loss', 0.0)) / (constraint_total + eps)
-        consistency_share = float(closses.get('consistency_loss', 0.0)) / (constraint_total + eps)
-        retention_share = float(closses.get('retention_loss', 0.0)) / (constraint_total + eps)
-        lag_gain_share = float(closses.get('lag_gain_loss', 0.0)) / (constraint_total + eps)
-        peer_alignment_share = float(closses.get('peer_alignment_loss', 0.0)) / (constraint_total + eps)
-        difficulty_ordering_share = float(closses.get('difficulty_ordering_loss', 0.0)) / (constraint_total + eps)
-        drift_smoothness_share = float(closses.get('drift_smoothness_loss', 0.0)) / (constraint_total + eps)
+        alignment_raw = float(closses.get('alignment_loss', 0.0))
+        alignment_share = alignment_raw / (constraint_total + eps)
+        sparsity_raw = float(closses.get('sparsity_loss', 0.0))
+        sparsity_share = sparsity_raw / (constraint_total + eps)
+        consistency_raw = float(closses.get('consistency_loss', 0.0))
+        consistency_share = consistency_raw / (constraint_total + eps)
+        retention_raw = float(closses.get('retention_loss', 0.0))
+        retention_share = retention_raw / (constraint_total + eps)
+        lag_gain_raw = float(closses.get('lag_gain_loss', 0.0))
+        lag_gain_share = lag_gain_raw / (constraint_total + eps)
+        peer_alignment_raw = float(closses.get('peer_alignment_loss', 0.0))
+        peer_alignment_share = peer_alignment_raw / (constraint_total + eps)
+        difficulty_ordering_raw = float(closses.get('difficulty_ordering_loss', 0.0))
+        difficulty_ordering_share = difficulty_ordering_raw / (constraint_total + eps)
+        drift_smoothness_raw = float(closses.get('drift_smoothness_loss', 0.0))
+        drift_smoothness_share = drift_smoothness_raw / (constraint_total + eps)
         rows.append({
             'epoch': epoch,
             'train_loss': train_loss,
@@ -471,11 +594,14 @@ def main():
             'gain_corr': gain_corr,
             'mastery_corr_macro': mastery_corr_macro,
             'gain_corr_macro': gain_corr_macro,
+            'mastery_corr_macro_weighted': mastery_corr_macro_weighted,
+            'gain_corr_macro_weighted': gain_corr_macro_weighted,
             'monotonicity_violation_rate': mono_rate,
             'retention_violation_rate': ret_rate,
             'gain_future_alignment': gain_future_alignment,
             'peer_influence_share': peer_share,
             'reconstruction_error': reconstruction_error,
+            'difficulty_penalty_contrib_mean': difficulty_penalty_contrib_mean,
             'alignment_share': alignment_share,
             'sparsity_share': sparsity_share,
             'consistency_share': consistency_share,
@@ -483,9 +609,19 @@ def main():
             'lag_gain_share': lag_gain_share,
             'peer_alignment_share': peer_alignment_share,
             'difficulty_ordering_share': difficulty_ordering_share,
-            'drift_smoothness_share': drift_smoothness_share
+            'drift_smoothness_share': drift_smoothness_share,
+            'alignment_loss_raw': alignment_raw,
+            'sparsity_loss_raw': sparsity_raw,
+            'consistency_loss_raw': consistency_raw,
+            'retention_loss_raw': retention_raw,
+            'lag_gain_loss_raw': lag_gain_raw,
+            'peer_alignment_loss_raw': peer_alignment_raw,
+            'difficulty_ordering_loss_raw': difficulty_ordering_raw,
+            'drift_smoothness_loss_raw': drift_smoothness_raw,
+            'cold_start_flag': cold_start,
+            'prediction_context_mode': prediction_context_mode
         })
-        print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f} mastery_corr={mastery_corr:.3f} gain_corr={gain_corr:.3f} mastery_macro={mastery_corr_macro:.3f} gain_macro={gain_corr_macro:.3f} mono_rate={mono_rate:.3f} gain_future_align={gain_future_alignment:.3f}")
+        print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f} mastery_corr={mastery_corr:.3f} gain_corr={gain_corr:.3f} mastery_macro={mastery_corr_macro:.3f} mastery_wmacro={mastery_corr_macro_weighted:.3f} gain_macro={gain_corr_macro:.3f} gain_wmacro={gain_corr_macro_weighted:.3f} mono_rate={mono_rate:.3f} gain_future_align={gain_future_alignment:.3f}")
         # Persist per-concept correlations
         artifacts_dir = os.path.join(exp_path, 'artifacts')
         os.makedirs(artifacts_dir, exist_ok=True)
@@ -494,9 +630,12 @@ def main():
         with open(metrics_path, 'a', newline='') as fcsv:
             writer = csv.writer(fcsv)
             writer.writerow([epoch, train_loss, constraint_total, val_auc, val_acc,
-                             mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mono_rate, ret_rate, gain_future_alignment,
+                             mastery_corr, gain_corr, mastery_corr_macro, gain_corr_macro, mastery_corr_macro_weighted, gain_corr_macro_weighted,
+                             mono_rate, ret_rate, gain_future_alignment,
                              peer_share, alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share,
-                             peer_alignment_share, difficulty_ordering_share, drift_smoothness_share, reconstruction_error])
+                             peer_alignment_share, difficulty_ordering_share, drift_smoothness_share, reconstruction_error, difficulty_penalty_contrib_mean,
+                             alignment_raw, sparsity_raw, consistency_raw, retention_raw, lag_gain_raw, peer_alignment_raw,
+                             difficulty_ordering_raw, drift_smoothness_raw, cold_start])
         # Serialize decomposition based on first validation batch for representative contributions
         with torch.no_grad():
             val_probe = val_loader[0] if isinstance(val_loader, list) else next(iter(val_loader))

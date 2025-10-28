@@ -1,0 +1,13 @@
+{
+  "best_temperature": 0.75,
+  "metric": "mastery_corr_macro_weighted",
+  "best_metrics": {
+    "val_auc": 0.5007462876956197,
+    "val_accuracy": 0.6047066151495392,
+    "mastery_corr": 0.5750519410064514,
+    "mastery_corr_macro": 0.6229606017918851,
+    "mastery_corr_macro_weighted": -0.1296391253930611,
+    "temperature": 0.75
+  },
+  "config_md5": "fea87d88722f2eca991dcf1548519377"
+}

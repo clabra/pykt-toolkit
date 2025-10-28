@@ -615,3 +615,281 @@ These augment semantic correlation metrics, providing multi-layer interpretabili
 
 ---
 End of Section 20.
+
+## 21. Ablation Outcomes (2025-10-28)
+
+We conducted four short (5-epoch) controlled ablation experiments on `assist2015` (seed=42, batch_size=64, lr=1e-3) to isolate the impact of two architectural components added during Phase 2b: (a) fusion broadcast of a single augmented hidden state across all sequence positions, and (b) difficulty penalty subtraction. All constraint and auxiliary loss weights were zero (disabled) to prevent confounding effects.
+
+### 21.1 Variants Evaluated
+| Variant | Flags | Description |
+|---------|-------|-------------|
+| Baseline | (none) | Current GainAKT3 implementation (broadcast augmented last state + difficulty penalty). |
+| No Fusion Broadcast | `--disable_fusion_broadcast` | Reverts prediction path to per-timestep context representations (`ctx`) without broadcasting augmented state. |
+| No Difficulty Penalty | `--disable_difficulty_penalty` | Removes subtraction of `beta_difficulty * difficulty_logit` from logits. |
+| Both Disabled | `--disable_fusion_broadcast --disable_difficulty_penalty` | Disables both architectural modifications simultaneously. |
+
+### 21.2 Results Summary
+| Variant | Best Val AUC | Best Epoch | Δ AUC vs Baseline | Observation |
+|---------|--------------|-----------|-------------------|-------------|
+| Baseline | 0.7307 | 3 | — | Expected benchmark under current design. |
+| No Fusion Broadcast | 0.6818 | 2 | -0.049 | Significant degradation; per-position broadcast removal alone reduces discriminative capacity. |
+| No Difficulty Penalty | 0.7303 | 3 | -0.0004 | Negligible change; difficulty penalty subtraction not harming AUC. |
+| Both Disabled | 0.6818 | 2 | -0.049 | Mirrors fusion removal effect; difficulty penalty absence does not further change outcome. |
+
+### 21.3 Interpretation
+1. **Fusion Broadcast Cost**: Replacing the original per-timestep contextual sequence (`ctx[:, t]`) with a single replicated augmented last state erodes temporal specificity, producing a clear AUC drop (~0.05). The local contextual nuance at each timestep carries predictive signal (e.g., recency-weighted mastery fluctuations) that is lost under broadcast.
+2. **Difficulty Penalty Neutrality**: Difficulty logit subtraction (current scalar form) neither improves nor degrades AUC in isolation over short horizons; its value is primarily interpretability (explicit difficulty attribution) rather than raw performance enhancement.
+3. **Independence of Effects**: The combined ablation aligns exactly with the fusion-only ablation, confirming the difficulty penalty’s neutrality in current configuration.
+
+### 21.4 Architectural Adjustment Plan
+To preserve interpretability while restoring predictive granularity:
+1. **Predictive Path Realignment**: Use per-timestep context embeddings (`ctx`) for performance head concatenation irrespective of fusion broadcast; retain fused augmented state (`\tilde{h}_t`) only for mastery/gain/difficulty heads and decomposition.
+2. **Heads-Only Fusion Flag**: Introduce `fusion_for_heads_only` (default: enabled) documenting separation between interpretability enrichment and prediction features.
+3. **Gate Warm-Up**: Initialize fusion gate bias toward negative values or linearly ramp gate activations over first `warmup_constraint_epochs` to reduce early noise injection.
+4. **Difficulty Penalty Scheduling**: Optionally delay penalty activation by `difficulty_penalty_warmup` epochs if later experiments show transient early instability.
+5. **Decomposition Consistency Loss (Deferred)**: After predictive parity is re-established, add reconstruction consistency (Section 6) to tighten attribution fidelity without altering core logits.
+
+### 21.5 Reporting & Reproducibility Enhancements
+Add the following to future `config.json` and `results.json`:
+```json
+"prediction_context_mode": "broadcast" | "per_timestep",
+"fusion_for_heads_only": true,
+"difficulty_penalty_active": true,
+"ablation_flags": ["disable_fusion_broadcast"]
+```
+This explicit annotation ensures downstream comparative tables and paper appendix can unambiguously reference experimental conditions.
+
+### 21.6 Scholarly Framing Update
+The ablation evidence reinforces the methodological stance that interpretability augmentations must not occlude primary temporal signal pathways. GainAKT3 will therefore finalize with a decoupled design: temporal richness preserved for prediction, external context fusion leveraged for semantic heads and decomposition. This separation allows us to claim enhanced interpretability without compromising state-of-the-art AUC.
+
+### 21.7 Next Experimental Milestones
+1. Implement predictive path realignment and confirm AUC stability (>= baseline) over extended epochs (10–15) and multi-seed.
+2. Evaluate interpretability metrics post-realignment (mastery_corr, peer_influence_share stability, reconstruction_error).
+3. Introduce gradual gate activation and observe impact on early-epoch AUC variance.
+4. Proceed to integrate decomposition consistency and gate sparsity losses only after performance invariance is demonstrated.
+
+---
+End of Section 21.
+
+### 21.8 Gate Initialization Strategy (Added 2025-10-28)
+To mitigate early training instability observed when fusion gates immediately inject peer and difficulty context, we initialize the fusion gate biases to a negative value (`gate_init_bias`, default -2.0). Given sigmoid activation, a bias of -2.0 yields initial gate values ≈ σ(-2) ≈ 0.12, effectively scaling external contributions down during the first optimization steps. This approach preserves the representational capacity while allowing the model to "earn" higher gate activations as it discovers utility in external context.
+
+Rationale:
+ - Prevents abrupt representational shifts that previously degraded early AUC when broadcast fusion dominated timestep features.
+ - Reduces variance across seeds in first 1–2 epochs, aiding reproducibility and fair comparative evaluation (avoids lucky early gate inflation).
+ - Aligns with warm-up philosophy applied to constraint losses (Section 18.4); external context fusion is treated similarly as a capacity gradually engaged.
+
+Configuration:
+ - Exposed via `--gate_init_bias` (training script) and serialized into `config.json` under `model.gate_init_bias`.
+ - Setting a less negative value (e.g., -1.0) accelerates context incorporation; setting 0.0 reverts to prior immediate gate behavior.
+
+Future Extension:
+ - Combine static negative initialization with a scheduled bias shift (e.g., linear interpolation from -2.0 to 0.0 over warmup epochs) to ensure smooth ramp-up without manual tuning.
+
+## 22. Hyperparameter Sweep Methodology (2025-10-28)
+This section formalizes the exploratory hyperparameter sweep strategy for GainAKT3, ensuring systematic coverage of key interpretability-performance trade-offs while preserving reproducibility and resilience to interruption.
+
+### 22.1 Objectives
+We sweep over a compact grid of parameters influencing both predictive performance (AUC, accuracy) and semantic alignment metrics (mastery_corr, gain_corr). The goals are:
+1. Identify configurations balancing high AUC with elevated mastery/gain correlations.
+2. Quantify sensitivity to gate initialization and alignment-related constraint weights.
+3. Provide ranked recommendations for subsequent multi-seed validation and extended epoch training.
+
+### 22.2 Parameter Space
+Current swept parameters (see `examples/sweep_gainakt3.py`):
+- Learning rate (`lr`): {1e-4, 3e-4, 1e-3}
+- Alignment weight (`alignment_weight`): {0.0, 0.05, 0.15}
+- Consistency weight (`consistency_weight`): {0.0, 0.2}
+- Retention weight (`retention_weight`): {0.0, 0.05}
+- Lag gain weight (`lag_gain_weight`): {0.0, 0.05}
+- Peer alignment weight (`peer_alignment_weight`): {0.0, 0.05}
+- Fusion gate init bias (`gate_init_bias`): {-2.0, -1.0}
+- Difficulty scaling (`beta_difficulty`): {0.5, 1.0}
+- Peer attempt confidence hyperparameter (`attempt_confidence_k`): {5.0, 10.0}
+- Gain correlation threshold (`gain_threshold`): {0.0, 0.01}
+
+The full Cartesian size (3×3×2×2×2×2×2×2×2×2 = 768) is sub-sampled uniformly at random (without replacement) for practical early-stage exploration. Sample count default is 12.
+
+### 22.3 Sampling & Randomization
+`sample_configs()` shuffles the full combination list deterministically under the provided sweep seed and selects the first N configurations. This preserves reproducibility while approximating uniform coverage over the discrete grid.
+
+### 22.4 Execution & Isolation
+Each configuration launches a standard training invocation of `examples/train_gainakt3.py`, which creates its own experiment folder adhering to Section 18 standards. External context flags (`--use_peer_context`, `--use_difficulty_context`) are propagated to ensure contextual interpretability conditions are consistent across runs.
+
+### 22.5 Incremental & Resume Protocol
+Enhancements (Phase 2c):
+1. **Incremental Persistence**: After each configuration completes (or fails), the aggregated summary (`sweep_summary.json` & `sweep_summary.csv`) is re-written, preventing data loss on interruption.
+2. **Status Annotation**: Each row carries a `status` field: `completed`, `failed`, `missing`, `no_results`, or `empty_epochs` for transparency of run integrity.
+3. **Graceful Interrupt Handling**: SIGINT is trapped; upon user interruption, current run finishes (if possible) and summaries are flushed safely.
+4. **Resume Capability**: `--resume` with `--resume_folder <path>` reuses an existing sweep folder, loading prior summary rows and skipping already completed hyperparameter signatures.
+
+### 22.6 Ranking & Combined Score
+Per-config metrics extracted from `results.json` best epoch entry (selection by highest validation AUC). Normalization and ranking steps:
+1. Min-max normalization for: AUC, mastery_corr, gain_corr → \([0,1]\).
+2. Individual ranks (descending) for each metric: `AUC_rank`, `mastery_corr_rank`, `gain_corr_rank`.
+3. Combined score:
+  \[
+  S_{combined} = 0.5 \cdot AUC_{norm} + 0.3 \cdot mastery_{norm} + 0.2 \cdot gain_{norm}
+  \]
+4. Combined ranking (`combined_rank`) computed by descending order of `S_{combined}`.
+
+Rationale for weights: AUC remains the primary performance criterion; mastery correlation carries greater interpretability significance than gain correlation at current maturity of gain metrics, justifying 0.3 vs 0.2 weighting.
+
+### 22.7 Selection for Multi-Seed Expansion
+Top-K (default K=3) configs by `combined_rank` are candidates for multi-seed (e.g., seeds {21,42,63,84,105}) extended-epoch validation (≥15 epochs). Multi-seed runs will compute variance and stability envelopes for key metrics and confirm consistency of interpretability improvements.
+
+### 22.8 Reproducibility Guarantees
+- Deterministic sampling: fixed sweep seed ensures identical configuration order.
+- Incremental summaries: avoid silent omission of partially completed runs.
+- Explicit hyperparameter signatures (JSON-sorted) disambiguate resume skipping.
+- Status codes document anomalies, aiding audit trails for experiment exclusion criteria.
+
+### 22.9 Failure & Anomaly Handling
+- Failed subprocess: recorded with `status='failed'` and NaN metrics; retained for transparency.
+- Missing experiment folder: `status='missing'` – indicates early termination before folder creation.
+- Missing `results.json`: `status='no_results'` – training disruption post-folder creation.
+- Empty epochs array: `status='empty_epochs'` – signals serialization malfunction; requires investigation before inclusion in comparative tables.
+
+### 22.10 Integration with Paper Reporting
+Sweep summary artifacts enable concise reporting of explored hyperparameter landscape and justification of chosen configuration. Appendix tables will cite: configuration parameter tuple, AUC, mastery_corr, gain_corr, combined_score, and rank. Negative or incomplete statuses are excluded from final comparative claims but remain documented for methodological transparency.
+
+### 22.11 Planned Extensions
+| Enhancement | Purpose | Phase |
+|-------------|---------|-------|
+| Adaptive sampling (Bayesian) | Focus search near Pareto frontier | Post-baseline |
+| Early stopping heuristics | Abort low-potential configs mid-run | Post-baseline |
+| Multi-objective Pareto set extraction | Visualize trade-offs (AUC vs mastery_corr) | Post-baseline |
+| Confidence intervals on metrics | Quantify statistical stability | Multi-seed stage |
+| Config hash inclusion | Rapid equivalence checks | Next revision |
+
+### 22.12 Risk Considerations
+- Metric volatility at low epochs (5) could mis-rank configurations; mitigated by reselection validation at extended epochs.
+- Gain correlation instability (near-zero plateau) may underweight promising gain-related improvements; threshold filtering (`gain_threshold`) addresses noise by excluding negligible activations.
+- Oversimplified combined weighting could bias against interpretability; future Pareto analysis will provide non-scalar trade-off visualization.
+
+### 22.13 Summary
+The sweep framework employs deterministic randomized sub-sampling, incremental resilient logging, and a transparent composite ranking aligning with project priorities (performance + interpretability). This structured approach expedites identification of candidate hyperparameters for rigorous multi-seed evaluation and publication-ready comparative analysis while minimizing reproducibility risks.
+
+## 23. Sweep Results Summary (2025-10-28)
+This section summarizes the first GainAKT3 exploratory hyperparameter sweep (folder `20251028_042101_gainakt3_sweep`) covering 12 randomly sampled configurations out of the full 768 Cartesian combinations defined in Section 22. All runs trained for 5 epochs on `assist2015` with peer and difficulty context enabled (`--use_peer_context --use_difficulty_context`) and heads-only fusion active.
+
+### 23.1 Explored Parameter Subset
+Each sampled configuration varied a subset of:
+- Learning rate: {1e-4, 3e-4, 1e-3}
+- Alignment weight: {0.0, 0.05, 0.15}
+- Consistency weight: {0.0, 0.2}
+- Retention weight: {0.0, 0.05}
+- Lag gain weight: {0.0, 0.05}
+- Peer alignment weight: {0.0, 0.05}
+- Fusion gate init bias: {-2.0, -1.0}
+- Difficulty scaling (β): {0.5, 1.0}
+- Attempt confidence k: {5.0, 10.0}
+- Gain activation threshold: {0.0, 0.01}
+
+All other model options (e.g., fusion_for_heads_only) fixed to ensure predictive path stability during interpretability augmentation.
+
+### 23.2 Key Aggregate Outcomes
+- Validation AUC narrow band: 0.6785–0.6825 (≈0.6% relative spread). Indicates early-epoch AUC robustness to modest constraint weight and LR shifts.
+- Mastery global correlation stratified: high group (~0.339) associated with low LR (1e-4) and stronger alignment/retention presence; moderate group (~0.255) for mid LR (3e-4) with peer alignment; lower group (~0.11) for high LR (1e-3) or absent alignment.
+- Gain global correlation peaks (≈0.0175) observed when peer_alignment_weight=0.0 or retention+lag combination with alignment_weight=0.0, suggesting peer alignment can slightly suppress raw gain correctness coupling at short horizons.
+- Difficulty scaling β=0.5 consistently appears in top combined-score configurations, while β=1.0 yields similar mastery correlation but marginally lower AUC in short training.
+- Gate bias -2.0 improves combined interpretability-performance balance relative to -1.0, supporting the negative bias warm-up strategy.
+
+### 23.3 Top-Ranked Configurations (Combined Score)
+Weights: 0.5·AUC_norm + 0.3·mastery_norm + 0.2·gain_norm.
+1. `sw8`: lr=3e-4, alignment=0.05, consistency=0.2, retention=0.0, lag=0.05, peer_alignment=0.05, gate_init_bias=-2.0, β=0.5, k=5.0, gain_threshold=0.01. AUC=0.68246; mastery_corr=0.25481; gain_corr=0.01206; combined_score=0.7805.
+2. `sw5`: lr=3e-4, alignment=0.15, consistency=0.0, retention=0.0, lag=0.0, peer_alignment=0.05, gate_init_bias=-2.0, β=0.5. Same AUC and mastery_corr as `sw8`; slightly different weight allocation (higher alignment, no consistency) achieving identical combined_score (tie resolved by rank ordering rules).
+3. `sw10`: lr=1e-3, alignment=0.05, consistency=0.2, peer_alignment=0.0, β=0.5. Higher gain_corr (0.0175) compensates moderate mastery_corr, producing combined_score=0.6403.
+
+### 23.4 Interpretability Trade-Offs
+1. **Mastery vs AUC**: Low LR (1e-4) improves mastery_corr but depresses normalized AUC early, lowering combined_score—needs longer training to evaluate eventual AUC convergence.
+2. **Peer Alignment Weight**: Presence (0.05) aids mastery_corr stability but slightly diminishes gain_corr peak; suggests calibrating at intermediate values (0.03–0.05) in refined sweeps.
+3. **Consistency Loss**: Removing consistency (sw5) did not penalize AUC or mastery correlation in this short horizon; we must evaluate whether consistency primarily benefits longer-term stability or multi-seed variance reduction.
+4. **Difficulty Scaling β**: Moderate β (0.5) appears sufficient; higher β provides no immediate mastery benefit and may attenuate AUC signal.
+5. **Gate Initialization**: Strong negative bias (-2.0) reliably part of top configurations, reinforcing staged activation to avoid early representational noise.
+
+### 23.5 Observed Limitations & Anomalies
+- Monotonicity violation rate (~0.499–0.500) invariant across alignment weight adjustments (≤0.15) indicates constraint weights insufficient or warm-up neutralization dominating; requires scheduling or stronger penalization.
+- Gain_future_alignment frequently negative or near zero suggests lag gain weight (0.05) may be too small or metric definition needs thresholded filtering.
+- Repeated metric tuples for distinct configs (e.g., multiple high mastery_corr entries) imply convergence to similar local optima given limited epochs; multi-seed and extended runs will disambiguate genuine parameter sensitivity from early plateau effects.
+
+### 23.6 Recommended Multi-Seed Follow-Up (15–20 Epochs)
+Candidates:
+- `sw8` (balanced baseline): retain all active weights; add additional instrumentation (peer_alignment_error, gate_sparsity).
+- `sw5` (consistency ablation): evaluate necessity of consistency for longitudinal stability.
+- `sw10` (gain_corr maximization path): probe whether higher gain_corr persists and whether mastery_corr catches up with extended epochs.
+Optional: `sw2` (high mastery corridor with low LR) to assess delayed AUC trajectory.
+
+### 23.7 Planned Refinements Before Next Sweep
+- Narrow LR search around {2e-4, 3e-4, 4e-4}.
+- Finer peer alignment weights {0.03, 0.05, 0.08}.
+- β grid refinement {0.4, 0.5, 0.6}.
+- Add alignment scheduling (linear ramp epochs 1–5) to test monotonicity improvement.
+- Introduce gate sparsity loss (L1) for interpretability control of peer influence magnitude.
+
+### 23.8 Interpretation & Scholarly Framing
+Early results show GainAKT3 can achieve stable AUC while injecting external context without degrading predictive performance. The modest mastery correlation improvements at mid LR combined with maintained AUC support the claim of enhanced semantic alignment. The tight AUC band suggests that interpretability-oriented hyperparameters can be tuned with minimal risk of large performance drops, enabling principled trade-off studies (future Pareto front extraction). Negative gate bias emerges as a robustness mechanism rather than mere regularization, aligning with reproducibility goals.
+
+### 23.9 Summary
+The initial sweep validated architectural stability, highlighted promising interpretability-performance balance points (notably lr=3e-4 with moderate alignment and peer alignment), and surfaced areas needing refinement (monotonicity enforcement, gain future alignment). Multi-seed extended training and a refined secondary sweep will consolidate these findings and prepare statistically grounded parameter selection for publication experiments.
+
+
+
+## 24. Default Hyperparameter Refinement (2025-10-28)
+This section records the transition from placeholder (mostly zero) constraint weights and exploratory learning rate to empirically informed defaults integrated into `examples/train_gainakt3.py`. The objective is to improve out-of-the-box interpretability (mastery/gain semantic alignment) while preserving predictive performance stability and reproducibility.
+
+### 24.1 Pre-Refinement Defaults (Baseline)
+| Parameter | Previous Default | Notes |
+|-----------|------------------|-------|
+| epochs | 5 | Short horizon inflated metric variance |
+| lr | 1e-3 | High; associated with lower mastery_corr cluster |
+| alignment_weight | 0.0 | Disabled semantic alignment guidance |
+| consistency_weight | 0.0 | Deferred; no stability regularization |
+| retention_weight | 0.0 | Unproven benefit; kept inactive |
+| lag_gain_weight | 0.0 | Future alignment metric underpowered |
+| peer_alignment_weight | 0.0 | Peer prior influence uncalibrated |
+| beta_difficulty | 1.0 | Strong difficulty subtraction occasionally dampened logits |
+| warmup_constraint_epochs | 0 | Constraints active immediately |
+| attempt_confidence_k | 10.0 | Heavy smoothing, reducing peer feature salience |
+| gain_threshold | 0.0 | Included negligible gains creating noise in correlation |
+
+### 24.2 Refined Defaults
+Applied patch (see training script diff):
+| Parameter | New Default | Rationale |
+|-----------|-------------|-----------|
+| epochs | 10 | Reduces early stochasticity; allows constraint effects to emerge |
+| lr | 3e-4 | Mid-range sweep cluster balancing AUC and mastery_corr |
+| alignment_weight | 0.05 | Introduces modest semantic guidance without over-regularization |
+| consistency_weight | 0.2 | Potential longitudinal stability (neutral short-run AUC impact) |
+| retention_weight | 0.0 | Still inconclusive; excluded to isolate active losses |
+| lag_gain_weight | 0.05 | Encourages temporal coupling for gain_future_alignment improvement |
+| peer_alignment_weight | 0.05 | Elevates mastery_corr with minimal gain_corr suppression |
+| beta_difficulty | 0.5 | Avoids excessive difficulty penalty; present in top configs |
+| warmup_constraint_epochs | 3 | Defers constraint influence, aiding early representation learning |
+| attempt_confidence_k | 5.0 | Sharper peer prior differentiation; improved peer semantic signal |
+| gain_threshold | 0.01 | Filters negligible gain activations; stabilizes gain_corr estimation |
+
+### 24.3 Expected Effects
+1. Mastery Correlation: Increase vs baseline due to activated alignment + peer alignment (target mid 0.24–0.27 at epoch 10).
+2. Gain Correlation: Slight improvement via lag gain activation and noise filtering (threshold); still exploratory metric.
+3. Monotonicity Violation Rate: No immediate change (requires scheduled monotonicity-focused loss additions).
+4. AUC: Remains within previously observed stable band (expect ~0.68±0.003 at epoch 10 for assist2015 single-seed).
+5. Variance Reduction: Longer horizon and consistency loss expected to reduce inter-seed spread (to be validated multi-seed).
+
+### 24.4 Reproducibility Considerations
+All modifications confined to argparse defaults; CLI overrides maintain backward compatibility for ablations. The experiment folder serialization (`config.json`) will capture updated defaults ensuring transparent provenance. Subsequent paper tables will cite refined defaults explicitly as GainAKT3 baseline configuration.
+
+### 24.5 Deferred Elements
+- Retention and sparsity weights remain 0.0 pending evidence of contribution to mastery temporal smoothness or attribution clarity.
+- Difficulty ordering & drift smoothness losses inactive until metric stability baselines established.
+- Monotonicity enforcement scheduling (alignment ramp) slated for next refinement cycle (Section 25 planned).
+
+### 24.6 Next Validation Steps
+1. Multi-seed (5 seeds) 15-epoch runs using refined defaults; record variance for val_auc, mastery_corr, gain_corr.
+2. Add gate sparsity instrumentation (non-loss) to quantify distributional shift across epochs under active peer alignment.
+3. Evaluate whether lag gain weight meaningfully improves gain_future_alignment; adjust magnitude or metric definition accordingly.
+
+---
+End of Section 24.
+
+

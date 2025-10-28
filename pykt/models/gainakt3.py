@@ -59,10 +59,14 @@ class GainAKT3(nn.Module):
                  drift_smoothness_weight: float = 0.0,
                  attempt_confidence_k: float = 10.0,
                  warmup_constraint_epochs: int = 0,
+                 gate_init_bias: float = -2.0,
                  use_peer_context: bool = False,
                  use_difficulty_context: bool = False,
                  disable_peer: bool = False,
                  disable_difficulty: bool = False,
+                 disable_fusion_broadcast: bool = False,
+                 disable_difficulty_penalty: bool = False,
+                 fusion_for_heads_only: bool = True,
                  device: Optional[str] = None):
         super().__init__()
         self.num_c = num_c
@@ -86,11 +90,15 @@ class GainAKT3(nn.Module):
         self.drift_smoothness_weight = drift_smoothness_weight
         self.attempt_confidence_k = attempt_confidence_k
         self.warmup_constraint_epochs = warmup_constraint_epochs
+        self.gate_init_bias = gate_init_bias
         self.current_epoch = 0  # externally adjustable by trainer
         self.use_peer_context = use_peer_context
         self.use_difficulty_context = use_difficulty_context
         self.disable_peer = disable_peer
         self.disable_difficulty = disable_difficulty
+        self.disable_fusion_broadcast = disable_fusion_broadcast
+        self.disable_difficulty_penalty = disable_difficulty_penalty
+        self.fusion_for_heads_only = fusion_for_heads_only
 
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -118,6 +126,9 @@ class GainAKT3(nn.Module):
 
         # Fusion gate for peer & difficulty
         self.fusion_gate = nn.Linear(d_model * 3, 2)
+        # Initialize gate bias negatively to start with closed gates (stability)
+        if self.fusion_gate.bias is not None:
+            nn.init.constant_(self.fusion_gate.bias, gate_init_bias)
 
         # Artifacts
         self.peer_path = os.path.join(artifact_base, 'peer_index', dataset, 'peer_index.pkl')
@@ -146,13 +157,86 @@ class GainAKT3(nn.Module):
         B, L = q.size()
         r_int = r.long()
         interaction_tokens = q + self.num_c * r_int
+        # ---- Defensive range & integrity checks (avoid opaque CUDA device-side asserts) ----
+        if os.environ.get('GAINAKT3_INDEX_DEBUG', '0') == '1':  # disabled by default; set env var to 1 to enable
+            try:
+                if not hasattr(self, '_index_summary_done'):
+                    self._index_summary_done = False
+                q_min = int(q.min().item())
+                q_max = int(q.max().item())
+                r_min = int(r_int.min().item())
+                r_max = int(r_int.max().item())
+                it_min = int(interaction_tokens.min().item())
+                it_max = int(interaction_tokens.max().item())
+                unique_r = sorted(set(r_int.view(-1).tolist()))
+                if not self._index_summary_done and os.environ.get('GAINAKT3_INDEX_SUMMARY','0') == '1':
+                    print(f"[GainAKT3][INDEX-SUMMARY] num_c={self.num_c} emb_sizes={{ctx:{self.context_embedding.num_embeddings},val:{self.value_embedding.num_embeddings}}} q_range=[{q_min},{q_max}] r_range=[{r_min},{r_max}] it_range=[{it_min},{it_max}] unique_r={unique_r}")
+                    self._index_summary_done = True
+                # Correctness values should be within {0,1}; flag otherwise
+                if r_min < 0 or r_max > 1 or any(rv not in (0,1) for rv in unique_r):
+                    print(f"[GainAKT3][INDEX-ERROR] r values outside {{0,1}} detected: unique_r={unique_r}")
+                    raise RuntimeError("Correctness sequence (r) contains values outside {0,1}; dataset encoding mismatch.")
+                # Concept id sanity vs declared num_c
+                if q_min < 0 or q_max >= self.num_c:
+                    print(f"[GainAKT3][INDEX-ERROR] Concept id out-of-range (min={q_min}, max={q_max}, num_c={self.num_c}).")
+                    # Capture a few offending ids
+                    bad_mask = (q < 0) | (q >= self.num_c)
+                    if bad_mask.any():
+                        offending = q[bad_mask][:50].detach().cpu().tolist()
+                        print(f"[GainAKT3][INDEX-ERROR] Sample offending concept ids: {offending}")
+                    raise RuntimeError("Concept id out-of-range relative to num_c; adjust num_c or fix dataset mapping.")
+                # Interaction token range check: must satisfy 0 <= token < num_c*2
+                limit = self.num_c * 2
+                if it_min < 0 or it_max >= limit:
+                    print(f"[GainAKT3][INDEX-ERROR] interaction_tokens range violation: min={it_min}, max={it_max}, expected < {limit}.")
+                    # Provide diagnostic breakdown counts for upper bound breach
+                    it_cpu = interaction_tokens.detach().cpu()
+                    over_mask = it_cpu >= limit
+                    under_mask = it_cpu < 0
+                    if over_mask.any():
+                        over_vals = it_cpu[over_mask][:50].tolist()
+                        print(f"[GainAKT3][INDEX-ERROR] Sample >={limit} tokens (first 50): {over_vals}")
+                    if under_mask.any():
+                        under_vals = it_cpu[under_mask][:50].tolist()
+                        print(f"[GainAKT3][INDEX-ERROR] Sample negative tokens (first 50): {under_vals}")
+                    # Extra decomposition: show joint (q,r) for offending positions
+                    if over_mask.any() or under_mask.any():
+                        offending_positions = (over_mask | under_mask).nonzero(as_tuple=False)[:50]
+                        pairs = []
+                        for pos in offending_positions:
+                            b_idx, l_idx = int(pos[0]), int(pos[1])
+                            pairs.append({'b': b_idx, 't': l_idx, 'q': int(q[b_idx, l_idx].item()), 'r': int(r_int[b_idx, l_idx].item()), 'it': int(interaction_tokens[b_idx, l_idx].item())})
+                        print(f"[GainAKT3][INDEX-ERROR] Offending (b,t,q,r,it) samples: {pairs}")
+                    raise RuntimeError("interaction_tokens out-of-range; investigate (q,r) encoding or num_c mismatch.")
+            except Exception as _dbg_e:
+                # If any unexpected failure in debug path, surface but continue (optional)
+                if os.environ.get('GAINAKT3_INDEX_DEBUG_STRICT','1') == '1':
+                    raise
+                else:
+                    print(f"[GainAKT3][INDEX-WARN] Debug index inspection failed: {_dbg_e}")
         positions = pos_encode(L).to(self.device)
         ctx = self.context_embedding(interaction_tokens) + self.pos_embedding(positions)
         val = self.value_embedding(interaction_tokens) + self.pos_embedding(positions)
 
+        # Causal upper-triangular attention mask (future positions blocked = True above diagonal).
         mask = ut_mask(L).to(q.device)
-        ctx = self.context_encoder(ctx, mask)
-        val = self.value_encoder(val, mask)
+        if not hasattr(self, '_mask_debugged'):
+            self._mask_debugged = False
+        if mask.dtype is not torch.bool:
+            print(f"[GainAKT3] WARN: mask arrived as dtype {mask.dtype}; converting to bool explicitly.")
+            mask = mask.bool()
+        if (not self._mask_debugged) and os.environ.get('GAINAKT3_MASK_DEBUG','0') == '1':
+            print(f"[GainAKT3] DEBUG mask dtype={mask.dtype}, shape={tuple(mask.shape)}, true_fraction={mask.float().mean().item():.4f}")
+            self._mask_debugged = True
+        import warnings as _w
+        if os.environ.get('GAINAKT3_SUPPRESS_MASK_WARN','1') == '1':
+            with _w.catch_warnings():
+                _w.filterwarnings('ignore', message='Converting mask without torch.bool dtype to bool')
+                ctx = self.context_encoder(ctx, mask)
+                val = self.value_encoder(val, mask)
+        else:
+            ctx = self.context_encoder(ctx, mask)
+            val = self.value_encoder(val, mask)
 
         # Peer vector retrieval (optional)
         if self.use_peer_context and (not self.disable_peer):
@@ -177,28 +261,45 @@ class GainAKT3(nn.Module):
         else:
             difficulty_vec = torch.zeros(B, self.d_model, device=ctx.device)
 
-        # Fusion (residual augmentation of last context state)
+        # Fusion (residual augmentation of last context state) with ablation capability
         h_last = ctx[:, -1, :]
         gate_in = torch.cat([h_last, peer_vec, difficulty_vec], dim=-1)
         gates = torch.sigmoid(self.fusion_gate(gate_in))
         g_p, g_d = gates[:, 0].unsqueeze(-1), gates[:, 1].unsqueeze(-1)
-        augmented_h = h_last + g_p * peer_vec + g_d * difficulty_vec
-        augmented_h = F.layer_norm(augmented_h, (self.d_model,))
+        if self.disable_fusion_broadcast:
+            augmented_h = h_last  # gating disabled entirely
+        else:
+            augmented_h = h_last + g_p * peer_vec + g_d * difficulty_vec
+            augmented_h = F.layer_norm(augmented_h, (self.d_model,))
+
+        # Prediction context selection:
+        # If fusion_for_heads_only: use original per-timestep ctx for prediction (preserves temporal granularity)
+        # Else: use broadcast augmented_h across sequence (legacy behavior)
+        if self.fusion_for_heads_only:
+            prediction_ctx_seq = ctx  # [B,L,d]
+            augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)  # still available for decomposition
+        else:
+            augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)
+            prediction_ctx_seq = augmented_h_seq
 
         # Prediction
         target_concepts = q if qry is None else qry
         target_emb = self.concept_embedding(target_concepts)
-        augmented_h_seq = augmented_h.unsqueeze(1).expand(-1, L, -1)
-        concat = torch.cat([augmented_h_seq, val, target_emb], dim=-1)
+        concat = torch.cat([prediction_ctx_seq, val, target_emb], dim=-1)
         base_logits = self.prediction_head(concat).squeeze(-1)
         difficulty_logit = self.difficulty_head(difficulty_vec).squeeze(-1)
         # Sequence difficulty logits for drift (context-based) - auxiliary only
         difficulty_logits_seq = self.difficulty_head(ctx).squeeze(-1)  # [B,L]
-        logits = base_logits - self.beta_difficulty * difficulty_logit.unsqueeze(1)
+        if self.disable_difficulty_penalty:
+            logits = base_logits  # skip subtraction for ablation
+            difficulty_penalty_contrib = torch.zeros_like(base_logits)
+        else:
+            logits = base_logits - self.beta_difficulty * difficulty_logit.unsqueeze(1)
+            difficulty_penalty_contrib = - self.beta_difficulty * difficulty_logit.unsqueeze(1)
         preds = torch.sigmoid(logits)
 
         # ---------------- Decomposition Components ----------------
-        # Separate prediction_head weight into 3 segments (augmented_h, value, target_emb)
+        # Separate prediction_head weight into 3 segments (prediction_ctx, value, target_emb)
         W_full = self.prediction_head.weight.view(-1)  # [3*d_model]
         W_h = W_full[: self.d_model]
         W_v = W_full[self.d_model: 2 * self.d_model]
@@ -221,7 +322,7 @@ class GainAKT3(nn.Module):
         value_stream_contrib = (val * W_v.unsqueeze(0).unsqueeze(0)).sum(-1)
         concept_contrib = (target_emb * W_t.unsqueeze(0).unsqueeze(0)).sum(-1)
         bias_contrib = bias_term.view(1,1).expand_as(base_logits)
-        difficulty_penalty_contrib = - self.beta_difficulty * difficulty_logit.unsqueeze(1)
+        # difficulty_penalty_contrib already defined above respecting ablation flag
         reconstructed_base = mastery_contrib + peer_prior_contrib + difficulty_fused_contrib + value_stream_contrib + concept_contrib + bias_contrib
         reconstruction_error = (base_logits - reconstructed_base).abs().mean().detach()
 
@@ -260,6 +361,7 @@ class GainAKT3(nn.Module):
         out['peer_influence_share'] = g_p.mean().detach()
         out['difficulty_adjustment_magnitude'] = (g_d.abs() * difficulty_logit.abs()).mean().detach()
         out['augmented_h_last'] = augmented_h.detach()
+        out['prediction_context_mode'] = 'per_timestep' if self.fusion_for_heads_only else 'broadcast'
         out['peer_hash'] = self.peer_hash
         out['difficulty_hash'] = self.diff_hash
         out['cold_start'] = self.cold_start
@@ -365,6 +467,29 @@ class GainAKT3(nn.Module):
             total_constraint = torch.tensor(0.0, device=q.device)
         out['constraint_losses'] = {k: v.detach() for k,v in constraint_losses.items()}
         out['total_constraint_loss'] = total_constraint
+        # DataParallel gather safety: wrap pure Python bools into tensors so scatter_gather does not fail
+        for k,v in list(out.items()):
+            if isinstance(v, bool):
+                out[k] = torch.tensor(float(v), device=q.device)
+        # Also normalize nested dicts (e.g., decomposition) any bool values
+        for k,v in list(out.items()):
+            if isinstance(v, dict):
+                for nk,nv in list(v.items()):
+                    if isinstance(nv, bool):
+                        v[nk] = torch.tensor(float(nv), device=q.device)
+        # Normalize zero-dim tensors to shape (1,) to avoid DataParallel scalar gather warning
+        def _reshape_scalars(container):
+            if isinstance(container, dict):
+                for kk, vv in container.items():
+                    if torch.is_tensor(vv) and vv.ndim == 0:
+                        container[kk] = vv.view(1)
+            elif torch.is_tensor(container) and container.ndim == 0:
+                return container.view(1)
+            return container
+        for kk in list(out.keys()):
+            out[kk] = _reshape_scalars(out[kk])
+        if 'constraint_losses' in out:
+            out['constraint_losses'] = _reshape_scalars(out['constraint_losses'])
         return out
 
 
@@ -395,5 +520,9 @@ def create_gainakt3_model(config):
         drift_smoothness_weight=config.get('drift_smoothness_weight', 0.0),
         attempt_confidence_k=config.get('attempt_confidence_k', 10.0),
         warmup_constraint_epochs=config.get('warmup_constraint_epochs', 0),
+        gate_init_bias=config.get('gate_init_bias', -2.0),
+        disable_fusion_broadcast=config.get('disable_fusion_broadcast', False),
+        disable_difficulty_penalty=config.get('disable_difficulty_penalty', False),
+        fusion_for_heads_only=config.get('fusion_for_heads_only', True),
         device=config.get('device')
     )

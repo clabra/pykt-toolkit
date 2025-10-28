@@ -1,0 +1,58 @@
+{
+  "artifacts": {
+    "cold_start": false,
+    "difficulty_table_path": "data/difficulty/assist2015/difficulty_table.parquet",
+    "difficulty_table_sha256": "e5ab11a146b9c0e168dc440cde70c665e36539d3ed4b269a2028642b04321bd4",
+    "peer_index_path": "data/peer_index/assist2015/peer_index.pkl",
+    "peer_index_sha256": "2dfdaf0fbd2d9090cdecd36ffab2761948fc389031480c7ebfeecab2874a7267"
+  },
+  "config_md5": "4a5e35c6d8d95c4bb48b8ce51665476f",
+  "data": {
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 200,
+    "num_c": 100,
+    "seq_len": 200
+  },
+  "experiment": {
+    "dataset": "assist2015",
+    "epochs": 2,
+    "fold": 0,
+    "id": "20251028_041904_gainakt3_sw3_lr0.001_align0.0_cons0.2_ret0.05_lag0.05_peerA0.05",
+    "lr": 0.001,
+    "model": "gainakt3"
+  },
+  "flags": {
+    "strict_artifact_hash": false
+  },
+  "hardware": {
+    "batch_size": 64,
+    "device": "cuda"
+  },
+  "model": {
+    "alignment_weight": 0.0,
+    "attempt_confidence_k": 5.0,
+    "beta_difficulty": 0.5,
+    "consistency_weight": 0.2,
+    "difficulty_ordering_weight": 0.0,
+    "disable_difficulty_penalty": false,
+    "disable_fusion_broadcast": false,
+    "drift_smoothness_weight": 0.0,
+    "fusion_for_heads_only": true,
+    "gain_threshold": 0.01,
+    "gate_init_bias": -1.0,
+    "lag_gain_weight": 0.05,
+    "mastery_temperature": 1.0,
+    "peer_K": 8,
+    "peer_alignment_weight": 0.05,
+    "retention_weight": 0.05,
+    "sparsity_weight": 0.0,
+    "use_difficulty_context": true,
+    "use_peer_context": true,
+    "warmup_constraint_epochs": 0
+  },
+  "seeds": {
+    "primary": 42
+  }
+}

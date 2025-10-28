@@ -403,3 +403,18 @@ These enhancements will bump `schema_version` upon structural additions; reprodu
 
 ---
 Unified scripting consolidates reproducibility, reduces maintenance surface, and strengthens audit trails via integrated override and comparison reporting.
+
+---
+## 16. Summary
+We have established a unified, hash‑anchored experimental protocol for GainAKT2Exp that:
+1. Enforces structural determinism through `schema_version`, comprehensive parameter serialization, and `config_md5` hashing.
+2. Differentiates exploration vs reproduction via explicit flags (`--reproduce_from`, `--compare_only`, `--manifest`) without fragmenting tooling.
+3. Provides quantitative tolerance bands (AUC ≤0.002; correlations ≤0.01 under AMP) enabling academically defensible stability claims while accommodating expected minor stochastic variance.
+4. Captures override lineage (`--set`) to preserve a transparent audit trail of deviations from canonical defaults.
+5. Integrates results artifact hashing (`results_md5`) to detect subtle environment drift otherwise invisible through configuration hashes alone.
+
+Collectively these measures elevate experimental credibility: claims of performance or interpretability improvements can be reproduced, audited, and contextualized against controlled baselines. Future enhancements (direct config ingestion, deterministic backend flags, RNG state artifacts) will further tighten verifiability and facilitate meta‑analysis across large experiment cohorts.
+
+Researchers adopting this framework should cite the exact experiment folder name and include both `config_md5` and (optionally) normalized config hash in appendices. When reporting comparative gains, reproduction manifests provide concise evidence that observed deltas reside within accepted tolerance thresholds rather than configuration drift.
+
+This summary supersedes earlier informal guidelines and should be referenced in any publication section on methodological rigor or reproducibility standards.

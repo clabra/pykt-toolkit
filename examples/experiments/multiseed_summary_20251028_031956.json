@@ -1,0 +1,70 @@
+{
+  "seeds": [
+    11,
+    12
+  ],
+  "per_seed": [
+    {
+      "val_auc": 0.5018885192598446,
+      "val_accuracy": 0.50171875,
+      "mastery_corr": -0.1298012969984864,
+      "gain_corr": -0.002622763367445068,
+      "mastery_corr_macro": 0.1562160922140724,
+      "gain_corr_macro": -0.0018525205065422156,
+      "peer_influence_share": 0.5137116312980652,
+      "monotonicity_violation_rate": 0.5004086840452261,
+      "gain_future_alignment": 0.0007167991119025813,
+      "experiment_folder": "20251028_031929_gainakt3_drysynthetic_s11"
+    },
+    {
+      "val_auc": 0.4972591336434701,
+      "val_accuracy": 0.50078125,
+      "mastery_corr": 0.023115464480829268,
+      "gain_corr": 0.003024212823313824,
+      "mastery_corr_macro": -0.3482410497611674,
+      "gain_corr_macro": 0.0012035357278643197,
+      "peer_influence_share": 0.4932129979133606,
+      "monotonicity_violation_rate": 0.4998001727386935,
+      "gain_future_alignment": 0.0022387138564227576,
+      "experiment_folder": "20251028_031942_gainakt3_drysynthetic_s12"
+    }
+  ],
+  "aggregate": {
+    "val_auc": {
+      "mean": 0.4995738264516573,
+      "std": 0.0023146928081872464
+    },
+    "val_accuracy": {
+      "mean": 0.50125,
+      "std": 0.00046875000000001776
+    },
+    "mastery_corr": {
+      "mean": -0.05334291625882856,
+      "std": 0.07645838073965783
+    },
+    "gain_corr": {
+      "mean": 0.00020072472793437792,
+      "std": 0.002823488095379446
+    },
+    "mastery_corr_macro": {
+      "mean": -0.09601247877354749,
+      "std": 0.25222857098761986
+    },
+    "gain_corr_macro": {
+      "mean": -0.0003244923893389479,
+      "std": 0.0015280281172032678
+    },
+    "peer_influence_share": {
+      "mean": 0.5034623146057129,
+      "std": 0.010249316692352295
+    },
+    "monotonicity_violation_rate": {
+      "mean": 0.5001044283919598,
+      "std": 0.00030425565326630544
+    },
+    "gain_future_alignment": {
+      "mean": 0.0014777564841626694,
+      "std": 0.000760957372260088
+    }
+  }
+}

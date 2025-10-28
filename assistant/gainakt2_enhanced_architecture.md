@@ -209,3 +209,31 @@ With systematic implementation of these improvements, achieving **AUC ~0.8** is 
 - **Risk**: Low - all techniques are proven and incremental
 
 This comprehensive approach addresses the key limitations of the current model while introducing state-of-the-art techniques specifically designed for knowledge tracing applications.
+---
+
+## Phase 2b/2c (GainAKT3) Calibration & Weighted Interpretability Metrics
+
+Recent GainAKT3 upgrades introduce post-hoc mastery probability calibration and weighted macro correlations:
+
+### Mastery Temperature Calibration
+Parameter: `--mastery_temperature` (default 1.0). Applied as inverse-temperature scaling in logit space before computing:
+- Global mastery correctness correlation (`mastery_corr`)
+- Per-concept mastery correlations (`per_concept_mastery_corr`)
+Purpose: Adjust probability sharpness without retraining; tune interpretability alignment with empirical correctness distributions.
+
+### Weighted Macro Correlations
+New metrics: `mastery_corr_macro_weighted`, `gain_corr_macro_weighted` complement unweighted macro means.
+Weighting scheme: Sample counts per concept (observations for mastery; increment pairs for gains). Mitigates volatility from sparse concepts influencing aggregate trends.
+
+### Difficulty Penalty Mean
+Metric: `difficulty_penalty_contrib_mean` surfaces average penalty contribution applied during difficulty fusion/decomposition. Aids in monitoring regularization pressure and over-penalization risk.
+
+### Multi-Seed Aggregation
+The multi-seed launcher now summarizes mean/std for calibrated and weighted metrics, providing robustness diagnostics pre- and post-calibration adjustments.
+
+### Rationale Summary
+- Calibration refines interpretability without structural change.
+- Weighted aggregates reduce bias from low-support concepts.
+- Difficulty penalty visibility strengthens reproducibility of constraint dynamics.
+
+These additions advance Phase 2 objectives: reproducible, interpretable mastery/gain dynamics with transparent regularization influences.

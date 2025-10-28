@@ -1,0 +1,110 @@
+{
+  "artifacts": {
+    "cold_start": false,
+    "difficulty_table_path": "data/difficulty/assist2015/difficulty_table.parquet",
+    "difficulty_table_sha256": "MISSING",
+    "peer_index_path": "data/peer_index/assist2015/peer_index.pkl",
+    "peer_index_sha256": "MISSING"
+  },
+  "config_md5": "919bc0b127e38a60004e0d44a73ebc26",
+  "context": {
+    "disable_difficulty_penalty": false,
+    "disable_fusion_broadcast": false,
+    "fusion_for_heads_only": true,
+    "hardware": {
+      "requested_devices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "visible_devices_env": "0,1,2,3,4"
+    },
+    "peer_K": 8,
+    "use_difficulty_context": false,
+    "use_peer_context": false
+  },
+  "data": {
+    "batch_size": 8,
+    "dataset": "assist2015",
+    "fold": 0,
+    "input_type": [
+      "concepts"
+    ],
+    "maxlen": 30,
+    "num_c": 20
+  },
+  "experiment": {
+    "id": "20251028_103245_gainakt3_table_test",
+    "model": "gainakt3",
+    "purpose": "GainAKT3 reproducible training run",
+    "short_title": "table_test"
+  },
+  "git": {
+    "branch": "v0.0.9-gainakt3",
+    "commit": "bea5248e3d9f0ed90452bcef220b89a0b3d8e2ef"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "num_workers": 5,
+    "threads": 8
+  },
+  "heads": {
+    "use_gain_head": true,
+    "use_mastery_head": true
+  },
+  "hyperparams": {
+    "attempt_confidence_k": 5.0,
+    "beta_difficulty": 0.5,
+    "gain_threshold": 0.01,
+    "gate_init_bias": -2.0,
+    "mastery_temperature": 1.0
+  },
+  "missing_params": [],
+  "raw_args": {
+    "artifact_base": "data",
+    "difficulty_artifact_path": "",
+    "grad_clip": 1.0,
+    "lr": 0.0003,
+    "peer_artifact_path": "",
+    "strict_artifact_hash": false,
+    "use_synthetic": true
+  },
+  "runtime": {
+    "command": "python examples/wandb_gainakt3_train.py --use_synthetic --epochs 2 --batch_size 8 --num_c 20 --maxlen 30 --short_title table_test",
+    "timestamp": "2025-10-28T10:32:45.745716Z"
+  },
+  "schema_version": 1,
+  "seeds": {
+    "all": [
+      21
+    ],
+    "primary": 21
+  },
+  "training": {
+    "epochs": 2,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.0003,
+    "mixed_precision": true,
+    "optimizer": "Adam",
+    "warmup_constraint_epochs": 3,
+    "weight_decay": 0.0
+  },
+  "weights": {
+    "alignment_weight": 0.05,
+    "consistency_weight": 0.2,
+    "difficulty_ordering_weight": 0.0,
+    "drift_smoothness_weight": 0.0,
+    "lag_gain_weight": 0.05,
+    "peer_alignment_weight": 0.05,
+    "retention_weight": 0.0,
+    "sparsity_weight": 0.0
+  }
+}
