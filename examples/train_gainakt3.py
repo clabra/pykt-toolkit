@@ -150,6 +150,13 @@ def main():
     parser.add_argument('--beta_difficulty', type=float, default=1.0)
     parser.add_argument('--artifact_base', default='data')
     parser.add_argument('--use_synthetic', action='store_true', help='Use synthetic data instead of real loader (debug)')
+    # Constraint weights (Phase2)
+    parser.add_argument('--alignment_weight', type=float, default=0.0)
+    parser.add_argument('--sparsity_weight', type=float, default=0.0)
+    parser.add_argument('--consistency_weight', type=float, default=0.0)
+    parser.add_argument('--retention_weight', type=float, default=0.0)
+    parser.add_argument('--lag_gain_weight', type=float, default=0.0)
+    parser.add_argument('--warmup_constraint_epochs', type=int, default=0, help='Epochs before constraints activate')
     args = parser.parse_args()
 
     set_seeds(args.seed)
@@ -194,7 +201,13 @@ def main():
         },
         'model': {
             'peer_K': args.peer_K,
-            'beta_difficulty': args.beta_difficulty
+            'beta_difficulty': args.beta_difficulty,
+            'alignment_weight': args.alignment_weight,
+            'sparsity_weight': args.sparsity_weight,
+            'consistency_weight': args.consistency_weight,
+            'retention_weight': args.retention_weight,
+            'lag_gain_weight': args.lag_gain_weight,
+            'warmup_constraint_epochs': args.warmup_constraint_epochs
         },
         'seeds': {
             'primary': args.seed
@@ -219,7 +232,13 @@ def main():
         'peer_K': args.peer_K,
         'beta_difficulty': args.beta_difficulty,
         'artifact_base': args.artifact_base,
-        'device': args.device
+        'device': args.device,
+        'alignment_weight': args.alignment_weight,
+        'sparsity_weight': args.sparsity_weight,
+        'consistency_weight': args.consistency_weight,
+        'retention_weight': args.retention_weight,
+        'lag_gain_weight': args.lag_gain_weight,
+        'warmup_constraint_epochs': args.warmup_constraint_epochs
     }
     model = create_gainakt3_model(model_cfg)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -246,8 +265,26 @@ def main():
     else:
         train_loader, val_loader = init_dataset4train(args.dataset, args.model_name, data_config, args.fold, args.batch_size)
 
+    # Prepare metrics CSV header (extended)
+    import csv
+    metrics_path = os.path.join(exp_path, 'metrics_epoch.csv')
+    header = ['epoch','train_loss','constraint_loss','val_auc','val_accuracy','peer_influence_share','alignment_share','sparsity_share','consistency_share','retention_share','lag_gain_share']
+    with open(metrics_path, 'w', newline='') as fcsv:
+        writer = csv.writer(fcsv)
+        writer.writerow(header)
+
     for epoch in range(1, args.epochs + 1):
-        train_loss = train_epoch(model, train_loader, args.device, optimizer, num_c)
+        # Set current epoch for constraint warm-up logic
+        model.current_epoch = epoch
+        perf_loss = train_epoch(model, train_loader, args.device, optimizer, num_c)
+        # After one batch forward, constraints were applied internally; we need a probe to capture aggregated constraint loss.
+        with torch.no_grad():
+            probe_batch = train_loader[0] if isinstance(train_loader, list) else next(iter(train_loader))
+            c_probe = probe_batch['cseqs'].to(args.device)
+            r_probe = probe_batch['rseqs'].to(args.device)
+            probe_out = model(c_probe.long(), r_probe.long())
+        constraint_total = float(probe_out['total_constraint_loss'].detach().cpu())
+        train_loss = perf_loss + constraint_total
         val_auc, val_acc = evaluate(model, val_loader, args.device)
         with torch.no_grad():
             probe = model(
@@ -255,16 +292,25 @@ def main():
                 torch.randint(0, 2, (1, seq_len)).to(args.device)
             )
         peer_share = float(probe['peer_influence_share'])
-        rows.append({'epoch': epoch, 'train_loss': train_loss, 'val_auc': val_auc, 'val_accuracy': val_acc, 'peer_influence_share': peer_share})
-        print(f"Epoch {epoch} | loss={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f}")
+        # Component shares relative to total constraint (add epsilon to avoid divide-by-zero)
+        eps = 1e-8
+        closses = probe_out['constraint_losses']
+        alignment_share = float(closses.get('alignment_loss', 0.0)) / (constraint_total + eps)
+        sparsity_share = float(closses.get('sparsity_loss', 0.0)) / (constraint_total + eps)
+        consistency_share = float(closses.get('consistency_loss', 0.0)) / (constraint_total + eps)
+        retention_share = float(closses.get('retention_loss', 0.0)) / (constraint_total + eps)
+        lag_gain_share = float(closses.get('lag_gain_loss', 0.0)) / (constraint_total + eps)
+        rows.append({'epoch': epoch, 'train_loss': train_loss, 'constraint_loss': constraint_total, 'val_auc': val_auc, 'val_accuracy': val_acc, 'peer_influence_share': peer_share,
+                     'alignment_share': alignment_share, 'sparsity_share': sparsity_share, 'consistency_share': consistency_share, 'retention_share': retention_share, 'lag_gain_share': lag_gain_share})
+        print(f"Epoch {epoch} | perf_loss={perf_loss:.4f} constraint={constraint_total:.4f} total={train_loss:.4f} val_auc={val_auc:.4f} val_acc={val_acc:.4f}")
+        with open(metrics_path, 'a', newline='') as fcsv:
+            writer = csv.writer(fcsv)
+            writer.writerow([epoch, train_loss, constraint_total, val_auc, val_acc, peer_share,
+                             alignment_share, sparsity_share, consistency_share, retention_share, lag_gain_share])
 
     with open(os.path.join(exp_path, 'results.json'), 'w') as f:
         json.dump({'config_md5': config_md5, 'epochs': rows}, f, indent=2)
-    import csv
-    with open(os.path.join(exp_path, 'metrics_epoch.csv'), 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
+    # Write JSON summary of epochs (includes constraint breakdown per row)
 
     torch.save(model.state_dict(), os.path.join(exp_path, 'model_last.pth'))
     best = max(rows, key=lambda x: x['val_auc'])

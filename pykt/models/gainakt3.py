@@ -48,6 +48,13 @@ class GainAKT3(nn.Module):
                  use_gain_head: bool = True,
                  emb_type: str = 'qid',
                  artifact_base: str = 'data',
+                 # Auxiliary interpretability constraint weights
+                 alignment_weight: float = 0.0,
+                 sparsity_weight: float = 0.0,
+                 consistency_weight: float = 0.0,
+                 retention_weight: float = 0.0,
+                 lag_gain_weight: float = 0.0,
+                 warmup_constraint_epochs: int = 0,
                  device: Optional[str] = None):
         super().__init__()
         self.num_c = num_c
@@ -60,6 +67,14 @@ class GainAKT3(nn.Module):
         self.use_gain_head = use_gain_head
         self.dataset = dataset
         self.artifact_base = artifact_base
+        # Store auxiliary weights
+        self.alignment_weight = alignment_weight
+        self.sparsity_weight = sparsity_weight
+        self.consistency_weight = consistency_weight
+        self.retention_weight = retention_weight
+        self.lag_gain_weight = lag_gain_weight
+        self.warmup_constraint_epochs = warmup_constraint_epochs
+        self.current_epoch = 0  # externally adjustable by trainer
 
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -109,11 +124,13 @@ class GainAKT3(nn.Module):
 
     def forward(self, q: torch.Tensor, r: torch.Tensor, qry: torch.Tensor = None, qtest: bool = False):
         # q,r: [B,L]
+        # Ensure inputs on model device
+        q = q.to(self.device)
+        r = r.to(self.device)
         B, L = q.size()
         r_int = r.long()
         interaction_tokens = q + self.num_c * r_int
-
-        positions = pos_encode(L).to(q.device)
+        positions = pos_encode(L).to(self.device)
         ctx = self.context_embedding(interaction_tokens) + self.pos_embedding(positions)
         val = self.value_embedding(interaction_tokens) + self.pos_embedding(positions)
 
@@ -171,6 +188,54 @@ class GainAKT3(nn.Module):
         out['peer_hash'] = self.peer_hash
         out['difficulty_hash'] = self.diff_hash
         out['cold_start'] = self.cold_start
+        # ---- Auxiliary losses (computed only if heads present & weights > 0) ----
+        constraint_losses = {}
+        if self.use_mastery_head and self.alignment_weight > 0:
+            # Alignment: encourage mastery trajectory monotonic non-decreasing (soft)
+            # penalize negative deltas
+            mastery_deltas = mastery_proj[:,1:,:] - mastery_proj[:,:-1,:]
+            alignment_penalty = F.relu(-mastery_deltas).mean()
+            constraint_losses['alignment_loss'] = alignment_penalty * self.alignment_weight
+        if self.use_gain_head and self.sparsity_weight > 0:
+            # Sparsity: encourage many near-zero gains (L1 norm)
+            sparsity_penalty = gains.abs().mean()
+            constraint_losses['sparsity_loss'] = sparsity_penalty * self.sparsity_weight
+        if self.use_mastery_head and self.use_gain_head and self.consistency_weight > 0:
+            # Consistency: gains should correlate with mastery increments (positive correlation)
+            mastery_inc = (mastery_proj[:,1:,:] - mastery_proj[:,:-1,:]).clamp(min=0)
+            gains_pos = gains[:,1:,:]
+            # Compute cosine similarity averaged
+            eps = 1e-8
+            sim = (mastery_inc * gains_pos).sum(-1) / ((mastery_inc.norm(dim=-1)+eps)*(gains_pos.norm(dim=-1)+eps))
+            # penalty if similarity below threshold (target ~ 0.5)
+            consistency_penalty = F.relu(0.5 - sim).mean()
+            constraint_losses['consistency_loss'] = consistency_penalty * self.consistency_weight
+        if self.use_mastery_head and self.retention_weight > 0:
+            # Retention: discourage mastery decay (negative steps)
+            mastery_deltas = mastery_proj[:,1:,:] - mastery_proj[:,:-1,:]
+            retention_penalty = F.relu(-mastery_deltas).mean()
+            constraint_losses['retention_loss'] = retention_penalty * self.retention_weight
+        if self.use_gain_head and self.lag_gain_weight > 0:
+            # Lag gain: encourage gains to precede mastery increases (temporal lead)
+            # Use cross-correlation: gains(t) vs mastery_inc(t+1)
+            if gains.size(1) > 2:
+                mastery_inc_full = (mastery_proj[:,1:,:] - mastery_proj[:,:-1,:]).clamp(min=0)  # [B,L-1,C]
+                # gains indices 0..L-2 should align with mastery_inc indices 1..L-2
+                mastery_lead = mastery_inc_full[:,1:,:]        # [B,L-2,C]
+                gains_trim = gains[:, :mastery_lead.size(1), :]  # truncate gains to L-2 positions
+                eps = 1e-8
+                lag_sim = (gains_trim * mastery_lead).sum(-1) / ((gains_trim.norm(dim=-1)+eps)*(mastery_lead.norm(dim=-1)+eps))
+                lag_penalty = F.relu(0.3 - lag_sim).mean()
+            else:
+                lag_penalty = torch.tensor(0.0, device=q.device)
+            constraint_losses['lag_gain_loss'] = lag_penalty * self.lag_gain_weight
+        # Aggregate constraint loss (respect warmup)
+        if constraint_losses and (self.current_epoch >= self.warmup_constraint_epochs):
+            total_constraint = sum(constraint_losses.values())
+        else:
+            total_constraint = torch.tensor(0.0, device=q.device)
+        out['constraint_losses'] = {k: v.detach() for k,v in constraint_losses.items()}
+        out['total_constraint_loss'] = total_constraint
         return out
 
 
@@ -191,5 +256,11 @@ def create_gainakt3_model(config):
         use_gain_head=config.get('use_gain_head', True),
         emb_type=config.get('emb_type', 'qid'),
         artifact_base=config.get('artifact_base', 'data'),
+        alignment_weight=config.get('alignment_weight', 0.0),
+        sparsity_weight=config.get('sparsity_weight', 0.0),
+        consistency_weight=config.get('consistency_weight', 0.0),
+        retention_weight=config.get('retention_weight', 0.0),
+        lag_gain_weight=config.get('lag_gain_weight', 0.0),
+        warmup_constraint_epochs=config.get('warmup_constraint_epochs', 0),
         device=config.get('device')
     )
