@@ -1,0 +1,58 @@
+{
+  "description": "GainAKT2Exp mastery correlation breakthrough reproduction config (commit cf4f4017)",
+  "commit": "cf4f4017cb2e969204fa3fbfcb536aff388541e3",
+  "model_name": "gainakt2exp",
+  "seed": 42,
+  "dataset": "assist2015",
+  "fold": 0,
+  "epochs": 12,
+  "batch_size": 64,
+  "learning_rate": 0.000174,
+  "weight_decay": 1.7571e-05,
+  "enhanced_constraints": true,
+  "constraint_weights": {
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "alignment": {
+    "enable_alignment_loss": true,
+    "alignment_weight": 0.25,
+    "alignment_warmup_epochs": 8,
+    "adaptive_alignment": true,
+    "alignment_min_correlation": 0.05,
+    "enable_global_alignment_pass": true,
+    "alignment_global_students": 600,
+    "use_residual_alignment": true,
+    "alignment_residual_window": 5
+  },
+  "refinement": {
+    "enable_retention_loss": true,
+    "retention_delta": 0.005,
+    "retention_weight": 0.14,
+    "enable_lag_gain_loss": true,
+    "lag_gain_weight": 0.06,
+    "lag_max_lag": 3,
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "enable_cosine_perf_schedule": false,
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_threshold": 0.10,
+    "consistency_rebalance_new_weight": 0.2,
+    "variance_floor": 1e-4,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5,
+    "alignment_share_cap": 0.08,
+    "alignment_share_decay_factor": 0.7
+  },
+  "expected_results": {
+    "best_val_auc": 0.7176,
+    "final_mastery_correlation": 0.0691,
+    "final_gain_correlation": 0.0559,
+    "perfect_consistency": true
+  }
+}
