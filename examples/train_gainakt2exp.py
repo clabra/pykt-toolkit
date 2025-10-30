@@ -425,11 +425,10 @@ def train_gainakt2exp_model(args):
     # Training setup
     # Use BCEWithLogitsLoss for AMP safety; model now returns both logits and sigmoid outputs.
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(
-        model.parameters(), 
-        lr=learning_rate, 
-        weight_decay=weight_decay
-    )
+    if getattr(args, 'optimizer', 'Adam').lower() == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    else:
+        raise ValueError(f"Unsupported optimizer: {getattr(args,'optimizer')}")
 
     # AMP scaler
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp and device.type == 'cuda')
@@ -699,12 +698,14 @@ def train_gainakt2exp_model(args):
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    clip_val = getattr(args, 'gradient_clip', 1.0)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_val)
                     scaler.step(optimizer)
                     scaler.update()
                 else:
                     total_batch_loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    clip_val = getattr(args, 'gradient_clip', 1.0)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_val)
                     optimizer.step()
             except RuntimeError as oom:
                 if 'out of memory' in str(oom).lower():
@@ -1170,19 +1171,102 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Train GainAKT2Exp model with reproducibility hooks.')
     parser.add_argument('--dataset', type=str, default='assist2015', help='Dataset name')
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
+    parser.add_argument('--fold', type=int, default=0, help='Dataset fold index')
+    # Default epochs: 20 to allow semantic heads + alignment to stabilize (peak often by epoch 3–5)
+    parser.add_argument('--epochs', type=int, default=20, help='Number of training epochs (default 20 for semantic emergence)')
     parser.add_argument('--batch_size', type=int, default=96, help='Batch size')
     parser.add_argument('--learning_rate', type=float, default=1.74e-4, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1.7571e-5, help='Weight decay')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer (Adam supported)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--use_wandb', action='store_true', help='Enable wandb logging')
     parser.add_argument('--monitor_freq', type=int, default=50, help='Interpretability monitor frequency (steps)')
+    parser.add_argument('--gradient_clip', type=float, default=1.0, help='Gradient clipping max norm')
+    parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
+    # =====================
+    # Interpretability Defaults: ENABLED by default
+    # We expose disable flags for explicit override while keeping backward-compatible enable flags.
+    # ---------------------
+    parser.add_argument('--use_mastery_head', action='store_true', default=True,
+                        help='Enable mastery head (default: enabled). Use --disable_mastery_head to turn off.')
+    parser.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head (overrides --use_mastery_head)')
+    parser.add_argument('--use_gain_head', action='store_true', default=True,
+                        help='Enable gain head (default: enabled). Use --disable_gain_head to turn off.')
+    parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head (overrides --use_gain_head)')
+    # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
+    parser.add_argument('--enhanced_constraints', action='store_true', default=True,
+                        help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')
+    parser.add_argument('--pure_bce', action='store_true', help='Disable enhanced constraints and force pure BCE loss.')
+    parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
+    parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
+    parser.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
+    parser.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
+    parser.add_argument('--sparsity_loss_weight', type=float, default=0.2)
+    parser.add_argument('--consistency_loss_weight', type=float, default=0.3)
+    # Semantic alignment & refinement flags (Phase 1+ reproducibility)
+    parser.add_argument('--enable_alignment_loss', action='store_true', default=True,
+                        help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
+    parser.add_argument('--disable_alignment_loss', action='store_true', help='Disable local alignment correlation loss')
+    parser.add_argument('--alignment_weight', type=float, default=0.25, help='Base weight for alignment loss (before warm-up scaling)')
+    parser.add_argument('--alignment_warmup_epochs', type=int, default=8, help='Epochs to linearly warm alignment weight')
+    parser.add_argument('--adaptive_alignment', action='store_true', default=True,
+                        help='Adaptively up-weight alignment if below min correlation post warm-up (default: enabled). Use --disable_adaptive_alignment to turn off.')
+    parser.add_argument('--disable_adaptive_alignment', action='store_true', help='Disable adaptive alignment scaling logic')
+    parser.add_argument('--alignment_min_correlation', type=float, default=0.05, help='Target minimum mastery correlation for adaptive scaling')
+    parser.add_argument('--alignment_share_cap', type=float, default=0.08, help='Max alignment loss share before decay applied')
+    parser.add_argument('--alignment_share_decay_factor', type=float, default=0.7, help='Decay factor for alignment weight when over cap and plateaued')
+    parser.add_argument('--enable_global_alignment_pass', action='store_true', default=True,
+                        help='Run a global alignment correlation pass each epoch (default: enabled). Use --disable_global_alignment_pass to turn off.')
+    parser.add_argument('--disable_global_alignment_pass', action='store_true', help='Disable global alignment correlation pass')
+    parser.add_argument('--alignment_global_students', type=int, default=600, help='Students sampled in global alignment stratified pass')
+    parser.add_argument('--use_residual_alignment', action='store_true', help='Residualize performance for alignment correlations')
+    parser.add_argument('--alignment_residual_window', type=int, default=5, help='Window for residual smoothing (rolling mean)')
+    # Retention & lag emergence
+    parser.add_argument('--enable_retention_loss', action='store_true', default=True,
+                        help='Enable retention penalty after peak correlation decay (default: enabled). Use --disable_retention_loss to turn off.')
+    parser.add_argument('--disable_retention_loss', action='store_true', help='Disable retention penalty')
+    parser.add_argument('--retention_delta', type=float, default=0.005, help='Minimum decay gap triggering retention penalty')
+    parser.add_argument('--retention_weight', type=float, default=0.14, help='Weight applied to retention decay gap')
+    parser.add_argument('--enable_lag_gain_loss', action='store_true', default=True,
+                        help='Enable multi-lag predictive emergence objective (default: enabled). Use --disable_lag_gain_loss to turn off.')
+    parser.add_argument('--disable_lag_gain_loss', action='store_true', help='Disable multi-lag predictive emergence objective')
+    parser.add_argument('--lag_gain_weight', type=float, default=0.06, help='Weight for lag predictive emergence objective')
+    parser.add_argument('--lag_max_lag', type=int, default=3, help='Maximum lag horizon considered for predictive emergence')
+    parser.add_argument('--lag_l1_weight', type=float, default=0.5, help='Weight for lag 1 correlation')
+    parser.add_argument('--lag_l2_weight', type=float, default=0.3, help='Weight for lag 2 correlation')
+    parser.add_argument('--lag_l3_weight', type=float, default=0.2, help='Weight for lag 3 correlation')
+    # Consistency rebalancing & variance floor dynamics
+    parser.add_argument('--consistency_rebalance_epoch', type=int, default=8, help='Epoch to start potential consistency loss weight reduction')
+    parser.add_argument('--consistency_rebalance_threshold', type=float, default=0.10, help='Mastery corr threshold triggering consistency reweight')
+    parser.add_argument('--consistency_rebalance_new_weight', type=float, default=0.2, help='New consistency loss weight after rebalancing')
+    parser.add_argument('--variance_floor', type=float, default=1e-4, help='Variance floor for mastery tensor triggering sparsity reduction')
+    parser.add_argument('--variance_floor_patience', type=int, default=3, help='Consecutive low-variance epochs before sparsity reduction')
+    parser.add_argument('--variance_floor_reduce_factor', type=float, default=0.5, help='Factor to reduce sparsity loss weight under variance floor')
+    # Constraint scheduling / performance alignment
+    parser.add_argument('--warmup_constraint_epochs', type=int, default=4, help='Warm-up epochs for performance alignment losses')
+    parser.add_argument('--enable_cosine_perf_schedule', action='store_true', help='Use cosine schedule for performance alignment weights')
+    parser.add_argument('--max_semantic_students', type=int, default=50, help='Students sampled for consistency semantic correlations')
     # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
     # Map to expected attribute names inside training function
     args.num_epochs = args.epochs
     args.dataset_name = args.dataset
     # Provide defaults for attributes referenced but not yet exposed
-    setattr(args, 'fold', 0)
-    setattr(args, 'enhanced_constraints', True)
+    # Resolve disable overrides (heads & losses)
+    if getattr(args, 'disable_mastery_head', False):
+        args.use_mastery_head = False
+    if getattr(args, 'disable_gain_head', False):
+        args.use_gain_head = False
+    if getattr(args, 'pure_bce', False):
+        args.enhanced_constraints = False
+    if getattr(args, 'disable_alignment_loss', False):
+        args.enable_alignment_loss = False
+    if getattr(args, 'disable_adaptive_alignment', False):
+        args.adaptive_alignment = False
+    if getattr(args, 'disable_global_alignment_pass', False):
+        args.enable_global_alignment_pass = False
+    if getattr(args, 'disable_retention_loss', False):
+        args.enable_retention_loss = False
+    if getattr(args, 'disable_lag_gain_loss', False):
+        args.enable_lag_gain_loss = False
     train_gainakt2exp_model(args)

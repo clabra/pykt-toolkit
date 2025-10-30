@@ -1,0 +1,85 @@
+{
+  "runtime": {
+    "command": "python examples/run_repro_experiment.py --train_script examples/train_gainakt2exp.py --model_name gainakt2exp --dataset assist2015 --fold 0 --epochs 1 --batch_size 32 --learning_rate 1.74e-4 --weight_decay 1.7571e-5 --short_title foldopt --devices 0 --enable_alignment_loss --optimizer Adam --gradient_clip 0.9 --patience 5 --dry_run",
+    "train_command": "/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py --dataset assist2015 --fold 0 --epochs 1 --batch_size 32 --learning_rate 0.000174 --seed 42 --weight_decay 1.7571e-05 --gradient_clip 0.9 --patience 5 --optimizer Adam --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --warmup_constraint_epochs 4 --max_semantic_students 50 --alignment_global_students 600 --alignment_residual_window 5 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+    "timestamp": "2025-10-30T08:47:38.749523Z"
+  },
+  "hardware": {
+    "devices": [
+      0
+    ],
+    "threads": 8
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "training": {
+    "epochs": 1,
+    "batch_size": 32,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "mixed_precision": false,
+    "gradient_clip": 0.9,
+    "patience": 5
+  },
+  "experiment": {
+    "id": "20251030_084738_gainakt2exp_foldopt",
+    "model": "gainakt2exp",
+    "short_title": "foldopt",
+    "purpose": "Reproducible training run"
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "interpretability": {
+    "use_mastery_head": false,
+    "use_gain_head": false,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "warmup_constraint_epochs": 4,
+    "non_negative_loss_weight": 0.0,
+    "enhanced_constraints": false,
+    "max_semantic_students": 50
+  },
+  "alignment": {
+    "enable_alignment_loss": true,
+    "alignment_weight": 0.25,
+    "alignment_warmup_epochs": 8,
+    "adaptive_alignment": false,
+    "alignment_min_correlation": 0.05,
+    "alignment_share_cap": 0.08,
+    "alignment_share_decay_factor": 0.7
+  },
+  "global_alignment": {
+    "enable_global_alignment_pass": false,
+    "alignment_global_students": 600,
+    "use_residual_alignment": false,
+    "alignment_residual_window": 5
+  },
+  "refinement": {
+    "enable_retention_loss": false,
+    "retention_delta": 0.005,
+    "retention_weight": 0.14,
+    "enable_lag_gain_loss": false,
+    "lag_gain_weight": 0.06,
+    "lag_max_lag": 3,
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_threshold": 0.1,
+    "consistency_rebalance_new_weight": 0.2,
+    "variance_floor": 0.0001,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5
+  },
+  "config_md5": "cf4b65359da829bcddee984a772f132b"
+}

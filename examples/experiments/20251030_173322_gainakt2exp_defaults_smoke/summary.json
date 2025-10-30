@@ -1,0 +1,28 @@
+{
+  "tail_metrics": {
+    "epoch": 1.0,
+    "train_loss": 0.548750095571261,
+    "train_auc": 0.691302039484479,
+    "val_loss": 0.5158336259880845,
+    "val_auc": 0.7154218616474952,
+    "val_accuracy": 0.749720191924009,
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": -0.0052095709691595245,
+    "gain_correlation": 0.07351136125823296,
+    "main_loss_share": 0.9701868150010362,
+    "constraint_loss_share": 0.029813181463374767,
+    "alignment_loss_share": -0.01289166041789262,
+    "lag_loss_share": 0.0,
+    "retention_loss_share": 0.0
+  },
+  "best_summary": {
+    "best_epoch": 1.0,
+    "best_val_auc": 0.7154218616474952,
+    "best_val_accuracy": 0.749720191924009,
+    "mastery_corr": null,
+    "gain_corr": null
+  },
+  "config_md5": "a54b539d5275e80959d41d4d2af65100"
+}

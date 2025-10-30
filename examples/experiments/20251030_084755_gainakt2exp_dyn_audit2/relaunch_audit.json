@@ -1,0 +1,29 @@
+{
+  "original_experiment_id": "20251030_084738_gainakt2exp_foldopt",
+  "relaunch_experiment_id": "20251030_084755_gainakt2exp_dyn_audit2",
+  "original_config_md5": "cf4b65359da829bcddee984a772f132b",
+  "relaunch_config_md5": "19195e1146e27582b2e24d78887e038f",
+  "train_script": "examples/train_gainakt2exp.py",
+  "original_train_command": "/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py --dataset assist2015 --fold 0 --epochs 1 --batch_size 32 --learning_rate 0.000174 --seed 42 --weight_decay 1.7571e-05 --gradient_clip 0.9 --patience 5 --optimizer Adam --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --warmup_constraint_epochs 4 --max_semantic_students 50 --alignment_global_students 600 --alignment_residual_window 5 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+  "reconstructed_train_command": "/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py --seed 42 --epochs 1 --batch_size 32 --learning_rate 0.000174 --weight_decay 1.7571e-05 --optimizer Adam --gradient_clip 0.9 --patience 5 --dataset assist2015 --fold 0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --warmup_constraint_epochs 4 --non_negative_loss_weight 0.0 --max_semantic_students 50 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_global_students 600 --alignment_residual_window 5 --retention_delta 0.005 --retention_weight 0.14 --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+  "param_diffs": {
+    "experiment.id": {
+      "original": "20251030_084738_gainakt2exp_foldopt",
+      "new": "20251030_084755_gainakt2exp_dyn_audit2"
+    },
+    "experiment.short_title": {
+      "original": "foldopt",
+      "new": "dyn_audit2"
+    },
+    "experiment.purpose": {
+      "original": "Reproducible training run",
+      "new": "Relaunch reproduction of 20251030_084738_gainakt2exp_foldopt"
+    }
+  },
+  "skipped_params": {},
+  "devices_used": [
+    0
+  ],
+  "dry_run": true,
+  "strict_failure": false
+}

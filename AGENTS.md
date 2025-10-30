@@ -50,6 +50,7 @@ The machine has 8 GPUs. Use 5 GPUs to run commands as default.
 - Most scripts are in `examples` folder
 - New files and scripts that don't adhere to the standard guidelines described in `contribute.pdf` and `quickstart.pdf` should be created in the `tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `tmp` folder. This way it will be easier to main contributions to the upstream folder we forked to develop new models.  
 
+
 ### Operational standards
 
 - Avoid monitoring commands that interrupt scripts running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions). Launch this kind of commands in such a way that terminating ongoing processes is avoided. 
