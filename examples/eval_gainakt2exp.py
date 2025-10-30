@@ -115,15 +115,26 @@ def main():
     parser.add_argument('--run_dir', type=str, required=True, help='Directory with best_model.pth')
     parser.add_argument('--dataset', type=str, default='assist2015')
     parser.add_argument('--fold', type=int, default=0)
-    parser.add_argument('--batch_size', type=int, default=96)
+    parser.add_argument('--batch_size', type=int, default=96, help='Batch size (match training default: 96)')
     parser.add_argument('--seq_len', type=int, default=200)
     parser.add_argument('--d_model', type=int, default=512)
     parser.add_argument('--n_heads', type=int, default=8)
     parser.add_argument('--num_encoder_blocks', type=int, default=6)
     parser.add_argument('--d_ff', type=int, default=1024)
     parser.add_argument('--dropout', type=float, default=0.2)
-    parser.add_argument('--use_mastery_head', action='store_true')
-    parser.add_argument('--use_gain_head', action='store_true')
+    # Heads enabled by default for interpretability parity with training; disable flags provided.
+    parser.add_argument('--use_mastery_head', action='store_true', default=True, help='Enable mastery head (default: enabled)')
+    parser.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head')
+    parser.add_argument('--use_gain_head', action='store_true', default=True, help='Enable gain head (default: enabled)')
+    parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head')
+    # Constraint weights (match training optimal defaults); evaluation does not apply losses but identical config ensures structural parity.
+    parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
+    parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
+    parser.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
+    parser.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
+    parser.add_argument('--sparsity_loss_weight', type=float, default=0.2)
+    parser.add_argument('--consistency_loss_weight', type=float, default=0.3)
+    parser.add_argument('--max_correlation_students', type=int, default=300, help='Max students sampled for mastery/gain correlation computation')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
@@ -148,6 +159,12 @@ def main():
         }
     }
 
+    # Resolve disable overrides
+    if args.disable_mastery_head:
+        args.use_mastery_head = False
+    if args.disable_gain_head:
+        args.use_gain_head = False
+
     model_config = {
         'num_c': data_config[args.dataset]['num_c'],
         'seq_len': args.seq_len,
@@ -159,13 +176,13 @@ def main():
         'emb_type': 'qid',
         'use_mastery_head': args.use_mastery_head,
         'use_gain_head': args.use_gain_head,
-        # Loss weights zeroed (evaluation does not require auxiliary losses)
-        'non_negative_loss_weight': 0.0,
-        'monotonicity_loss_weight': 0.0,
-        'mastery_performance_loss_weight': 0.0,
-        'gain_performance_loss_weight': 0.0,
-        'sparsity_loss_weight': 0.0,
-        'consistency_loss_weight': 0.0
+        # Use provided weights for structural parity (interpretability losses not applied during evaluation forward path)
+        'non_negative_loss_weight': args.non_negative_loss_weight,
+        'monotonicity_loss_weight': args.monotonicity_loss_weight,
+        'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
+        'gain_performance_loss_weight': args.gain_performance_loss_weight,
+        'sparsity_loss_weight': args.sparsity_loss_weight,
+        'consistency_loss_weight': args.consistency_loss_weight
     }
 
     device = torch.device(args.device)
@@ -217,7 +234,7 @@ def main():
 
     valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
     test_auc, test_acc = evaluate_predictions(model, test_loader, device)
-    mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device)
+    mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device, max_students=args.max_correlation_students)
 
     results = {
         'valid_auc': valid_auc,

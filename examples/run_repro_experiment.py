@@ -316,7 +316,49 @@ def main():
     # Launcher command reproduction (python path + full argv for this script)
     raw_args['launcher_command'] = 'python ' + ' '.join(shlex.quote(a) for a in sys.argv)
     raw_args['command'] = raw_args['launcher_command']  # backward compatibility
+    # Pre-build evaluation command template; run_dir placeholder replaced after exp_dir creation
+    # We rely on architectural defaults used in training script (d_model, n_heads, etc.). These are not passed here; evaluation script will infer them or user can adjust.
+    # Include heads if flags set to ensure correlation computation works identically at eval time.
+    eval_parts = [
+        'python', 'examples/eval_gainakt2exp.py', '--run_dir', '{EXP_DIR}', '--dataset', args.dataset
+    ]
+    # Evaluation script defaults:
+    eval_defaults = {
+        'fold': 0,
+        'batch_size': 96,
+        'seq_len': 200,
+        'd_model': 512,
+        'n_heads': 8,
+        'num_encoder_blocks': 6,
+        'd_ff': 1024,
+        'dropout': 0.2,
+        'use_mastery_head': True,
+        'use_gain_head': True
+    }
+    # Add only overrides vs these defaults
+    if args.fold != eval_defaults['fold']:
+        eval_parts.extend(['--fold', str(args.fold)])
+    if args.batch_size != eval_defaults['batch_size']:
+        eval_parts.extend(['--batch_size', str(args.batch_size)])
+    # Heads: include disable flag if turned off
+    if getattr(args,'disable_mastery_head',False) or not args.use_mastery_head:
+        eval_parts.append('--disable_mastery_head')
+    if getattr(args,'disable_gain_head',False) or not args.use_gain_head:
+        eval_parts.append('--disable_gain_head')
+    # If any architectural overrides were passed through extra_args or differ from defaults, include them
+    # We inspect raw_args for presence
+    raw_eval_related = {k: raw_args.get(k) for k in ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout'] if k in raw_args}
+    for k,v in raw_eval_related.items():
+        if v is not None and str(v) != str(eval_defaults.get(k)):
+            eval_parts.extend([f'--{k}', str(v)])
+    raw_args['eval_command_template'] = ' '.join(eval_parts)
     cfg = build_config(raw_args, exp_id=exp_id, exp_path=exp_dir, seeds=seeds)
+    # Inject resolved evaluation command now that EXP_DIR known
+    eval_cmd = raw_args.get('eval_command_template','').replace('{EXP_DIR}', exp_dir)
+    if 'runtime' in cfg:
+        cfg['runtime']['eval_command'] = eval_cmd
+    else:
+        cfg['runtime'] = {'eval_command': eval_cmd}
     atomic_write_json(cfg, os.path.join(exp_dir, 'config.json'))
 
     # Step 4: Environment + seeds metadata
