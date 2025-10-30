@@ -58,7 +58,7 @@ The machine has 8 GPUs. Use 5 GPUs to run commands as default.
 
 ### Reproducibility
 
-We treat every training or evaluation run as a formal experiment requiring full reconstruction capability. The following standards must be met for an experiment to be considered reproducible.
+We treat every training or evaluation run as a formal experiment requiring full reconstruction capability. All resolved parameters originate from a single source of truth: `configs/parameter_default.json`. This file now includes architectural, interpretability, and runtime parameters (`seed`, `monitor_freq`, `use_amp`, `use_wandb`, `enable_cosine_perf_schedule`). CLI flags override individual defaults; absence of a CLI flag implies the default recorded in the experiment's `config.json` (no hidden or implicit defaults allowed). The following standards must be met for an experiment to be considered reproducible.
 
 #### 1. Experiment Folder Structure
 Each experiment creates a dedicated folder under `examples/experiments` using the convention:
@@ -86,70 +86,49 @@ Mandatory contents within this folder:
 | `README.md` | Human-readable summary (objective, config highlights, table with key results (val AUC, accuracy, loss, master correlation, gain correlation, etc.), results interpretation (including comparison with metrics in the previous experiment), reproducibility checklist). |
 | `artifacts/` | Auxiliary plots or correlation trajectory JSONs. |
 
-#### 2. Config File Schema (`config.json`)
-The config file must include both user-specified and defaulted parameters. Suggested top-level keys:
-```json
-{
-	"experiment": {
-		"id": "20251025_141237_gainakt3_warmup8_align_retention",
-		"model": "gainakt3",
-		"short_title": "warmup8_align_retention",
-		"purpose": "Assess sustained semantic alignment with extended warm-up and retention penalty"
-	},
-	"data": {
-		"dataset": "assist2015",
-		"split_strategy": "standard",
-		"num_students": 17746
-	},
-	"training": {
-		"epochs": 12,
-		"batch_size": 64,
-		"learning_rate": 0.000174,
-		"optimizer": "Adam",
-		"weight_decay": 0.0,
-		"scheduler": "None",
-		"mixed_precision": true,
-		"gradient_clip": 1.0
-	},
-	"interpretability": {
-		"use_mastery_head": true,
-		"use_gain_head": true,
-		"monotonicity_loss_weight": 0.1,
-		"mastery_performance_loss_weight": 0.8,
-		"gain_performance_loss_weight": 0.8,
-		"sparsity_loss_weight": 0.2,
-		"consistency_loss_weight": 0.3,
-		"warmup_constraint_epochs": 8,
-		"alignment_weight": 0.25,
-		"retention_weight": 0.1,
-		"lag_gain_weight": 0.05
-	},
-	"sampling": {
-		"max_semantic_students": 200,
-		"global_alignment_students": 600
-	},
-	"seeds": {
-		"primary": 21,
-		"all": [21,42,63,84,105]
-	},
-	"hardware": {
-		"devices": [0,1,2,3,4],
-		"num_workers": 5,
-		"threads": 8
-	},
-	"command": "bash train.sh",
-	"git": {
-		"commit": "<hash>",
-		"branch": "v0.0.9-gainakt3"
-	},
-	"timestamp": "2025-10-25T14:12:37Z"
-}
-```
-Adjust values accordingly; record all added flags to prevent ambiguity.
+
+#### 2. Parameters Consistency 
+
+`configs/parameter_default.json` contains two sections:
+1. `training_defaults`
+2. `evaluation_defaults`
+
+Coverage rules:
+- Every argparse-defined training/evaluation parameter must appear exactly once in the corresponding section.
+- Runtime and monitoring parameters (now included): `seed`, `monitor_freq`, `use_amp`, `use_wandb`, `enable_cosine_perf_schedule`.
+- If a new parameter is added to a script, add it to the JSON before running experiments; otherwise reproduction claims are invalid.
+
+Override mechanics:
+1. Training: `examples/run_repro_experiment.py` loads defaults, applies CLI overrides; resolved dictionary is serialized immediately into `config.json`.
+2. Evaluation: `examples/eval_gainakt2exp.py` loads `evaluation_defaults`, applies CLI overrides, writes resolved evaluation command into `config.json.runtime.eval_command`.
+
+Drift prevention:
+- After modifying any script's argparse block, run a consistency check (to be added) that diffs argparse parameter names against JSON keys.
+- Update the appendix in `paper/README_gainakt2exp.md` only after the JSON change; the README must never introduce parameters not present in the JSON.
+
+Config hash protocol:
+- Compute MD5 on a sorted key serialization of `config.json` immediately after writing (stored in `config.json.config_md5`).
+- Any change in defaults or overrides results in a new hash; prior runs become non-equivalent for reproduction unless re-launched.
+
+Appendix synchronization:
+- The Appendix in `paper/README_gainakt2exp.md` is regenerated from `configs/parameter_default.json` (manual or scripted) to ensure alignment.
+- If a parameter is removed, mark it deprecated in commit message; do not silently delete without experiment archival.
+
+No hidden defaults:
+- Absence of a value in `config.json` is not permitted. Every parameter must be explicit. Boolean flags appear as `true`/`false`.
+
+Failure conditions:
+- If `seed` or `monitor_freq` missing from either JSON or `config.json`, mark run as non-reproducible.
+- If MD5 hash not recorded, run cannot be audited.
+
+#### 3. Config File Schema (`config.json`)
+
+When an experiment is launched, the launcher copies structured defaults into `config.json` and applies CLI overrides; it does not embed unresolved implicit values. The full resolved set (including runtime/meta groups) is the canonical configuration.
+
 
 #### 3. Launch experiment
 
-
+The config.json file will contain the commands used to launch training and to evaluate the model. 
 
 
 #### 4. Metric & Logging Standards

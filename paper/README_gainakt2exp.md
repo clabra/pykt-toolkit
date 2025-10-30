@@ -103,6 +103,107 @@ data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015',
 }
 ```
 
+## Reproducible Experiment Workflow
+
+This supplements the earlier ad-hoc commands with the formal launcher + evaluation pipeline. Every published result MUST originate from a launcher-generated folder under `examples/experiments/` containing a canonical `config.json`.
+
+### 1. Launch (Provenance Capture)
+
+```bash
+python examples/run_repro_experiment.py \
+  --train_script examples/train_gainakt2exp.py \
+  --model_name gainakt2exp \
+  --dataset assist2015 \
+  --epochs 2 \
+  --batch_size 80 \
+  --short_title evalcmd_selective
+```
+
+Creates (example): `examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective/`.
+
+### 2. Fully Resolved Training Command
+
+Embedded in `config.json.runtime.train_command` (single line there; wrapped here for readability):
+
+```bash
+/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py \
+  --dataset assist2015 --fold 0 --epochs 2 --batch_size 80 \
+  --learning_rate 0.000174 --seed 42 --weight_decay 0.0 \
+  --gradient_clip 1.0 --patience 20 --optimizer Adam \
+  --use_mastery_head --use_gain_head --enhanced_constraints \
+  --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 \
+  --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 \
+  --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 \
+  --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 \
+  --alignment_min_correlation 0.05 --alignment_share_cap 0.08 \
+  --alignment_share_decay_factor 0.7 --warmup_constraint_epochs 4 \
+  --max_semantic_students 50 --adaptive_alignment \
+  --enable_global_alignment_pass --alignment_global_students 600 \
+  --alignment_residual_window 5 --enable_retention_loss \
+  --retention_delta 0.005 --retention_weight 0.14 \
+  --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 \
+  --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 \
+  --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 \
+  --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 \
+  --variance_floor_patience 3 --variance_floor_reduce_factor 0.5
+```
+
+### 3. Evaluation Command
+
+Added to `config.json.runtime.eval_command` (only overrides from evaluation defaults emitted):
+
+```bash
+python examples/eval_gainakt2exp.py \
+  --run_dir examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective \
+  --dataset assist2015 \
+  --batch_size 80
+```
+
+### 4. Reproduce / Audit an Existing Run
+
+```bash
+python examples/relaunch_experiment.py \
+  --source_dir examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective \
+  --short_title relaunch \
+  --strict
+```
+
+Produces a new relaunch folder + `relaunch_audit.json` summarizing MD5 match, parameter diffs, and device adaptation (if any).
+
+### 5. Dry Run (Config Only)
+
+```bash
+python examples/run_repro_experiment.py \
+  --train_script examples/train_gainakt2exp.py \
+  --model_name gainakt2exp \
+  --dataset assist2015 \
+  --epochs 2 \
+  --batch_size 80 \
+  --short_title docdemo_selective \
+  --dry_run
+```
+
+### 6. Canonical Defaults Source
+
+Defaults are centralized in `configs/parameter_default.json` (sections: `training_defaults`, `evaluation_defaults`). The launcher ingests this file to populate unspecified parameters—`config.json` reflects resolved values explicitly; no hidden defaults.
+
+### 7. Integrity Checklist
+
+Each experiment folder MUST contain: `config.json`, `environment.txt`, `SEED_INFO.md`, `stdout.log`, `metrics_epoch.csv`, `model_best.pth` (unless `--dry_run`), `model_last.pth`. Missing artifacts invalidate reproducibility claims.
+
+### 8. Evaluation Notes
+
+`eval_gainakt2exp.py` loads `best_model.pth` and computes validation/test metrics. Mastery and gain correlations are sampled up to `--max_correlation_students` (default 300) for bounded runtime.
+
+### 9. Updating or Extending Parameters
+
+When adding a new flag to training or evaluation scripts: (i) add to argparse; (ii) add a default to `parameter_default.json`; (iii) verify presence in generated `config.json`; (iv) re-run a dry run to ensure MD5 stability except for intended additions.
+
+---
+
+This workflow guarantees any published GainAKT2Exp result is reconstructible via a single `config.json` plus stored commands.
+
+
 
 ## Parameters
 
@@ -693,5 +794,105 @@ The table below lists each relevant flag, its functional role, current state (in
 
 ### Immediate Next Action
 Activate `enable_alignment_loss` alone (Phase P1) under current reproducible framework, collect epoch-wise correlation trajectory, and populate the "Mastery Corr (Target)" and "Gain Corr (Target)" columns for that flag after run completion.
+
+## Appendix - Parameter Defaults
+
+This appendix enumerates the canonical default parameters stored in `configs/parameter_default.json`. These values are ingested by the reproducible launcher and evaluation script; any CLI overrides replace only the specified keys while all others are resolved from this source of truth. We separate training and evaluation scopes. If a parameter appears in both, its semantic meaning is consistent (e.g., architectural or interpretability toggles) unless explicitly noted.
+
+### Training Defaults (`training_defaults`)
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `dataset` | `assist2015` | Dataset name used for training. |
+| `fold` | `0` | Data split / fold index. |
+| `epochs` | `20` | Total training epochs (subject to early stopping). |
+| `batch_size` | `96` | Mini-batch size. |
+| `learning_rate` | `0.000174` | Initial learning rate. |
+| `weight_decay` | `0.000017571` | L2 regularization coefficient. |
+| `optimizer` | `Adam` | Optimizer algorithm. |
+| `gradient_clip` | `1.0` | Max gradient norm (global clip). |
+| `patience` | `20` | Epochs to wait for improvement before early stop. |
+| `use_mastery_head` | `true` | Enables mastery prediction head. |
+| `use_gain_head` | `true` | Enables gain prediction head. |
+| `enhanced_constraints` | `true` | Activates extended constraint bundle (monotonicity, performance alignment, sparsity, consistency). |
+| `non_negative_loss_weight` | `0.0` | Penalty weight enforcing non-negativity of mastery/gain. |
+| `monotonicity_loss_weight` | `0.1` | Penalty weight for temporal monotonicity violations. |
+| `mastery_performance_loss_weight` | `0.8` | Alignment loss weight (mastery vs performance). |
+| `gain_performance_loss_weight` | `0.8` | Alignment loss weight (gain vs performance). |
+| `sparsity_loss_weight` | `0.2` | Encourages sparse activation patterns. |
+| `consistency_loss_weight` | `0.3` | Stabilizes mastery/gain temporal evolution. |
+| `enable_alignment_loss` | `true` | Enables local short-horizon alignment objective. |
+| `alignment_weight` | `0.25` | Base weight for alignment loss prior to adaptive scaling. |
+| `alignment_warmup_epochs` | `8` | Warm-up period before full alignment enforcement. |
+| `adaptive_alignment` | `true` | Dynamically scales alignment based on correlation feedback. |
+| `alignment_min_correlation` | `0.05` | Target floor for correlation to maintain/enhance alignment pressure. |
+| `alignment_share_cap` | `0.08` | Max fraction of total loss permitted from alignment. |
+| `alignment_share_decay_factor` | `0.7` | Multiplicative decay when share cap exceeded without progress. |
+| `enable_global_alignment_pass` | `true` | Enables secondary pass with global (population-level) alignment. |
+| `alignment_global_students` | `600` | Student sample size for global alignment statistics. |
+| `use_residual_alignment` | `false` | Residualizes performance signal before alignment to remove explained variance. |
+| `alignment_residual_window` | `5` | Rolling window length for residual computation. |
+| `enable_retention_loss` | `true` | Preserves mastery peaks (limits premature decay). |
+| `retention_delta` | `0.005` | Tolerance for allowable post-peak decline before penalization. |
+| `retention_weight` | `0.14` | Weight of retention penalty. |
+| `enable_lag_gain_loss` | `true` | Enforces structured emergence of gains with temporal lag. |
+| `lag_gain_weight` | `0.06` | Weight of lag gain objective. |
+| `lag_max_lag` | `3` | Max lag depth considered in gain emergence. |
+| `lag_l1_weight` | `0.5` | Relative weighting for lag 1 component. |
+| `lag_l2_weight` | `0.3` | Relative weighting for lag 2 component. |
+| `lag_l3_weight` | `0.2` | Relative weighting for lag 3 component. |
+| `consistency_rebalance_epoch` | `8` | Epoch to trigger consistency weight adjustment logic. |
+| `consistency_rebalance_threshold` | `0.10` | Mastery correlation threshold guiding rebalance decision. |
+| `consistency_rebalance_new_weight` | `0.2` | Updated consistency weight after rebalance event. |
+| `variance_floor` | `0.0001` | Lower bound on mastery variance to avoid collapse. |
+| `variance_floor_patience` | `3` | Patience epochs before variance floor adjustment. |
+| `variance_floor_reduce_factor` | `0.5` | Factor to adjust floor if instability detected. |
+| `warmup_constraint_epochs` | `4` | Constraints warm-up period (note: differs from alignment warm-up). |
+| `max_semantic_students` | `50` | Cap of students sampled per epoch for semantic metrics (local). |
+
+### Evaluation Defaults (`evaluation_defaults`)
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `dataset` | `assist2015` | Dataset name used for evaluation. |
+| `fold` | `0` | Data split / fold index. |
+| `batch_size` | `96` | Mini-batch size for evaluation. |
+| `seq_len` | `200` | Sequence length (truncation/padding threshold). |
+| `d_model` | `512` | Transformer hidden dimension. |
+| `n_heads` | `8` | Number of attention heads. |
+| `num_encoder_blocks` | `6` | Depth (# of encoder layers). |
+| `d_ff` | `1024` | Feed-forward layer dimension. |
+| `dropout` | `0.2` | Dropout probability. |
+| `use_mastery_head` | `true` | Uses mastery prediction head during eval. |
+| `use_gain_head` | `true` | Uses gain prediction head during eval. |
+| `non_negative_loss_weight` | `0.0` | Carried for completeness; not typically active in pure inference. |
+| `monotonicity_loss_weight` | `0.1` | Carried for interpretability metric computation (if reconstructed). |
+| `mastery_performance_loss_weight` | `0.8` | Same semantic as training (traceability). |
+| `gain_performance_loss_weight` | `0.8` | Same semantic as training (traceability). |
+| `sparsity_loss_weight` | `0.2` | Same semantic as training (traceability). |
+| `consistency_loss_weight` | `0.3` | Same semantic as training (traceability). |
+| `max_correlation_students` | `300` | Max students sampled for mastery/gain correlation metrics. |
+
+### Runtime / Monitoring Parameters Now Included
+The previously external runtime parameters have been incorporated into `training_defaults` in `configs/parameter_default.json`:
+
+- `seed`: Primary random seed (default 42).
+- `monitor_freq`: Interpretability monitor frequency (steps; was referred to as `monitor_frequency` in some JSON artifacts; canonical name is `monitor_freq`).
+- `use_amp`: Mixed precision flag (default `false`).
+- `use_wandb`: WandB logging flag (default `false`).
+- `enable_cosine_perf_schedule`: Optional cosine scheduling for performance alignment weights (default `false`).
+
+All these parameters are now resolved from the defaults JSON; no hidden runtime defaults remain. If a CLI override is provided it will appear explicitly in `config.json`.
+
+### Update Protocol
+1. Modify `configs/parameter_default.json` (add/edit keys).  
+2. Re-run an integrity check script (to be added) that diffs argparse defaults vs JSON.  
+3. Regenerate Appendix section tables from JSON (automated regeneration planned).  
+4. Commit with message including JSON MD5 pre/post (for audit trail).  
+5. Reference new commit hash in subsequent experiment `environment.txt`.
+
+This structured listing ensures no silent or implicit hyperparameter influences experiment outcomes.
+
+
 
 

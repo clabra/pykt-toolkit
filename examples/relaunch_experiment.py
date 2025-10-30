@@ -210,13 +210,24 @@ def main():
     flat_original = flatten_config(original_cfg)
     flat_new = flatten_config(new_cfg)
     param_diffs = {}
+    # Float comparison tolerance to treat formatting-only differences as equal
+    FLOAT_TOL = 1e-12
+    def values_equal(a,b):
+        if not isinstance(b, type(a)):
+            # Allow int vs float if numerically equal
+            if isinstance(a,(int,float)) and isinstance(b,(int,float)):
+                return abs(float(a)-float(b)) < FLOAT_TOL
+            return False
+        if isinstance(a,float):
+            return abs(a-b) < FLOAT_TOL
+        return a == b
     for k,v in flat_original.items():
         if k.startswith('runtime.') or k == 'config_md5':
             continue
         if k not in flat_new:
             param_diffs[k] = {'original': v, 'new': '<missing>'}
         else:
-            if flat_new[k] != v:
+            if not values_equal(flat_new[k], v):
                 param_diffs[k] = {'original': v, 'new': flat_new[k]}
     # Inverse check: new params not in original
     for k,v in flat_new.items():
@@ -228,7 +239,8 @@ def main():
     allowed_metadata_diff_prefixes = {
         'experiment.id',
         'experiment.short_title',
-        'experiment.purpose'
+        'experiment.purpose',
+        'runtime.timestamp'  # timestamp always differs
     }
     # Epoch difference info
     original_epochs = original_cfg.get('training', {}).get('epochs')
@@ -242,9 +254,19 @@ def main():
             'override_used': args.override_epochs is not None
         }
     # Determine if any param_diffs are substantive (not in allowed metadata set)
-    substantive_diffs = {
-        k: v for k, v in param_diffs.items() if k not in allowed_metadata_diff_prefixes
-    }
+    substantive_diffs = {}
+    non_substantive_diffs = {}
+    # Re-classify diffs: treat float formatting-only differences as non-substantive
+    for k, v in param_diffs.items():
+        if k in allowed_metadata_diff_prefixes:
+            non_substantive_diffs[k] = v
+        else:
+            orig_val = v['original']
+            new_val = v['new']
+            if isinstance(orig_val,(int,float)) and isinstance(new_val,(int,float)) and values_equal(orig_val,new_val):
+                non_substantive_diffs[k] = v
+            else:
+                substantive_diffs[k] = v
     # MD5 comparison (ignoring metadata change expectations). We simply compare config_md5 values from original and relaunch.
     md5_match = (original_md5 == new_cfg.get('config_md5'))
     md5_comparison = {
@@ -271,6 +293,7 @@ def main():
         'original_train_command': original_cfg['runtime'].get('train_command'),
         'reconstructed_train_command': reconstructed_cmd,
         'param_diffs': param_diffs,
+        'non_substantive_param_diffs': non_substantive_diffs,
         'skipped_params': skipped,
         'devices_original': orig_devices,
         'devices_used': adapted_devices,
@@ -281,18 +304,24 @@ def main():
         'dry_run': args.dry_run
     }
     # Strict mode: if epochs changed, fail early with guidance regardless of other diffs.
-    if args.strict and epochs_changed:
-        audit['strict_failure'] = True
-        audit['strict_guidance'] = 'Epoch count differs. Remove --strict or omit --override_epochs for faithful reproduction.'
-        audit['substantive_param_diffs'] = substantive_diffs
-    elif args.strict and (substantive_diffs or skipped):
-        audit['strict_failure'] = True
-        audit['substantive_param_diffs'] = substantive_diffs
-        if 'training.epochs' in substantive_diffs:
-            audit['strict_guidance'] = 'Epoch count differs (override_epochs in use). Re-run without --strict to execute shortened reproduction.'
+    if args.strict:
+        if epochs_changed:
+            audit['strict_failure'] = True
+            audit['strict_guidance'] = 'Epoch count differs. Remove --strict or omit --override_epochs for faithful reproduction.'
+            audit['substantive_param_diffs'] = substantive_diffs
+        elif substantive_diffs or skipped:
+            audit['strict_failure'] = True
+            audit['strict_guidance'] = 'Substantive parameter diffs detected; aborting in strict mode.'
+            audit['substantive_param_diffs'] = substantive_diffs
+        else:
+            # Only non-substantive diffs or none -> allow
+            audit['strict_failure'] = False
+            audit['strict_guidance'] = 'Only metadata differences detected; proceeding.'
+            audit['substantive_param_diffs'] = {}
     else:
         audit['strict_failure'] = False
-        audit['substantive_param_diffs'] = {}
+        audit['strict_guidance'] = 'Strict mode disabled.'
+        audit['substantive_param_diffs'] = substantive_diffs
     atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
     logger = timestamped_logger('relaunch', os.path.join(new_exp_dir,'stdout.log'))
     logger.info(f"Relaunch audit created for {original_cfg['experiment']['id']} -> {exp_id}")
@@ -302,7 +331,7 @@ def main():
         logger.info("No parameter diffs detected; proceeding with faithful reproduction.")
     if skipped:
         logger.warning(f"SKIPPED {len(skipped)} unmapped parameters.")
-    if args.strict and (param_diffs or skipped):
+    if args.strict and audit['strict_failure']:
         logger.error("Strict mode violation: aborting before training.")
         return
     if not args.dry_run:

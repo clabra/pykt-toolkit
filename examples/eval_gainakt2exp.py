@@ -2,25 +2,48 @@
 """
 Evaluation script for GainAKT2Exp.
 
-Loads a saved checkpoint (best_model.pth) from a training run directory and evaluates
-on the validation and test splits using PyKT dataset initialization patterns.
+WARNING: SAME-TIME VS NEXT-STEP EVALUATION LEAKAGE
+-----------------------------------------------
+Historically, this script (and several KT baselines) computed predictive metrics
+by feeding (q_t, r_t) into the model and directly comparing the resulting
+probabilities to r_t. However, the GainAKT2Exp architecture embeds the current
+response label r_t inside its interaction token (q_t + num_c * r_t). When we
+evaluate on the same timestep we are effectively allowing the model to see the
+ground-truth label it is asked to predict, inflating AUC/ACC.
+
+Correct predictive semantics for sequential KT require NEXT-STEP evaluation:
+    Model consumes interactions up to time t (including r_t) to predict r_{t+1}.
+The training loop already uses shifted targets (responses_shifted) with
+forward_with_states(q, r, qry=questions_shifted) and applies loss on
+shft_rseqs. Therefore, to obtain faithful metrics we must align predictions
+with shft_rseqs rather than rseqs.
+
+This script preserves original same-time evaluation for backward compatibility.
+For reproducible reporting:
+    1. Run post-training helper: tmp/shifted_eval_helper.py (auto-run if
+         auto_shifted_eval=true in launcher) to produce next-step metrics.
+    2. Report NEXT-STEP metrics as primary; SAME-TIME metrics only as an
+         auxiliary leakage diagnostic.
+    3. Include both in experiment README with an explicit AUC gap calculation.
 
 Usage:
-  python examples/eval_gainakt2exp.py \
-      --run_dir saved_model/gainakt2exp_align_reproduce_cf4f4017 \
-      --dataset assist2015 \
-      --batch_size 96 \
-      --fold 0 \
-      --seq_len 200 \
-      --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 \
-      --use_mastery_head --use_gain_head
+    python examples/eval_gainakt2exp.py \
+            --run_dir saved_model/gainakt2exp_align_reproduce_cf4f4017 \
+            --dataset assist2015 \
+            --batch_size 96 \
+            --fold 0 \
+            --seq_len 200 \
+            --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 \
+            --use_mastery_head --use_gain_head
 
 Outputs a JSON file alongside the checkpoint directory:
-  <run_dir>/eval_results.json
+    <run_dir>/eval_results.json
 Containing: test_auc, test_acc, valid_auc, valid_acc and basic interpretability correlations.
 
 We restrict evaluation to standard predictive metrics plus optional mastery/gain correlations
 computed on the test set for up to max_students samples to keep runtime bounded.
+
+NEXT-STEP METRICS: Use tmp/shifted_eval_helper.py for unbiased performance.
 """
 import os
 import sys
@@ -29,7 +52,7 @@ import argparse
 from datetime import datetime
 import numpy as np
 import torch
-from sklearn.metrics import roc_auc_score
+from examples.experiment_utils import compute_auc_acc
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
 from pykt.models.gainakt2_exp import create_exp_model
@@ -82,6 +105,7 @@ def compute_correlations(model, data_loader, device, max_students=300):
 
 
 def evaluate_predictions(model, data_loader, device):
+    """Unified prediction evaluation using shared compute_auc_acc for consistency with training."""
     model.eval()
     preds = []
     trues = []
@@ -94,20 +118,17 @@ def evaluate_predictions(model, data_loader, device):
             mask = batch['masks'].to(device).bool()
             for i in range(q.size(0)):
                 m = mask[i]
-                pr = p[i][m].cpu().numpy()
+                pr = p[i][m].detach().cpu().numpy()
                 gt = r[i][m].float().cpu().numpy()
                 preds.append(pr)
                 trues.append(gt)
     if not preds:
         return 0.0, 0.0
-    preds = np.concatenate(preds)
-    trues = np.concatenate(trues)
-    try:
-        auc = roc_auc_score(trues, preds)
-    except ValueError:
-        auc = 0.0
-    acc = float(np.mean((preds >= 0.5) == (trues == 1)))
-    return float(auc), acc
+    import numpy as _np
+    flat_preds = _np.concatenate(preds)
+    flat_trues = _np.concatenate(trues)
+    stats = compute_auc_acc(flat_trues, flat_preds)
+    return stats['auc'], stats['acc']
 
 
 def main():
@@ -138,9 +159,15 @@ def main():
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
-    ckpt_path = os.path.join(args.run_dir, 'best_model.pth')
-    if not os.path.exists(ckpt_path):
-        raise FileNotFoundError(f'Checkpoint not found: {ckpt_path}')
+    # Primary checkpoint name produced by training is model_best.pth; fallback to legacy best_model.pth
+    primary_ckpt = os.path.join(args.run_dir, 'model_best.pth')
+    fallback_ckpt = os.path.join(args.run_dir, 'best_model.pth')
+    if os.path.exists(primary_ckpt):
+        ckpt_path = primary_ckpt
+    elif os.path.exists(fallback_ckpt):
+        ckpt_path = fallback_ckpt
+    else:
+        raise FileNotFoundError(f'Checkpoint not found (searched {primary_ckpt} and {fallback_ckpt})')
 
     data_config = {
         args.dataset: {

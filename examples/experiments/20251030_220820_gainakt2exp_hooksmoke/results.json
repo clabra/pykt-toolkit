@@ -1,0 +1,64 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7183945334563611,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": -0.0280325902682601,
+    "gain_correlation": 0.03714975395941044
+  },
+  "train_history": {
+    "train_loss": [
+      0.5424499859927232
+    ],
+    "train_auc": [
+      0.6941095086064548
+    ],
+    "val_auc": [
+      0.7183945334563611
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": -0.0020437454481414155,
+        "gain_correlation": 0.08903529209540299
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": -0.0020437454481414155,
+        "gain_correlation": 0.08903529209540299,
+        "warmup_scale": 0.25,
+        "alignment_corr_mastery": 0.15285144746303558,
+        "alignment_corr_gain": 0.3145448565483093,
+        "global_alignment_mastery_corr": 0.017005796044371285,
+        "global_alignment_gain_corr": 0.03796810819529734,
+        "effective_alignment_weight": 0.03125,
+        "peak_mastery_corr": 0.017005796044371285,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.9775438326391696,
+          "constraint_total": 0.022456168909526942,
+          "alignment": -0.01552783459907744,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.01587008587880919,
+        "min_mastery_variance": 0.012122801505029202,
+        "max_mastery_variance": 0.039954956620931625,
+        "per_lag_correlations": []
+      }
+    ]
+  },
+  "shifted_eval": {
+    "parse_error": "Could not parse helper JSON from stdout"
+  }
+}

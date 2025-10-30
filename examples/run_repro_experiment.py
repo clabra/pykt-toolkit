@@ -115,6 +115,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--output_base', type=str, default='examples/experiments')
     p.add_argument('--skip_readme', action='store_true')
     p.add_argument('--dry_run', action='store_true', help='Create folder & config only; skip training subprocess.')
+    p.add_argument('--allow_drift', action='store_true', default=False, help='Proceed even if argparse vs defaults drift detected (default: False).')
+    p.add_argument('--report_only', action='store_true', default=False, help='Print consistency (argparse vs defaults) report and exit without creating an experiment directory (default: False).')
+    # Post-training shifted evaluation hook (next-step metrics). Enabled by default via parameter_default.json
+    p.add_argument('--auto_shifted_eval', action='store_true', help='Automatically run tmp/shifted_eval_helper.py after training to produce unbiased next-step metrics.')
     return p.parse_args()
 
 def build_subprocess_command(args: argparse.Namespace) -> List[str]:
@@ -204,6 +208,23 @@ def build_subprocess_command(args: argparse.Namespace) -> List[str]:
         cmd.extend(args.extra_args)
     return cmd
 
+def run_consistency_check(train_script: str) -> Dict[str,Any]:
+    """Invoke check_defaults_consistency.py and parse JSON output. Returns dict."""
+    checker = os.path.join(os.path.dirname(__file__), 'check_defaults_consistency.py')
+    eval_script = os.path.join(os.path.dirname(__file__), 'eval_gainakt2exp.py')
+    defaults_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 'parameter_default.json')
+    cmd = [sys.executable, checker, '--train_script', train_script, '--eval_script', eval_script, '--defaults_path', defaults_path]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    out, err = proc.communicate()
+    report = {}
+    try:
+        import json as _json
+        report = _json.loads(out)
+    except Exception:
+        report = {'parse_error': out, 'stderr': err}
+    report['exit_code'] = proc.returncode
+    return report
+
 def tail_metrics_from_csv(csv_path: str) -> Optional[Dict[str,Any]]:
     if not os.path.exists(csv_path):
         return None
@@ -222,11 +243,101 @@ def tail_metrics_from_csv(csv_path: str) -> Optional[Dict[str,Any]]:
                 except (ValueError, TypeError):
                     parsed[k] = v
             return parsed
+
+        def main():
+            args = parse_args()
+            # Pre-flight consistency check
+            consistency_report = run_consistency_check(args.train_script)
+            if consistency_report.get('drift_detected') and not args.allow_drift:
+                print('[ConsistencyCheck] Drift detected between argparse flags and defaults. Aborting launch.', file=sys.stderr)
+                print('[ConsistencyCheck] Report:', file=sys.stderr)
+                print(str(consistency_report), file=sys.stderr)
+                sys.exit(2)
+            # Proceed with original logic (moved from bottom). Reconstruct training command etc.
+            cmd = build_subprocess_command(args)
+            # Device environment setup
+            os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
+            exp_dir = make_experiment_dir(args.model_name, args.short_title, base_dir=args.output_base)
+            exp_id = os.path.basename(exp_dir)
+            logger = timestamped_logger('launcher', os.path.join(exp_dir,'stdout.log'))
+            logger.info(f"Launching reproducible experiment: {exp_id}")
+            logger.info(f"Training script: {os.path.abspath(args.train_script)}")
+            full_command_str = ' '.join(shlex.quote(c) for c in [sys.executable] + cmd[1:]) if cmd and cmd[0] == sys.executable else ' '.join(shlex.quote(x) for x in cmd)
+            logger.info(f"Command: {full_command_str}")
+            # Build config
+            raw_args = vars(args).copy()
+            raw_args['launcher_command'] = full_command_str
+            raw_args['train_command'] = full_command_str
+            raw_args['devices'] = args.devices
+            cfg = build_config(raw_args, exp_id=exp_id, exp_path=exp_dir, seeds=[args.seed])
+            # Insert eval command for snapshot reproducibility
+            cfg['runtime']['eval_command'] = f"python examples/eval_gainakt2exp.py --run_dir {os.path.abspath(exp_dir)} --dataset {args.dataset}"
+            atomic_write_json(cfg, os.path.join(exp_dir,'config.json'))
+            capture_environment(os.path.join(exp_dir,'environment.txt'))
+            write_seed_info(os.path.join(exp_dir,'SEED_INFO.md'), [args.seed], args.seed)
+            if not args.skip_readme:
+                write_readme(exp_dir, cfg, best_metrics=None)
+            # Dry-run exit
+            if args.dry_run:
+                logger.info('Dry run selected; training subprocess skipped.')
+                print(f"Experiment directory created (dry run): {exp_dir}")
+                return
+            # Launch training subprocess
+            logger.info('[Launcher] Set EXPERIMENT_DIR=' + exp_dir)
+            env = os.environ.copy()
+            env['EXPERIMENT_DIR'] = exp_dir
+            proc = subprocess.Popen(' '.join(shlex.quote(x) for x in cmd), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+            start = time.time()
+            while True:
+                line = proc.stdout.readline()
+                if line:
+                    logger.info(line.rstrip())
+                elif proc.poll() is not None:
+                    break
+            stderr = proc.stderr.read()
+            if stderr:
+                with open(os.path.join(exp_dir,'stderr.log'),'w') as ef:
+                    ef.write(stderr)
+            rc = proc.wait()
+            dur = time.time() - start
+            logger.info(f"Training subprocess exit code: {rc} (duration {dur:.1f}s)")
+            # Attempt to attach best metrics
+            metrics_csv = os.path.join(exp_dir,'metrics_epoch.csv')
+            best_metrics = tail_metrics_from_csv(metrics_csv)
+            if best_metrics and not args.skip_readme:
+                write_readme(exp_dir, cfg, best_metrics=best_metrics)
+            print(f"Experiment directory created: {exp_dir}")
+
+        if __name__ == '__main__':
+            main()
     except Exception:
         return None
 
 def main():
     args = parse_args()
+    # Load external defaults and apply any missing attributes (only for training_defaults)
+    try:
+        import json as _json
+        defaults_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'parameter_default.json')
+        if os.path.exists(defaults_path):
+            with open(defaults_path) as df:
+                _defaults = _json.load(df)
+            training_defaults = _defaults.get('training_defaults', {})
+            # For each key, if arg value equals parser default AND user didn't pass it, override with json default
+            # We approximate "user didn't pass" by checking sys.argv tokens.
+            provided_flags = set(a.lstrip('-') for a in sys.argv if a.startswith('--'))
+            for k,v in training_defaults.items():
+                # map json key names to argparse attribute names (identical here)
+                if hasattr(args, k):
+                    # If flag not explicitly provided and current value differs from desired default, set
+                    if k not in provided_flags and getattr(args, k) != v:
+                        setattr(args, k, v)
+                else:
+                    # inject attribute for downstream config building
+                    setattr(args, k, v)
+    except Exception:
+        # Non-fatal; continue with existing args
+        pass
     # Normalize / validate train_script path (common user error: running from examples/ and passing 'examples/train_*.py')
     orig_train_script = args.train_script
     if not os.path.isabs(orig_train_script):
@@ -255,6 +366,18 @@ def main():
     # Final existence check
     if not os.path.exists(args.train_script):
         raise FileNotFoundError(f"Training script not found: '{orig_train_script}' (resolved attempt: '{args.train_script}'). If you ran from inside 'examples/', omit the leading 'examples/' in --train_script.")
+
+    # Report-only mode: run consistency check then exit WITHOUT creating experiment directory.
+    if getattr(args, 'report_only', False):
+        report = run_consistency_check(args.train_script)
+        import json as _json
+        print(_json.dumps(report, indent=2, sort_keys=True))
+        if report.get('drift_detected'):
+            print('[ReportOnly] Drift detected between argparse flags and defaults.')
+            sys.exit(2)
+        else:
+            print('[ReportOnly] No drift detected.')
+            sys.exit(0)
     # Dynamic multi-GPU selection logic:
     # If user supplies --devices explicitly (non-empty list differing from defaults) we honor it.
     # Otherwise we attempt environment-based discovery:
@@ -456,6 +579,61 @@ def main():
         write_readme(exp_dir, cfg, best_metrics)
 
     print(f"Experiment directory created: {exp_dir}")
+
+    # Step 8: Optional post-training shifted evaluation (next-step metrics)
+    # Guard conditions: auto_shifted_eval enabled AND training actually ran (not dry_run) AND checkpoint exists.
+    if getattr(args, 'auto_shifted_eval', False) and not args.dry_run:
+        ckpt = os.path.join(exp_dir, 'model_best.pth')
+        helper = os.path.join(os.path.dirname(__file__), '..', 'tmp', 'shifted_eval_helper.py')
+        if os.path.exists(helper):
+            if os.path.exists(ckpt):
+                import subprocess as _sp
+                import json as _json
+                # Build helper command mirroring architectural defaults; rely on eval helper internal defaults for d_model etc if not trained with overrides.
+                helper_cmd = [sys.executable, helper,
+                              '--run_dir', exp_dir,
+                              '--dataset', args.dataset,
+                              '--fold', str(args.fold),
+                              '--batch_size', str(args.batch_size),
+                              '--seq_len', '200',
+                              '--d_model', '512', '--n_heads', '8', '--num_encoder_blocks', '6', '--d_ff', '1024', '--dropout', '0.2']
+                try:
+                    print('[PostEval] Running shifted next-step evaluation helper...')
+                    proc = _sp.Popen(helper_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
+                    out, err = proc.communicate()
+                    if proc.returncode == 0:
+                        # Attempt to parse final JSON block from stdout (helper prints results JSON)
+                        # Simple heuristic: last '{' to end
+                        last_brace = out.rfind('{')
+                        shifted_results = None
+                        if last_brace != -1:
+                            try:
+                                shifted_results = _json.loads(out[last_brace:])
+                            except Exception:
+                                shifted_results = {'parse_error': 'Could not parse helper JSON from stdout'}
+                        else:
+                            shifted_results = {'parse_error': 'No JSON object found in helper stdout'}
+                        # Merge into results.json if present
+                        results_path = os.path.join(exp_dir, 'results.json')
+                        merged = {}
+                        if os.path.exists(results_path):
+                            try:
+                                with open(results_path) as rf:
+                                    merged = _json.load(rf)
+                            except Exception:
+                                merged = {'load_error': 'Failed to read existing results.json'}
+                        merged['shifted_eval'] = shifted_results
+                        with open(results_path, 'w') as wf:
+                            _json.dump(merged, wf, indent=2)
+                        print('[PostEval] Shifted evaluation results merged into results.json')
+                    else:
+                        print(f'[PostEval] Helper returned non-zero exit code {proc.returncode}. stderr:\n{err[:5000]}')
+                except Exception as e:
+                    print(f'[PostEval] Exception during shifted evaluation: {e}')
+            else:
+                print('[PostEval] Skipping shifted evaluation: model_best.pth not found.')
+        else:
+            print('[PostEval] Skipping shifted evaluation: helper script missing (tmp/shifted_eval_helper.py).')
 
 if __name__ == '__main__':
     main()

@@ -12,7 +12,8 @@ import sys
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import accuracy_score  # retained for any legacy usage
+from examples.experiment_utils import compute_auc_acc
 import json
 from datetime import datetime
 import csv  # added for reproducibility metrics CSV
@@ -746,8 +747,9 @@ def train_gainakt2exp_model(args):
         mean_mastery_variance = float(np.mean(batch_mastery_variances)) if batch_mastery_variances else None
         min_mastery_variance = float(np.min(batch_mastery_variances)) if batch_mastery_variances else None
         max_mastery_variance = float(np.max(batch_mastery_variances)) if batch_mastery_variances else None
-        train_auc = roc_auc_score(total_targets, total_predictions)
-        train_acc = accuracy_score(total_targets, np.round(total_predictions))
+        train_stats = compute_auc_acc(total_targets, total_predictions)
+        train_auc = train_stats['auc']
+        train_acc = train_stats['acc']
         
         # Validation phase
         model.eval()
@@ -784,8 +786,9 @@ def train_gainakt2exp_model(args):
                 val_targets.extend(valid_targets.cpu().numpy())
         
         val_loss = val_loss / len(valid_loader)
-        val_auc = roc_auc_score(val_targets, val_predictions)
-        val_acc = accuracy_score(val_targets, np.round(val_predictions))
+        val_stats = compute_auc_acc(val_targets, val_predictions)
+        val_auc = val_stats['auc']
+        val_acc = val_stats['acc']
         
         # Consistency validation
         logger.info("  Running consistency validation...")

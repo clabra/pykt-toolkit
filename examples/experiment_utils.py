@@ -158,6 +158,23 @@ def write_readme(exp_path: str, cfg: Dict[str,Any], best_metrics: Optional[Dict[
     lines.append("|-----|-------|")
     for k,v in cfg.get('interpretability', {}).items():
         lines.append(f"| interpretability.{k} | {v} |")
+    # Evaluation snapshot section if present
+    if 'evaluation_snapshot' in cfg:
+        lines.append("\n### Evaluation Snapshot")
+        lines.append("| Key | Value |")
+        lines.append("|-----|-------|")
+        for k,v in cfg['evaluation_snapshot'].items():
+            lines.append(f"| evaluation.{k} | {v} |")
+        if 'evaluation_snapshot_md5' in cfg:
+            lines.append(f"\nSnapshot MD5: `{cfg['evaluation_snapshot_md5']}`")
+    # Reproducibility policy section
+    if 'reproducibility_policy' in cfg:
+        lines.append("\n### Reproducibility Policy")
+        policy = cfg['reproducibility_policy']
+        lines.append("Ignored evaluation flags: " + (', '.join(policy.get('ignored_eval_flags', [])) or 'None'))
+        lines.append("Ignored training flags: " + (', '.join(policy.get('ignored_training_flags', [])) or 'None'))
+        lines.append(f"Schema version: {policy.get('schema_version','<unset>')}")
+        lines.append(f"Policy last updated: {policy.get('policy_last_updated','<unset>')}")
     if best_metrics:
         lines.append("\n## Best Epoch Summary")
         lines.append('| Metric | Value |')
@@ -171,11 +188,22 @@ def build_config(raw_args: Dict[str,Any], exp_id: str, exp_path: str, seeds: Lis
     # Distinguish between launcher command and underlying train script command
     launcher_command = raw_args.get('launcher_command', raw_args.get('command'))
     train_command = raw_args.get('train_command', '<unset>')
+    # Normalize runtime fields: enforce non-null monitor_freq and explicit seed
+    monitor_freq_val = raw_args.get('monitor_freq')
+    if monitor_freq_val is None:
+        # Fallback to default (50) if absent; MUST be explicit for reproducibility
+        monitor_freq_val = 50
+    seed_val = raw_args.get('seed', seeds[0] if seeds else 42)
     cfg = OrderedDict({
         'runtime': {
-            'command': launcher_command,  # full reproducible launcher invocation
-            'train_command': train_command,  # underlying training script invocation
-            'timestamp': datetime.datetime.utcnow().isoformat() + 'Z'
+            'command': launcher_command,
+            'train_command': train_command,
+            'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
+            'seed': seed_val,
+            'monitor_freq': monitor_freq_val,
+            'use_amp': bool(raw_args.get('use_amp', False)),
+            'use_wandb': bool(raw_args.get('use_wandb', False)),
+            'enable_cosine_perf_schedule': bool(raw_args.get('enable_cosine_perf_schedule', False))
         },
         'hardware': {
             'devices': raw_args.get('devices'),
@@ -248,10 +276,46 @@ def build_config(raw_args: Dict[str,Any], exp_id: str, exp_path: str, seeds: Lis
         'variance_floor_patience': raw_args.get('variance_floor_patience', 3),
         'variance_floor_reduce_factor': raw_args.get('variance_floor_reduce_factor', 0.5)
     }
+    # Evaluation defaults snapshot
+    try:
+        defaults_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 'parameter_default.json')
+        with open(defaults_path) as df:
+            defaults_json = json.load(df)
+        eval_snapshot = defaults_json.get('evaluation_defaults', {})
+        cfg['evaluation_snapshot'] = eval_snapshot
+        cfg['evaluation_snapshot_md5'] = hashlib.md5(json.dumps(eval_snapshot, sort_keys=True).encode()).hexdigest()
+        # Metadata reproducibility policy (ignored flags)
+        metadata = defaults_json.get('metadata', {})
+        policy = {
+            'ignored_eval_flags': metadata.get('ignored_eval_flags', []),
+            'ignored_training_flags': metadata.get('ignored_training_flags', []),
+            'schema_version': metadata.get('schema_version'),
+            'policy_last_updated': metadata.get('policy_last_updated')
+        }
+        cfg['reproducibility_policy'] = policy
+    except Exception as e:
+        cfg['evaluation_snapshot_error'] = f"Failed to load evaluation defaults: {e}"    
     cfg['config_md5'] = compute_config_hash(cfg)
     return cfg
 
 __all__ = [
     'make_experiment_dir','capture_environment','atomic_write_json','append_epoch_csv','timestamped_logger',
-    'compute_config_hash','utc_timestamp','write_seed_info','write_readme','build_config'
+    'compute_config_hash','utc_timestamp','write_seed_info','write_readme','build_config','compute_auc_acc'
 ]
+
+def compute_auc_acc(targets, preds) -> Dict[str,float]:
+    """Shared AUC/Accuracy computation to unify training and evaluation metrics.
+    Expects flat lists/arrays of targets (0/1) and prediction probabilities.
+    Returns dict with auc and acc (binary accuracy at 0.5 threshold)."""
+    import numpy as _np
+    from sklearn.metrics import roc_auc_score as _roc_auc
+    if len(targets) == 0:
+        return {'auc': 0.0, 'acc': 0.0}
+    t = _np.asarray(targets)
+    p = _np.asarray(preds)
+    try:
+        auc = float(_roc_auc(t, p))
+    except ValueError:
+        auc = 0.0
+    acc = float(_np.mean((p >= 0.5) == (t == 1)))
+    return {'auc': auc, 'acc': acc}
