@@ -620,3 +620,78 @@ Priority Legend: High = foundational causal interpretability; Medium = depth/edu
 
 Paper Positioning Sentence (updated): *GainAKT2Exp matches the Augmented Architecture Design (projection heads + five educational losses + monitoring) and extends it with alignment, retention, and lag objectives, yet still lacks intrinsic attention-level gain semantics (Values ≠ gains) and direct Σ α g knowledge state formation. Bridging this gap through intrinsic gain attention and unified evaluation metrics is our next step to claim causal interpretability while maintaining competitive AUC.*
 
+## Semantic Interpretabily Metrics
+
+We observed a regression in semantic interpretability when migrating to the reproducible launcher: validation mastery correlation decreased from 0.1015 (previous aligned run) to 0.0597 (repro run without semantic modules). This section documents a systematic recovery plan and establishes a measurement framework to quantify the impact of each controllable flag on mastery and gain correlations while preserving predictive AUC.
+
+The semantic mechnisms we are going to activate are: 
+
+- Alignment
+- Global Residual Alignment
+- Residualization
+- Retention
+- Lag Gains
+
+### Objective
+Recover (and ideally surpass) prior mastery/gain correlation levels (target: mastery ≥0.12 sustained post-warm-up; gain ≥0.08) while maintaining early-stopped validation AUC ≥0.72. We will isolate, re‑enable, and tune semantic flags incrementally to attribute gains in interpretability to specific mechanisms.
+
+### Methodological Approach
+1. Baseline (B0): Constraints only (monotonicity, performance alignment, sparsity, consistency) — no semantic alignment, retention, or lag.
+2. Incremental Activation: Add one semantic mechanism at a time (Alignment → Global Residual Alignment → Residualization → Retention → Lag Gains).
+3. Scheduling & Regularization Tuning: Restore weight decay; evaluate alignment warm-up and share cap interactions.
+4. Measurement per epoch: AUC, mastery_corr, gain_corr, mastery_variance, violation rates, alignment_loss_share, lag_corr_summary.
+5. Criterion for acceptance of a mechanism: +Δ mastery_corr ≥ 0.01 OR +Δ gain_corr ≥ 0.01 with ≤1% relative AUC drop from prior accepted configuration.
+6. Multi-seed validation (≥5 seeds) once single-seed improvements plateau.
+
+### Possible Metrics Extensions (To Confirm)
+- Coverage: fraction of students contributing positive (non‑trivial) mastery correlation (|corr|>0.02).
+- Bootstrap 95% CI for mastery and gain correlations (student resampling).
+- Lag stability: median lag‑1 correlation and positive fraction.
+- Retention effectiveness: difference between peak mastery correlation and final mastery correlation decay (should be ≤5%).
+
+### Flag Impact Table
+The table below lists each relevant flag, its functional role, current state (in latest reproducible run), desired target state, and current vs target placeholders for key semantic metrics. We treat mastery and gain correlations as the principal semantic interpretability metrics; additional columns will be populated after experiments.
+
+| Flag / Parameter | Role | Current State | Target State | Mastery Corr (Current) | Mastery Corr (Target) | Gain Corr (Current) | Gain Corr (Target) | Notes / Hypothesized Impact |
+|------------------|------|---------------|--------------|------------------------|-----------------------|---------------------|--------------------|------------------------------|
+| `enable_alignment_loss` | Local alignment of mastery/gain trajectories with performance signal (short-horizon) | Disabled | Enabled (gradual warm-up) | 0.0597 | ≥0.070 | 0.0618 | ≥0.070 | Expected immediate +Δ mastery, moderate +Δ gain; watch AUC erosion |
+| `enable_global_alignment_pass` | Population-level residual alignment (captures broader semantic coherence) | Disabled | Enabled (after warm-up) | 0.0597 | ≥0.080 | 0.0618 | ≥0.075 | Raises global mastery correlation; may increase alignment loss share |
+| `use_residual_alignment` | Residualization to remove explained performance variance before alignment | Disabled | Enabled (paired with global pass) | 0.0597 | ≥0.085 | 0.0618 | ≥0.080 | Sharper semantic signal; risk of over-subtraction without window tuning |
+| `enable_retention_loss` | Preserves mastery peaks; penalizes premature decay | Disabled | Enabled (post warm-up) | 0.0597 | Peak decay ≤5% (corr ≥ peak−0.005) | 0.0618 | Stabilize | Prevents drop after peak; aim for sustained plateau |
+| `enable_lag_gain_loss` | Structures temporal emergence of gains (lagged attention/gain relations) | Disabled | Enabled (after alignment stabilization) | 0.0597 | ≥0.090 | 0.0618 | ≥0.085 | Increases gain interpretability; may introduce variance early |
+| `weight_decay` | Regularization smoothing latent trajectories | 0.0 | 1.7571e-05 | 0.0597 | +0.005 (smoothing effect) | 0.0618 | +0.003 | Expect slight increase by reducing overfitting noise |
+| `warmup_constraint_epochs` | Delay full strength of constraint/semantic losses | 8 | 8 (review after trials) | 0.0597 | — | 0.0618 | — | Maintain; consider reducing if early correlation emergence stalls |
+| `alignment_weight` | Base magnitude of local alignment objective | N/A (inactive) | 0.25 with cap | 0.0597 | Tune for plateau (≥0.085) | 0.0618 | ≥0.080 | Will ramp; final effective weight adaptive |
+| `alignment_share_cap` | Prevents alignment loss dominating | N/A | 0.08 | 0.0597 | Limits negative performance impact | 0.0618 | Limits | Critical to retain predictive AUC |
+| `alignment_share_decay_factor` | Decays alignment weight when cap exceeded without correlation gains | N/A | 0.7 | 0.0597 | Stabilize | 0.0618 | Stabilize | Avoid runaway negative alignment loss share |
+| `retention_weight` | Strength of retention penalty on peak decline | N/A | 0.14 (tunable) | 0.0597 | Maintain peak - minimal decay | 0.0618 | Neutral | Higher if mastery decays >5% |
+| `lag_gain_weight` | Strength of lag gain emergence objective | N/A | 0.06 (tunable) | 0.0597 | Increase interpretability | 0.0618 | Increase | Evaluate noise vs structured improvement |
+| `lag_max_lag` | Depth of temporal lag exploration | N/A | 3 | 0.0597 | Controlled expansion | 0.0618 | Controlled | Limit to avoid over-dispersion |
+| `variance_floor` | Prevent degenerately low mastery variance | 0.0001 | 0.0001 (monitor) | 0.0597 | Support variance | 0.0618 | Support | If variance too tight, raise to 0.0002 |
+| `consistency_rebalance_epoch` | Epoch to adjust consistency weight | N/A | 8 | 0.0597 | Avoid late correlation stall | 0.0618 | Avoid stall | Rebalance if mastery_corr < threshold |
+| `consistency_rebalance_threshold` | Corr threshold triggering rebalance | N/A | 0.1 | 0.0597 | Targets post-warm-up ≥0.1 | 0.0618 | Same | If unmet, reduce consistency weight |
+| `consistency_rebalance_new_weight` | New consistency weight after rebalance | N/A | 0.2 | 0.0597 | Slight freeing of semantic heads | 0.0618 | Slight | Encourage variance/correlation growth |
+| `monitor_frequency` | Granularity of semantic logging | 50 | 50 (optionally 25) | 0.0597 | Faster feedback -> quicker tuning | 0.0618 | Faster | If iteration slow, decrease to 25 |
+| `batch_size` | Implicit variance smoothing | 64 | 64 (maybe 48 for more stochasticity) | 0.0597 | Slight variance gain | 0.0618 | Slight | Smaller batch may raise correlation variance |
+| `seed` | Reproducibility / variance assessment | 42 | Multi-seed (42,7,123,2025,31415) | 0.0597 | Distribution mean ≥0.12 | 0.0618 | Mean ≥0.08 | Multi-seed CI demonstration |
+
+### Experimental Phases
+| Phase | Added Component(s) | Expected Δ Mastery Corr | Expected Δ Gain Corr | AUC Safeguard Action | Go/No-Go Criterion |
+|-------|--------------------|-------------------------|----------------------|----------------------|--------------------|
+| B0 | Constraints only | Baseline | Baseline | Record best AUC | Establish starting point |
+| P1 | enable_alignment_loss | +0.010–0.020 | +0.005–0.010 | Cap alignment share | If AUC drop <1% accept |
+| P2 | +global + residual alignment | +0.010–0.015 | +0.010–0.015 | Monitor share decay | If mastery_corr ≥0.08 accept |
+| P3 | +retention loss | Sustain peak (decay ≤5%) | Neutral | Track peak vs final | If peak decay ≤5% accept |
+| P4 | +lag gain loss | +0.005–0.010 | +0.010–0.020 | Lag weight schedule | If gain_corr ≥0.085 accept |
+| P5 | weight_decay restore | +0.003–0.005 | +0.002–0.004 | Monitor AUC rebound | If AUC improves or stable |
+| P6 | Multi-seed | CI shrink | CI shrink | Early stop per seed | If mean mastery ≥0.12 |
+
+### Measurement & Logging Enhancements (Upcoming)
+- Extend metrics CSV with: mastery_coverage, gain_coverage, peak_mastery_corr, peak_gain_corr, mastery_corr_ci_lower/upper, gain_corr_ci_lower/upper, lag1_corr_median, lag1_corr_positive_fraction.
+- Add `summary_semantic.json` artifact containing per-phase delta metrics.
+- Introduce `--phase` flag to training script to automatically activate appropriate components.
+
+### Immediate Next Action
+Activate `enable_alignment_loss` alone (Phase P1) under current reproducible framework, collect epoch-wise correlation trajectory, and populate the "Mastery Corr (Target)" and "Gain Corr (Target)" columns for that flag after run completion.
+
+

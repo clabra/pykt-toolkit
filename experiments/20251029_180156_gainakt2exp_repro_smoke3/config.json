@@ -1,0 +1,48 @@
+{
+  "config_md5": "3411b455cee5953ea48496fdfaab488f",
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "experiment": {
+    "id": "20251029_180156_gainakt2exp_repro_smoke3",
+    "model": "gainakt2exp",
+    "purpose": "Reproducible training run",
+    "short_title": "repro_smoke3"
+  },
+  "hardware": {
+    "devices": [
+      0
+    ],
+    "threads": 8
+  },
+  "interpretability": {
+    "consistency_loss_weight": 0.3,
+    "gain_performance_loss_weight": 0.8,
+    "mastery_performance_loss_weight": 0.8,
+    "monotonicity_loss_weight": 0.1,
+    "sparsity_loss_weight": 0.2,
+    "use_gain_head": true,
+    "use_mastery_head": true,
+    "warmup_constraint_epochs": 8
+  },
+  "runtime": {
+    "command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --dataset assist2015 --epochs 1 --batch_size 32 --learning_rate 0.000174 --seed 42",
+    "timestamp": "2025-10-29T18:01:56.456878Z"
+  },
+  "seeds": {
+    "all": [
+      42
+    ],
+    "primary": 42
+  },
+  "training": {
+    "batch_size": 32,
+    "epochs": 1,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.000174,
+    "mixed_precision": false,
+    "optimizer": "Adam",
+    "weight_decay": 0.0
+  }
+}

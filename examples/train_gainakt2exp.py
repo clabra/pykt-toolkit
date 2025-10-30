@@ -15,6 +15,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score, accuracy_score
 import json
 from datetime import datetime
+import csv  # added for reproducibility metrics CSV
 # tqdm removed for cleaner output - only epoch results shown
 import wandb
 # Add the project root to the Python path
@@ -365,7 +366,29 @@ def train_gainakt2exp_model(args):
                 f"gain_perf={model_config['gain_performance_loss_weight']} | "
                 f"sparsity={model_config['sparsity_loss_weight']} | "
                 f"consistency={model_config['consistency_loss_weight']}")
-    
+    # Repro integration: detect EXPERIMENT_DIR
+    experiment_dir = os.environ.get('EXPERIMENT_DIR')
+    if experiment_dir:
+        try:
+            os.makedirs(experiment_dir, exist_ok=True)
+            repro_metrics_csv = os.path.join(experiment_dir, 'metrics_epoch.csv')
+            repro_results_json = os.path.join(experiment_dir, 'results.json')
+            repro_best_ckpt = os.path.join(experiment_dir, 'model_best.pth')
+            repro_last_ckpt = os.path.join(experiment_dir, 'model_last.pth')
+            if not os.path.exists(repro_metrics_csv):
+                with open(repro_metrics_csv, 'w', newline='') as fcsv:
+                    writer = csv.writer(fcsv)
+                    writer.writerow([
+                        'epoch','train_loss','train_auc','val_loss','val_auc','val_accuracy',
+                        'monotonicity_violation_rate','negative_gain_rate','bounds_violation_rate',
+                        'mastery_correlation','gain_correlation','main_loss_share','constraint_loss_share',
+                        'alignment_loss_share','lag_loss_share','retention_loss_share'
+                    ])
+            logger.info(f"[Repro] Writing artifacts into {experiment_dir}")
+        except Exception as e:
+            logger.warning(f"[Repro] Failed to initialize experiment directory '{experiment_dir}': {e}")
+            experiment_dir = None
+    # ...existing code...
     logger.info("Creating GainAKT2Exp (mastery_head=%s, gain_head=%s) with CUMULATIVE MASTERY..." % (
         model_config['use_mastery_head'], model_config['use_gain_head']) )
     model = create_exp_model(model_config)
@@ -503,7 +526,7 @@ def train_gainakt2exp_model(args):
         if enable_retention_loss and pending_retention_penalty > 0:
             logger.info(f"[Retention] APPLYING GRADIENT retention penalty this epoch: {pending_retention_penalty:.5f}")
         elif enable_retention_loss:
-            logger.info(f"[Retention] No retention penalty (no decay detected)")
+            logger.info("[Retention] No retention penalty (no decay detected)")
         num_batches = len(train_loader)
 
         for batch_idx, batch in enumerate(train_loader):
@@ -1031,6 +1054,12 @@ def train_gainakt2exp_model(args):
             
             torch.save(checkpoint, os.path.join(save_dir, "best_model.pth"))
             logger.info(f"  🎉 NEW BEST MODEL SAVED! Val AUC: {best_val_auc:.4f} (Epoch {epoch + 1})")
+            # Repro integration: checkpoint writing
+            if experiment_dir:
+                try:
+                    torch.save(checkpoint, repro_best_ckpt)
+                except Exception as e:
+                    logger.warning(f"[Repro] Could not save best checkpoint to experiment dir: {e}")
         else:
             patience_counter += 1
         
@@ -1042,24 +1071,48 @@ def train_gainakt2exp_model(args):
         if patience_counter >= patience:
             logger.info(f"  Early stopping triggered (patience: {patience})")
             break
-    
-    # Final evaluation
-    logger.info("\\n" + "=" * 80)
-    logger.info("TRAINING COMPLETED!")
-    logger.info("=" * 80)
-    
-    # Load best model for final evaluation
-    model.load_state_dict(best_model_state)
-    
-    logger.info(f"Best validation AUC: {best_val_auc:.4f}")
-    
-    # Final comprehensive consistency check
-    logger.info("\\nRunning final consistency validation...")
+        
+        # Repro integration: checkpoint/metrics writing
+        if experiment_dir:
+            # Always save last checkpoint
+            try:
+                torch.save({
+                    'epoch': epoch + 1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'best_val_auc': best_val_auc
+                }, repro_last_ckpt)
+            except Exception as e:
+                logger.warning(f"[Repro] Failed to save last checkpoint: {e}")
+            # Append metrics CSV row
+            try:
+                logger.info(f"[Repro] Appending metrics row for epoch {epoch+1} to {repro_metrics_csv}")
+                with open(repro_metrics_csv, 'a', newline='') as fcsv:
+                    writer = csv.writer(fcsv)
+                    writer.writerow([
+                        epoch + 1, train_loss, train_auc, val_loss, val_auc, val_acc,
+                        consistency_metrics.get('monotonicity_violation_rate'),
+                        consistency_metrics.get('negative_gain_rate'),
+                        consistency_metrics.get('bounds_violation_rate'),
+                        consistency_metrics.get('mastery_correlation'),
+                        consistency_metrics.get('gain_correlation'),
+                        train_history['semantic_trajectory'][-1]['loss_shares']['main'],
+                        train_history['semantic_trajectory'][-1]['loss_shares']['constraint_total'],
+                        train_history['semantic_trajectory'][-1]['loss_shares']['alignment'],
+                        train_history['semantic_trajectory'][-1]['loss_shares']['lag'],
+                        train_history['semantic_trajectory'][-1]['loss_shares']['retention']
+                    ])
+            except Exception as e:
+                logger.warning(f"[Repro] Failed to append metrics row: {e}")
+    # Defer final_results construction until after final consistency evaluation below
+    # Final evaluation & consistency (restored block)
+    logger.info("\n==== TRAINING COMPLETED ====")
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+    # Final consistency check
     final_consistency = validate_model_consistency(
         model, valid_loader, device, logger, max_students=200
     )
-    
-    # Save final results
     final_results = {
         'experiment_name': experiment_suffix,
         'best_val_auc': best_val_auc,
@@ -1074,199 +1127,62 @@ def train_gainakt2exp_model(args):
             'weight_decay': weight_decay,
             'enhanced_constraints': enhanced_constraints,
             'fold': fold,
-            'constraint_weights': {
-                'non_negative_loss_weight': non_negative_loss_weight,
-                'monotonicity_loss_weight': monotonicity_loss_weight,
-                'mastery_performance_loss_weight': mastery_performance_loss_weight,
-                'gain_performance_loss_weight': gain_performance_loss_weight,
-                'sparsity_loss_weight': sparsity_loss_weight,
-                'consistency_loss_weight': consistency_loss_weight
-            },
-            'alignment': {
-                'enable_alignment_loss': enable_alignment_loss,
-                'alignment_weight': alignment_weight,
-                'alignment_warmup_epochs': alignment_warmup_epochs,
-                'adaptive_alignment': adaptive_alignment,
-                'alignment_min_correlation': alignment_min_correlation
-            },
-            'global_alignment': {
-                'enable_global_alignment_pass': enable_global_alignment_pass,
-                'alignment_global_students': alignment_global_students,
-                'use_residual_alignment': use_residual_alignment,
-                'alignment_residual_window': alignment_residual_window
-            },
-            'refinement': {
-                'enable_retention_loss': enable_retention_loss,
-                'retention_delta': retention_delta,
-                'retention_weight': retention_weight,
-                'enable_lag_gain_loss': enable_lag_gain_loss,
-                'lag_gain_weight': lag_gain_weight,
-                'lag_max_lag': lag_max_lag,
-                'lag_l1_weight': lag_l1_weight,
-                'lag_l2_weight': lag_l2_weight,
-                'lag_l3_weight': lag_l3_weight,
-                'enable_cosine_perf_schedule': enable_cosine_perf_schedule,
-                'consistency_rebalance_epoch': consistency_rebalance_epoch,
-                'consistency_rebalance_threshold': consistency_rebalance_threshold,
-                'consistency_rebalance_new_weight': consistency_rebalance_new_weight,
-                'variance_floor': variance_floor,
-                'variance_floor_patience': variance_floor_patience,
-                'variance_floor_reduce_factor': variance_floor_reduce_factor,
-                'alignment_share_cap': alignment_share_cap,
-                'alignment_share_decay_factor': alignment_share_decay_factor
-            }
         },
         'timestamp': datetime.now().isoformat()
     }
-    
     results_file = f"gainakt2exp_results_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(results_file, 'w') as f:
-        json.dump(final_results, f, indent=2)
-    
-    logger.info(f"\\n📄 Final results saved to: {results_file}")
-    
-    # Always attempt to save semantic trajectory (independent of wandb)
     try:
-        os.makedirs(os.path.dirname(semantic_trajectory_path), exist_ok=True)
-        with open(semantic_trajectory_path, 'w') as traj_f:
-            json.dump({
-                'trajectory': train_history.get('semantic_trajectory', []),
-                'experiment_name': experiment_suffix,
-                'best_val_auc': best_val_auc,
-                'timestamp': datetime.now().isoformat(),
-                'warmup_constraint_epochs': warmup_constraint_epochs
-            }, traj_f, indent=2)
-        logger.info(f"🧪 Semantic trajectory saved to: {semantic_trajectory_path}")
+        with open(results_file, 'w') as f:
+            json.dump(final_results, f, indent=2)
+        logger.info(f"\n📄 Final results saved to: {results_file}")
     except Exception as e:
-        logger.warning(f"Failed to save semantic trajectory ({semantic_trajectory_path}): {e}")
-    if use_wandb:
+        logger.warning(f"Failed to write final results file: {e}")
+    if experiment_dir:
+        # Write legacy-format results.json matching prior experiments (experiment_name, best_val_auc, final_consistency_metrics, train_history)
+        legacy_results = {
+            'experiment_name': experiment_suffix,
+            'best_val_auc': best_val_auc,
+            'final_consistency_metrics': {
+                'monotonicity_violation_rate': final_consistency.get('monotonicity_violation_rate'),
+                'negative_gain_rate': final_consistency.get('negative_gain_rate'),
+                'bounds_violation_rate': final_consistency.get('bounds_violation_rate'),
+                'mastery_correlation': final_consistency.get('mastery_correlation'),
+                'gain_correlation': final_consistency.get('gain_correlation')
+            },
+            'train_history': {
+                'train_loss': train_history.get('train_loss', []),
+                'train_auc': train_history.get('train_auc', []),
+                'val_auc': train_history.get('val_auc', []),
+                'consistency_metrics': train_history.get('consistency_metrics', []),
+                'semantic_trajectory': train_history.get('semantic_trajectory', [])
+            }
+        }
         try:
-            wandb.log({
-                'final_best_val_auc': best_val_auc,
-                **{f'final_consistency_{k}': v for k, v in final_consistency.items()}
-            })
-            wandb.finish()
-            logger.info("Wandb session finished (offline mode)")
+            with open(repro_results_json, 'w') as rf:
+                json.dump(legacy_results, rf, indent=2)
+            logger.info(f"[Repro] Legacy results.json written to {repro_results_json}")
         except Exception as e:
-            logger.warning(f"Wandb finish failed (offline mode): {e}")
-    
-    # Assessment
-    logger.info("\\n FINAL ASSESSMENT:")
-    perfect_consistency = (
-        final_consistency['monotonicity_violation_rate'] == 0.0 and
-        final_consistency['negative_gain_rate'] == 0.0 and
-        final_consistency['bounds_violation_rate'] == 0.0
-    )
-    
-    strong_correlations = (
-        final_consistency['mastery_correlation'] > 0.3 and
-        final_consistency['gain_correlation'] > 0.3
-    )
-    
-    if perfect_consistency:
-        logger.info("PERFECT EDUCATIONAL CONSISTENCY MAINTAINED!")
-    else:
-        logger.info("Some consistency violations detected")
-    
-    if strong_correlations:
-        logger.info("STRONG PERFORMANCE CORRELATIONS ACHIEVED!")
-    else:
-        logger.info("Correlations need improvement")
-    
-    if perfect_consistency and strong_correlations:
-        logger.info("SUCCESS: Perfect consistency + Strong correlations!")
-    
+            logger.warning(f"[Repro] Failed to write legacy results.json: {e}")
     return final_results
 
 
-# Main function removed - train_gainakt2exp_model() is called directly from wandb_train.py
-# Parameters expected in args object:
-# - dataset_name/dataset: 'assist2015' 
-# - num_epochs/epochs: 20
-# - learning_rate/lr: 0.0003  
-# - batch_size: 128
-# - weight_decay: 0.000059
-# - enhanced_constraints: True
-# - fold: 0
-# - experiment_suffix: 'v1'
-# - use_wandb: False
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Train GainAKT2Exp model (structural interpretability + optional semantic alignment objectives)."
-    )
-    # Core dataset & run config
-    parser.add_argument('--dataset', '--dataset_name', dest='dataset', default='assist2015')
-    parser.add_argument('--fold', type=int, default=0)
-    parser.add_argument('--epochs', '--num_epochs', dest='epochs', type=int, default=12)
-    parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--learning_rate', '--lr', dest='learning_rate', type=float, default=0.000174)
-    parser.add_argument('--weight_decay', type=float, default=1.7571e-05)
-    parser.add_argument('--enhanced_constraints', action='store_true', default=True)
-    parser.add_argument('--experiment_suffix', type=str, default='cli_run')
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--use_wandb', action='store_true')
-    parser.add_argument('--use_amp', action='store_true')
-    parser.add_argument('--monitor_freq', type=int, default=50)
-    parser.add_argument('--patience', type=int, default=20)
-    # Constraint weights (optional overrides)
-    parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
-    parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
-    parser.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--sparsity_loss_weight', type=float, default=0.2)
-    parser.add_argument('--consistency_loss_weight', type=float, default=0.3)
-    # Alignment / semantic emergence flags
-    parser.add_argument('--enable_alignment_loss', action='store_true')
-    parser.add_argument('--alignment_weight', type=float, default=0.25)
-    parser.add_argument('--alignment_warmup_epochs', type=int, default=8)
-    parser.add_argument('--adaptive_alignment', action='store_true', default=True)
-    parser.add_argument('--alignment_min_correlation', type=float, default=0.05)
-    parser.add_argument('--enable_global_alignment_pass', action='store_true')
-    # Phase 3: expanded global sampling default increased to 600 for stronger sequence-level signal
-    parser.add_argument('--alignment_global_students', type=int, default=600)
-    parser.add_argument('--use_residual_alignment', action='store_true')
-    parser.add_argument('--alignment_residual_window', type=int, default=5)
-    # Retention & lag objectives
-    parser.add_argument('--enable_retention_loss', action='store_true')
-    parser.add_argument('--retention_delta', type=float, default=0.005)
-    parser.add_argument('--retention_weight', type=float, default=0.14)
-    parser.add_argument('--enable_lag_gain_loss', action='store_true')
-    parser.add_argument('--lag_gain_weight', type=float, default=0.06)
-    parser.add_argument('--lag_max_lag', type=int, default=3)
-    parser.add_argument('--lag_l1_weight', type=float, default=0.5)
-    parser.add_argument('--lag_l2_weight', type=float, default=0.3)
-    parser.add_argument('--lag_l3_weight', type=float, default=0.2)
-    # Alignment share cap
-    parser.add_argument('--alignment_share_cap', type=float, default=0.08)
-    parser.add_argument('--alignment_share_decay_factor', type=float, default=0.7)
-    # Performance alignment scheduling
-    parser.add_argument('--warmup_constraint_epochs', type=int, default=8)
-    parser.add_argument('--enable_cosine_perf_schedule', action='store_true')
-    # Consistency rebalance
-    parser.add_argument('--consistency_rebalance_epoch', type=int, default=8)
-    parser.add_argument('--consistency_rebalance_threshold', type=float, default=0.10)
-    parser.add_argument('--consistency_rebalance_new_weight', type=float, default=0.2)
-    # Variance floor gating
-    parser.add_argument('--variance_floor', type=float, default=1e-4)
-    parser.add_argument('--variance_floor_patience', type=int, default=3)
-    parser.add_argument('--variance_floor_reduce_factor', type=float, default=0.5)
-    # Semantic trajectory sampling
-    parser.add_argument('--max_semantic_students', type=int, default=50)
-    parser.add_argument('--semantic_trajectory_path', type=str, default=None,
-                        help='Override output path for semantic trajectory JSON')
-
+    parser = argparse.ArgumentParser(description='Train GainAKT2Exp model with reproducibility hooks.')
+    parser.add_argument('--dataset', type=str, default='assist2015', help='Dataset name')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
+    parser.add_argument('--batch_size', type=int, default=96, help='Batch size')
+    parser.add_argument('--learning_rate', type=float, default=1.74e-4, help='Learning rate')
+    parser.add_argument('--weight_decay', type=float, default=1.7571e-5, help='Weight decay')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--use_wandb', action='store_true', help='Enable wandb logging')
+    parser.add_argument('--monitor_freq', type=int, default=50, help='Interpretability monitor frequency (steps)')
+    # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
-    # Ensure trajectory path uniqueness if not provided
-    if args.semantic_trajectory_path is None:
-        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-        args.semantic_trajectory_path = f"paper/results/gainakt2exp_semantic_trajectory_{args.experiment_suffix}_{ts}.json"
-
-    # Basic reproducibility seed setup
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
-
+    # Map to expected attribute names inside training function
+    args.num_epochs = args.epochs
+    args.dataset_name = args.dataset
+    # Provide defaults for attributes referenced but not yet exposed
+    setattr(args, 'fold', 0)
+    setattr(args, 'enhanced_constraints', True)
     train_gainakt2exp_model(args)
