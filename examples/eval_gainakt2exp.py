@@ -1,49 +1,37 @@
 #!/usr/bin/env python3
 """
-Evaluation script for GainAKT2Exp.
+Evaluation script for GainAKT2Exp (UPDATED FOR NEXT-STEP METRICS).
 
-WARNING: SAME-TIME VS NEXT-STEP EVALUATION LEAKAGE
------------------------------------------------
-Historically, this script (and several KT baselines) computed predictive metrics
-by feeding (q_t, r_t) into the model and directly comparing the resulting
-probabilities to r_t. However, the GainAKT2Exp architecture embeds the current
-response label r_t inside its interaction token (q_t + num_c * r_t). When we
-evaluate on the same timestep we are effectively allowing the model to see the
-ground-truth label it is asked to predict, inflating AUC/ACC.
+CHANGE LOG (2025-10-30):
+    - Previous version computed SAME-TIME metrics (predictions vs r_t) which are
+        inflated because the interaction embedding includes r_t (label leakage).
+    - This updated version now computes NEXT-STEP predictive metrics by aligning
+        logits from forward_with_states(q, r, qry=shft_cseqs) with shifted targets
+        shft_rseqs under the mask. The outputs valid_auc / test_auc now reflect
+        unbiased next-step performance consistent with the training objective.
+    - SAME-TIME evaluation has been removed from primary metric computation to
+        avoid accidental leakage reporting. To quantify leakage, use the separate
+        next-step diagnostic script (examples/eval_gainakt2exp_nextstep.py) or the
+        integrated post-training helper (tmp/shifted_eval_helper.py).
 
-Correct predictive semantics for sequential KT require NEXT-STEP evaluation:
-    Model consumes interactions up to time t (including r_t) to predict r_{t+1}.
-The training loop already uses shifted targets (responses_shifted) with
-forward_with_states(q, r, qry=questions_shifted) and applies loss on
-shft_rseqs. Therefore, to obtain faithful metrics we must align predictions
-with shft_rseqs rather than rseqs.
+RATIONALE:
+    In GainAKT2Exp, interaction_tokens = q_t + num_c * r_t embeds the current
+    response. Evaluating on r_t directly gives the model access to the label it
+    is asked to predict. Next-step alignment (predict r_{t+1}) mirrors the
+    training loss and produces defensible AUC/ACC.
 
-This script preserves original same-time evaluation for backward compatibility.
-For reproducible reporting:
-    1. Run post-training helper: tmp/shifted_eval_helper.py (auto-run if
-         auto_shifted_eval=true in launcher) to produce next-step metrics.
-    2. Report NEXT-STEP metrics as primary; SAME-TIME metrics only as an
-         auxiliary leakage diagnostic.
-    3. Include both in experiment README with an explicit AUC gap calculation.
+PRIMARY OUTPUTS (next-step): valid_auc, valid_acc, test_auc, test_acc, plus
+correlation metrics using shifted performance sequences.
 
 Usage:
     python examples/eval_gainakt2exp.py \
-            --run_dir saved_model/gainakt2exp_align_reproduce_cf4f4017 \
-            --dataset assist2015 \
-            --batch_size 96 \
-            --fold 0 \
-            --seq_len 200 \
+            --run_dir <experiment_dir> --dataset assist2015 \
+            --batch_size 96 --fold 0 --seq_len 200 \
             --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 \
             --use_mastery_head --use_gain_head
 
-Outputs a JSON file alongside the checkpoint directory:
-    <run_dir>/eval_results.json
-Containing: test_auc, test_acc, valid_auc, valid_acc and basic interpretability correlations.
-
-We restrict evaluation to standard predictive metrics plus optional mastery/gain correlations
-computed on the test set for up to max_students samples to keep runtime bounded.
-
-NEXT-STEP METRICS: Use tmp/shifted_eval_helper.py for unbiased performance.
+Outputs a JSON file: <run_dir>/eval_results.json containing:
+    valid_auc, valid_acc, test_auc, test_acc, mastery/gain correlations.
 """
 import os
 import sys
@@ -105,21 +93,31 @@ def compute_correlations(model, data_loader, device, max_students=300):
 
 
 def evaluate_predictions(model, data_loader, device):
-    """Unified prediction evaluation using shared compute_auc_acc for consistency with training."""
+    """Next-step evaluation: predict r_{t+1} using context up to t."""
     model.eval()
     preds = []
     trues = []
     with torch.no_grad():
+        core = model.module if isinstance(model, torch.nn.DataParallel) else model
         for batch in data_loader:
-            q = batch['cseqs'].to(device)
-            r = batch['rseqs'].to(device)
-            out = model(q, r)
-            p = out['predictions']  # [B, T]
-            mask = batch['masks'].to(device).bool()
+            q = batch['cseqs'].to(device)          # current concepts (t)
+            r = batch['rseqs'].to(device)          # current responses (t)
+            q_shft = batch['shft_cseqs'].to(device)  # next concepts (t+1)
+            r_shft = batch['shft_rseqs'].to(device)  # next responses (t+1)
+            mask = batch['masks'].to(device).bool()  # valid interaction mask
+            out = core.forward_with_states(q=q, r=r, qry=q_shft)
+            logits = out.get('logits')
+            if logits is None:
+                # Fallback: invert predictions safely if logits missing
+                preds_raw = out['predictions']
+                eps = 1e-6
+                logits = torch.log(preds_raw.clamp(eps, 1 - eps) / (1 - preds_raw.clamp(eps, 1 - eps)))
             for i in range(q.size(0)):
                 m = mask[i]
-                pr = p[i][m].detach().cpu().numpy()
-                gt = r[i][m].float().cpu().numpy()
+                if m.sum() == 0:
+                    continue
+                pr = torch.sigmoid(logits[i][m]).detach().cpu().numpy()
+                gt = r_shft[i][m].float().cpu().numpy()
                 preds.append(pr)
                 trues.append(gt)
     if not preds:

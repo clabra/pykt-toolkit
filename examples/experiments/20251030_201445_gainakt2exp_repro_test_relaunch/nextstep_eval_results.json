@@ -1,0 +1,39 @@
+{
+  "next_step": {
+    "valid_auc": 0.7250405880063795,
+    "valid_acc": 0.7534866519382184,
+    "samples": 102749
+  },
+  "same_time": {
+    "valid_auc": 0.8991568529909629,
+    "valid_acc": 0.7805428763296967,
+    "samples": 102749
+  },
+  "leakage_gap": {
+    "auc_gap": 0.17411626498458344,
+    "acc_gap": 0.027056224391478256
+  },
+  "correlations": {
+    "mastery_corr_mean": -0.0014615295257606965,
+    "gain_corr_mean": 0.0506141600901469,
+    "students": 261
+  },
+  "meta": {
+    "timestamp": "2025-10-30T22:28:03.817104",
+    "run_dir": "/workspaces/pykt-toolkit/examples/experiments/20251030_201445_gainakt2exp_repro_test_relaunch",
+    "fold": 0,
+    "device": "cuda",
+    "model_config": {
+      "num_c": 100,
+      "seq_len": 200,
+      "d_model": 512,
+      "n_heads": 8,
+      "num_encoder_blocks": 6,
+      "d_ff": 1024,
+      "dropout": 0.2,
+      "emb_type": "qid",
+      "use_mastery_head": true,
+      "use_gain_head": true
+    }
+  }
+}
