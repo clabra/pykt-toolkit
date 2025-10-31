@@ -3,8 +3,8 @@
     "dataset": "assist2015",
     "fold": 0,
     "seed": 42,
-    "epochs": 20,
-    "batch_size": 96,
+    "epochs": 12,
+    "batch_size": 64,
     "learning_rate": 0.000174,
     "weight_decay": 0.000017571,
     "optimizer": "Adam",
@@ -32,7 +32,7 @@
     "alignment_share_decay_factor": 0.7,
     "enable_global_alignment_pass": true,
     "alignment_global_students": 600,
-    "use_residual_alignment": false,
+  "use_residual_alignment": true,
     "alignment_residual_window": 5,
     "enable_retention_loss": true,
     "retention_delta": 0.005,
@@ -49,14 +49,14 @@
     "variance_floor": 0.0001,
     "variance_floor_patience": 3,
     "variance_floor_reduce_factor": 0.5,
-    "warmup_constraint_epochs": 4,
+    "warmup_constraint_epochs": 8,
     "max_semantic_students": 50,
     "enable_cosine_perf_schedule": false
   },
   "evaluation_defaults": {
     "dataset": "assist2015",
     "fold": 0,
-    "batch_size": 96,
+    "batch_size": 64,
     "seq_len": 200,
     "d_model": 512,
     "n_heads": 8,
@@ -76,7 +76,12 @@
   "metadata": {
     "schema_version": "1.0.0",
     "policy_last_updated": "2025-10-30",
-    "ignored_eval_flags": ["device", "run_dir"],
-    "ignored_training_flags": []
+    "ignored_eval_flags": [
+      "device", "run_dir",
+      "batch_size","consistency_loss_weight","d_ff","d_model","dataset","dropout","fold","gain_performance_loss_weight",
+      "mastery_performance_loss_weight","monotonicity_loss_weight","n_heads","non_negative_loss_weight","num_encoder_blocks","seq_len",
+      "sparsity_loss_weight","use_gain_head","use_mastery_head"
+    ],
+    "ignored_training_flags": ["auto_shifted_eval"]
   }
 }

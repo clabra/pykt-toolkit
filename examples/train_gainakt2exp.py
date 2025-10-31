@@ -12,7 +12,6 @@ import sys
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import accuracy_score  # retained for any legacy usage
 from examples.experiment_utils import compute_auc_acc
 import json
 from datetime import datetime
@@ -154,6 +153,25 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
     }
 
 
+def load_config_if_available():
+    """Load experiment config from PYKT_CONFIG_PATH if present, else return None."""
+    cfg_path = os.environ.get('PYKT_CONFIG_PATH')
+    if cfg_path and os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                return json.load(f)
+        except Exception:
+            return None
+    return None
+
+def resolve_param(cfg, section, key, fallback):
+    try:
+        if cfg is None:
+            return fallback
+        return cfg.get(section, {}).get(key, fallback)
+    except Exception:
+        return fallback
+
 def train_gainakt2exp_model(args):
     """
     Standardized training function for GainAKT2Exp model using PyKT framework patterns.
@@ -172,57 +190,58 @@ def train_gainakt2exp_model(args):
     import logging
     
     # Get parameters with OPTIMAL defaults (AUC: 0.7260, Perfect Consistency)
-    dataset_name = getattr(args, 'dataset_name', getattr(args, 'dataset', 'assist2015'))
-    num_epochs = getattr(args, 'num_epochs', getattr(args, 'epochs', 20))
-    learning_rate = getattr(args, 'learning_rate', getattr(args, 'lr', 0.000174))  # OPTIMAL
-    batch_size = getattr(args, 'batch_size', 96)  # OPTIMAL
-    weight_decay = getattr(args, 'weight_decay', 1.7571e-05)  # OPTIMAL
-    enhanced_constraints = getattr(args, 'enhanced_constraints', True)
-    fold = getattr(args, 'fold', 0)
+    cfg = load_config_if_available()
+    dataset_name = resolve_param(cfg, 'data', 'dataset', getattr(args, 'dataset', 'assist2015'))
+    fold = resolve_param(cfg, 'data', 'fold', getattr(args, 'fold', 0))
+    num_epochs = resolve_param(cfg, 'training', 'epochs', getattr(args, 'epochs', 20))
+    batch_size = resolve_param(cfg, 'training', 'batch_size', getattr(args, 'batch_size', 96))
+    learning_rate = resolve_param(cfg, 'training', 'learning_rate', getattr(args, 'learning_rate', 0.000174))
+    weight_decay = resolve_param(cfg, 'training', 'weight_decay', getattr(args, 'weight_decay', 1.7571e-05))
+    enhanced_constraints = resolve_param(cfg, 'interpretability', 'enhanced_constraints', getattr(args, 'enhanced_constraints', True))
     experiment_suffix = getattr(args, 'experiment_suffix', 'optimal_v1')
-    use_wandb = getattr(args, 'use_wandb', False)
-    use_amp = getattr(args, 'use_amp', False)
+    use_wandb = resolve_param(cfg, 'runtime', 'use_wandb', getattr(args, 'use_wandb', False))
+    use_amp = resolve_param(cfg, 'runtime', 'use_amp', getattr(args, 'use_amp', False))
     # Alignment / semantic emergence new arguments (may be absent in older runs)
-    enable_alignment_loss = getattr(args, 'enable_alignment_loss', False)
-    alignment_weight = float(getattr(args, 'alignment_weight', 0.1))
-    alignment_warmup_epochs = int(getattr(args, 'alignment_warmup_epochs', 8))
-    adaptive_alignment = getattr(args, 'adaptive_alignment', True)
-    alignment_min_correlation = float(getattr(args, 'alignment_min_correlation', 0.05))
+    enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', False))
+    alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.1)))
+    alignment_warmup_epochs = int(resolve_param(cfg, 'alignment', 'alignment_warmup_epochs', getattr(args, 'alignment_warmup_epochs', 8)))
+    adaptive_alignment = resolve_param(cfg, 'alignment', 'adaptive_alignment', getattr(args, 'adaptive_alignment', True))
+    alignment_min_correlation = float(resolve_param(cfg, 'alignment', 'alignment_min_correlation', getattr(args, 'alignment_min_correlation', 0.05)))
     # Global alignment / residual options (Tier B refinements)
-    enable_global_alignment_pass = getattr(args, 'enable_global_alignment_pass', False)
-    alignment_global_students = int(getattr(args, 'alignment_global_students', 600))  # enlarged for stratified global sampling
-    use_residual_alignment = getattr(args, 'use_residual_alignment', False)
-    alignment_residual_window = int(getattr(args, 'alignment_residual_window', 5))
+    enable_global_alignment_pass = resolve_param(cfg, 'global_alignment', 'enable_global_alignment_pass', getattr(args, 'enable_global_alignment_pass', False))
+    alignment_global_students = int(resolve_param(cfg, 'global_alignment', 'alignment_global_students', getattr(args, 'alignment_global_students', 600)))
+    use_residual_alignment = resolve_param(cfg, 'global_alignment', 'use_residual_alignment', getattr(args, 'use_residual_alignment', False))
+    alignment_residual_window = int(resolve_param(cfg, 'global_alignment', 'alignment_residual_window', getattr(args, 'alignment_residual_window', 5)))
     # Refinement cycle new arguments
     # Phase 0–2 semantic emergence controls (updated defaults)
-    enable_retention_loss = getattr(args, 'enable_retention_loss', False)
-    retention_delta = float(getattr(args, 'retention_delta', 0.005))  # tighter tolerance before applying penalty
-    retention_weight = float(getattr(args, 'retention_weight', 0.14))  # stronger retention to preserve peaks
-    enable_lag_gain_loss = getattr(args, 'enable_lag_gain_loss', False)
-    lag_gain_weight = float(getattr(args, 'lag_gain_weight', 0.06))  # modest weight for multi-lag predictive emergence
-    lag_max_lag = int(getattr(args, 'lag_max_lag', 3))  # extend to lag 3
+    enable_retention_loss = resolve_param(cfg, 'refinement', 'enable_retention_loss', getattr(args, 'enable_retention_loss', False))
+    retention_delta = float(resolve_param(cfg, 'refinement', 'retention_delta', getattr(args, 'retention_delta', 0.005)))
+    retention_weight = float(resolve_param(cfg, 'refinement', 'retention_weight', getattr(args, 'retention_weight', 0.14)))
+    enable_lag_gain_loss = resolve_param(cfg, 'refinement', 'enable_lag_gain_loss', getattr(args, 'enable_lag_gain_loss', False))
+    lag_gain_weight = float(resolve_param(cfg, 'refinement', 'lag_gain_weight', getattr(args, 'lag_gain_weight', 0.06)))
+    lag_max_lag = int(resolve_param(cfg, 'refinement', 'lag_max_lag', getattr(args, 'lag_max_lag', 3)))
     # Weighted multi-lag scheme (L1 emphasis)
-    lag_l1_weight = float(getattr(args, 'lag_l1_weight', 0.5))
-    lag_l2_weight = float(getattr(args, 'lag_l2_weight', 0.3))
-    lag_l3_weight = float(getattr(args, 'lag_l3_weight', 0.2))
+    lag_l1_weight = float(resolve_param(cfg, 'refinement', 'lag_l1_weight', getattr(args, 'lag_l1_weight', 0.5)))
+    lag_l2_weight = float(resolve_param(cfg, 'refinement', 'lag_l2_weight', getattr(args, 'lag_l2_weight', 0.3)))
+    lag_l3_weight = float(resolve_param(cfg, 'refinement', 'lag_l3_weight', getattr(args, 'lag_l3_weight', 0.2)))
     # Alignment share cap & decay factor
-    alignment_share_cap = float(getattr(args, 'alignment_share_cap', 0.08))
-    alignment_share_decay_factor = float(getattr(args, 'alignment_share_decay_factor', 0.7))
-    enable_cosine_perf_schedule = getattr(args, 'enable_cosine_perf_schedule', False)
-    consistency_rebalance_epoch = int(getattr(args, 'consistency_rebalance_epoch', 8))
-    consistency_rebalance_threshold = float(getattr(args, 'consistency_rebalance_threshold', 0.10))
-    consistency_rebalance_new_weight = float(getattr(args, 'consistency_rebalance_new_weight', 0.2))
-    variance_floor = float(getattr(args, 'variance_floor', 1e-4))
-    variance_floor_patience = int(getattr(args, 'variance_floor_patience', 3))
-    variance_floor_reduce_factor = float(getattr(args, 'variance_floor_reduce_factor', 0.5))
+    alignment_share_cap = float(resolve_param(cfg, 'alignment', 'alignment_share_cap', getattr(args, 'alignment_share_cap', 0.08)))
+    alignment_share_decay_factor = float(resolve_param(cfg, 'alignment', 'alignment_share_decay_factor', getattr(args, 'alignment_share_decay_factor', 0.7)))
+    enable_cosine_perf_schedule = resolve_param(cfg, 'runtime', 'enable_cosine_perf_schedule', getattr(args, 'enable_cosine_perf_schedule', False))
+    consistency_rebalance_epoch = int(resolve_param(cfg, 'refinement', 'consistency_rebalance_epoch', getattr(args, 'consistency_rebalance_epoch', 8)))
+    consistency_rebalance_threshold = float(resolve_param(cfg, 'refinement', 'consistency_rebalance_threshold', getattr(args, 'consistency_rebalance_threshold', 0.10)))
+    consistency_rebalance_new_weight = float(resolve_param(cfg, 'refinement', 'consistency_rebalance_new_weight', getattr(args, 'consistency_rebalance_new_weight', 0.2)))
+    variance_floor = float(resolve_param(cfg, 'refinement', 'variance_floor', getattr(args, 'variance_floor', 1e-4)))
+    variance_floor_patience = int(resolve_param(cfg, 'refinement', 'variance_floor_patience', getattr(args, 'variance_floor_patience', 3)))
+    variance_floor_reduce_factor = float(resolve_param(cfg, 'refinement', 'variance_floor_reduce_factor', getattr(args, 'variance_floor_reduce_factor', 0.5)))
     
     # Individual constraint weights - OPTIMAL values from parameter sweep
-    non_negative_loss_weight = getattr(args, 'non_negative_loss_weight', 0.0)
-    monotonicity_loss_weight = getattr(args, 'monotonicity_loss_weight', 0.1)
-    mastery_performance_loss_weight = getattr(args, 'mastery_performance_loss_weight', 0.8)
-    gain_performance_loss_weight = getattr(args, 'gain_performance_loss_weight', 0.8)
-    sparsity_loss_weight = getattr(args, 'sparsity_loss_weight', 0.2)
-    consistency_loss_weight = getattr(args, 'consistency_loss_weight', 0.3)
+    non_negative_loss_weight = resolve_param(cfg, 'interpretability', 'non_negative_loss_weight', getattr(args, 'non_negative_loss_weight', 0.0))
+    monotonicity_loss_weight = resolve_param(cfg, 'interpretability', 'monotonicity_loss_weight', getattr(args, 'monotonicity_loss_weight', 0.1))
+    mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.8))
+    gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.8))
+    sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.2))
+    consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.3))
     
     # Setup logging with experiment-specific logger name for parallel disambiguation
     logger_name = f"gainakt2exp.{experiment_suffix}"
@@ -314,10 +333,9 @@ def train_gainakt2exp_model(args):
         'd_ff': 1024,
         'dropout': 0.2,
         'emb_type': 'qid',
-        'monitor_frequency': 50,
-        # Allow disabling heads for pure predictive baseline
-        'use_mastery_head': getattr(args, 'use_mastery_head', True),
-        'use_gain_head': getattr(args, 'use_gain_head', True)
+        'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
+        'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
+        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True))
     }
     
     # Constraint resolution logic:
@@ -338,7 +356,18 @@ def train_gainakt2exp_model(args):
             'consistency_loss_weight': 0.0
         })
         logger.info("PURE BCE baseline: all constraint weights forced to 0.0")
-    elif enhanced_constraints and not any(hasattr(args, p) for p in individual_params):
+    elif enhanced_constraints and cfg is not None and all(p in cfg.get('interpretability', {}) for p in individual_params):
+        # Config already holds weights; use them directly
+        model_config.update({
+            'non_negative_loss_weight': non_negative_loss_weight,
+            'monotonicity_loss_weight': monotonicity_loss_weight,
+            'mastery_performance_loss_weight': mastery_performance_loss_weight,
+            'gain_performance_loss_weight': gain_performance_loss_weight,
+            'sparsity_loss_weight': sparsity_loss_weight,
+            'consistency_loss_weight': consistency_loss_weight
+        })
+        logger.info("Enhanced constraints: weights sourced from config.json interpretability section")
+    elif enhanced_constraints and cfg is None:
         model_config.update({
             'non_negative_loss_weight': 0.0,  # enforced architecturally
             'monotonicity_loss_weight': 0.1,
@@ -369,6 +398,15 @@ def train_gainakt2exp_model(args):
                 f"consistency={model_config['consistency_loss_weight']}")
     # Repro integration: detect EXPERIMENT_DIR
     experiment_dir = os.environ.get('EXPERIMENT_DIR')
+    # If not launched via run_repro_experiment (no EXPERIMENT_DIR), create a manual containment folder.
+    if not experiment_dir:
+        manual_root = os.path.join(os.getcwd(), 'examples', 'experiments')
+        os.makedirs(manual_root, exist_ok=True)
+        fallback_tag = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Use model name + 'manual' suffix for clarity; avoid including many hyperparameters.
+        experiment_dir = os.path.join(manual_root, f"{fallback_tag}_{model_name}_manual")
+        os.makedirs(experiment_dir, exist_ok=True)
+        logger.info(f"[Repro] Auto-created experiment_dir for manual run: {experiment_dir}")
     if experiment_dir:
         try:
             os.makedirs(experiment_dir, exist_ok=True)
@@ -393,7 +431,8 @@ def train_gainakt2exp_model(args):
     logger.info("Creating GainAKT2Exp (mastery_head=%s, gain_head=%s) with CUMULATIVE MASTERY..." % (
         model_config['use_mastery_head'], model_config['use_gain_head']) )
     model = create_exp_model(model_config)
-    monitor = InterpretabilityMonitor(model, log_frequency=args.monitor_freq)
+    monitor_freq = resolve_param(cfg, 'runtime', 'monitor_freq', getattr(args, 'monitor_freq', 50))
+    monitor = InterpretabilityMonitor(model, log_frequency=monitor_freq)
     model.set_monitor(monitor)
     model = model.to(device)
     # ------------------------------
@@ -454,7 +493,7 @@ def train_gainakt2exp_model(args):
     
     logger.info(f"\\nStarting training for {num_epochs} epochs...")
     # Tier B semantic emergence parameters
-    warmup_constraint_epochs = getattr(args, 'warmup_constraint_epochs', 4)
+    warmup_constraint_epochs = getattr(args, 'warmup_constraint_epochs', 8)
     max_semantic_students = getattr(args, 'max_semantic_students', 50)
     semantic_trajectory_path = getattr(
         args,
@@ -1134,11 +1173,20 @@ def train_gainakt2exp_model(args):
         },
         'timestamp': datetime.now().isoformat()
     }
-    results_file = f"gainakt2exp_results_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    # Primary comprehensive results file (historically written to repo root).
+    # Relocate inside experiment_dir for reproducibility containment if available.
+    # Standardized reproduction results filename (experiment-contained): repro_results_<YYYYMMDD>_<HHMMSS>.json
+    # Remove prior prefix and experiment_suffix to avoid overly long filenames and ensure uniformity across runs.
+    timestamp_tag = datetime.now().strftime('%Y%m%d_%H%M%S')
+    results_filename = f"repro_results_{timestamp_tag}.json"
+    if experiment_dir:
+        results_file = os.path.join(experiment_dir, results_filename)
+    else:
+        results_file = results_filename
     try:
         with open(results_file, 'w') as f:
             json.dump(final_results, f, indent=2)
-        logger.info(f"\n📄 Final results saved to: {results_file}")
+        logger.info(f"\n📄 Final results saved to: {results_file} (containment={'experiment_dir' if experiment_dir else 'root'})")
     except Exception as e:
         logger.warning(f"Failed to write final results file: {e}")
     if experiment_dir:
@@ -1173,11 +1221,13 @@ def train_gainakt2exp_model(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Train GainAKT2Exp model with reproducibility hooks.')
+    # Single-source config reproduction flag: when provided, all parameters are loaded from this file.
+    parser.add_argument('--config', type=str, help='Path to resolved experiment config.json (single source of truth).')
     parser.add_argument('--dataset', type=str, default='assist2015', help='Dataset name')
     parser.add_argument('--fold', type=int, default=0, help='Dataset fold index')
-    # Default epochs: 20 to allow semantic heads + alignment to stabilize (peak often by epoch 3–5)
-    parser.add_argument('--epochs', type=int, default=20, help='Number of training epochs (default 20 for semantic emergence)')
-    parser.add_argument('--batch_size', type=int, default=96, help='Batch size')
+    # Recovered configuration defaults (semantic modules active, correlations stabilize by ~epoch 8)
+    parser.add_argument('--epochs', type=int, default=12, help='Number of training epochs (default 12 recovered configuration)')
+    parser.add_argument('--batch_size', type=int, default=64, help='Batch size (default 64 recovered configuration)')
     parser.add_argument('--learning_rate', type=float, default=1.74e-4, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1.7571e-5, help='Weight decay')
     parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer (Adam supported)')
@@ -1251,6 +1301,13 @@ if __name__ == '__main__':
     parser.add_argument('--max_semantic_students', type=int, default=50, help='Students sampled for consistency semantic correlations')
     # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
+    # If a config path is passed, set PYKT_CONFIG_PATH so internal loaders pick it up.
+    if getattr(args, 'config', None):
+        if not os.path.exists(args.config):
+            print(f"[ERROR] --config file not found: {args.config}", file=sys.stderr)
+            sys.exit(2)
+        os.environ['PYKT_CONFIG_PATH'] = os.path.abspath(args.config)
+        print(f"[Repro] Using explicit config file: {os.environ['PYKT_CONFIG_PATH']}")
     # Map to expected attribute names inside training function
     args.num_epochs = args.epochs
     args.dataset_name = args.dataset

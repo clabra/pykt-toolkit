@@ -26,6 +26,7 @@ import sys
 import subprocess
 import shlex
 import time
+import json
 from typing import List, Dict, Any, Optional
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -39,173 +40,151 @@ EPOCH_HEADER = [
 ]
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Generic reproducible experiment wrapper")
-    p.add_argument('--train_script', type=str, required=True,
-                   help='Path to existing training script to execute (e.g., examples/train_gainakt2exp.py).')
+    p = argparse.ArgumentParser(description="Repro launcher (config-first) with backward-compatible training flags.")
+    p.add_argument('--train_script', type=str, required=True, help='Training script path (e.g., examples/train_gainakt2exp.py)')
     p.add_argument('--model_name', type=str, default='gainakt2exp')
     p.add_argument('--short_title', type=str, default='baseline')
     p.add_argument('--purpose', type=str, default='Reproducible training run')
-    p.add_argument('--dataset', type=str, default='assist2015')
-    p.add_argument('--fold', type=int, default=0)
-    p.add_argument('--epochs', type=int, default=12)
-    p.add_argument('--batch_size', type=int, default=64)
-    p.add_argument('--learning_rate', type=float, default=0.000174)
-    p.add_argument('--weight_decay', type=float, default=0.0)
-    p.add_argument('--optimizer', type=str, default='Adam', help='Optimizer type (currently only Adam supported)')
-    p.add_argument('--gradient_clip', type=float, default=1.0, help='Gradient clipping max norm')
-    p.add_argument('--seed', type=int, default=42)
-    p.add_argument('--patience', type=int, default=20, help='Early stopping patience')
-    p.add_argument('--extra_args', type=str, nargs='*', default=[],
-                   help='Additional raw args forwarded to the training script.')
-    p.add_argument('--devices', type=int, nargs='*', default=[0,1,2,3,4])
-    p.add_argument('--use_amp', action='store_true')
-    # Core interpretability heads & constraint weights
-    # Interpretability defaults: ENABLE semantic components unless user disables
-    p.add_argument('--use_mastery_head', action='store_true', default=True, help='Enable mastery head (default: enabled). Use --disable_mastery_head to turn off.')
-    p.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head')
-    p.add_argument('--use_gain_head', action='store_true', default=True, help='Enable gain head (default: enabled). Use --disable_gain_head to turn off.')
-    p.add_argument('--disable_gain_head', action='store_true', help='Disable gain head')
-    p.add_argument('--enhanced_constraints', action='store_true', default=True, help='Use enhanced constraint preset (default: enabled). Use --pure_bce to disable.')
-    p.add_argument('--pure_bce', action='store_true', help='Disable enhanced constraints (pure BCE baseline)')
-    p.add_argument('--non_negative_loss_weight', type=float, default=0.0)
-    p.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
-    p.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
-    p.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
-    p.add_argument('--sparsity_loss_weight', type=float, default=0.2)
-    p.add_argument('--consistency_loss_weight', type=float, default=0.3)
-    # Semantic interpretability / alignment flags (captured for config reproducibility)
-    p.add_argument('--enable_alignment_loss', action='store_true', default=True, help='Enable local alignment loss (default: enabled). Use --disable_alignment_loss to turn off.')
-    p.add_argument('--disable_alignment_loss', action='store_true', help='Disable local alignment loss')
-    p.add_argument('--alignment_weight', type=float, default=0.25, help='Base alignment weight')
-    p.add_argument('--alignment_warmup_epochs', type=int, default=8, help='Warm-up epochs for alignment scaling')
-    p.add_argument('--adaptive_alignment', action='store_true', default=True, help='Enable adaptive alignment scaling logic (default: enabled). Use --disable_adaptive_alignment to turn off.')
-    p.add_argument('--disable_adaptive_alignment', action='store_true', help='Disable adaptive alignment scaling')
-    p.add_argument('--alignment_min_correlation', type=float, default=0.05, help='Minimum correlation to retain/increase alignment weight')
-    p.add_argument('--alignment_share_cap', type=float, default=0.08, help='Cap on alignment loss share (fraction of total loss)')
-    p.add_argument('--alignment_share_decay_factor', type=float, default=0.7, help='Decay factor applied when alignment exceeds cap without improvement')
-    # Global residual alignment
-    p.add_argument('--enable_global_alignment_pass', action='store_true', default=True, help='Enable global alignment consistency pass (default: enabled). Use --disable_global_alignment_pass to turn off.')
-    p.add_argument('--disable_global_alignment_pass', action='store_true', help='Disable global alignment pass')
-    p.add_argument('--alignment_global_students', type=int, default=600, help='Number of students for global alignment sampling')
-    p.add_argument('--use_residual_alignment', action='store_true', help='Use residualization for global alignment')
-    p.add_argument('--alignment_residual_window', type=int, default=5, help='Window size for residual alignment calculations')
-    # Additional semantic sampling / scheduling args used by training script
-    p.add_argument('--warmup_constraint_epochs', type=int, default=4, help='Warm-up epochs for performance alignment losses')
-    p.add_argument('--max_semantic_students', type=int, default=50, help='Students sampled for consistency semantic correlations')
-    # Retention & Lag objectives
-    p.add_argument('--enable_retention_loss', action='store_true', default=True, help='Enable retention loss to preserve mastery peaks (default: enabled). Use --disable_retention_loss to turn off.')
-    p.add_argument('--disable_retention_loss', action='store_true', help='Disable retention loss')
-    p.add_argument('--retention_delta', type=float, default=0.005, help='Minimum decay before retention penalty triggers')
-    p.add_argument('--retention_weight', type=float, default=0.14, help='Retention penalty scaling weight')
-    p.add_argument('--enable_lag_gain_loss', action='store_true', default=True, help='Enable lag-based gain emergence loss (default: enabled). Use --disable_lag_gain_loss to turn off.')
-    p.add_argument('--disable_lag_gain_loss', action='store_true', help='Disable lag-based gain emergence loss')
-    p.add_argument('--lag_gain_weight', type=float, default=0.06, help='Base lag gain weight')
-    p.add_argument('--lag_max_lag', type=int, default=3, help='Maximum lag depth considered')
-    p.add_argument('--lag_l1_weight', type=float, default=0.5, help='Lag level-1 weight')
-    p.add_argument('--lag_l2_weight', type=float, default=0.3, help='Lag level-2 weight')
-    p.add_argument('--lag_l3_weight', type=float, default=0.2, help='Lag level-3 weight')
-    # Consistency rebalance & variance
-    p.add_argument('--consistency_rebalance_epoch', type=int, default=8, help='Epoch to potentially rebalance consistency weight')
-    p.add_argument('--consistency_rebalance_threshold', type=float, default=0.1, help='Mastery corr threshold for rebalance trigger')
-    p.add_argument('--consistency_rebalance_new_weight', type=float, default=0.2, help='New consistency weight after rebalance')
-    p.add_argument('--variance_floor', type=float, default=0.0001, help='Floor for mastery variance monitoring')
-    p.add_argument('--variance_floor_patience', type=int, default=3, help='Patience epochs before adjusting floor')
-    p.add_argument('--variance_floor_reduce_factor', type=float, default=0.5, help='Factor to reduce floor if needed')
-    # Use project-root anchored default to avoid examples/examples duplication
     p.add_argument('--output_base', type=str, default='examples/experiments')
+    p.add_argument('--devices', type=int, nargs='*', default=[0,1,2,3,4])
+    # Overrides: allow arbitrary --param=value matching defaults JSON; store raw extras
+    p.add_argument('--override', action='append', default=[], help='Override in key=value form; can repeat.')
+    # Legacy parameter flags (will be transformed into overrides automatically)
+    p.add_argument('--dataset', type=str)
+    p.add_argument('--fold', type=int)
+    p.add_argument('--seed', type=int)
+    p.add_argument('--epochs', type=int)
+    p.add_argument('--batch_size', type=int)
+    p.add_argument('--learning_rate', type=float)
+    p.add_argument('--weight_decay', type=float)
+    p.add_argument('--optimizer', type=str)
+    p.add_argument('--gradient_clip', type=float)
+    p.add_argument('--patience', type=int)
+    p.add_argument('--use_amp', action='store_true')
+    p.add_argument('--use_wandb', action='store_true')
+    # Interpretability & constraints
+    p.add_argument('--use_mastery_head', action='store_true')
+    p.add_argument('--use_gain_head', action='store_true')
+    p.add_argument('--enhanced_constraints', action='store_true')
+    p.add_argument('--non_negative_loss_weight', type=float)
+    p.add_argument('--monotonicity_loss_weight', type=float)
+    p.add_argument('--mastery_performance_loss_weight', type=float)
+    p.add_argument('--gain_performance_loss_weight', type=float)
+    p.add_argument('--sparsity_loss_weight', type=float)
+    p.add_argument('--consistency_loss_weight', type=float)
+    p.add_argument('--warmup_constraint_epochs', type=int)
+    p.add_argument('--max_semantic_students', type=int)
+    # Alignment
+    p.add_argument('--enable_alignment_loss', action='store_true')
+    p.add_argument('--alignment_weight', type=float)
+    p.add_argument('--alignment_warmup_epochs', type=int)
+    p.add_argument('--adaptive_alignment', action='store_true')
+    p.add_argument('--alignment_min_correlation', type=float)
+    p.add_argument('--alignment_share_cap', type=float)
+    p.add_argument('--alignment_share_decay_factor', type=float)
+    # Global alignment
+    p.add_argument('--enable_global_alignment_pass', action='store_true')
+    p.add_argument('--alignment_global_students', type=int)
+    p.add_argument('--use_residual_alignment', action='store_true')
+    p.add_argument('--alignment_residual_window', type=int)
+    # Refinement
+    p.add_argument('--enable_retention_loss', action='store_true')
+    p.add_argument('--retention_delta', type=float)
+    p.add_argument('--retention_weight', type=float)
+    p.add_argument('--enable_lag_gain_loss', action='store_true')
+    p.add_argument('--lag_gain_weight', type=float)
+    p.add_argument('--lag_max_lag', type=int)
+    p.add_argument('--lag_l1_weight', type=float)
+    p.add_argument('--lag_l2_weight', type=float)
+    p.add_argument('--lag_l3_weight', type=float)
+    p.add_argument('--consistency_rebalance_epoch', type=int)
+    p.add_argument('--consistency_rebalance_threshold', type=float)
+    p.add_argument('--consistency_rebalance_new_weight', type=float)
+    p.add_argument('--variance_floor', type=float)
+    p.add_argument('--variance_floor_patience', type=int)
+    p.add_argument('--variance_floor_reduce_factor', type=float)
+    p.add_argument('--enable_cosine_perf_schedule', action='store_true')
+    p.add_argument('--dry_run', action='store_true')
     p.add_argument('--skip_readme', action='store_true')
-    p.add_argument('--dry_run', action='store_true', help='Create folder & config only; skip training subprocess.')
-    p.add_argument('--allow_drift', action='store_true', default=False, help='Proceed even if argparse vs defaults drift detected (default: False).')
-    p.add_argument('--report_only', action='store_true', default=False, help='Print consistency (argparse vs defaults) report and exit without creating an experiment directory (default: False).')
-    # Post-training shifted evaluation hook (next-step metrics). Enabled by default via parameter_default.json
-    p.add_argument('--auto_shifted_eval', action='store_true', help='Automatically run tmp/shifted_eval_helper.py after training to produce unbiased next-step metrics.')
+    p.add_argument('--allow_drift', action='store_true', default=False)
+    p.add_argument('--report_only', action='store_true', default=False)
+    p.add_argument('--auto_shifted_eval', action='store_true')
     return p.parse_args()
 
-def build_subprocess_command(args: argparse.Namespace) -> List[str]:
-    cmd = [sys.executable, args.train_script,
-           '--dataset', args.dataset,
-           '--fold', str(args.fold),
-           '--epochs', str(args.epochs),
-           '--batch_size', str(args.batch_size),
-           '--learning_rate', str(args.learning_rate),
-           '--seed', str(args.seed),
-           '--weight_decay', str(args.weight_decay),
-           '--gradient_clip', str(args.gradient_clip),
-           '--patience', str(args.patience)]
-    if args.optimizer:
-        cmd.extend(['--optimizer', args.optimizer])
-    # Heads & constraints (now enabled by default in training script). We only propagate explicit disables via extra args.
-    # Preserve explicit enable flags if user supplied them for clarity.
-    if getattr(args, 'disable_mastery_head', False):
-        # Training script interprets disable flag; no need to send enable flag
-        cmd.append('--disable_mastery_head')
-    elif args.use_mastery_head:
-        cmd.append('--use_mastery_head')
-    if getattr(args, 'disable_gain_head', False):
-        cmd.append('--disable_gain_head')
-    elif args.use_gain_head:
-        cmd.append('--use_gain_head')
-    if getattr(args, 'pure_bce', False):
-        cmd.append('--pure_bce')
-    elif args.enhanced_constraints:
-        cmd.append('--enhanced_constraints')
+def build_subprocess_command(train_script: str, resolved: Dict[str,Any]) -> List[str]:
+    """Construct training subprocess command from resolved config dictionary (training_defaults merged with overrides).
+    We only emit flags necessary for legacy training script compatibility until it is converted to config ingestion.
+    """
+    td = resolved['training']
+    interp = resolved.get('interpretability', {})
+    align = resolved.get('alignment', {})
+    glob = resolved.get('global_alignment', {})
+    refn = resolved.get('refinement', {})
+    runtime = resolved.get('runtime', {})
+    cmd = [sys.executable, train_script,
+           '--dataset', resolved['data']['dataset'],
+           '--fold', str(resolved['data']['fold']),
+           '--epochs', str(td['epochs']),
+           '--batch_size', str(td['batch_size']),
+           '--learning_rate', str(td['learning_rate']),
+           '--seed', str(runtime.get('seed', resolved['seeds']['primary'])),
+           '--weight_decay', str(td['weight_decay']),
+           '--gradient_clip', str(td['gradient_clip']),
+           '--patience', str(td['patience'])]
     cmd.extend([
-        '--non_negative_loss_weight', str(args.non_negative_loss_weight),
-        '--monotonicity_loss_weight', str(args.monotonicity_loss_weight),
-        '--mastery_performance_loss_weight', str(args.mastery_performance_loss_weight),
-        '--gain_performance_loss_weight', str(args.gain_performance_loss_weight),
-        '--sparsity_loss_weight', str(args.sparsity_loss_weight),
-        '--consistency_loss_weight', str(args.consistency_loss_weight)
+        '--monotonicity_loss_weight', str(interp['monotonicity_loss_weight']),
+        '--mastery_performance_loss_weight', str(interp['mastery_performance_loss_weight']),
+        '--gain_performance_loss_weight', str(interp['gain_performance_loss_weight']),
+        '--sparsity_loss_weight', str(interp['sparsity_loss_weight']),
+        '--consistency_loss_weight', str(interp['consistency_loss_weight']),
+        '--non_negative_loss_weight', str(interp['non_negative_loss_weight']),
+        '--warmup_constraint_epochs', str(interp['warmup_constraint_epochs']),
+        '--max_semantic_students', str(interp['max_semantic_students'])
     ])
-    # Forward semantic flags if enabled / set (keep defaults for transparency)
-    # Alignment & semantic objectives default enabled; only append enable flag if explicitly set (transparency) or disabled flag absent.
-    if getattr(args, 'disable_alignment_loss', False):
-        cmd.append('--disable_alignment_loss')
-    elif args.enable_alignment_loss:
+    if interp.get('use_mastery_head', True):
+        cmd.append('--use_mastery_head')
+    else:
+        cmd.append('--disable_mastery_head')
+    if interp.get('use_gain_head', True):
+        cmd.append('--use_gain_head')
+    else:
+        cmd.append('--disable_gain_head')
+    if interp.get('enhanced_constraints', True):
+        cmd.append('--enhanced_constraints')
+    align_enabled = align.get('enable_alignment_loss', False)
+    if align_enabled:
         cmd.append('--enable_alignment_loss')
     cmd.extend([
-        '--alignment_weight', str(args.alignment_weight),
-        '--alignment_warmup_epochs', str(args.alignment_warmup_epochs),
-        '--alignment_min_correlation', str(args.alignment_min_correlation),
-        '--alignment_share_cap', str(args.alignment_share_cap),
-        '--alignment_share_decay_factor', str(args.alignment_share_decay_factor),
-        '--warmup_constraint_epochs', str(args.warmup_constraint_epochs),
-        '--max_semantic_students', str(args.max_semantic_students)
+        '--alignment_weight', str(align['alignment_weight']),
+        '--alignment_warmup_epochs', str(align['alignment_warmup_epochs']),
+        '--alignment_min_correlation', str(align['alignment_min_correlation']),
+        '--alignment_share_cap', str(align['alignment_share_cap']),
+        '--alignment_share_decay_factor', str(align['alignment_share_decay_factor'])
     ])
-    if getattr(args, 'disable_adaptive_alignment', False):
-        cmd.append('--disable_adaptive_alignment')
-    elif args.adaptive_alignment:
+    if align.get('adaptive_alignment', False):
         cmd.append('--adaptive_alignment')
-    if getattr(args, 'disable_global_alignment_pass', False):
-        cmd.append('--disable_global_alignment_pass')
-    elif args.enable_global_alignment_pass:
+    if glob.get('enable_global_alignment_pass', False):
         cmd.append('--enable_global_alignment_pass')
     cmd.extend([
-        '--alignment_global_students', str(args.alignment_global_students),
-        '--alignment_residual_window', str(args.alignment_residual_window)
+        '--alignment_global_students', str(glob['alignment_global_students']),
+        '--alignment_residual_window', str(glob['alignment_residual_window'])
     ])
-    if args.use_residual_alignment:
+    if glob.get('use_residual_alignment', False):
         cmd.append('--use_residual_alignment')
-    if getattr(args, 'disable_retention_loss', False):
-        cmd.append('--disable_retention_loss')
-    elif args.enable_retention_loss:
-        cmd.extend(['--enable_retention_loss', '--retention_delta', str(args.retention_delta), '--retention_weight', str(args.retention_weight)])
-    if getattr(args, 'disable_lag_gain_loss', False):
-        cmd.append('--disable_lag_gain_loss')
-    elif args.enable_lag_gain_loss:
-        cmd.extend(['--enable_lag_gain_loss', '--lag_gain_weight', str(args.lag_gain_weight), '--lag_max_lag', str(args.lag_max_lag), '--lag_l1_weight', str(args.lag_l1_weight), '--lag_l2_weight', str(args.lag_l2_weight), '--lag_l3_weight', str(args.lag_l3_weight)])
+    if refn.get('enable_retention_loss', False):
+        cmd.extend(['--enable_retention_loss','--retention_delta', str(refn['retention_delta']), '--retention_weight', str(refn['retention_weight'])])
+    if refn.get('enable_lag_gain_loss', False):
+        cmd.extend(['--enable_lag_gain_loss','--lag_gain_weight', str(refn['lag_gain_weight']), '--lag_max_lag', str(refn['lag_max_lag']), '--lag_l1_weight', str(refn['lag_l1_weight']), '--lag_l2_weight', str(refn['lag_l2_weight']), '--lag_l3_weight', str(refn['lag_l3_weight'])])
     cmd.extend([
-        '--consistency_rebalance_epoch', str(args.consistency_rebalance_epoch),
-        '--consistency_rebalance_threshold', str(args.consistency_rebalance_threshold),
-        '--consistency_rebalance_new_weight', str(args.consistency_rebalance_new_weight),
-        '--variance_floor', str(args.variance_floor),
-        '--variance_floor_patience', str(args.variance_floor_patience),
-        '--variance_floor_reduce_factor', str(args.variance_floor_reduce_factor)
+        '--consistency_rebalance_epoch', str(refn['consistency_rebalance_epoch']),
+        '--consistency_rebalance_threshold', str(refn['consistency_rebalance_threshold']),
+        '--consistency_rebalance_new_weight', str(refn['consistency_rebalance_new_weight']),
+        '--variance_floor', str(refn['variance_floor']),
+        '--variance_floor_patience', str(refn['variance_floor_patience']),
+        '--variance_floor_reduce_factor', str(refn['variance_floor_reduce_factor'])
     ])
-    if args.use_amp:
+    if runtime.get('use_amp', False):
         cmd.append('--use_amp')
-    if args.extra_args:
-        cmd.extend(args.extra_args)
     return cmd
 
 def run_consistency_check(train_script: str) -> Dict[str,Any]:
@@ -315,30 +294,6 @@ def tail_metrics_from_csv(csv_path: str) -> Optional[Dict[str,Any]]:
 
 def main():
     args = parse_args()
-    # Load external defaults and apply any missing attributes (only for training_defaults)
-    try:
-        import json as _json
-        defaults_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'parameter_default.json')
-        if os.path.exists(defaults_path):
-            with open(defaults_path) as df:
-                _defaults = _json.load(df)
-            training_defaults = _defaults.get('training_defaults', {})
-            # For each key, if arg value equals parser default AND user didn't pass it, override with json default
-            # We approximate "user didn't pass" by checking sys.argv tokens.
-            provided_flags = set(a.lstrip('-') for a in sys.argv if a.startswith('--'))
-            for k,v in training_defaults.items():
-                # map json key names to argparse attribute names (identical here)
-                if hasattr(args, k):
-                    # If flag not explicitly provided and current value differs from desired default, set
-                    if k not in provided_flags and getattr(args, k) != v:
-                        setattr(args, k, v)
-                else:
-                    # inject attribute for downstream config building
-                    setattr(args, k, v)
-    except Exception:
-        # Non-fatal; continue with existing args
-        pass
-    # Normalize / validate train_script path (common user error: running from examples/ and passing 'examples/train_*.py')
     orig_train_script = args.train_script
     if not os.path.isabs(orig_train_script):
         # First try as given relative to project root (parent of this file)
@@ -378,6 +333,139 @@ def main():
         else:
             print('[ReportOnly] No drift detected.')
             sys.exit(0)
+    # Load canonical defaults JSON
+    defaults_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'parameter_default.json')
+    with open(defaults_path) as f:
+        defaults_json = json.load(f)
+    training_defaults = defaults_json['training_defaults']
+    # Build initial resolved structure (nested grouping similar to previous build_config output)
+    # Map training_defaults flat keys into sections
+    def sectionize(td: Dict[str,Any]) -> Dict[str,Any]:
+        resolved = {
+            'runtime': {
+                'seed': td['seed'],
+                'monitor_freq': td['monitor_freq'],
+                'use_amp': td['use_amp'],
+                'use_wandb': td['use_wandb'],
+                'enable_cosine_perf_schedule': td['enable_cosine_perf_schedule'],
+                'auto_shifted_eval': td.get('auto_shifted_eval', False)
+            },
+            'training': {
+                'epochs': td['epochs'],
+                'batch_size': td['batch_size'],
+                'learning_rate': td['learning_rate'],
+                'weight_decay': td['weight_decay'],
+                'optimizer': td['optimizer'],
+                'gradient_clip': td['gradient_clip'],
+                'patience': td['patience']
+            },
+            'data': {
+                'dataset': td['dataset'],
+                'fold': td['fold']
+            },
+            'interpretability': {
+                'use_mastery_head': td['use_mastery_head'],
+                'use_gain_head': td['use_gain_head'],
+                'enhanced_constraints': td['enhanced_constraints'],
+                'non_negative_loss_weight': td['non_negative_loss_weight'],
+                'monotonicity_loss_weight': td['monotonicity_loss_weight'],
+                'mastery_performance_loss_weight': td['mastery_performance_loss_weight'],
+                'gain_performance_loss_weight': td['gain_performance_loss_weight'],
+                'sparsity_loss_weight': td['sparsity_loss_weight'],
+                'consistency_loss_weight': td['consistency_loss_weight'],
+                'warmup_constraint_epochs': td['warmup_constraint_epochs'],
+                'max_semantic_students': td['max_semantic_students']
+            },
+            'alignment': {
+                'enable_alignment_loss': td['enable_alignment_loss'],
+                'alignment_weight': td['alignment_weight'],
+                'alignment_warmup_epochs': td['alignment_warmup_epochs'],
+                'adaptive_alignment': td['adaptive_alignment'],
+                'alignment_min_correlation': td['alignment_min_correlation'],
+                'alignment_share_cap': td['alignment_share_cap'],
+                'alignment_share_decay_factor': td['alignment_share_decay_factor']
+            },
+            'global_alignment': {
+                'enable_global_alignment_pass': td['enable_global_alignment_pass'],
+                'alignment_global_students': td['alignment_global_students'],
+                'use_residual_alignment': td['use_residual_alignment'],
+                'alignment_residual_window': td['alignment_residual_window']
+            },
+            'refinement': {
+                'enable_retention_loss': td['enable_retention_loss'],
+                'retention_delta': td['retention_delta'],
+                'retention_weight': td['retention_weight'],
+                'enable_lag_gain_loss': td['enable_lag_gain_loss'],
+                'lag_gain_weight': td['lag_gain_weight'],
+                'lag_max_lag': td['lag_max_lag'],
+                'lag_l1_weight': td['lag_l1_weight'],
+                'lag_l2_weight': td['lag_l2_weight'],
+                'lag_l3_weight': td['lag_l3_weight'],
+                'consistency_rebalance_epoch': td['consistency_rebalance_epoch'],
+                'consistency_rebalance_threshold': td['consistency_rebalance_threshold'],
+                'consistency_rebalance_new_weight': td['consistency_rebalance_new_weight'],
+                'variance_floor': td['variance_floor'],
+                'variance_floor_patience': td['variance_floor_patience'],
+                'variance_floor_reduce_factor': td['variance_floor_reduce_factor']
+            }
+        }
+        return resolved
+    resolved = sectionize(training_defaults)
+    # Collect legacy flags into overrides automatically (omit None values)
+    legacy_to_key = [
+        'dataset','fold','seed','epochs','batch_size','learning_rate','weight_decay','optimizer','gradient_clip','patience',
+        'use_amp','use_wandb','use_mastery_head','use_gain_head','enhanced_constraints','non_negative_loss_weight','monotonicity_loss_weight',
+        'mastery_performance_loss_weight','gain_performance_loss_weight','sparsity_loss_weight','consistency_loss_weight','warmup_constraint_epochs',
+        'max_semantic_students','enable_alignment_loss','alignment_weight','alignment_warmup_epochs','adaptive_alignment','alignment_min_correlation',
+        'alignment_share_cap','alignment_share_decay_factor','enable_global_alignment_pass','alignment_global_students','use_residual_alignment',
+        'alignment_residual_window','enable_retention_loss','retention_delta','retention_weight','enable_lag_gain_loss','lag_gain_weight','lag_max_lag',
+        'lag_l1_weight','lag_l2_weight','lag_l3_weight','consistency_rebalance_epoch','consistency_rebalance_threshold','consistency_rebalance_new_weight',
+        'variance_floor','variance_floor_patience','variance_floor_reduce_factor','enable_cosine_perf_schedule'
+    ]
+    override_pairs = {}
+    for k in legacy_to_key:
+        if hasattr(args, k):
+            val = getattr(args, k)
+            if val is not None:
+                # For store_true style booleans: only override when user explicitly enabled (True).
+                # If flag not passed (False), skip so defaults (possibly True) remain intact.
+                if isinstance(val, bool) and val is False:
+                    continue
+                override_pairs[k] = val
+    # Apply overrides from --override key=value pairs (explicit string form)
+    for ov in args.override:
+        if '=' not in ov:
+            raise ValueError(f"Override must be key=value: {ov}")
+        kk, vv = ov.split('=',1)
+        kk = kk.strip()
+        vv = vv.strip()
+        if vv.lower() in ('true','false'):
+            v_cast = vv.lower() == 'true'
+        else:
+            try:
+                v_cast = int(vv) if vv.isdigit() else float(vv)
+            except ValueError:
+                v_cast = vv
+        override_pairs[kk] = v_cast
+    # Validate every override key exists in training_defaults
+    missing = [k for k in override_pairs.keys() if k not in training_defaults]
+    if missing:
+        raise KeyError(f"Overrides contain unknown keys not in training_defaults: {missing}")
+    # Merge
+    for k,val in override_pairs.items():
+        training_defaults[k] = val
+    # Re-sectionize after updates
+    resolved = sectionize(training_defaults)
+    # Integrity: ensure every training_defaults key appears in some resolved section
+    flat_keys = set(training_defaults.keys())
+    section_keys = set()
+    for sec_name, sec_vals in resolved.items():
+        for sk in sec_vals.keys():
+            section_keys.add(sk)
+    missing_mapped = flat_keys - section_keys
+    if missing_mapped:
+        raise RuntimeError(f"Integrity check failed: some defaults keys not mapped into resolved sections: {sorted(missing_mapped)}")
+    resolved['override_applied'] = override_pairs
     # Dynamic multi-GPU selection logic:
     # If user supplies --devices explicitly (non-empty list differing from defaults) we honor it.
     # Otherwise we attempt environment-based discovery:
@@ -432,57 +520,43 @@ def main():
     # Step 2: Seeds (single-seed for now; multi-seed orchestration will wrap multiple calls)
     seeds = [args.seed]
 
-    # Step 3: Build and dump config
-    raw_args = vars(args).copy()
-    train_cmd_list = build_subprocess_command(args)
-    raw_args['train_command'] = ' '.join(shlex.quote(c) for c in train_cmd_list)
-    # Launcher command reproduction (python path + full argv for this script)
-    raw_args['launcher_command'] = 'python ' + ' '.join(shlex.quote(a) for a in sys.argv)
-    raw_args['command'] = raw_args['launcher_command']  # backward compatibility
-    # Pre-build evaluation command template; run_dir placeholder replaced after exp_dir creation
-    # We rely on architectural defaults used in training script (d_model, n_heads, etc.). These are not passed here; evaluation script will infer them or user can adjust.
-    # Include heads if flags set to ensure correlation computation works identically at eval time.
-    eval_parts = [
-        'python', 'examples/eval_gainakt2exp.py', '--run_dir', '{EXP_DIR}', '--dataset', args.dataset
-    ]
-    # Evaluation script defaults:
-    eval_defaults = {
-        'fold': 0,
-        'batch_size': 96,
-        'seq_len': 200,
-        'd_model': 512,
-        'n_heads': 8,
-        'num_encoder_blocks': 6,
-        'd_ff': 1024,
-        'dropout': 0.2,
-        'use_mastery_head': True,
-        'use_gain_head': True
+    # Step 3: Build and dump config (config-first). Add experiment + hardware metadata.
+    # Train/eval command placeholders inserted after constructing resolved.
+    resolved['experiment'] = {
+        'id': exp_id,
+        'model': args.model_name,
+        'short_title': args.short_title,
+        'purpose': args.purpose
     }
-    # Add only overrides vs these defaults
-    if args.fold != eval_defaults['fold']:
-        eval_parts.extend(['--fold', str(args.fold)])
-    if args.batch_size != eval_defaults['batch_size']:
-        eval_parts.extend(['--batch_size', str(args.batch_size)])
-    # Heads: include disable flag if turned off
-    if getattr(args,'disable_mastery_head',False) or not args.use_mastery_head:
-        eval_parts.append('--disable_mastery_head')
-    if getattr(args,'disable_gain_head',False) or not args.use_gain_head:
-        eval_parts.append('--disable_gain_head')
-    # If any architectural overrides were passed through extra_args or differ from defaults, include them
-    # We inspect raw_args for presence
-    raw_eval_related = {k: raw_args.get(k) for k in ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout'] if k in raw_args}
-    for k,v in raw_eval_related.items():
-        if v is not None and str(v) != str(eval_defaults.get(k)):
-            eval_parts.extend([f'--{k}', str(v)])
-    raw_args['eval_command_template'] = ' '.join(eval_parts)
-    cfg = build_config(raw_args, exp_id=exp_id, exp_path=exp_dir, seeds=seeds)
-    # Inject resolved evaluation command now that EXP_DIR known
-    eval_cmd = raw_args.get('eval_command_template','').replace('{EXP_DIR}', exp_dir)
-    if 'runtime' in cfg:
-        cfg['runtime']['eval_command'] = eval_cmd
-    else:
-        cfg['runtime'] = {'eval_command': eval_cmd}
-    atomic_write_json(cfg, os.path.join(exp_dir, 'config.json'))
+    resolved['hardware'] = {
+        'devices': args.devices,
+        'threads': int(os.environ.get('OMP_NUM_THREADS','8'))
+    }
+    resolved['seeds'] = {
+        'primary': resolved['runtime']['seed'],
+        'all': [resolved['runtime']['seed']]
+    }
+    # Evaluation defaults snapshot retained from defaults_json
+    eval_defaults = defaults_json.get('evaluation_defaults', {})
+    resolved['evaluation_defaults'] = eval_defaults
+    # Commands
+    train_cmd_list = build_subprocess_command(args.train_script, resolved)
+    train_cmd_str = ' '.join(shlex.quote(c) for c in train_cmd_list)
+    launcher_command = 'python ' + ' '.join(shlex.quote(a) for a in sys.argv)
+    resolved['runtime']['command'] = launcher_command
+    resolved['runtime']['train_command'] = train_cmd_str
+    resolved['runtime']['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    resolved['runtime']['eval_command'] = f"python examples/eval_gainakt2exp.py --run_dir {exp_dir} --dataset {resolved['data']['dataset']}"
+    # Minimal reproduction command (config-first): a single invocation pointing to the canonical config.json.
+    # Rationale: The training script now supports --config to ingest ALL parameters from the stored file, eliminating
+    # the need for verbose override enumeration and reducing drift risk. Reproduction requires copying the experiment
+    # directory (or config.json) and executing this command. To retain legacy behaviour, one could reintroduce the
+    # enumerated override method behind a feature flag (not requested).
+    resolved['runtime']['repro_command'] = f"{sys.executable} {args.train_script} --config {os.path.join(exp_dir,'config.json')}"
+    # Config hash
+    from examples.experiment_utils import compute_config_hash
+    resolved['config_md5'] = compute_config_hash(resolved)
+    atomic_write_json(resolved, os.path.join(exp_dir, 'config.json'))
 
     # Step 4: Environment + seeds metadata
     capture_environment(os.path.join(exp_dir, 'environment.txt'))
@@ -492,7 +566,8 @@ def main():
     logger = timestamped_logger('repro', os.path.join(exp_dir, 'stdout.log'))
     logger.info(f"Launching reproducible experiment: {exp_id}")
     logger.info(f"Training script: {args.train_script}")
-    logger.info(f"Command: {raw_args['command']}")
+    logger.info(f"Launcher command: {launcher_command}")
+    logger.info(f"Train command: {train_cmd_str}")
 
     # Step 6: Optionally run training
     metrics_csv = os.path.join(exp_dir, 'metrics_epoch.csv')
@@ -518,12 +593,13 @@ def main():
     if not args.dry_run:
         env = os.environ.copy()
         env['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
-        # Also expose chosen devices via PYKT_VISIBLE_GPUS for downstream scripts (evaluation, relaunch) if not already set.
         env.setdefault('PYKT_VISIBLE_GPUS', env['CUDA_VISIBLE_DEVICES'])
         env['EXPERIMENT_DIR'] = exp_dir
+        env['PYKT_CONFIG_PATH'] = os.path.join(exp_dir, 'config.json')
         logger.info(f"[Launcher] Set EXPERIMENT_DIR={exp_dir}")
+        logger.info(f"[Launcher] Set PYKT_CONFIG_PATH={env['PYKT_CONFIG_PATH']}")
         start = time.time()
-        proc = subprocess.Popen(build_subprocess_command(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True)
+        proc = subprocess.Popen(train_cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True, shell=True)
         # Stream output with timestamps
         while True:
             line = proc.stdout.readline()
@@ -560,23 +636,23 @@ def main():
                 'mastery_corr': tail_metrics.get('mastery_corr'),
                 'gain_corr': tail_metrics.get('gain_corr'),
             }
-            atomic_write_json({'tail_metrics': tail_metrics, 'best_summary': best_metrics, 'config_md5': cfg['config_md5']}, results_json_path)
+            atomic_write_json({'tail_metrics': tail_metrics, 'best_summary': best_metrics, 'config_md5': resolved['config_md5']}, results_json_path)
         else:
             note = 'metrics_epoch.csv present but no data rows appended (training script may not have written metrics).' if metrics_csv and os.path.exists(metrics_csv) else 'No metrics file (dry_run or script not adapted).'
             failure = ret != 0
-            payload = {'config_md5': cfg['config_md5'], 'note': note}
+            payload = {'config_md5': resolved['config_md5'], 'note': note}
             if failure:
                 payload['exit_code'] = ret
-                # Include truncated stderr snippet for quick diagnosis
                 if stderr_out:
                     payload['stderr_excerpt'] = stderr_out[:5000]
             atomic_write_json(payload, results_json_path)
     else:
-        atomic_write_json({'config_md5': cfg['config_md5'], 'dry_run': True, 'note': 'Dry run: metrics and training skipped.'}, results_json_path)
+        atomic_write_json({'config_md5': resolved['config_md5'], 'dry_run': True, 'note': 'Dry run: metrics and training skipped.'}, results_json_path)
 
     # Step 7: README generation (optional)
     if not args.skip_readme:
-        write_readme(exp_dir, cfg, best_metrics)
+        # Reuse write_readme with resolved config; adapt format to expected keys
+        write_readme(exp_dir, resolved, best_metrics)
 
     print(f"Experiment directory created: {exp_dir}")
 

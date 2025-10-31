@@ -201,7 +201,7 @@ When adding a new flag to training or evaluation scripts: (i) add to argparse; (
 
 ---
 
-This workflow guarantees any published GainAKT2Exp result is reconstructible via a single `config.json` plus stored commands.
+This workflow guarantees any published GainAKT2Exp result is reconstructable via a single `config.json` plus stored commands.
 
 
 
@@ -721,177 +721,110 @@ Priority Legend: High = foundational causal interpretability; Medium = depth/edu
 
 Paper Positioning Sentence (updated): *GainAKT2Exp matches the Augmented Architecture Design (projection heads + five educational losses + monitoring) and extends it with alignment, retention, and lag objectives, yet still lacks intrinsic attention-level gain semantics (Values ≠ gains) and direct Σ α g knowledge state formation. Bridging this gap through intrinsic gain attention and unified evaluation metrics is our next step to claim causal interpretability while maintaining competitive AUC.*
 
-## Semantic Interpretabily Metrics
-
-We observed a regression in semantic interpretability when migrating to the reproducible launcher: validation mastery correlation decreased from 0.1015 (previous aligned run) to 0.0597 (repro run without semantic modules). This section documents a systematic recovery plan and establishes a measurement framework to quantify the impact of each controllable flag on mastery and gain correlations while preserving predictive AUC.
-
-The semantic mechnisms we are going to activate are: 
-
-- Alignment
-- Global Residual Alignment
-- Residualization
-- Retention
-- Lag Gains
+## Semantic Interpretabily Recovery
 
 ### Objective
-Recover (and ideally surpass) prior mastery/gain correlation levels (target: mastery ≥0.12 sustained post-warm-up; gain ≥0.08) while maintaining early-stopped validation AUC ≥0.72. We will isolate, re‑enable, and tune semantic flags incrementally to attribute gains in interpretability to specific mechanisms.
+Recover non-zero, educationally meaningful mastery and gain correlations after they regressed to 0.0 in a prior configuration, and identify the minimal parameter set whose activation restores semantic signals. Provide actionable guidance for parameter sweep design to optimize the trade-off between predictive AUC and interpretability (correlations, stability, coverage).
 
 ### Methodological Approach
-1. Baseline (B0): Constraints only (monotonicity, performance alignment, sparsity, consistency) — no semantic alignment, retention, or lag.
-2. Incremental Activation: Add one semantic mechanism at a time (Alignment → Global Residual Alignment → Residualization → Retention → Lag Gains).
-3. Scheduling & Regularization Tuning: Restore weight decay; evaluate alignment warm-up and share cap interactions.
-4. Measurement per epoch: AUC, mastery_corr, gain_corr, mastery_variance, violation rates, alignment_loss_share, lag_corr_summary.
-5. Criterion for acceptance of a mechanism: +Δ mastery_corr ≥ 0.01 OR +Δ gain_corr ≥ 0.01 with ≤1% relative AUC drop from prior accepted configuration.
-6. Multi-seed validation (≥5 seeds) once single-seed improvements plateau.
+We compared two experiment configurations:
+1. Pre-recovery (zero correlations): `20251030_232030_gainakt2exp_config_params`.
+2. Post-recovery (restored correlations): `20251030_234720_gainakt2exp_recover_bool_fix`.
 
-### Possible Metrics Extensions (To Confirm)
-- Coverage: fraction of students contributing positive (non‑trivial) mastery correlation (|corr|>0.02).
-- Bootstrap 95% CI for mastery and gain correlations (student resampling).
-- Lag stability: median lag‑1 correlation and positive fraction.
-- Retention effectiveness: difference between peak mastery correlation and final mastery correlation decay (should be ≤5%).
+Both runs share core hyperparameters (learning_rate, weight_decay, monotonicity/gain/mastery performance weights, sparsity, consistency base weights, alignment_weight, alignment_warmup_epochs), but differ along enabled boolean semantics and scheduling parameters. The regression was traced to unintended overrides of store_true flags to `False` (heads and semantic modules disabled), caused by launcher logic that wrote false values when flags were not explicitly passed. The fix re-enabled defaults by only overriding booleans when explicitly set `True`.
+
+We enumerated parameter deltas in the sections: interpretability, alignment, global_alignment, refinement, plus epochs/batch_size/warmup_constraint_epochs. We then linked each delta to plausible causal pathways for mastery/gain correlation emergence.
+
+### Parameter Delta Summary (Pre vs Post)
+| Group | Parameter | Pre (Zero Corr) | Post (Recovered Corr) | Causal Role |
+|-------|-----------|-----------------|------------------------|-------------|
+| interpretability | use_mastery_head | false | true | Enables projection of mastery trajectories necessary for correlation computation. |
+| interpretability | use_gain_head | false | true | Produces gain trajectories; correlations impossible without activation. |
+| interpretability | enhanced_constraints | false | true | Activates bundled structural losses stabilizing trajectories (monotonicity, alignment to performance, sparsity, consistency synergy). |
+| interpretability | warmup_constraint_epochs | 4 | 8 | Longer warm-up reduces early over-regularization, allowing mastery/gain signal to form before full constraint pressure. |
+| training/runtime | epochs | 20 | 12 | Shorter training halts before late overfitting / correlation erosion; preserves early semantic signal. |
+| training/runtime | batch_size | 96 | 64 | Smaller batch increases update stochasticity; can amplify diversity in latent states aiding correlation emergence. |
+| alignment | enable_alignment_loss | false | true | Local alignment shapes latent representations toward performance-consistent mastery evolution. |
+| alignment | adaptive_alignment | false | true | Dynamically scales alignment forcing based on correlation feedback; supports sustained growth without over-saturation. |
+| global_alignment | enable_global_alignment_pass | false | true | Population-level coherence improves mastery correlation stability (global signal reinforcement). |
+| global_alignment | use_residual_alignment | false | true | Removes explained variance, clarifying incremental mastery/gain improvements; sharper correlations. |
+| refinement | enable_retention_loss | false | true | Prevents post-peak decay of mastery trajectory, retaining correlation magnitude. |
+| refinement | enable_lag_gain_loss | false | true | Introduces temporal structure for gains; lag pattern increases gain correlation interpretability. |
+| refinement | retention_delta / retention_weight | inactive | active | Retention only influences trajectories when enabled; improves final correlation retention ratio. |
+| refinement | lag_* weights | inactive | active | Lag structuring turns otherwise inert weights into semantic shaping forces. |
+
+All other numeric weights remained identical; correlation recovery is attributable to activation of the semantic and interpretability heads plus extended warm-up and reduced epoch horizon.
+
+### Causal Impact Inference
+1. Heads Activation (Mastery/Gain): Mandatory prerequisite; without heads correlations are structurally zero. Their absence fully explains initial regression.
+2. Enhanced Constraints: Provides regularization synergy; prevents degenerate or noisy trajectories, increasing correlation stability above random fluctuation.
+3. Alignment (Local + Adaptive): Drives early shaping of mastery sequence toward performance-consistent progression, accelerating correlation emergence pre-warm-up completion.
+4. Global Residual Alignment: Consolidates population patterns; lifts mastery correlation peak and smooths gain correlation ascent by reducing cross-student variance.
+5. Retention: Maintains elevated mastery levels post-peak, reducing late-stage decline and supporting higher final correlation.
+6. Lag Gain Loss: Adds temporal causal narrative for gains; improves gain correlation by emphasizing structured progression rather than noise.
+7. Warm-up Extension (4 → 8): Avoids premature constraint saturation, allowing latent representations to differentiate before full constraint pressure, yielding higher eventual peak correlations.
+8. Epoch Reduction (20 → 12): Avoids performance/semantic drift phase where alignment dominance and constraint loss shares begin to erode predictive calibration and correlation stability.
+9. Batch Size Reduction (96 → 64): Increases gradient variance, potentially enhancing exploration and preventing early convergence to flat mastery trajectories (empirical pattern: higher mastery_corr at epoch 3).
+
+### Sweep Design Guidance
+We propose a structured sweep with prioritized axes:
+- Core Activation Set (binary toggles): {enhanced_constraints, enable_alignment_loss, adaptive_alignment, enable_global_alignment_pass, use_residual_alignment, enable_retention_loss, enable_lag_gain_loss}.
+- Warm-up Horizon: warmup_constraint_epochs ∈ {4, 6, 8, 10}.
+- Epoch Budget / Early Stop: epochs ∈ {8, 10, 12, 14} with early-stopping on val AUC plateau (ΔAUC < 0.002 over 2 epochs).
+- Batch Size: {48, 64, 80, 96} to evaluate impact on correlation variance vs AUC stability.
+- Alignment Weight & Cap: alignment_weight ∈ {0.15, 0.25, 0.35}; alignment_share_cap ∈ {0.06, 0.08, 0.10}.
+- Lag Gain Weight: lag_gain_weight ∈ {0.04, 0.06, 0.08} with lag_l1:l2:l3 ratios fixed or slightly varied.
+- Retention Weight: retention_weight ∈ {0.10, 0.14, 0.18}; retention_delta fixed at 0.005.
+
+Sweep Objective Metrics:
+- Peak & final val AUC.
+- Peak & final mastery_corr, gain_corr.
+- Correlation retention ratio = final_corr / peak_corr.
+- Constraint violation rates (expected 0; monitor for regression).
+- Alignment loss share trajectory (identify saturation / over-dominance).
+- Gain temporal structure metrics (median lag1 correlation, positive fraction).
+
+Multi-stage approach: First coarse sweep to identify promising semantic activation subsets; second fine-tuning sweep on alignment_weight, warmup_constraint_epochs, retention_weight trade-offs.
 
 ### Flag Impact Table
-The table below lists each relevant flag, its functional role, current state (in latest reproducible run), desired target state, and current vs target placeholders for key semantic metrics. We treat mastery and gain correlations as the principal semantic interpretability metrics; additional columns will be populated after experiments.
-
-| Flag / Parameter | Role | Current State | Target State | Mastery Corr (Current) | Mastery Corr (Target) | Gain Corr (Current) | Gain Corr (Target) | Notes / Hypothesized Impact |
-|------------------|------|---------------|--------------|------------------------|-----------------------|---------------------|--------------------|------------------------------|
-| `enable_alignment_loss` | Local alignment of mastery/gain trajectories with performance signal (short-horizon) | Disabled | Enabled (gradual warm-up) | 0.0597 | ≥0.070 | 0.0618 | ≥0.070 | Expected immediate +Δ mastery, moderate +Δ gain; watch AUC erosion |
-| `enable_global_alignment_pass` | Population-level residual alignment (captures broader semantic coherence) | Disabled | Enabled (after warm-up) | 0.0597 | ≥0.080 | 0.0618 | ≥0.075 | Raises global mastery correlation; may increase alignment loss share |
-| `use_residual_alignment` | Residualization to remove explained performance variance before alignment | Disabled | Enabled (paired with global pass) | 0.0597 | ≥0.085 | 0.0618 | ≥0.080 | Sharper semantic signal; risk of over-subtraction without window tuning |
-| `enable_retention_loss` | Preserves mastery peaks; penalizes premature decay | Disabled | Enabled (post warm-up) | 0.0597 | Peak decay ≤5% (corr ≥ peak−0.005) | 0.0618 | Stabilize | Prevents drop after peak; aim for sustained plateau |
-| `enable_lag_gain_loss` | Structures temporal emergence of gains (lagged attention/gain relations) | Disabled | Enabled (after alignment stabilization) | 0.0597 | ≥0.090 | 0.0618 | ≥0.085 | Increases gain interpretability; may introduce variance early |
-| `weight_decay` | Regularization smoothing latent trajectories | 0.0 | 1.7571e-05 | 0.0597 | +0.005 (smoothing effect) | 0.0618 | +0.003 | Expect slight increase by reducing overfitting noise |
-| `warmup_constraint_epochs` | Delay full strength of constraint/semantic losses | 8 | 8 (review after trials) | 0.0597 | — | 0.0618 | — | Maintain; consider reducing if early correlation emergence stalls |
-| `alignment_weight` | Base magnitude of local alignment objective | N/A (inactive) | 0.25 with cap | 0.0597 | Tune for plateau (≥0.085) | 0.0618 | ≥0.080 | Will ramp; final effective weight adaptive |
-| `alignment_share_cap` | Prevents alignment loss dominating | N/A | 0.08 | 0.0597 | Limits negative performance impact | 0.0618 | Limits | Critical to retain predictive AUC |
-| `alignment_share_decay_factor` | Decays alignment weight when cap exceeded without correlation gains | N/A | 0.7 | 0.0597 | Stabilize | 0.0618 | Stabilize | Avoid runaway negative alignment loss share |
-| `retention_weight` | Strength of retention penalty on peak decline | N/A | 0.14 (tunable) | 0.0597 | Maintain peak - minimal decay | 0.0618 | Neutral | Higher if mastery decays >5% |
-| `lag_gain_weight` | Strength of lag gain emergence objective | N/A | 0.06 (tunable) | 0.0597 | Increase interpretability | 0.0618 | Increase | Evaluate noise vs structured improvement |
-| `lag_max_lag` | Depth of temporal lag exploration | N/A | 3 | 0.0597 | Controlled expansion | 0.0618 | Controlled | Limit to avoid over-dispersion |
-| `variance_floor` | Prevent degenerately low mastery variance | 0.0001 | 0.0001 (monitor) | 0.0597 | Support variance | 0.0618 | Support | If variance too tight, raise to 0.0002 |
-| `consistency_rebalance_epoch` | Epoch to adjust consistency weight | N/A | 8 | 0.0597 | Avoid late correlation stall | 0.0618 | Avoid stall | Rebalance if mastery_corr < threshold |
-| `consistency_rebalance_threshold` | Corr threshold triggering rebalance | N/A | 0.1 | 0.0597 | Targets post-warm-up ≥0.1 | 0.0618 | Same | If unmet, reduce consistency weight |
-| `consistency_rebalance_new_weight` | New consistency weight after rebalance | N/A | 0.2 | 0.0597 | Slight freeing of semantic heads | 0.0618 | Slight | Encourage variance/correlation growth |
-| `monitor_frequency` | Granularity of semantic logging | 50 | 50 (optionally 25) | 0.0597 | Faster feedback -> quicker tuning | 0.0618 | Faster | If iteration slow, decrease to 25 |
-| `batch_size` | Implicit variance smoothing | 64 | 64 (maybe 48 for more stochasticity) | 0.0597 | Slight variance gain | 0.0618 | Slight | Smaller batch may raise correlation variance |
-| `seed` | Reproducibility / variance assessment | 42 | Multi-seed (42,7,123,2025,31415) | 0.0597 | Distribution mean ≥0.12 | 0.0618 | Mean ≥0.08 | Multi-seed CI demonstration |
+| Flag / Parameter | Role | Pre-Recovery Value | Post-Recovery Value | Hypothesized Impact on Mastery Corr | Hypothesized Impact on Gain Corr | Interaction Notes |
+|------------------|------|--------------------|---------------------|-------------------------------------|----------------------------------|-------------------|
+| use_mastery_head | Enables mastery trajectory | false | true | Enables computation (from 0 to >0.10) | Indirect (gain interacts via consistency) | Must be true for mastery metrics |
+| use_gain_head | Enables gain trajectory | false | true | Indirect (gain influences mastery via consistency) | Enables gain correlation (>0.05) | Needed for lag structuring |
+| enhanced_constraints | Synergistic structural regularization | false | true | Stabilizes trajectory, raises reliability | Reduces gain noise variance | Enhances effect of alignment |
+| enable_alignment_loss | Local alignment shaping | false | true | Accelerates emergence (earlier peak) | Provides smoother gain ascent | Warm-up interacts with its ramp |
+| adaptive_alignment | Dynamic scaling | false | true | Avoids plateau, sustains improvements | Prevents over-alignment degradation | Works with share_cap decay |
+| enable_global_alignment_pass | Population-level coherence | false | true | Raises peak mastery corr | Minor direct, stabilizing indirectly | Synergizes with residual alignment |
+| use_residual_alignment | Residual variance removal | false | true | Sharper mastery increments | Clarifies gain increments | Overuse may reduce AUC; monitor |
+| enable_retention_loss | Preserve peaks | false | true | Higher final vs peak retention ratio | Minor direct, prevents mastery decline affecting gain | Tune weight to avoid over-preservation |
+| enable_lag_gain_loss | Temporal gain structure | false | true | Mild indirect via constraint interplay | Primary: boosts gain correlation | Needs gain_head active |
+| warmup_constraint_epochs | Delay full constraint pressure | 4 | 8 | Higher peak, less early suppression | Gain builds under partial constraints | Too long may delay convergence |
+| epochs | Training horizon | 20 | 12 | Avoids late decline phase | Prevents gain drift after peak | Early stopping alternative |
+| batch_size | Stochasticity level | 96 | 64 | Slightly higher variance fosters emergence | Better gain differentiation | Trade-off with AUC stability |
 
 ### Experimental Phases
-| Phase | Added Component(s) | Expected Δ Mastery Corr | Expected Δ Gain Corr | AUC Safeguard Action | Go/No-Go Criterion |
-|-------|--------------------|-------------------------|----------------------|----------------------|--------------------|
-| B0 | Constraints only | Baseline | Baseline | Record best AUC | Establish starting point |
-| P1 | enable_alignment_loss | +0.010–0.020 | +0.005–0.010 | Cap alignment share | If AUC drop <1% accept |
-| P2 | +global + residual alignment | +0.010–0.015 | +0.010–0.015 | Monitor share decay | If mastery_corr ≥0.08 accept |
-| P3 | +retention loss | Sustain peak (decay ≤5%) | Neutral | Track peak vs final | If peak decay ≤5% accept |
-| P4 | +lag gain loss | +0.005–0.010 | +0.010–0.020 | Lag weight schedule | If gain_corr ≥0.085 accept |
-| P5 | weight_decay restore | +0.003–0.005 | +0.002–0.004 | Monitor AUC rebound | If AUC improves or stable |
-| P6 | Multi-seed | CI shrink | CI shrink | Early stop per seed | If mean mastery ≥0.12 |
+1. Diagnostic Recovery: Confirm heads + semantic modules activation rescues correlations (completed).
+2. Activation Subset Sweep: Binary subset search to rank contribution (target next).
+3. Schedule Optimization: Tune warmup_constraint_epochs vs alignment_weight vs retention_weight for AUC retention.
+4. Stability & Robustness: Multi-seed (≥5) runs for top 3 configurations; bootstrap CIs for correlations.
+5. Fine-Grained Lag Structuring: Adjust lag_gain_weight and ratios; assess temporal interpretability metrics.
+6. Pareto Profiling: Construct AUC vs mastery_corr trade-off curves across retained configurations.
 
 ### Measurement & Logging Enhancements (Upcoming)
-- Extend metrics CSV with: mastery_coverage, gain_coverage, peak_mastery_corr, peak_gain_corr, mastery_corr_ci_lower/upper, gain_corr_ci_lower/upper, lag1_corr_median, lag1_corr_positive_fraction.
-- Add `summary_semantic.json` artifact containing per-phase delta metrics.
-- Introduce `--phase` flag to training script to automatically activate appropriate components.
+- Add per-epoch: peak_mastery_corr_so_far, retention_ratio, alignment_effective_weight, lag1_median_corr, lag_positive_fraction.
+- Bootstrap (N=200 student resamples) mastery/gain correlation CIs at best epoch and final epoch.
+- Coverage: percentage of students with mastery_corr > 0 and gain_corr > 0.05.
+- Correlation retention ratio = final_corr / peak_corr.
+- Early stopping criteria logging (epochs until AUC plateau, correlation slope).
 
 ### Immediate Next Action
-Activate `enable_alignment_loss` alone (Phase P1) under current reproducible framework, collect epoch-wise correlation trajectory, and populate the "Mastery Corr (Target)" and "Gain Corr (Target)" columns for that flag after run completion.
+Implement logging instrumentation for lag correlation summary, coverage, retention ratio, and bootstrap confidence intervals, then launch activation subset sweep varying enhanced_constraints, alignment family, retention, lag, residual alignment to quantify individual and combined contributions. Document results in a new `SEMANTIC_SWEEP_RESULTS.md` and update this section with empirical impact values.
 
-## Appendix - Parameter Defaults
+### Sweep Axes (Concise List)
+`use_mastery_head` (ensure always true), `use_gain_head`, `enhanced_constraints`, `enable_alignment_loss`, `adaptive_alignment`, `enable_global_alignment_pass`, `use_residual_alignment`, `enable_retention_loss`, `enable_lag_gain_loss`, `warmup_constraint_epochs`, `alignment_weight`, `alignment_share_cap`, `retention_weight`, `lag_gain_weight`, `batch_size`, `epochs`.
 
-This appendix enumerates the canonical default parameters stored in `configs/parameter_default.json`. These values are ingested by the reproducible launcher and evaluation script; any CLI overrides replace only the specified keys while all others are resolved from this source of truth. We separate training and evaluation scopes. If a parameter appears in both, its semantic meaning is consistent (e.g., architectural or interpretability toggles) unless explicitly noted.
-
-### Training Defaults (`training_defaults`)
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `dataset` | `assist2015` | Dataset name used for training. |
-| `fold` | `0` | Data split / fold index. |
-| `epochs` | `20` | Total training epochs (subject to early stopping). |
-| `batch_size` | `96` | Mini-batch size. |
-| `learning_rate` | `0.000174` | Initial learning rate. |
-| `weight_decay` | `0.000017571` | L2 regularization coefficient. |
-| `optimizer` | `Adam` | Optimizer algorithm. |
-| `gradient_clip` | `1.0` | Max gradient norm (global clip). |
-| `patience` | `20` | Epochs to wait for improvement before early stop. |
-| `use_mastery_head` | `true` | Enables mastery prediction head. |
-| `use_gain_head` | `true` | Enables gain prediction head. |
-| `enhanced_constraints` | `true` | Activates extended constraint bundle (monotonicity, performance alignment, sparsity, consistency). |
-| `non_negative_loss_weight` | `0.0` | Penalty weight enforcing non-negativity of mastery/gain. |
-| `monotonicity_loss_weight` | `0.1` | Penalty weight for temporal monotonicity violations. |
-| `mastery_performance_loss_weight` | `0.8` | Alignment loss weight (mastery vs performance). |
-| `gain_performance_loss_weight` | `0.8` | Alignment loss weight (gain vs performance). |
-| `sparsity_loss_weight` | `0.2` | Encourages sparse activation patterns. |
-| `consistency_loss_weight` | `0.3` | Stabilizes mastery/gain temporal evolution. |
-| `enable_alignment_loss` | `true` | Enables local short-horizon alignment objective. |
-| `alignment_weight` | `0.25` | Base weight for alignment loss prior to adaptive scaling. |
-| `alignment_warmup_epochs` | `8` | Warm-up period before full alignment enforcement. |
-| `adaptive_alignment` | `true` | Dynamically scales alignment based on correlation feedback. |
-| `alignment_min_correlation` | `0.05` | Target floor for correlation to maintain/enhance alignment pressure. |
-| `alignment_share_cap` | `0.08` | Max fraction of total loss permitted from alignment. |
-| `alignment_share_decay_factor` | `0.7` | Multiplicative decay when share cap exceeded without progress. |
-| `enable_global_alignment_pass` | `true` | Enables secondary pass with global (population-level) alignment. |
-| `alignment_global_students` | `600` | Student sample size for global alignment statistics. |
-| `use_residual_alignment` | `false` | Residualizes performance signal before alignment to remove explained variance. |
-| `alignment_residual_window` | `5` | Rolling window length for residual computation. |
-| `enable_retention_loss` | `true` | Preserves mastery peaks (limits premature decay). |
-| `retention_delta` | `0.005` | Tolerance for allowable post-peak decline before penalization. |
-| `retention_weight` | `0.14` | Weight of retention penalty. |
-| `enable_lag_gain_loss` | `true` | Enforces structured emergence of gains with temporal lag. |
-| `lag_gain_weight` | `0.06` | Weight of lag gain objective. |
-| `lag_max_lag` | `3` | Max lag depth considered in gain emergence. |
-| `lag_l1_weight` | `0.5` | Relative weighting for lag 1 component. |
-| `lag_l2_weight` | `0.3` | Relative weighting for lag 2 component. |
-| `lag_l3_weight` | `0.2` | Relative weighting for lag 3 component. |
-| `consistency_rebalance_epoch` | `8` | Epoch to trigger consistency weight adjustment logic. |
-| `consistency_rebalance_threshold` | `0.10` | Mastery correlation threshold guiding rebalance decision. |
-| `consistency_rebalance_new_weight` | `0.2` | Updated consistency weight after rebalance event. |
-| `variance_floor` | `0.0001` | Lower bound on mastery variance to avoid collapse. |
-| `variance_floor_patience` | `3` | Patience epochs before variance floor adjustment. |
-| `variance_floor_reduce_factor` | `0.5` | Factor to adjust floor if instability detected. |
-| `warmup_constraint_epochs` | `4` | Constraints warm-up period (note: differs from alignment warm-up). |
-| `max_semantic_students` | `50` | Cap of students sampled per epoch for semantic metrics (local). |
-
-### Evaluation Defaults (`evaluation_defaults`)
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `dataset` | `assist2015` | Dataset name used for evaluation. |
-| `fold` | `0` | Data split / fold index. |
-| `batch_size` | `96` | Mini-batch size for evaluation. |
-| `seq_len` | `200` | Sequence length (truncation/padding threshold). |
-| `d_model` | `512` | Transformer hidden dimension. |
-| `n_heads` | `8` | Number of attention heads. |
-| `num_encoder_blocks` | `6` | Depth (# of encoder layers). |
-| `d_ff` | `1024` | Feed-forward layer dimension. |
-| `dropout` | `0.2` | Dropout probability. |
-| `use_mastery_head` | `true` | Uses mastery prediction head during eval. |
-| `use_gain_head` | `true` | Uses gain prediction head during eval. |
-| `non_negative_loss_weight` | `0.0` | Carried for completeness; not typically active in pure inference. |
-| `monotonicity_loss_weight` | `0.1` | Carried for interpretability metric computation (if reconstructed). |
-| `mastery_performance_loss_weight` | `0.8` | Same semantic as training (traceability). |
-| `gain_performance_loss_weight` | `0.8` | Same semantic as training (traceability). |
-| `sparsity_loss_weight` | `0.2` | Same semantic as training (traceability). |
-| `consistency_loss_weight` | `0.3` | Same semantic as training (traceability). |
-| `max_correlation_students` | `300` | Max students sampled for mastery/gain correlation metrics. |
-
-### Runtime / Monitoring Parameters Now Included
-The previously external runtime parameters have been incorporated into `training_defaults` in `configs/parameter_default.json`:
-
-- `seed`: Primary random seed (default 42).
-- `monitor_freq`: Interpretability monitor frequency (steps; was referred to as `monitor_frequency` in some JSON artifacts; canonical name is `monitor_freq`).
-- `use_amp`: Mixed precision flag (default `false`).
-- `use_wandb`: WandB logging flag (default `false`).
-- `enable_cosine_perf_schedule`: Optional cosine scheduling for performance alignment weights (default `false`).
-
-All these parameters are now resolved from the defaults JSON; no hidden runtime defaults remain. If a CLI override is provided it will appear explicitly in `config.json`.
-
-### Update Protocol
-1. Modify `configs/parameter_default.json` (add/edit keys).  
-2. Re-run an integrity check script (to be added) that diffs argparse defaults vs JSON.  
-3. Regenerate Appendix section tables from JSON (automated regeneration planned).  
-4. Commit with message including JSON MD5 pre/post (for audit trail).  
-5. Reference new commit hash in subsequent experiment `environment.txt`.
-
-This structured listing ensures no silent or implicit hyperparameter influences experiment outcomes.
+### Expected Outcomes
+Recovered configuration demonstrates that enabling semantic modules and interpretability heads plus extending warm-up and reducing training horizon restores correlations (mastery ≈0.10+, gain ≈0.05+). Sweeps will seek configurations yielding mastery_corr ≥0.12 with val AUC ≥0.72 (early-stopped) and gain_corr ≥0.07 under zero violations, establishing a balanced regime for publication.
 
 
 

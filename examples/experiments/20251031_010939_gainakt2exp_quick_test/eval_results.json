@@ -1,0 +1,10 @@
+{
+  "valid_auc": 0.7233956122416472,
+  "valid_acc": 0.7537786255827307,
+  "test_auc": 0.7174905989009683,
+  "test_acc": 0.7472286614360437,
+  "test_mastery_correlation": 0.09492715507033156,
+  "test_gain_correlation": 0.017133438428076995,
+  "test_correlation_students": 262,
+  "timestamp": "2025-10-31T01:11:49.224273"
+}

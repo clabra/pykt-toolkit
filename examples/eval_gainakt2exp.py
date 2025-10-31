@@ -131,31 +131,54 @@ def evaluate_predictions(model, data_loader, device):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_dir', type=str, required=True, help='Directory with best_model.pth')
-    parser.add_argument('--dataset', type=str, default='assist2015')
-    parser.add_argument('--fold', type=int, default=0)
-    parser.add_argument('--batch_size', type=int, default=96, help='Batch size (match training default: 96)')
-    parser.add_argument('--seq_len', type=int, default=200)
-    parser.add_argument('--d_model', type=int, default=512)
-    parser.add_argument('--n_heads', type=int, default=8)
-    parser.add_argument('--num_encoder_blocks', type=int, default=6)
-    parser.add_argument('--d_ff', type=int, default=1024)
-    parser.add_argument('--dropout', type=float, default=0.2)
-    # Heads enabled by default for interpretability parity with training; disable flags provided.
-    parser.add_argument('--use_mastery_head', action='store_true', default=True, help='Enable mastery head (default: enabled)')
-    parser.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head')
-    parser.add_argument('--use_gain_head', action='store_true', default=True, help='Enable gain head (default: enabled)')
-    parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head')
-    # Constraint weights (match training optimal defaults); evaluation does not apply losses but identical config ensures structural parity.
-    parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
-    parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
-    parser.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--sparsity_loss_weight', type=float, default=0.2)
-    parser.add_argument('--consistency_loss_weight', type=float, default=0.3)
-    parser.add_argument('--max_correlation_students', type=int, default=300, help='Max students sampled for mastery/gain correlation computation')
+    parser.add_argument('--run_dir', type=str, required=True, help='Experiment directory containing config.json and model_best.pth')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--override', action='append', default=[], help='Optional key=value overrides for evaluation_defaults')
+    parser.add_argument('--max_correlation_students', type=int, default=None, help='Override max students for correlation if desired')
+    parser.add_argument('--dataset', type=str, help='Explicit dataset name (overrides config/eval defaults)')
     args = parser.parse_args()
+
+    # Load experiment config.json
+    cfg_path = os.path.join(args.run_dir, 'config.json')
+    if not os.path.exists(cfg_path):
+        raise FileNotFoundError(f'config.json not found in run_dir: {cfg_path}')
+    with open(cfg_path) as f:
+        cfg = json.load(f)
+    eval_defaults = cfg.get('evaluation_defaults') or cfg.get('evaluation_snapshot') or {}
+    # Apply overrides from CLI
+    for ov in args.override:
+        if '=' not in ov:
+            raise ValueError(f"Override must be key=value: {ov}")
+        k, v = ov.split('=', 1)
+        k = k.strip()
+        v = v.strip()
+        if v.lower() in ('true','false'):
+            v_cast = v.lower() == 'true'
+        else:
+            try:
+                v_cast = int(v) if v.isdigit() else float(v)
+            except ValueError:
+                v_cast = v
+        eval_defaults[k] = v_cast
+
+    dataset = args.dataset or cfg.get('data', {}).get('dataset', eval_defaults.get('dataset', 'assist2015'))
+    fold = cfg.get('data', {}).get('fold', eval_defaults.get('fold', 0))
+    batch_size = eval_defaults.get('batch_size', 96)
+    seq_len = eval_defaults.get('seq_len', 200)
+    d_model = eval_defaults.get('d_model', 512)
+    n_heads = eval_defaults.get('n_heads', 8)
+    num_encoder_blocks = eval_defaults.get('num_encoder_blocks', 6)
+    d_ff = eval_defaults.get('d_ff', 1024)
+    dropout = eval_defaults.get('dropout', 0.2)
+    use_mastery_head = bool(cfg.get('interpretability', {}).get('use_mastery_head', eval_defaults.get('use_mastery_head', True)))
+    use_gain_head = bool(cfg.get('interpretability', {}).get('use_gain_head', eval_defaults.get('use_gain_head', True)))
+    non_negative_loss_weight = eval_defaults.get('non_negative_loss_weight', 0.0)
+    monotonicity_loss_weight = eval_defaults.get('monotonicity_loss_weight', 0.1)
+    mastery_performance_loss_weight = eval_defaults.get('mastery_performance_loss_weight', 0.8)
+    gain_performance_loss_weight = eval_defaults.get('gain_performance_loss_weight', 0.8)
+    sparsity_loss_weight = eval_defaults.get('sparsity_loss_weight', 0.2)
+    consistency_loss_weight = eval_defaults.get('consistency_loss_weight', 0.3)
+    max_corr_students = args.max_correlation_students or eval_defaults.get('max_correlation_students', 300)
 
     # Primary checkpoint name produced by training is model_best.pth; fallback to legacy best_model.pth
     primary_ckpt = os.path.join(args.run_dir, 'model_best.pth')
@@ -168,14 +191,14 @@ def main():
         raise FileNotFoundError(f'Checkpoint not found (searched {primary_ckpt} and {fallback_ckpt})')
 
     data_config = {
-        args.dataset: {
-            'dpath': f'/workspaces/pykt-toolkit/data/{args.dataset}',
+        dataset: {
+            'dpath': f'/workspaces/pykt-toolkit/data/{dataset}',
             'num_q': 0,
             'num_c': 100,
             'input_type': ['concepts'],
             'max_concepts': 1,
             'min_seq_len': 3,
-            'maxlen': args.seq_len,
+            'maxlen': seq_len,
             'emb_path': '',
             'folds': [0,1,2,3,4],  # injected folds for evaluation consistency
             'train_valid_file': 'train_valid_sequences.csv',
@@ -185,29 +208,26 @@ def main():
     }
 
     # Resolve disable overrides
-    if args.disable_mastery_head:
-        args.use_mastery_head = False
-    if args.disable_gain_head:
-        args.use_gain_head = False
+    # (Disable flags via config not needed; use_mastery_head/gain already resolved)
 
     model_config = {
-        'num_c': data_config[args.dataset]['num_c'],
-        'seq_len': args.seq_len,
-        'd_model': args.d_model,
-        'n_heads': args.n_heads,
-        'num_encoder_blocks': args.num_encoder_blocks,
-        'd_ff': args.d_ff,
-        'dropout': args.dropout,
+        'num_c': data_config[dataset]['num_c'],
+        'seq_len': seq_len,
+        'd_model': d_model,
+        'n_heads': n_heads,
+        'num_encoder_blocks': num_encoder_blocks,
+        'd_ff': d_ff,
+        'dropout': dropout,
         'emb_type': 'qid',
-        'use_mastery_head': args.use_mastery_head,
-        'use_gain_head': args.use_gain_head,
+        'use_mastery_head': use_mastery_head,
+        'use_gain_head': use_gain_head,
         # Use provided weights for structural parity (interpretability losses not applied during evaluation forward path)
-        'non_negative_loss_weight': args.non_negative_loss_weight,
-        'monotonicity_loss_weight': args.monotonicity_loss_weight,
-        'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
-        'gain_performance_loss_weight': args.gain_performance_loss_weight,
-        'sparsity_loss_weight': args.sparsity_loss_weight,
-        'consistency_loss_weight': args.consistency_loss_weight
+        'non_negative_loss_weight': non_negative_loss_weight,
+        'monotonicity_loss_weight': monotonicity_loss_weight,
+        'mastery_performance_loss_weight': mastery_performance_loss_weight,
+        'gain_performance_loss_weight': gain_performance_loss_weight,
+        'sparsity_loss_weight': sparsity_loss_weight,
+        'consistency_loss_weight': consistency_loss_weight
     }
 
     device = torch.device(args.device)
@@ -249,17 +269,17 @@ def main():
 
     # Initialize loaders (train_valid for validation); custom lightweight test loader
     from pykt.datasets import init_dataset4train
-    train_loader, valid_loader = init_dataset4train(args.dataset, 'gainakt2exp', data_config, args.fold, args.batch_size)
+    train_loader, valid_loader = init_dataset4train(dataset, 'gainakt2exp', data_config, fold, batch_size)
     # Build test loader using KTDataset directly (standard path) to avoid dependence on init_test_datasets signature differences.
     from pykt.datasets.data_loader import KTDataset
-    test_cfg = data_config[args.dataset]
+    test_cfg = data_config[dataset]
     test_dataset = KTDataset(os.path.join(test_cfg['dpath'], test_cfg['test_file']), test_cfg['input_type'], {-1})
     from torch.utils.data import DataLoader
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=int(os.getenv('PYKT_NUM_WORKERS','32')), pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=int(os.getenv('PYKT_NUM_WORKERS','32')), pin_memory=True)
 
     valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
     test_auc, test_acc = evaluate_predictions(model, test_loader, device)
-    mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device, max_students=args.max_correlation_students)
+    mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device, max_students=max_corr_students)
 
     results = {
         'valid_auc': valid_auc,

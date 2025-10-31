@@ -1,0 +1,124 @@
+{
+  "runtime": {
+    "seed": 42,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "enable_cosine_perf_schedule": false,
+    "auto_shifted_eval": true,
+    "command": "python examples/run_repro_experiment.py --train_script examples/train_gainakt2exp.py --model_name gainakt2exp --short_title recover_bool_fix --epochs 12 --batch_size 64 --learning_rate 0.000174 --weight_decay 1.7571e-05 --seed 42 --warmup_constraint_epochs 8 --devices 0 1 2 3 4",
+    "train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --dataset assist2015 --fold 0 --epochs 12 --batch_size 64 --learning_rate 0.000174 --seed 42 --weight_decay 1.7571e-05 --gradient_clip 1.0 --patience 20 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --non_negative_loss_weight 0.0 --warmup_constraint_epochs 8 --max_semantic_students 50 --use_mastery_head --use_gain_head --enhanced_constraints --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --adaptive_alignment --enable_global_alignment_pass --alignment_global_students 600 --alignment_residual_window 5 --use_residual_alignment --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+    "timestamp": "2025-10-30T23:47:20Z",
+    "eval_command": "python examples/eval_gainakt2exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251030_234720_gainakt2exp_recover_bool_fix --dataset assist2015",
+  "repro_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --config /workspaces/pykt-toolkit/examples/experiments/20251030_234720_gainakt2exp_recover_bool_fix/config.json"
+  },
+  "training": {
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 20
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "interpretability": {
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "enhanced_constraints": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "warmup_constraint_epochs": 8,
+    "max_semantic_students": 50
+  },
+  "alignment": {
+    "enable_alignment_loss": true,
+    "alignment_weight": 0.25,
+    "alignment_warmup_epochs": 8,
+    "adaptive_alignment": true,
+    "alignment_min_correlation": 0.05,
+    "alignment_share_cap": 0.08,
+    "alignment_share_decay_factor": 0.7
+  },
+  "global_alignment": {
+    "enable_global_alignment_pass": true,
+    "alignment_global_students": 600,
+    "use_residual_alignment": true,
+    "alignment_residual_window": 5
+  },
+  "refinement": {
+    "enable_retention_loss": true,
+    "retention_delta": 0.005,
+    "retention_weight": 0.14,
+    "enable_lag_gain_loss": true,
+    "lag_gain_weight": 0.06,
+    "lag_max_lag": 3,
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_threshold": 0.1,
+    "consistency_rebalance_new_weight": 0.2,
+    "variance_floor": 0.0001,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5
+  },
+  "override_applied": {
+    "seed": 42,
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "warmup_constraint_epochs": 8
+  },
+  "experiment": {
+    "id": "20251030_234720_gainakt2exp_recover_bool_fix",
+    "model": "gainakt2exp",
+    "short_title": "recover_bool_fix",
+    "purpose": "Reproducible training run"
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threads": 8
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "evaluation_defaults": {
+    "dataset": "assist2015",
+    "fold": 0,
+    "batch_size": 64,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "max_correlation_students": 300
+  },
+  "config_md5": "1ce39ca724a78b23fb05d8e42d3eb5e5"
+}
