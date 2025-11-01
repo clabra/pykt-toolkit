@@ -136,6 +136,7 @@ def main():
     parser.add_argument('--override', action='append', default=[], help='Optional key=value overrides for evaluation_defaults')
     parser.add_argument('--max_correlation_students', type=int, default=None, help='Override max students for correlation if desired')
     parser.add_argument('--dataset', type=str, help='Explicit dataset name (overrides config/eval defaults)')
+    parser.add_argument('--experiment_id', type=str, default=None, help='Explicit experiment id for logging (overrides id derived from run_dir/config).')
     args = parser.parse_args()
 
     # Load experiment config.json
@@ -164,12 +165,20 @@ def main():
     dataset = args.dataset or cfg.get('data', {}).get('dataset', eval_defaults.get('dataset', 'assist2015'))
     fold = cfg.get('data', {}).get('fold', eval_defaults.get('fold', 0))
     batch_size = eval_defaults.get('batch_size', 96)
-    seq_len = eval_defaults.get('seq_len', 200)
-    d_model = eval_defaults.get('d_model', 512)
-    n_heads = eval_defaults.get('n_heads', 8)
-    num_encoder_blocks = eval_defaults.get('num_encoder_blocks', 6)
-    d_ff = eval_defaults.get('d_ff', 1024)
-    dropout = eval_defaults.get('dropout', 0.2)
+    # Prefer model_config for architecture; fall back to evaluation_defaults only if model_config absent
+    model_cfg = cfg.get('model_config')
+    arch_source = 'model_config' if model_cfg is not None else 'evaluation_defaults'
+    arch_dict = model_cfg if model_cfg is not None else eval_defaults
+    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+    missing_arch = [k for k in mandatory_arch if k not in arch_dict]
+    if missing_arch:
+        raise KeyError(f"Missing mandatory architecture keys ({missing_arch}) in {arch_source}; reproduction invalid.")
+    seq_len = arch_dict['seq_len']
+    d_model = arch_dict['d_model']
+    n_heads = arch_dict['n_heads']
+    num_encoder_blocks = arch_dict['num_encoder_blocks']
+    d_ff = arch_dict['d_ff']
+    dropout = arch_dict['dropout']
     use_mastery_head = bool(cfg.get('interpretability', {}).get('use_mastery_head', eval_defaults.get('use_mastery_head', True)))
     use_gain_head = bool(cfg.get('interpretability', {}).get('use_gain_head', eval_defaults.get('use_gain_head', True)))
     non_negative_loss_weight = eval_defaults.get('non_negative_loss_weight', 0.0)
@@ -210,6 +219,7 @@ def main():
     # Resolve disable overrides
     # (Disable flags via config not needed; use_mastery_head/gain already resolved)
 
+    # Assemble model_config (interpretability weights retained for parity; not all used in eval forward path)
     model_config = {
         'num_c': data_config[dataset]['num_c'],
         'seq_len': seq_len,
@@ -218,10 +228,9 @@ def main():
         'num_encoder_blocks': num_encoder_blocks,
         'd_ff': d_ff,
         'dropout': dropout,
-        'emb_type': 'qid',
+        'emb_type': arch_dict.get('emb_type', 'qid'),
         'use_mastery_head': use_mastery_head,
         'use_gain_head': use_gain_head,
-        # Use provided weights for structural parity (interpretability losses not applied during evaluation forward path)
         'non_negative_loss_weight': non_negative_loss_weight,
         'monotonicity_loss_weight': monotonicity_loss_weight,
         'mastery_performance_loss_weight': mastery_performance_loss_weight,
@@ -281,7 +290,11 @@ def main():
     test_auc, test_acc = evaluate_predictions(model, test_loader, device)
     mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device, max_students=max_corr_students)
 
+    experiment_id = args.experiment_id or cfg.get('experiment', {}).get('id') or os.path.basename(args.run_dir)
     results = {
+        'experiment_id': experiment_id,
+        'dataset': dataset,
+        'fold': fold,
         'valid_auc': valid_auc,
         'valid_acc': valid_acc,
         'test_auc': test_auc,

@@ -1,0 +1,13 @@
+{
+  "experiment_id": "eval_arch_train2",
+  "dataset": "assist2015",
+  "fold": 0,
+  "valid_auc": 0.7175653837996081,
+  "valid_acc": 0.7519099942578517,
+  "test_auc": 0.7114107841485655,
+  "test_acc": 0.7455495126010461,
+  "test_mastery_correlation": 0.09475271520183867,
+  "test_gain_correlation": -0.018041932909832362,
+  "test_correlation_students": 262,
+  "timestamp": "2025-10-31T18:28:17.139149"
+}

@@ -73,6 +73,15 @@
     "consistency_loss_weight": 0.3,
     "max_correlation_students": 300
   },
+  "model_config_defaults": {
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid"
+  },
   "metadata": {
     "schema_version": "1.0.0",
     "policy_last_updated": "2025-10-30",

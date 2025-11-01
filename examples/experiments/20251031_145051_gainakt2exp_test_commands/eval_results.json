@@ -1,0 +1,13 @@
+{
+  "experiment_id": "20251031_145051_gainakt2exp_test_commands",
+  "dataset": "assist2015",
+  "fold": 0,
+  "valid_auc": 0.7254380077866529,
+  "valid_acc": 0.7538467527664503,
+  "test_auc": 0.7192239562042849,
+  "test_acc": 0.7474664170233001,
+  "test_mastery_correlation": 0.09940751550605773,
+  "test_gain_correlation": 0.027482709663920055,
+  "test_correlation_students": 262,
+  "timestamp": "2025-10-31T15:14:36.069378"
+}

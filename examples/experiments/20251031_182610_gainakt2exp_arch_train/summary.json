@@ -1,0 +1,6 @@
+{
+  "config_md5": "1db1527f8051322d2b372d626e4c8591",
+  "note": "metrics_epoch.csv present but no data rows appended (training script may not have written metrics).",
+  "exit_code": 1,
+  "stderr_excerpt": "Traceback (most recent call last):\n  File \"/workspaces/pykt-toolkit/examples/train_gainakt2exp.py\", line 1339, in <module>\n    train_gainakt2exp_model(args)\n  File \"/workspaces/pykt-toolkit/examples/train_gainakt2exp.py\", line 329, in train_gainakt2exp_model\n    raise KeyError(\"model_config section missing from config.json; reproduction invalid. Ensure launcher added model_config.\")\nKeyError: 'model_config section missing from config.json; reproduction invalid. Ensure launcher added model_config.'\n"
+}

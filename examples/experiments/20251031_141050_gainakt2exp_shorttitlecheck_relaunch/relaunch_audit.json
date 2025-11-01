@@ -1,0 +1,503 @@
+{
+  "original_experiment_id": "20251031_140957_gainakt2exp_shorttitlecheck",
+  "relaunch_experiment_id": "20251031_141050_gainakt2exp_shorttitlecheck_relaunch",
+  "original_config_md5": "e77905448ed7d2fdf88d2181a9cf13bb",
+  "relaunch_config_md5": "65ab6a98adccc869b5cb928d86a65015",
+  "train_script": "/workspaces/pykt-toolkit/examples/train_gainakt2exp.py",
+  "original_train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --dataset assist2015 --fold 0 --epochs 1 --batch_size 32 --learning_rate 0.000174 --seed 42 --weight_decay 1.7571e-05 --gradient_clip 1.0 --patience 20 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --non_negative_loss_weight 0.0 --warmup_constraint_epochs 8 --max_semantic_students 50 --use_mastery_head --use_gain_head --enhanced_constraints --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --adaptive_alignment --enable_global_alignment_pass --alignment_global_students 600 --alignment_residual_window 5 --use_residual_alignment --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+  "reconstructed_train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --seed 42 --epochs 1 --batch_size 64 --learning_rate 0.000174 --weight_decay 1.7571e-05 --optimizer Adam --gradient_clip 1.0 --patience 20 --dataset assist2015 --fold 0 --use_mastery_head --use_gain_head --enhanced_constraints --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --warmup_constraint_epochs 8 --max_semantic_students 50 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --adaptive_alignment --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --enable_global_alignment_pass --alignment_global_students 600 --use_residual_alignment --alignment_residual_window 5 --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+  "param_diffs": {
+    "training.batch_size": {
+      "original": 32,
+      "new": 64
+    },
+    "override_applied.dataset": {
+      "original": "assist2015",
+      "new": "<missing>"
+    },
+    "override_applied.epochs": {
+      "original": 1,
+      "new": "<missing>"
+    },
+    "override_applied.batch_size": {
+      "original": 32,
+      "new": "<missing>"
+    },
+    "experiment.id": {
+      "original": "20251031_140957_gainakt2exp_shorttitlecheck",
+      "new": "20251031_141050_gainakt2exp_shorttitlecheck_relaunch"
+    },
+    "experiment.short_title": {
+      "original": "shorttitlecheck",
+      "new": "shorttitlecheck_relaunch"
+    },
+    "experiment.purpose": {
+      "original": "Reproducible training run",
+      "new": "Relaunch reproduction of 20251031_140957_gainakt2exp_shorttitlecheck"
+    },
+    "evaluation_defaults.dataset": {
+      "original": "assist2015",
+      "new": "<missing>"
+    },
+    "evaluation_defaults.fold": {
+      "original": 0,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.batch_size": {
+      "original": 64,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.seq_len": {
+      "original": 200,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.d_model": {
+      "original": 512,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.n_heads": {
+      "original": 8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.num_encoder_blocks": {
+      "original": 6,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.d_ff": {
+      "original": 1024,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.dropout": {
+      "original": 0.2,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.use_mastery_head": {
+      "original": true,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.use_gain_head": {
+      "original": true,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.non_negative_loss_weight": {
+      "original": 0.0,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.monotonicity_loss_weight": {
+      "original": 0.1,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.mastery_performance_loss_weight": {
+      "original": 0.8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.gain_performance_loss_weight": {
+      "original": 0.8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.sparsity_loss_weight": {
+      "original": 0.2,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.consistency_loss_weight": {
+      "original": 0.3,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.max_correlation_students": {
+      "original": 300,
+      "new": "<missing>"
+    },
+    "training.mixed_precision": {
+      "original": "<missing>",
+      "new": false
+    },
+    "evaluation_snapshot.dataset": {
+      "original": "<missing>",
+      "new": "assist2015"
+    },
+    "evaluation_snapshot.fold": {
+      "original": "<missing>",
+      "new": 0
+    },
+    "evaluation_snapshot.batch_size": {
+      "original": "<missing>",
+      "new": 64
+    },
+    "evaluation_snapshot.seq_len": {
+      "original": "<missing>",
+      "new": 200
+    },
+    "evaluation_snapshot.d_model": {
+      "original": "<missing>",
+      "new": 512
+    },
+    "evaluation_snapshot.n_heads": {
+      "original": "<missing>",
+      "new": 8
+    },
+    "evaluation_snapshot.num_encoder_blocks": {
+      "original": "<missing>",
+      "new": 6
+    },
+    "evaluation_snapshot.d_ff": {
+      "original": "<missing>",
+      "new": 1024
+    },
+    "evaluation_snapshot.dropout": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.use_mastery_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.use_gain_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.non_negative_loss_weight": {
+      "original": "<missing>",
+      "new": 0.0
+    },
+    "evaluation_snapshot.monotonicity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.1
+    },
+    "evaluation_snapshot.mastery_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.gain_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.sparsity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.consistency_loss_weight": {
+      "original": "<missing>",
+      "new": 0.3
+    },
+    "evaluation_snapshot.max_correlation_students": {
+      "original": "<missing>",
+      "new": 300
+    },
+    "evaluation_snapshot_md5": {
+      "original": "<missing>",
+      "new": "0e82676eacb130fcaf96f4c977b79f39"
+    },
+    "reproducibility_policy.ignored_eval_flags": {
+      "original": "<missing>",
+      "new": [
+        "device",
+        "run_dir",
+        "batch_size",
+        "consistency_loss_weight",
+        "d_ff",
+        "d_model",
+        "dataset",
+        "dropout",
+        "fold",
+        "gain_performance_loss_weight",
+        "mastery_performance_loss_weight",
+        "monotonicity_loss_weight",
+        "n_heads",
+        "non_negative_loss_weight",
+        "num_encoder_blocks",
+        "seq_len",
+        "sparsity_loss_weight",
+        "use_gain_head",
+        "use_mastery_head"
+      ]
+    },
+    "reproducibility_policy.ignored_training_flags": {
+      "original": "<missing>",
+      "new": [
+        "auto_shifted_eval"
+      ]
+    },
+    "reproducibility_policy.schema_version": {
+      "original": "<missing>",
+      "new": "1.0.0"
+    },
+    "reproducibility_policy.policy_last_updated": {
+      "original": "<missing>",
+      "new": "2025-10-30"
+    }
+  },
+  "non_substantive_param_diffs": {
+    "experiment.id": {
+      "original": "20251031_140957_gainakt2exp_shorttitlecheck",
+      "new": "20251031_141050_gainakt2exp_shorttitlecheck_relaunch"
+    },
+    "experiment.short_title": {
+      "original": "shorttitlecheck",
+      "new": "shorttitlecheck_relaunch"
+    },
+    "experiment.purpose": {
+      "original": "Reproducible training run",
+      "new": "Relaunch reproduction of 20251031_140957_gainakt2exp_shorttitlecheck"
+    }
+  },
+  "skipped_params": {
+    "evaluation_defaults.seq_len": "missing flag --seq_len",
+    "evaluation_defaults.d_model": "missing flag --d_model",
+    "evaluation_defaults.n_heads": "missing flag --n_heads",
+    "evaluation_defaults.num_encoder_blocks": "missing flag --num_encoder_blocks",
+    "evaluation_defaults.d_ff": "missing flag --d_ff",
+    "evaluation_defaults.dropout": "missing flag --dropout",
+    "evaluation_defaults.max_correlation_students": "missing flag --max_correlation_students"
+  },
+  "devices_original": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "devices_used": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "device_adaptation_note": null,
+  "gpu_comparison": {
+    "original_devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "relaunch_devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "device_count_original": 5,
+    "device_count_relaunch": 5,
+    "device_count_changed": false
+  },
+  "epoch_diff_info": null,
+  "md5_comparison": {
+    "md5_match": false,
+    "original_md5": "e77905448ed7d2fdf88d2181a9cf13bb",
+    "relaunch_md5": "65ab6a98adccc869b5cb928d86a65015"
+  },
+  "dry_run": false,
+  "strict_failure": false,
+  "strict_guidance": "Strict mode disabled.",
+  "substantive_param_diffs": {
+    "training.batch_size": {
+      "original": 32,
+      "new": 64
+    },
+    "override_applied.dataset": {
+      "original": "assist2015",
+      "new": "<missing>"
+    },
+    "override_applied.epochs": {
+      "original": 1,
+      "new": "<missing>"
+    },
+    "override_applied.batch_size": {
+      "original": 32,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.dataset": {
+      "original": "assist2015",
+      "new": "<missing>"
+    },
+    "evaluation_defaults.fold": {
+      "original": 0,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.batch_size": {
+      "original": 64,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.seq_len": {
+      "original": 200,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.d_model": {
+      "original": 512,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.n_heads": {
+      "original": 8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.num_encoder_blocks": {
+      "original": 6,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.d_ff": {
+      "original": 1024,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.dropout": {
+      "original": 0.2,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.use_mastery_head": {
+      "original": true,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.use_gain_head": {
+      "original": true,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.non_negative_loss_weight": {
+      "original": 0.0,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.monotonicity_loss_weight": {
+      "original": 0.1,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.mastery_performance_loss_weight": {
+      "original": 0.8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.gain_performance_loss_weight": {
+      "original": 0.8,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.sparsity_loss_weight": {
+      "original": 0.2,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.consistency_loss_weight": {
+      "original": 0.3,
+      "new": "<missing>"
+    },
+    "evaluation_defaults.max_correlation_students": {
+      "original": 300,
+      "new": "<missing>"
+    },
+    "training.mixed_precision": {
+      "original": "<missing>",
+      "new": false
+    },
+    "evaluation_snapshot.dataset": {
+      "original": "<missing>",
+      "new": "assist2015"
+    },
+    "evaluation_snapshot.fold": {
+      "original": "<missing>",
+      "new": 0
+    },
+    "evaluation_snapshot.batch_size": {
+      "original": "<missing>",
+      "new": 64
+    },
+    "evaluation_snapshot.seq_len": {
+      "original": "<missing>",
+      "new": 200
+    },
+    "evaluation_snapshot.d_model": {
+      "original": "<missing>",
+      "new": 512
+    },
+    "evaluation_snapshot.n_heads": {
+      "original": "<missing>",
+      "new": 8
+    },
+    "evaluation_snapshot.num_encoder_blocks": {
+      "original": "<missing>",
+      "new": 6
+    },
+    "evaluation_snapshot.d_ff": {
+      "original": "<missing>",
+      "new": 1024
+    },
+    "evaluation_snapshot.dropout": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.use_mastery_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.use_gain_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.non_negative_loss_weight": {
+      "original": "<missing>",
+      "new": 0.0
+    },
+    "evaluation_snapshot.monotonicity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.1
+    },
+    "evaluation_snapshot.mastery_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.gain_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.sparsity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.consistency_loss_weight": {
+      "original": "<missing>",
+      "new": 0.3
+    },
+    "evaluation_snapshot.max_correlation_students": {
+      "original": "<missing>",
+      "new": 300
+    },
+    "evaluation_snapshot_md5": {
+      "original": "<missing>",
+      "new": "0e82676eacb130fcaf96f4c977b79f39"
+    },
+    "reproducibility_policy.ignored_eval_flags": {
+      "original": "<missing>",
+      "new": [
+        "device",
+        "run_dir",
+        "batch_size",
+        "consistency_loss_weight",
+        "d_ff",
+        "d_model",
+        "dataset",
+        "dropout",
+        "fold",
+        "gain_performance_loss_weight",
+        "mastery_performance_loss_weight",
+        "monotonicity_loss_weight",
+        "n_heads",
+        "non_negative_loss_weight",
+        "num_encoder_blocks",
+        "seq_len",
+        "sparsity_loss_weight",
+        "use_gain_head",
+        "use_mastery_head"
+      ]
+    },
+    "reproducibility_policy.ignored_training_flags": {
+      "original": "<missing>",
+      "new": [
+        "auto_shifted_eval"
+      ]
+    },
+    "reproducibility_policy.schema_version": {
+      "original": "<missing>",
+      "new": "1.0.0"
+    },
+    "reproducibility_policy.policy_last_updated": {
+      "original": "<missing>",
+      "new": "2025-10-30"
+    }
+  }
+}

@@ -284,6 +284,22 @@ def build_config(raw_args: Dict[str,Any], exp_id: str, exp_path: str, seeds: Lis
         eval_snapshot = defaults_json.get('evaluation_defaults', {})
         cfg['evaluation_snapshot'] = eval_snapshot
         cfg['evaluation_snapshot_md5'] = hashlib.md5(json.dumps(eval_snapshot, sort_keys=True).encode()).hexdigest()
+        # Inject architecture model_config (explicit, no hidden defaults). Allow raw_args overrides if present.
+        model_cfg_defaults = defaults_json.get('model_config_defaults', {})
+        model_cfg_resolved = {}
+        for k,v in model_cfg_defaults.items():
+            # Allow override via raw_args (e.g., seq_len passed explicitly)
+            if k in raw_args and raw_args[k] is not None:
+                model_cfg_resolved[k] = raw_args[k]
+            else:
+                model_cfg_resolved[k] = v
+        # Ensure mandatory keys present
+        mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+        missing = [m for m in mandatory_arch if m not in model_cfg_resolved]
+        if missing:
+            raise KeyError(f"Missing mandatory architecture keys in model_config resolution: {missing}")
+        cfg['model_config'] = model_cfg_resolved
+        cfg['model_config_md5'] = hashlib.md5(json.dumps(model_cfg_resolved, sort_keys=True).encode()).hexdigest()
         # Metadata reproducibility policy (ignored flags)
         metadata = defaults_json.get('metadata', {})
         policy = {

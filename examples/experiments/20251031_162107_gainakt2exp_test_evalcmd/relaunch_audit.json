@@ -1,0 +1,114 @@
+{
+  "original_experiment_id": "20251031_161727_gainakt2exp_test_evalcmd2",
+  "relaunch_experiment_id": "20251031_162107_gainakt2exp_test_evalcmd",
+  "original_config_md5": "5906558bf28f5a66435db682125dc817",
+  "relaunch_config_md5": "34a0d167d0a7298319fdd6ccee27d54e",
+  "train_script": "/workspaces/pykt-toolkit/examples/train_gainakt2exp.py",
+  "original_train_command": "python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --config /workspaces/pykt-toolkit/examples/experiments/20251031_161727_gainakt2exp_test_evalcmd2/config.json",
+  "reconstructed_train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --seed 42 --epochs 3 --batch_size 64 --learning_rate 0.000174 --weight_decay 1.7571e-05 --optimizer Adam --gradient_clip 1.0 --patience 20 --dataset assist2015 --fold 0 --use_mastery_head --use_gain_head --enhanced_constraints --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --warmup_constraint_epochs 8 --max_semantic_students 50 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --adaptive_alignment --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --enable_global_alignment_pass --alignment_global_students 600 --use_residual_alignment --alignment_residual_window 5 --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5",
+  "param_diffs_substantive": {
+    "training.mixed_precision": {
+      "original": "<missing>",
+      "new": false
+    }
+  },
+  "missing_params": {
+    "training.mixed_precision": {
+      "original": "<missing>",
+      "new": false
+    }
+  },
+  "skipped_params": {
+    "evaluation_defaults.seq_len": "missing flag --seq_len",
+    "evaluation_defaults.d_model": "missing flag --d_model",
+    "evaluation_defaults.n_heads": "missing flag --n_heads",
+    "evaluation_defaults.num_encoder_blocks": "missing flag --num_encoder_blocks",
+    "evaluation_defaults.d_ff": "missing flag --d_ff",
+    "evaluation_defaults.dropout": "missing flag --dropout",
+    "evaluation_defaults.max_correlation_students": "missing flag --max_correlation_students"
+  },
+  "devices_original": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "devices_used": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "device_adaptation_note": null,
+  "gpu_comparison": {
+    "original_devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "relaunch_devices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "device_count_original": 5,
+    "device_count_relaunch": 5,
+    "device_count_changed": false
+  },
+  "epoch_diff_info": null,
+  "md5_comparison": {
+    "md5_match": false,
+    "original_md5": "5906558bf28f5a66435db682125dc817",
+    "relaunch_md5": "34a0d167d0a7298319fdd6ccee27d54e"
+  },
+  "dry_run": false,
+  "strict_failure": false,
+  "strict_guidance": "Strict mode disabled.",
+  "metrics_comparison": {
+    "original": {
+      "best_val_auc": 0.7257475745089552,
+      "mastery_corr": 0.07185119343420451,
+      "gain_corr": 0.03912898285505924
+    },
+    "relaunch": {
+      "best_val_auc": 0.7257469102280544,
+      "mastery_corr": 0.11209364128121607,
+      "gain_corr": 0.04363680874935743
+    },
+    "diffs": {
+      "best_val_auc": {
+        "original": 0.7257475745089552,
+        "relaunch": 0.7257469102280544,
+        "abs_diff": 6.642809008416961e-07,
+        "tolerance": 0.001
+      },
+      "mastery_corr": {
+        "original": 0.07185119343420451,
+        "relaunch": 0.11209364128121607,
+        "abs_diff": 0.04024244784701156,
+        "tolerance": 0.01
+      },
+      "gain_corr": {
+        "original": 0.03912898285505924,
+        "relaunch": 0.04363680874935743,
+        "abs_diff": 0.004507825894298191,
+        "tolerance": 0.01
+      }
+    },
+    "within_tolerance": false,
+    "tolerance_map": {
+      "best_val_auc": 0.001,
+      "mastery_corr": 0.01,
+      "gain_corr": 0.01
+    },
+    "training_exit_code": 0
+  },
+  "audit_completed_at": "2025-10-31T16:23:52.248361",
+  "missing_params_count": 1
+}

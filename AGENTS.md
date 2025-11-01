@@ -54,11 +54,13 @@ The machine has 8 GPUs. Use 5 GPUs to run commands as default.
 ### Operational standards
 
 - Avoid monitoring commands that interrupt scripts running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions). Launch this kind of commands in such a way that terminating ongoing processes is avoided. 
-- Launch scripts in such a way that we leverage around 60% of available GPUs (in current machine, for instance, we should GPUs 0 to 5) and less than 60% of CPU power. 
+- Launch scripts in such a way that we leverage available GPUs (60% as much if not set otherwise) and less than 60% of CPU power. 
 
 ### Reproducibility
 
 We treat every training or evaluation run as a formal experiment requiring full reconstruction capability. All resolved parameters originate from a single source of truth: `configs/parameter_default.json`. This file now includes architectural, interpretability, and runtime parameters (`seed`, `monitor_freq`, `use_amp`, `use_wandb`, `enable_cosine_perf_schedule`). CLI flags override individual defaults; absence of a CLI flag implies the default recorded in the experiment's `config.json` (no hidden or implicit defaults allowed). The following standards must be met for an experiment to be considered reproducible.
+
+We want to avoid the risks of having parameter defaults hardcoded. Changes in hardcoded values would not be reflected unless parameter_default.json is manually update first; moreover, evaluation could keep using another values, producing divergent checkpoints and invalid reproducibility claims. Hard-coding also prevents per-experiment architectural variation via overrides.
 
 #### 1. Experiment Folder Structure
 Each experiment creates a dedicated folder under `examples/experiments` using the convention:

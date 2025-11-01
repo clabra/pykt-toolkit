@@ -322,17 +322,24 @@ def train_gainakt2exp_model(args):
     train_loader, valid_loader = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
     logger.info("Dataset loaded successfully")
     
-    # Create model with standard PyKT configuration
+    # Create model with architecture pulled from config.json (cfg['model_config']) to avoid hidden defaults
     num_c = data_config[dataset_name]['num_c']
+    arch_cfg = cfg.get('model_config')
+    if arch_cfg is None:
+        raise KeyError("model_config section missing from config.json; reproduction invalid. Ensure launcher added model_config.")
+    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+    missing_arch = [k for k in mandatory_arch if k not in arch_cfg]
+    if missing_arch:
+        raise KeyError(f"Missing mandatory architecture keys in model_config: {missing_arch}")
     model_config = {
         'num_c': num_c,
-        'seq_len': 200,
-        'd_model': 512,
-        'n_heads': 8,
-        'num_encoder_blocks': 6,
-        'd_ff': 1024,
-        'dropout': 0.2,
-        'emb_type': 'qid',
+        'seq_len': arch_cfg['seq_len'],
+        'd_model': arch_cfg['d_model'],
+        'n_heads': arch_cfg['n_heads'],
+        'num_encoder_blocks': arch_cfg['num_encoder_blocks'],
+        'd_ff': arch_cfg['d_ff'],
+        'dropout': arch_cfg['dropout'],
+        'emb_type': arch_cfg.get('emb_type', 'qid'),
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
         'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True))
@@ -442,6 +449,30 @@ def train_gainakt2exp_model(args):
     # This keeps all existing logic unchanged (no need for distributed initialization).
     if device.type == 'cuda':
         gpu_count = torch.cuda.device_count()
+        visible_env = os.environ.get('CUDA_VISIBLE_DEVICES', '')
+        gpu_ids_env = os.environ.get('PYKT_GPU_IDS', '')
+        num_gpus_env = os.environ.get('PYKT_NUM_GPUS', '')
+        # Determine selection source (matches launcher precedence)
+        if visible_env:
+            selection_source = 'CUDA_VISIBLE_DEVICES'
+        elif gpu_ids_env:
+            selection_source = 'PYKT_GPU_IDS'
+        elif num_gpus_env:
+            selection_source = 'PYKT_NUM_GPUS'
+        else:
+            selection_source = 'heuristic_<70% or external default'
+        logger.info(f"[GPU] source={selection_source} CUDA_VISIBLE_DEVICES='{visible_env}' | torch.cuda.device_count()={gpu_count}")
+        # List device names
+        try:
+            names = [torch.cuda.get_device_name(i) for i in range(gpu_count)]
+            logger.info(f"[GPU] Device names: {names}")
+        except Exception as e:
+            logger.info(f"[GPU] Unable to list device names: {e}")
+        # If env specifies devices, compare counts
+        if visible_env:
+            requested_ids = [d for d in visible_env.split(',') if d.strip()!='']
+            if len(requested_ids) != gpu_count:
+                logger.warning(f"[GPU] Mismatch: requested {len(requested_ids)} ids ({requested_ids}) but torch reports {gpu_count} devices. DataParallel will use reported count.")
         if gpu_count > 1:
             logger.info(f"Multi-GPU detected (n={gpu_count}). Wrapping model with nn.DataParallel for simple data parallelism.")
             model = torch.nn.DataParallel(model)
@@ -1236,6 +1267,7 @@ if __name__ == '__main__':
     parser.add_argument('--monitor_freq', type=int, default=50, help='Interpretability monitor frequency (steps)')
     parser.add_argument('--gradient_clip', type=float, default=1.0, help='Gradient clipping max norm')
     parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
+    # --require_multi_gpu removed: no mandatory multi-GPU enforcement; script now allows single GPU or CPU without failure.
     # =====================
     # Interpretability Defaults: ENABLED by default
     # We expose disable flags for explicit override while keeping backward-compatible enable flags.

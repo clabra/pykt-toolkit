@@ -86,6 +86,7 @@ def main():
     ignored_eval_flags, ignored_train_flags = load_metadata_ignored(defaults)
     train_defaults = set(defaults.get('training_defaults', {}).keys())
     eval_defaults = set(defaults.get('evaluation_defaults', {}).keys())
+    model_config_defaults = set(defaults.get('model_config_defaults', {}).keys())
     train_flags = extract_flags(args.train_script)
     eval_flags = extract_flags(args.eval_script)
 
@@ -96,7 +97,9 @@ def main():
     eval_flags_filtered = {f: v for f,v in eval_flags.items() if normalize(f) not in ignored_eval_flags}
     miss_json_eval, miss_argparse_eval, extra_eval = classify(eval_flags_filtered, eval_defaults)
 
-    drift = any([miss_json_train, miss_argparse_train, extra_train, miss_json_eval, miss_argparse_eval, extra_eval])
+    # Architecture keys are not expected to appear in training argparse (currently); exclude them from drift unless missing in defaults
+    arch_missing_in_defaults = [k for k in ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout'] if k not in model_config_defaults]
+    drift = any([miss_json_train, miss_argparse_train, extra_train, miss_json_eval, miss_argparse_eval, extra_eval, arch_missing_in_defaults])
 
     report = {
         'train_script': args.train_script,
@@ -107,6 +110,8 @@ def main():
         'missing_in_json_evaluation': sorted(list(miss_json_eval)),
         'missing_in_argparse_evaluation': sorted(list(miss_argparse_eval)),
         'extraneous_evaluation_defaults': sorted(list(extra_eval)),
+        'model_config_defaults': sorted(list(model_config_defaults)),
+        'architecture_missing_in_defaults': arch_missing_in_defaults,
         'ignored_eval_flags': sorted(list(ignored_eval_flags)),
         'ignored_training_flags': sorted(list(ignored_train_flags)),
         'drift_detected': drift

@@ -121,12 +121,14 @@ def build_subprocess_command(train_script: str, resolved: Dict[str,Any]) -> List
     glob = resolved.get('global_alignment', {})
     refn = resolved.get('refinement', {})
     runtime = resolved.get('runtime', {})
+    # Initial unsorted command components (we will canonicalize ordering later)
     cmd = [sys.executable, train_script,
            '--dataset', resolved['data']['dataset'],
            '--fold', str(resolved['data']['fold']),
            '--epochs', str(td['epochs']),
            '--batch_size', str(td['batch_size']),
            '--learning_rate', str(td['learning_rate']),
+           '--optimizer', str(td.get('optimizer','Adam')),
            '--seed', str(runtime.get('seed', resolved['seeds']['primary'])),
            '--weight_decay', str(td['weight_decay']),
            '--gradient_clip', str(td['gradient_clip']),
@@ -185,6 +187,32 @@ def build_subprocess_command(train_script: str, resolved: Dict[str,Any]) -> List
     ])
     if runtime.get('use_amp', False):
         cmd.append('--use_amp')
+    # Canonical ordering (lexicographic) of flags for reproducibility string equivalence.
+    # Preserve interpreter + script path; sort the remaining flags treating flag+value as a unit.
+    head = cmd[:2]
+    tail = cmd[2:]
+    paired: List[tuple[str,List[str]]] = []
+    i = 0
+    while i < len(tail):
+        token = tail[i]
+        if token.startswith('--'):
+            # Boolean flag (no value) if next token starts with '--' or doesn't exist
+            if i+1 >= len(tail) or tail[i+1].startswith('--'):
+                paired.append((token, [token]))
+                i += 1
+            else:
+                # Flag-value pair
+                paired.append((token, [token, tail[i+1]]))
+                i += 2
+        else:
+            # Unexpected stray value without leading flag; treat as standalone (should not happen)
+            paired.append((f'__val_{i}__', [token]))
+            i += 1
+    paired.sort(key=lambda x: x[0])
+    canonical_tail: List[str] = []
+    for _, group in paired:
+        canonical_tail.extend(group)
+    cmd = head + canonical_tail
     return cmd
 
 def run_consistency_check(train_script: str) -> Dict[str,Any]:
@@ -539,23 +567,49 @@ def main():
     # Evaluation defaults snapshot retained from defaults_json
     eval_defaults = defaults_json.get('evaluation_defaults', {})
     resolved['evaluation_defaults'] = eval_defaults
+    # Inject architecture model_config from defaults (allow overrides via legacy flags if provided in override_pairs above)
+    model_cfg_defaults = defaults_json.get('model_config_defaults', {})
+    # Allow user override through --override seq_len=... etc.
+    model_cfg_resolved = {}
+    for k,v in model_cfg_defaults.items():
+        if k in override_pairs:
+            model_cfg_resolved[k] = override_pairs[k]
+        else:
+            model_cfg_resolved[k] = v
+    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+    missing_arch = [m for m in mandatory_arch if m not in model_cfg_resolved]
+    if missing_arch:
+        raise KeyError(f"Missing mandatory architecture keys during launcher resolution: {missing_arch}")
+    resolved['model_config'] = model_cfg_resolved
     # Commands
     train_cmd_list = build_subprocess_command(args.train_script, resolved)
-    train_cmd_str = ' '.join(shlex.quote(c) for c in train_cmd_list)
+    # train_cmd_list is already canonical (flags lexicographically ordered) ensuring stable string equivalence
+    verbose_train_cmd_str = ' '.join(shlex.quote(c) for c in train_cmd_list)
     launcher_command = 'python ' + ' '.join(shlex.quote(a) for a in sys.argv)
     resolved['runtime']['command'] = launcher_command
-    resolved['runtime']['train_command'] = train_cmd_str
+    # Minimal train command (config-first). The verbose version is retained under 'verbose_train_command' for audit.
+    minimal_train_cmd_str = f"python {args.train_script} --config {os.path.join(exp_dir, 'config.json')}"
+    resolved['runtime']['train_command'] = minimal_train_cmd_str
+    resolved['runtime']['verbose_train_command'] = verbose_train_cmd_str
     resolved['runtime']['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-    resolved['runtime']['eval_command'] = f"python examples/eval_gainakt2exp.py --run_dir {exp_dir} --dataset {resolved['data']['dataset']}"
+    resolved['runtime']['eval_command'] = (
+        f"python examples/eval_gainakt2exp.py --run_dir {exp_dir} --dataset {resolved['data']['dataset']} --experiment_id {exp_id}")
     # Minimal reproduction command (config-first): a single invocation pointing to the canonical config.json.
     # Rationale: The training script now supports --config to ingest ALL parameters from the stored file, eliminating
     # the need for verbose override enumeration and reducing drift risk. Reproduction requires copying the experiment
     # directory (or config.json) and executing this command. To retain legacy behaviour, one could reintroduce the
     # enumerated override method behind a feature flag (not requested).
-    resolved['runtime']['repro_command'] = f"{sys.executable} {args.train_script} --config {os.path.join(exp_dir,'config.json')}"
+    # Updated reproduction protocol: use relaunch_experiment.py to formally audit and relaunch.
+    # short_title for relaunch must be the original user-provided short_title (without timestamp/model prefix) + '_relaunch'.
+    # This avoids overly long folder names and keeps semantic continuity with the initial short_title.
+    relaunch_short = f"{args.short_title}_relaunch" if args.short_title else "relaunch"
+    resolved['runtime']['repro_command'] = (
+        f"{sys.executable} examples/relaunch_experiment.py --source_dir {exp_dir} --short_title {relaunch_short}" )
     # Config hash
     from examples.experiment_utils import compute_config_hash
     resolved['config_md5'] = compute_config_hash(resolved)
+    # Record placeholder gpu_selection_source; will be updated if training runs.
+    resolved['hardware']['gpu_selection_source'] = 'pending'
     atomic_write_json(resolved, os.path.join(exp_dir, 'config.json'))
 
     # Step 4: Environment + seeds metadata
@@ -567,7 +621,8 @@ def main():
     logger.info(f"Launching reproducible experiment: {exp_id}")
     logger.info(f"Training script: {args.train_script}")
     logger.info(f"Launcher command: {launcher_command}")
-    logger.info(f"Train command: {train_cmd_str}")
+    logger.info(f"Train command (minimal): {minimal_train_cmd_str}")
+    logger.info(f"Train command (verbose): {verbose_train_cmd_str}")
 
     # Step 6: Optionally run training
     metrics_csv = os.path.join(exp_dir, 'metrics_epoch.csv')
@@ -592,14 +647,74 @@ def main():
 
     if not args.dry_run:
         env = os.environ.copy()
-        env['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
-        env.setdefault('PYKT_VISIBLE_GPUS', env['CUDA_VISIBLE_DEVICES'])
+        # Dynamic GPU subset selection precedence:
+        # 1. If CUDA_VISIBLE_DEVICES already set (explicit device list), use it as-is.
+        # 2. Else if PYKT_GPU_IDS provided (comma-separated list), use that.
+        # 3. Else if PYKT_NUM_GPUS provided (count), select first N from args.devices.
+        # 4. Else apply heuristic: select a subset strictly <70% of available (ceil(avail*0.7)-1 if >1) else 1.
+        existing_cuda = env.get('CUDA_VISIBLE_DEVICES')
+        gpu_ids_env = env.get('PYKT_GPU_IDS')
+        requested_env_gpus = env.get('PYKT_NUM_GPUS')
+        selection_source = None
+        if existing_cuda:
+            # Honor pre-set CUDA_VISIBLE_DEVICES (could be set by external scheduler)
+            selected_devices = [d for d in existing_cuda.split(',') if d!='']
+            selection_source = 'CUDA_VISIBLE_DEVICES'
+        elif gpu_ids_env:
+            selected_devices = [d for d in gpu_ids_env.split(',') if d!='']
+            selection_source = 'PYKT_GPU_IDS'
+        elif requested_env_gpus is not None:
+            try:
+                num_requested = int(requested_env_gpus)
+            except ValueError:
+                num_requested = len(args.devices)
+            selected_devices = [str(d) for d in args.devices[:num_requested]]
+            selection_source = 'PYKT_NUM_GPUS'
+        else:
+            try:
+                import torch
+                import math
+                avail = torch.cuda.device_count() if torch.cuda.is_available() else 0
+            except Exception:
+                avail = 0
+            if avail > 0:
+                # Heuristic target (<70% but ensure at least 2 if >=2 available)
+                raw_target = max(1, math.ceil(avail * 0.7))
+                if raw_target >= avail and avail > 1:
+                    raw_target = avail - 1  # enforce strictly <100% when possible
+                num_select = max(1, raw_target)
+                if num_select < 2 and avail >= 2:
+                    num_select = 2  # ensure multi-GPU utilization when at least 2 are available
+                selected_devices = [str(d) for d in args.devices[:num_select]]
+            else:
+                selected_devices = []
+            selection_source = 'heuristic_<70%_min2'
+        # Normalize and set CUDA_VISIBLE_DEVICES to selected list
+        env['CUDA_VISIBLE_DEVICES'] = ','.join(selected_devices)
+        env['PYKT_VISIBLE_GPUS'] = env['CUDA_VISIBLE_DEVICES']
+        logger.info(f"[Launcher] GPU selection (subprocess): source={selection_source} available={args.devices} selected={selected_devices}")
+        visible_count = len(args.devices)
+        selected_count = len(selected_devices)
+        logger.info(f"[Launcher] GPU counts: visible={visible_count} selected={selected_count}")
+        # Update config with actual selection source for audit reproducibility
+        try:
+            import json as _json
+            cfg_path = os.path.join(exp_dir, 'config.json')
+            with open(cfg_path) as _cf:
+                _cfg = _json.load(_cf)
+            _cfg['hardware']['gpu_selection_source'] = selection_source
+            _cfg['hardware']['visible_gpu_count'] = len(args.devices)
+            _cfg['hardware']['selected_gpu_count'] = len(selected_devices)
+            atomic_write_json(_cfg, cfg_path)
+        except Exception as e:
+            logger.info(f"[Launcher] Warning: unable to update gpu_selection_source in config.json: {e}")
         env['EXPERIMENT_DIR'] = exp_dir
         env['PYKT_CONFIG_PATH'] = os.path.join(exp_dir, 'config.json')
         logger.info(f"[Launcher] Set EXPERIMENT_DIR={exp_dir}")
         logger.info(f"[Launcher] Set PYKT_CONFIG_PATH={env['PYKT_CONFIG_PATH']}")
         start = time.time()
-        proc = subprocess.Popen(train_cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True, shell=True)
+        # Use verbose command for actual execution to avoid relying on file that is simultaneously being written.
+        proc = subprocess.Popen(verbose_train_cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True, shell=True)
         # Stream output with timestamps
         while True:
             line = proc.stdout.readline()

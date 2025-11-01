@@ -1,0 +1,2 @@
+experiment,timestamp,dataset,fold,val_auc,val_acc,test_auc,test_acc,mastery_corr,gain_corr,best AUC,best Master Corr
+20251031_182636_gainakt2exp_arch_train2,2025-10-31T18:28:17.139149,assist2015,0,0.7175653837996081,0.7519099942578517,0.7114107841485655,0.7455495126010461,0.09475271520183867,-0.018041932909832362,True,True

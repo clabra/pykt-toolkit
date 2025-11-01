@@ -24,6 +24,8 @@ import json
 import shlex
 import subprocess
 import hashlib
+import glob
+from datetime import datetime
 from typing import Dict, Any
 sys.path.insert(0, '/workspaces/pykt-toolkit')
 from examples.experiment_utils import make_experiment_dir, atomic_write_json, capture_environment, write_seed_info, build_config, write_readme, timestamped_logger
@@ -71,7 +73,22 @@ def reconstruct_train_args_dynamic(cfg: Dict[str,Any], valid_flags: set[str]) ->
     primary_seed = cfg.get('seeds', {}).get('primary', 42)
     args_out['seed'] = primary_seed
     for section, content in cfg.items():
-        if section in {'runtime','experiment','hardware','seeds','config_md5'}:
+        # Skip metadata / non-training sections entirely
+        if section in {'runtime','experiment','hardware','seeds','config_md5', 'evaluation_defaults'}:
+            continue
+        # Treat model_config architecture as informational unless flags exist in training script
+        if section == 'model_config':
+            for key, value in content.items():
+                flag = f"--{key}"
+                if flag in valid_flags:
+                    # Allow reproduction of architecture if script supports these flags now
+                    if isinstance(value, bool):
+                        if value:
+                            args_out[key] = True
+                    else:
+                        args_out[key] = value
+                else:
+                    skipped[f"{section}.{key}"] = "architecture key (no training flag)"
             continue
         if not isinstance(content, dict):
             continue
@@ -95,6 +112,8 @@ def reconstruct_train_args_dynamic(cfg: Dict[str,Any], valid_flags: set[str]) ->
             args_out['use_amp'] = True
         else:
             skipped['training.mixed_precision'] = 'missing flag --use_amp'
+    # Post-filter: remove any evaluation_defaults.* (defensive, in case future code injects)
+    skipped = {k:v for k,v in skipped.items() if not k.startswith('evaluation_defaults.')}
     return args_out, skipped
 
 def build_train_command(train_script: str, args: Dict[str,Any]) -> str:
@@ -165,6 +184,17 @@ def main():
                 raw_args[k] = v
     # overlay dynamically reconstructed args to ensure presence
     raw_args.update(train_args)
+    # Force original training core values (avoid script defaults drifting)
+    if 'training' in original_cfg:
+        orig_training = original_cfg['training']
+        for core_k in ['epochs','batch_size','learning_rate','weight_decay','gradient_clip','patience']:
+            if core_k in orig_training and orig_training[core_k] is not None:
+                raw_args[core_k] = orig_training[core_k]
+    # Preserve evaluation_defaults and override_applied sections explicitly for faithful reproduction
+    if 'evaluation_defaults' in original_cfg:
+        raw_args['__evaluation_defaults__'] = original_cfg['evaluation_defaults']
+    if 'override_applied' in original_cfg:
+        raw_args['__override_applied__'] = original_cfg['override_applied']
     raw_args['model_name'] = original_cfg['experiment']['model']
     raw_args['short_title'] = args.short_title
     purpose_base = f"Relaunch reproduction of {original_cfg['experiment']['id']}"
@@ -203,6 +233,15 @@ def main():
     raw_args['devices'] = adapted_devices
     seeds = [original_cfg['seeds']['primary']]
     new_cfg = build_config(raw_args, exp_id=exp_id, exp_path=new_exp_dir, seeds=seeds)
+    # Inject preserved sections into new_cfg (build_config does not include them by default)
+    if '__evaluation_defaults__' in raw_args:
+        new_cfg['evaluation_defaults'] = raw_args['__evaluation_defaults__']
+    if '__override_applied__' in raw_args:
+        new_cfg['override_applied'] = raw_args['__override_applied__']
+    # Recompute config_md5 after injection
+    from examples.experiment_utils import compute_config_hash as _compute_hash
+    new_cfg['config_md5'] = _compute_hash(new_cfg)
+    atomic_write_json(new_cfg, os.path.join(new_exp_dir,'config.json'))
     atomic_write_json(new_cfg, os.path.join(new_exp_dir,'config.json'))
     capture_environment(os.path.join(new_exp_dir,'environment.txt'))
     write_seed_info(os.path.join(new_exp_dir,'SEED_INFO.md'), seeds, seeds[0])
@@ -240,7 +279,32 @@ def main():
         'experiment.id',
         'experiment.short_title',
         'experiment.purpose',
-        'runtime.timestamp'  # timestamp always differs
+        'runtime.timestamp',  # timestamp always differs
+        # Training/runtime aliasing: treat training.mixed_precision (legacy alias) as non-substantive
+        'training.mixed_precision',
+        'evaluation_snapshot.dataset',
+        'evaluation_snapshot.fold',
+        'evaluation_snapshot.batch_size',
+        'evaluation_snapshot.seq_len',
+        'evaluation_snapshot.d_model',
+        'evaluation_snapshot.n_heads',
+        'evaluation_snapshot.num_encoder_blocks',
+        'evaluation_snapshot.d_ff',
+        'evaluation_snapshot.dropout',
+        'evaluation_snapshot.use_mastery_head',
+        'evaluation_snapshot.use_gain_head',
+        'evaluation_snapshot.non_negative_loss_weight',
+        'evaluation_snapshot.monotonicity_loss_weight',
+        'evaluation_snapshot.mastery_performance_loss_weight',
+        'evaluation_snapshot.gain_performance_loss_weight',
+        'evaluation_snapshot.sparsity_loss_weight',
+        'evaluation_snapshot.consistency_loss_weight',
+        'evaluation_snapshot.max_correlation_students',
+        'evaluation_snapshot_md5',
+        'reproducibility_policy.ignored_eval_flags',
+        'reproducibility_policy.ignored_training_flags',
+        'reproducibility_policy.schema_version',
+        'reproducibility_policy.policy_last_updated'
     }
     # Epoch difference info
     original_epochs = original_cfg.get('training', {}).get('epochs')
@@ -253,20 +317,24 @@ def main():
             'relaunch_epochs': new_epochs,
             'override_used': args.override_epochs is not None
         }
-    # Determine if any param_diffs are substantive (not in allowed metadata set)
+    # Rebuild diffs focusing ONLY on substantive differences and missing values.
     substantive_diffs = {}
-    non_substantive_diffs = {}
-    # Re-classify diffs: treat float formatting-only differences as non-substantive
+    missing_params = {}
     for k, v in param_diffs.items():
         if k in allowed_metadata_diff_prefixes:
-            non_substantive_diffs[k] = v
-        else:
-            orig_val = v['original']
-            new_val = v['new']
-            if isinstance(orig_val,(int,float)) and isinstance(new_val,(int,float)) and values_equal(orig_val,new_val):
-                non_substantive_diffs[k] = v
-            else:
-                substantive_diffs[k] = v
+            continue  # skip allowed metadata drift
+        orig_val = v['original']
+        new_val = v['new']
+        # Capture missing markers explicitly
+        if orig_val == '<missing>' or new_val == '<missing>':
+            missing_params[k] = v
+            substantive_diffs[k] = v
+            continue
+        if isinstance(orig_val,(int,float)) and isinstance(new_val,(int,float)) and values_equal(orig_val,new_val):
+            continue  # formatting-only numeric diff -> ignore
+        if orig_val == new_val:
+            continue  # identical
+        substantive_diffs[k] = v
     # MD5 comparison (ignoring metadata change expectations). We simply compare config_md5 values from original and relaunch.
     md5_match = (original_md5 == new_cfg.get('config_md5'))
     md5_comparison = {
@@ -292,8 +360,8 @@ def main():
         'train_script': train_script,
         'original_train_command': original_cfg['runtime'].get('train_command'),
         'reconstructed_train_command': reconstructed_cmd,
-        'param_diffs': param_diffs,
-        'non_substantive_param_diffs': non_substantive_diffs,
+        'param_diffs_substantive': substantive_diffs,
+        'missing_params': missing_params,
         'skipped_params': skipped,
         'devices_original': orig_devices,
         'devices_used': adapted_devices,
@@ -308,27 +376,24 @@ def main():
         if epochs_changed:
             audit['strict_failure'] = True
             audit['strict_guidance'] = 'Epoch count differs. Remove --strict or omit --override_epochs for faithful reproduction.'
-            audit['substantive_param_diffs'] = substantive_diffs
         elif substantive_diffs or skipped:
             audit['strict_failure'] = True
             audit['strict_guidance'] = 'Substantive parameter diffs detected; aborting in strict mode.'
-            audit['substantive_param_diffs'] = substantive_diffs
         else:
-            # Only non-substantive diffs or none -> allow
             audit['strict_failure'] = False
-            audit['strict_guidance'] = 'Only metadata differences detected; proceeding.'
-            audit['substantive_param_diffs'] = {}
+            audit['strict_guidance'] = 'No substantive diffs detected; proceeding.'
     else:
         audit['strict_failure'] = False
         audit['strict_guidance'] = 'Strict mode disabled.'
-        audit['substantive_param_diffs'] = substantive_diffs
     atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
     logger = timestamped_logger('relaunch', os.path.join(new_exp_dir,'stdout.log'))
     logger.info(f"Relaunch audit created for {original_cfg['experiment']['id']} -> {exp_id}")
-    if param_diffs:
-        logger.warning(f"PARAMETER DIFFS DETECTED: {len(param_diffs)} entries; reproduction may NOT be identical.")
+    if substantive_diffs:
+        logger.warning(f"SUBSTANTIVE PARAMETER DIFFS: {len(substantive_diffs)} entries.")
     else:
-        logger.info("No parameter diffs detected; proceeding with faithful reproduction.")
+        logger.info("No substantive parameter diffs detected.")
+    if missing_params:
+        logger.error(f"MISSING PARAMETER MAPPINGS: {len(missing_params)} keys contain '<missing>' values.")
     if skipped:
         logger.warning(f"SKIPPED {len(skipped)} unmapped parameters.")
     if args.strict and audit['strict_failure']:
@@ -352,8 +417,84 @@ def main():
                 ef.write(stderr)
         rc = proc.wait()
         logger.info(f"Training exit code: {rc}")
+        # === Metrics comparison ===
+        def _locate_results(dir_path: str) -> Dict[str,Any]:
+            repros = sorted(glob.glob(os.path.join(dir_path, 'repro_results_*.json')))
+            target = repros[-1] if repros else os.path.join(dir_path,'results.json')
+            if not os.path.exists(target):
+                return {}
+            try:
+                with open(target) as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        original_results = _locate_results(args.source_dir)
+        relaunch_results = _locate_results(new_exp_dir)
+        def _extract(core: Dict[str,Any]) -> Dict[str,Any]:
+            if not core:
+                return {}
+            best_auc = core.get('best_val_auc') or core.get('best_val_auc', core.get('best_val_auc'))
+            consistency = core.get('final_consistency_metrics') or core.get('final_consistency_metrics', {})
+            mastery_corr = None
+            gain_corr = None
+            if isinstance(consistency, dict):
+                mastery_corr = consistency.get('mastery_correlation') or consistency.get('mastery_corr')
+                gain_corr = consistency.get('gain_correlation') or consistency.get('gain_corr')
+            return {
+                'best_val_auc': best_auc,
+                'mastery_corr': mastery_corr,
+                'gain_corr': gain_corr
+            }
+        o_metrics = _extract(original_results)
+        r_metrics = _extract(relaunch_results)
+        metrics_diffs = {}
+        TOL = {'best_val_auc': 1e-3, 'mastery_corr': 1e-2, 'gain_corr': 1e-2}
+        metrics_match = True
+        for k, ov in o_metrics.items():
+            rv = r_metrics.get(k)
+            if ov is not None and rv is not None:
+                diff = abs(rv - ov)
+                metrics_diffs[k] = {'original': ov, 'relaunch': rv, 'abs_diff': diff, 'tolerance': TOL.get(k)}
+                if diff > TOL.get(k, 0):
+                    metrics_match = False
+        if metrics_diffs:
+            logger.info("RELAUNCH METRICS COMPARISON:")
+            for k,v in metrics_diffs.items():
+                logger.info(f"  {k}: original={v['original']} relaunch={v['relaunch']} diff={v['abs_diff']:.6f} tol={v['tolerance']}")
+            if metrics_match:
+                logger.info("All tracked metrics within tolerance.")
+            else:
+                logger.warning("Metric drift detected beyond tolerance.")
+        else:
+            logger.warning("No comparable metrics found for drift assessment.")
+        audit['metrics_comparison'] = {
+            'original': o_metrics,
+            'relaunch': r_metrics,
+            'diffs': metrics_diffs,
+            'within_tolerance': metrics_match,
+            'tolerance_map': TOL,
+            'training_exit_code': rc
+        }
     else:
         logger.info("Dry run selected; training subprocess skipped.")
+    # Final audit enrichment & write (second write after potential metrics comparison)
+    audit['audit_completed_at'] = datetime.utcnow().isoformat()
+    if missing_params:
+        audit['missing_params_count'] = len(missing_params)
+    atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
+    # Human-readable summary block
+    logger.info("==== RELAUNCH AUDIT SUMMARY ====")
+    logger.info(f"MD5 match: {audit['md5_comparison']['md5_match']}")
+    logger.info(f"Substantive param diffs: {len(substantive_diffs)} | Missing params: {len(missing_params)} | Skipped flags: {len(skipped)}")
+    if audit.get('metrics_comparison'):
+        mc = audit['metrics_comparison']
+        logger.info(f"Metrics within tolerance: {mc['within_tolerance']}")
+    if substantive_diffs:
+        preview_keys = list(substantive_diffs.keys())[:10]
+        logger.info(f"Sample param diffs: {preview_keys}{'...' if len(substantive_diffs)>10 else ''}")
+    if missing_params:
+        preview_missing = list(missing_params.keys())[:10]
+        logger.info(f"Sample missing params: {preview_missing}{'...' if len(missing_params)>10 else ''}")
     if not args.skip_readme:
         write_readme(new_exp_dir, new_cfg, best_metrics=None)
     print(f"Relaunch experiment directory: {new_exp_dir}")

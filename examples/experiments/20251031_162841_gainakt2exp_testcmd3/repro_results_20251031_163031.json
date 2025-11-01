@@ -1,0 +1,128 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7236227908910079,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.06831339025366795,
+    "gain_correlation": 0.026597476986508262
+  },
+  "train_history": {
+    "train_loss": [
+      0.5415849521987797,
+      0.5188641728823666
+    ],
+    "train_auc": [
+      0.6921260544528618,
+      0.724531364878306
+    ],
+    "val_auc": [
+      0.7157886651471604,
+      0.7236227908910079
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.10984879660059454,
+        "gain_correlation": 0.015186724397729733
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.105855374294697,
+        "gain_correlation": 0.009990199125109343
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.10984879660059454,
+        "gain_correlation": 0.015186724397729733,
+        "warmup_scale": 0.125,
+        "alignment_corr_mastery": 0.023074770346283913,
+        "alignment_corr_gain": 0.14498382806777954,
+        "global_alignment_mastery_corr": 0.08591837714989196,
+        "global_alignment_gain_corr": 0.00977959742975751,
+        "effective_alignment_weight": 0.03125,
+        "peak_mastery_corr": 0.08591837714989196,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.9824490645068018,
+          "constraint_total": 0.017550937731340706,
+          "alignment": -0.005053257770839422,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.013807343700273358,
+        "min_mastery_variance": 0.009801283478736877,
+        "max_mastery_variance": 0.04201595485210419,
+        "per_lag_correlations": []
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.105855374294697,
+        "gain_correlation": 0.009990199125109343,
+        "warmup_scale": 0.25,
+        "alignment_corr_mastery": 0.052884913980960846,
+        "alignment_corr_gain": 0.1693936437368393,
+        "global_alignment_mastery_corr": 0.0702618907955548,
+        "global_alignment_gain_corr": 0.026908443130547917,
+        "effective_alignment_weight": 0.0625,
+        "peak_mastery_corr": 0.08591837714989196,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.9902881611777474,
+          "constraint_total": 0.009711842430703969,
+          "alignment": -0.022028542071439373,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.009874094200412227,
+        "min_mastery_variance": 0.009822064079344273,
+        "max_mastery_variance": 0.009947803802788258,
+        "per_lag_correlations": []
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 2,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": true,
+    "fold": 0
+  },
+  "timestamp": "2025-10-31T16:30:31.090337"
+}

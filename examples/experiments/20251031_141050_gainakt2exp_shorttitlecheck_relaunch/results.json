@@ -1,0 +1,61 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7177985929471418,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.06791085017420517,
+    "gain_correlation": 0.015020181898666891
+  },
+  "train_history": {
+    "train_loss": [
+      0.5415762250596378
+    ],
+    "train_auc": [
+      0.6933483373993532
+    ],
+    "val_auc": [
+      0.7177985929471418
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.09763604632738901,
+        "gain_correlation": -0.0013196192581213168
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.09763604632738901,
+        "gain_correlation": -0.0013196192581213168,
+        "warmup_scale": 0.125,
+        "alignment_corr_mastery": 0.03115238808095455,
+        "alignment_corr_gain": 0.1513051986694336,
+        "global_alignment_mastery_corr": 0.11742372630940129,
+        "global_alignment_gain_corr": 0.03566527079621058,
+        "effective_alignment_weight": 0.03125,
+        "peak_mastery_corr": 0.11742372630940129,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.981097456782917,
+          "constraint_total": 0.018902538327797386,
+          "alignment": -0.005371460292573486,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.013630033321099577,
+        "min_mastery_variance": 0.00981154851615429,
+        "max_mastery_variance": 0.04112113639712334,
+        "per_lag_correlations": []
+      }
+    ]
+  }
+}
