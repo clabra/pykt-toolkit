@@ -8,6 +8,7 @@ This is an enhanced version of the GainAKT2 model that includes:
 """
 
 import torch
+import os
 from .gainakt2 import GainAKT2
 
 
@@ -149,11 +150,21 @@ class GainAKT2Exp(GainAKT2):
             interpretability_loss = torch.tensor(0.0, device=q.device)
         output['interpretability_loss'] = interpretability_loss
         
-        # 8. Call interpretability monitor if enabled and at right frequency
+        # Optional debug: log device placement once (controlled by env var)
+        if batch_idx == 0 and bool(int(os.environ.get('PYKT_DEBUG_DP_DEVICES', '0'))):
+            try:
+                # Only emit from primary device (index 0) to avoid duplicate logs under DataParallel
+                if hasattr(q, 'device') and (q.device.index is None or q.device.index == 0):
+                    print(f"[DP-DEBUG] forward_with_states: q.device={q.device} context_seq.device={context_seq.device}")
+            except Exception:
+                pass
+
+        # 8. Call interpretability monitor if enabled and at right frequency.
+        # Guard to execute only on primary replica (device index 0) to prevent duplicate side-effects under DataParallel.
+        primary_device = (hasattr(q, 'device') and (q.device.index is None or q.device.index == 0))
         if (self.interpretability_monitor is not None and 
             batch_idx is not None and 
-            batch_idx % self.monitor_frequency == 0):
-            
+            batch_idx % self.monitor_frequency == 0 and primary_device):
             with torch.no_grad():
                 self.interpretability_monitor(
                     batch_idx=batch_idx,

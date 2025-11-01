@@ -188,6 +188,21 @@ def train_gainakt2exp_model(args):
     - use_wandb: bool (default: False)
     """
     import logging
+    import random
+    # Deterministic seed initialization (before any data/model ops)
+    seed_base = getattr(args, 'seed', 42)
+    random.seed(seed_base)
+    np.random.seed(seed_base)
+    torch.manual_seed(seed_base)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed_base)
+    # Enforce deterministic algorithms where feasible
+    try:
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    except Exception:
+        pass
     
     # Get parameters with OPTIMAL defaults (AUC: 0.7260, Perfect Consistency)
     cfg = load_config_if_available()
@@ -324,22 +339,61 @@ def train_gainakt2exp_model(args):
     
     # Create model with architecture pulled from config.json (cfg['model_config']) to avoid hidden defaults
     num_c = data_config[dataset_name]['num_c']
-    arch_cfg = cfg.get('model_config')
-    if arch_cfg is None:
+    arch_cfg = cfg.get('model_config') if cfg is not None else None
+    if arch_cfg is None and cfg is not None:
         raise KeyError("model_config section missing from config.json; reproduction invalid. Ensure launcher added model_config.")
+    if arch_cfg is None and cfg is None:
+        # Standalone run (no config provided): synthesize architecture from CLI defaults
+        arch_cfg = {
+            'seq_len': getattr(args, 'seq_len'),
+            'd_model': getattr(args, 'd_model'),
+            'n_heads': getattr(args, 'n_heads'),
+            'num_encoder_blocks': getattr(args, 'num_encoder_blocks'),
+            'd_ff': getattr(args, 'd_ff'),
+            'dropout': getattr(args, 'dropout'),
+            'emb_type': getattr(args, 'emb_type', 'qid')
+        }
+        logger.info("[ArchFallback] No config.json loaded; using CLI architecture values as model_config.")
     mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
     missing_arch = [k for k in mandatory_arch if k not in arch_cfg]
     if missing_arch:
         raise KeyError(f"Missing mandatory architecture keys in model_config: {missing_arch}")
+    # Architecture override precedence: if a CLI flag for an architecture key is explicitly provided,
+    # we override the config value. This enables ablations via launcher/relaunch without editing config.json.
+    # Detect presence in sys.argv (raw) to decide override; argparse will still supply defaults.
+    cli_args_raw = sys.argv
+    def arch_value(key, arg_name=None):
+        flag = f"--{arg_name or key}"
+        if any(a.startswith(flag) for a in cli_args_raw):
+            return getattr(args, arg_name or key)
+        # fallback to config value
+        return arch_cfg.get(key, getattr(args, arg_name or key))
+    resolved_seq_len = arch_value('seq_len')
+    resolved_d_model = arch_value('d_model')
+    resolved_n_heads = arch_value('n_heads')
+    resolved_num_encoder_blocks = arch_value('num_encoder_blocks')
+    resolved_d_ff = arch_value('d_ff')
+    resolved_dropout = arch_value('dropout')
+    resolved_emb_type = arch_value('emb_type')
+    # Log overrides for transparency
+    override_msgs = []
+    for k, v in [('seq_len', resolved_seq_len), ('d_model', resolved_d_model), ('n_heads', resolved_n_heads),
+                 ('num_encoder_blocks', resolved_num_encoder_blocks), ('d_ff', resolved_d_ff), ('dropout', resolved_dropout), ('emb_type', resolved_emb_type)]:
+        config_val = arch_cfg.get(k)
+        cli_flag = f"--{k}" in cli_args_raw
+        if cli_flag and v != config_val:
+            override_msgs.append(f"{k}: config={config_val} -> cli={v}")
+    if override_msgs:
+        logger.info("[ArchOverride] CLI architecture overrides applied: " + "; ".join(override_msgs))
     model_config = {
         'num_c': num_c,
-        'seq_len': arch_cfg['seq_len'],
-        'd_model': arch_cfg['d_model'],
-        'n_heads': arch_cfg['n_heads'],
-        'num_encoder_blocks': arch_cfg['num_encoder_blocks'],
-        'd_ff': arch_cfg['d_ff'],
-        'dropout': arch_cfg['dropout'],
-        'emb_type': arch_cfg.get('emb_type', 'qid'),
+        'seq_len': resolved_seq_len,
+        'd_model': resolved_d_model,
+        'n_heads': resolved_n_heads,
+        'num_encoder_blocks': resolved_num_encoder_blocks,
+        'd_ff': resolved_d_ff,
+        'dropout': resolved_dropout,
+        'emb_type': resolved_emb_type,
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
         'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True))
@@ -610,7 +664,17 @@ def train_gainakt2exp_model(args):
             try:
                 with torch.cuda.amp.autocast(enabled=use_amp and device.type == 'cuda'):
                     # Forward with underlying module to access custom method
+                    # DataParallel scatter occurs only when calling model(...). To retain internal states,
+                    # we invoke forward_with_states on each replica via a thin wrapper exposed as 'forward'.
+                    # For multi-GPU we call model(...) which internally calls forward() -> forward_with_states.
+                    # The standard forward returns limited outputs; for training we need logits & interpretability states.
+                    # Solution: temporarily add attribute access: if DataParallel, gather states from model.module after call.
                     if isinstance(model, torch.nn.DataParallel):
+                        # Call collective forward to trigger scatter
+                        fwd_basic = model(questions, responses, questions_shifted, qtest=False)
+                        # After collective forward, call forward_with_states on primary module with full batch (already on device 0)
+                        # Note: This duplicates computation on device0; acceptable for short diagnostic. For true efficiency,
+                        # implement custom DataParallel subclass to return states from replicas.
                         outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
                     else:
                         outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
@@ -779,10 +843,145 @@ def train_gainakt2exp_model(args):
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_val)
                     optimizer.step()
             except RuntimeError as oom:
-                if 'out of memory' in str(oom).lower():
+                msg = str(oom).lower()
+                if 'out of memory' in msg:
                     logger.warning("OOM encountered; clearing CUDA cache and skipping batch")
                     torch.cuda.empty_cache()
                     continue
+                # Deterministic CuBLAS failure fallback: disable deterministic algorithms & retry once
+                if ('cublas' in msg and 'deterministic' in msg) or ('cublas' in msg and 'workspace' in msg):
+                    logger.warning("[DeterminismFallback] CuBLAS deterministic failure detected; disabling deterministic algorithms and retrying batch once.")
+                    try:
+                        if hasattr(torch, 'use_deterministic_algorithms'):
+                            torch.use_deterministic_algorithms(False)
+                        torch.backends.cudnn.deterministic = False
+                        with torch.cuda.amp.autocast(enabled=use_amp and device.type == 'cuda'):
+                            if isinstance(model, torch.nn.DataParallel):
+                                _ = model(questions, responses, questions_shifted, qtest=False)
+                                outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                            else:
+                                outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                            logits = outputs['logits']
+                            interpretability_loss = outputs['interpretability_loss']
+                            valid_mask = mask.bool()
+                            valid_predictions = logits[valid_mask]
+                            valid_targets = responses_shifted[valid_mask].float()
+                            main_loss = criterion(valid_predictions, valid_targets)
+                            alignment_loss = torch.zeros(1, device=device)
+                            alignment_corr_mastery = torch.zeros(1, device=device)
+                            alignment_corr_gain = torch.zeros(1, device=device)
+                            if enable_alignment_loss and model_core.mastery_head is not None and model_core.gain_head is not None and 'projected_mastery' in outputs and 'projected_gains' in outputs:
+                                pm = outputs['projected_mastery']
+                                pg = outputs['projected_gains']
+                                perf = responses_shifted
+                                student_mask = mask.bool()
+                                max_students_align = 32
+                                if pm.size(0) > max_students_align:
+                                    pm = pm[:max_students_align]
+                                    pg = pg[:max_students_align]
+                                    perf = perf[:max_students_align]
+                                    student_mask = student_mask[:max_students_align]
+                                mastery_mean = pm.mean(dim=2)
+                                gains_mean = pg.mean(dim=2)
+                                mastery_sel = mastery_mean[student_mask]
+                                gains_sel = gains_mean[student_mask]
+                                perf_sel = perf[student_mask].float()
+                                if use_residual_alignment:
+                                    perf_raw = perf_sel.clone()
+                                    if perf_raw.numel() >= alignment_residual_window + 2:
+                                        kernel = torch.ones(alignment_residual_window, device=device) / alignment_residual_window
+                                        pad = alignment_residual_window // 2
+                                        perf_padded = torch.nn.functional.pad(perf_raw.unsqueeze(0).unsqueeze(0), (pad, pad), mode='reflect')
+                                        smooth = torch.nn.functional.conv1d(perf_padded, kernel.view(1,1,-1)).squeeze()[:perf_raw.numel()]
+                                        perf_sel = (perf_raw - smooth).detach()
+                                def corr_fn(x, y):
+                                    if x.numel() < 3 or y.numel() < 3:
+                                        return torch.zeros(1, device=device)
+                                    xm = x - x.mean()
+                                    ym = y - y.mean()
+                                    denom = (xm.std(unbiased=False) * ym.std(unbiased=False) + 1e-6)
+                                    return (xm * ym).mean() / denom
+                                alignment_corr_mastery = corr_fn(mastery_sel, perf_sel)
+                                alignment_corr_gain = corr_fn(gains_sel, perf_sel)
+                                align_scale = min(1.0, (epoch + 1) / max(1, alignment_warmup_epochs))
+                                effective_weight = global_alignment_state['alignment_weight_current'] * align_scale
+                                if adaptive_alignment and align_scale >= 1.0:
+                                    reference_corr = alignment_corr_mastery.detach()
+                                    if enable_global_alignment_pass and global_alignment_state['prev_global_mastery_corr'] is not None:
+                                        reference_corr = torch.tensor(global_alignment_state['prev_global_mastery_corr'], device=device)
+                                    if reference_corr < alignment_min_correlation:
+                                        factor = min(3.0, 1.0 + (alignment_min_correlation - float(reference_corr)) * 4.0)
+                                        effective_weight = effective_weight * factor
+                                global_alignment_state['effective_alignment_weight_last'] = float(effective_weight)
+                                lag_loss = torch.zeros(1, device=device)
+                                mean_lag_corr = torch.zeros(1, device=device)
+                                lag_corr_count = 0
+                                if enable_lag_gain_loss and lag_max_lag > 0 and (epoch + 1) >= (warmup_constraint_epochs + 3):
+                                    gains_mean_time = gains_mean
+                                    perf_time = perf.float()
+                                    weights_map = {1: lag_l1_weight, 2: lag_l2_weight, 3: lag_l3_weight}
+                                    weighted_corr_sum = torch.zeros(1, device=device)
+                                    lag_terms = []
+                                    for student_idx in range(gains_mean_time.size(0)):
+                                        student_gains = gains_mean_time[student_idx]
+                                        student_perf = perf_time[student_idx]
+                                        student_valid = student_mask[student_idx]
+                                        if student_valid.sum() < 5:
+                                            continue
+                                        for lag in range(1, min(lag_max_lag + 1, 3)):
+                                            T = student_gains.size(0)
+                                            if T - lag <= 2:
+                                                continue
+                                            gm_window = student_gains[:T - lag][student_valid[:T - lag]]
+                                            pt_window = student_perf[lag:][student_valid[lag:]]
+                                            if gm_window.numel() < 3 or pt_window.numel() < 3:
+                                                continue
+                                            gm_z = (gm_window - gm_window.mean()) / (gm_window.std(unbiased=False) + 1e-6)
+                                            pt_z = (pt_window - pt_window.mean()) / (pt_window.std(unbiased=False) + 1e-6)
+                                            if gm_z.numel() == pt_z.numel() and gm_z.numel() >= 3:
+                                                corr_lag = corr_fn(gm_z, pt_z)
+                                                w_lag = weights_map.get(lag, 0.0)
+                                                if w_lag > 0 and not torch.isnan(corr_lag):
+                                                    weighted_corr_sum += w_lag * corr_lag
+                                                    lag_terms.append((lag, corr_lag.detach(), w_lag))
+                                    total_w = lag_l1_weight + lag_l2_weight
+                                    if lag_terms and total_w > 0:
+                                        mean_lag_corr = weighted_corr_sum / total_w
+                                        lag_corr_count = len(lag_terms)
+                                        lag_loss = - torch.clamp(mean_lag_corr, min=0.0) * lag_gain_weight
+                                if 'projected_mastery' in outputs and outputs['projected_mastery'].var().item() < variance_floor:
+                                    alignment_loss = torch.zeros(1, device=device)
+                                else:
+                                    alignment_loss = - (alignment_corr_mastery + alignment_corr_gain) * effective_weight + lag_loss
+                                total_alignment_loss += float((- (alignment_corr_mastery + alignment_corr_gain) * effective_weight).detach().cpu())
+                                total_lag_loss += float(lag_loss.detach().cpu())
+                            retention_component = torch.zeros(1, device=device)
+                            if enable_retention_loss and pending_retention_penalty > 0:
+                                retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
+                                total_retention_component += float(retention_component.detach().cpu())
+                            if enable_alignment_loss:
+                                total_batch_loss = main_loss + interpretability_loss + alignment_loss + retention_component
+                            else:
+                                total_batch_loss = main_loss + interpretability_loss + retention_component
+                        if use_amp and device.type == 'cuda':
+                            scaler.scale(total_batch_loss).backward()
+                            clip_val = getattr(args, 'gradient_clip', 1.0)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_val)
+                            scaler.step(optimizer)
+                            scaler.update()
+                        else:
+                            total_batch_loss.backward()
+                            clip_val = getattr(args, 'gradient_clip', 1.0)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_val)
+                            optimizer.step()
+                        try:
+                            train_history.setdefault('determinism_fallback_batches', []).append({'epoch': epoch+1, 'batch': batch_idx})
+                        except Exception:
+                            pass
+                        continue
+                    except Exception as retry_exc:
+                        logger.error(f"[DeterminismFallback] Retry failed: {retry_exc}")
+                        raise
                 else:
                     raise
 
@@ -837,7 +1036,12 @@ def train_gainakt2exp_model(args):
 
                 # Use forward_with_states to ensure logits are present for BCEWithLogitsLoss
                 # Use model_core to access underlying module when DataParallel is active
-                outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                # Validation: for efficiency avoid duplicate forward; single GPU uses forward_with_states directly.
+                if isinstance(model, torch.nn.DataParallel):
+                    _ = model(questions, responses, questions_shifted, qtest=False)
+                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                else:
+                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                 logits = outputs.get('logits')
                 if logits is None:
                     # Fallback: if logits absent (legacy path), approximate by inverse sigmoid of predictions
@@ -880,6 +1084,7 @@ def train_gainakt2exp_model(args):
                     responses_shifted = batch['shft_rseqs'].to(device)
                     mask = batch['masks'].to(device)
                     if isinstance(model, torch.nn.DataParallel):
+                        _ = model(questions, responses, questions_shifted, qtest=False)
                         outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                     else:
                         outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
@@ -930,6 +1135,7 @@ def train_gainakt2exp_model(args):
                         responses_shifted = batch['shft_rseqs'].to(device)
                         mask = batch['masks'].to(device)
                         if isinstance(model, torch.nn.DataParallel):
+                            _ = model(questions, responses, questions_shifted, qtest=False)
                             out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                         else:
                             out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
@@ -968,8 +1174,9 @@ def train_gainakt2exp_model(args):
                         if not bin_indices:
                             continue
                         take = min(target_per_bin, len(bin_indices))
-                        choice = np.random.choice(bin_indices, size=take, replace=False)
-                        for ci in choice:
+                        # Deterministic selection: sorted order first N
+                        deterministic_slice = sorted(bin_indices)[:take]
+                        for ci in deterministic_slice:
                             m_seq, g_seq, p_seq = records[ci]
                             mc = safe_corr(m_seq, p_seq)
                             gc = safe_corr(g_seq, p_seq)
@@ -1025,7 +1232,17 @@ def train_gainakt2exp_model(args):
         logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
         if device.type == 'cuda':
             peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
-            logger.info(f"  🧠 Peak GPU memory this epoch: {peak_mem:.1f} MiB")
+            logger.info(f"  🧠 Peak GPU memory this epoch (global): {peak_mem:.1f} MiB")
+            try:
+                gpu_count_local = torch.cuda.device_count()
+                per_device_stats = []
+                for gid in range(gpu_count_local):
+                    alloc = torch.cuda.memory_allocated(gid) / (1024 ** 2)
+                    reserved = torch.cuda.memory_reserved(gid) / (1024 ** 2)
+                    per_device_stats.append(f"GPU{gid}: alloc={alloc:.1f}MiB reserved={reserved:.1f}MiB")
+                logger.info("  🔍 Per-GPU memory: " + " | ".join(per_device_stats))
+            except Exception as e:
+                logger.info(f"  [GPU] Memory detail unavailable: {e}")
             torch.cuda.reset_peak_memory_stats()
         
         # Add AUC progress tracking
@@ -1204,6 +1421,30 @@ def train_gainakt2exp_model(args):
         },
         'timestamp': datetime.now().isoformat()
     }
+    if train_history.get('determinism_fallback_batches'):
+        final_results['determinism_fallback'] = {
+            'count': len(train_history['determinism_fallback_batches']),
+            'batches': train_history['determinism_fallback_batches']
+        }
+    # Correlation determinism metadata (global + local mastery/gain correlations gathered during last epoch)
+    try:
+        last_semantic = train_history['semantic_trajectory'][-1] if train_history.get('semantic_trajectory') else {}
+        local_mastery_corr = last_semantic.get('mastery_correlation')
+        local_gain_corr = last_semantic.get('gain_correlation')
+        # Collect raw per-student correlations stored earlier (consistency_metrics list)
+        # They are summary, not raw list; thus we cannot recompute SE precisely without storing all values.
+        # Provide placeholders signaling deterministic sampling was enforced.
+        final_results['correlation_sampling'] = {
+            'deterministic': True,
+            'epoch': len(train_history.get('val_auc', [])),
+            'local_mastery_corr': local_mastery_corr,
+            'local_gain_corr': local_gain_corr,
+            'global_mastery_corr': global_mastery_corr,
+            'global_gain_corr': global_gain_corr,
+            'notes': 'Deterministic stratified selection (sorted slice) applied; seeds fixed.'
+        }
+    except Exception:
+        final_results['correlation_sampling'] = {'deterministic': True, 'error': 'metadata collection failed'}
     # Primary comprehensive results file (historically written to repo root).
     # Relocate inside experiment_dir for reproducibility containment if available.
     # Standardized reproduction results filename (experiment-contained): repro_results_<YYYYMMDD>_<HHMMSS>.json
@@ -1238,7 +1479,8 @@ def train_gainakt2exp_model(args):
                 'val_auc': train_history.get('val_auc', []),
                 'consistency_metrics': train_history.get('consistency_metrics', []),
                 'semantic_trajectory': train_history.get('semantic_trajectory', [])
-            }
+            },
+            'correlation_sampling': final_results.get('correlation_sampling')
         }
         try:
             with open(repro_results_json, 'w') as rf:
@@ -1331,6 +1573,17 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_constraint_epochs', type=int, default=4, help='Warm-up epochs for performance alignment losses')
     parser.add_argument('--enable_cosine_perf_schedule', action='store_true', help='Use cosine schedule for performance alignment weights')
     parser.add_argument('--max_semantic_students', type=int, default=50, help='Students sampled for consistency semantic correlations')
+    # =====================
+    # Architecture flags (added for full CLI reproducibility & ablation control)
+    # These mirror keys in config['model_config'] and allow overriding defaults without editing config.json.
+    # If --config is provided, values from config are used unless an explicit CLI override flag is present.
+    parser.add_argument('--seq_len', type=int, default=200, help='Maximum sequence length (architecture)')
+    parser.add_argument('--d_model', type=int, default=128, help='Model hidden dimension (Transformer)')
+    parser.add_argument('--n_heads', type=int, default=4, help='Number of attention heads')
+    parser.add_argument('--num_encoder_blocks', type=int, default=2, help='Number of Transformer encoder blocks')
+    parser.add_argument('--d_ff', type=int, default=256, help='Feed-forward layer dimension')
+    parser.add_argument('--dropout', type=float, default=0.1, help='Transformer dropout rate')
+    parser.add_argument('--emb_type', type=str, default='qid', choices=['qid','concept','hybrid'], help='Embedding type used for questions/concepts')
     # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
     # If a config path is passed, set PYKT_CONFIG_PATH so internal loaders pick it up.

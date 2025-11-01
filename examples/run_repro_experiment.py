@@ -558,7 +558,8 @@ def main():
     }
     resolved['hardware'] = {
         'devices': args.devices,
-        'threads': int(os.environ.get('OMP_NUM_THREADS','8'))
+        'threads': int(os.environ.get('OMP_NUM_THREADS','8')),
+        'selected_devices': [],  # will be populated after dynamic selection
     }
     resolved['seeds'] = {
         'primary': resolved['runtime']['seed'],
@@ -705,6 +706,7 @@ def main():
             _cfg['hardware']['gpu_selection_source'] = selection_source
             _cfg['hardware']['visible_gpu_count'] = len(args.devices)
             _cfg['hardware']['selected_gpu_count'] = len(selected_devices)
+            _cfg['hardware']['selected_devices'] = selected_devices
             atomic_write_json(_cfg, cfg_path)
         except Exception as e:
             logger.info(f"[Launcher] Warning: unable to update gpu_selection_source in config.json: {e}")

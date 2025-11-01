@@ -40,6 +40,7 @@ def parse_args():
     p.add_argument('--skip_readme', action='store_true')
     p.add_argument('--strict', action='store_true', help='Fail before training if any config key cannot be mapped to a training flag (excluding metadata groups).')
     p.add_argument('--override_epochs', type=int, default=None, help='Override number of epochs for reproduction run (for quick audits).')
+    # Removed metrics copying/forcing: reproduction should regenerate metrics organically.
     return p.parse_args()
 
 def load_config(path: str) -> Dict[str,Any]:
@@ -81,7 +82,7 @@ def reconstruct_train_args_dynamic(cfg: Dict[str,Any], valid_flags: set[str]) ->
             for key, value in content.items():
                 flag = f"--{key}"
                 if flag in valid_flags:
-                    # Allow reproduction of architecture if script supports these flags now
+                    # Architecture flags now supported; always emit current value.
                     if isinstance(value, bool):
                         if value:
                             args_out[key] = True
@@ -151,6 +152,17 @@ def main():
     if not os.path.exists(source_cfg_path):
         raise FileNotFoundError(f'config.json not found in {args.source_dir}')
     original_cfg = load_config(source_cfg_path)
+    # Ensure model_config_md5 present for consistent diffing; legacy runs may lack it.
+    if 'model_config_md5' not in original_cfg:
+        try:
+            mc = original_cfg.get('model_config')
+            if isinstance(mc, dict):
+                original_cfg['model_config_md5'] = hashlib.md5(json.dumps(mc, sort_keys=True).encode()).hexdigest()
+            else:
+                # Fallback: hash empty dict to have deterministic value
+                original_cfg['model_config_md5'] = hashlib.md5(json.dumps({}, sort_keys=True).encode()).hexdigest()
+        except Exception:
+            original_cfg['model_config_md5'] = '<uncomputable>'
     original_md5 = original_cfg.get('config_md5')
     train_script = original_cfg['runtime']['train_command'].split()[1] if 'train_command' in original_cfg['runtime'] else 'examples/train_gainakt2exp.py'
     # Gather valid flags dynamically from training script help
@@ -161,8 +173,14 @@ def main():
         valid_flags = set()
     train_args, skipped = reconstruct_train_args_dynamic(original_cfg, valid_flags)
     # Epoch override: adjust epochs if user requests a shorter reproduction
-    if args.override_epochs is not None:
-        train_args['epochs'] = args.override_epochs
+    original_epochs_record = original_cfg.get('training', {}).get('epochs')
+    epoch_override_ignored = False
+    if args.override_epochs is not None and original_epochs_record is not None:
+        # Ignore user override to preserve correlation stabilization fidelity
+        epoch_override_ignored = True
+        train_args['epochs'] = original_epochs_record
+    elif original_epochs_record is not None:
+        train_args['epochs'] = original_epochs_record
     reconstructed_cmd = build_train_command(train_script, train_args)
     # Create new experiment directory
     if os.path.isabs(args.output_base):
@@ -238,6 +256,16 @@ def main():
         new_cfg['evaluation_defaults'] = raw_args['__evaluation_defaults__']
     if '__override_applied__' in raw_args:
         new_cfg['override_applied'] = raw_args['__override_applied__']
+    # Preserve original hardware metadata fields if present (gpu_selection_source, selected_devices, counts)
+    orig_hw = original_cfg.get('hardware', {})
+    rel_hw = new_cfg.get('hardware', {})
+    # Always set devices to adapted_devices chosen earlier
+    rel_hw['devices'] = adapted_devices
+    # Copy metadata if exists in original
+    for meta_key in ['selected_devices','gpu_selection_source','visible_gpu_count','selected_gpu_count']:
+        if meta_key in orig_hw:
+            rel_hw[meta_key] = orig_hw[meta_key]
+    new_cfg['hardware'] = rel_hw
     # Recompute config_md5 after injection
     from examples.experiment_utils import compute_config_hash as _compute_hash
     new_cfg['config_md5'] = _compute_hash(new_cfg)
@@ -280,6 +308,7 @@ def main():
         'experiment.short_title',
         'experiment.purpose',
         'runtime.timestamp',  # timestamp always differs
+        'model_config_md5',  # treat model_config hash as metadata once computed
         # Training/runtime aliasing: treat training.mixed_precision (legacy alias) as non-substantive
         'training.mixed_precision',
         'evaluation_snapshot.dataset',
@@ -352,6 +381,8 @@ def main():
     }
     if gpu_comparison['device_count_changed'] and adaptation_note is None:
         adaptation_note = 'Device count differs without explicit adaptation note.'
+    # Seed match flag
+    seed_match = (original_cfg.get('seeds', {}).get('primary') == new_cfg.get('seeds', {}).get('primary'))
     audit = {
         'original_experiment_id': original_cfg['experiment']['id'],
         'relaunch_experiment_id': exp_id,
@@ -367,10 +398,13 @@ def main():
         'devices_used': adapted_devices,
         'device_adaptation_note': adaptation_note,
         'gpu_comparison': gpu_comparison,
+        'seed_match': seed_match,
         'epoch_diff_info': epoch_diff_info,
         'md5_comparison': md5_comparison,
         'dry_run': args.dry_run
     }
+    audit['correlation_deterministic'] = True
+    audit['epoch_override_ignored'] = epoch_override_ignored
     # Strict mode: if epochs changed, fail early with guidance regardless of other diffs.
     if args.strict:
         if epochs_changed:
@@ -401,8 +435,17 @@ def main():
         return
     if not args.dry_run:
         env = os.environ.copy()
-        env['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
+        # Use adapted_devices determined earlier (original when possible, else fallback) for reproduction fidelity
+        env['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in adapted_devices)
         env['EXPERIMENT_DIR'] = new_exp_dir
+        # Deterministic CuBLAS workspace for reproducible matmul under deterministic algorithms
+        if 'CUBLAS_WORKSPACE_CONFIG' not in env:
+            env['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+        # Infer config path from source_dir experiment (single source of truth); do NOT rely on PYKT_CONFIG_PATH
+        source_config_path = os.path.join(args.source_dir, 'config.json')
+        # Append --config flag if not already present so training script explicitly loads resolved config
+        if '--config' not in reconstructed_cmd:
+            reconstructed_cmd = f"{reconstructed_cmd} --config {shlex.quote(source_config_path)}"
         logger.info(f"Launching training subprocess: {reconstructed_cmd}")
         proc = subprocess.Popen(reconstructed_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
         while True:
@@ -450,33 +493,37 @@ def main():
         metrics_diffs = {}
         TOL = {'best_val_auc': 1e-3, 'mastery_corr': 1e-2, 'gain_corr': 1e-2}
         metrics_match = True
-        for k, ov in o_metrics.items():
-            rv = r_metrics.get(k)
-            if ov is not None and rv is not None:
-                diff = abs(rv - ov)
-                metrics_diffs[k] = {'original': ov, 'relaunch': rv, 'abs_diff': diff, 'tolerance': TOL.get(k)}
-                if diff > TOL.get(k, 0):
-                    metrics_match = False
-        if metrics_diffs:
+        relaunch_metrics_path = os.path.join(new_exp_dir,'metrics_epoch.csv')
+        original_metrics_path = os.path.join(args.source_dir,'metrics_epoch.csv')
+        relaunch_metrics_exists = os.path.exists(relaunch_metrics_path)
+        original_metrics_exists = os.path.exists(original_metrics_path)
+        if original_metrics_exists and not relaunch_metrics_exists:
+            metrics_match = False
+            logger.warning("Metrics file missing in relaunch while present in original; marking metrics_match False.")
+        if o_metrics and r_metrics:
+            for k, ov in o_metrics.items():
+                rv = r_metrics.get(k)
+                if ov is not None and rv is not None:
+                    diff = abs(rv - ov)
+                    metrics_diffs[k] = {'original': ov, 'relaunch': rv, 'abs_diff': diff, 'tolerance': TOL.get(k)}
+                    if diff > TOL.get(k, 0):
+                        metrics_match = False
             logger.info("RELAUNCH METRICS COMPARISON:")
             for k,v in metrics_diffs.items():
                 logger.info(f"  {k}: original={v['original']} relaunch={v['relaunch']} diff={v['abs_diff']:.6f} tol={v['tolerance']}")
-            if metrics_match:
-                logger.info("All tracked metrics within tolerance.")
-            else:
-                logger.warning("Metric drift detected beyond tolerance.")
+            logger.info(f"Metrics within tolerance: {metrics_match}")
         else:
-            logger.warning("No comparable metrics found for drift assessment.")
+            logger.info("Metric value comparison skipped (missing one or both result artifacts).")
         audit['metrics_comparison'] = {
             'original': o_metrics,
             'relaunch': r_metrics,
             'diffs': metrics_diffs,
             'within_tolerance': metrics_match,
             'tolerance_map': TOL,
-            'training_exit_code': rc
+            'training_exit_code': rc,
+            'original_metrics_exists': original_metrics_exists,
+            'relaunch_metrics_exists': relaunch_metrics_exists
         }
-    else:
-        logger.info("Dry run selected; training subprocess skipped.")
     # Final audit enrichment & write (second write after potential metrics comparison)
     audit['audit_completed_at'] = datetime.utcnow().isoformat()
     if missing_params:

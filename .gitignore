@@ -65,3 +65,9 @@ examples/models/
 data_original/*
 
 TSMini/
+
+experiments/*/*.pth
+examples/experiments/*/*.pth
+
+data/difficulty/
+data/peer_index/
