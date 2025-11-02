@@ -1,897 +1,661 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-# Model-agnostic reproducible experiment launcher.
-# We avoid modifying existing training scripts (e.g., `examples/train_gainakt2exp.py`).
-# Instead, this wrapper:
-#   1. Parses generic experiment arguments (model script, short title, seeds, devices).
-#   2. Creates a timestamped experiment directory per AGENTS.md reproducibility spec.
-#   3. Serializes a canonical `config.json` (resolved args + defaults) using `tmp/experiment_utils`.
-#   4. Captures environment metadata to `environment.txt`.
-#   5. Invokes the underlying training script as a subprocess, teeing stdout/stderr into logs with timestamps.
-#   6. Expects the training script to optionally emit a JSON metrics file or performs a lightweight post-hoc extraction.
-#   7. Saves `model_best.pth` / `model_last.pth` if produced by the training script.
-#   8. Generates a README summarizing best metrics if found.
-# Usage example:
-#   python examples/run_repro_experiment.py \
-#       --train_script examples/train_gainakt2exp.py \
-#       --short_title baseline \
-#       --dataset assist2015 \
-#       --epochs 12 \
-#       --batch_size 64 \
-#       --learning_rate 0.000174 \
-#       --seed 42
+"""
+Simplified reproducible experiment launcher with integrated reproduction mode.
+
+TRAINING MODE (default):
+    Creates new experiment with 6-digit ID
+    python examples/run_repro_experiment.py \
+        --train_script examples/train_gainakt2exp.py \
+        --model_name gainakt2exp \
+        --dataset assist2015 \
+        --short_title baseline
+
+REPRODUCTION MODE:
+    Reproduces existing experiment by ID (all parameters read from original config)
+    python examples/run_repro_experiment.py \
+        --repro_experiment_id 423891
+"""
 import argparse
-import os
+import json
 import sys
 import subprocess
-import shlex
-import time
-import json
-from typing import List, Dict, Any, Optional
+import hashlib
+import random
+from pathlib import Path
+from datetime import datetime
 
-sys.path.insert(0, '/workspaces/pykt-toolkit')
-from examples.experiment_utils import (
-    make_experiment_dir, build_config, atomic_write_json, capture_environment,
-    timestamped_logger, write_seed_info, write_readme
-)
-
-EPOCH_HEADER = [
-    'epoch','train_loss','val_auc','val_accuracy','mastery_corr','gain_corr','constraint_loss_share'
-]
-
-def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Repro launcher (config-first) with backward-compatible training flags.")
-    p.add_argument('--train_script', type=str, required=True, help='Training script path (e.g., examples/train_gainakt2exp.py)')
-    p.add_argument('--model_name', type=str, default='gainakt2exp')
-    p.add_argument('--short_title', type=str, default='baseline')
-    p.add_argument('--purpose', type=str, default='Reproducible training run')
-    p.add_argument('--output_base', type=str, default='examples/experiments')
-    p.add_argument('--devices', type=int, nargs='*', default=[0,1,2,3,4])
-    # Overrides: allow arbitrary --param=value matching defaults JSON; store raw extras
-    p.add_argument('--override', action='append', default=[], help='Override in key=value form; can repeat.')
-    # Legacy parameter flags (will be transformed into overrides automatically)
-    p.add_argument('--dataset', type=str)
-    p.add_argument('--fold', type=int)
-    p.add_argument('--seed', type=int)
-    p.add_argument('--epochs', type=int)
-    p.add_argument('--batch_size', type=int)
-    p.add_argument('--learning_rate', type=float)
-    p.add_argument('--weight_decay', type=float)
-    p.add_argument('--optimizer', type=str)
-    p.add_argument('--gradient_clip', type=float)
-    p.add_argument('--patience', type=int)
-    p.add_argument('--use_amp', action='store_true')
-    p.add_argument('--use_wandb', action='store_true')
-    # Interpretability & constraints
-    p.add_argument('--use_mastery_head', action='store_true')
-    p.add_argument('--use_gain_head', action='store_true')
-    p.add_argument('--enhanced_constraints', action='store_true')
-    p.add_argument('--non_negative_loss_weight', type=float)
-    p.add_argument('--monotonicity_loss_weight', type=float)
-    p.add_argument('--mastery_performance_loss_weight', type=float)
-    p.add_argument('--gain_performance_loss_weight', type=float)
-    p.add_argument('--sparsity_loss_weight', type=float)
-    p.add_argument('--consistency_loss_weight', type=float)
-    p.add_argument('--warmup_constraint_epochs', type=int)
-    p.add_argument('--max_semantic_students', type=int)
-    # Alignment
-    p.add_argument('--enable_alignment_loss', action='store_true')
-    p.add_argument('--alignment_weight', type=float)
-    p.add_argument('--alignment_warmup_epochs', type=int)
-    p.add_argument('--adaptive_alignment', action='store_true')
-    p.add_argument('--alignment_min_correlation', type=float)
-    p.add_argument('--alignment_share_cap', type=float)
-    p.add_argument('--alignment_share_decay_factor', type=float)
-    # Global alignment
-    p.add_argument('--enable_global_alignment_pass', action='store_true')
-    p.add_argument('--alignment_global_students', type=int)
-    p.add_argument('--use_residual_alignment', action='store_true')
-    p.add_argument('--alignment_residual_window', type=int)
-    # Refinement
-    p.add_argument('--enable_retention_loss', action='store_true')
-    p.add_argument('--retention_delta', type=float)
-    p.add_argument('--retention_weight', type=float)
-    p.add_argument('--enable_lag_gain_loss', action='store_true')
-    p.add_argument('--lag_gain_weight', type=float)
-    p.add_argument('--lag_max_lag', type=int)
-    p.add_argument('--lag_l1_weight', type=float)
-    p.add_argument('--lag_l2_weight', type=float)
-    p.add_argument('--lag_l3_weight', type=float)
-    p.add_argument('--consistency_rebalance_epoch', type=int)
-    p.add_argument('--consistency_rebalance_threshold', type=float)
-    p.add_argument('--consistency_rebalance_new_weight', type=float)
-    p.add_argument('--variance_floor', type=float)
-    p.add_argument('--variance_floor_patience', type=int)
-    p.add_argument('--variance_floor_reduce_factor', type=float)
-    p.add_argument('--enable_cosine_perf_schedule', action='store_true')
-    p.add_argument('--dry_run', action='store_true')
-    p.add_argument('--skip_readme', action='store_true')
-    p.add_argument('--allow_drift', action='store_true', default=False)
-    p.add_argument('--report_only', action='store_true', default=False)
-    p.add_argument('--auto_shifted_eval', action='store_true')
-    return p.parse_args()
-
-def build_subprocess_command(train_script: str, resolved: Dict[str,Any]) -> List[str]:
-    """Construct training subprocess command from resolved config dictionary (training_defaults merged with overrides).
-    We only emit flags necessary for legacy training script compatibility until it is converted to config ingestion.
+def get_required_param(config, section, param_name):
     """
-    td = resolved['training']
-    interp = resolved.get('interpretability', {})
-    align = resolved.get('alignment', {})
-    glob = resolved.get('global_alignment', {})
-    refn = resolved.get('refinement', {})
-    runtime = resolved.get('runtime', {})
-    # Initial unsorted command components (we will canonicalize ordering later)
-    cmd = [sys.executable, train_script,
-           '--dataset', resolved['data']['dataset'],
-           '--fold', str(resolved['data']['fold']),
-           '--epochs', str(td['epochs']),
-           '--batch_size', str(td['batch_size']),
-           '--learning_rate', str(td['learning_rate']),
-           '--optimizer', str(td.get('optimizer','Adam')),
-           '--seed', str(runtime.get('seed', resolved['seeds']['primary'])),
-           '--weight_decay', str(td['weight_decay']),
-           '--gradient_clip', str(td['gradient_clip']),
-           '--patience', str(td['patience'])]
-    cmd.extend([
-        '--monotonicity_loss_weight', str(interp['monotonicity_loss_weight']),
-        '--mastery_performance_loss_weight', str(interp['mastery_performance_loss_weight']),
-        '--gain_performance_loss_weight', str(interp['gain_performance_loss_weight']),
-        '--sparsity_loss_weight', str(interp['sparsity_loss_weight']),
-        '--consistency_loss_weight', str(interp['consistency_loss_weight']),
-        '--non_negative_loss_weight', str(interp['non_negative_loss_weight']),
-        '--warmup_constraint_epochs', str(interp['warmup_constraint_epochs']),
-        '--max_semantic_students', str(interp['max_semantic_students'])
-    ])
-    if interp.get('use_mastery_head', True):
-        cmd.append('--use_mastery_head')
+    Get a required parameter from config with strict validation.
+    Priority: input section -> defaults section -> ERROR
+    No hardcoded fallbacks allowed.
+    """
+    # Check input section first
+    if 'input' in config and param_name in config['input']:
+        return config['input'][param_name]
+    
+    # Check defaults section
+    if section in config and param_name in config[section]:
+        return config[section][param_name]
+    
+    # For backward compatibility, also check top-level defaults
+    if 'defaults' in config and param_name in config['defaults']:
+        return config['defaults'][param_name]
+    
+    # Parameter not found - this is an error
+    raise ValueError(
+        f"Required parameter '{param_name}' not found in config.\n"
+        f"Expected in: input section (user override) or {section} section (default value).\n"
+        f"Please ensure parameter_default.json contains this parameter."
+    )
+
+def generate_experiment_id():
+    """Generate a unique 6-digit experiment ID."""
+    return str(random.randint(100000, 999999))
+
+def find_experiment_folder(experiment_id, base_dir="examples/experiments"):
+    """Find experiment folder containing the given experiment ID."""
+    base_path = Path(base_dir)
+    if not base_path.exists():
+        return None
+    
+    # Search for folder containing the experiment_id (excluding _repro folders for original search)
+    candidates = []
+    for folder in base_path.iterdir():
+        if folder.is_dir() and experiment_id in folder.name:
+            # Prioritize non-repro folders
+            if "_repro" not in folder.name:
+                return folder
+            candidates.append(folder)
+    
+    # If only repro folders found, return the first one
+    return candidates[0] if candidates else None
+
+def create_experiment_folder(model_name, short_title, experiment_id, is_repro=False):
+    """Create experiment folder with naming convention: YYYYMMDD_HHMMSS_modelname_title_XXXXXX[_repro]"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    folder_name = f"{timestamp}_{model_name}_{short_title}_{experiment_id}"
+    if is_repro:
+        folder_name += "_repro"
+    
+    folder_path = Path("examples/experiments") / folder_name
+    folder_path.mkdir(parents=True, exist_ok=False)
+    
+    return folder_path
+
+def load_config_from_experiment(experiment_id):
+    """Load config.json from existing experiment folder."""
+    folder = find_experiment_folder(experiment_id)
+    if folder is None:
+        raise FileNotFoundError(f"No experiment folder found containing ID: {experiment_id}")
+    
+    config_path = folder / "config.json"
+    if not config_path.exists():
+        raise FileNotFoundError(f"config.json not found in {folder}")
+    
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    # Verify MD5 integrity on load
+    verify_config_md5(config)
+    
+    return config, folder
+
+def verify_config_md5(config):
+    """
+    Verify that the MD5 of current defaults section matches the stored md5.
+    Prints confirmation or warning message.
+    
+    Note: config['md5'] should contain the MD5 of the resolved config (defaults + overrides),
+    not the original parameter_default.json MD5.
+    """
+    if 'defaults' not in config or 'md5' not in config:
+        print("⚠️  WARNING: Config missing 'defaults' or 'md5' section - cannot verify integrity")
+        return False
+    
+    # Calculate current MD5 from defaults section
+    defaults_str = json.dumps(config['defaults'], sort_keys=True)
+    current_md5 = hashlib.md5(defaults_str.encode()).hexdigest()
+    stored_md5 = config['md5']
+    
+    if current_md5 == stored_md5:
+        print(f"✓ Config integrity verified (MD5: {current_md5})")
+        return True
     else:
-        cmd.append('--disable_mastery_head')
-    if interp.get('use_gain_head', True):
-        cmd.append('--use_gain_head')
-    else:
-        cmd.append('--disable_gain_head')
-    if interp.get('enhanced_constraints', True):
-        cmd.append('--enhanced_constraints')
-    align_enabled = align.get('enable_alignment_loss', False)
-    if align_enabled:
-        cmd.append('--enable_alignment_loss')
-    cmd.extend([
-        '--alignment_weight', str(align['alignment_weight']),
-        '--alignment_warmup_epochs', str(align['alignment_warmup_epochs']),
-        '--alignment_min_correlation', str(align['alignment_min_correlation']),
-        '--alignment_share_cap', str(align['alignment_share_cap']),
-        '--alignment_share_decay_factor', str(align['alignment_share_decay_factor'])
-    ])
-    if align.get('adaptive_alignment', False):
-        cmd.append('--adaptive_alignment')
-    if glob.get('enable_global_alignment_pass', False):
-        cmd.append('--enable_global_alignment_pass')
-    cmd.extend([
-        '--alignment_global_students', str(glob['alignment_global_students']),
-        '--alignment_residual_window', str(glob['alignment_residual_window'])
-    ])
-    if glob.get('use_residual_alignment', False):
-        cmd.append('--use_residual_alignment')
-    if refn.get('enable_retention_loss', False):
-        cmd.extend(['--enable_retention_loss','--retention_delta', str(refn['retention_delta']), '--retention_weight', str(refn['retention_weight'])])
-    if refn.get('enable_lag_gain_loss', False):
-        cmd.extend(['--enable_lag_gain_loss','--lag_gain_weight', str(refn['lag_gain_weight']), '--lag_max_lag', str(refn['lag_max_lag']), '--lag_l1_weight', str(refn['lag_l1_weight']), '--lag_l2_weight', str(refn['lag_l2_weight']), '--lag_l3_weight', str(refn['lag_l3_weight'])])
-    cmd.extend([
-        '--consistency_rebalance_epoch', str(refn['consistency_rebalance_epoch']),
-        '--consistency_rebalance_threshold', str(refn['consistency_rebalance_threshold']),
-        '--consistency_rebalance_new_weight', str(refn['consistency_rebalance_new_weight']),
-        '--variance_floor', str(refn['variance_floor']),
-        '--variance_floor_patience', str(refn['variance_floor_patience']),
-        '--variance_floor_reduce_factor', str(refn['variance_floor_reduce_factor'])
-    ])
-    if runtime.get('use_amp', False):
-        cmd.append('--use_amp')
-    # Canonical ordering (lexicographic) of flags for reproducibility string equivalence.
-    # Preserve interpreter + script path; sort the remaining flags treating flag+value as a unit.
-    head = cmd[:2]
-    tail = cmd[2:]
-    paired: List[tuple[str,List[str]]] = []
-    i = 0
-    while i < len(tail):
-        token = tail[i]
-        if token.startswith('--'):
-            # Boolean flag (no value) if next token starts with '--' or doesn't exist
-            if i+1 >= len(tail) or tail[i+1].startswith('--'):
-                paired.append((token, [token]))
-                i += 1
-            else:
-                # Flag-value pair
-                paired.append((token, [token, tail[i+1]]))
-                i += 2
+        print("⚠️  WARNING: Config MD5 mismatch!")
+        print(f"   Expected (stored): {stored_md5}")
+        print(f"   Got (computed):    {current_md5}")
+        print("   This suggests the defaults section has been modified after initial save.")
+        return False
+
+def save_config(config, experiment_folder):
+    """Save config.json to experiment folder."""
+    config_path = experiment_folder / "config.json"
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    return config_path
+
+def build_train_command_from_config(train_script, config_path, experiment_dir):
+    """Build the training command using --config flag and set EXPERIMENT_DIR."""
+    python_path = sys.executable
+    return f"EXPERIMENT_DIR={experiment_dir} {python_path} {train_script} --config {config_path}"
+
+def build_explicit_train_command(train_script, params):
+    """Build training command with all parameters explicit."""
+    python_path = sys.executable
+    cmd_parts = [python_path, train_script]
+    
+    # Launcher-only parameters (not passed to training script)
+    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students'}
+    
+    # Add all parameters explicitly (exclude launcher-only params)
+    for key, value in sorted(params.items()):
+        if key in launcher_only_params:
+            continue
+        if isinstance(value, bool):
+            if value:
+                cmd_parts.append(f"--{key}")
         else:
-            # Unexpected stray value without leading flag; treat as standalone (should not happen)
-            paired.append((f'__val_{i}__', [token]))
-            i += 1
-    paired.sort(key=lambda x: x[0])
-    canonical_tail: List[str] = []
-    for _, group in paired:
-        canonical_tail.extend(group)
-    cmd = head + canonical_tail
-    return cmd
+            cmd_parts.append(f"--{key} {value}")
+    
+    return " ".join(cmd_parts)
 
-def run_consistency_check(train_script: str) -> Dict[str,Any]:
-    """Invoke check_defaults_consistency.py and parse JSON output. Returns dict."""
-    checker = os.path.join(os.path.dirname(__file__), 'check_defaults_consistency.py')
-    eval_script = os.path.join(os.path.dirname(__file__), 'eval_gainakt2exp.py')
-    defaults_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 'parameter_default.json')
-    cmd = [sys.executable, checker, '--train_script', train_script, '--eval_script', eval_script, '--defaults_path', defaults_path]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    out, err = proc.communicate()
-    report = {}
-    try:
-        import json as _json
-        report = _json.loads(out)
-    except Exception:
-        report = {'parse_error': out, 'stderr': err}
-    report['exit_code'] = proc.returncode
-    return report
+def build_explicit_eval_command(eval_script, experiment_folder, params):
+    """
+    Build explicit evaluation command with ALL parameters.
+    Similar to build_explicit_train_command but for evaluation.
+    """
+    python_path = sys.executable
+    cmd_parts = [python_path, eval_script]
+    
+    # Add run_dir
+    cmd_parts.append(f"--run_dir {experiment_folder}")
+    
+    # Evaluation-specific parameters (subset of training params)
+    eval_params = [
+        'dataset', 'fold', 'batch_size',  # data
+        'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
+        'non_negative_loss_weight', 'monotonicity_loss_weight',  # constraints
+        'mastery_performance_loss_weight', 'gain_performance_loss_weight',
+        'sparsity_loss_weight', 'consistency_loss_weight'
+    ]
+    
+    # Boolean flags
+    bool_flags = ['use_mastery_head', 'use_gain_head']
+    
+    # Add max_correlation_students (default 300 if not in params)
+    max_corr = params.get('max_correlation_students', 300)
+    cmd_parts.append(f"--max_correlation_students {max_corr}")
+    
+    for key in eval_params:
+        if key in params:
+            value = params[key]
+            cmd_parts.append(f"--{key} {value}")
+    
+    for key in bool_flags:
+        if params.get(key, False):
+            cmd_parts.append(f"--{key}")
+    
+    return " ".join(cmd_parts)
 
-def tail_metrics_from_csv(csv_path: str) -> Optional[Dict[str,Any]]:
-    if not os.path.exists(csv_path):
-        return None
-    try:
-        import csv
-        with open(csv_path) as f:
-            rows = list(csv.DictReader(f))
-            if not rows:
-                return None
-            last = rows[-1]
-            # Convert numeric fields when possible
-            parsed = {}
-            for k,v in last.items():
-                try:
-                    parsed[k] = float(v)
-                except (ValueError, TypeError):
-                    parsed[k] = v
-            return parsed
+def build_eval_command(eval_script, model_path):
+    """Build evaluation command (legacy - for simple eval script)."""
+    python_path = sys.executable
+    return f"{python_path} {eval_script} --model_path {model_path}"
 
-        def main():
-            args = parse_args()
-            # Pre-flight consistency check
-            consistency_report = run_consistency_check(args.train_script)
-            if consistency_report.get('drift_detected') and not args.allow_drift:
-                print('[ConsistencyCheck] Drift detected between argparse flags and defaults. Aborting launch.', file=sys.stderr)
-                print('[ConsistencyCheck] Report:', file=sys.stderr)
-                print(str(consistency_report), file=sys.stderr)
-                sys.exit(2)
-            # Proceed with original logic (moved from bottom). Reconstruct training command etc.
-            cmd = build_subprocess_command(args)
-            # Device environment setup
-            os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(d) for d in args.devices)
-            exp_dir = make_experiment_dir(args.model_name, args.short_title, base_dir=args.output_base)
-            exp_id = os.path.basename(exp_dir)
-            logger = timestamped_logger('launcher', os.path.join(exp_dir,'stdout.log'))
-            logger.info(f"Launching reproducible experiment: {exp_id}")
-            logger.info(f"Training script: {os.path.abspath(args.train_script)}")
-            full_command_str = ' '.join(shlex.quote(c) for c in [sys.executable] + cmd[1:]) if cmd and cmd[0] == sys.executable else ' '.join(shlex.quote(x) for x in cmd)
-            logger.info(f"Command: {full_command_str}")
-            # Build config
-            raw_args = vars(args).copy()
-            raw_args['launcher_command'] = full_command_str
-            raw_args['train_command'] = full_command_str
-            raw_args['devices'] = args.devices
-            cfg = build_config(raw_args, exp_id=exp_id, exp_path=exp_dir, seeds=[args.seed])
-            # Insert eval command for snapshot reproducibility
-            cfg['runtime']['eval_command'] = f"python examples/eval_gainakt2exp.py --run_dir {os.path.abspath(exp_dir)} --dataset {args.dataset}"
-            atomic_write_json(cfg, os.path.join(exp_dir,'config.json'))
-            capture_environment(os.path.join(exp_dir,'environment.txt'))
-            write_seed_info(os.path.join(exp_dir,'SEED_INFO.md'), [args.seed], args.seed)
-            if not args.skip_readme:
-                write_readme(exp_dir, cfg, best_metrics=None)
-            # Dry-run exit
-            if args.dry_run:
-                logger.info('Dry run selected; training subprocess skipped.')
-                print(f"Experiment directory created (dry run): {exp_dir}")
-                return
-            # Launch training subprocess
-            logger.info('[Launcher] Set EXPERIMENT_DIR=' + exp_dir)
-            env = os.environ.copy()
-            env['EXPERIMENT_DIR'] = exp_dir
-            proc = subprocess.Popen(' '.join(shlex.quote(x) for x in cmd), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
-            start = time.time()
-            while True:
-                line = proc.stdout.readline()
-                if line:
-                    logger.info(line.rstrip())
-                elif proc.poll() is not None:
-                    break
-            stderr = proc.stderr.read()
-            if stderr:
-                with open(os.path.join(exp_dir,'stderr.log'),'w') as ef:
-                    ef.write(stderr)
-            rc = proc.wait()
-            dur = time.time() - start
-            logger.info(f"Training subprocess exit code: {rc} (duration {dur:.1f}s)")
-            # Attempt to attach best metrics
-            metrics_csv = os.path.join(exp_dir,'metrics_epoch.csv')
-            best_metrics = tail_metrics_from_csv(metrics_csv)
-            if best_metrics and not args.skip_readme:
-                write_readme(exp_dir, cfg, best_metrics=best_metrics)
-            print(f"Experiment directory created: {exp_dir}")
+def build_repro_command(repro_script, experiment_id):
+    """Build reproduction command."""
+    python_path = sys.executable
+    return f"{python_path} {repro_script} --repro_experiment_id {experiment_id}"
 
-        if __name__ == '__main__':
-            main()
-    except Exception:
-        return None
+def compute_training_md5(config):
+    """
+    Compute MD5 hash based on the 'defaults' section only.
+    
+    The "defaults" section contains ALL parameters that directly affect
+    training results, including model name.
+    
+    Args:
+        config: Full configuration dictionary
+        
+    Returns:
+        str: MD5 hash of defaults section only
+    """
+    if "defaults" not in config:
+        raise KeyError("Config missing 'defaults' section - cannot compute training MD5")
+    
+    # Compute MD5 on ONLY the defaults section
+    defaults_str = json.dumps(config["defaults"], sort_keys=True)
+    defaults_md5 = hashlib.md5(defaults_str.encode()).hexdigest()
+    
+    return defaults_md5
+
 
 def main():
-    args = parse_args()
-    orig_train_script = args.train_script
-    if not os.path.isabs(orig_train_script):
-        # First try as given relative to project root (parent of this file)
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        candidate_root = os.path.join(project_root, orig_train_script)
-        if not os.path.exists(candidate_root):
-            # If we are currently inside examples/ and path starts with 'examples/', try stripping the prefix
-            if os.path.basename(os.getcwd()) == 'examples' and orig_train_script.startswith('examples/'):
-                stripped = orig_train_script.split('/', 1)[1]
-                if os.path.exists(stripped):
-                    args.train_script = stripped
-                else:
-                    # Try relative to project root after stripping
-                    stripped_root = os.path.join(project_root, stripped)
-                    if os.path.exists(stripped_root):
-                        args.train_script = stripped_root
-            elif os.path.exists(orig_train_script):
-                # Exists relative to current CWD
-                args.train_script = orig_train_script
+    # First, load defaults to know what parameters are available
+    defaults_path = Path(__file__).parent.parent / "configs" / "parameter_default.json"
+    if not defaults_path.exists():
+        print(f"❌ ERROR: Defaults file not found: {defaults_path}")
+        sys.exit(1)
+    
+    with open(defaults_path, 'r') as f:
+        defaults_config = json.load(f)
+    
+    available_params = defaults_config.get("defaults", {})
+    
+    # Create parser with known arguments
+    parser = argparse.ArgumentParser(description='Launch training or reproduce experiment (simplified)')
+    
+    # Common parameters
+    parser.add_argument('--train_script', type=str, default=None,
+                       help='Path to training script (default from config)')
+    parser.add_argument('--model_name', type=str, default=None,
+                       help='Model name for folder naming (default from config, ignored in reproduction mode)')
+    parser.add_argument('--short_title', type=str,
+                       help='Short title for experiment folder (required in training mode, ignored in reproduction mode)')
+    
+    # Reproduction mode - single parameter
+    parser.add_argument('--repro_experiment_id', type=str,
+                       help='6-digit experiment ID to reproduce. If provided, activates reproduction mode and ALL other parameters are ignored.')
+    
+    # Training parameters (only used in training mode, ignored in reproduction)
+    parser.add_argument('--dataset', type=str, default=None,
+                       help='Dataset name (default from config, ignored if --repro_experiment_id is set)')
+    parser.add_argument('--fold', type=int, default=None,
+                       help='Dataset fold (default from config, ignored if --repro_experiment_id is set)')
+    
+    # Runtime
+    parser.add_argument('--dry_run', action='store_true',
+                       help='Create config but do not train')
+    
+    # Dynamically add arguments for ALL parameters in defaults
+    for param_name, default_value in available_params.items():
+        # Skip parameters already defined above
+        if param_name in ['train_script', 'model', 'dataset', 'fold', 'eval_script']:
+            continue
+        
+        # Determine argument type based on default value
+        if isinstance(default_value, bool):
+            # For boolean parameters, use store_true/store_false
+            if default_value:
+                parser.add_argument(f'--{param_name}', action='store_false', 
+                                   dest=param_name,
+                                   help=f'Disable {param_name} (default: True)')
+                parser.add_argument(f'--no_{param_name}', action='store_false',
+                                   dest=param_name,
+                                   help=argparse.SUPPRESS)
             else:
-                # As last fallback keep original; will raise explicit error below if still missing
-                pass
+                parser.add_argument(f'--{param_name}', action='store_true',
+                                   dest=param_name,
+                                   help=f'Enable {param_name} (default: False)')
+        elif isinstance(default_value, int):
+            parser.add_argument(f'--{param_name}', type=int, default=None,
+                               help=f'{param_name} (default: {default_value})')
+        elif isinstance(default_value, float):
+            parser.add_argument(f'--{param_name}', type=float, default=None,
+                               help=f'{param_name} (default: {default_value})')
         else:
-            args.train_script = candidate_root
-    # Final existence check
-    if not os.path.exists(args.train_script):
-        raise FileNotFoundError(f"Training script not found: '{orig_train_script}' (resolved attempt: '{args.train_script}'). If you ran from inside 'examples/', omit the leading 'examples/' in --train_script.")
-
-    # Report-only mode: run consistency check then exit WITHOUT creating experiment directory.
-    if getattr(args, 'report_only', False):
-        report = run_consistency_check(args.train_script)
-        import json as _json
-        print(_json.dumps(report, indent=2, sort_keys=True))
-        if report.get('drift_detected'):
-            print('[ReportOnly] Drift detected between argparse flags and defaults.')
-            sys.exit(2)
+            parser.add_argument(f'--{param_name}', type=str, default=None,
+                               help=f'{param_name} (default: {default_value})')
+    
+    args = parser.parse_args()
+    
+    # ========================================
+    # REPRODUCTION MODE
+    # ========================================
+    if args.repro_experiment_id:
+        # Load defaults to check for non-default values
+        defaults_path = Path(__file__).parent.parent / "configs" / "parameter_default.json"
+        if not defaults_path.exists():
+            print(f"❌ ERROR: Defaults file not found: {defaults_path}")
+            sys.exit(1)
+        
+        with open(defaults_path, 'r') as f:
+            defaults = json.load(f)
+        
+        # Get default values (no hardcoded fallbacks)
+        try:
+            default_dataset = get_required_param(defaults, "defaults", "dataset")
+            default_fold = get_required_param(defaults, "defaults", "fold")
+            default_model = get_required_param(defaults, "defaults", "model")
+            default_train_script = get_required_param(defaults, "defaults", "train_script")
+        except ValueError as e:
+            print("❌ ERROR: Missing required parameter in parameter_default.json")
+            print(f"   {str(e)}")
+            sys.exit(1)
+        
+        # Warn about ALL ignored parameters (everything except repro_experiment_id)
+        ignored_params = []
+        if args.short_title:
+            ignored_params.append(f"--short_title {args.short_title}")
+        if args.dataset is not None and args.dataset != default_dataset:
+            ignored_params.append(f"--dataset {args.dataset}")
+        if args.fold is not None and args.fold != default_fold:
+            ignored_params.append(f"--fold {args.fold}")
+        if args.model_name is not None and args.model_name != default_model:
+            ignored_params.append(f"--model_name {args.model_name}")
+        if args.train_script is not None and args.train_script != default_train_script:
+            ignored_params.append(f"--train_script {args.train_script}")
+        
+        if ignored_params:
+            print("⚠️  WARNING: Reproduction mode activated. The following parameters will be IGNORED:")
+            for param in ignored_params:
+                print(f"    - {param}")
+            print("    ALL parameters will be read from the original experiment's config.json")
+            print()
+        
+        print("=" * 80)
+        print("REPRODUCTION MODE")
+        print("=" * 80)
+        print(f"Searching for experiment ID: {args.repro_experiment_id}")
+        
+        # Load original config unchanged
+        config, original_folder = load_config_from_experiment(args.repro_experiment_id)
+        print(f"✓ Found original experiment: {original_folder.name}")
+        print("✓ Loaded config.json")
+        
+        # Extract model_name and short_title from original config (no hardcoded fallbacks)
+        try:
+            if 'input' in config:
+                # New structure: check input first, then defaults
+                model_name = get_required_param(config, 'defaults', 'model')
+                # short_title is always in input (it's required)
+                if 'short_title' not in config['input']:
+                    raise ValueError("'short_title' missing from input section in config")
+                original_short_title = config['input']['short_title']
+            else:
+                # Backward compatibility with old config structure
+                if 'defaults' in config and 'model' in config['defaults']:
+                    model_name = config['defaults']['model']
+                elif 'training' in config and 'model' in config['training']:
+                    model_name = config['training']['model']
+                elif 'experiment' in config and 'model' in config['experiment']:
+                    model_name = config['experiment']['model']
+                else:
+                    raise ValueError("'model' parameter not found in config (checked: defaults, training, experiment)")
+                
+                if 'experiment' in config and 'short_title' in config['experiment']:
+                    original_short_title = config['experiment']['short_title']
+                elif 'input' in config and 'short_title' in config['input']:
+                    original_short_title = config['input']['short_title']
+                else:
+                    raise ValueError("'short_title' not found in config (checked: experiment, input)")
+        except ValueError as e:
+            print(f"❌ ERROR: Invalid config structure in experiment {args.repro_experiment_id}")
+            print(f"   {str(e)}")
+            sys.exit(1)
+        
+        # Use original short_title (is_repro=True will add '_repro' suffix automatically)
+        repro_short_title = original_short_title
+        
+        # Create reproduction experiment folder with same ID + _repro suffix
+        repro_folder = create_experiment_folder(
+            model_name=model_name,
+            short_title=repro_short_title,
+            experiment_id=args.repro_experiment_id,
+            is_repro=True
+        )
+        print(f"✓ Created reproduction folder: {repro_folder.name}")
+        
+        # Copy config.json unchanged to reproduction folder
+        save_config(config, repro_folder)
+        print("✓ Copied config.json (unchanged)")
+        
+        # Use train_explicit command for complete reproducibility (all params explicit)
+        repro_dir_abs = str(repro_folder.absolute())
+        train_command = f"EXPERIMENT_DIR={repro_dir_abs} {config['commands']['train_explicit']}"
+        
+        print(f"\n{'Original experiment:':<25} {original_folder.name}")
+        print(f"{'Reproduction folder:':<25} {repro_folder.name}")
+        print(f"\n{'Training command:':<25}")
+        print(f"  {train_command}")
+        
+        if args.dry_run:
+            print("\n[DRY RUN] Skipping training execution")
+            print("\nTo execute training, run:")
+            print(f"  {train_command}")
+            return
+        
+        # Launch training
+        print("\n" + "=" * 80)
+        print("LAUNCHING REPRODUCTION TRAINING")
+        print("=" * 80 + "\n")
+        result = subprocess.run(train_command, shell=True)
+        
+        if result.returncode == 0:
+            print("\n" + "=" * 80)
+            print("✓ REPRODUCTION TRAINING COMPLETED SUCCESSFULLY")
+            print("=" * 80)
+            print(f"\nResults saved to: {repro_folder}")
+            
+            # Suggest comparison with external script
+            print("\n" + "=" * 80)
+            print("VERIFY REPRODUCIBILITY")
+            print("=" * 80)
+            print("\nTo compare results with the original experiment, run:")
+            print(f"\n  python examples/compare_reproduction.py {args.repro_experiment_id}")
+            print("\nOr specify both folders explicitly:")
+            print(f"\n  python examples/compare_reproduction.py \\")
+            print(f"    {original_folder} \\")
+            print(f"    {repro_folder}")
+            print("\n" + "=" * 80)
+            
         else:
-            print('[ReportOnly] No drift detected.')
-            sys.exit(0)
-    # Load canonical defaults JSON
-    defaults_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'parameter_default.json')
-    with open(defaults_path) as f:
-        defaults_json = json.load(f)
-    training_defaults = defaults_json['training_defaults']
-    # Build initial resolved structure (nested grouping similar to previous build_config output)
-    # Map training_defaults flat keys into sections
-    def sectionize(td: Dict[str,Any]) -> Dict[str,Any]:
-        resolved = {
-            'runtime': {
-                'seed': td['seed'],
-                'monitor_freq': td['monitor_freq'],
-                'use_amp': td['use_amp'],
-                'use_wandb': td['use_wandb'],
-                'enable_cosine_perf_schedule': td['enable_cosine_perf_schedule'],
-                'auto_shifted_eval': td.get('auto_shifted_eval', False)
+            print("\n" + "=" * 80)
+            print("❌ REPRODUCTION TRAINING FAILED")
+            print("=" * 80)
+            sys.exit(result.returncode)
+    
+    # ========================================
+    # TRAINING MODE
+    # ========================================
+    else:
+        # Validate required parameter in training mode
+        if not args.short_title:
+            parser.error("--short_title is required in training mode")
+        
+        print("=" * 80)
+        print("TRAINING MODE")
+        print("=" * 80)
+        
+        # Load default parameters
+        defaults_path = Path("configs/parameter_default.json")
+        if not defaults_path.exists():
+            raise FileNotFoundError(f"Defaults file not found: {defaults_path}")
+        
+        with open(defaults_path, 'r') as f:
+            defaults = json.load(f)
+        
+        # Get required parameters from defaults (no hardcoded fallbacks)
+        try:
+            default_dataset = get_required_param(defaults, "defaults", "dataset")
+            default_fold = get_required_param(defaults, "defaults", "fold")
+            default_model = get_required_param(defaults, "defaults", "model")
+            default_train_script = get_required_param(defaults, "defaults", "train_script")
+            default_eval_script = get_required_param(defaults, "defaults", "eval_script")
+        except ValueError as e:
+            print("❌ ERROR: Missing required parameter in parameter_default.json")
+            print(f"   {str(e)}")
+            sys.exit(1)
+        
+        # Use CLI arguments if provided, otherwise use defaults from config
+        dataset = args.dataset if args.dataset is not None else default_dataset
+        fold = args.fold if args.fold is not None else default_fold
+        model_name = args.model_name if args.model_name is not None else default_model
+        train_script = args.train_script if args.train_script is not None else default_train_script
+        eval_script = default_eval_script  # eval_script has no CLI argument
+        
+        # Validate required parameter (short_title must be provided)
+        if not args.short_title:
+            print("❌ ERROR: --short_title is required in training mode")
+            sys.exit(1)
+        
+        # Generate new experiment ID
+        experiment_id = generate_experiment_id()
+        print(f"Generated experiment ID: {experiment_id}")
+        
+        # Create experiment folder
+        experiment_folder = create_experiment_folder(
+            model_name=model_name,
+            short_title=args.short_title,
+            experiment_id=experiment_id,
+            is_repro=False
+        )
+        print(f"✓ Created experiment folder: {experiment_folder.name}")
+        
+        # Build config from defaults
+        # Get training defaults and add model
+        training_params = defaults.get("defaults", {}).copy()
+        training_params["model"] = model_name
+        
+        # Override dataset and fold (use resolved values, not args directly)
+        training_params["dataset"] = dataset
+        training_params["fold"] = fold
+        
+        # Process parameter overrides from command-line arguments
+        # Check all parameters in defaults to see if they were overridden via CLI
+        overrides = {}
+        for param_name in defaults.get("defaults", {}).keys():
+            # Skip special parameters already handled
+            if param_name in ['train_script', 'eval_script', 'model', 'dataset', 'fold']:
+                continue
+            
+            # Check if this parameter was provided via CLI
+            arg_value = getattr(args, param_name, None)
+            default_value = defaults.get("defaults", {}).get(param_name)
+            
+            # For boolean parameters, argparse sets them to True/False directly
+            # For others, they're None if not provided
+            if isinstance(default_value, bool):
+                # Boolean was explicitly set if it differs from default
+                if arg_value != default_value:
+                    overrides[param_name] = arg_value
+                    training_params[param_name] = arg_value
+                    print(f"  Override: {param_name} = {arg_value}")
+            elif arg_value is not None:
+                # Non-boolean parameter was explicitly provided
+                overrides[param_name] = arg_value
+                training_params[param_name] = arg_value
+                print(f"  Override: {param_name} = {arg_value} (type: {type(arg_value).__name__})")
+        
+        # Build input section with ONLY explicitly provided parameters
+        input_params = {
+            "short_title": args.short_title
+        }
+        
+        # Add to input only if different from default
+        if args.dataset is not None and args.dataset != default_dataset:
+            input_params["dataset"] = args.dataset
+        if args.fold is not None and args.fold != default_fold:
+            input_params["fold"] = args.fold
+        if args.model_name is not None and args.model_name != default_model:
+            input_params["model"] = args.model_name
+        if args.train_script is not None and args.train_script != default_train_script:
+            input_params["train_script"] = args.train_script
+        
+        # Add all overrides to input section
+        for param_name, param_value in overrides.items():
+            input_params[param_name] = param_value
+        
+        # Build the original run_repro command
+        original_command_parts = [sys.executable, sys.argv[0]]
+        if args.short_title:
+            original_command_parts.extend(["--short_title", args.short_title])
+        if args.dataset is not None and args.dataset != default_dataset:
+            original_command_parts.extend(["--dataset", args.dataset])
+        if args.fold is not None and args.fold != default_fold:
+            original_command_parts.extend(["--fold", str(args.fold)])
+        if args.model_name is not None and args.model_name != default_model:
+            original_command_parts.extend(["--model_name", args.model_name])
+        if args.train_script is not None and args.train_script != default_train_script:
+            original_command_parts.extend(["--train_script", args.train_script])
+        # Add all override parameters to the command (using direct --param value syntax)
+        for param_name, param_value in overrides.items():
+            original_command_parts.extend([f"--{param_name}", str(param_value)])
+        original_command = " ".join(original_command_parts)
+        
+        # Build commands
+        experiment_dir_abs = str(experiment_folder.absolute())
+        
+        train_command_explicit = build_explicit_train_command(train_script, training_params)
+        eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
+        repro_command = build_repro_command(sys.argv[0], experiment_id)
+        
+        # Build new config structure - NO redundant typed sections
+        # Build config with logical section order: input, commands, experiment, seeds, then reference data
+        config = {
+            "input": input_params,
+            "commands": {
+                "run_repro_original": original_command,
+                "train_explicit": train_command_explicit,
+                "eval_explicit": eval_command_explicit,
+                "reproduce": repro_command
             },
-            'training': {
-                'epochs': td['epochs'],
-                'batch_size': td['batch_size'],
-                'learning_rate': td['learning_rate'],
-                'weight_decay': td['weight_decay'],
-                'optimizer': td['optimizer'],
-                'gradient_clip': td['gradient_clip'],
-                'patience': td['patience']
+            "experiment": {
+                "id": experiment_folder.name,
+                "short_title": args.short_title,
+                "experiment_id": experiment_id,
+                "created": experiment_folder.name.split('_')[0] + "_" + experiment_folder.name.split('_')[1]
             },
-            'data': {
-                'dataset': td['dataset'],
-                'fold': td['fold']
+            "seeds": {
+                "primary": training_params["seed"],
+                "all": [training_params["seed"]]
             },
-            'interpretability': {
-                'use_mastery_head': td['use_mastery_head'],
-                'use_gain_head': td['use_gain_head'],
-                'enhanced_constraints': td['enhanced_constraints'],
-                'non_negative_loss_weight': td['non_negative_loss_weight'],
-                'monotonicity_loss_weight': td['monotonicity_loss_weight'],
-                'mastery_performance_loss_weight': td['mastery_performance_loss_weight'],
-                'gain_performance_loss_weight': td['gain_performance_loss_weight'],
-                'sparsity_loss_weight': td['sparsity_loss_weight'],
-                'consistency_loss_weight': td['consistency_loss_weight'],
-                'warmup_constraint_epochs': td['warmup_constraint_epochs'],
-                'max_semantic_students': td['max_semantic_students']
-            },
-            'alignment': {
-                'enable_alignment_loss': td['enable_alignment_loss'],
-                'alignment_weight': td['alignment_weight'],
-                'alignment_warmup_epochs': td['alignment_warmup_epochs'],
-                'adaptive_alignment': td['adaptive_alignment'],
-                'alignment_min_correlation': td['alignment_min_correlation'],
-                'alignment_share_cap': td['alignment_share_cap'],
-                'alignment_share_decay_factor': td['alignment_share_decay_factor']
-            },
-            'global_alignment': {
-                'enable_global_alignment_pass': td['enable_global_alignment_pass'],
-                'alignment_global_students': td['alignment_global_students'],
-                'use_residual_alignment': td['use_residual_alignment'],
-                'alignment_residual_window': td['alignment_residual_window']
-            },
-            'refinement': {
-                'enable_retention_loss': td['enable_retention_loss'],
-                'retention_delta': td['retention_delta'],
-                'retention_weight': td['retention_weight'],
-                'enable_lag_gain_loss': td['enable_lag_gain_loss'],
-                'lag_gain_weight': td['lag_gain_weight'],
-                'lag_max_lag': td['lag_max_lag'],
-                'lag_l1_weight': td['lag_l1_weight'],
-                'lag_l2_weight': td['lag_l2_weight'],
-                'lag_l3_weight': td['lag_l3_weight'],
-                'consistency_rebalance_epoch': td['consistency_rebalance_epoch'],
-                'consistency_rebalance_threshold': td['consistency_rebalance_threshold'],
-                'consistency_rebalance_new_weight': td['consistency_rebalance_new_weight'],
-                'variance_floor': td['variance_floor'],
-                'variance_floor_patience': td['variance_floor_patience'],
-                'variance_floor_reduce_factor': td['variance_floor_reduce_factor']
-            },
-            'model_config': {
-                'seq_len': td['seq_len'],
-                'd_model': td['d_model'],
-                'n_heads': td['n_heads'],
-                'num_encoder_blocks': td['num_encoder_blocks'],
-                'd_ff': td['d_ff'],
-                'dropout': td['dropout'],
-                'emb_type': td['emb_type']
+            "defaults": defaults.get("defaults", {}),  # Pristine copy of training_defaults from parameter_default.json
+            "overrides": {k: v for k, v in training_params.items() if k in defaults.get("defaults", {}) and training_params[k] != defaults["defaults"][k]},
+            "types": defaults.get("types", {}),
+            "md5": defaults.get("md5", ""),  # MD5 of original defaults from parameter_default.json
+            "reference": {
+                "parameter_default_json": "configs/parameter_default.json"
             }
         }
-        return resolved
-    resolved = sectionize(training_defaults)
-    # Collect legacy flags into overrides automatically (omit None values)
-    legacy_to_key = [
-        'dataset','fold','seed','epochs','batch_size','learning_rate','weight_decay','optimizer','gradient_clip','patience',
-        'use_amp','use_wandb','use_mastery_head','use_gain_head','enhanced_constraints','non_negative_loss_weight','monotonicity_loss_weight',
-        'mastery_performance_loss_weight','gain_performance_loss_weight','sparsity_loss_weight','consistency_loss_weight','warmup_constraint_epochs',
-        'max_semantic_students','enable_alignment_loss','alignment_weight','alignment_warmup_epochs','adaptive_alignment','alignment_min_correlation',
-        'alignment_share_cap','alignment_share_decay_factor','enable_global_alignment_pass','alignment_global_students','use_residual_alignment',
-        'alignment_residual_window','enable_retention_loss','retention_delta','retention_weight','enable_lag_gain_loss','lag_gain_weight','lag_max_lag',
-        'lag_l1_weight','lag_l2_weight','lag_l3_weight','consistency_rebalance_epoch','consistency_rebalance_threshold','consistency_rebalance_new_weight',
-        'variance_floor','variance_floor_patience','variance_floor_reduce_factor','enable_cosine_perf_schedule'
-    ]
-    override_pairs = {}
-    for k in legacy_to_key:
-        if hasattr(args, k):
-            val = getattr(args, k)
-            if val is not None:
-                # For store_true style booleans: only override when user explicitly enabled (True).
-                # If flag not passed (False), skip so defaults (possibly True) remain intact.
-                if isinstance(val, bool) and val is False:
-                    continue
-                override_pairs[k] = val
-    # Apply overrides from --override key=value pairs (explicit string form)
-    for ov in args.override:
-        if '=' not in ov:
-            raise ValueError(f"Override must be key=value: {ov}")
-        kk, vv = ov.split('=',1)
-        kk = kk.strip()
-        vv = vv.strip()
-        if vv.lower() in ('true','false'):
-            v_cast = vv.lower() == 'true'
-        else:
-            try:
-                v_cast = int(vv) if vv.isdigit() else float(vv)
-            except ValueError:
-                v_cast = vv
-        override_pairs[kk] = v_cast
-    # Validate every override key exists in training_defaults
-    missing = [k for k in override_pairs.keys() if k not in training_defaults]
-    if missing:
-        raise KeyError(f"Overrides contain unknown keys not in training_defaults: {missing}")
-    # Merge
-    for k,val in override_pairs.items():
-        training_defaults[k] = val
-    # Re-sectionize after updates
-    resolved = sectionize(training_defaults)
-    # Integrity: ensure every training_defaults key appears in some resolved section
-    flat_keys = set(training_defaults.keys())
-    section_keys = set()
-    for sec_name, sec_vals in resolved.items():
-        for sk in sec_vals.keys():
-            section_keys.add(sk)
-    missing_mapped = flat_keys - section_keys
-    if missing_mapped:
-        raise RuntimeError(f"Integrity check failed: some defaults keys not mapped into resolved sections: {sorted(missing_mapped)}")
-    resolved['override_applied'] = override_pairs
-    # Preflight consistency audit (non-blocking): verify argparse vs defaults alignment
-    try:
-        consistency_report = run_consistency_check(args.train_script)
-    except Exception as _consistency_exc:
-        consistency_report = {'error': f'consistency_check_failed: {_consistency_exc}'}
-    drift = consistency_report.get('drift_detected')
-    if drift:
-        print('[PreflightConsistency] DRIFT DETECTED (see stderr for details). Proceeding.', file=sys.stdout)
-        print('[PreflightConsistency] WARNING: drift_detected==true before launch. Training will proceed.', file=sys.stderr)
-        print('[PreflightConsistency] Summary:', file=sys.stderr)
-        try:
-            print(json.dumps({k: consistency_report.get(k) for k in ['missing_in_json_training','missing_in_argparse_training','missing_in_json_evaluation','missing_in_argparse_evaluation','architecture_missing_train_argparse_flags','architecture_missing_eval_argparse_flags','exit_code','drift_detected']}, indent=2), file=sys.stderr)
-        except Exception:
-            print(str(consistency_report), file=sys.stderr)
-    else:
-        print('[PreflightConsistency] CONSISTENCY PASS (no drift).', file=sys.stdout)
-        print('[PreflightConsistency] No drift detected.', file=sys.stderr)
-    # Persist report (lightweight) for later audit comparison
-    resolved['preflight_consistency'] = {k: consistency_report.get(k) for k in consistency_report if k not in {'parse_error','stderr'}}
-    # Dynamic multi-GPU selection logic:
-    # If user supplies --devices explicitly (non-empty list differing from defaults) we honor it.
-    # Otherwise we attempt environment-based discovery:
-    #   1. PYKT_VISIBLE_GPUS (comma-separated indices) overrides everything when set.
-    #   2. If CUDA is available, query torch.cuda.device_count() and select up to 60% (ceil) capped at 5.
-    #      Fallback to first GPU [0] if count==1.
-    #   3. Persist chosen list back into args.devices so config.json records actual devices used.
-    try:
-        import torch  # local import to avoid hard dependency for non-training dry runs
-        explicit_devices = args.devices if args.devices != [0,1,2,3,4] else None
-        env_devices = os.environ.get('PYKT_VISIBLE_GPUS')
-        selected: List[int] = []
-        if env_devices:
-            try:
-                selected = [int(x) for x in env_devices.split(',') if x.strip()!='']
-            except ValueError:
-                selected = []
-        if not selected and explicit_devices:
-            selected = explicit_devices
-        if not selected:
-            if torch.cuda.is_available():
-                count = torch.cuda.device_count()
-                if count > 1:
-                    import math
-                    target = max(1, math.ceil(count * 0.6))
-                    target = min(target, 5)  # cap per project guideline
-                    selected = list(range(target))
-                else:
-                    selected = [0]
-            else:
-                selected = [0]
-        args.devices = selected
-    except Exception:
-        # In case torch import fails (e.g., CPU-only dry environment), keep original value
-        pass
-    # Normalize output base to absolute path to avoid relative path duplication when launching from subdirectories
-    output_base = args.output_base
-    # Normalize base path relative to project root (one 'examples')
-    if not os.path.isabs(output_base):
-        # If script resides in /.../examples/, project root is parent
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        # Preserve 'examples/experiments' path hierarchy; do not collapse 'examples'
-        if output_base.startswith('examples'):
-            candidate = os.path.join(project_root, output_base)  # keep full relative path
-        else:
-            candidate = os.path.join(project_root, output_base)
-        output_base = os.path.abspath(candidate)
-    # Step 1: Create experiment directory
-    exp_dir = make_experiment_dir(args.model_name, args.short_title, base_dir=output_base)
-    exp_id = os.path.basename(exp_dir)
-
-    # Step 2: Seeds (single-seed for now; multi-seed orchestration will wrap multiple calls)
-    seeds = [args.seed]
-
-    # Step 3: Build and dump config (config-first). Add experiment + hardware metadata.
-    # Train/eval command placeholders inserted after constructing resolved.
-    resolved['experiment'] = {
-        'id': exp_id,
-        'model': args.model_name,
-        'short_title': args.short_title,
-        'purpose': args.purpose
-    }
-    resolved['hardware'] = {
-        'devices': args.devices,
-        'threads': int(os.environ.get('OMP_NUM_THREADS','8')),
-        'selected_devices': [],  # will be populated after dynamic selection
-    }
-    resolved['seeds'] = {
-        'primary': resolved['runtime']['seed'],
-        'all': [resolved['runtime']['seed']]
-    }
-    # Evaluation defaults snapshot retained from defaults_json
-    eval_defaults = defaults_json.get('evaluation_defaults', {})
-    resolved['evaluation_defaults'] = eval_defaults
-    # Inject architecture model_config from defaults (allow overrides via legacy flags if provided in override_pairs above)
-    model_cfg_defaults = defaults_json.get('model_config_defaults', {})
-    # Allow user override through --override seq_len=... etc.
-    model_cfg_resolved = {}
-    for k,v in model_cfg_defaults.items():
-        if k in override_pairs:
-            model_cfg_resolved[k] = override_pairs[k]
-        else:
-            model_cfg_resolved[k] = v
-    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
-    missing_arch = [m for m in mandatory_arch if m not in model_cfg_resolved]
-    if missing_arch:
-        raise KeyError(f"Missing mandatory architecture keys during launcher resolution: {missing_arch}")
-    resolved['model_config'] = model_cfg_resolved
-    # Commands
-    train_cmd_list = build_subprocess_command(args.train_script, resolved)
-    # train_cmd_list is already canonical (flags lexicographically ordered) ensuring stable string equivalence
-    verbose_train_cmd_str = ' '.join(shlex.quote(c) for c in train_cmd_list)
-    launcher_command = 'python ' + ' '.join(shlex.quote(a) for a in sys.argv)
-    resolved['runtime']['command'] = launcher_command
-    # Minimal train command (config-first). The verbose version is retained under 'verbose_train_command' for audit.
-    minimal_train_cmd_str = f"python {args.train_script} --config {os.path.join(exp_dir, 'config.json')}"
-    resolved['runtime']['train_command'] = minimal_train_cmd_str
-    resolved['runtime']['verbose_train_command'] = verbose_train_cmd_str
-    resolved['runtime']['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-    resolved['runtime']['eval_command'] = (
-        f"python examples/eval_gainakt2exp.py --run_dir {exp_dir} --dataset {resolved['data']['dataset']} --experiment_id {exp_id}")
-    # Minimal reproduction command (config-first): a single invocation pointing to the canonical config.json.
-    # Rationale: The training script now supports --config to ingest ALL parameters from the stored file, eliminating
-    # the need for verbose override enumeration and reducing drift risk. Reproduction requires copying the experiment
-    # directory (or config.json) and executing this command. To retain legacy behaviour, one could reintroduce the
-    # enumerated override method behind a feature flag (not requested).
-    # Updated reproduction protocol: use relaunch_experiment.py to formally audit and relaunch.
-    # short_title for relaunch must be the original user-provided short_title (without timestamp/model prefix) + '_relaunch'.
-    # This avoids overly long folder names and keeps semantic continuity with the initial short_title.
-    relaunch_short = f"{args.short_title}_relaunch" if args.short_title else "relaunch"
-    resolved['runtime']['repro_command'] = (
-        f"{sys.executable} examples/relaunch_experiment.py --source_dir {exp_dir} --short_title {relaunch_short}" )
-    # Config hash
-    from examples.experiment_utils import compute_config_hash
-    # Full hash includes all metadata sections.
-    full_md5 = compute_config_hash(resolved)
-    # Effective hash excludes strictly metadata / audit-only sections that should not affect reproduction equivalence.
-    def strip_effective(obj: dict) -> dict:
-        """Remove metadata-only sections and fields from config for effective hash."""
-        META_EXCLUDE_SECTIONS = {'preflight_consistency', 'evaluation_snapshot', 'override_applied', 'reproducibility_policy'}
-        MD5_EXCLUDE_KEYS = {'config_md5', 'config_md5_full', 'config_md5_effective', 'model_config_md5', 'evaluation_snapshot_md5'}
-        RUNTIME_METADATA_PREFIXES = ('runtime.', 'experiment.', 'hardware.gpu_selection_source', 'hardware.selected_devices')
-        OPTIONAL_METADATA_KEYS = {'training.mixed_precision'}
         
-        def flatten_and_filter(cfg):
-            flat = {}
-            for section, content in cfg.items():
-                if section in META_EXCLUDE_SECTIONS or section in MD5_EXCLUDE_KEYS:
-                    continue
-                if isinstance(content, dict):
-                    for k, v in content.items():
-                        key = f"{section}.{k}"
-                        if any(key.startswith(pref) for pref in RUNTIME_METADATA_PREFIXES):
-                            continue
-                        if key in OPTIONAL_METADATA_KEYS:
-                            continue
-                        # Filter out any *_md5 fields
-                        if k.endswith('_md5') or '_md5_' in k:
-                            continue
-                        flat[key] = v
-                else:
-                    if section not in MD5_EXCLUDE_KEYS:
-                        flat[section] = content
-            return flat
+        # Save config (MD5 verification will happen on load)
+        save_config(config, experiment_folder)
+        print("✓ Saved config.json")
         
-        return flatten_and_filter(obj)
-    
-    effective_md5 = compute_config_hash(strip_effective(resolved))
-    resolved['config_md5_full'] = full_md5
-    resolved['config_md5_effective'] = effective_md5
-    # Backward compatibility: retain original field name pointing to full hash.
-    resolved['config_md5'] = full_md5
-    # Record placeholder gpu_selection_source; will be updated if training runs.
-    resolved['hardware']['gpu_selection_source'] = 'pending'
-    atomic_write_json(resolved, os.path.join(exp_dir, 'config.json'))
-
-    # Step 4: Environment + seeds metadata
-    capture_environment(os.path.join(exp_dir, 'environment.txt'))
-    write_seed_info(os.path.join(exp_dir, 'SEED_INFO.md'), seeds, seeds[0])
-
-    # Step 5: Logger (stdout.log); we still run subprocess for training
-    logger = timestamped_logger('repro', os.path.join(exp_dir, 'stdout.log'))
-    logger.info(f"Launching reproducible experiment: {exp_id}")
-    logger.info(f"Training script: {args.train_script}")
-    logger.info(f"Launcher command: {launcher_command}")
-    logger.info(f"Train command (minimal): {minimal_train_cmd_str}")
-    logger.info(f"Train command (verbose): {verbose_train_cmd_str}")
-
-    # Step 6: Optionally run training
-    metrics_csv = os.path.join(exp_dir, 'metrics_epoch.csv')
-    if not args.dry_run:
-        # Pre-create header to distinguish between "file never written" vs "no epochs" scenarios
-        if not os.path.exists(metrics_csv):
-            import csv as _csv
-            with open(metrics_csv, 'w', newline='') as f:
-                writer = _csv.writer(f)
-                writer.writerow([
-                    'epoch','train_loss','train_auc','val_loss','val_auc','val_accuracy',
-                    'monotonicity_violation_rate','negative_gain_rate','bounds_violation_rate',
-                    'mastery_correlation','gain_correlation','main_loss_share','constraint_loss_share',
-                    'alignment_loss_share','lag_loss_share','retention_loss_share'
-                ])
-    else:
-        # In dry_run: do not create metrics file to avoid confusion about missing values
-        metrics_csv = None
-    # Launcher now writes a separate summary file to avoid clashing with legacy training results.json
-    results_json_path = os.path.join(exp_dir, 'summary.json')
-    best_metrics: Optional[Dict[str,Any]] = None
-
-    if not args.dry_run:
-        env = os.environ.copy()
-        # Dynamic GPU subset selection precedence:
-        # 1. If CUDA_VISIBLE_DEVICES already set (explicit device list), use it as-is.
-        # 2. Else if PYKT_GPU_IDS provided (comma-separated list), use that.
-        # 3. Else if PYKT_NUM_GPUS provided (count), select first N from args.devices.
-        # 4. Else apply heuristic: select a subset strictly <70% of available (ceil(avail*0.7)-1 if >1) else 1.
-        existing_cuda = env.get('CUDA_VISIBLE_DEVICES')
-        gpu_ids_env = env.get('PYKT_GPU_IDS')
-        requested_env_gpus = env.get('PYKT_NUM_GPUS')
-        selection_source = None
-        if existing_cuda:
-            # Honor pre-set CUDA_VISIBLE_DEVICES (could be set by external scheduler)
-            selected_devices = [d for d in existing_cuda.split(',') if d!='']
-            selection_source = 'CUDA_VISIBLE_DEVICES'
-        elif gpu_ids_env:
-            selected_devices = [d for d in gpu_ids_env.split(',') if d!='']
-            selection_source = 'PYKT_GPU_IDS'
-        elif requested_env_gpus is not None:
-            try:
-                num_requested = int(requested_env_gpus)
-            except ValueError:
-                num_requested = len(args.devices)
-            selected_devices = [str(d) for d in args.devices[:num_requested]]
-            selection_source = 'PYKT_NUM_GPUS'
+        # Verify config integrity immediately after saving
+        verify_config_md5(config)
+        
+        # Use train_explicit command for complete reproducibility (all params explicit)
+        experiment_dir_abs = str(experiment_folder.absolute())
+        train_command = f"EXPERIMENT_DIR={experiment_dir_abs} {config['commands']['train_explicit']}"
+        
+        print(f"\n{'Experiment ID:':<25} {experiment_id}")
+        print(f"{'Dataset:':<25} {dataset}")
+        print(f"{'Fold:':<25} {fold}")
+        print(f"{'Epochs:':<25} {training_params['epochs']}")
+        print(f"{'Batch size:':<25} {training_params['batch_size']}")
+        print(f"{'Learning rate:':<25} {training_params['learning_rate']}")
+        print(f"\n{'Training command:':<25}")
+        print(f"  {train_command}")
+        
+        if args.dry_run:
+            print("\n[DRY RUN] Skipping training execution")
+            print("\nTo execute training, run:")
+            print(f"  {train_command}")
+            return
+        
+        # Launch training
+        print("\n" + "=" * 80)
+        print("LAUNCHING TRAINING")
+        print("=" * 80 + "\n")
+        result = subprocess.run(train_command, shell=True)
+        
+        if result.returncode == 0:
+            print("\n" + "=" * 80)
+            print("✓ TRAINING COMPLETED SUCCESSFULLY")
+            print("=" * 80)
+            print(f"\nResults saved to: {experiment_folder}")
+            print("\nTo reproduce this experiment:")
+            print("  python examples/run_repro_experiment.py \\")
+            print(f"    --repro_experiment_id {experiment_id}")
         else:
-            try:
-                import torch
-                import math
-                avail = torch.cuda.device_count() if torch.cuda.is_available() else 0
-            except Exception:
-                avail = 0
-            if avail > 0:
-                # Heuristic target (<70% but ensure at least 2 if >=2 available)
-                raw_target = max(1, math.ceil(avail * 0.7))
-                if raw_target >= avail and avail > 1:
-                    raw_target = avail - 1  # enforce strictly <100% when possible
-                num_select = max(1, raw_target)
-                if num_select < 2 and avail >= 2:
-                    num_select = 2  # ensure multi-GPU utilization when at least 2 are available
-                selected_devices = [str(d) for d in args.devices[:num_select]]
-            else:
-                selected_devices = []
-            selection_source = 'heuristic_<70%_min2'
-        # Normalize and set CUDA_VISIBLE_DEVICES to selected list
-        env['CUDA_VISIBLE_DEVICES'] = ','.join(selected_devices)
-        env['PYKT_VISIBLE_GPUS'] = env['CUDA_VISIBLE_DEVICES']
-        logger.info(f"[Launcher] GPU selection (subprocess): source={selection_source} available={args.devices} selected={selected_devices}")
-        visible_count = len(args.devices)
-        selected_count = len(selected_devices)
-        logger.info(f"[Launcher] GPU counts: visible={visible_count} selected={selected_count}")
-        # Update config with actual selection source for audit reproducibility
-        try:
-            import json as _json
-            cfg_path = os.path.join(exp_dir, 'config.json')
-            with open(cfg_path) as _cf:
-                _cfg = _json.load(_cf)
-            _cfg['hardware']['gpu_selection_source'] = selection_source
-            _cfg['hardware']['visible_gpu_count'] = len(args.devices)
-            _cfg['hardware']['selected_gpu_count'] = len(selected_devices)
-            _cfg['hardware']['selected_devices'] = selected_devices
-            atomic_write_json(_cfg, cfg_path)
-        except Exception as e:
-            logger.info(f"[Launcher] Warning: unable to update gpu_selection_source in config.json: {e}")
-        env['EXPERIMENT_DIR'] = exp_dir
-        env['PYKT_CONFIG_PATH'] = os.path.join(exp_dir, 'config.json')
-        logger.info(f"[Launcher] Set EXPERIMENT_DIR={exp_dir}")
-        logger.info(f"[Launcher] Set PYKT_CONFIG_PATH={env['PYKT_CONFIG_PATH']}")
-        start = time.time()
-        # Use verbose command for actual execution to avoid relying on file that is simultaneously being written.
-        proc = subprocess.Popen(verbose_train_cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True, shell=True)
-        # Stream output with timestamps
-        while True:
-            line = proc.stdout.readline()
-            if line:
-                logger.info(line.rstrip())
-            elif proc.poll() is not None:
-                break
-        stderr_out = proc.stderr.read()
-        if stderr_out:
-            with open(os.path.join(exp_dir,'stderr.log'),'w') as ef:
-                ef.write(stderr_out)
-        ret = proc.wait()
-        duration = time.time() - start
-        logger.info(f"Training subprocess exit code: {ret} (duration {duration:.1f}s)")
-        # Post-hoc best metrics extraction attempt
-        tail_metrics = tail_metrics_from_csv(metrics_csv) if metrics_csv else None
-        # Determine whether epochs were appended (header-only file indicates no data rows)
-        data_rows = 0
-        if metrics_csv:
-            try:
-                import csv as _csv
-                with open(metrics_csv) as f:
-                    reader = _csv.reader(f)
-                    next(reader, None)
-                    for _ in reader:
-                        data_rows += 1
-            except Exception:
-                pass
-        if tail_metrics and data_rows > 0:
-            best_metrics = {
-                'best_epoch': tail_metrics.get('epoch'),
-                'best_val_auc': tail_metrics.get('val_auc'),
-                'best_val_accuracy': tail_metrics.get('val_accuracy'),
-                'mastery_corr': tail_metrics.get('mastery_corr'),
-                'gain_corr': tail_metrics.get('gain_corr'),
-            }
-            atomic_write_json({'tail_metrics': tail_metrics, 'best_summary': best_metrics, 'config_md5': resolved['config_md5']}, results_json_path)
-        else:
-            note = 'metrics_epoch.csv present but no data rows appended (training script may not have written metrics).' if metrics_csv and os.path.exists(metrics_csv) else 'No metrics file (dry_run or script not adapted).'
-            failure = ret != 0
-            payload = {'config_md5': resolved['config_md5'], 'note': note}
-            if failure:
-                payload['exit_code'] = ret
-                if stderr_out:
-                    payload['stderr_excerpt'] = stderr_out[:5000]
-            atomic_write_json(payload, results_json_path)
-    else:
-        atomic_write_json({'config_md5': resolved['config_md5'], 'dry_run': True, 'note': 'Dry run: metrics and training skipped.'}, results_json_path)
+            print("\n" + "=" * 80)
+            print("❌ TRAINING FAILED")
+            print("=" * 80)
+            sys.exit(result.returncode)
 
-    # Step 7: README generation (optional)
-    if not args.skip_readme:
-        # Reuse write_readme with resolved config; adapt format to expected keys
-        write_readme(exp_dir, resolved, best_metrics)
-
-    print(f"Experiment directory created: {exp_dir}")
-
-    # Step 8: Optional post-training shifted evaluation (next-step metrics)
-    # Guard conditions: auto_shifted_eval enabled AND training actually ran (not dry_run) AND checkpoint exists.
-    if getattr(args, 'auto_shifted_eval', False) and not args.dry_run:
-        ckpt = os.path.join(exp_dir, 'model_best.pth')
-        helper = os.path.join(os.path.dirname(__file__), '..', 'tmp', 'shifted_eval_helper.py')
-        if os.path.exists(helper):
-            if os.path.exists(ckpt):
-                import subprocess as _sp
-                import json as _json
-                # Build helper command mirroring architectural defaults; rely on eval helper internal defaults for d_model etc if not trained with overrides.
-                helper_cmd = [sys.executable, helper,
-                              '--run_dir', exp_dir,
-                              '--dataset', args.dataset,
-                              '--fold', str(args.fold),
-                              '--batch_size', str(args.batch_size),
-                              '--seq_len', '200',
-                              '--d_model', '512', '--n_heads', '8', '--num_encoder_blocks', '6', '--d_ff', '1024', '--dropout', '0.2']
-                try:
-                    print('[PostEval] Running shifted next-step evaluation helper...')
-                    proc = _sp.Popen(helper_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
-                    out, err = proc.communicate()
-                    if proc.returncode == 0:
-                        # Attempt to parse final JSON block from stdout (helper prints results JSON)
-                        # Simple heuristic: last '{' to end
-                        last_brace = out.rfind('{')
-                        shifted_results = None
-                        if last_brace != -1:
-                            try:
-                                shifted_results = _json.loads(out[last_brace:])
-                            except Exception:
-                                shifted_results = {'parse_error': 'Could not parse helper JSON from stdout'}
-                        else:
-                            shifted_results = {'parse_error': 'No JSON object found in helper stdout'}
-                        # Merge into results.json if present
-                        results_path = os.path.join(exp_dir, 'results.json')
-                        merged = {}
-                        if os.path.exists(results_path):
-                            try:
-                                with open(results_path) as rf:
-                                    merged = _json.load(rf)
-                            except Exception:
-                                merged = {'load_error': 'Failed to read existing results.json'}
-                        merged['shifted_eval'] = shifted_results
-                        with open(results_path, 'w') as wf:
-                            _json.dump(merged, wf, indent=2)
-                        print('[PostEval] Shifted evaluation results merged into results.json')
-                    else:
-                        print(f'[PostEval] Helper returned non-zero exit code {proc.returncode}. stderr:\n{err[:5000]}')
-                except Exception as e:
-                    print(f'[PostEval] Exception during shifted evaluation: {e}')
-            else:
-                print('[PostEval] Skipping shifted evaluation: model_best.pth not found.')
-        else:
-            print('[PostEval] Skipping shifted evaluation: helper script missing (tmp/shifted_eval_helper.py).')
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

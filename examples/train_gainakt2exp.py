@@ -1,6 +1,31 @@
 #!/usr/bin/env python3
 """
 Standardized training script for GainAKT2Exp model using PyKT framework patterns.
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         ⚠️  REPRODUCIBILITY WARNING ⚠️                        ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  DO NOT CALL THIS SCRIPT DIRECTLY FOR REPRODUCIBLE EXPERIMENTS!             ║
+║                                                                              ║
+║  This script has ZERO hardcoded defaults and requires 60+ explicit          ║
+║  parameters. Direct execution will FAIL unless all parameters are provided. ║
+║                                                                              ║
+║  For reproducible experiments, use the experiment launcher:                 ║
+║                                                                              ║
+║      python examples/run_repro_experiment_simple.py --short_title "name"    ║
+║                                                                              ║
+║  The launcher will:                                                         ║
+║    ✓ Load defaults from configs/parameter_default.json                      ║
+║    ✓ Apply your CLI overrides                                               ║
+║    ✓ Generate explicit command with ALL 60+ parameters                      ║
+║    ✓ Create experiment folder with full audit trail                         ║
+║    ✓ Save config.json for perfect reproducibility                           ║
+║                                                                              ║
+║  See: docs/REPRODUCIBILITY_WORKFLOW.md for complete documentation           ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 OPTIMAL PARAMETERS from comprehensive sweep (AUC: 0.7260, Perfect Consistency):
 - learning_rate: 0.000174, weight_decay: 1.7571e-05, batch_size: 96
 - enhanced_constraints: True, peaks at epoch 3, early stopping recommended
@@ -165,10 +190,28 @@ def load_config_if_available():
     return None
 
 def resolve_param(cfg, section, key, fallback):
+    """
+    Resolve parameter value with priority: input -> defaults -> fallback.
+    The 'section' parameter is ignored (kept for backward compatibility).
+    """
     try:
         if cfg is None:
             return fallback
-        return cfg.get(section, {}).get(key, fallback)
+        
+        # Priority 1: Check input section (explicit user overrides)
+        if 'input' in cfg and key in cfg['input']:
+            return cfg['input'][key]
+        
+        # Priority 2: Check defaults section (parameter defaults)
+        if 'defaults' in cfg and key in cfg['defaults']:
+            return cfg['defaults'][key]
+        
+        # Priority 3: Check old typed section format (backward compatibility)
+        if section in cfg and key in cfg[section]:
+            return cfg[section][key]
+        
+        # Priority 4: Use fallback
+        return fallback
     except Exception:
         return fallback
 
@@ -341,12 +384,34 @@ def train_gainakt2exp_model(args):
     train_loader, valid_loader = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
     logger.info("Dataset loaded successfully")
     
-    # Create model with architecture pulled from config.json (cfg['model_config']) to avoid hidden defaults
+    # Create model with architecture from input/defaults sections
     num_c = data_config[dataset_name]['num_c']
-    arch_cfg = cfg.get('model_config') if cfg is not None else None
-    if arch_cfg is None and cfg is not None:
-        raise KeyError("model_config section missing from config.json; reproduction invalid. Ensure launcher added model_config.")
-    if arch_cfg is None and cfg is None:
+    
+    # Build arch_cfg from input (overrides) and defaults
+    if cfg is not None:
+        # Check for model_config params in input and defaults
+        model_config_params = ['seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type']
+        arch_cfg = {}
+        for param in model_config_params:
+            # Priority: input -> defaults -> None
+            if 'input' in cfg and param in cfg['input']:
+                arch_cfg[param] = cfg['input'][param]
+            elif 'defaults' in cfg and param in cfg['defaults']:
+                arch_cfg[param] = cfg['defaults'][param]
+            elif 'model_config' in cfg and param in cfg['model_config']:
+                # Backward compatibility with old format
+                arch_cfg[param] = cfg['model_config'][param]
+        
+        # Validate we got the required parameters
+        mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+        missing_arch = [k for k in mandatory_arch if k not in arch_cfg]
+        if missing_arch:
+            raise KeyError(f"Missing required model architecture parameters in config (input/defaults): {missing_arch}")
+        
+        # Set default for emb_type if not specified
+        if 'emb_type' not in arch_cfg:
+            arch_cfg['emb_type'] = 'qid'
+    else:
         # Standalone run (no config provided): synthesize architecture from CLI defaults
         arch_cfg = {
             'seq_len': getattr(args, 'seq_len'),
@@ -358,6 +423,8 @@ def train_gainakt2exp_model(args):
             'emb_type': getattr(args, 'emb_type', 'qid')
         }
         logger.info("[ArchFallback] No config.json loaded; using CLI architecture values as model_config.")
+    
+    # Remove the old validation code that was here
     mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
     missing_arch = [k for k in mandatory_arch if k not in arch_cfg]
     if missing_arch:
@@ -675,7 +742,7 @@ def train_gainakt2exp_model(args):
                     # Solution: temporarily add attribute access: if DataParallel, gather states from model.module after call.
                     if isinstance(model, torch.nn.DataParallel):
                         # Call collective forward to trigger scatter
-                        fwd_basic = model(questions, responses, questions_shifted, qtest=False)
+                        fwd_basic = model(questions, responses, qry=questions_shifted, qtest=False)
                         # After collective forward, call forward_with_states on primary module with full batch (already on device 0)
                         # Note: This duplicates computation on device0; acceptable for short diagnostic. For true efficiency,
                         # implement custom DataParallel subclass to return states from replicas.
@@ -861,7 +928,7 @@ def train_gainakt2exp_model(args):
                         torch.backends.cudnn.deterministic = False
                         with torch.cuda.amp.autocast(enabled=use_amp and device.type == 'cuda'):
                             if isinstance(model, torch.nn.DataParallel):
-                                _ = model(questions, responses, questions_shifted, qtest=False)
+                                _ = model(questions, responses, qry=questions_shifted, qtest=False)
                                 outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
                             else:
                                 outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
@@ -1042,7 +1109,7 @@ def train_gainakt2exp_model(args):
                 # Use model_core to access underlying module when DataParallel is active
                 # Validation: for efficiency avoid duplicate forward; single GPU uses forward_with_states directly.
                 if isinstance(model, torch.nn.DataParallel):
-                    _ = model(questions, responses, questions_shifted, qtest=False)
+                    _ = model(questions, responses, qry=questions_shifted, qtest=False)
                     outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                 else:
                     outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
@@ -1088,7 +1155,7 @@ def train_gainakt2exp_model(args):
                     responses_shifted = batch['shft_rseqs'].to(device)
                     mask = batch['masks'].to(device)
                     if isinstance(model, torch.nn.DataParallel):
-                        _ = model(questions, responses, questions_shifted, qtest=False)
+                        _ = model(questions, responses, qry=questions_shifted, qtest=False)
                         outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                     else:
                         outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
@@ -1139,7 +1206,7 @@ def train_gainakt2exp_model(args):
                         responses_shifted = batch['shft_rseqs'].to(device)
                         mask = batch['masks'].to(device)
                         if isinstance(model, torch.nn.DataParallel):
-                            _ = model(questions, responses, questions_shifted, qtest=False)
+                            _ = model(questions, responses, qry=questions_shifted, qtest=False)
                             out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
                         else:
                             out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
@@ -1500,94 +1567,96 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train GainAKT2Exp model with reproducibility hooks.')
     # Single-source config reproduction flag: when provided, all parameters are loaded from this file.
     parser.add_argument('--config', type=str, help='Path to resolved experiment config.json (single source of truth).')
-    parser.add_argument('--dataset', type=str, default='assist2015', help='Dataset name')
-    parser.add_argument('--fold', type=int, default=0, help='Dataset fold index')
+    parser.add_argument('--dataset', type=str, required=True, help='Dataset name')
+    parser.add_argument('--fold', type=int, required=True, help='Dataset fold index')
     # Recovered configuration defaults (semantic modules active, correlations stabilize by ~epoch 8)
-    parser.add_argument('--epochs', type=int, default=12, help='Number of training epochs (default 12 recovered configuration)')
-    parser.add_argument('--batch_size', type=int, default=64, help='Batch size (default 64 recovered configuration)')
-    parser.add_argument('--learning_rate', type=float, default=1.74e-4, help='Learning rate')
-    parser.add_argument('--weight_decay', type=float, default=1.7571e-5, help='Weight decay')
-    parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer (Adam supported)')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--epochs', type=int, required=True, help='Number of training epochs (default 12 recovered configuration)')
+    parser.add_argument('--batch_size', type=int, required=True, help='Batch size (default 64 recovered configuration)')
+    parser.add_argument('--learning_rate', type=float, required=True, help='Learning rate')
+    parser.add_argument('--weight_decay', type=float, required=True, help='Weight decay')
+    parser.add_argument('--optimizer', type=str, required=True, help='Optimizer (Adam supported)')
+    parser.add_argument('--seed', type=int, required=True, help='Random seed')
     parser.add_argument('--use_wandb', action='store_true', help='Enable wandb logging')
-    parser.add_argument('--monitor_freq', type=int, default=50, help='Interpretability monitor frequency (steps)')
-    parser.add_argument('--gradient_clip', type=float, default=1.0, help='Gradient clipping max norm')
-    parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
+    parser.add_argument('--use_amp', action='store_true', help='Enable automatic mixed precision (AMP) training')
+    parser.add_argument('--auto_shifted_eval', action='store_true', help='Enable auto-shifted evaluation (reproducibility invariant)')
+    parser.add_argument('--monitor_freq', type=int, required=True, help='Interpretability monitor frequency (steps)')
+    parser.add_argument('--gradient_clip', type=float, required=True, help='Gradient clipping max norm')
+    parser.add_argument('--patience', type=int, required=True, help='Early stopping patience')
     # --require_multi_gpu removed: no mandatory multi-GPU enforcement; script now allows single GPU or CPU without failure.
     # =====================
     # Interpretability Defaults: ENABLED by default
     # We expose disable flags for explicit override while keeping backward-compatible enable flags.
     # ---------------------
-    parser.add_argument('--use_mastery_head', action='store_true', default=True,
+    parser.add_argument('--use_mastery_head', action='store_true',
                         help='Enable mastery head (default: enabled). Use --disable_mastery_head to turn off.')
     parser.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head (overrides --use_mastery_head)')
-    parser.add_argument('--use_gain_head', action='store_true', default=True,
+    parser.add_argument('--use_gain_head', action='store_true',
                         help='Enable gain head (default: enabled). Use --disable_gain_head to turn off.')
     parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head (overrides --use_gain_head)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
-    parser.add_argument('--enhanced_constraints', action='store_true', default=True,
+    parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')
     parser.add_argument('--pure_bce', action='store_true', help='Disable enhanced constraints and force pure BCE loss.')
-    parser.add_argument('--non_negative_loss_weight', type=float, default=0.0)
-    parser.add_argument('--monotonicity_loss_weight', type=float, default=0.1)
-    parser.add_argument('--mastery_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--gain_performance_loss_weight', type=float, default=0.8)
-    parser.add_argument('--sparsity_loss_weight', type=float, default=0.2)
-    parser.add_argument('--consistency_loss_weight', type=float, default=0.3)
+    parser.add_argument('--non_negative_loss_weight', type=float, required=True)
+    parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
+    parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
+    parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
+    parser.add_argument('--sparsity_loss_weight', type=float, required=True)
+    parser.add_argument('--consistency_loss_weight', type=float, required=True)
     # Semantic alignment & refinement flags (Phase 1+ reproducibility)
-    parser.add_argument('--enable_alignment_loss', action='store_true', default=True,
+    parser.add_argument('--enable_alignment_loss', action='store_true',
                         help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
     parser.add_argument('--disable_alignment_loss', action='store_true', help='Disable local alignment correlation loss')
-    parser.add_argument('--alignment_weight', type=float, default=0.25, help='Base weight for alignment loss (before warm-up scaling)')
-    parser.add_argument('--alignment_warmup_epochs', type=int, default=8, help='Epochs to linearly warm alignment weight')
-    parser.add_argument('--adaptive_alignment', action='store_true', default=True,
+    parser.add_argument('--alignment_weight', type=float, required=True, help='Base weight for alignment loss (before warm-up scaling)')
+    parser.add_argument('--alignment_warmup_epochs', type=int, required=True, help='Epochs to linearly warm alignment weight')
+    parser.add_argument('--adaptive_alignment', action='store_true',
                         help='Adaptively up-weight alignment if below min correlation post warm-up (default: enabled). Use --disable_adaptive_alignment to turn off.')
     parser.add_argument('--disable_adaptive_alignment', action='store_true', help='Disable adaptive alignment scaling logic')
-    parser.add_argument('--alignment_min_correlation', type=float, default=0.05, help='Target minimum mastery correlation for adaptive scaling')
-    parser.add_argument('--alignment_share_cap', type=float, default=0.08, help='Max alignment loss share before decay applied')
-    parser.add_argument('--alignment_share_decay_factor', type=float, default=0.7, help='Decay factor for alignment weight when over cap and plateaued')
-    parser.add_argument('--enable_global_alignment_pass', action='store_true', default=True,
+    parser.add_argument('--alignment_min_correlation', type=float, required=True, help='Target minimum mastery correlation for adaptive scaling')
+    parser.add_argument('--alignment_share_cap', type=float, required=True, help='Max alignment loss share before decay applied')
+    parser.add_argument('--alignment_share_decay_factor', type=float, required=True, help='Decay factor for alignment weight when over cap and plateaued')
+    parser.add_argument('--enable_global_alignment_pass', action='store_true',
                         help='Run a global alignment correlation pass each epoch (default: enabled). Use --disable_global_alignment_pass to turn off.')
     parser.add_argument('--disable_global_alignment_pass', action='store_true', help='Disable global alignment correlation pass')
-    parser.add_argument('--alignment_global_students', type=int, default=600, help='Students sampled in global alignment stratified pass')
+    parser.add_argument('--alignment_global_students', type=int, required=True, help='Students sampled in global alignment stratified pass')
     parser.add_argument('--use_residual_alignment', action='store_true', help='Residualize performance for alignment correlations')
-    parser.add_argument('--alignment_residual_window', type=int, default=5, help='Window for residual smoothing (rolling mean)')
+    parser.add_argument('--alignment_residual_window', type=int, required=True, help='Window for residual smoothing (rolling mean)')
     # Retention & lag emergence
-    parser.add_argument('--enable_retention_loss', action='store_true', default=True,
+    parser.add_argument('--enable_retention_loss', action='store_true',
                         help='Enable retention penalty after peak correlation decay (default: enabled). Use --disable_retention_loss to turn off.')
     parser.add_argument('--disable_retention_loss', action='store_true', help='Disable retention penalty')
-    parser.add_argument('--retention_delta', type=float, default=0.005, help='Minimum decay gap triggering retention penalty')
-    parser.add_argument('--retention_weight', type=float, default=0.14, help='Weight applied to retention decay gap')
-    parser.add_argument('--enable_lag_gain_loss', action='store_true', default=True,
+    parser.add_argument('--retention_delta', type=float, required=True, help='Minimum decay gap triggering retention penalty')
+    parser.add_argument('--retention_weight', type=float, required=True, help='Weight applied to retention decay gap')
+    parser.add_argument('--enable_lag_gain_loss', action='store_true',
                         help='Enable multi-lag predictive emergence objective (default: enabled). Use --disable_lag_gain_loss to turn off.')
     parser.add_argument('--disable_lag_gain_loss', action='store_true', help='Disable multi-lag predictive emergence objective')
-    parser.add_argument('--lag_gain_weight', type=float, default=0.06, help='Weight for lag predictive emergence objective')
-    parser.add_argument('--lag_max_lag', type=int, default=3, help='Maximum lag horizon considered for predictive emergence')
-    parser.add_argument('--lag_l1_weight', type=float, default=0.5, help='Weight for lag 1 correlation')
-    parser.add_argument('--lag_l2_weight', type=float, default=0.3, help='Weight for lag 2 correlation')
-    parser.add_argument('--lag_l3_weight', type=float, default=0.2, help='Weight for lag 3 correlation')
+    parser.add_argument('--lag_gain_weight', type=float, required=True, help='Weight for lag predictive emergence objective')
+    parser.add_argument('--lag_max_lag', type=int, required=True, help='Maximum lag horizon considered for predictive emergence')
+    parser.add_argument('--lag_l1_weight', type=float, required=True, help='Weight for lag 1 correlation')
+    parser.add_argument('--lag_l2_weight', type=float, required=True, help='Weight for lag 2 correlation')
+    parser.add_argument('--lag_l3_weight', type=float, required=True, help='Weight for lag 3 correlation')
     # Consistency rebalancing & variance floor dynamics
-    parser.add_argument('--consistency_rebalance_epoch', type=int, default=8, help='Epoch to start potential consistency loss weight reduction')
-    parser.add_argument('--consistency_rebalance_threshold', type=float, default=0.10, help='Mastery corr threshold triggering consistency reweight')
-    parser.add_argument('--consistency_rebalance_new_weight', type=float, default=0.2, help='New consistency loss weight after rebalancing')
-    parser.add_argument('--variance_floor', type=float, default=1e-4, help='Variance floor for mastery tensor triggering sparsity reduction')
-    parser.add_argument('--variance_floor_patience', type=int, default=3, help='Consecutive low-variance epochs before sparsity reduction')
-    parser.add_argument('--variance_floor_reduce_factor', type=float, default=0.5, help='Factor to reduce sparsity loss weight under variance floor')
+    parser.add_argument('--consistency_rebalance_epoch', type=int, required=True, help='Epoch to start potential consistency loss weight reduction')
+    parser.add_argument('--consistency_rebalance_threshold', type=float, required=True, help='Mastery corr threshold triggering consistency reweight')
+    parser.add_argument('--consistency_rebalance_new_weight', type=float, required=True, help='New consistency loss weight after rebalancing')
+    parser.add_argument('--variance_floor', type=float, required=True, help='Variance floor for mastery tensor triggering sparsity reduction')
+    parser.add_argument('--variance_floor_patience', type=int, required=True, help='Consecutive low-variance epochs before sparsity reduction')
+    parser.add_argument('--variance_floor_reduce_factor', type=float, required=True, help='Factor to reduce sparsity loss weight under variance floor')
     # Constraint scheduling / performance alignment
-    parser.add_argument('--warmup_constraint_epochs', type=int, default=4, help='Warm-up epochs for performance alignment losses')
+    parser.add_argument('--warmup_constraint_epochs', type=int, required=True, help='Warm-up epochs for performance alignment losses')
     parser.add_argument('--enable_cosine_perf_schedule', action='store_true', help='Use cosine schedule for performance alignment weights')
-    parser.add_argument('--max_semantic_students', type=int, default=50, help='Students sampled for consistency semantic correlations')
+    parser.add_argument('--max_semantic_students', type=int, required=True, help='Students sampled for consistency semantic correlations')
     # =====================
     # Architecture flags (added for full CLI reproducibility & ablation control)
     # These mirror keys in config['model_config'] and allow overriding defaults without editing config.json.
     # If --config is provided, values from config are used unless an explicit CLI override flag is present.
-    parser.add_argument('--seq_len', type=int, default=200, help='Maximum sequence length (architecture)')
-    parser.add_argument('--d_model', type=int, default=128, help='Model hidden dimension (Transformer)')
-    parser.add_argument('--n_heads', type=int, default=4, help='Number of attention heads')
-    parser.add_argument('--num_encoder_blocks', type=int, default=2, help='Number of Transformer encoder blocks')
-    parser.add_argument('--d_ff', type=int, default=256, help='Feed-forward layer dimension')
-    parser.add_argument('--dropout', type=float, default=0.1, help='Transformer dropout rate')
-    parser.add_argument('--emb_type', type=str, default='qid', choices=['qid','concept','hybrid'], help='Embedding type used for questions/concepts')
+    parser.add_argument('--seq_len', type=int, required=True, help='Maximum sequence length (architecture)')
+    parser.add_argument('--d_model', type=int, required=True, help='Model hidden dimension (Transformer)')
+    parser.add_argument('--n_heads', type=int, required=True, help='Number of attention heads')
+    parser.add_argument('--num_encoder_blocks', type=int, required=True, help='Number of Transformer encoder blocks')
+    parser.add_argument('--d_ff', type=int, required=True, help='Feed-forward layer dimension')
+    parser.add_argument('--dropout', type=float, required=True, help='Transformer dropout rate')
+    parser.add_argument('--emb_type', type=str, choices=['qid','concept','hybrid'], required=True, help='Embedding type used for questions/concepts')
     # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
     # If a config path is passed, set PYKT_CONFIG_PATH so internal loaders pick it up.

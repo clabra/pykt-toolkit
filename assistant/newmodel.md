@@ -1,1 +1,1 @@
-gainakt_architecture_approach.md
+gainakt2exp_architecture_approach.md

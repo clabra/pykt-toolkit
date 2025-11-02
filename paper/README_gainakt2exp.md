@@ -1,128 +1,648 @@
-# GainAKT2Exp - Current State, Reproduction, and Interpretability Assessment
+# GainAKT2Exp - Reproducibility Guide
+
+**Last Updated:** November 2, 2025  
+**Current Approach:** Explicit Parameters, Zero Defaults
+
+---
+
+## Executive Summary
+
+This document describes the reproducibility infrastructure for training, evaluating, and reproducing GainAKT2Exp experiments. The system enforces **zero hidden defaults**: all ~60 training parameters and ~20 evaluation parameters must be explicitly specified via command line. A single launcher script (`run_repro_experiment_simple.py`) manages the complete workflow.
+
+**Key Features:**
+- ✅ Single source of truth: `configs/parameter_default.json` (63 parameters)
+- ✅ Explicit commands: ALL parameters visible in generated commands
+- ✅ MD5 integrity: Tamper detection for config defaults
+- ✅ Auto-reproduction: Use 6-digit experiment ID to rerun experiments
+- ✅ Parameter provenance: Clear trail from defaults → CLI overrides → execution
+
+**Quick Commands:**
+```bash
+# Train
+python examples/run_repro_experiment_simple.py --short_title test --epochs 12
+
+# Reproduce
+python examples/run_repro_experiment_simple.py --repro_experiment_id 584063
+
+# Evaluate (copy eval_explicit command from config.json)
+cd examples/experiments/[experiment_folder]
+cat config.json | grep eval_explicit
+# → Copy and run the command
+
+# Compare
+python examples/compare_reproduction.py 584063
+```
+
+---
 
 ## Quick Start
 
-### 1. Launch Reproducible Experiment
+### Reproducibility Philosophy: No Hidden Defaults
+
+All scripts follow a **strict no-defaults** design:
+- Every parameter must be **explicitly specified** via command line
+- No hardcoded fallback values in argparse (all parameters use `required=True`)
+- Single source of truth: `configs/parameter_default.json`
+- Launcher generates explicit commands with ALL ~60+ parameters visible
+- Config integrity verified via MD5 hash
+
+### 1. Launch Training Experiment
 
 ```bash
-python examples/run_repro_experiment.py \
-  --train_script examples/train_gainakt2exp.py \
-  --model_name gainakt2exp \
-  --dataset assist2015 \
-  --short_title experiment_name
+python examples/run_repro_experiment_simple.py \
+  --short_title baseline \
+  --epochs 12 \
+  --batch_size 64
 ```
 
-Creates the experiment folder, e.g. `examples/experiments/20251030_181629_gainakt2exp_experiment_name/` where you can find the commands to evaluate the model and relaunch the experiment in a reproducible way, as the fully resolved training command wthat explicitly set all the parameter values. 
+**What happens:**
+1. Loads all defaults from `configs/parameter_default.json` (63 parameters)
+2. Applies CLI overrides (e.g., epochs, batch_size)
+3. Generates 6-digit experiment ID (e.g., `423891`)
+4. Creates experiment folder: `20251102_143210_gainakt2exp_baseline_423891/`
+5. Builds **explicit training command** with ALL parameters:
+   ```bash
+   python examples/train_gainakt2exp.py \
+     --dataset assist2015 --fold 0 --seed 42 --epochs 12 --batch_size 64 \
+     --learning_rate 0.000174 --weight_decay 1e-05 --optimizer adam \
+     --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 \
+     ... (50+ more explicit parameters)
+   ```
+6. Saves config.json with:
+   - `defaults`: Pristine copy from parameter_default.json
+   - `overrides`: CLI parameters that differ from defaults
+   - `commands.train_explicit`: Complete command with all parameters
+   - `md5`: Hash of original defaults (tamper detection)
 
-### 2. Evaluation Command
+### 2. Evaluate Trained Model
 
-Added to `config.json.runtime.eval_command` (only overrides from evaluation defaults emitted):
+Get evaluation command from config.json
 
+```bash
+cd examples/experiments/20251102_143210_gainakt2exp_baseline_423891
+# Copy the eval_explicit command from config.json and run it
+```
+
+Evaluation command set all parameters explicitly, example: 
 ```bash
 python examples/eval_gainakt2exp.py \
-  --run_dir examples/experiments/20251030_181629_gainakt2exp_experiment_name \
-  --dataset assist2015 \
+  --run_dir examples/experiments/20251102_143210_gainakt2exp_baseline_423891 \
+  --max_correlation_students 300 \
+  --dataset assist2015 --fold 0 --batch_size 64 \
+  --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 \
+  --d_ff 1024 --dropout 0.2 --emb_type qid \
+  --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 \
+  --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 \
+  --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 \
+  --use_mastery_head --use_gain_head
 ```
 
-### 3. Reproduce / Audit an Existing Run
+**What it does:**
+- Loads `model_best.pth` from experiment folder
+- Computes validation/test AUC, accuracy
+- Computes mastery/gain correlations (up to a limited number of students for bounded runtime)
+- Saves `eval_results.json`, `config_eval.json`, `metrics_epoch_eval.csv`
+
+**Important:** Evaluation requires ~20 architecture/constraint parameters to match training configuration. Using the `eval_explicit` command from config.json ensures perfect parameter alignment.
+
+### 3. Reproduce Existing Experiment
 
 ```bash
-python examples/relaunch_experiment.py \
-  --source_dir examples/experiments/20251030_181629_gainakt2exp_experiment_name \
-  --short_title relaunch \
+python examples/run_repro_experiment_simple.py \
+  --repro_experiment_id 423891
 ```
 
-Produces a new relaunch folder + `relaunch_audit.json` summarizing MD5 match, parameter diffs, and device adaptation (if any).
+**What happens:**
+1. Searches for experiment folder containing ID `423891`
+2. Loads original `config.json` (perfect defaults + original overrides)
+3. Creates reproduction folder: `20251102_154320_gainakt2exp_423891_repro/`
+4. Copies config.json **unchanged** (byte-for-byte identical)
+5. Executes the **same explicit training command** from original config
 
-## Reproducibility
+**Key principle:** No parameter inference, no adaptation, no modifications—exact rerun.
 
-Using `examples/run_repro_experiment.py` to launch experiments guarantees any published GainAKT2Exp result is reconstructable via a single `config.json` plus stored commands.
+### 4. Compare Original vs Reproduction
 
-### Canonical Defaults Source
+```bash
+python examples/compare_reproduction.py 423891
+```
 
-Defaults are centralized in `configs/parameter_default.json` (sections: `training_defaults`, `evaluation_defaults`). The launcher ingests this file to populate unspecified parameters—`config.json` reflects resolved values explicitly; no hidden defaults.
+Auto-detects reproduction folder and shows:
+```
+Metric                    Original      Repro         Diff          Status  
+----------------------------------------------------------------------------------------------------
+Best Val AUC              0.7412        0.7411        0.0001        ✅ PASS
+Best Val Accuracy         0.6812        0.6811        0.0001        ✅ PASS
+Mastery Correlation       0.5234        0.5231        0.0003        ✅ PASS
+Gain Correlation          0.4123        0.4122        0.0001        ✅ PASS
+```
 
-A MD5 hash is computed from config.json (sorted keys). When relaunch_experiment.py runs it compares parameters between original and relaunch config.json files
+## Reproducibility Architecture
 
-### Integrity Checklist
+### Core Principle: Explicit Parameters, Zero Defaults
 
-Each experiment folder MUST contain: `config.json`, `environment.txt`, `SEED_INFO.md`, `stdout.log`, `metrics_epoch.csv`, `model_best.pth` (unless `--dry_run`), `model_last.pth`. Missing artifacts invalidate reproducibility claims.
+**Design Philosophy:**
+- **No hardcoded defaults**: Every parameter in training/evaluation scripts uses `required=True`
+- **Single source of truth**: `configs/parameter_default.json` (63 parameters)
+- **Explicit commands**: Launcher generates commands with ALL parameters visible
+- **Tamper detection**: MD5 hash verifies config integrity
+- **Parameter provenance**: Clear trail from defaults → CLI overrides → explicit command
 
-### Evaluation Notes
+### Parameter Flow
 
-`eval_gainakt2exp.py` loads `best_model.pth` and computes validation/test metrics. Mastery and gain correlations are sampled up to `--max_correlation_students` (default 300) for bounded runtime.
+```
+┌─────────────────────────────────┐
+│ configs/parameter_default.json  │  ← Single source of truth
+│ - training_defaults (63 params) │
+│ - md5: ca1ef5c... (integrity)   │
+└────────────┬────────────────────┘
+             │
+             ↓ (load all defaults)
+┌─────────────────────────────────┐
+│ run_repro_experiment_simple.py  │  ← Launcher
+│ - Apply CLI overrides           │
+│ - Build explicit commands       │
+└────────────┬────────────────────┘
+             │
+             ↓ (save to experiment folder)
+┌─────────────────────────────────┐
+│ config.json                     │
+│ ├─ defaults: {...perfect...}   │  ← Unchanged from parameter_default.json
+│ ├─ overrides: {epochs: 12, ...} │  ← CLI parameters that differ
+│ ├─ commands:                    │
+│ │  ├─ train_explicit: "python   │  ← ALL 60+ params explicit
+│ │  │    train_gainakt2exp.py    │
+│ │  │    --param1 val1 ...       │
+│ │  ├─ eval_explicit: "python    │  ← ALL 20+ params explicit
+│ │  │    eval_gainakt2exp.py..." │
+│ │  └─ reproduce: "python run... │
+│ └─ md5: ca1ef5c...              │  ← Hash of perfect defaults
+└────────────┬────────────────────┘
+             │
+             ↓ (execute explicit command)
+┌─────────────────────────────────┐
+│ train_gainakt2exp.py            │  ← Training script
+│ - Receives ALL params via CLI   │
+│ - No config.json reading        │
+│ - No hardcoded defaults         │
+└─────────────────────────────────┘
+```
 
-### Updating or Extending Parameters
+### Training Mode vs Reproduction Mode
 
-Every parameter must have a path from CLI → argparse → defaults JSON → config.json, and breaking any link in this chain undermines the entire reproducibility guarantee
+**Training Mode** (default):
+```bash
+python examples/run_repro_experiment_simple.py \
+  --short_title baseline --epochs 12 --batch_size 64
+```
+1. Loads 63 defaults from `configs/parameter_default.json`
+2. Applies CLI overrides (epochs=12, batch_size=64)
+3. Generates 6-digit experiment ID (e.g., `584063`)
+4. Creates folder: `20251102_202046_gainakt2exp_baseline_584063/`
+5. Builds explicit command with **all 60+ parameters**
+6. Saves config.json with perfect defaults + overrides
+7. Executes explicit training command
 
-When adding a new flag to training or evaluation scripts: 
+**Reproduction Mode**:
+```bash
+python examples/run_repro_experiment_simple.py \
+  --repro_experiment_id 584063
+```
+1. Searches for experiment folder containing `584063`
+2. Loads original `config.json` (perfect defaults + original overrides)
+3. Creates reproduction folder: `20251102_203015_gainakt2exp_584063_repro/`
+4. Copies config.json **byte-for-byte unchanged**
+5. Executes the **same explicit training command** from original
 
-(i) add to argparse 
+### Config.json Structure
 
-If not, the principle "no hidden defaults" is violated, silent reproducibility failures become possible, if it's an arch parameter then training and evaluation become incompatible. 
+Each experiment's config.json contains:
 
-The drift checker only sees what has been added to argparse that is exposed with --help. 
-
-
-
-(ii) add a default to `parameter_default.json` 
-
-If not, the principle "no hidden defaults" is violated, it won't appear in substantive vs. metadata categorization and relaunch audits can't distinguish whether changes are benign or breaking. 
-
-If not, config.json will record the drift in preflight_consistency section:
+```json
 {
-  "preflight_consistency": {
-    "missing_in_json_training": ["your_new_parameter"],
-    "drift_detected": true,
-    "exit_code": 1
+  "input": {
+    "dataset": "assist2015",
+    "fold": 0,
+    "model": "gainakt2exp",
+    "train_script": "examples/train_gainakt2exp.py",
+    "eval_script": "examples/eval_gainakt2exp.py"
+  },
+  "commands": {
+    "run_repro_original": "python examples/run_repro_experiment_simple.py --short_title baseline --epochs 12",
+    "train_explicit": "EXPERIMENT_DIR=/path/to/exp python examples/train_gainakt2exp.py --dataset assist2015 --fold 0 --seed 42 --epochs 12 --batch_size 64 --learning_rate 0.000174 ... (60+ params)",
+    "eval_explicit": "python examples/eval_gainakt2exp.py --run_dir /path/to/exp --max_correlation_students 300 --dataset assist2015 --fold 0 ... (20+ params)",
+    "reproduce": "python examples/run_repro_experiment_simple.py --repro_experiment_id 584063"
+  },
+  "experiment": {
+    "id": "20251102_202046_gainakt2exp_baseline_584063",
+    "short_title": "baseline",
+    "experiment_id": "584063",
+    "created": "20251102_202046"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [42]
+  },
+  "defaults": {
+    "model": "gainakt2exp",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "epochs": 12,
+    "batch_size": 64,
+    ... (63 total perfect defaults)
+  },
+  "overrides": {
+    "epochs": 12,
+    "batch_size": 64
+  },
+  "types": { ... },
+  "md5": "ca1ef5c58232b47017ec7d1ba70e17d7",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
   }
 }
+```
 
+**Key sections:**
+- **`defaults`**: Pristine copy from `parameter_default.json` (unchanged)
+- **`overrides`**: Only parameters that differ from defaults (CLI args)
+- **`commands.train_explicit`**: Complete command with ALL parameters explicit
+- **`commands.eval_explicit`**: Complete evaluation command with ALL architecture params
+- **`md5`**: Hash of `defaults` section for tamper detection
+
+### MD5 Integrity Verification
+
+**Purpose:** Detect manual tampering of config.json defaults
+
+**Computation:**
+```python
+import json, hashlib
+defaults_str = json.dumps(config['defaults'], sort_keys=True)
+md5 = hashlib.md5(defaults_str.encode()).hexdigest()
+# Result: ca1ef5c58232b47017ec7d1ba70e17d7
+```
+
+**Verification flow:**
+1. Launcher saves config.json with MD5 of perfect defaults
+2. On reproduction/relaunch, recompute MD5 from `config['defaults']`
+3. Compare with stored `config['md5']`
+4. If mismatch → WARNING: defaults have been manually modified
+
+**What it catches:**
+- ✅ Manual edits to defaults in config.json
+- ✅ Config corruption or file tampering
+- ✅ Drift between parameter_default.json versions
+
+**What it doesn't catch:**
+- Changes to `overrides` section (intentional user modifications)
+- Changes to `commands` section (regenerated on relaunch)
+- Metadata changes (timestamps, folder paths)
+
+### Experiment ID System
+
+**Format:** 6-digit random number (100000-999999)
+
+**Purpose:**
+- Uniquely identifies each experiment
+- Enables simple reproduction: `--repro_experiment_id XXXXXX`
+- Persists across reproductions (same ID + `_repro` suffix)
+- Easy reference in papers, discussions, logs
+
+**Folder naming:**
+```
+YYYYMMDD_HHMMSS_modelname_shorttitle_XXXXXX
+20251102_202046_gainakt2exp_baseline_584063       ← Original
+20251102_203015_gainakt2exp_584063_repro          ← Reproduction
+```
+
+### Parameter Management
+
+**Single Source of Truth:** `configs/parameter_default.json`
+
+Structure:
+```json
 {
-  "missing_in_json_training": ["new_hyperparameter"],
-  "missing_in_argparse_training": [],
-  "extraneous_training_defaults": [],
-  "drift_detected": true
+  "defaults": {
+    "model": "gainakt2exp",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "train_script": "examples/train_gainakt2exp.py",
+    "eval_script": "examples/eval_gainakt2exp.py",
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1e-05,
+    "optimizer": "adam",
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    ... (63 total parameters)
+  },
+  "types": {
+    "seed": "int",
+    "epochs": "int",
+    "batch_size": "int",
+    "learning_rate": "float",
+    "use_mastery_head": "bool",
+    ... (type information for validation)
+  },
+  "md5": "ca1ef5c58232b47017ec7d1ba70e17d7"
 }
+```
 
-The three-layer protection model (canonical changes, snapshot validation, schema evolution) won't cover it.
+**Key parameters categories:**
+1. **Runtime**: seed, epochs, batch_size, learning_rate, optimizer
+2. **Architecture**: seq_len, d_model, n_heads, num_encoder_blocks, d_ff, dropout
+3. **Embeddings**: emb_type, emb_size
+4. **Constraints**: non_negative_loss_weight, monotonicity_loss_weight, mastery_performance_loss_weight, gain_performance_loss_weight, sparsity_loss_weight, consistency_loss_weight
+5. **Interpretability**: use_mastery_head, use_gain_head, use_cumulative_mastery
+6. **Evaluation**: max_correlation_students (eval-only, not used in training)
+7. **Launcher-only**: model, train_script, eval_script (not passed to training script)
 
+### Training Script Design
 
-(iii) verify presence in generated `config.json`
+**File:** `examples/train_gainakt2exp.py`
 
-Missing parameters in config.json represent catastrophic reproducibility failure because:
-- Violates "no hidden defaults" principle
-- Incomplete provenance trail
-- MD5 hash doesn't capture all hyperparameters
-- Verbose command cannot reproduce the run
-- Relaunch audits have blind spots
-- Evaluation may fail with architecture mismatch
-- Cannot be used in publication or comparative analysis
-- Indicates critical launcher bug
+**Key principles:**
+- **Zero hardcoded defaults**: All argparse parameters use `required=True`
+- **No config.json reading**: Only accepts CLI parameters
+- **Architecture from CLI**: All model parameters (d_model, n_heads, etc.) from CLI
 
-The preflight consistency audit would catch this:
-{
-  "preflight_consistency": {
-    "drift_detected": true,
-    "missing_parameters": ["learning_rate"]
-  }
-}
+**Parameter count:** ~60 required parameters
 
-(iv) re-run a dry run to ensure MD5 stability except for intended additions.
+**Example invocation** (generated by launcher):
+```bash
+EXPERIMENT_DIR=/path/to/exp python examples/train_gainakt2exp.py \
+  --dataset assist2015 \
+  --fold 0 \
+  --seed 42 \
+  --epochs 12 \
+  --batch_size 64 \
+  --learning_rate 0.000174 \
+  --weight_decay 1e-05 \
+  --optimizer adam \
+  --seq_len 200 \
+  --d_model 512 \
+  --n_heads 8 \
+  --num_encoder_blocks 6 \
+  --d_ff 1024 \
+  --dropout 0.2 \
+  --emb_type qid \
+  --non_negative_loss_weight 0.0 \
+  --monotonicity_loss_weight 0.1 \
+  --mastery_performance_loss_weight 0.8 \
+  --gain_performance_loss_weight 0.8 \
+  --sparsity_loss_weight 0.2 \
+  --consistency_loss_weight 0.3 \
+  --use_mastery_head \
+  --use_gain_head \
+  --use_cumulative_mastery \
+  ... (40+ more parameters)
+```
 
-The primary purpose of the dry run is to verify that:
-- The new parameter appears correctly in config.json
-- The MD5 hash changes only due to the intended new parameter
-- No unintended side effects or drift occurred
+**Why explicit parameters?**
+- Complete provenance: See ALL hyperparameters in one command
+- No hidden state: What you see is what you get
+- Perfect reproduction: Copy-paste the command to rerun
+- Version safety: No risk of default value drift over time
 
-Without verification:
-- You don't confirm drift_detected: false
-- Might miss missing_in_json_training or missing_in_argparse_training warnings
-- Parameter asymmetries remain hidden until production runs
-- If the new parameter is architecture-related, evaluation script reads corrupted architecture and aborts with architecture mismatch.
+### Evaluation Script Design
 
-The dry run is absolutely critical when:
+**File:** `examples/eval_gainakt2exp.py`
+
+**Key principles:**
+- **Zero hardcoded defaults**: All argparse parameters use `required=True`
+- **No config.json reading**: Only accepts CLI parameters (like training)
+- **Architecture must match training**: Requires same d_model, n_heads, etc.
+
+**Parameter count:** ~20 required parameters
+
+**Why architecture params needed:**
+- Model checkpoint contains weights but not architecture metadata
+- Evaluation must recreate exact model structure to load weights
+- Architecture mismatch → model loading failure
+
+**Example invocation** (generated by launcher):
+```bash
+python examples/eval_gainakt2exp.py \
+  --run_dir /path/to/experiment \
+  --max_correlation_students 300 \
+  --dataset assist2015 \
+  --fold 0 \
+  --batch_size 64 \
+  --seq_len 200 \
+  --d_model 512 \
+  --n_heads 8 \
+  --num_encoder_blocks 6 \
+  --d_ff 1024 \
+  --dropout 0.2 \
+  --emb_type qid \
+  --non_negative_loss_weight 0.0 \
+  --monotonicity_loss_weight 0.1 \
+  --mastery_performance_loss_weight 0.8 \
+  --gain_performance_loss_weight 0.8 \
+  --sparsity_loss_weight 0.2 \
+  --consistency_loss_weight 0.3 \
+  --use_mastery_head \
+  --use_gain_head
+```
+
+**Best practice:** Copy `eval_explicit` command from experiment's config.json
+
+### Launcher Parameter Filtering
+
+The launcher (`run_repro_experiment_simple.py`) excludes certain parameters from training/evaluation:
+
+**Launcher-only parameters** (excluded from training):
+- `model`: Used for folder naming and script selection
+- `train_script`: Path to training script
+- `eval_script`: Path to evaluation script
+- `max_correlation_students`: Evaluation-only parameter
+
+**Training parameters:** 59 (63 total - 4 launcher-only)
+**Evaluation parameters:** 20 (architecture + constraints + eval-specific)
+
+**Why exclude?**
+- Training script doesn't have `--model` argparse (model is hardcoded as gainakt2exp)
+- `max_correlation_students` only used in evaluation (correlation sampling limit)
+- Keeps training command clean and focused
+
+### Reproducibility Checklist
+
+Each experiment folder **MUST** contain these artifacts:
+
+| File/Dir | Purpose | Verification |
+|----------|---------|--------------|
+| `config.json` | Complete parameter record + explicit commands | MD5 integrity check |
+| `environment.txt` | Python/PyTorch/CUDA versions, git commit | Version match |
+| `SEED_INFO.md` | Seeds used and rationale | Determinism audit |
+| `stdout.log` | Raw console output with timestamps | Training trajectory |
+| `stderr.log` | Error output (if any) | Debug failures |
+| `metrics_epoch.csv` | Per-epoch metrics (loss, AUC, correlations) | Performance tracking |
+| `results.json` | Best epoch metrics + final summary | Key results |
+| `model_best.pth` | Best checkpoint (by validation AUC) | Evaluation/deployment |
+| `model_last.pth` | Last epoch checkpoint | Recovery/debugging |
+| `README.md` | Human-readable summary + results table | Documentation |
+
+**Missing artifacts = Invalid reproducibility claim**
+
+### Common Workflows
+
+**Workflow 1: Train → Evaluate → Compare**
+```bash
+# 1. Train new experiment
+python examples/run_repro_experiment_simple.py \
+  --short_title new_arch \
+  --epochs 12 \
+  --batch_size 128
+# → Creates: 20251102_150000_gainakt2exp_new_arch_123456/
+
+# 2. Evaluate (copy eval_explicit from config.json)
+cd examples/experiments/20251102_150000_gainakt2exp_new_arch_123456
+cat config.json | grep eval_explicit
+# → Copy and run the eval command
+
+# 3. Compare with baseline
+python examples/compare_reproduction.py 123456
+```
+
+**Workflow 2: Reproduce for Verification**
+```bash
+# 1. Reproduce experiment 423891
+python examples/run_repro_experiment_simple.py \
+  --repro_experiment_id 423891
+# → Creates: 20251102_160000_gainakt2exp_423891_repro/
+
+# 2. Compare metrics
+python examples/compare_reproduction.py 423891
+# → Shows original vs reproduction side-by-side
+```
+
+**Workflow 3: Parameter Sweep**
+```bash
+# Train multiple configurations
+for lr in 0.0001 0.00017 0.0003; do
+  python examples/run_repro_experiment_simple.py \
+    --short_title lr_${lr} \
+    --learning_rate ${lr}
+done
+
+# Compare results in examples/experiments/RESULTS.csv
+```
+
+**Workflow 4: Debug Reproduction Failure**
+```bash
+# 1. Check config MD5 integrity
+cd examples/experiments/20251102_150000_gainakt2exp_test_123456
+python -c "
+import json, hashlib
+config = json.load(open('config.json'))
+computed = hashlib.md5(json.dumps(config['defaults'], sort_keys=True).encode()).hexdigest()
+print('Stored MD5:  ', config['md5'])
+print('Computed MD5:', computed)
+print('Match:', config['md5'] == computed)
+"
+
+# 2. Check environment consistency
+cat environment.txt
+git log -1 --oneline
+
+# 3. Compare explicit commands
+cat config.json | jq '.commands.train_explicit'
+
+# 4. Re-run with same seed
+# Use the exact train_explicit command from config.json
+```
+
+### Config Integrity: MD5 Deep Dive
+
+**Why MD5 for defaults?**
+- Detect manual tampering of config.json
+- Ensure perfect defaults match parameter_default.json
+- Catch config corruption or file damage
+- Prevent silent drift in reproducibility claims
+
+**How it works:**
+1. Launcher loads `configs/parameter_default.json`
+2. Copies perfect defaults to `config.json['defaults']`
+3. Computes MD5: `md5(json.dumps(defaults, sort_keys=True))`
+4. Stores in `config.json['md5']`
+5. On reproduction: recompute MD5 and compare
+6. Mismatch → WARNING: defaults have been modified
+
+**What triggers mismatch:**
+- ✅ Manual edit of `config.json['defaults']` values
+- ✅ Corruption during file transfer
+- ✅ Different parameter_default.json version
+- ❌ Changes to `overrides` section (not checked)
+- ❌ Changes to `commands` section (not checked)
+- ❌ Metadata changes (timestamps, paths)
+
+**Current MD5:** `ca1ef5c58232b47017ec7d1ba70e17d7`
+
+**Verification example:**
+```python
+import json, hashlib
+
+# Load parameter_default.json
+defaults = json.load(open('configs/parameter_default.json'))
+
+# Compute MD5
+defaults_str = json.dumps(defaults['defaults'], sort_keys=True)
+md5 = hashlib.md5(defaults_str.encode()).hexdigest()
+
+print(md5)  # Should match: ca1ef5c58232b47017ec7d1ba70e17d7
+```
+
+### Parameter Evolution Protocol
+
+When adding/modifying parameters in `configs/parameter_default.json`:
+
+**Step 1: Update parameter_default.json**
+```bash
+# Edit configs/parameter_default.json
+# Add new parameter or change existing default
+```
+
+**Step 2: Recompute MD5**
+```bash
+python -c "
+import json, hashlib
+data = json.load(open('configs/parameter_default.json'))
+md5 = hashlib.md5(json.dumps(data['defaults'], sort_keys=True).encode()).hexdigest()
+data['md5'] = md5
+json.dump(data, open('configs/parameter_default.json', 'w'), indent=2)
+print(f'Updated MD5: {md5}')
+"
+```
+
+**Step 3: Update training/evaluation scripts**
+```bash
+# Add argparse parameter to train_gainakt2exp.py and/or eval_gainakt2exp.py
+# Ensure required=True (no hardcoded defaults)
+```
+
+**Step 4: Test with dry run**
+```bash
+python examples/run_repro_experiment_simple.py \
+  --short_title test_new_param \
+  --epochs 1
+# Check that new parameter appears in config.json
+```
+
+**Step 5: Document in README**
+```bash
+# Update this README with parameter description
+# Add to parameter categories section
+```
+
+**Failure to follow protocol:**
+- Training script rejects unknown parameter
+- MD5 mismatch warnings
+- Reproducibility chain broken
+- Evaluation may fail (architecture mismatch)
 
 - Adding first-time parameter (no prior baseline exists)
 - Modifying architecture parameters (affects evaluation compatibility)
@@ -159,9 +679,9 @@ Bottom line: The drift checker is a safety net for steps (ii) and (iii), but ste
 
 Event: In any of the following scenarios the codebase (model, training/evaluation/reproduction scripts, etc.) might change from one experiment to the next. 
 
-Checkings: 
-  - There are no hidden parameters with hardcoded default values that change without notice, distorting the interpretation of the impact of hyperparameter changes.
-  - If parameters are added or changed (name or default values), this will be properly managed according to the 4 steps detailed in "### Updating or Extending Parameters" section. 
+Check that: 
+  - There are no hidden parameters with hardcoded default values that can change without notice, distorting the interpretation of the impact of hyperparameter changes.
+  - If parameters are added or changed (name or default value), "defaults" section of configs/parameter_default.json needs to be updated accordingly. 
 
 Action: 
 - Launch a consistency test after each change in the codebase and output warnings (only inform) or errors (inform and await for remediation)
@@ -169,564 +689,214 @@ Action:
 #### Scenario 1: Hyperparameter Sweep
 
 Objective: By doing a sweep, we mean systematically exploring different combinations of hyperparameters to find the configuration that yields the best performance.
+Guidelines: Use default values in configs/parameter_default.json as starting points. Once a optimal combination is found, ask to modify current defaults in configs/parameter_default.json
 
 #### Scenario 2: Ablation Studies
 
 Objective: in a ablation studio we change parameters one by one to measure their impact
+Guidelines: Check current value of the parameter to ablate in configs/parameter_default.json and change value to remove its impact (changing a boolean value, setting a weight to 0, etc.). Ask to see the convenience of modify current default. 
 
 #### Scenario 3: Benchmark
 
 Objective: compare metrics of different models or models variants with different combinations of hyperparameter values. 
-
-
-
-## Architecture
-
-```mermaid
-graph TD
-  A[Input Sequence: qid + correctness] --> B[Embedding]
-  B --> C[Positional Encoding]
-  C --> D[Transformer Encoder 6x512/8]
-  D --> E[Mastery Head]
-  D --> F[Gain Head]
-  E --> E1[Mastery Trajectory]
-  F --> F1[Gain Estimates]
-
-  subgraph Constraints
-    M1[Monotonicity]
-    Pm[MasteryPerfAlign]
-    Pg[GainPerfAlign]
-    S[Sparsity]
-    Cons[Consistency]
-  end
-
-  subgraph Semantics
-    Al[LocalAlign]
-    GAl[GlobalResidualAlign]
-    Ret[Retention]
-    Lag[LagGains]
-  end
-
-  E1 --> M1
-  E1 --> Pm
-  F1 --> Pg
-  F1 --> S
-  E1 --> Cons
-  F1 --> Cons
-
-  D --> Al
-  D --> GAl
-  E1 --> Ret
-  F1 --> Lag
-
-  Al --> GAl
-  GAl --> E1
-  Ret --> E1
-  Lag --> F1
-
-  subgraph Schedule
-    Warm[Warmup]
-    Cap[AlignShareCap]
-    Resid[Residualization]
-  end
-
-  Warm --> Al
-  Warm --> Constraints
-  Cap --> Al
-  Resid --> GAl
-
-  E1 --> O1[MasteryCorr]
-  F1 --> O2[GainCorr]
-  Constraints --> Opt[Optimizer]
-  Semantics --> Opt
-  Opt --> D
-```
-
-_Fallback textual description:_ The input (question id + correctness) is embedded and positionally encoded before passing through a 6-layer transformer (d_model 512, 8 heads). Two heads produce mastery and gain trajectories. Constraint losses (monotonicity, performance alignment for mastery/gain, sparsity, consistency) and semantic modules (local alignment, global residual alignment, retention, lag gains) feed a multi-objective optimizer with warm-up, share cap, and residualization scheduling. Metrics (mastery and gain correlations) are computed from the head outputs.
-
-
-
-
-
-## Reproducible Experiment Workflow
-
-This supplements the earlier ad-hoc commands with the formal launcher + evaluation pipeline. Every published result MUST originate from a launcher-generated folder under `examples/experiments/` containing a canonical `config.json`.
-
-### Executive Summary of Reproducibility Guarantees (2025-11-01 Update)
-
-We enforce end-to-end determinism (Python, NumPy, PyTorch, CUDA) and explicit parameter resolution. A run is considered reproducible only if the sorted MD5 of `config.json` matches and all required artifacts are present. Hidden defaults are disallowed: every training and evaluation flag appears exactly once in `configs/parameter_default.json`. Architecture parameters (seq_len, d_model, n_heads, num_encoder_blocks, d_ff, dropout, emb_type) are now promoted to CLI flags for both training and evaluation, eliminating earlier reproduction gaps.
-
-Runtime-only invariants (not user-overridable) are whitelisted: `auto_shifted_eval` (must be `true`). Invariant violations are surfaced during training and relaunch audits. Drift detection between argparse exposure and default JSON keys is performed preflight; results embedded in `config.json.preflight_consistency` with stdout PASS/DRIFT signaling.
-
-Interpretability metrics (mastery_corr, gain_corr) are computed via deterministic student selection (sorted, capped) removing prior sampling variance. Constraint loss contributions and semantic module shares are logged per epoch enabling correlation-performance trade-off inspection.
-
-| Guarantee | Mechanism | Artifact |
-|-----------|-----------|----------|
-| No hidden defaults | Central `parameter_default.json`; exhaustive argparse mapping | `config.json` (all keys) |
-| Deterministic seeds | Set Python/NumPy/Torch/CUDA + CuDNN deterministic | `SEED_INFO.md` |
-| Architecture drift prevention | Architecture flags mirrored in evaluation; mismatch abort | `eval_gainakt2exp.py` runtime check |
-| Preflight consistency audit | Defaults vs argparse diff, PASS/DRIFT stdout | `config.json.preflight_consistency` |
-| Config hash traceability | Sorted JSON MD5 stored | `config.json.config_md5` |
-| Invariant enforcement | Auto-shifted eval must remain true | Training stderr + relaunch audit |
-| Epoch metric integrity | Atomic JSON+CSV logging | `metrics_epoch.csv`, `results.json` |
-| Correlation determinism | Fixed ordered sampling subset | `metrics_epoch.csv` columns `mastery_corr`, `gain_corr` |
-| Resume safety (planned) | Pending `resume_state.json` design | (Future) |
-
-### Determinism & Fallback Strategy
-
-The training launcher enables PyTorch deterministic algorithms. If a kernel violates determinism, a controlled fallback records the offending batch indices and continues with deterministic constraints reinstated subsequently. We configure CuBLAS workspace determinism and disable nondeterministic benchmark heuristics. Any fallback occurrence is annotated in logs; absence of entries confirms strict determinism.
-
-### Invariants
-
-Current invariant set:
-1. `auto_shifted_eval == True` (runtime-only; ensures evaluation head shift behavior is consistent).
-2. Architecture tuple `(seq_len, d_model, n_heads, num_encoder_blocks, d_ff, dropout, emb_type)` stable between training and evaluation; evaluation aborts if mismatch.
-3. Presence of `seed` and `monitor_freq` in both `training_defaults` and emitted `config.json` (absence invalidates run).
-
-Invariant failures produce explicit diagnostic blocks in stdout and are recorded in relaunch audits under `invariant_failures`.
-
-### Preflight Consistency Audit
-
-Before training begins, the launcher performs a non-blocking audit comparing argparse-declared flags with JSON default sets. Results:
-* `drift_detected: false` => `[PreflightConsistency] CONSISTENCY PASS` printed.
-* `drift_detected: true` => `[PreflightConsistency] DRIFT DETECTED (details embedded in config)` printed and detailed diff added.
-
-Fields stored under `preflight_consistency`: `timestamp`, `drift_detected`, `missing_in_defaults`, `argparse_only`, `default_only`, `runtime_only_filtered`. This ensures later reviewers can reconstruct the exact preflight context.
-
-Interpretive definition: The preflight block answers four reproducibility questions:
-1. Coverage: Are all parameters declared in `parameter_default.json` present (no hidden defaults)?
-2. Symmetry: Are all argparse-exposed training and evaluation flags represented in the defaults JSON (no orphan CLI flags)?
-3. Architecture Integrity: Are all mandatory architecture keys (`seq_len`, `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`) defined across sections and exposed as CLI flags so evaluation can verify them?
-4. Drift Detection: Is there any mismatch between the expected parameter universe and what is actually exposed (`drift_detected` boolean)?
-
-Thus, preflight consistency is the embedded launch-time audit that verifies and records that every CLI-exposed and default-defined training/evaluation/architecture parameter set is complete and drift-free, forming the reproducibility contract for the experiment. If a future rerun alters results while the preflight block remained clean and the effective MD5 hash is unchanged, the discrepancy is attributable to environmental factors rather than configuration drift.
-
-### Parameter Coverage (Canonical Defaults Extract)
-
-All effective training parameters (including architecture and interpretability) reside in `training_defaults`. Evaluation mirrors architecture and loss weights to guard against representational drift. Metadata lists ignored runtime-only flags and schema revision identifiers. Any newly added flag must first appear in the JSON before experiment execution.
-
-Key additions since prior README revision:
-* Added architecture to evaluation defaults.
-* Introduced `enable_cosine_perf_schedule` (disabled by default) for performance-aligned scheduling.
-* Added `monitor_freq` to track logging cadence explicitly.
-* Formalized `ignored_training_flags`: `auto_shifted_eval`, `config`, `experiment_id`.
-* Consolidated deterministic correlation sampling and removed stochastic selection logic.
-
-### Evaluation Drift Guards
-
-`eval_gainakt2exp.py` now reconstructs baseline architecture from training `config.json` and checks CLI-supplied architecture flags. A mismatch triggers an abort to prevent silent architecture evaluation on divergent model shapes. Performance and constraint loss weight mismatches also raise guard exceptions unless explicitly aligned.
-
-### Reproducibility Checklist (Expanded)
-
-| Item | Status Policy |
-|------|---------------|
-| Folder naming convention | `[YYYYMMDD]_[HHMMSS]_[modelname]_[shorttitle]` enforced by launcher |
-| `config.json` completeness | Must include every parameter (boolean flags explicit) |
-| `config_md5` recorded | Required; absence invalidates run |
-| Shell command captured | `train.sh`/`evaluate.sh` or runtime section in `config.json` |
-| Checkpoints | `model_best.pth` + `model_last.pth` present unless dry run |
-| Epoch metrics | `metrics_epoch.csv` + `results.json` persisted atomically |
-| Seeds documented | `SEED_INFO.md` includes all seeds & determinism mode |
-| Environment captured | `environment.txt` records Python/PyTorch/CUDA versions, git commit |
-| Interpretability metrics | mastery_corr, gain_corr logged each epoch |
-| Correlation determinism | Deterministic sampling (fixed ordered IDs) |
-| Invariant adherence | No invariant failures recorded |
-
-All checklist items must be marked ✅ in per-experiment `README.md` for inclusion in comparative tables.
-
-### Future Work (Roadmap)
-
-1. Introduce `resume_state.json` with RNG snapshots for mid-epoch recovery.
-2. Hard-fail preflight drift unless `--allow_drift` explicitly passed (currently advisory).
-3. Emit `eval_config.json` with independent MD5 for evaluation reproducibility.
-4. Multi-seed orchestration wrapper producing aggregated stability statistics.
-5. Automated Appendix regeneration from `parameter_default.json` (script) to avoid manual drift.
-6. Confidence interval estimation for mastery/gain correlation trajectories (bootstrap over student subsets with deterministic ordering to ensure replicability).
-7. Add variance diagnostic plots (distribution of mastery variance vs floor across epochs).
-
-### Interpretability Metric Stability
-
-We reduced early volatility by replacing prior random stratified student sampling with deterministic sorted selection (capped at `max_semantic_students` for semantic modules; `max_correlation_students` for evaluation correlations). This ensures trajectory comparisons across relaunches produce tightly bounded deltas and reduces false regression alarms.
-
-### Audit Artifacts
-
-`relaunch_audit.json` records: `config_md5_match` boolean, `substantive_diffs` (excluding metadata keys), `metrics_comparison` (original vs relaunch best epoch within tolerance), and `invariant_failures`. Absence of substantive diffs combined with MD5 match and empty `invariant_failures` flags a clean reproduction.
-
-### Relaunch Audit Reporting (Enhanced)
-
-The relaunch experiment system provides **structured, actionable audit reports** displayed before training begins and after training completes.
-
-#### Pre-Training Audit Summary
-
-Displayed immediately after audit creation, before any training decision:
-
-```
-================================================================================
-RELAUNCH AUDIT SUMMARY
-================================================================================
-
-✅ REPRODUCIBILITY STATUS: EQUIVALENT
-   Reproducible: True
-
---------------------------------------------------------------------------------
-THREE-LAYER PROTECTION SUMMARY
---------------------------------------------------------------------------------
-
-✅ Layer 1 - CANONICAL CHANGES (Hyperparameter Detection)
-   Status: PASS
-   Action Required: False
-   No action needed - experiments are substantively equivalent
-
-✅ Layer 2 - SNAPSHOT VALIDATION (Consistency Check)
-   Status: PASS
-   Action Required: False
-   No action needed - snapshot values match canonical locations
-
-ℹ️  Layer 3 - SCHEMA EVOLUTION (Metadata Changes)
-   Status: BENIGN
-   Count: 43 changes
-     - Added: 25
-     - Changed: 0
-     - Skipped: 18
-   Action Required: False
-   No action needed - 25 metadata fields added, 0 changed, 18 skipped...
-
---------------------------------------------------------------------------------
-HASH VERIFICATION
---------------------------------------------------------------------------------
-
-✅ Effective Hash Match: True
-   Full Hash Match: False (includes metadata)
-   → full=all params including metadata; effective=substantive hyperparameters only
-
-✅ VERDICT: Experiments are substantively EQUIVALENT and REPRODUCIBLE
-   No action required. Safe to proceed.
-================================================================================
-```
-
-**Three-Layer Protection Model:**
-
-1. **Layer 1 - Canonical Changes**: Detects substantive hyperparameter differences (learning rate, batch size, model architecture, loss weights)
-2. **Layer 2 - Snapshot Validation**: Validates that `evaluation_snapshot.*` copies match their canonical hyperparameter sources
-3. **Layer 3 - Schema Evolution**: Tracks benign metadata changes (timestamps, hardware info, launcher version evolution)
-
-**Key Indicators:**
-
-- ✅ Green checkmark: PASS / No action needed
-- ❌ Red X: FAIL / Must resolve before proceeding
-- ⚠️ Warning triangle: Review recommended
-- ℹ️ Info icon: Informational only
-
-#### Post-Training Metrics Comparison
-
-After relaunch training completes, an enhanced metrics comparison report validates reproducibility:
-
-```
-================================================================================
-TRAINING COMPLETE - REPRODUCIBILITY REPORT
-================================================================================
-
---------------------------------------------------------------------------------
-METRICS COMPARISON REPORT
---------------------------------------------------------------------------------
-
-✅ METRICS REPRODUCED SUCCESSFULLY
-   All metrics within tolerance - reproducibility CONFIRMED
-
-Metric                    Original     Relaunch     Delta        Status    
---------------------------------------------------------------------------------
-Best Val Auc              0.726160     0.726180     0.000020     ✅ PASS
-Mastery Corr              0.101510     0.101480     0.000030     ✅ PASS
-Gain Corr                 0.066040     0.066010     0.000030     ✅ PASS
-
---------------------------------------------------------------------------------
-✅ VERDICT: Relaunch successfully reproduced original metrics
-   → Reproducibility validated. Safe to use relaunch results.
-
---------------------------------------------------------------------------------
-EXPERIMENT ARTIFACTS
---------------------------------------------------------------------------------
-Relaunch Directory: /workspaces/pykt-toolkit/examples/experiments/20251102_XXXXXX_relaunch
-Audit JSON:         .../relaunch_audit.json
-Metrics CSV:        .../metrics_epoch.csv
-Results JSON:       .../results.json
-Training Log:       .../stdout.log
-================================================================================
-```
-
-**Metric Tolerance Thresholds:**
-
-- `best_val_auc`: 0.001 (0.1%)
-- `mastery_corr`: 0.01 (1%)
-- `gain_corr`: 0.01 (1%)
-
-**Failure Diagnosis:**
-
-When metrics exceed tolerance, the report provides:
-
-- ❌ Per-metric failure indication
-- Percentage difference calculation
-- Possible causes (non-determinism, hardware differences, library versions, hyperparameter drift)
-- Actionable steps for investigation
-
-**Report Variants:**
-
-1. **Successful Reproduction**: All metrics within tolerance (✅)
-2. **Metrics Divergence**: Some metrics exceed tolerance with specific failure count and diagnostic guidance (❌)
-3. **Training Failed**: Non-zero exit code prevents comparison (❌)
-4. **Missing Metrics**: Original or relaunch metrics files not found (⚠️)
-
-#### Decision Gates
-
-Three sequential checks before training starts:
-
-1. **Strict Mode Check**: Aborts if violations detected with `--strict` flag
-2. **Blocking Issues Warning**: Warns about issues but allows continuation (unless strict mode)
-3. **Dry Run Exit**: Clean exit with audit report, no training execution
-
-#### Audit JSON Structure
-
-The `relaunch_audit.json` contains eight structured sections:
-
-1. **`reproducibility_status`**: Verdict, blocking issues, warnings, informational messages
-2. **`canonical_changes`**: Layer 1 hyperparameter comparison results
-3. **`snapshot_corruption`**: Layer 2 evaluation snapshot validation results
-4. **`schema_evolution`**: Layer 3 metadata change tracking
-5. **`experiment`**: Original and relaunch IDs, commands
-6. **`hash_verification`**: Full and effective MD5 hash comparison
-7. **`diagnostics`**: Missing parameters, invariant failures, device info
-8. **`execution`**: Dry run mode, strict mode, timestamp
-
-**Effective vs Full Hash:**
-
-- **Effective Hash**: Computed from substantive hyperparameters only (excludes metadata)
-- **Full Hash**: Includes all parameters including metadata (timestamps, hardware, etc.)
-- **Key Signal**: `effective_match: true` confirms substantive reproducibility
-
-
-
+Guidelines: use defaults to launch training and evaluation.
 
 
 ## Parameters
 
-**Parameter Group Explanations**
-- **model_config:**
-  - **Structural properties:**
-    - `d_model`, `num_encoder_blocks`: Define representational capacity.
-    - `n_heads`: Governs attention expressiveness.
-    - `dropout`: Regularization parameter.
-    - `use_mastery_head`, `use_gain_head`: Activate mastery and gain heads.
-  - **Constraint loss weights:**
-    - Define static baseline strengths for structural objectives applied to mastery/gain outputs.
+### Current Parameter Structure
 
-- **training_args:**
-  - **Experiment-level settings:**
-    - `dataset_name`: Specifies dataset identity.
-    - `num_epochs`, `batch_size`: Control training horizon and batch granularity.
-    - `learning_rate`, `weight_decay`: Optimizer hyperparameters.
-    - `enhanced_constraints`: Enables composite constraint scheduling.
-  - **Cross-validation:**
-    - `fold`: Index for dataset fold.
-  - **Reproducibility:**
-    - `constraint_weights`: Logs scalar coefficients for structural constraints.
+All parameters are stored in a **flat structure** in `configs/parameter_default.json` (63 parameters total). The launcher (`run_repro_experiment_simple.py`) loads these defaults and generates explicit commands with all parameters visible.
 
-- **constraint_weights:**
-  - **Structural constraints:**
-    - Monotonicity, performance alignment, sparsity, consistency, non-negative.
-  - **Auditability:**
-    - Matches corresponding entries in `model_config`.
+**Key parameter categories:**
 
-- **alignment:**
-  - **Local alignment configuration:**
-    - `enable_alignment_loss`: Toggles activation.
-    - `alignment_weight`: Sets base magnitude.
-    - `alignment_warmup_epochs`: Controls gradual ramp-up.
-    - `adaptive_alignment`: Enables dynamic scaling.
-    - `alignment_min_correlation`: Threshold for weight retention or increase.
+### 1. Infrastructure Parameters
+| Parameter | Default | Description | Used In |
+|-----------|---------|-------------|---------|
+| `model` | `"gainakt2exp"` | Model identifier | Launcher only (folder naming) |
+| `train_script` | `"examples/train_gainakt2exp.py"` | Training script path | Launcher only |
+| `eval_script` | `"examples/eval_gainakt2exp.py"` | Evaluation script path | Launcher only |
+| `dataset` | `"assist2015"` | Dataset name | Training + Evaluation |
+| `fold` | `0` | Cross-validation fold | Training + Evaluation |
+| `seed` | `42` | Random seed | Training |
 
-- **global_alignment:**
-  - **Residual alignment parameters:**
-    - `enable_global_alignment_pass`: Activates global alignment phase.
-    - `alignment_global_students`: Sample size for population-level coherence.
-    - `use_residual_alignment`: Operates on residualized performance signals.
-    - `alignment_residual_window`: Temporal span for residual calculation.
+### 2. Training Hyperparameters
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `epochs` | `12` | Number of training epochs |
+| `batch_size` | `64` | Training batch size |
+| `learning_rate` | `0.000174` | Optimizer learning rate |
+| `weight_decay` | `1e-05` | L2 regularization |
+| `optimizer` | `"adam"` | Optimizer type |
 
-- **refinement:**
-  - **Semantic enhancement:**
-    - `enable_retention_loss`: Prevents collapse of mastery peaks.
-    - `retention_delta`, `retention_weight`: Tune sensitivity.
-  - **Lag gain structuring:**
-    - `enable_lag_gain_loss`: Activates lag-based gain emergence.
-    - `lag_gain_weight`, `lag_l1_weight`, `lag_l2_weight`, `lag_l3_weight`: Control lag weights.
-    - `lag_max_lag`: Sets maximum lag.
-  - **Scheduling and robustness:**
-    - `enable_cosine_perf_schedule`: Modulates consistency pressure.
-    - `consistency_rebalance_epoch`, `consistency_rebalance_threshold`, `consistency_rebalance_new_weight`: Adjust consistency mid-training.
-  - **Variance stabilization:**
-    - `variance_floor`, `variance_floor_patience`, `variance_floor_reduce_factor`: Guard against degenerate latent distributions.
-  - **Alignment safety:**
-    - `alignment_share_cap`, `alignment_share_decay_factor`: Curb alignment dominance.
+### 3. Model Architecture
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `seq_len` | `200` | Maximum sequence length |
+| `d_model` | `512` | Model dimension |
+| `n_heads` | `8` | Number of attention heads |
+| `num_encoder_blocks` | `6` | Number of transformer blocks |
+| `d_ff` | `1024` | Feed-forward dimension |
+| `dropout` | `0.2` | Dropout rate |
+| `emb_type` | `"qid"` | Embedding type (question ID) |
 
-- **timestamp:**
-  - **Reproducibility tracking:**
-    - ISO-8601 timestamp of artifact creation.
+### 4. Interpretability Heads
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `use_mastery_head` | `true` | Enable mastery projection head |
+| `use_gain_head` | `true` | Enable gain projection head |
+| `use_cumulative_mastery` | `true` | Cumulative mastery accumulation |
 
-```
-  "model_config": {
-    "num_c": 100,
+### 5. Constraint Loss Weights
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `non_negative_loss_weight` | `0.0` | Non-negative gain constraint |
+| `monotonicity_loss_weight` | `0.1` | Monotonic mastery constraint |
+| `mastery_performance_loss_weight` | `0.8` | Mastery-performance alignment |
+| `gain_performance_loss_weight` | `0.8` | Gain-performance alignment |
+| `sparsity_loss_weight` | `0.2` | Skill sparsity constraint |
+| `consistency_loss_weight` | `0.3` | Temporal consistency |
+
+### 6. Alignment Loss (Local)
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enable_alignment_loss` | `true` | Toggle alignment loss |
+| `alignment_weight` | `0.25` | Base alignment weight |
+| `warmup_constraint_epochs` | `8` | Constraint warm-up epochs |
+| `adaptive_alignment` | `true` | Dynamic weight scaling |
+| `alignment_target_min_corr` | `0.05` | Minimum correlation target |
+
+### 7. Global Alignment
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enable_global_alignment` | `true` | Toggle global alignment |
+| `alignment_global_students` | `600` | Students for global pass |
+| `use_residual_alignment` | `true` | Use residualized signals |
+
+### 8. Refinement Objectives
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enable_retention_loss` | `true` | Prevent mastery peak decay |
+| `retention_delta` | `0.005` | Retention sensitivity |
+| `retention_weight` | `0.14` | Retention loss weight |
+| `enable_lag_gain_loss` | `true` | Lag-based gain structuring |
+| `lag_gain_weight` | `0.06` | Lag loss weight |
+| `lag_max_lag` | `3` | Maximum lag |
+
+### 9. Evaluation Parameters
+| Parameter | Default | Description | Training | Evaluation |
+|-----------|---------|-------------|----------|------------|
+| `max_correlation_students` | `300` | Max students for correlation | ❌ | ✅ |
+
+### 10. Monitoring & Runtime
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `monitor_freq` | `50` | Monitoring frequency (batches) |
+
+### Parameter Access Patterns
+
+**From `configs/parameter_default.json`:**
+```json
+{
+  "defaults": {
+    "model": "gainakt2exp",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "train_script": "examples/train_gainakt2exp.py",
+    "eval_script": "examples/eval_gainakt2exp.py",
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1e-05,
+    "optimizer": "adam",
     "seq_len": 200,
     "d_model": 512,
     "n_heads": 8,
-    "num_encoder_blocks": 6,
-    "d_ff": 1024,
-    "dropout": 0.2,
-    "emb_type": "qid",
-    "monitor_frequency": 50,
-    "use_mastery_head": true,
-    "use_gain_head": true,
-    "non_negative_loss_weight": 0.0,
-    "monotonicity_loss_weight": 0.1,
-    "mastery_performance_loss_weight": 0.8,
-    "gain_performance_loss_weight": 0.8,
-    "sparsity_loss_weight": 0.2,
-    "consistency_loss_weight": 0.3
+    ... (63 total parameters)
   },
-  "training_args": {
-    "dataset_name": "assist2015",
-    "num_epochs": 12,
-    "batch_size": 64,
-    "learning_rate": 0.000174,
-    "weight_decay": 1.7571e-05,
-    "enhanced_constraints": true,
-    "fold": 0,
-    "constraint_weights": {
-      "non_negative_loss_weight": 0.0,
-      "monotonicity_loss_weight": 0.1,
-      "mastery_performance_loss_weight": 0.8,
-      "gain_performance_loss_weight": 0.8,
-      "sparsity_loss_weight": 0.2,
-      "consistency_loss_weight": 0.3
-    },
-    "alignment": {
-      "enable_alignment_loss": true,
-      "alignment_weight": 0.25,
-      "alignment_warmup_epochs": 8,
-      "adaptive_alignment": true,
-      "alignment_min_correlation": 0.05
-    },
-    "global_alignment": {
-      "enable_global_alignment_pass": true,
-      "alignment_global_students": 600,
-      "use_residual_alignment": true,
-      "alignment_residual_window": 5
-    },
-    "refinement": {
-      "enable_retention_loss": true,
-      "retention_delta": 0.005,
-      "retention_weight": 0.14,
-      "enable_lag_gain_loss": true,
-      "lag_gain_weight": 0.06,
-      "lag_max_lag": 3,
-      "lag_l1_weight": 0.5,
-      "lag_l2_weight": 0.3,
-      "lag_l3_weight": 0.2,
-      "enable_cosine_perf_schedule": false,
-      "consistency_rebalance_epoch": 8,
-      "consistency_rebalance_threshold": 0.1,
-      "consistency_rebalance_new_weight": 0.2,
-      "variance_floor": 0.0001,
-      "variance_floor_patience": 3,
-      "variance_floor_reduce_factor": 0.5,
-      "alignment_share_cap": 0.08,
-      "alignment_share_decay_factor": 0.7
-    }
-  },
-  "timestamp": "2025-10-28T21:02:34.211283"
+  "types": { ... },
+  "md5": "ca1ef5c58232b47017ec7d1ba70e17d7"
+}
 ```
 
+**In experiment `config.json`:**
+```json
+{
+  "defaults": { ... pristine copy from parameter_default.json ... },
+  "overrides": { "epochs": 12, "batch_size": 128 },
+  "commands": {
+    "train_explicit": "python train_gainakt2exp.py --dataset assist2015 --fold 0 --seed 42 --epochs 12 --batch_size 128 ... (60+ params)",
+    "eval_explicit": "python eval_gainakt2exp.py --run_dir /path --max_correlation_students 300 ... (20+ params)"
+  }
+}
+```
 
-## Analysis
+### CLI Override Examples
 
-Key headline improvements (compare to previous run without semantic modules):
+```bash
+# Override learning rate
+python examples/run_repro_experiment_simple.py \
+  --short_title lr_sweep \
+  --learning_rate 0.0003
 
-- **Best validation AUC**: 0.72616 (slightly higher than 0.72459 earlier, and reached at epoch 3 instead of epoch 3 previously; early peak retained).
-- **Final mastery correlation**: 0.10151 (previous final was 0.01668) → 6.1× improvement.
-- **Final gain correlation**: 0.06604 (previous final was 0.01162) → 5.7× improvement.
-- **Structural consistency**: Remains perfect (all violation rates 0.0).
+# Override architecture
+python examples/run_repro_experiment_simple.py \
+  --short_title deeper \
+  --num_encoder_blocks 8 \
+  --d_model 768
 
-**Correlation trajectory:**
+# Override constraints
+python examples/run_repro_experiment_simple.py \
+  --short_title ablation \
+  --enable_alignment_loss false \
+  --enable_retention_loss false
 
-- Mastery correlation begins at **0.1243** (epoch 1), experiences a slight dip during the warm-up phase (epochs 2–4), and then rebounds, surpassing the early peak after the warm-up scale reaches 1 (peaking at **0.1491** during epochs 8–11).
-- Gain correlation shows a steady increase from **0.0097** at epoch 1 to **0.1035** by epoch 12.
-- The early dip in mastery correlation (epochs 2–4) aligns with the warm-up allocation of effective alignment weight and residualization transitions, with stabilization observed around epochs 7–8 as the warm-up phase concludes.
+# Multiple overrides
+python examples/run_repro_experiment_simple.py \
+  --short_title custom \
+  --epochs 20 \
+  --batch_size 128 \
+  --learning_rate 0.0002 \
+  --warmup_constraint_epochs 10
+```
 
-**Peak vs final:**
+### Parameter Evolution Best Practices
 
-- **Peak mastery corr** observed 0.14910 at epoch 11 vs final 0.14350 (≈3.8% decline).
-- **Peak gain corr** 0.10351 at epoch 12 (final epoch) so gain correlation still trending upward at training stop — potential further increases with more epochs (risk of overfitting AUC though).
-- **Retention mechanism** active (`retention_loss_value` non-zero first at epoch 10 onward) limiting mastery corr decline but perhaps could lock earlier peaks with tuned weight.
+When adding/changing parameters:
 
-**Loss shares:**
+1. **Update `configs/parameter_default.json`**
+   ```bash
+   # Edit the file to add new parameter
+   # Then recompute MD5:
+   python -c "
+   import json, hashlib
+   data = json.load(open('configs/parameter_default.json'))
+   md5 = hashlib.md5(json.dumps(data['defaults'], sort_keys=True).encode()).hexdigest()
+   data['md5'] = md5
+   json.dump(data, open('configs/parameter_default.json', 'w'), indent=2)
+   print(f'Updated MD5: {md5}')
+   "
+   ```
 
-- **Alignment loss** shows strong negative share (e.g., epoch 8 alignment contribution -0.14596) meaning its gradient component is significant relative to main task; share capping needed to ensure main predictive objective doesn’t underfit future epochs.
-- **Constraint_total** grows later (epoch 11 `constraint_total` 0.06258) indicating rebalancing after consistency rebalance at warm-up completion.
+2. **Update training/evaluation scripts**
+   - Add argparse parameter with `required=True` (no default!)
+   - Ensure parameter name matches exactly
 
-**Effective alignment weight dynamics:**
+3. **Test with dry run**
+   ```bash
+   python examples/run_repro_experiment_simple.py \
+     --short_title test_new_param \
+     --epochs 1
+   ```
 
-- Starts 0.03125 (epoch 1) rises to 0.15625 by epoch 5 then reduces to ~0.0600 post warm-up when residual alignment engages (epochs 11–12). Adaptive alignment appears to reduce weight after hitting `alignment_share_cap`, consistent with share decay factor.
-- There is a temporary mid-warm-up overshoot (epoch 5) where `alignment_corr_gain` is very high (0.2845) but mastery corr dips later (epoch 6). Suggest smoothing schedule to reduce oscillation.
+4. **Verify in config.json**
+   - Check that parameter appears in `defaults` section
+   - Check that it appears in `train_explicit` or `eval_explicit` command
 
-**Global vs local alignment:**
-
-- **Global alignment mastery correlations** (e.g., 0.1298 at epoch 9) surpass early peak and become new peak, demonstrating global pass plus residual alignment helps push mastery semantics.
-- **Residual alignment** active (`use_residual_alignment` true); residualization may be amplifying global mastery corr while `local_alignment_corr_mastery` remains ~0.09–0.10 later.
-
-**Lag gain loss:**
-
-- **Lag gain correlations** appear only from epoch 11 onward (`lag_corr_count` > 0). Mixed signs indicate emerging predictive lag structure; some strong positive (0.2079) and negative correlations; distribution heterogeneity suggests early exploration phase. Mean lag corr kept at 0.0 (aggregate neutral) — likely due to balancing positive/negative contributions.
-- Many lag=1 correlations >0.18 and some >0.30 (epochs 12 high values) while lag=2 also positive (0.3041). This supports temporal gain emergence (interpretability claim). Need to compute summary statistics (mean, median absolute) and confidence intervals.
-
-**Mastery variance:**
-
-- Very tight variance (≈0.0099) across epochs; minimal shifts, controlled by variance floor parameter. Possibly too constrained — may limit further correlation growth. Consider relaxing `variance_floor_reduce_factor` or raising floor to allow broader representation dispersion.
-
-**AUC trajectory:**
-
-- After peak at epoch 3, steady decline reaching 0.6566 by epoch 12 (9.6% absolute drop). This suggests semantic and constraint objectives shift prediction capacity toward interpretability at performance cost. Need early stopping or multi-objective scheduling to arrest AUC decay while preserving correlations.
-- Observing `best_val_auc` early with increasing correlations later indicates decoupled optimization; might adopt two-phase training: freeze semantic weights after certain correlation threshold or apply cosine perf schedule (currently disabled) to maintain some performance gradient.
-
-**Comparison summary (vs no-alignment run):**
-
-- **Interpretability** significantly improved; both mastery and gain correlations cross 0.10 / 0.066 thresholds.
-- **AUC decline** pattern similar but final AUC higher (0.6566 vs 0.5988 at comparable late epoch) meaning semantic modules did not exacerbate late predictive decay and actually mitigated some performance erosion.
-- **Semantic trajectory** exhibits classic warm-up dip and post-warm-up surge—healthy emergence shape.
-
-### Issues and Edge Cases
-
-- **Potential over-alignment risk:** Large magnitude negative alignment loss share implies risk of dominating training, potentially distorting predictive calibration (seen in AUC decay). `alignment_corr_gain` extremely high (>0.57 at epoch 12); need to verify no saturation or artifact (check whether correlation computed with proper masking). High gain alignment might overshadow mastery alignment.
-- **Lag correlation noise:** Mixed positive/negative lag correlations including large negative outliers may indicate unstable lag objective weighting; may need separate stability criterion (e.g. require non-trivial positive median before increasing `lag_gain_weight` further).
-- **Retention mechanism:** Low `retention_loss_value` indicates retention penalty is mild; mastery peak decline small. Could slightly raise `retention_weight` to lock earlier mastery peak if later decline grows in longer runs.
-- **Variance floor stability:** Variance metrics show narrow range; risk of representational collapse (over-regularization). Monitor `min_mastery_variance`; if stays near floor across runs, incremental relaxation may improve correlation headroom.
-
-### Recommendations (Actionable)
-
-- **Early stopping and two-phase schedule:** Stop at epoch when AUC within 0.5% of best (epoch 3) then continue semantic optimization with lower learning rate or frozen main weights to avoid performance erosion. Implement optional flag: `--semantic_phase_epochs N`.
-- **Alignment weight smoothing:** Replace discrete warmup steps with cosine ramp from 0 to `base_weight` by `alignment_warmup_epochs` to reduce correlation oscillations. Ensure share never exceeds `alignment_share_cap`.
-- **Lag objective stabilization:** Introduce running median absolute lag correlation; scale `lag_gain_weight` only after `median_abs_corr` > threshold (e.g. 0.05) to avoid early noise amplification.
-- **Coverage metrics:** Add `mastery_coverage` = proportion of students with mastery trajectory variance above `variance_floor`*1.1. Add `gain_coverage` similarly for gain evolution. Log these each epoch to substantiate interpretability claims.
-- **Correlation confidence intervals:** Bootstrap (e.g., 500 samples of students) mastery and gain correlations at final epoch; report 95% CI to ensure statistical significance (target exclude 0).
-- **Performance safeguarding:** Enable `cosine_perf_schedule` to keep some predictive gradient active during semantic phase; gradually reduce mastery/gain performance loss weights instead of letting alignment dominate.
-- **Residual alignment calibration:** Monitor residual window variance; if `global_alignment_mastery_corr` surpasses local mastery corr by large delta (>0.04) for 3 consecutive epochs, reduce `effective_alignment_weight` by decay factor earlier.
-- **Extend run modestly:** (e.g., to 16 epochs) with adaptive early stopping triggered by `val_auc` drop > (`best_auc` - 0.05) AND `mastery_corr` improvement < 0.002 over last 2 epochs.
-- **Reporting artifact:** Produce a summarized CSV row: `experiment_name`, `best_val_auc`, `final_val_auc`, `peak_mastery_corr`, `final_mastery_corr`, `peak_gain_corr`, `final_gain_corr`, `mastery_corr_loss_from_peak`, `gain_corr_growth_last3`, `alignment_peak_gain_corr`, `avg_lag1_corr_positive_fraction`.
-
-### Concrete Next Steps
-
-Possible next steps: 
-
-- Add metrics instrumentation for coverage and bootstrap CIs in training script.
-- Introduce scheduling flags (`--semantic_phase_epochs`, `--use_cosine_alignment_ramp`).
-- Create comparison script merging this JSON with previous results to compute delta metrics.
+5. **Update this documentation**
+   - Add to appropriate category table above
+   - Document purpose and default value
 
 ### Summary
 
@@ -790,46 +960,6 @@ The run shows promising semantic interpretability (mastery/gain correlations rea
 - Create comparison script aggregating multi-seed JSONs into a summary CSV.
 - Launch multi-seed runs with alignment schedule refinement.
 
-## Evaluation Comparison and Interpretation
-
-### Evaluation Metrics Summary
-The standalone evaluation of the checkpoint (`saved_model/gainakt2exp_align_reproduce_cf4f4017/best_model.pth`) produced:
-- Validation: AUC = 0.8878, ACC = 0.7946 (dense per-step aggregation methodology)  
-- Test: AUC = 0.8849, ACC = 0.7921  
-- Test semantic correlations (student-level mean): mastery = 0.0790, gain = 0.0245 (n = 262 students)
-
-Training JSON reported (validation-centric, sampled consistency check):
-- Best validation AUC (epoch 3): 0.72616 (per-epoch masked evaluation)  
-- Final mastery correlation (validation subset): 0.1015 (peak 0.1491)  
-- Final gain correlation (validation subset): 0.0660 (peak 0.1035)  
-
-These discrepancies arise from methodological differences (global flattened AUC vs in-training masked AUC), different student subsets, and absence of active semantic losses during pure evaluation forward pass.
-
-### Comparative Interpretation
-1. Semantic retention: Mastery correlation on test (0.079) remains positive but lower than validation final (0.1015), indicating partial transfer of learned semantics; gain correlation attenuates more strongly (0.0245 vs 0.0660), suggesting gain trajectory more sensitive to distribution shift and the need for stabilization.
-2. Predictive performance: Dense per-step aggregation yields AUC ≈0.88, which is not directly comparable to the reported 0.726 validation AUC (different evaluation granularity). A unified metric implementation is needed for publication consistency.
-3. Peak vs final dynamics: Training peak mastery/gain correlations (0.149 / 0.103) decline slightly by final epoch (0.143 / 0.103). Test mastery correlation drop is larger (≈47% of peak), supporting early stopping or retention weight adjustment.
-4. Alignment saturation: Large alignment shares late in training may have diverted optimization focus away from generalizable predictive signals, contributing to semantic overfitting relative to test behavior.
-5. Lag emergence: Late-epoch lag correlations show heterogeneous positive and negative values; test evaluation did not compute lag summaries, so stability remains unverified.
-
-### Identified Gaps for Publication Readiness
-- Unified AUC methodology (replicate training masking in eval).
-- Statistical robustness: multi-seed variance and bootstrap confidence intervals for mastery/gain correlations.
-- Coverage metrics: proportion of students contributing meaningful semantic correlation.
-- Lag interpretability summary: median and IQR for lag-1, lag-2 correlations; stability criteria.
-- Ablation evidence: removal of alignment, global residual, retention, lag modules and their effect on AUC + correlations.
-- Performance preservation protocol: early stopping or phased semantic fine-tuning to avoid late AUC erosion.
-- Calibration metrics: Brier score and expected calibration error to assure predictive quality under interpretability constraints.
-
-### Recommended Next Steps
-- Implement instrumentation in `train_gainakt2exp.py` for: coverage, bootstrap CIs, lag summaries, calibration metrics.
-- Add early stopping and optional second semantic phase (`--semantic_phase_epochs`) with frozen predictive layers.
-- Re-run multi-seed (≥5) experiments capturing peak and stabilized metrics; aggregate results into a publication summary JSON/Markdown.
-- Produce trade-off visualization: epoch-wise AUC vs mastery correlation curve with annotated chosen stop point.
-- Conduct ablations and compile a delta table quantifying contribution of each module.
-
-### Provisional Assessment
-Current evaluation confirms persistence of semantic signal but reveals attenuation on test and methodological inconsistency in AUC reporting. Before asserting a balanced interpretability-performance contribution, we must establish metric comparability, reproducibility, and stability across seeds and ablations.
 
 ## Comparison with Proposed Learning Gain Attention Architecture 
 
@@ -1128,6 +1258,69 @@ Implement logging instrumentation for lag correlation summary, coverage, retenti
 ### Expected Outcomes
 Recovered configuration demonstrates that enabling semantic modules and interpretability heads plus extending warm-up and reducing training horizon restores correlations (mastery ≈0.10+, gain ≈0.05+). Sweeps will seek configurations yielding mastery_corr ≥0.12 with val AUC ≥0.72 (early-stopped) and gain_corr ≥0.07 under zero violations, establishing a balanced regime for publication.
 
+## Architecture
+
+```mermaid
+graph TD
+  A[Input Sequence: qid + correctness] --> B[Embedding]
+  B --> C[Positional Encoding]
+  C --> D[Transformer Encoder 6x512/8]
+  D --> E[Mastery Head]
+  D --> F[Gain Head]
+  E --> E1[Mastery Trajectory]
+  F --> F1[Gain Estimates]
+
+  subgraph Constraints
+    M1[Monotonicity]
+    Pm[MasteryPerfAlign]
+    Pg[GainPerfAlign]
+    S[Sparsity]
+    Cons[Consistency]
+  end
+
+  subgraph Semantics
+    Al[LocalAlign]
+    GAl[GlobalResidualAlign]
+    Ret[Retention]
+    Lag[LagGains]
+  end
+
+  E1 --> M1
+  E1 --> Pm
+  F1 --> Pg
+  F1 --> S
+  E1 --> Cons
+  F1 --> Cons
+
+  D --> Al
+  D --> GAl
+  E1 --> Ret
+  F1 --> Lag
+
+  Al --> GAl
+  GAl --> E1
+  Ret --> E1
+  Lag --> F1
+
+  subgraph Schedule
+    Warm[Warmup]
+    Cap[AlignShareCap]
+    Resid[Residualization]
+  end
+
+  Warm --> Al
+  Warm --> Constraints
+  Cap --> Al
+  Resid --> GAl
+
+  E1 --> O1[MasteryCorr]
+  F1 --> O2[GainCorr]
+  Constraints --> Opt[Optimizer]
+  Semantics --> Opt
+  Opt --> D
+```
+
+_Fallback textual description:_ The input (question id + correctness) is embedded and positionally encoded before passing through a 6-layer transformer (d_model 512, 8 heads). Two heads produce mastery and gain trajectories. Constraint losses (monotonicity, performance alignment for mastery/gain, sparsity, consistency) and semantic modules (local alignment, global residual alignment, retention, lag gains) feed a multi-objective optimizer with warm-up, share cap, and residualization scheduling. Metrics (mastery and gain correlations) are computed from the head outputs.
 
 
 
