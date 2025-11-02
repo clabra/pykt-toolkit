@@ -1,5 +1,185 @@
 # GainAKT2Exp - Current State, Reproduction, and Interpretability Assessment
 
+## Quick Start
+
+### 1. Launch Reproducible Experiment
+
+```bash
+python examples/run_repro_experiment.py \
+  --train_script examples/train_gainakt2exp.py \
+  --model_name gainakt2exp \
+  --dataset assist2015 \
+  --short_title experiment_name
+```
+
+Creates the experiment folder, e.g. `examples/experiments/20251030_181629_gainakt2exp_experiment_name/` where you can find the commands to evaluate the model and relaunch the experiment in a reproducible way, as the fully resolved training command wthat explicitly set all the parameter values. 
+
+### 2. Evaluation Command
+
+Added to `config.json.runtime.eval_command` (only overrides from evaluation defaults emitted):
+
+```bash
+python examples/eval_gainakt2exp.py \
+  --run_dir examples/experiments/20251030_181629_gainakt2exp_experiment_name \
+  --dataset assist2015 \
+```
+
+### 3. Reproduce / Audit an Existing Run
+
+```bash
+python examples/relaunch_experiment.py \
+  --source_dir examples/experiments/20251030_181629_gainakt2exp_experiment_name \
+  --short_title relaunch \
+```
+
+Produces a new relaunch folder + `relaunch_audit.json` summarizing MD5 match, parameter diffs, and device adaptation (if any).
+
+## Reproducibility
+
+Using `examples/run_repro_experiment.py` to launch experiments guarantees any published GainAKT2Exp result is reconstructable via a single `config.json` plus stored commands.
+
+### Canonical Defaults Source
+
+Defaults are centralized in `configs/parameter_default.json` (sections: `training_defaults`, `evaluation_defaults`). The launcher ingests this file to populate unspecified parameters—`config.json` reflects resolved values explicitly; no hidden defaults.
+
+A MD5 hash is computed from config.json (sorted keys). When relaunch_experiment.py runs it compares parameters between original and relaunch config.json files
+
+### Integrity Checklist
+
+Each experiment folder MUST contain: `config.json`, `environment.txt`, `SEED_INFO.md`, `stdout.log`, `metrics_epoch.csv`, `model_best.pth` (unless `--dry_run`), `model_last.pth`. Missing artifacts invalidate reproducibility claims.
+
+### Evaluation Notes
+
+`eval_gainakt2exp.py` loads `best_model.pth` and computes validation/test metrics. Mastery and gain correlations are sampled up to `--max_correlation_students` (default 300) for bounded runtime.
+
+### Updating or Extending Parameters
+
+Every parameter must have a path from CLI → argparse → defaults JSON → config.json, and breaking any link in this chain undermines the entire reproducibility guarantee
+
+When adding a new flag to training or evaluation scripts: 
+
+(i) add to argparse 
+
+If not, the principle "no hidden defaults" is violated, silent reproducibility failures become possible, if it's an arch parameter then training and evaluation become incompatible. 
+
+The drift checker only sees what has been added to argparse that is exposed with --help. 
+
+
+
+(ii) add a default to `parameter_default.json` 
+
+If not, the principle "no hidden defaults" is violated, it won't appear in substantive vs. metadata categorization and relaunch audits can't distinguish whether changes are benign or breaking. 
+
+If not, config.json will record the drift in preflight_consistency section:
+{
+  "preflight_consistency": {
+    "missing_in_json_training": ["your_new_parameter"],
+    "drift_detected": true,
+    "exit_code": 1
+  }
+}
+
+{
+  "missing_in_json_training": ["new_hyperparameter"],
+  "missing_in_argparse_training": [],
+  "extraneous_training_defaults": [],
+  "drift_detected": true
+}
+
+The three-layer protection model (canonical changes, snapshot validation, schema evolution) won't cover it.
+
+
+(iii) verify presence in generated `config.json`
+
+Missing parameters in config.json represent catastrophic reproducibility failure because:
+- Violates "no hidden defaults" principle
+- Incomplete provenance trail
+- MD5 hash doesn't capture all hyperparameters
+- Verbose command cannot reproduce the run
+- Relaunch audits have blind spots
+- Evaluation may fail with architecture mismatch
+- Cannot be used in publication or comparative analysis
+- Indicates critical launcher bug
+
+The preflight consistency audit would catch this:
+{
+  "preflight_consistency": {
+    "drift_detected": true,
+    "missing_parameters": ["learning_rate"]
+  }
+}
+
+(iv) re-run a dry run to ensure MD5 stability except for intended additions.
+
+The primary purpose of the dry run is to verify that:
+- The new parameter appears correctly in config.json
+- The MD5 hash changes only due to the intended new parameter
+- No unintended side effects or drift occurred
+
+Without verification:
+- You don't confirm drift_detected: false
+- Might miss missing_in_json_training or missing_in_argparse_training warnings
+- Parameter asymmetries remain hidden until production runs
+- If the new parameter is architecture-related, evaluation script reads corrupted architecture and aborts with architecture mismatch.
+
+The dry run is absolutely critical when:
+
+- Adding first-time parameter (no prior baseline exists)
+- Modifying architecture parameters (affects evaluation compatibility)
+- Changing parameter structure in parameter_default.json
+- After launcher code changes
+- Before multi-seed production runs (catches issues before scaling)
+- Before paper submission (validates reproducibility claims)
+
+### Consistency Checks
+
+The script `examples/check_defaults_consistency.py` detects: 
+
+- What it DOES detect: It extracts flags from argparse (via --help output) and compares them against parameter_default.json to find:
+  - missing_in_json_training: Parameters that ARE in argparse but NOT in parameter_default.json (detects missing step ii)
+  - missing_in_argparse_training: Parameters that ARE in parameter_default.json but NOT in argparse (detects orphaned JSON entries)
+
+- What it CANNOT detect: If you add a parameter only to your code logic (hardcoded default, used internally) but never add it to argparse, the drift checker has no way to know about it because:
+  - It only sees what --help exposes
+  - Your internal parameter is invisible to the --help parser
+  - It's not scanning your Python source code for variable usage
+
+## Detection coverage summary
+
+| Scenario | Detected? | How |
+|----------|-----------|-----|
+| Added to argparse but NOT in parameter_default.json | ✅ Yes | `missing_in_json_training` |
+| Added to parameter_default.json but NOT in argparse | ✅ Yes | `missing_in_argparse_training` |
+| Added to neither (pure hardcoded default) | ❌ No | Invisible to drift checker |
+
+
+Bottom line: The drift checker is a safety net for steps (ii) and (iii), but step (i) is user responsibility. If argparse addition is skip, the drift checker won't catch it unless you also remember to add it to `parameter_default.json` (which would then trigger `missing_in_argparse` warning).  When added to neither (pure hardcoded default), the parameter becomes a hidden default. 
+
+### Consistency Checks
+
+Event: In any of the following scenarios the codebase (model, training/evaluation/reproduction scripts, etc.) might change from one experiment to the next. 
+
+Checkings: 
+  - There are no hidden parameters with hardcoded default values that change without notice, distorting the interpretation of the impact of hyperparameter changes.
+  - If parameters are added or changed (name or default values), this will be properly managed according to the 4 steps detailed in "### Updating or Extending Parameters" section. 
+
+Action: 
+- Launch a consistency test after each change in the codebase and output warnings (only inform) or errors (inform and await for remediation)
+
+#### Scenario 1: Hyperparameter Sweep
+
+Objective: By doing a sweep, we mean systematically exploring different combinations of hyperparameters to find the configuration that yields the best performance.
+
+#### Scenario 2: Ablation Studies
+
+Objective: in a ablation studio we change parameters one by one to measure their impact
+
+#### Scenario 3: Benchmark
+
+Objective: compare metrics of different models or models variants with different combinations of hyperparameter values. 
+
+
+
 ## Architecture
 
 ```mermaid
@@ -66,42 +246,7 @@ _Fallback textual description:_ The input (question id + correctness) is embedde
 
 
 
-## Commands
 
-### Training
-
-```bash
-python examples/train_gainakt2exp.py   --epochs 12   --experiment_suffix align_reproduce_cf4f4017   --batch_size 64   --learning_rate 0.000174   --weight_decay 1.7571e-05   --seed 42   --enhanced_constraints   --warmup_constraint_epochs 8   --enable_alignment_loss   --enable_global_alignment_pass   --use_residual_alignment   --enable_retention_loss   --enable_lag_gain_loss
-
-Result file: `gainakt2exp_results_align_reproduce_cf4f4017_20251028_210234.json`: 
-{
-  "experiment_name": "align_reproduce_cf4f4017",
-  "best_val_auc": 0.7261593833475227,
-  "final_consistency_metrics": {
-    "monotonicity_violation_rate": 0.0,
-    "negative_gain_rate": 0.0,
-    "bounds_violation_rate": 0.0,
-    "mastery_correlation": 0.10150700274631948,
-    "gain_correlation": 0.06604230123265684
-  }
-}
-```
-### Evaluation
-```
-python examples/eval_gainakt2exp.py --run_dir saved_model/gainakt2exp_align_reproduce_cf4f4017 --dataset assist2015 --use_mastery_head --use_gain_head
-dataset_name:assist2015
-data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'folds': [0, 1, 2, 3, 4], 'train_valid_file': 'train_valid_sequences.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
-{
-  "valid_auc": 0.8878193265955879,
-  "valid_acc": 0.7946354709048263,
-  "test_auc": 0.8849121559132034,
-  "test_acc": 0.7921050285306704,
-  "test_mastery_correlation": 0.07899053839727387,
-  "test_gain_correlation": 0.024538149268571695,
-  "test_correlation_students": 262,
-  "timestamp": "2025-10-28T22:31:24.615418"
-}
-```
 
 ## Reproducible Experiment Workflow
 
@@ -358,108 +503,7 @@ The `relaunch_audit.json` contains eight structured sections:
 - **Full Hash**: Includes all parameters including metadata (timestamps, hardware, etc.)
 - **Key Signal**: `effective_match: true` confirms substantive reproducibility
 
-#### Documentation References
 
-- Audit format guide: `tmp/actionable_audit_report_format.md`
-- Quick reference: `tmp/audit_quick_reference.md`
-- Metadata classification: `tmp/metadata_classification_criteria.md`
-- Execution flow: `tmp/relaunch_experiment_flow.md`
-
-### 1. Launch (Provenance Capture)
-
-```bash
-python examples/run_repro_experiment.py \
-  --train_script examples/train_gainakt2exp.py \
-  --model_name gainakt2exp \
-  --dataset assist2015 \
-  --epochs 2 \
-  --batch_size 80 \
-  --short_title evalcmd_selective
-```
-
-Creates (example): `examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective/`.
-
-### 2. Fully Resolved Training Command
-
-Embedded in `config.json.runtime.train_command` (single line there; wrapped here for readability):
-
-```bash
-/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py \
-  --dataset assist2015 --fold 0 --epochs 2 --batch_size 80 \
-  --learning_rate 0.000174 --seed 42 --weight_decay 0.0 \
-  --gradient_clip 1.0 --patience 20 --optimizer Adam \
-  --use_mastery_head --use_gain_head --enhanced_constraints \
-  --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 \
-  --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 \
-  --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 \
-  --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 \
-  --alignment_min_correlation 0.05 --alignment_share_cap 0.08 \
-  --alignment_share_decay_factor 0.7 --warmup_constraint_epochs 4 \
-  --max_semantic_students 50 --adaptive_alignment \
-  --enable_global_alignment_pass --alignment_global_students 600 \
-  --alignment_residual_window 5 --enable_retention_loss \
-  --retention_delta 0.005 --retention_weight 0.14 \
-  --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 \
-  --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 \
-  --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 \
-  --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 \
-  --variance_floor_patience 3 --variance_floor_reduce_factor 0.5
-```
-
-### 3. Evaluation Command
-
-Added to `config.json.runtime.eval_command` (only overrides from evaluation defaults emitted):
-
-```bash
-python examples/eval_gainakt2exp.py \
-  --run_dir examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective \
-  --dataset assist2015 \
-  --batch_size 80
-```
-
-### 4. Reproduce / Audit an Existing Run
-
-```bash
-python examples/relaunch_experiment.py \
-  --source_dir examples/experiments/20251030_181629_gainakt2exp_evalcmd_selective \
-  --short_title relaunch \
-  --strict
-```
-
-Produces a new relaunch folder + `relaunch_audit.json` summarizing MD5 match, parameter diffs, and device adaptation (if any).
-
-### 5. Dry Run (Config Only)
-
-```bash
-python examples/run_repro_experiment.py \
-  --train_script examples/train_gainakt2exp.py \
-  --model_name gainakt2exp \
-  --dataset assist2015 \
-  --epochs 2 \
-  --batch_size 80 \
-  --short_title docdemo_selective \
-  --dry_run
-```
-
-### 6. Canonical Defaults Source
-
-Defaults are centralized in `configs/parameter_default.json` (sections: `training_defaults`, `evaluation_defaults`). The launcher ingests this file to populate unspecified parameters—`config.json` reflects resolved values explicitly; no hidden defaults.
-
-### 7. Integrity Checklist
-
-Each experiment folder MUST contain: `config.json`, `environment.txt`, `SEED_INFO.md`, `stdout.log`, `metrics_epoch.csv`, `model_best.pth` (unless `--dry_run`), `model_last.pth`. Missing artifacts invalidate reproducibility claims.
-
-### 8. Evaluation Notes
-
-`eval_gainakt2exp.py` loads `best_model.pth` and computes validation/test metrics. Mastery and gain correlations are sampled up to `--max_correlation_students` (default 300) for bounded runtime.
-
-### 9. Updating or Extending Parameters
-
-When adding a new flag to training or evaluation scripts: (i) add to argparse; (ii) add a default to `parameter_default.json`; (iii) verify presence in generated `config.json`; (iv) re-run a dry run to ensure MD5 stability except for intended additions.
-
----
-
-This workflow guarantees any published GainAKT2Exp result is reconstructable via a single `config.json` plus stored commands.
 
 
 

@@ -358,29 +358,138 @@ def main():
     from torch.utils.data import DataLoader
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=int(os.getenv('PYKT_NUM_WORKERS','32')), pin_memory=True)
 
+    # Compute predictions for all splits
+    train_auc, train_acc = evaluate_predictions(model, train_loader, device)
     valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
     test_auc, test_acc = evaluate_predictions(model, test_loader, device)
-    mastery_corr, gain_corr, n_students = compute_correlations(model, test_loader, device, max_students=max_corr_students)
+    
+    # Compute correlations for train and test (not validation - avoid overfitting to interpretability)
+    train_mastery_corr, train_gain_corr, train_n_students = compute_correlations(model, train_loader, device, max_students=max_corr_students)
+    test_mastery_corr, test_gain_corr, test_n_students = compute_correlations(model, test_loader, device, max_students=max_corr_students)
 
     experiment_id = args.experiment_id or cfg.get('experiment', {}).get('id') or os.path.basename(args.run_dir)
+    
+    # Build config_eval.json mirroring config.json structure
+    config_eval = {
+        'runtime': {
+            'eval_command': ' '.join(sys.argv),
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'device': args.device,
+            'checkpoint_path': ckpt_path
+        },
+        'evaluation': {
+            'batch_size': batch_size,
+            'max_correlation_students': max_corr_students
+        },
+        'data': {
+            'dataset': dataset,
+            'fold': fold
+        },
+        'model_config': {
+            'seq_len': seq_len,
+            'd_model': d_model,
+            'n_heads': n_heads,
+            'num_encoder_blocks': num_encoder_blocks,
+            'd_ff': d_ff,
+            'dropout': dropout,
+            'emb_type': emb_type,
+            'use_mastery_head': use_mastery_head,
+            'use_gain_head': use_gain_head,
+            'non_negative_loss_weight': non_negative_loss_weight,
+            'monotonicity_loss_weight': monotonicity_loss_weight,
+            'mastery_performance_loss_weight': mastery_performance_loss_weight,
+            'gain_performance_loss_weight': gain_performance_loss_weight,
+            'sparsity_loss_weight': sparsity_loss_weight,
+            'consistency_loss_weight': consistency_loss_weight
+        },
+        'experiment': {
+            'id': experiment_id,
+            'source_run_dir': args.run_dir,
+            'model': 'gainakt2exp'
+        },
+        'architecture_validation': {
+            'baseline_architecture': baseline_arch,
+            'cli_overrides_provided': cli_arch,
+            'drift_detected': bool(arch_drift),
+            'drift_details': arch_drift if arch_drift else {}
+        },
+        'config_md5_eval': None  # Will compute if needed
+    }
+    
     results = {
         'experiment_id': experiment_id,
         'dataset': dataset,
         'fold': fold,
+        'train_auc': train_auc,
+        'train_acc': train_acc,
+        'train_mastery_correlation': train_mastery_corr,
+        'train_gain_correlation': train_gain_corr,
+        'train_correlation_students': train_n_students,
         'valid_auc': valid_auc,
         'valid_acc': valid_acc,
         'test_auc': test_auc,
         'test_acc': test_acc,
-        'test_mastery_correlation': mastery_corr,
-        'test_gain_correlation': gain_corr,
-        'test_correlation_students': n_students,
+        'test_mastery_correlation': test_mastery_corr,
+        'test_gain_correlation': test_gain_corr,
+        'test_correlation_students': test_n_students,
         'timestamp': datetime.utcnow().isoformat()
     }
 
+    # Save eval_results.json (legacy output)
     out_path = os.path.join(args.run_dir, 'eval_results.json')
     with open(out_path, 'w') as f:
         json.dump(results, f, indent=2)
+    
+    # Save config_eval.json
+    config_eval_path = os.path.join(args.run_dir, 'config_eval.json')
+    with open(config_eval_path, 'w') as f:
+        json.dump(config_eval, f, indent=2)
+    
+    # Save metrics_epoch_eval.csv (evaluation metrics with correlations)
+    import csv
+    metrics_csv_path = os.path.join(args.run_dir, 'metrics_epoch_eval.csv')
+    with open(metrics_csv_path, 'w', newline='') as csvfile:
+        fieldnames = [
+            'split', 'auc', 'accuracy', 
+            'mastery_correlation', 'gain_correlation', 
+            'correlation_students', 'timestamp'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        # Write training metrics (with correlations)
+        writer.writerow({
+            'split': 'training',
+            'auc': train_auc,
+            'accuracy': train_acc,
+            'mastery_correlation': train_mastery_corr,
+            'gain_correlation': train_gain_corr,
+            'correlation_students': train_n_students,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        # Write validation metrics (AUC/accuracy only, correlations set to N/A to avoid overfitting)
+        writer.writerow({
+            'split': 'validation',
+            'auc': valid_auc,
+            'accuracy': valid_acc,
+            'mastery_correlation': 'N/A',
+            'gain_correlation': 'N/A',
+            'correlation_students': 'N/A',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        # Write test/evaluation metrics (with correlations - primary evaluation results)
+        writer.writerow({
+            'split': 'test',
+            'auc': test_auc,
+            'accuracy': test_acc,
+            'mastery_correlation': test_mastery_corr,
+            'gain_correlation': test_gain_corr,
+            'correlation_students': test_n_students,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    
     print(json.dumps(results, indent=2))
+    print(f"\n✅ Saved config_eval.json to {config_eval_path}")
+    print(f"✅ Saved metrics_epoch_eval.csv to {metrics_csv_path}")
 
 if __name__ == '__main__':
     main()

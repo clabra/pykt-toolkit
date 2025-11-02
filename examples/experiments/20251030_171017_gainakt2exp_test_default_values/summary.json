@@ -1,4 +1,0 @@
-{
-  "config_md5": "4012d686b4dd96182cccbd1022abd41b",
-  "note": "metrics_epoch.csv present but no data rows appended (training script may not have written metrics)."
-}
