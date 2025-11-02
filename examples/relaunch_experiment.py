@@ -164,6 +164,11 @@ def main():
         except Exception:
             original_cfg['model_config_md5'] = '<uncomputable>'
     original_md5 = original_cfg.get('config_md5')
+    # Invariant collection: auto_shifted_eval must remain True
+    auto_shifted_eval_val = original_cfg.get('runtime', {}).get('auto_shifted_eval', True)
+    invariant_failures = []
+    if auto_shifted_eval_val is not True:
+        invariant_failures.append({'key': 'runtime.auto_shifted_eval', 'expected': True, 'found': auto_shifted_eval_val})
     train_script = original_cfg['runtime']['train_command'].split()[1] if 'train_command' in original_cfg['runtime'] else 'examples/train_gainakt2exp.py'
     # Gather valid flags dynamically from training script help
     try:
@@ -266,9 +271,45 @@ def main():
         if meta_key in orig_hw:
             rel_hw[meta_key] = orig_hw[meta_key]
     new_cfg['hardware'] = rel_hw
-    # Recompute config_md5 after injection
+    # Preserve original preflight_consistency block if present to avoid metadata erosion
+    if 'preflight_consistency' in original_cfg and 'preflight_consistency' not in new_cfg:
+        new_cfg['preflight_consistency'] = original_cfg['preflight_consistency']
+    # Recompute hashes (full + effective) after injection
     from examples.experiment_utils import compute_config_hash as _compute_hash
-    new_cfg['config_md5'] = _compute_hash(new_cfg)
+    def _strip_effective(obj: dict) -> dict:
+        """Remove metadata-only sections and fields from config for effective hash (must match launcher logic)."""
+        META_EXCLUDE_SECTIONS = {'preflight_consistency', 'evaluation_snapshot', 'override_applied', 'reproducibility_policy'}
+        MD5_EXCLUDE_KEYS = {'config_md5', 'config_md5_full', 'config_md5_effective', 'model_config_md5', 'evaluation_snapshot_md5'}
+        RUNTIME_METADATA_PREFIXES = ('runtime.', 'experiment.', 'hardware.gpu_selection_source', 'hardware.selected_devices')
+        OPTIONAL_METADATA_KEYS = {'training.mixed_precision'}
+        
+        def flatten_and_filter(cfg):
+            flat = {}
+            for section, content in cfg.items():
+                if section in META_EXCLUDE_SECTIONS or section in MD5_EXCLUDE_KEYS:
+                    continue
+                if isinstance(content, dict):
+                    for k, v in content.items():
+                        key = f"{section}.{k}"
+                        if any(key.startswith(pref) for pref in RUNTIME_METADATA_PREFIXES):
+                            continue
+                        if key in OPTIONAL_METADATA_KEYS:
+                            continue
+                        # Filter out any *_md5 fields
+                        if k.endswith('_md5') or '_md5_' in k:
+                            continue
+                        flat[key] = v
+                else:
+                    if section not in MD5_EXCLUDE_KEYS:
+                        flat[section] = content
+            return flat
+        
+        return flatten_and_filter(obj)
+    
+    new_cfg['config_md5_full'] = _compute_hash(new_cfg)
+    new_cfg['config_md5_effective'] = _compute_hash(_strip_effective(new_cfg))
+    # Backward compatible field
+    new_cfg['config_md5'] = new_cfg['config_md5_full']
     atomic_write_json(new_cfg, os.path.join(new_exp_dir,'config.json'))
     atomic_write_json(new_cfg, os.path.join(new_exp_dir,'config.json'))
     capture_environment(os.path.join(new_exp_dir,'environment.txt'))
@@ -347,14 +388,79 @@ def main():
             'override_used': args.override_epochs is not None
         }
     # Rebuild diffs focusing ONLY on substantive differences and missing values.
+    # VALIDATION: Check evaluation_snapshot consistency with canonical hyperparameters
+    eval_snapshot_inconsistencies = []
+    if 'evaluation_snapshot' in new_cfg:
+        canonical_mappings = {
+            'emb_type': ('model_config', 'emb_type'),
+            'seq_len': ('model_config', 'seq_len'),
+            'd_model': ('model_config', 'd_model'),
+            'n_heads': ('model_config', 'n_heads'),
+            'num_encoder_blocks': ('model_config', 'num_encoder_blocks'),
+            'd_ff': ('model_config', 'd_ff'),
+            'dropout': ('model_config', 'dropout'),
+            'dataset': ('training', 'dataset_name'),
+            'fold': ('training', 'fold'),
+            'batch_size': ('training', 'batch_size')
+        }
+        for snap_key, (canon_section, canon_key) in canonical_mappings.items():
+            snap_val = new_cfg['evaluation_snapshot'].get(snap_key)
+            canon_val = new_cfg.get(canon_section, {}).get(canon_key)
+            if snap_val is not None and canon_val is not None and snap_val != canon_val:
+                eval_snapshot_inconsistencies.append({
+                    'snapshot_key': f'evaluation_snapshot.{snap_key}',
+                    'snapshot_value': snap_val,
+                    'canonical_key': f'{canon_section}.{canon_key}',
+                    'canonical_value': canon_val
+                })
+    
+    # Refined metadata filtering:
+    # evaluation_snapshot.* contains COPIES of canonical hyperparameters for eval convenience.
+    # While batch_size, seq_len, emb_type, etc. ARE hyperparameters in their canonical locations
+    # (training.batch_size, model_config.seq_len, model_config.emb_type), their COPIES in
+    # evaluation_snapshot are metadata (redundant cache). The validation layer above ensures
+    # that if evaluation_snapshot values exist, they match their canonical counterparts.
+    # Therefore, treating ALL evaluation_snapshot.* as metadata is correct:
+    # - If canonical hyperparameter unchanged → snapshot presence/absence is metadata evolution
+    # - If canonical hyperparameter changed → flagged via canonical location diff
+    # - If snapshot diverges from canonical → flagged via validation as corruption
+    
+    # Extend prefix matching for metadata to catch runtime/experiment/etc
+    metadata_filter_prefixes = (
+        'experiment.', 'runtime.', 'hardware.', 'preflight_consistency.', 
+        'evaluation_snapshot.',  # All snapshot keys are metadata (validated copies of canonical values)
+        'reproducibility_policy.',
+        'config_md5', 'model_config_md5', 'evaluation_snapshot_md5'
+    )
+    def is_metadata_key(key):
+        """Return True if key should be ignored as pure metadata (not hyperparameter).
+        
+        Note: evaluation_snapshot.* keys are metadata even when they represent hyperparameters,
+        because they are redundant copies of canonical values in model_config/training sections.
+        The validation layer ensures consistency; divergence is flagged as corruption.
+        """
+        if key in allowed_metadata_diff_prefixes:
+            return True
+        if any(key.startswith(pref) for pref in metadata_filter_prefixes):
+            return True
+        # Also exclude any *_md5 fields
+        if key.endswith('_md5') or '_md5_' in key:
+            return True
+        return False
+    
     substantive_diffs = {}
     missing_params = {}
+    metadata_added = {}  # Track newly added metadata for audit transparency
+    
     for k, v in param_diffs.items():
-        if k in allowed_metadata_diff_prefixes:
-            continue  # skip allowed metadata drift
+        if is_metadata_key(k):
+            # If it's a new metadata field (missing in original), track separately
+            if v['original'] == '<missing>':
+                metadata_added[k] = v
+            continue  # skip from substantive diffs
         orig_val = v['original']
         new_val = v['new']
-        # Capture missing markers explicitly
+        # Capture missing markers explicitly (for true hyperparameters only)
         if orig_val == '<missing>' or new_val == '<missing>':
             missing_params[k] = v
             substantive_diffs[k] = v
@@ -364,12 +470,60 @@ def main():
         if orig_val == new_val:
             continue  # identical
         substantive_diffs[k] = v
-    # MD5 comparison (ignoring metadata change expectations). We simply compare config_md5 values from original and relaunch.
-    md5_match = (original_md5 == new_cfg.get('config_md5'))
+    # MD5 comparison: Recompute effective hash for BOTH configs using current exclusion logic
+    # to ensure consistent comparison (original may have been computed with older logic).
+    from examples.experiment_utils import compute_config_hash as _compute_hash_util
+    
+    # Use the same _strip_effective defined earlier in relaunch script (lines 279-302)
+    def _recompute_effective(cfg):
+        """Apply current metadata exclusion logic to any config for fair comparison."""
+        META_EXCLUDE_SECTIONS = {'preflight_consistency', 'evaluation_snapshot', 'override_applied', 'reproducibility_policy'}
+        MD5_EXCLUDE_KEYS = {'config_md5', 'config_md5_full', 'config_md5_effective', 'model_config_md5', 'evaluation_snapshot_md5'}
+        # Expand runtime/experiment metadata to cover all non-hyperparameter fields
+        RUNTIME_METADATA_PREFIXES = ('runtime.', 'experiment.', 'hardware.gpu_selection_source', 'hardware.selected_devices')
+        # Legacy/optional fields added in later versions (not present in all runs)
+        OPTIONAL_METADATA_KEYS = {'training.mixed_precision'}
+        
+        def flatten_and_filter(c):
+            flat = {}
+            for section, content in c.items():
+                if section in META_EXCLUDE_SECTIONS or section in MD5_EXCLUDE_KEYS:
+                    continue
+                if isinstance(content, dict):
+                    for k, v in content.items():
+                        key = f"{section}.{k}"
+                        # Exclude all runtime.* and experiment.* keys (not hyperparameters)
+                        if any(key.startswith(pref) for pref in RUNTIME_METADATA_PREFIXES):
+                            continue
+                        # Exclude optional metadata fields
+                        if key in OPTIONAL_METADATA_KEYS:
+                            continue
+                        if k.endswith('_md5') or '_md5_' in k:
+                            continue
+                        flat[key] = v
+                else:
+                    if section not in MD5_EXCLUDE_KEYS:
+                        flat[section] = content
+            return flat
+        return flatten_and_filter(cfg)
+    
+    original_full = original_cfg.get('config_md5_full', original_md5)
+    relaunch_full = new_cfg.get('config_md5_full')
+    # Recompute effective hashes using current unified logic
+    original_effective_recomputed = _compute_hash_util(_recompute_effective(original_cfg))
+    relaunch_effective_recomputed = _compute_hash_util(_recompute_effective(new_cfg))
+    
+    md5_full_match = (original_full == relaunch_full)
+    md5_effective_match = (original_effective_recomputed == relaunch_effective_recomputed)
     md5_comparison = {
-        'md5_match': md5_match,
-        'original_md5': original_md5,
-        'relaunch_md5': new_cfg.get('config_md5')
+        'md5_full_match': md5_full_match,
+        'md5_effective_match': md5_effective_match,
+        # Backward compatibility: single md5_match flag (true only if both full & effective match)
+        'md5_match': (md5_full_match and md5_effective_match),
+        'original_full_md5': original_full,
+        'relaunch_full_md5': relaunch_full,
+        'original_effective_md5': original_effective_recomputed,
+        'relaunch_effective_md5': relaunch_effective_recomputed
     }
     # GPU comparison summary
     gpu_comparison = {
@@ -383,25 +537,198 @@ def main():
         adaptation_note = 'Device count differs without explicit adaptation note.'
     # Seed match flag
     seed_match = (original_cfg.get('seeds', {}).get('primary') == new_cfg.get('seeds', {}).get('primary'))
-    audit = {
-        'original_experiment_id': original_cfg['experiment']['id'],
-        'relaunch_experiment_id': exp_id,
-        'original_config_md5': original_md5,
-        'relaunch_config_md5': new_cfg['config_md5'],
-        'train_script': train_script,
-        'original_train_command': original_cfg['runtime'].get('train_command'),
-        'reconstructed_train_command': reconstructed_cmd,
-        'param_diffs_substantive': substantive_diffs,
-        'missing_params': missing_params,
+    # Helper to detect presence of original metrics file (simple existence heuristic)
+    def metrics_csv_exists():
+        return os.path.exists(os.path.join(args.source_dir, 'metrics_epoch.csv'))
+    # Classify diff types: metadata_only vs hyperparameter
+    metadata_prefixes = (
+        'experiment.', 'runtime.', 'hardware.', 'preflight_consistency.', 'evaluation_snapshot.', 'model_config_md5',
+        'config_md5', 'config_md5_full', 'config_md5_effective'
+    )
+    hyperparameter_diffs = {}
+    metadata_diffs = {}
+    for k,v in substantive_diffs.items():
+        if any(k.startswith(pref) for pref in metadata_prefixes):
+            metadata_diffs[k] = v
+        else:
+            hyperparameter_diffs[k] = v
+    # Determine equivalence status
+    if md5_effective_match and not hyperparameter_diffs and metrics_csv_exists():
+        equivalence_status = 'equivalent'
+    elif md5_effective_match and hyperparameter_diffs == {} and metadata_diffs:
+        equivalence_status = 'metadata_diff'
+    elif not md5_effective_match and not hyperparameter_diffs and metadata_diffs:
+        equivalence_status = 'metadata_diff'
+    elif hyperparameter_diffs and md5_effective_match:
+        equivalence_status = 'param_diff'
+    else:
+        equivalence_status = 'param_diff'
+    def metrics_csv_exists(train_cmd):
+        # Placeholder: assume metrics exist if original run folder contained metrics_epoch.csv
+        orig_metrics = os.path.join(args.source_dir, 'metrics_epoch.csv')
+        return os.path.exists(orig_metrics)
+    # ========== ACTIONABLE AUDIT: THREE-LAYER PROTECTION ==========
+    
+    # Layer 1: Detect Hyperparameter Changes (via canonical diffs)
+    canonical_changes = {
+        'status': 'PASS' if not substantive_diffs else 'FAIL',
+        'description': 'Checks if substantive hyperparameters changed between original and relaunch',
+        'hyperparameter_diffs': substantive_diffs,
+        'count': len(substantive_diffs),
+        'action_required': bool(substantive_diffs),
+        'guidance': 'No action needed - experiments are substantively equivalent' if not substantive_diffs else 'ACTION REQUIRED: Hyperparameter changes detected. These experiments are NOT equivalent.'
+    }
+    
+    # Layer 2: Validate Consistency (via snapshot validation)
+    snapshot_corruption = {
+        'status': 'PASS' if not eval_snapshot_inconsistencies else 'FAIL',
+        'description': 'Checks if evaluation_snapshot copies match their canonical hyperparameter sources',
+        'inconsistencies': eval_snapshot_inconsistencies,
+        'count': len(eval_snapshot_inconsistencies),
+        'action_required': bool(eval_snapshot_inconsistencies),
+        'guidance': 'No action needed - snapshot values match canonical locations' if not eval_snapshot_inconsistencies else 'ACTION REQUIRED: Snapshot corruption detected. Config file is INVALID.'
+    }
+    
+    # Layer 3: Track Schema Evolution (via metadata classification)
+    schema_evolution = {
+        'status': 'BENIGN',
+        'description': 'Tracks metadata additions/changes from launcher version evolution',
+        'metadata_added': metadata_added,
+        'metadata_changed': metadata_diffs,
         'skipped_params': skipped,
-        'devices_original': orig_devices,
-        'devices_used': adapted_devices,
-        'device_adaptation_note': adaptation_note,
-        'gpu_comparison': gpu_comparison,
-        'seed_match': seed_match,
-        'epoch_diff_info': epoch_diff_info,
-        'md5_comparison': md5_comparison,
-        'dry_run': args.dry_run
+        'count': len(metadata_added) + len(metadata_diffs) + len(skipped),
+        'count_added': len(metadata_added),
+        'count_changed': len(metadata_diffs),
+        'count_skipped': len(skipped),
+        'action_required': False,
+        'guidance': f'No action needed - {len(metadata_added)} metadata fields added, {len(metadata_diffs)} changed, {len(skipped)} skipped due to missing CLI flags'
+    }
+    
+    # Overall Reproducibility Status
+    reproducibility_status = {
+        'verdict': equivalence_status,
+        'reproducible': equivalence_status == 'equivalent' and not eval_snapshot_inconsistencies,
+        'blocking_issues': [],
+        'warnings': [],
+        'info': []
+    }
+    
+    if substantive_diffs:
+        reproducibility_status['blocking_issues'].append({
+            'type': 'HYPERPARAMETER_MISMATCH',
+            'severity': 'CRITICAL',
+            'count': len(substantive_diffs),
+            'message': f'{len(substantive_diffs)} hyperparameter(s) differ between experiments',
+            'action': 'Review canonical_changes.hyperparameter_diffs for details'
+        })
+    
+    if eval_snapshot_inconsistencies:
+        reproducibility_status['blocking_issues'].append({
+            'type': 'SNAPSHOT_CORRUPTION',
+            'severity': 'CRITICAL',
+            'count': len(eval_snapshot_inconsistencies),
+            'message': 'Evaluation snapshot values do not match canonical hyperparameters',
+            'action': 'Review snapshot_corruption.inconsistencies for corrupted keys'
+        })
+    
+    if missing_params:
+        reproducibility_status['blocking_issues'].append({
+            'type': 'MISSING_PARAMETERS',
+            'severity': 'CRITICAL',
+            'count': len(missing_params),
+            'message': f'{len(missing_params)} parameter(s) could not be reconstructed',
+            'action': 'Check missing_parameters section for unmapped keys'
+        })
+    
+    if invariant_failures:
+        reproducibility_status['blocking_issues'].append({
+            'type': 'INVARIANT_VIOLATION',
+            'severity': 'CRITICAL',
+            'count': len(invariant_failures),
+            'message': 'Invariant checks failed',
+            'action': 'Review invariant_failures for validation errors'
+        })
+    
+    if not seed_match:
+        reproducibility_status['warnings'].append({
+            'type': 'SEED_MISMATCH',
+            'severity': 'WARNING',
+            'message': 'Random seed differs between experiments',
+            'action': 'Results may not be numerically identical'
+        })
+    
+    if epoch_diff_info:
+        reproducibility_status['warnings'].append({
+            'type': 'EPOCH_OVERRIDE',
+            'severity': 'WARNING',
+            'message': epoch_diff_info,
+            'action': 'Training duration differs from original'
+        })
+    
+    if adaptation_note:
+        reproducibility_status['warnings'].append({
+            'type': 'DEVICE_ADAPTATION',
+            'severity': 'INFO',
+            'message': adaptation_note,
+            'action': 'GPUs differ but training can proceed'
+        })
+    
+    if metadata_added:
+        reproducibility_status['info'].append({
+            'type': 'SCHEMA_EVOLUTION',
+            'severity': 'INFO',
+            'message': f'{len(metadata_added)} metadata field(s) added from newer launcher version',
+            'action': 'No action required - benign schema evolution'
+        })
+    
+    # Compact actionable audit structure
+    audit = {
+        # === ACTIONABLE SUMMARY ===
+        'reproducibility_status': reproducibility_status,
+        
+        # === THREE-LAYER PROTECTION ===
+        'canonical_changes': canonical_changes,
+        'snapshot_corruption': snapshot_corruption,
+        'schema_evolution': schema_evolution,
+        
+        # === EXPERIMENT IDENTITY ===
+        'experiment': {
+            'original_id': original_cfg['experiment']['id'],
+            'relaunch_id': exp_id,
+            'train_script': train_script,
+            'original_command': original_cfg['runtime'].get('train_command'),
+            'relaunch_command': reconstructed_cmd
+        },
+        
+        # === HASH VERIFICATION ===
+        'hash_verification': {
+            'full_match': md5_full_match,
+            'effective_match': md5_effective_match,
+            'combined_match': md5_full_match and md5_effective_match,
+            'original_effective_md5': original_effective_recomputed,
+            'relaunch_effective_md5': relaunch_effective_recomputed,
+            'explanation': 'full=all params including metadata; effective=substantive hyperparameters only'
+        },
+        
+        # === DETAILED DIAGNOSTICS (for debugging) ===
+        'diagnostics': {
+            'missing_parameters': missing_params,
+            'invariant_failures': invariant_failures,
+            'seed_match': seed_match,
+            'epoch_info': epoch_diff_info,
+            'device_info': {
+                'original': orig_devices,
+                'relaunch': adapted_devices,
+                'adaptation_note': adaptation_note
+            }
+        },
+        
+        # === EXECUTION METADATA ===
+        'execution': {
+            'dry_run': args.dry_run,
+            'strict_mode': args.strict,
+            'audit_timestamp': datetime.utcnow().isoformat()
+        }
     }
     audit['correlation_deterministic'] = True
     audit['epoch_override_ignored'] = epoch_override_ignored
@@ -422,17 +749,165 @@ def main():
     atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
     logger = timestamped_logger('relaunch', os.path.join(new_exp_dir,'stdout.log'))
     logger.info(f"Relaunch audit created for {original_cfg['experiment']['id']} -> {exp_id}")
-    if substantive_diffs:
-        logger.warning(f"SUBSTANTIVE PARAMETER DIFFS: {len(substantive_diffs)} entries.")
-    else:
-        logger.info("No substantive parameter diffs detected.")
-    if missing_params:
-        logger.error(f"MISSING PARAMETER MAPPINGS: {len(missing_params)} keys contain '<missing>' values.")
-    if skipped:
-        logger.warning(f"SKIPPED {len(skipped)} unmapped parameters.")
+    
+    # === PRINT ACTIONABLE SUMMARY TO CONSOLE ===
+    def print_audit_summary():
+        """Print structured, actionable summary of relaunch audit to console."""
+        print("\n" + "=" * 80)
+        print("RELAUNCH AUDIT SUMMARY")
+        print("=" * 80)
+        
+        # 1. Quick Status
+        status = reproducibility_status['verdict'].upper()
+        reproducible = reproducibility_status['reproducible']
+        status_symbol = "✅" if reproducible else "❌"
+        print(f"\n{status_symbol} REPRODUCIBILITY STATUS: {status}")
+        print(f"   Reproducible: {reproducible}")
+        
+        # 2. Blocking Issues (if any)
+        if reproducibility_status['blocking_issues']:
+            print(f"\n❌ BLOCKING ISSUES ({len(reproducibility_status['blocking_issues'])}):")
+            for issue in reproducibility_status['blocking_issues']:
+                print(f"   • [{issue['severity']}] {issue['type']}")
+                print(f"     {issue['message']}")
+                print(f"     → ACTION: {issue['action']}")
+        
+        # 3. Three-Layer Protection Summary
+        print("\n" + "-" * 80)
+        print("THREE-LAYER PROTECTION SUMMARY")
+        print("-" * 80)
+        
+        # Layer 1: Canonical Changes
+        layer1_symbol = "✅" if canonical_changes['status'] == 'PASS' else "❌"
+        print(f"\n{layer1_symbol} Layer 1 - CANONICAL CHANGES (Hyperparameter Detection)")
+        print(f"   Status: {canonical_changes['status']}")
+        print(f"   Action Required: {canonical_changes['action_required']}")
+        print(f"   {canonical_changes['guidance']}")
+        if canonical_changes.get('details'):
+            for detail in canonical_changes['details'][:3]:  # Show first 3
+                print(f"      • {detail}")
+        
+        # Layer 2: Snapshot Corruption
+        layer2_symbol = "✅" if snapshot_corruption['status'] == 'PASS' else "⚠️"
+        print(f"\n{layer2_symbol} Layer 2 - SNAPSHOT VALIDATION (Consistency Check)")
+        print(f"   Status: {snapshot_corruption['status']}")
+        print(f"   Action Required: {snapshot_corruption['action_required']}")
+        print(f"   {snapshot_corruption['guidance']}")
+        if snapshot_corruption.get('details'):
+            for detail in snapshot_corruption['details'][:3]:
+                print(f"      • {detail}")
+        
+        # Layer 3: Schema Evolution
+        layer3_symbol = "ℹ️" if schema_evolution['status'] == 'BENIGN' else "⚠️"
+        print(f"\n{layer3_symbol} Layer 3 - SCHEMA EVOLUTION (Metadata Changes)")
+        print(f"   Status: {schema_evolution['status']}")
+        print(f"   Count: {schema_evolution['count']} changes")
+        print(f"     - Added: {len(schema_evolution.get('added', []))}")
+        print(f"     - Changed: {len(schema_evolution.get('changed', []))}")
+        print(f"     - Skipped: {len(schema_evolution.get('skipped', []))}")
+        print(f"   Action Required: {schema_evolution['action_required']}")
+        print(f"   {schema_evolution['guidance']}")
+        
+        # 4. Hash Verification
+        print("\n" + "-" * 80)
+        print("HASH VERIFICATION")
+        print("-" * 80)
+        effective_match = audit['hash_verification']['effective_match']
+        full_match = audit['hash_verification']['full_match']
+        hash_symbol = "✅" if effective_match else "❌"
+        print(f"\n{hash_symbol} Effective Hash Match: {effective_match}")
+        print(f"   Full Hash Match: {full_match} (includes metadata)")
+        print(f"   → {audit['hash_verification']['explanation']}")
+        
+        # 5. Warnings (if any)
+        if reproducibility_status['warnings']:
+            print(f"\n⚠️  WARNINGS ({len(reproducibility_status['warnings'])}):")
+            for warn in reproducibility_status['warnings']:
+                print(f"   • [{warn['severity']}] {warn['type']}")
+                print(f"     {warn['message']}")
+                print(f"     → ACTION: {warn['action']}")
+        
+        # 6. Info Messages
+        if reproducibility_status['info']:
+            print("\nℹ️  INFO:")
+            for info in reproducibility_status['info']:
+                print(f"   • {info['message']}")
+        
+        # 7. Bottom Line
+        print("\n" + "=" * 80)
+        if reproducible and effective_match:
+            print("✅ VERDICT: Experiments are substantively EQUIVALENT and REPRODUCIBLE")
+            print("   No action required. Safe to proceed.")
+        elif reproducibility_status['blocking_issues']:
+            print("❌ VERDICT: BLOCKING issues detected - Review and resolve before proceeding")
+        else:
+            print("⚠️  VERDICT: Review warnings and verify reproducibility claims")
+        print("=" * 80)
+        print(f"\nFull audit details: {os.path.join(new_exp_dir, 'relaunch_audit.json')}")
+        print()
+    
+    # Print the summary
+    print_audit_summary()
+    
+    # === ACTIONABLE SUMMARY LOGGING ===
+    logger.info("==== REPRODUCIBILITY STATUS ====")
+    logger.info(f"Verdict: {reproducibility_status['verdict'].upper()}")
+    logger.info(f"Reproducible: {reproducibility_status['reproducible']}")
+    
+    if reproducibility_status['blocking_issues']:
+        logger.error(f"BLOCKING ISSUES ({len(reproducibility_status['blocking_issues'])}):")
+        for issue in reproducibility_status['blocking_issues']:
+            logger.error(f"  [{issue['severity']}] {issue['type']}: {issue['message']}")
+            logger.error(f"      Action: {issue['action']}")
+    
+    if reproducibility_status['warnings']:
+        logger.warning(f"WARNINGS ({len(reproducibility_status['warnings'])}):")
+        for warn in reproducibility_status['warnings']:
+            logger.warning(f"  [{warn['severity']}] {warn['type']}: {warn['message']}")
+            logger.warning(f"      Action: {warn['action']}")
+    
+    if reproducibility_status['info']:
+        logger.info("INFO:")
+        for info in reproducibility_status['info']:
+            logger.info(f"  {info['message']}")
+    
+    # === THREE-LAYER PROTECTION SUMMARY ===
+    logger.info("==== THREE-LAYER PROTECTION ====")
+    logger.info(f"Layer 1 (Canonical Changes): {canonical_changes['status']} - {canonical_changes['guidance']}")
+    logger.info(f"Layer 2 (Snapshot Corruption): {snapshot_corruption['status']} - {snapshot_corruption['guidance']}")
+    logger.info(f"Layer 3 (Schema Evolution): {schema_evolution['status']} - {schema_evolution['guidance']}")
+    
+    # === STRICT MODE CHECK (Before Training) ===
     if args.strict and audit['strict_failure']:
         logger.error("Strict mode violation: aborting before training.")
+        print("\n❌ STRICT MODE: Aborting due to reproducibility violations.")
+        print("   Remove --strict flag to proceed anyway, or resolve issues first.\n")
         return
+    
+    # === BLOCKING ISSUES CHECK (Before Training) ===
+    if reproducibility_status['blocking_issues'] and not args.dry_run:
+        print("\n⚠️  BLOCKING ISSUES DETECTED")
+        print("   The audit found issues that may affect reproducibility.")
+        print("   Review the audit summary above before proceeding.\n")
+        logger.warning("Blocking issues present but not in strict mode; proceeding with training.")
+    
+    # === DRY RUN COMPLETION ===
+    if args.dry_run:
+        print("\n✅ DRY RUN COMPLETE - No training executed")
+        print(f"   Audit saved to: {os.path.join(new_exp_dir, 'relaunch_audit.json')}\n")
+        logger.info("Dry run completed; no training executed.")
+        # Still write final audit with diagnostics
+        atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
+        if not args.skip_readme:
+            write_readme(new_exp_dir, new_cfg, best_metrics=None)
+        return
+    
+    # === PROCEED TO TRAINING ===
+    print("\n" + "=" * 80)
+    print("PROCEEDING TO TRAINING")
+    print("=" * 80)
+    logger.info("Starting relaunch training subprocess...")
+    
     if not args.dry_run:
         env = os.environ.copy()
         # Use adapted_devices determined earlier (original when possible, else fallback) for reproduction fidelity
@@ -525,26 +1000,132 @@ def main():
             'relaunch_metrics_exists': relaunch_metrics_exists
         }
     # Final audit enrichment & write (second write after potential metrics comparison)
-    audit['audit_completed_at'] = datetime.utcnow().isoformat()
     if missing_params:
-        audit['missing_params_count'] = len(missing_params)
+        audit['diagnostics']['missing_params_count'] = len(missing_params)
     atomic_write_json(audit, os.path.join(new_exp_dir,'relaunch_audit.json'))
-    # Human-readable summary block
-    logger.info("==== RELAUNCH AUDIT SUMMARY ====")
-    logger.info(f"MD5 match: {audit['md5_comparison']['md5_match']}")
-    logger.info(f"Substantive param diffs: {len(substantive_diffs)} | Missing params: {len(missing_params)} | Skipped flags: {len(skipped)}")
+    
+    # Human-readable summary block (post-training)
+    print("\n" + "=" * 80)
+    print("TRAINING COMPLETE - REPRODUCIBILITY REPORT")
+    print("=" * 80)
+    
+    logger.info("==== FINAL AUDIT SUMMARY ====")
+    logger.info(f"Reproducibility Status: {audit['reproducibility_status']['verdict'].upper()}")
+    logger.info(f"Hash Verification: effective={audit['hash_verification']['effective_match']}, full={audit['hash_verification']['full_match']}")
+    
+    # === ENHANCED METRICS COMPARISON REPORT ===
     if audit.get('metrics_comparison'):
         mc = audit['metrics_comparison']
-        logger.info(f"Metrics within tolerance: {mc['within_tolerance']}")
-    if substantive_diffs:
-        preview_keys = list(substantive_diffs.keys())[:10]
-        logger.info(f"Sample param diffs: {preview_keys}{'...' if len(substantive_diffs)>10 else ''}")
-    if missing_params:
-        preview_missing = list(missing_params.keys())[:10]
-        logger.info(f"Sample missing params: {preview_missing}{'...' if len(missing_params)>10 else ''}")
+        
+        # Determine overall metrics status
+        all_metrics_match = mc.get('within_tolerance', False)
+        has_metrics = bool(mc.get('diffs'))
+        training_succeeded = mc.get('training_exit_code') == 0
+        
+        print("\n" + "-" * 80)
+        print("METRICS COMPARISON REPORT")
+        print("-" * 80)
+        
+        if not training_succeeded:
+            print("\n❌ TRAINING FAILED")
+            print(f"   Exit code: {mc.get('training_exit_code')}")
+            print("   Cannot compare metrics - relaunch did not complete successfully")
+            logger.error(f"Training failed with exit code {mc.get('training_exit_code')}")
+        
+        elif not mc.get('original_metrics_exists'):
+            print("\n⚠️  ORIGINAL METRICS MISSING")
+            print("   Original experiment did not produce metrics file")
+            print("   Cannot verify reproducibility")
+            logger.warning("Original metrics file not found")
+        
+        elif not mc.get('relaunch_metrics_exists'):
+            print("\n❌ RELAUNCH METRICS MISSING")
+            print("   Relaunch training did not produce metrics file")
+            print("   Training may have crashed or been interrupted")
+            logger.error("Relaunch metrics file not found")
+        
+        elif not has_metrics:
+            print("\n⚠️  NO METRICS AVAILABLE FOR COMPARISON")
+            print("   Results files exist but contain no extractable metrics")
+            print("   Check results.json format in both experiments")
+            logger.warning("Metrics extraction failed for comparison")
+        
+        else:
+            # We have metrics to compare
+            logger.info(f"Metrics Comparison: within_tolerance={all_metrics_match}")
+            
+            if all_metrics_match:
+                print("\n✅ METRICS REPRODUCED SUCCESSFULLY")
+                print("   All metrics within tolerance - reproducibility CONFIRMED")
+            else:
+                print("\n❌ METRICS DIVERGENCE DETECTED")
+                print("   Some metrics exceed tolerance - reproducibility at RISK")
+            
+            print(f"\n{'Metric':<25} {'Original':<12} {'Relaunch':<12} {'Delta':<12} {'Status':<10}")
+            print("-" * 80)
+            
+            for k, v in mc['diffs'].items():
+                orig = v['original']
+                rel = v['relaunch']
+                diff = v['abs_diff']
+                tol = v['tolerance']
+                
+                within_tol = diff <= tol
+                status_symbol = "✅ PASS" if within_tol else "❌ FAIL"
+                
+                # Format metric name
+                metric_display = k.replace('_', ' ').title()
+                
+                print(f"{metric_display:<25} {orig:<12.6f} {rel:<12.6f} {diff:<12.6f} {status_symbol}")
+                
+                # Log to file
+                logger.info(f"  {k}: original={orig:.6f}, relaunch={rel:.6f}, diff={diff:.6f}, tolerance={tol}, match={within_tol}")
+                
+                # Additional context for failures
+                if not within_tol:
+                    pct_diff = (diff / orig * 100) if orig != 0 else float('inf')
+                    print(f"  {'':>25} ⚠️  Tolerance: {tol:.6f} | Δ%: {pct_diff:+.2f}%")
+            
+            # Bottom line verdict
+            print("\n" + "-" * 80)
+            if all_metrics_match:
+                print("✅ VERDICT: Relaunch successfully reproduced original metrics")
+                print("   → Reproducibility validated. Safe to use relaunch results.")
+            else:
+                failed_count = sum(1 for v in mc['diffs'].values() if v['abs_diff'] > v['tolerance'])
+                print(f"❌ VERDICT: {failed_count}/{len(mc['diffs'])} metric(s) exceed tolerance")
+                print("   → Possible causes:")
+                print("      • Non-deterministic operations (check seeds/determinism settings)")
+                print("      • Hardware differences (GPU/CPU variations)")
+                print("      • Library version changes (PyTorch/CUDA)")
+                print("      • Hyperparameter drift (review Layer 1 canonical changes)")
+                print("   → ACTION: Review audit for hyperparameter differences and check logs")
+    
+    else:
+        print("\n⚠️  METRICS COMPARISON SKIPPED")
+        print("   Training did not run or metrics not available")
+    
+    # File locations
+    print("\n" + "-" * 80)
+    print("EXPERIMENT ARTIFACTS")
+    print("-" * 80)
+    print(f"Relaunch Directory: {new_exp_dir}")
+    print(f"Audit JSON:         {os.path.join(new_exp_dir, 'relaunch_audit.json')}")
+    if audit.get('metrics_comparison', {}).get('relaunch_metrics_exists'):
+        print(f"Metrics CSV:        {os.path.join(new_exp_dir, 'metrics_epoch.csv')}")
+        print(f"Results JSON:       {os.path.join(new_exp_dir, 'results.json')}")
+    print(f"Training Log:       {os.path.join(new_exp_dir, 'stdout.log')}")
+    
+    # Final warnings
+    if audit['reproducibility_status']['blocking_issues']:
+        print("\n⚠️  CONFIGURATION ISSUES DETECTED")
+        print(f"   {len(audit['reproducibility_status']['blocking_issues'])} blocking issue(s) found")
+        print("   Review relaunch_audit.json for hyperparameter differences")
+    
+    print("=" * 80 + "\n")
+    
     if not args.skip_readme:
         write_readme(new_exp_dir, new_cfg, best_metrics=None)
-    print(f"Relaunch experiment directory: {new_exp_dir}")
 
 if __name__ == '__main__':
     main()

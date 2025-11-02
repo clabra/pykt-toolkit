@@ -1,0 +1,70 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7173643946156429,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.10487909419856291,
+    "gain_correlation": 0.020485006360102618
+  },
+  "train_history": {
+    "train_loss": [
+      0.536961246880225
+    ],
+    "train_auc": [
+      0.695039992963822
+    ],
+    "val_auc": [
+      0.7173643946156429
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.1507920474756726,
+        "gain_correlation": 0.002416141290140443
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.1507920474756726,
+        "gain_correlation": 0.002416141290140443,
+        "warmup_scale": 0.125,
+        "alignment_corr_mastery": 0.027454325929284096,
+        "alignment_corr_gain": 0.10450497269630432,
+        "global_alignment_mastery_corr": 0.12206572028623972,
+        "global_alignment_gain_corr": 0.021216457085926475,
+        "effective_alignment_weight": 0.03125,
+        "peak_mastery_corr": 0.12206572028623972,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 0.9868062532321296,
+          "constraint_total": 0.013193746890454569,
+          "alignment": -0.007272364930443323,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.01317667664352013,
+        "min_mastery_variance": 0.00984229240566492,
+        "max_mastery_variance": 0.04882470518350601,
+        "per_lag_correlations": []
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 1,
+    "local_mastery_corr": 0.1507920474756726,
+    "local_gain_corr": 0.002416141290140443,
+    "global_mastery_corr": 0.12206572028623972,
+    "global_gain_corr": 0.021216457085926475,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

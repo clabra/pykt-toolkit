@@ -70,6 +70,7 @@
     "num_encoder_blocks": 6,
     "d_ff": 1024,
     "dropout": 0.2,
+    "emb_type": "qid",
     "use_mastery_head": true,
     "use_gain_head": true,
     "non_negative_loss_weight": 0.0,
@@ -93,11 +94,8 @@
     "schema_version": "1.0.0",
     "policy_last_updated": "2025-10-30",
     "ignored_eval_flags": [
-      "device", "run_dir",
-      "batch_size","consistency_loss_weight","d_ff","d_model","dataset","dropout","fold","gain_performance_loss_weight",
-      "mastery_performance_loss_weight","monotonicity_loss_weight","n_heads","non_negative_loss_weight","num_encoder_blocks","seq_len",
-      "sparsity_loss_weight","use_gain_head","use_mastery_head"
+      "device", "run_dir"
     ],
-    "ignored_training_flags": ["auto_shifted_eval"]
+    "ignored_training_flags": ["auto_shifted_eval", "config", "experiment_id"]
   }
 }

@@ -137,6 +137,25 @@ def main():
     parser.add_argument('--max_correlation_students', type=int, default=None, help='Override max students for correlation if desired')
     parser.add_argument('--dataset', type=str, help='Explicit dataset name (overrides config/eval defaults)')
     parser.add_argument('--experiment_id', type=str, default=None, help='Explicit experiment id for logging (overrides id derived from run_dir/config).')
+    # Architecture flags promoted for audit transparency
+    parser.add_argument('--seq_len', type=int, help='Sequence length (must match training model_config)')
+    parser.add_argument('--d_model', type=int, help='Model hidden dimension (must match)')
+    parser.add_argument('--n_heads', type=int, help='Number of attention heads (must match)')
+    parser.add_argument('--num_encoder_blocks', type=int, help='Number of transformer blocks (must match)')
+    parser.add_argument('--d_ff', type=int, help='Feed-forward layer dimension (must match)')
+    parser.add_argument('--dropout', type=float, help='Dropout probability (must match)')
+    parser.add_argument('--emb_type', type=str, help='Embedding type (qid, tag, etc.) (must match)')
+    # Performance / interpretability weight flags (for explicit validation; must match stored config if provided)
+    parser.add_argument('--batch_size', type=int, help='Evaluation batch size (must match evaluation_defaults if provided)')
+    parser.add_argument('--fold', type=int, help='Data split fold (must match)')
+    parser.add_argument('--use_mastery_head', action='store_true', help='Expect mastery head enabled')
+    parser.add_argument('--use_gain_head', action='store_true', help='Expect gain head enabled')
+    parser.add_argument('--non_negative_loss_weight', type=float, help='Must match training config value')
+    parser.add_argument('--monotonicity_loss_weight', type=float, help='Must match training config value')
+    parser.add_argument('--mastery_performance_loss_weight', type=float, help='Must match training config value')
+    parser.add_argument('--gain_performance_loss_weight', type=float, help='Must match training config value')
+    parser.add_argument('--sparsity_loss_weight', type=float, help='Must match training config value')
+    parser.add_argument('--consistency_loss_weight', type=float, help='Must match training config value')
     args = parser.parse_args()
 
     # Load experiment config.json
@@ -169,16 +188,35 @@ def main():
     model_cfg = cfg.get('model_config')
     arch_source = 'model_config' if model_cfg is not None else 'evaluation_defaults'
     arch_dict = model_cfg if model_cfg is not None else eval_defaults
-    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
+    mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout','emb_type']
     missing_arch = [k for k in mandatory_arch if k not in arch_dict]
     if missing_arch:
         raise KeyError(f"Missing mandatory architecture keys ({missing_arch}) in {arch_source}; reproduction invalid.")
-    seq_len = arch_dict['seq_len']
-    d_model = arch_dict['d_model']
-    n_heads = arch_dict['n_heads']
-    num_encoder_blocks = arch_dict['num_encoder_blocks']
-    d_ff = arch_dict['d_ff']
-    dropout = arch_dict['dropout']
+    # Resolved (baseline) architecture from stored config
+    baseline_arch = {k: arch_dict[k] for k in mandatory_arch}
+    # Apply CLI overrides ONLY for validation (do not mutate baseline).
+    cli_arch = {}
+    for k in mandatory_arch:
+        v = getattr(args, k, None)
+        if v is not None:
+            cli_arch[k] = v
+    # Validation guard: if user supplied any CLI arch flags, all supplied must match baseline_arch
+    arch_drift = {}
+    for k, v in cli_arch.items():
+        if str(v) != str(baseline_arch[k]):
+            arch_drift[k] = {'expected': baseline_arch[k], 'provided': v}
+    if arch_drift:
+        raise ValueError(f"Architecture drift detected for keys: {json.dumps(arch_drift)}. Evaluation aborted to preserve reproducibility.")
+    # Final resolved architecture values
+    seq_len = baseline_arch['seq_len']
+    d_model = baseline_arch['d_model']
+    n_heads = baseline_arch['n_heads']
+    num_encoder_blocks = baseline_arch['num_encoder_blocks']
+    d_ff = baseline_arch['d_ff']
+    dropout = baseline_arch['dropout']
+    emb_type = baseline_arch['emb_type']
+
+    # Resolve baseline performance/interpretability weights from config before validation
     use_mastery_head = bool(cfg.get('interpretability', {}).get('use_mastery_head', eval_defaults.get('use_mastery_head', True)))
     use_gain_head = bool(cfg.get('interpretability', {}).get('use_gain_head', eval_defaults.get('use_gain_head', True)))
     non_negative_loss_weight = eval_defaults.get('non_negative_loss_weight', 0.0)
@@ -187,6 +225,40 @@ def main():
     gain_performance_loss_weight = eval_defaults.get('gain_performance_loss_weight', 0.8)
     sparsity_loss_weight = eval_defaults.get('sparsity_loss_weight', 0.2)
     consistency_loss_weight = eval_defaults.get('consistency_loss_weight', 0.3)
+    # Validate performance/interpretability weights if provided via CLI (after baseline resolution)
+    perf_keys = [
+        'batch_size','fold','use_mastery_head','use_gain_head','non_negative_loss_weight','monotonicity_loss_weight',
+        'mastery_performance_loss_weight','gain_performance_loss_weight','sparsity_loss_weight','consistency_loss_weight'
+    ]
+    baseline_perf = {
+        'batch_size': eval_defaults.get('batch_size', 96),
+        'fold': fold,
+        'use_mastery_head': use_mastery_head,
+        'use_gain_head': use_gain_head,
+        'non_negative_loss_weight': non_negative_loss_weight,
+        'monotonicity_loss_weight': monotonicity_loss_weight,
+        'mastery_performance_loss_weight': mastery_performance_loss_weight,
+        'gain_performance_loss_weight': gain_performance_loss_weight,
+        'sparsity_loss_weight': sparsity_loss_weight,
+        'consistency_loss_weight': consistency_loss_weight
+    }
+    perf_drift = {}
+    for k in perf_keys:
+        cli_val = getattr(args, k, None)
+        # For store_true flags, argparse sets False when absent; treat absence as None to avoid false drift.
+        if k in {'use_mastery_head','use_gain_head'}:
+            # Determine if flag explicitly present in sys.argv
+            flag_present = any(arg == f"--{k}" for arg in sys.argv[1:])
+            if not flag_present:
+                continue  # skip validation for unsupplied flag
+        if cli_val is None:
+            continue
+        provided = cli_val
+        expected = baseline_perf[k]
+        if str(provided) != str(expected):
+            perf_drift[k] = {'expected': expected, 'provided': provided}
+    if perf_drift:
+        raise ValueError(f"Performance/interpretability weight drift detected: {json.dumps(perf_drift)}")
     max_corr_students = args.max_correlation_students or eval_defaults.get('max_correlation_students', 300)
 
     # Primary checkpoint name produced by training is model_best.pth; fallback to legacy best_model.pth
@@ -228,7 +300,7 @@ def main():
         'num_encoder_blocks': num_encoder_blocks,
         'd_ff': d_ff,
         'dropout': dropout,
-        'emb_type': arch_dict.get('emb_type', 'qid'),
+        'emb_type': emb_type,
         'use_mastery_head': use_mastery_head,
         'use_gain_head': use_gain_head,
         'non_negative_loss_weight': non_negative_loss_weight,

@@ -1,0 +1,217 @@
+{
+  "runtime": {
+    "command": "python examples/relaunch_experiment.py --source_dir examples/experiments/20251101_221149_gainakt2exp_check_consistency",
+    "train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --seed 42 --epochs 2 --batch_size 64 --learning_rate 0.000174 --weight_decay 1.7571e-05 --optimizer Adam --gradient_clip 1.0 --patience 20 --dataset assist2015 --fold 0 --use_mastery_head --use_gain_head --enhanced_constraints --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --warmup_constraint_epochs 8 --max_semantic_students 50 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --adaptive_alignment --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --enable_global_alignment_pass --alignment_global_students 600 --use_residual_alignment --alignment_residual_window 5 --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 --emb_type qid",
+    "timestamp": "2025-11-01T22:53:32.989508Z",
+    "seed": 42,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "enable_cosine_perf_schedule": false
+  },
+  "hardware": {
+    "devices": [
+      0,
+      1,
+      2
+    ],
+    "threads": 8,
+    "selected_devices": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "gpu_selection_source": "CUDA_VISIBLE_DEVICES",
+    "visible_gpu_count": 3,
+    "selected_gpu_count": 5
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "training": {
+    "epochs": 2,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "mixed_precision": false,
+    "gradient_clip": 1.0,
+    "patience": 20
+  },
+  "experiment": {
+    "id": "20251101_225331_gainakt2exp_final_verification",
+    "model": "gainakt2exp",
+    "short_title": "final_verification",
+    "purpose": "Relaunch reproduction of 20251101_221149_gainakt2exp_check_consistency"
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "interpretability": {
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "warmup_constraint_epochs": 8,
+    "non_negative_loss_weight": 0.0,
+    "enhanced_constraints": true,
+    "max_semantic_students": 50
+  },
+  "alignment": {
+    "enable_alignment_loss": true,
+    "alignment_weight": 0.25,
+    "alignment_warmup_epochs": 8,
+    "adaptive_alignment": true,
+    "alignment_min_correlation": 0.05,
+    "alignment_share_cap": 0.08,
+    "alignment_share_decay_factor": 0.7
+  },
+  "global_alignment": {
+    "enable_global_alignment_pass": true,
+    "alignment_global_students": 600,
+    "use_residual_alignment": true,
+    "alignment_residual_window": 5
+  },
+  "refinement": {
+    "enable_retention_loss": true,
+    "retention_delta": 0.005,
+    "retention_weight": 0.14,
+    "enable_lag_gain_loss": true,
+    "lag_gain_weight": 0.06,
+    "lag_max_lag": 3,
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_threshold": 0.1,
+    "consistency_rebalance_new_weight": 0.2,
+    "variance_floor": 0.0001,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5
+  },
+  "evaluation_snapshot": {
+    "dataset": "assist2015",
+    "fold": 0,
+    "batch_size": 64,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "max_correlation_students": 300
+  },
+  "evaluation_snapshot_md5": "5d4c1b259dc8ae0277fd1ce352dbd27e",
+  "model_config": {
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid"
+  },
+  "model_config_md5": "424c9c11c87c7175fa7f0e836be0d212",
+  "reproducibility_policy": {
+    "ignored_eval_flags": [
+      "device",
+      "run_dir"
+    ],
+    "ignored_training_flags": [
+      "auto_shifted_eval",
+      "config",
+      "experiment_id"
+    ],
+    "schema_version": "1.0.0",
+    "policy_last_updated": "2025-10-30"
+  },
+  "config_md5": "0f326cde665970b73f606b46e9b6bdab",
+  "evaluation_defaults": {
+    "dataset": "assist2015",
+    "fold": 0,
+    "batch_size": 64,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.8,
+    "gain_performance_loss_weight": 0.8,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "max_correlation_students": 300
+  },
+  "override_applied": {
+    "epochs": 2
+  },
+  "preflight_consistency": {
+    "train_script": "/workspaces/pykt-toolkit/examples/train_gainakt2exp.py",
+    "eval_script": "examples/eval_gainakt2exp.py",
+    "missing_in_json_training": [],
+    "missing_in_argparse_training": [],
+    "extraneous_training_defaults": [],
+    "missing_in_json_evaluation": [],
+    "missing_in_argparse_evaluation": [],
+    "extraneous_evaluation_defaults": [],
+    "model_config_defaults": [
+      "d_ff",
+      "d_model",
+      "dropout",
+      "emb_type",
+      "n_heads",
+      "num_encoder_blocks",
+      "seq_len"
+    ],
+    "architecture_keys": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "architecture_not_in_model_config_defaults": [],
+    "architecture_not_in_training_defaults": [],
+    "architecture_not_in_evaluation_defaults": [],
+    "architecture_missing_train_argparse_flags": [],
+    "architecture_missing_eval_argparse_flags": [],
+    "ignored_eval_flags": [
+      "device",
+      "run_dir"
+    ],
+    "ignored_training_flags": [
+      "auto_shifted_eval",
+      "config",
+      "experiment_id"
+    ],
+    "drift_detected": false,
+    "exit_code": 0
+  },
+  "config_md5_full": "0f326cde665970b73f606b46e9b6bdab",
+  "config_md5_effective": "e9588c32b75efc995747c3cd14c5bae6"
+}

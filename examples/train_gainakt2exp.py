@@ -206,6 +206,10 @@ def train_gainakt2exp_model(args):
     
     # Get parameters with OPTIMAL defaults (AUC: 0.7260, Perfect Consistency)
     cfg = load_config_if_available()
+    # Invariant: auto_shifted_eval must remain True for standardized next-step metrics reproducibility
+    auto_shifted_eval_val = resolve_param(cfg, 'runtime', 'auto_shifted_eval', True)
+    if auto_shifted_eval_val is not True:
+        raise ValueError(f"Reproducibility invariant violated: auto_shifted_eval expected True, found {auto_shifted_eval_val}. Abort.")
     dataset_name = resolve_param(cfg, 'data', 'dataset', getattr(args, 'dataset', 'assist2015'))
     fold = resolve_param(cfg, 'data', 'fold', getattr(args, 'fold', 0))
     num_epochs = resolve_param(cfg, 'training', 'epochs', getattr(args, 'epochs', 20))

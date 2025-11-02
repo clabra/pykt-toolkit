@@ -1,0 +1,189 @@
+{
+  "original_experiment_id": "20251101_221149_gainakt2exp_check_consistency",
+  "relaunch_experiment_id": "20251101_225331_gainakt2exp_final_verification",
+  "original_config_md5_full": "0b48fb05074f7da698d8a156f16c1f76",
+  "relaunch_config_md5_full": "0f326cde665970b73f606b46e9b6bdab",
+  "original_config_md5_effective": "195655036b9ec01b0eaf85b2dd4f325a",
+  "relaunch_config_md5_effective": "e9588c32b75efc995747c3cd14c5bae6",
+  "train_script": "/workspaces/pykt-toolkit/examples/train_gainakt2exp.py",
+  "original_train_command": "python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --config /workspaces/pykt-toolkit/examples/experiments/20251101_221149_gainakt2exp_check_consistency/config.json",
+  "reconstructed_train_command": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/train_gainakt2exp.py --seed 42 --epochs 2 --batch_size 64 --learning_rate 0.000174 --weight_decay 1.7571e-05 --optimizer Adam --gradient_clip 1.0 --patience 20 --dataset assist2015 --fold 0 --use_mastery_head --use_gain_head --enhanced_constraints --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --warmup_constraint_epochs 8 --max_semantic_students 50 --enable_alignment_loss --alignment_weight 0.25 --alignment_warmup_epochs 8 --adaptive_alignment --alignment_min_correlation 0.05 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --enable_global_alignment_pass --alignment_global_students 600 --use_residual_alignment --alignment_residual_window 5 --enable_retention_loss --retention_delta 0.005 --retention_weight 0.14 --enable_lag_gain_loss --lag_gain_weight 0.06 --lag_max_lag 3 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --consistency_rebalance_epoch 8 --consistency_rebalance_threshold 0.1 --consistency_rebalance_new_weight 0.2 --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 --emb_type qid",
+  "param_diffs_substantive": {},
+  "param_diffs_hyperparameter": {},
+  "param_diffs_metadata": {},
+  "metadata_added": {
+    "training.mixed_precision": {
+      "original": "<missing>",
+      "new": false
+    },
+    "evaluation_snapshot.dataset": {
+      "original": "<missing>",
+      "new": "assist2015"
+    },
+    "evaluation_snapshot.fold": {
+      "original": "<missing>",
+      "new": 0
+    },
+    "evaluation_snapshot.batch_size": {
+      "original": "<missing>",
+      "new": 64
+    },
+    "evaluation_snapshot.seq_len": {
+      "original": "<missing>",
+      "new": 200
+    },
+    "evaluation_snapshot.d_model": {
+      "original": "<missing>",
+      "new": 512
+    },
+    "evaluation_snapshot.n_heads": {
+      "original": "<missing>",
+      "new": 8
+    },
+    "evaluation_snapshot.num_encoder_blocks": {
+      "original": "<missing>",
+      "new": 6
+    },
+    "evaluation_snapshot.d_ff": {
+      "original": "<missing>",
+      "new": 1024
+    },
+    "evaluation_snapshot.dropout": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.emb_type": {
+      "original": "<missing>",
+      "new": "qid"
+    },
+    "evaluation_snapshot.use_mastery_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.use_gain_head": {
+      "original": "<missing>",
+      "new": true
+    },
+    "evaluation_snapshot.non_negative_loss_weight": {
+      "original": "<missing>",
+      "new": 0.0
+    },
+    "evaluation_snapshot.monotonicity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.1
+    },
+    "evaluation_snapshot.mastery_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.gain_performance_loss_weight": {
+      "original": "<missing>",
+      "new": 0.8
+    },
+    "evaluation_snapshot.sparsity_loss_weight": {
+      "original": "<missing>",
+      "new": 0.2
+    },
+    "evaluation_snapshot.consistency_loss_weight": {
+      "original": "<missing>",
+      "new": 0.3
+    },
+    "evaluation_snapshot.max_correlation_students": {
+      "original": "<missing>",
+      "new": 300
+    },
+    "evaluation_snapshot_md5": {
+      "original": "<missing>",
+      "new": "5d4c1b259dc8ae0277fd1ce352dbd27e"
+    },
+    "reproducibility_policy.ignored_eval_flags": {
+      "original": "<missing>",
+      "new": [
+        "device",
+        "run_dir"
+      ]
+    },
+    "reproducibility_policy.ignored_training_flags": {
+      "original": "<missing>",
+      "new": [
+        "auto_shifted_eval",
+        "config",
+        "experiment_id"
+      ]
+    },
+    "reproducibility_policy.schema_version": {
+      "original": "<missing>",
+      "new": "1.0.0"
+    },
+    "reproducibility_policy.policy_last_updated": {
+      "original": "<missing>",
+      "new": "2025-10-30"
+    }
+  },
+  "relaunch_equivalence_status": "param_diff",
+  "missing_params": {},
+  "skipped_params": {
+    "preflight_consistency.train_script": "missing flag --train_script",
+    "preflight_consistency.eval_script": "missing flag --eval_script",
+    "preflight_consistency.missing_in_json_training": "missing flag --missing_in_json_training",
+    "preflight_consistency.missing_in_argparse_training": "missing flag --missing_in_argparse_training",
+    "preflight_consistency.extraneous_training_defaults": "missing flag --extraneous_training_defaults",
+    "preflight_consistency.missing_in_json_evaluation": "missing flag --missing_in_json_evaluation",
+    "preflight_consistency.missing_in_argparse_evaluation": "missing flag --missing_in_argparse_evaluation",
+    "preflight_consistency.extraneous_evaluation_defaults": "missing flag --extraneous_evaluation_defaults",
+    "preflight_consistency.model_config_defaults": "missing flag --model_config_defaults",
+    "preflight_consistency.architecture_keys": "missing flag --architecture_keys",
+    "preflight_consistency.architecture_not_in_model_config_defaults": "missing flag --architecture_not_in_model_config_defaults",
+    "preflight_consistency.architecture_not_in_training_defaults": "missing flag --architecture_not_in_training_defaults",
+    "preflight_consistency.architecture_not_in_evaluation_defaults": "missing flag --architecture_not_in_evaluation_defaults",
+    "preflight_consistency.architecture_missing_train_argparse_flags": "missing flag --architecture_missing_train_argparse_flags",
+    "preflight_consistency.architecture_missing_eval_argparse_flags": "missing flag --architecture_missing_eval_argparse_flags",
+    "preflight_consistency.ignored_eval_flags": "missing flag --ignored_eval_flags",
+    "preflight_consistency.ignored_training_flags": "missing flag --ignored_training_flags",
+    "preflight_consistency.exit_code": "missing flag --exit_code"
+  },
+  "devices_original": [
+    0,
+    1,
+    2
+  ],
+  "devices_used": [
+    0,
+    1,
+    2
+  ],
+  "device_adaptation_note": null,
+  "gpu_comparison": {
+    "original_devices": [
+      0,
+      1,
+      2
+    ],
+    "relaunch_devices": [
+      0,
+      1,
+      2
+    ],
+    "device_count_original": 3,
+    "device_count_relaunch": 3,
+    "device_count_changed": false
+  },
+  "seed_match": true,
+  "epoch_diff_info": null,
+  "md5_comparison": {
+    "md5_full_match": false,
+    "md5_effective_match": false,
+    "md5_match": false,
+    "original_full_md5": "0b48fb05074f7da698d8a156f16c1f76",
+    "relaunch_full_md5": "0f326cde665970b73f606b46e9b6bdab",
+    "original_effective_md5": "195655036b9ec01b0eaf85b2dd4f325a",
+    "relaunch_effective_md5": "e9588c32b75efc995747c3cd14c5bae6"
+  },
+  "dry_run": true,
+  "invariant_failures": [],
+  "correlation_deterministic": true,
+  "epoch_override_ignored": false,
+  "strict_failure": false,
+  "strict_guidance": "Strict mode disabled.",
+  "audit_completed_at": "2025-11-01T22:53:33.026850"
+}

@@ -435,6 +435,15 @@ def main():
                 'variance_floor': td['variance_floor'],
                 'variance_floor_patience': td['variance_floor_patience'],
                 'variance_floor_reduce_factor': td['variance_floor_reduce_factor']
+            },
+            'model_config': {
+                'seq_len': td['seq_len'],
+                'd_model': td['d_model'],
+                'n_heads': td['n_heads'],
+                'num_encoder_blocks': td['num_encoder_blocks'],
+                'd_ff': td['d_ff'],
+                'dropout': td['dropout'],
+                'emb_type': td['emb_type']
             }
         }
         return resolved
@@ -494,6 +503,25 @@ def main():
     if missing_mapped:
         raise RuntimeError(f"Integrity check failed: some defaults keys not mapped into resolved sections: {sorted(missing_mapped)}")
     resolved['override_applied'] = override_pairs
+    # Preflight consistency audit (non-blocking): verify argparse vs defaults alignment
+    try:
+        consistency_report = run_consistency_check(args.train_script)
+    except Exception as _consistency_exc:
+        consistency_report = {'error': f'consistency_check_failed: {_consistency_exc}'}
+    drift = consistency_report.get('drift_detected')
+    if drift:
+        print('[PreflightConsistency] DRIFT DETECTED (see stderr for details). Proceeding.', file=sys.stdout)
+        print('[PreflightConsistency] WARNING: drift_detected==true before launch. Training will proceed.', file=sys.stderr)
+        print('[PreflightConsistency] Summary:', file=sys.stderr)
+        try:
+            print(json.dumps({k: consistency_report.get(k) for k in ['missing_in_json_training','missing_in_argparse_training','missing_in_json_evaluation','missing_in_argparse_evaluation','architecture_missing_train_argparse_flags','architecture_missing_eval_argparse_flags','exit_code','drift_detected']}, indent=2), file=sys.stderr)
+        except Exception:
+            print(str(consistency_report), file=sys.stderr)
+    else:
+        print('[PreflightConsistency] CONSISTENCY PASS (no drift).', file=sys.stdout)
+        print('[PreflightConsistency] No drift detected.', file=sys.stderr)
+    # Persist report (lightweight) for later audit comparison
+    resolved['preflight_consistency'] = {k: consistency_report.get(k) for k in consistency_report if k not in {'parse_error','stderr'}}
     # Dynamic multi-GPU selection logic:
     # If user supplies --devices explicitly (non-empty list differing from defaults) we honor it.
     # Otherwise we attempt environment-based discovery:
@@ -608,7 +636,44 @@ def main():
         f"{sys.executable} examples/relaunch_experiment.py --source_dir {exp_dir} --short_title {relaunch_short}" )
     # Config hash
     from examples.experiment_utils import compute_config_hash
-    resolved['config_md5'] = compute_config_hash(resolved)
+    # Full hash includes all metadata sections.
+    full_md5 = compute_config_hash(resolved)
+    # Effective hash excludes strictly metadata / audit-only sections that should not affect reproduction equivalence.
+    def strip_effective(obj: dict) -> dict:
+        """Remove metadata-only sections and fields from config for effective hash."""
+        META_EXCLUDE_SECTIONS = {'preflight_consistency', 'evaluation_snapshot', 'override_applied', 'reproducibility_policy'}
+        MD5_EXCLUDE_KEYS = {'config_md5', 'config_md5_full', 'config_md5_effective', 'model_config_md5', 'evaluation_snapshot_md5'}
+        RUNTIME_METADATA_PREFIXES = ('runtime.', 'experiment.', 'hardware.gpu_selection_source', 'hardware.selected_devices')
+        OPTIONAL_METADATA_KEYS = {'training.mixed_precision'}
+        
+        def flatten_and_filter(cfg):
+            flat = {}
+            for section, content in cfg.items():
+                if section in META_EXCLUDE_SECTIONS or section in MD5_EXCLUDE_KEYS:
+                    continue
+                if isinstance(content, dict):
+                    for k, v in content.items():
+                        key = f"{section}.{k}"
+                        if any(key.startswith(pref) for pref in RUNTIME_METADATA_PREFIXES):
+                            continue
+                        if key in OPTIONAL_METADATA_KEYS:
+                            continue
+                        # Filter out any *_md5 fields
+                        if k.endswith('_md5') or '_md5_' in k:
+                            continue
+                        flat[key] = v
+                else:
+                    if section not in MD5_EXCLUDE_KEYS:
+                        flat[section] = content
+            return flat
+        
+        return flatten_and_filter(obj)
+    
+    effective_md5 = compute_config_hash(strip_effective(resolved))
+    resolved['config_md5_full'] = full_md5
+    resolved['config_md5_effective'] = effective_md5
+    # Backward compatibility: retain original field name pointing to full hash.
+    resolved['config_md5'] = full_md5
     # Record placeholder gpu_selection_source; will be updated if training runs.
     resolved['hardware']['gpu_selection_source'] = 'pending'
     atomic_write_json(resolved, os.path.join(exp_dir, 'config.json'))

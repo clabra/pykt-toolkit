@@ -1,0 +1,13 @@
+{
+  "experiment_id": "20251102_003039_gainakt2exp_consistency_report",
+  "dataset": "assist2015",
+  "fold": 0,
+  "valid_auc": 0.7257377349250834,
+  "valid_acc": 0.7534769194834013,
+  "test_auc": 0.7189463649819829,
+  "test_acc": 0.7462479196386115,
+  "test_mastery_correlation": 0.08908827925238205,
+  "test_gain_correlation": 0.030283552127204957,
+  "test_correlation_students": 262,
+  "timestamp": "2025-11-02T00:37:50.146296"
+}

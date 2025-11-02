@@ -107,6 +107,264 @@ data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015',
 
 This supplements the earlier ad-hoc commands with the formal launcher + evaluation pipeline. Every published result MUST originate from a launcher-generated folder under `examples/experiments/` containing a canonical `config.json`.
 
+### Executive Summary of Reproducibility Guarantees (2025-11-01 Update)
+
+We enforce end-to-end determinism (Python, NumPy, PyTorch, CUDA) and explicit parameter resolution. A run is considered reproducible only if the sorted MD5 of `config.json` matches and all required artifacts are present. Hidden defaults are disallowed: every training and evaluation flag appears exactly once in `configs/parameter_default.json`. Architecture parameters (seq_len, d_model, n_heads, num_encoder_blocks, d_ff, dropout, emb_type) are now promoted to CLI flags for both training and evaluation, eliminating earlier reproduction gaps.
+
+Runtime-only invariants (not user-overridable) are whitelisted: `auto_shifted_eval` (must be `true`). Invariant violations are surfaced during training and relaunch audits. Drift detection between argparse exposure and default JSON keys is performed preflight; results embedded in `config.json.preflight_consistency` with stdout PASS/DRIFT signaling.
+
+Interpretability metrics (mastery_corr, gain_corr) are computed via deterministic student selection (sorted, capped) removing prior sampling variance. Constraint loss contributions and semantic module shares are logged per epoch enabling correlation-performance trade-off inspection.
+
+| Guarantee | Mechanism | Artifact |
+|-----------|-----------|----------|
+| No hidden defaults | Central `parameter_default.json`; exhaustive argparse mapping | `config.json` (all keys) |
+| Deterministic seeds | Set Python/NumPy/Torch/CUDA + CuDNN deterministic | `SEED_INFO.md` |
+| Architecture drift prevention | Architecture flags mirrored in evaluation; mismatch abort | `eval_gainakt2exp.py` runtime check |
+| Preflight consistency audit | Defaults vs argparse diff, PASS/DRIFT stdout | `config.json.preflight_consistency` |
+| Config hash traceability | Sorted JSON MD5 stored | `config.json.config_md5` |
+| Invariant enforcement | Auto-shifted eval must remain true | Training stderr + relaunch audit |
+| Epoch metric integrity | Atomic JSON+CSV logging | `metrics_epoch.csv`, `results.json` |
+| Correlation determinism | Fixed ordered sampling subset | `metrics_epoch.csv` columns `mastery_corr`, `gain_corr` |
+| Resume safety (planned) | Pending `resume_state.json` design | (Future) |
+
+### Determinism & Fallback Strategy
+
+The training launcher enables PyTorch deterministic algorithms. If a kernel violates determinism, a controlled fallback records the offending batch indices and continues with deterministic constraints reinstated subsequently. We configure CuBLAS workspace determinism and disable nondeterministic benchmark heuristics. Any fallback occurrence is annotated in logs; absence of entries confirms strict determinism.
+
+### Invariants
+
+Current invariant set:
+1. `auto_shifted_eval == True` (runtime-only; ensures evaluation head shift behavior is consistent).
+2. Architecture tuple `(seq_len, d_model, n_heads, num_encoder_blocks, d_ff, dropout, emb_type)` stable between training and evaluation; evaluation aborts if mismatch.
+3. Presence of `seed` and `monitor_freq` in both `training_defaults` and emitted `config.json` (absence invalidates run).
+
+Invariant failures produce explicit diagnostic blocks in stdout and are recorded in relaunch audits under `invariant_failures`.
+
+### Preflight Consistency Audit
+
+Before training begins, the launcher performs a non-blocking audit comparing argparse-declared flags with JSON default sets. Results:
+* `drift_detected: false` => `[PreflightConsistency] CONSISTENCY PASS` printed.
+* `drift_detected: true` => `[PreflightConsistency] DRIFT DETECTED (details embedded in config)` printed and detailed diff added.
+
+Fields stored under `preflight_consistency`: `timestamp`, `drift_detected`, `missing_in_defaults`, `argparse_only`, `default_only`, `runtime_only_filtered`. This ensures later reviewers can reconstruct the exact preflight context.
+
+Interpretive definition: The preflight block answers four reproducibility questions:
+1. Coverage: Are all parameters declared in `parameter_default.json` present (no hidden defaults)?
+2. Symmetry: Are all argparse-exposed training and evaluation flags represented in the defaults JSON (no orphan CLI flags)?
+3. Architecture Integrity: Are all mandatory architecture keys (`seq_len`, `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`) defined across sections and exposed as CLI flags so evaluation can verify them?
+4. Drift Detection: Is there any mismatch between the expected parameter universe and what is actually exposed (`drift_detected` boolean)?
+
+Thus, preflight consistency is the embedded launch-time audit that verifies and records that every CLI-exposed and default-defined training/evaluation/architecture parameter set is complete and drift-free, forming the reproducibility contract for the experiment. If a future rerun alters results while the preflight block remained clean and the effective MD5 hash is unchanged, the discrepancy is attributable to environmental factors rather than configuration drift.
+
+### Parameter Coverage (Canonical Defaults Extract)
+
+All effective training parameters (including architecture and interpretability) reside in `training_defaults`. Evaluation mirrors architecture and loss weights to guard against representational drift. Metadata lists ignored runtime-only flags and schema revision identifiers. Any newly added flag must first appear in the JSON before experiment execution.
+
+Key additions since prior README revision:
+* Added architecture to evaluation defaults.
+* Introduced `enable_cosine_perf_schedule` (disabled by default) for performance-aligned scheduling.
+* Added `monitor_freq` to track logging cadence explicitly.
+* Formalized `ignored_training_flags`: `auto_shifted_eval`, `config`, `experiment_id`.
+* Consolidated deterministic correlation sampling and removed stochastic selection logic.
+
+### Evaluation Drift Guards
+
+`eval_gainakt2exp.py` now reconstructs baseline architecture from training `config.json` and checks CLI-supplied architecture flags. A mismatch triggers an abort to prevent silent architecture evaluation on divergent model shapes. Performance and constraint loss weight mismatches also raise guard exceptions unless explicitly aligned.
+
+### Reproducibility Checklist (Expanded)
+
+| Item | Status Policy |
+|------|---------------|
+| Folder naming convention | `[YYYYMMDD]_[HHMMSS]_[modelname]_[shorttitle]` enforced by launcher |
+| `config.json` completeness | Must include every parameter (boolean flags explicit) |
+| `config_md5` recorded | Required; absence invalidates run |
+| Shell command captured | `train.sh`/`evaluate.sh` or runtime section in `config.json` |
+| Checkpoints | `model_best.pth` + `model_last.pth` present unless dry run |
+| Epoch metrics | `metrics_epoch.csv` + `results.json` persisted atomically |
+| Seeds documented | `SEED_INFO.md` includes all seeds & determinism mode |
+| Environment captured | `environment.txt` records Python/PyTorch/CUDA versions, git commit |
+| Interpretability metrics | mastery_corr, gain_corr logged each epoch |
+| Correlation determinism | Deterministic sampling (fixed ordered IDs) |
+| Invariant adherence | No invariant failures recorded |
+
+All checklist items must be marked ✅ in per-experiment `README.md` for inclusion in comparative tables.
+
+### Future Work (Roadmap)
+
+1. Introduce `resume_state.json` with RNG snapshots for mid-epoch recovery.
+2. Hard-fail preflight drift unless `--allow_drift` explicitly passed (currently advisory).
+3. Emit `eval_config.json` with independent MD5 for evaluation reproducibility.
+4. Multi-seed orchestration wrapper producing aggregated stability statistics.
+5. Automated Appendix regeneration from `parameter_default.json` (script) to avoid manual drift.
+6. Confidence interval estimation for mastery/gain correlation trajectories (bootstrap over student subsets with deterministic ordering to ensure replicability).
+7. Add variance diagnostic plots (distribution of mastery variance vs floor across epochs).
+
+### Interpretability Metric Stability
+
+We reduced early volatility by replacing prior random stratified student sampling with deterministic sorted selection (capped at `max_semantic_students` for semantic modules; `max_correlation_students` for evaluation correlations). This ensures trajectory comparisons across relaunches produce tightly bounded deltas and reduces false regression alarms.
+
+### Audit Artifacts
+
+`relaunch_audit.json` records: `config_md5_match` boolean, `substantive_diffs` (excluding metadata keys), `metrics_comparison` (original vs relaunch best epoch within tolerance), and `invariant_failures`. Absence of substantive diffs combined with MD5 match and empty `invariant_failures` flags a clean reproduction.
+
+### Relaunch Audit Reporting (Enhanced)
+
+The relaunch experiment system provides **structured, actionable audit reports** displayed before training begins and after training completes.
+
+#### Pre-Training Audit Summary
+
+Displayed immediately after audit creation, before any training decision:
+
+```
+================================================================================
+RELAUNCH AUDIT SUMMARY
+================================================================================
+
+✅ REPRODUCIBILITY STATUS: EQUIVALENT
+   Reproducible: True
+
+--------------------------------------------------------------------------------
+THREE-LAYER PROTECTION SUMMARY
+--------------------------------------------------------------------------------
+
+✅ Layer 1 - CANONICAL CHANGES (Hyperparameter Detection)
+   Status: PASS
+   Action Required: False
+   No action needed - experiments are substantively equivalent
+
+✅ Layer 2 - SNAPSHOT VALIDATION (Consistency Check)
+   Status: PASS
+   Action Required: False
+   No action needed - snapshot values match canonical locations
+
+ℹ️  Layer 3 - SCHEMA EVOLUTION (Metadata Changes)
+   Status: BENIGN
+   Count: 43 changes
+     - Added: 25
+     - Changed: 0
+     - Skipped: 18
+   Action Required: False
+   No action needed - 25 metadata fields added, 0 changed, 18 skipped...
+
+--------------------------------------------------------------------------------
+HASH VERIFICATION
+--------------------------------------------------------------------------------
+
+✅ Effective Hash Match: True
+   Full Hash Match: False (includes metadata)
+   → full=all params including metadata; effective=substantive hyperparameters only
+
+✅ VERDICT: Experiments are substantively EQUIVALENT and REPRODUCIBLE
+   No action required. Safe to proceed.
+================================================================================
+```
+
+**Three-Layer Protection Model:**
+
+1. **Layer 1 - Canonical Changes**: Detects substantive hyperparameter differences (learning rate, batch size, model architecture, loss weights)
+2. **Layer 2 - Snapshot Validation**: Validates that `evaluation_snapshot.*` copies match their canonical hyperparameter sources
+3. **Layer 3 - Schema Evolution**: Tracks benign metadata changes (timestamps, hardware info, launcher version evolution)
+
+**Key Indicators:**
+
+- ✅ Green checkmark: PASS / No action needed
+- ❌ Red X: FAIL / Must resolve before proceeding
+- ⚠️ Warning triangle: Review recommended
+- ℹ️ Info icon: Informational only
+
+#### Post-Training Metrics Comparison
+
+After relaunch training completes, an enhanced metrics comparison report validates reproducibility:
+
+```
+================================================================================
+TRAINING COMPLETE - REPRODUCIBILITY REPORT
+================================================================================
+
+--------------------------------------------------------------------------------
+METRICS COMPARISON REPORT
+--------------------------------------------------------------------------------
+
+✅ METRICS REPRODUCED SUCCESSFULLY
+   All metrics within tolerance - reproducibility CONFIRMED
+
+Metric                    Original     Relaunch     Delta        Status    
+--------------------------------------------------------------------------------
+Best Val Auc              0.726160     0.726180     0.000020     ✅ PASS
+Mastery Corr              0.101510     0.101480     0.000030     ✅ PASS
+Gain Corr                 0.066040     0.066010     0.000030     ✅ PASS
+
+--------------------------------------------------------------------------------
+✅ VERDICT: Relaunch successfully reproduced original metrics
+   → Reproducibility validated. Safe to use relaunch results.
+
+--------------------------------------------------------------------------------
+EXPERIMENT ARTIFACTS
+--------------------------------------------------------------------------------
+Relaunch Directory: /workspaces/pykt-toolkit/examples/experiments/20251102_XXXXXX_relaunch
+Audit JSON:         .../relaunch_audit.json
+Metrics CSV:        .../metrics_epoch.csv
+Results JSON:       .../results.json
+Training Log:       .../stdout.log
+================================================================================
+```
+
+**Metric Tolerance Thresholds:**
+
+- `best_val_auc`: 0.001 (0.1%)
+- `mastery_corr`: 0.01 (1%)
+- `gain_corr`: 0.01 (1%)
+
+**Failure Diagnosis:**
+
+When metrics exceed tolerance, the report provides:
+
+- ❌ Per-metric failure indication
+- Percentage difference calculation
+- Possible causes (non-determinism, hardware differences, library versions, hyperparameter drift)
+- Actionable steps for investigation
+
+**Report Variants:**
+
+1. **Successful Reproduction**: All metrics within tolerance (✅)
+2. **Metrics Divergence**: Some metrics exceed tolerance with specific failure count and diagnostic guidance (❌)
+3. **Training Failed**: Non-zero exit code prevents comparison (❌)
+4. **Missing Metrics**: Original or relaunch metrics files not found (⚠️)
+
+#### Decision Gates
+
+Three sequential checks before training starts:
+
+1. **Strict Mode Check**: Aborts if violations detected with `--strict` flag
+2. **Blocking Issues Warning**: Warns about issues but allows continuation (unless strict mode)
+3. **Dry Run Exit**: Clean exit with audit report, no training execution
+
+#### Audit JSON Structure
+
+The `relaunch_audit.json` contains eight structured sections:
+
+1. **`reproducibility_status`**: Verdict, blocking issues, warnings, informational messages
+2. **`canonical_changes`**: Layer 1 hyperparameter comparison results
+3. **`snapshot_corruption`**: Layer 2 evaluation snapshot validation results
+4. **`schema_evolution`**: Layer 3 metadata change tracking
+5. **`experiment`**: Original and relaunch IDs, commands
+6. **`hash_verification`**: Full and effective MD5 hash comparison
+7. **`diagnostics`**: Missing parameters, invariant failures, device info
+8. **`execution`**: Dry run mode, strict mode, timestamp
+
+**Effective vs Full Hash:**
+
+- **Effective Hash**: Computed from substantive hyperparameters only (excludes metadata)
+- **Full Hash**: Includes all parameters including metadata (timestamps, hardware, etc.)
+- **Key Signal**: `effective_match: true` confirms substantive reproducibility
+
+#### Documentation References
+
+- Audit format guide: `tmp/actionable_audit_report_format.md`
+- Quick reference: `tmp/audit_quick_reference.md`
+- Metadata classification: `tmp/metadata_classification_criteria.md`
+- Execution flow: `tmp/relaunch_experiment_flow.md`
+
 ### 1. Launch (Provenance Capture)
 
 ```bash
