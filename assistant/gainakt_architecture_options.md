@@ -7,8 +7,6 @@ The new model is an encoder-only with self-attention on interaction (S, R) tuple
 The fundamental innovation of this approach lies in the reformulation of the attention mechanism to directly compute and aggregate learning gains. It is described in sections below. 
 
 
-
-
 ## Fresh Starting
 
 ### Option 1

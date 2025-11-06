@@ -54,63 +54,11 @@ The abstract of the paper is as follows:
 - A complete description of concepts in assistment datasets can be found in the `assist09.md` file.
 
 
-## The Typical Encoder Architecture
-
-The typical architecture of a standard, generic, encoder-only Transformer is illustrated in the diagram below. 
-
-```mermaid
-graph TD
-    subgraph Input Processing
-        A[Input Sequence of Tokens]
-        B(Token Embeddings)
-        C(Positional Embeddings)
-        D["Sum (+)"]
-        
-        A --> B
-        A --> C
-        B --> D
-        C --> D
-    end
-
-    D --> E[Input to Encoder Stack]
-
-    subgraph "Encoder Stack (N x Blocks)"
-        subgraph "Encoder Block 1"
-            E_In_1[Block Input] --> F_1(Multi-Head Self-Attention)
-            F_1 --> G_1("Add & Norm")
-            E_In_1 -- Residual Connection --> G_1
-            
-            G_1 --> H_1(Feed-Forward Network)
-            H_1 --> I_1("Add & Norm ")
-            G_1 -- Residual Connection --> I_1
-        end
-
-        E --> E_In_1
-        I_1 --> J[...]
-
-        subgraph "Encoder Block N"
-            J_In_N[Block Input] --> F_N(Multi-Head Self-Attention)
-            F_N --> G_N("Add & Norm")
-            J_In_N -- Residual Connection --> G_N
-
-            G_N --> H_N(Feed-Forward Network)
-            H_N --> I_N("Add & Norm ")
-            G_N -- Residual Connection --> I_N
-        end
-        
-        J --> J_In_N
-        I_N --> K[Output from Encoder Stack]
-    end
-
-    K --> L[Output: Sequence of Contextualized Embeddings]
-```
-
-
 ## The Gains Approach
 
-The new model we propose is an encoder-only with self-attention on interaction (S, R) tuples to learn tuple learning gains. 
+The new model is an encoder-only with self-attention on interaction (S, R) tuples to learn tuple learning gains. 
 
-The fundamental innovation of this approach lies in the reformulation of the attention mechanism to directly compute and aggregate learning gains as is described in sections below. 
+The fundamental innovation of this approach lies in the reformulation of the attention mechanism to directly compute and aggregate learning gains. It is described in sections below. 
 
 ### Token Representation
 
@@ -265,9 +213,65 @@ This approach naturally aligns with established educational frameworks:
 - Causal explanations for learning predictions
 - Alignment with educational theories
 
-## Encoder Architecture Based on Learning Gains 
 
-The diagram below illustrates a basic Transformer-based architecture implementing the learning gains approach. 
+## Architecture
+
+### Typical Encoder
+
+The typical architecture of a standard, generic, encoder-only Transformer is illustrated in the diagram below. 
+
+```mermaid
+graph TD
+    subgraph Input Processing
+        A[Input Sequence of Tokens]
+        B(Token Embeddings)
+        C(Positional Embeddings)
+        D["Sum (+)"]
+        
+        A --> B
+        A --> C
+        B --> D
+        C --> D
+    end
+
+    D --> E[Input to Encoder Stack]
+
+    subgraph "Encoder Stack (N x Blocks)"
+        subgraph "Encoder Block 1"
+            E_In_1[Block Input] --> F_1(Multi-Head Self-Attention)
+            F_1 --> G_1("Add & Norm")
+            E_In_1 -- Residual Connection --> G_1
+            
+            G_1 --> H_1(Feed-Forward Network)
+            H_1 --> I_1("Add & Norm ")
+            G_1 -- Residual Connection --> I_1
+        end
+
+        E --> E_In_1
+        I_1 --> J[...]
+
+        subgraph "Encoder Block N"
+            J_In_N[Block Input] --> F_N(Multi-Head Self-Attention)
+            F_N --> G_N("Add & Norm")
+            J_In_N -- Residual Connection --> G_N
+
+            G_N --> H_N(Feed-Forward Network)
+            H_N --> I_N("Add & Norm ")
+            G_N -- Residual Connection --> I_N
+        end
+        
+        J --> J_In_N
+        I_N --> K[Output from Encoder Stack]
+    end
+
+    K --> L[Output: Sequence of Contextualized Embeddings]
+```
+
+
+
+## Architecture Design
+
+The diagram below illustrates a basic Transformer-based architecture implementing the proposed approach. 
 
 ### 1. Basic Implementation
 ```mermaid
@@ -320,7 +324,7 @@ flowchart TD
     class L output
     
 ```
-### 2. Skill-only Embedding to Feed the Prediction Head
+### 2. Skill-only Embedding to Feed the Prediction head
 
 We have explored the options described in gainakt_architecture_options.md. Finally we decided to choose the one described in the "Option 4" section that add a skill-only embedding table to feed the prediction head. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
 
@@ -504,38 +508,116 @@ Why feeding the updated "Value" stream into the prediction head is a good idea
     In summary, the dynamic value stream architecture is a good idea because it moves beyond a static view of knowledge and embraces a more realistic, dynamic model of learning. It provides the prediction head with richer information, allows for more context-aware modeling of learning gains, and enhances the overall interpretability of the model, which are all central goals of the project. 
 
 
+### Workflow
+
+This diagram illustrates the end-to-end training workflow initiated by the `python examples/wandb_gainakt2_train.py` command.
+
+```mermaid
+sequenceDiagram
+    participant wandb_train.py
+    participant train_model.py
+    participant GainAKT2
+    participant EncoderBlock
+    participant MultiHeadAttention
+
+    wandb_train.py->>train_model.py: train(model, data, args) - Start Training
+    train_model.py->>GainAKT2: __init__(...) - Initialize Model
+    loop For each epoch
+        train_model.py->>train_model.py: Get batch
+        train_model.py->>GainAKT2: forward(q, r) - Process Batch
+        activate GainAKT2
+        GainAKT2->>GainAKT2: interaction_tokens = q + r * num_c - Create Interaction Tokens
+        GainAKT2->>GainAKT2: context_embedding(tokens), value_embedding(tokens) - Get Embeddings
+        GainAKT2->>GainAKT2: pos_embedding(positions) - Get Positional Embeddings
+        loop For each Encoder Block
+            GainAKT2->>EncoderBlock: forward(context_seq, value_seq) - Process through Encoder
+            activate EncoderBlock
+            EncoderBlock->>MultiHeadAttention: forward(context, value) - Attention Mechanism
+            activate MultiHeadAttention
+            MultiHeadAttention->>MultiHeadAttention: self.query_proj, self.key_proj, self.value_proj - Project Q, K, V
+            MultiHeadAttention->>MultiHeadAttention: scores = torch.matmul(Q, K.T) - Calculate Attention Scores
+            MultiHeadAttention->>MultiHeadAttention: F.softmax(scores) - Calculate Attention Weights
+            MultiHeadAttention->>MultiHeadAttention: output = torch.matmul(weights, V) - Apply Attention to V
+            MultiHeadAttention-->>EncoderBlock: attn_output
+            deactivate MultiHeadAttention
+            EncoderBlock->>EncoderBlock: self.norm1_val(value + attn) - Add & Norm (Value)
+            EncoderBlock->>EncoderBlock: self.norm1_ctx(context + attn) - Add & Norm (Context)
+            EncoderBlock->>EncoderBlock: self.ffn(context) - Feed-Forward Network
+            EncoderBlock-->>GainAKT2: new_context_seq, new_value_seq
+            deactivate EncoderBlock
+        end
+        GainAKT2->>GainAKT2: self.concept_embedding(target_concepts) - Get Target Skill Embedding
+        GainAKT2->>GainAKT2: torch.cat([context, value, concept]) - Concatenate for Prediction
+        GainAKT2->>GainAKT2: self.prediction_head(concatenated) - Prediction Head
+        GainAKT2->>GainAKT2: torch.sigmoid(logits) - Final Output
+        GainAKT2-->>train_model.py: predictions
+        deactivate GainAKT2
+        train_model.py->>train_model.py: loss.backward(), optimizer.step() - Backpropagation
+    end
+    train_model.py-->>wandb_train.py: trained_model
+    wandb_train.py->>wandb_train.py: Save model
+```
+
 ### Towards Causal Explainability
 
+#### Using PyTorch Hooks for Post-Hoc Analysis
 
-#### Training-Time Monitoring Integration
+To capture the intermediate knowledge states and learning gains without modifying the model's `forward` signature, we can use PyTorch's forward hooks. A hook is a function that gets executed when a module's `forward` method is called. This allows us to "peek" inside the model during execution.
 
-To capture the intermediate knowledge states and learning gains without modifying the model's `forward` signature, we can use: 
+Here is a simple implementation of a class that manages the hooks and captures the activations:
 
-- PyTorch's forward hooks. A hook is a function that gets executed when a module's `forward` method is called. This allows us to "peek" inside the model during execution.
-- Dual forward method approach,  a more direct and efficient approach that uses a custom forward_with_states() method.
+```python
+import torch
+import torch.nn as nn
+from collections import OrderedDict
 
+class ActivationExtractor:
+    """
+    A class to capture the output of specified modules in a PyTorch model.
+
+    Usage:
+        # Assuming 'model' is an instance of GainAKT2
+        module_names = [f"encoder_blocks.{i}" for i in range(model.num_encoder_blocks)]
+        extractor = ActivationExtractor(model, module_names)
+        
+        # Run the model
+        output = model(q_batch, r_batch)
+        
+        # Get the captured activations
+        activations = extractor.get_activations()
+        
+        # Don't forget to remove the hooks when you're done
+        extractor.remove_hooks()
+    """
+    def __init__(self, model: nn.Module, module_names: list[str]):
+        self.model = model
+        self.module_names = module_names
+        self.activations = OrderedDict()
+        self.hooks = []
+        self._register_hooks()
+
+    def _register_hooks(self):
+        for name, module in self.model.named_modules():
+            if name in self.module_names:
+                self.hooks.append(
+                    module.register_forward_hook(self._create_hook(name))
+                )
+
+    def _create_hook(self, name: str):
+        def hook(module, input, output):
+            # The output of an EncoderBlock is a tuple (context_seq, value_seq)
+            self.activations[name] = output
+        return hook
+
+    def get_activations(self) -> OrderedDict:
+        """Returns the captured activations."""
+        return self.activations
+
+    def remove_hooks(self):
+        """Remove all registered hooks."""
+        for hook in self.hooks:
+            hook.remove()
 ```
-forward_with_states() - Extended method that explicitly returns all internal states:
-    context_seq: Final context sequence (knowledge states)
-    value_seq: Final value sequence (learning gains)
-    projected_mastery: Per-skill mastery estimates via mastery_head
-    projected_gains: Per-skill gain estimates via gain_head
-    predictions: Response probabilities
-    interpretability_loss: Auxiliary constraint losses
-
-forward() - Standard PyKT-compatible method that
-    Internally calls forward_with_states()
-    Returns only necessary outputs for PyKT framework compatibility
-```
-
-| **Aspect**       | **PyTorch Hooks**       | **`forward_with_states()`** (gainakt2exp)|
-|-------------------|------------------------------------|--------------------------------------|
-| **Complexity**    | Requires hook registration/removal | Simple method call                  |
-| **Performance**   | Extra overhead from hook callbacks | Direct return, minimal overhead     |
-| **Clarity**       | Implicit capture via side effects  | Explicit return values              |
-| **Debugging**     | Harder to trace hook execution     | Straightforward method flow         |
-| **Multi-GPU**     | Complex with `DataParallel`        | Already handled |
-| **Type Safety**   | Runtime errors possible            | Compile-time checked                |
 
 #### Projection Heads for Interpretability
 
@@ -563,41 +645,41 @@ Two complementary approaches enable translation from latent representations to p
 
 *   **Method:** Add linear layers that directly project latent representations to skill space:
     - **Mastery Head:** `nn.Linear(d_model, num_skills)` projects `context_seq` to per-skill mastery probabilities
-        - **Gain Head:** `nn.Linear(d_model, num_skills)` projects `value_seq` to per-skill learning gains
-        *   **Advantages:** Explicit and efficient; computes all skills in a single pass; enables targeted auxiliary losses.
-        *   **Limitations:** Requires architectural change and carefully designed training objectives.
+    - **Gain Head:** `nn.Linear(d_model, num_skills)` projects `value_seq` to per-skill learning gains
+*   **Advantages:** Explicit and efficient; computes all skills in a single pass; enables targeted auxiliary losses.
+*   **Limitations:** Requires architectural change and carefully designed training objectives.
 
-        ##### Making Representations Interpretable
+##### Making Representations Interpretable
 
-        **Simple Magnitude Analysis:**
+**Simple Magnitude Analysis:**
 
-        Calculate the L2 norm of gain vectors to identify the most impactful interactions:
+Calculate the L2 norm of gain vectors to identify the most impactful interactions:
 
-        ```python
-        # value_seq shape: [batch_size, seq_len, d_model]
-        gain_magnitudes = torch.linalg.norm(value_seq, dim=-1)
-        # gain_magnitudes shape: [batch_size, seq_len]
-        ```
+```python
+# value_seq shape: [batch_size, seq_len, d_model]
+gain_magnitudes = torch.linalg.norm(value_seq, dim=-1)
+# gain_magnitudes shape: [batch_size, seq_len]
+```
 
-        **Advanced Skill-Space Projection:**
+**Advanced Skill-Space Projection:**
 
-        Using a gain projection head enables powerful explainability by revealing how interactions affect individual skills and cross-skill transfer:
+Using a gain projection head enables powerful explainability by revealing how interactions affect individual skills and cross-skill transfer:
 
-        ```
-        gain_vector (d_model) → Linear(d_model, num_skills) → per_skill_gain_vector (num_skills)
-        ```
+```
+gain_vector (d_model) → Linear(d_model, num_skills) → per_skill_gain_vector (num_skills)
+```
 
-        This allows visualization of how an interaction with an "Algebra" problem affects not only "Algebra" mastery but also related skills like "Geometry" or "Calculus", providing direct quantification of skill transfer.
+This allows visualization of how an interaction with an "Algebra" problem affects not only "Algebra" mastery but also related skills like "Geometry" or "Calculus", providing direct quantification of skill transfer.
 
 
 ## Augmenting the Architecture for Interpretability
 
-This section outlines a pragmatic approach that enhances the `GainAKT2` model to improve interpretability and potentially performance. The strategy is to augment the existing architecture with modular, configurable components that allow for systematic experimentation and ablation studies, rather than designing a completely new model from scratch.
+This section outlines a pragmatic approach to enhancing the current `GainAKT2` model to improve interpretability and potentially performance. The strategy is to augment the existing architecture with modular, configurable components that allow for systematic experimentation and ablation studies, rather than designing a completely new model from scratch.
 
 **Guiding Principle: Augment, Don't Replace**:
 The proposed approach is to add new, optional components to the `GainAKT2` model. These components will be responsible for computing and regularizing explicit skill mastery and learning gain representations, and can be enabled or disabled via configuration flags.
 
-We'll apply these explanation-based augmentation features on the gainakt2exp.py model. 
+We'll apply these explanation-based augmentation features on the gainakt3.py model. 
 
 ### Step 1: Add Interpretable "Projection Heads"
 
@@ -613,9 +695,7 @@ This is the central component for making the latent states understandable. We ca
 **Recommendation:**
 Implement these as optional modules in `GainAKT2.__init__`. We can control their creation with flags like `use_mastery_head` and `use_gain_head`.
 
-### Step 2: Implement Modular Auxiliary Loss Functions 
-
-#### 2.1 Define Consistency Requirements
+### Step 2: Check Consistency Requirements
 
 To be considered interpretable and explainable, the model should adhere to the following consistency requirements:
 
@@ -625,35 +705,106 @@ To be considered interpretable and explainable, the model should adhere to the f
 - **Gain-Performance Correlation**: Correct answers should, on average, reflect greater learning gains for the linked skills than incorrect ones.
 - **Sparsity of Gains (Desirable)**: The learning gain from an interaction with a specific question should primarily involve only the skills linked to that question.
 
+#### Ablation Study Results
 
-#### 2.2 Define Consistency Metrics
+```
+Baseline GainAKT2: ~0.72
+With Consistency Loss only: 0.7200
+With Both Losses: 0.7199
+With Non-Negative Gain Loss only: 0.7185
+```
 
-The model's interpretability is evaluated by measuring how well its internal representations adhere to educational consistency requirements. Rather than aggregating constraints into a single loss, we calculate separate metrics to enable direct comparison between predictive performance and interpretability quality.
+These results demonstrate that we can add these auxiliary losses to enforce educational constraints and improve interpretability without any significant drop in predictive performance. The "Consistency Loss Only" model, in particular, is a very strong candidate as it matches the baseline performance while being simpler than the model with both losses.
 
-**Core Principle:** A model with slightly lower AUC but coherent, explainable internal mechanics may be preferable to a black-box model with marginally higher accuracy.
+#### Interpretability Analysis
+
+The crucial next step is to verify if the models have actually learned the interpretable representations we intended. We need to analyze the outputs of our new projection heads.
+
+We create a new script, **examples/analyze_interpretability.py**, to perform the following analysis:
+
+- Load a Trained Model: We will load the weights from our best-performing augmented model (e.g., the one trained with the consistency loss).
+- Run on Validation Data: We will run the model on the validation set to get its predictions and the projected mastery states for each interaction.
+- Analyze the Mastery-Performance Correlation: For each skill, we will calculate the correlation between the model's projected mastery of that skill and its final prediction for questions involving that skill.
+This analysis will be **the key evidence for our paper's claim that the model is interpretable. It will demonstrate that the model's internal beliefs (projected mastery) are consistent with its external actions (predictions)**.
+
+```
+cd pykt && python ../clabra/examples/analyze_interpretability.py --load_model_path ../examples/saved_model/assist2015_gainakt2_qid_saved_model_42_0_256_0.0002_8_4_768_0.2_200_10_1_1_0.0_0.0_0_1/qid_model.ckpt --d_model 256 --n_heads 8 --num_encoder_blocks 4 --d_ff 768 --dropout 0.2 --seq_len 200 --use_mastery_head 1 --use_gain_head 1 --fold 0 --batch_size 10
+
+Interpretability Metrics Results
+--- 1. Mastery-Performance Correlation Analysis ---
+Average correlation across all skills: -0.0426
+
+--- 2. Gain-Performance Correlation Analysis ---
+Correlation between learning gain and response correctness: -0.0536
+
+--- 3. Non-Negative Gains Violation Rate ---
+Percentage of projected learning gains that are negative: 50.4911%
+
+--- 4. Mastery Monotonicity Violation Rate ---
+Percentage of instances where skill mastery decreases: 50.1796%
+Analysis
+These results provide a clear and comprehensive baseline for the current model's interpretability:
+
+Mastery-Performance Correlation: As before, the near-zero correlation (-0.0426) confirms that the model's internal concept of "mastery" is not aligned with its predictions.
+Gain-Performance Correlation: The negative correlation (-0.0536) is the opposite of what we would expect. It suggests that, for this untrained model, there's a slight tendency for incorrect answers to be associated with higher learning gains, which is not educationally sound.
+Non-Negative Gains & Monotonicity: The violation rates are both around 50%. This is essentially random. The model is just as likely to produce a negative gain as a positive one, leading to a mastery level that goes down as often as it goes up.
+Conclusion: This analysis quantitatively demonstrates that the baseline model does not meet any of the four consistency requirements for interpretability. The internal representations of "mastery" and "learning gain" are not meaningful from an educational perspective.
+
+This is a crucial step, as it establishes a clear baseline and strongly motivates the next phase of your research: training the model with the auxiliary loss functions (consistency_loss and non_negative_gain_loss) to explicitly enforce these constraints. This will allow us to measure the impact of these losses on both predictive performance and these new interpretability metrics.
+
+```
+
+Once the script is functional, we will run it to obtain the quantitative interpretability metrics.
+
+Implement Remaining Metrics (if not already done): We will ensure the script calculates and reports the Gain-Correctness Correlation and the Non-Negativity Violation Rate.
+
+With this, hopefully we can augment the GainAKT3 architecture to produce interpretable outputs without sacrificing predictive performance.
 
 
-**1. Mastery-Performance Correlation**
-- **Definition:** Pearson correlation between projected skill mastery and prediction accuracy for questions involving that skill
-- **Expected:** Positive correlation (higher mastery → higher predicted performance)
-- **Interpretation:** Measures alignment between internal beliefs and external predictions
 
-**2. Gain-Correctness Correlation**
-- **Definition:** Correlation between learning gain magnitude and response correctness
-- **Expected:** Positive correlation (correct answers → higher learning gains)
-- **Interpretation:** Validates that successful practice produces more learning
+### Interpretability Metrics
 
-**3. Non-Negativity Violation Rate**
-- **Definition:** Percentage of projected learning gains that are negative
-- **Expected:** 0% (learning should never decrease knowledge)
-- **Interpretation:** Lower is better (ideally zero)
 
-**4. Monotonicity Violation Rate**
-- **Definition:** Percentage of instances where skill mastery decreases over time
-- **Expected:** 0% (knowledge should accumulate)
-- **Interpretation:** Lower is better (ideally zero)
+**Rather than aggregating all components into a single global loss, we propose calculating separate losses to serve as distinct metrics**. Each time a requirement or constraint is violated, it is recorded as an error. This approach enables a direct comparison between the model's predictive performance loss and its adherence to interpretability constraints. The rationale is that even if the model does not achieve the highest AUC, its interpretability metrics may demonstrate significant value. Specifically, the model's ability to compute mastery states and learning gains, maintain consistency, and adhere to predefined constraints could make it a highly effective and explainable solution, even at the expense of marginally lower predictive accuracy.
 
-#### 2.3 Define Loss Functions
+We should indeed treat the fulfillment of these consistency requirements not just as auxiliary training objectives, but as first-class evaluation metrics in their own right.
+
+Or goal is not just trying to maximize AUC, but to find a model that achieves a good balance between predictive performance (AUC) and interpretability (consistency metrics). A model with a slightly lower AUC might be considered superior if its internal mechanics are far more coherent and explainable.
+
+This approach allows us to create a more complete "report card" for each model, evaluating it on multiple axes.
+
+```
+A Multi-Faceted Evaluation Framework
+
+Based on the above idea,  we can formalize this by creating a new set of "Interpretability Metrics". We can modify our analysis script (or create a new evaluation script) to compute and report these alongside AUC and ACC.
+
+
+Key metrics we can implement, based on the consistency requirements:
+
+- Mastery-Performance Correlation (Already Implemented):
+
+What it is: The Pearson correlation between the projected mastery of a skill and the model's prediction for questions of that skill.
+Interpretation: Measures how well the model's internal "belief" about mastery aligns with its external "statement" about performance. Higher is better.
+
+- Gain-Correctness Correlation:
+
+What it is: The correlation between the magnitude of the projected learning gain and the correctness of the response (r).
+Interpretation: We expect that, on average, correct answers (r=1) should produce higher learning gains than incorrect answers (r=0). This metric will quantify that relationship. A positive correlation is expected.
+
+- Non-Negativity Violation Rate (for Gains):
+
+What it is: The percentage of dimensions in the projected_gains vectors that are negative.
+Interpretation: Measures how well the model adheres to the "no negative learning" constraint. Lower is better (ideally 0).
+
+- Monotonicity Violation Rate (for Mastery):
+
+What it is: The percentage of instances where a student's projected mastery for a skill decreases after a correct answer to a question on that skill, or increases after an incorrect answer.
+Interpretation: Measures how well the model adheres to the "mastery should not decrease with correct practice" and "mastery should not increase with incorrect practice" constraints. Lower is better (ideally 0).
+```
+
+This comprehensive evaluation framework will allow us to objectively compare models not just on predictive accuracy, but also on their adherence to fundamental educational principles, providing a more holistic view of their utility and trustworthiness.
+
+### Step 3: Implement Modular Auxiliary Loss Functions ✅ IMPLEMENTED
 
 These loss functions use the outputs of the projection heads to enforce educational "Consistency Requirements". They are integrated into the main training loss with tunable weight hyperparameters. The current implementation in `gainakt2_monitored.py` includes five comprehensive auxiliary losses:
 
@@ -709,34 +860,7 @@ total_interpretability_loss = (
 
 **Status:** ✅ **FULLY IMPLEMENTED** - All auxiliary losses are active in the current `GainAKT2Monitored` model with successful validation (AUC: 0.7253, controlled overfitting gap: 0.0145).
 
-#### Baseline Analysis
-
-Baseline model evaluation on validation data demonstrates the need for auxiliary loss constraints:
-
-```
-Mastery-Performance Correlation: -0.0426 (near-zero, no alignment)
-Gain-Performance Correlation: -0.0536 (opposite of expected)
-Non-Negative Gains Violation: 50.49% (essentially random)
-Monotonicity Violation: 50.18% (essentially random)
-```
-
-**Conclusion:** The baseline model without auxiliary losses fails all consistency requirements, producing educationally meaningless internal representations despite acceptable predictive performance.
-
-#### Ablation Study Results
-
-Training with auxiliary losses maintains predictive performance while enforcing interpretability:
-
-```
-Baseline GainAKT2: AUC ~0.72
-+ Consistency Loss only: AUC 0.7200
-+ Both Losses: AUC 0.7199
-+ Non-Negative Gain Loss only: AUC 0.7185
-```
-
-These results demonstrate that educational constraints can be enforced without sacrificing predictive accuracy, with the consistency-loss-only variant offering the best simplicity-performance balance.
-
-
-### Step 3: Leverage Inferred Knowledge via Gated Injection (FUTURE RESEARCH, NOT IMPLEMENTED)
+### Step 4: Leverage Inferred Knowledge via Gated Injection 🔬 FUTURE RESEARCH
 
 This advanced mechanism would feed interpretable knowledge back into the model for potential performance improvements.
 
@@ -766,14 +890,7 @@ The current implementation achieves **excellent performance (AUC: 0.7253) with s
 
 ## Augmented Architecture Design 
 
-The following diagram shows the **complete augmented architecture** including these aforementioned improvements: 
-
-- Skill-only Embedding
-- Dynamic Value Stream
-- Training-time monitoring integration
-- Projection Heads
-- Auxiliary loss functions
-
+The following diagram shows the **complete implemented architecture** of `GainAKT2Monitored` including all 5 auxiliary loss functions and training-time monitoring integration:
 
 ```mermaid
 graph TD
@@ -999,11 +1116,11 @@ graph TD
    - **Generalization:** Overfitting gap 0.0145 (excellent control)
    - **Dependencies:** All verified and documented
 
-## Summary of Implementation Status
+### Summary of Implementation Status
 
 The architecture described in this document has been **successfully implemented** in `GainAKT2Monitored`:
 
-✅ **Completed Implementation:**
+#### ✅ **Completed Implementation:**
 
 1.  **Mastery and Gain Heads** ✅ Fully implemented in `c.py`
     - `mastery_head`: Projects context sequences to skill mastery estimates  

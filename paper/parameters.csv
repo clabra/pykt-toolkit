@@ -1,0 +1,64 @@
+name,default,category,description
+model,gainakt2exp,launcher,Model identifier
+train_script,examples/train_gainakt2exp.py,launcher,Training script path
+eval_script,examples/eval_gainakt2exp.py,launcher,Evaluation script path
+dataset,assist2015,data,Dataset name
+fold,0,data,Cross-validation fold
+seed,42,runtime,Random seed
+epochs,12,runtime,Number of training epochs
+batch_size,64,runtime,Training batch size
+learning_rate,0.000174,runtime,Optimizer learning rate
+weight_decay,1.7571e-05,runtime,L2 regularization
+optimizer,Adam,runtime,Optimizer type
+gradient_clip,1.0,runtime,Gradient clipping threshold
+patience,20,runtime,Early stopping patience
+monitor_freq,50,runtime,Monitoring frequency (batches)
+use_amp,false,runtime,Automatic mixed precision
+use_wandb,false,runtime,Weights & Biases logging
+auto_shifted_eval,true,runtime,Automatic shifted evaluation
+seq_len,200,model_config,Maximum sequence length
+d_model,512,model_config,Model dimension
+n_heads,8,model_config,Number of attention heads
+num_encoder_blocks,6,model_config,Number of transformer blocks
+d_ff,1024,model_config,Feed-forward dimension
+dropout,0.2,model_config,Dropout rate
+emb_type,qid,model_config,Embedding type (question ID)
+use_mastery_head,true,interpretability,Enable mastery projection head
+use_gain_head,true,interpretability,Enable gain projection head
+enhanced_constraints,true,interpretability,Enable enhanced constraint losses
+non_negative_loss_weight,0.0,interpretability,Non-negative gain constraint
+monotonicity_loss_weight,0.1,interpretability,Monotonic mastery constraint
+mastery_performance_loss_weight,0.8,interpretability,Mastery-performance alignment
+gain_performance_loss_weight,0.8,interpretability,Gain-performance alignment
+sparsity_loss_weight,0.2,interpretability,Skill sparsity constraint
+consistency_loss_weight,0.3,interpretability,Temporal consistency
+warmup_constraint_epochs,8,interpretability,Constraint warm-up epochs
+max_semantic_students,50,interpretability,Max students for semantic computation
+enable_cosine_perf_schedule,false,interpretability,Cosine performance scheduling
+enable_alignment_loss,true,alignment,Toggle alignment loss
+alignment_weight,0.25,alignment,Base alignment weight
+alignment_warmup_epochs,8,alignment,Alignment warm-up epochs
+adaptive_alignment,true,alignment,Dynamic weight scaling
+alignment_min_correlation,0.05,alignment,Minimum correlation target
+alignment_share_cap,0.08,alignment,Alignment share cap
+alignment_share_decay_factor,0.7,alignment,Share cap decay factor
+use_residual_alignment,true,alignment,Use residualized signals
+alignment_residual_window,5,alignment,Residual window size
+enable_global_alignment_pass,true,global_alignment,Toggle global alignment
+alignment_global_students,600,global_alignment,Students for global pass
+enable_retention_loss,true,refinement,Prevent mastery peak decay
+retention_delta,0.005,refinement,Retention sensitivity
+retention_weight,0.14,refinement,Retention loss weight
+enable_lag_gain_loss,true,refinement,Lag-based gain structuring
+lag_gain_weight,0.06,refinement,Lag loss weight
+lag_max_lag,3,refinement,Maximum lag
+lag_l1_weight,0.5,refinement,Lag L1 weight
+lag_l2_weight,0.3,refinement,Lag L2 weight
+lag_l3_weight,0.2,refinement,Lag L3 weight
+consistency_rebalance_epoch,8,refinement,Consistency rebalance epoch
+consistency_rebalance_threshold,0.1,refinement,Consistency rebalance threshold
+consistency_rebalance_new_weight,0.2,refinement,Consistency new weight
+variance_floor,0.0001,refinement,Variance floor
+variance_floor_patience,3,refinement,Variance floor patience
+variance_floor_reduce_factor,0.5,refinement,Variance floor reduction factor
+max_correlation_students,300,evaluation,Max students for correlation

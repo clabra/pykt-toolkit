@@ -19,13 +19,14 @@
   Predict: r₄  # Only predict response, not the pair!`
 ```
 
+
 ```
   # WRONG conceptualization:
   Sequence: [(q₁,r₁), (q₂,r₂), (q₃,r₃), ???]
                                            ↑
                               Predict next (q,r) token?
 
-  # But q₄ is GIVEN! We don't predict it!
+  # But q₄ is GIVEN We don't predict it!
 
   # CORRECT conceptualization:
   History: [(q₁,r₁), (q₂,r₂), (q₃,r₃)]
@@ -33,7 +34,7 @@
   Predict: r₄
 ```
 
-#### Three Approaches to Handle This
+#### Approaches to Handle This
 
 ```
   - Approach 1: Shifted Sequences (SAKT-style)
