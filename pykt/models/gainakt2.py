@@ -135,12 +135,15 @@ class MultiHeadAttention(nn.Module):
             aggregated_gains_padded = head_gains.transpose(1, 2).contiguous().view(batch_size, -1, self.num_skills_padded)
             # Remove padding to get actual skill space: [B, L, num_skills]
             aggregated_gains = aggregated_gains_padded[..., :self.num_skills]
+            # Store for monitoring pathway
+            self.last_aggregated_gains = aggregated_gains
             # Project gains to d_model for compatibility
             output = self.gain_to_context(aggregated_gains)
         else:
             # Legacy: output shape [B, n_heads, L, d_k]
             output = torch.matmul(attention_weights, V)
             output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+            self.last_aggregated_gains = None
         
         # 4) Final linear projection
         projected_output = self.output_proj(output)
@@ -390,4 +393,20 @@ class GainAKT2(nn.Module):
             projected_gains = self.gain_head(value_seq)
             output['projected_gains'] = projected_gains
             
-        return output
+        return output    
+    def get_aggregated_gains(self):
+        """
+        Retrieve aggregated gains from the last encoder block's attention mechanism.
+        Only applicable in intrinsic_gain_attention mode.
+        
+        Returns:
+            torch.Tensor: Aggregated gains [B, L, num_skills] or None if not in intrinsic mode
+        """
+        if not self.intrinsic_gain_attention:
+            return None
+        
+        # Get the last encoder block's attention layer
+        last_block = self.encoder_blocks[-1]
+        if hasattr(last_block.attn, 'last_aggregated_gains'):
+            return last_block.attn.last_aggregated_gains
+        return None

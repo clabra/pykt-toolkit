@@ -129,7 +129,26 @@ class GainAKT2Exp(GainAKT2):
         predictions = torch.sigmoid(logits)
         
         # 5. Optionally compute interpretability projections
-        if self.use_gain_head and self.use_mastery_head:
+        if self.intrinsic_gain_attention:
+            # Intrinsic mode: retrieve aggregated gains directly from attention mechanism
+            aggregated_gains = self.get_aggregated_gains()
+            
+            if aggregated_gains is not None:
+                # Apply non-negativity activation to aggregated gains
+                projected_gains = torch.relu(aggregated_gains)  # Ensure non-negativity
+                
+                # Compute cumulative mastery from gains
+                batch_size, seq_len, num_c = projected_gains.shape
+                projected_mastery = torch.zeros_like(projected_gains)
+                projected_mastery[:, 0, :] = torch.clamp(projected_gains[:, 0, :] * 0.1, min=0.0, max=1.0)
+                for t in range(1, seq_len):
+                    accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+                    projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+            else:
+                projected_mastery = None
+                projected_gains = None
+        elif self.use_gain_head and self.use_mastery_head:
+            # Legacy mode: use projection heads
             projected_gains_raw = self.gain_head(value_seq)  
             projected_gains = torch.relu(projected_gains_raw)  # enforce non-negativity
 

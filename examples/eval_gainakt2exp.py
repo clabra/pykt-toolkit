@@ -119,6 +119,7 @@ def main():
     parser.add_argument('--emb_type', type=str, required=True)
     parser.add_argument('--use_mastery_head', action='store_true')
     parser.add_argument('--use_gain_head', action='store_true')
+    parser.add_argument('--intrinsic_gain_attention', action='store_true')
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
@@ -173,6 +174,7 @@ def main():
         'emb_type': args.emb_type,
         'use_mastery_head': args.use_mastery_head,
         'use_gain_head': args.use_gain_head,
+        'intrinsic_gain_attention': args.intrinsic_gain_attention,
         'non_negative_loss_weight': args.non_negative_loss_weight,
         'monotonicity_loss_weight': args.monotonicity_loss_weight,
         'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
