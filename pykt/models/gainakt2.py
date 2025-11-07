@@ -17,23 +17,49 @@ class MultiHeadAttention(nn.Module):
 
     This implementation computes all heads in parallel for efficiency. Q and K are
     derived from the `context_sequence`, while V is derived from the `value_sequence`.
+    
+    Supports two modes:
+    - Legacy: Values are d_model dimensional latent representations
+    - Intrinsic: Values are num_skills dimensional gains (h_t = Σ α g)
 
     Args:
         n_heads (int): Number of attention heads.
         d_model (int): Dimensionality of the model.
         dropout (float): Dropout probability.
+        intrinsic_gain_attention (bool): If True, values are skill-space gains.
+        num_skills (int): Number of skills (required if intrinsic_gain_attention=True).
     """
     
-    def __init__(self, n_heads, d_model, dropout=0.1):
+    def __init__(self, n_heads, d_model, dropout=0.1, intrinsic_gain_attention=False, 
+                 num_skills=None):
         super().__init__()
         assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
         self.d_model = d_model
-        self.d_k = d_model // n_heads
         self.n_heads = n_heads
+        self.intrinsic_gain_attention = intrinsic_gain_attention
+        self.num_skills = num_skills
+        
+        if intrinsic_gain_attention:
+            assert num_skills is not None, "num_skills required for intrinsic gain attention"
+            self.d_k = d_model // n_heads
+            # Pad num_skills to be divisible by n_heads for uniform head distribution
+            self.num_skills_padded = ((num_skills + n_heads - 1) // n_heads) * n_heads
+            self.d_g = self.num_skills_padded // n_heads  # Gain dimension per head
+            # Create gain_to_context as a proper submodule (for DataParallel compatibility)
+            # Use actual num_skills (not padded) for projection
+            self.gain_to_context = nn.Linear(num_skills, d_model)
+        else:
+            self.d_k = d_model // n_heads
         
         self.query_proj = nn.Linear(d_model, d_model)
         self.key_proj = nn.Linear(d_model, d_model)
-        self.value_proj = nn.Linear(d_model, d_model)
+        
+        if intrinsic_gain_attention:
+            # Value projection maps num_skills to num_skills (identity or refinement)
+            self.value_proj = nn.Linear(num_skills, num_skills)
+        else:
+            # Legacy: d_model to d_model
+            self.value_proj = nn.Linear(d_model, d_model)
         
         self.output_proj = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
@@ -46,7 +72,8 @@ class MultiHeadAttention(nn.Module):
             context_sequence (torch.Tensor): The sequence for queries and keys.
                                             Shape: [batch_size, seq_len, d_model]
             value_sequence (torch.Tensor): The sequence for values.
-                                           Shape: [batch_size, seq_len, d_model]
+                                           Shape: [batch_size, seq_len, d_model] (legacy)
+                                           or [batch_size, seq_len, num_skills] (intrinsic)
             mask (torch.Tensor, optional): A boolean mask to prevent attention to certain positions.
                                            Shape: [seq_len, seq_len]
 
@@ -56,10 +83,27 @@ class MultiHeadAttention(nn.Module):
         """
         batch_size = context_sequence.size(0)
 
-        # 1) Project and reshape Q, K, V for all heads in parallel
+        # 1) Project and reshape Q, K for all heads in parallel
         Q = self.query_proj(context_sequence).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
         K = self.key_proj(context_sequence).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
-        V = self.value_proj(value_sequence).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
+        
+        if self.intrinsic_gain_attention:
+            # Intrinsic mode: V has shape [B, L, num_skills]
+            # Project values
+            V_proj = self.value_proj(value_sequence)  # [B, L, num_skills]
+            
+            # Pad to num_skills_padded for uniform head distribution
+            if self.num_skills_padded > self.num_skills:
+                padding = torch.zeros(batch_size, value_sequence.size(1), 
+                                    self.num_skills_padded - self.num_skills,
+                                    device=value_sequence.device, dtype=V_proj.dtype)
+                V_proj = torch.cat([V_proj, padding], dim=-1)
+            
+            # Reshape to [B, n_heads, L, d_g]
+            V = V_proj.view(batch_size, -1, self.n_heads, self.d_g).transpose(1, 2)
+        else:
+            # Legacy mode: V has shape [B, L, d_model]
+            V = self.value_proj(value_sequence).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
         
         # 2) Compute attention scores
         # scores shape: [batch_size, n_heads, seq_len, seq_len]
@@ -83,9 +127,20 @@ class MultiHeadAttention(nn.Module):
             
         attention_weights = F.softmax(scores, dim=-1)
         
-        # 3) Apply attention to V and reshape back
-        output = torch.matmul(attention_weights, V)
-        output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+        # 3) Apply attention to V
+        if self.intrinsic_gain_attention:
+            # Aggregate gains: head_gains shape [B, n_heads, L, d_g]
+            head_gains = torch.matmul(attention_weights, V)
+            # Concatenate heads to get padded skill space: [B, L, num_skills_padded]
+            aggregated_gains_padded = head_gains.transpose(1, 2).contiguous().view(batch_size, -1, self.num_skills_padded)
+            # Remove padding to get actual skill space: [B, L, num_skills]
+            aggregated_gains = aggregated_gains_padded[..., :self.num_skills]
+            # Project gains to d_model for compatibility
+            output = self.gain_to_context(aggregated_gains)
+        else:
+            # Legacy: output shape [B, n_heads, L, d_k]
+            output = torch.matmul(attention_weights, V)
+            output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
         
         # 4) Final linear projection
         projected_output = self.output_proj(output)
@@ -106,9 +161,12 @@ class EncoderBlock(nn.Module):
         dropout (float): The dropout rate.
     """
     
-    def __init__(self, d_model, n_heads, d_ff, dropout=0.1):
+    def __init__(self, d_model, n_heads, d_ff, dropout=0.1, intrinsic_gain_attention=False,
+                 num_skills=None):
         super().__init__()
-        self.attn = MultiHeadAttention(n_heads, d_model, dropout)
+        self.intrinsic_gain_attention = intrinsic_gain_attention
+        self.attn = MultiHeadAttention(n_heads, d_model, dropout, intrinsic_gain_attention, 
+                                       num_skills)
         self.ffn = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.ReLU(),
@@ -116,7 +174,9 @@ class EncoderBlock(nn.Module):
             nn.Linear(d_ff, d_model)
         )
         self.norm1_ctx = nn.LayerNorm(d_model)
-        self.norm1_val = nn.LayerNorm(d_model)
+        if not intrinsic_gain_attention:
+            # Only need value normalization in legacy mode
+            self.norm1_val = nn.LayerNorm(d_model)
         self.norm2_ctx = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
 
@@ -139,11 +199,15 @@ class EncoderBlock(nn.Module):
         # Attention sub-layer
         attn_output = self.attn(context_sequence, value_sequence, mask)
 
-        # Update value sequence
-        new_value_sequence = self.norm1_val(value_sequence + attn_output)
-
-        # Update context sequence (first residual connection)
-        x = self.norm1_ctx(context_sequence + attn_output)
+        if self.intrinsic_gain_attention:
+            # Intrinsic mode: value sequence stays as raw gains (no residual update)
+            new_value_sequence = value_sequence
+            # Only context gets updated with attention output
+            x = self.norm1_ctx(context_sequence + attn_output)
+        else:
+            # Legacy mode: both streams get updated
+            new_value_sequence = self.norm1_val(value_sequence + attn_output)
+            x = self.norm1_ctx(context_sequence + attn_output)
 
         # Feed-forward sub-layer
         ffn_output = self.ffn(x)
@@ -166,7 +230,8 @@ class GainAKT2(nn.Module):
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
                  d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
-                 use_mastery_head=False, use_gain_head=False, non_negative_loss_weight=0.0, 
+                 use_mastery_head=False, use_gain_head=False, intrinsic_gain_attention=False,
+                 non_negative_loss_weight=0.0, 
                  monotonicity_loss_weight=0.0, mastery_performance_loss_weight=0.0,
                  gain_performance_loss_weight=0.0, sparsity_loss_weight=0.0, consistency_loss_weight=0.0):
         super().__init__()
@@ -178,8 +243,9 @@ class GainAKT2(nn.Module):
         self.num_encoder_blocks = num_encoder_blocks
         self.dropout = dropout
         self.emb_type = emb_type
-        self.use_mastery_head = use_mastery_head
-        self.use_gain_head = use_gain_head
+        self.intrinsic_gain_attention = intrinsic_gain_attention
+        self.use_mastery_head = use_mastery_head and not intrinsic_gain_attention  # Disable in intrinsic mode
+        self.use_gain_head = use_gain_head and not intrinsic_gain_attention  # Disable in intrinsic mode
         self.non_negative_loss_weight = non_negative_loss_weight
         self.monotonicity_loss_weight = monotonicity_loss_weight
         self.mastery_performance_loss_weight = mastery_performance_loss_weight
@@ -193,7 +259,15 @@ class GainAKT2(nn.Module):
             # Interaction embeddings for context (Q,K) and value (V) streams
             # The size is num_c * 2 to account for both concepts and responses (correct/incorrect)
             self.context_embedding = nn.Embedding(num_c * 2, d_model)
-            self.value_embedding = nn.Embedding(num_c * 2, d_model)
+            
+            if intrinsic_gain_attention:
+                # Intrinsic mode: Values represent per-skill gains (num_c dimensional)
+                self.value_embedding = nn.Embedding(num_c * 2, num_c)
+                self.gain_activation = nn.Softplus()  # Ensures g_i >= 0
+            else:
+                # Legacy mode: Opaque latent values
+                self.value_embedding = nn.Embedding(num_c * 2, d_model)
+            
             # A separate embedding for the target concept in the prediction head
             self.concept_embedding = nn.Embedding(num_c, d_model)
         
@@ -202,16 +276,28 @@ class GainAKT2(nn.Module):
 
         # Stack of encoder blocks
         self.encoder_blocks = nn.ModuleList([
-            EncoderBlock(d_model, n_heads, d_ff, dropout) for _ in range(num_encoder_blocks)
+            EncoderBlock(d_model, n_heads, d_ff, dropout, intrinsic_gain_attention,
+                        num_c if intrinsic_gain_attention else None)
+            for _ in range(num_encoder_blocks)
         ])
         
         # Final prediction head
-        self.prediction_head = nn.Sequential(
-            nn.Linear(d_model * 3, d_ff), # Takes concatenated [context_seq, value_seq, concept_embedding]
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(d_ff, 1)
-        )
+        if intrinsic_gain_attention:
+            # Intrinsic mode: [h_t, concept_embedding] where h_t already from Σ α g
+            self.prediction_head = nn.Sequential(
+                nn.Linear(d_model * 2, d_ff),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(d_ff, 1)
+            )
+        else:
+            # Legacy mode: [context_seq, value_seq, concept_embedding]
+            self.prediction_head = nn.Sequential(
+                nn.Linear(d_model * 3, d_ff),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(d_ff, 1)
+            )
 
         # Optional projection heads for interpretability
         if self.use_mastery_head:
@@ -257,12 +343,19 @@ class GainAKT2(nn.Module):
         # 1. Get embeddings for the two streams (context and value)
         context_seq = self.context_embedding(interaction_tokens)
         value_seq = self.value_embedding(interaction_tokens)
+        
+        if self.intrinsic_gain_attention:
+            # Apply non-negativity activation to gains
+            value_seq = self.gain_activation(value_seq)
 
         # 2. Add positional encodings to both streams
         positions = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
         pos_emb = self.pos_embedding(positions)
         context_seq += pos_emb
-        value_seq += pos_emb
+        
+        if not self.intrinsic_gain_attention:
+            # Legacy mode: add positional encoding to value stream
+            value_seq += pos_emb
         
         # 3. Pass sequences through the stack of encoder blocks
         for block in self.encoder_blocks:
@@ -270,7 +363,14 @@ class GainAKT2(nn.Module):
         
         # 4. Prepare inputs for the prediction head
         target_concept_emb = self.concept_embedding(target_concepts)
-        concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+        
+        if self.intrinsic_gain_attention:
+            # Intrinsic mode: [h_t, concept_embedding]
+            # context_seq already represents h_t from Σ α g
+            concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
+        else:
+            # Legacy mode: [context_seq, value_seq, concept_embedding]
+            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
         
         # 5. Generate predictions
         logits = self.prediction_head(concatenated)

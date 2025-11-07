@@ -24,7 +24,8 @@ class GainAKT2Exp(GainAKT2):
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
                  d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
-                 use_mastery_head=True, use_gain_head=True, non_negative_loss_weight=0.1,
+                 use_mastery_head=True, use_gain_head=True, intrinsic_gain_attention=False,
+                 non_negative_loss_weight=0.1,
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, monitor_frequency=50):
@@ -33,6 +34,7 @@ class GainAKT2Exp(GainAKT2):
         
         Args:
             monitor_frequency (int): How often to compute interpretability metrics during training
+            intrinsic_gain_attention (bool): If True, use intrinsic gain attention mode
             Other args: Same as base GainAKT2 model
         """
         # Allow disabling heads for a pure predictive baseline; otherwise enable.
@@ -40,7 +42,8 @@ class GainAKT2Exp(GainAKT2):
             num_c=num_c, seq_len=seq_len, d_model=d_model, n_heads=n_heads,
             num_encoder_blocks=num_encoder_blocks, d_ff=d_ff, dropout=dropout,
             emb_type=emb_type, emb_path=emb_path, pretrain_dim=pretrain_dim,
-            use_mastery_head=use_mastery_head, use_gain_head=use_gain_head, 
+            use_mastery_head=use_mastery_head, use_gain_head=use_gain_head,
+            intrinsic_gain_attention=intrinsic_gain_attention,
             non_negative_loss_weight=non_negative_loss_weight,
             monotonicity_loss_weight=monotonicity_loss_weight,
             mastery_performance_loss_weight=mastery_performance_loss_weight,
@@ -93,12 +96,19 @@ class GainAKT2Exp(GainAKT2):
         # 1. Get embeddings for the two streams
         context_seq = self.context_embedding(interaction_tokens)
         value_seq = self.value_embedding(interaction_tokens)
+        
+        if self.intrinsic_gain_attention:
+            # Apply non-negativity activation to gains
+            value_seq = self.gain_activation(value_seq)
 
         # 2. Add positional encodings
         positions = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
         pos_emb = self.pos_embedding(positions)
         context_seq += pos_emb
-        value_seq += pos_emb
+        
+        if not self.intrinsic_gain_attention:
+            # Legacy mode: add positional encoding to value stream
+            value_seq += pos_emb
         
         # 3. Pass sequences through encoder blocks
         for block in self.encoder_blocks:
@@ -106,7 +116,14 @@ class GainAKT2Exp(GainAKT2):
         
         # 4. Generate predictions
         target_concept_emb = self.concept_embedding(target_concepts)
-        concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+        
+        if self.intrinsic_gain_attention:
+            # Intrinsic mode: [h_t, concept_embedding]
+            concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
+        else:
+            # Legacy mode: [context_seq, value_seq, concept_embedding]
+            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+            
         logits = self.prediction_head(concatenated).squeeze(-1)
         # Defer sigmoid until evaluation to allow using BCEWithLogitsLoss safely under AMP
         predictions = torch.sigmoid(logits)
@@ -295,6 +312,7 @@ def create_exp_model(config):
         emb_type=config.get('emb_type', 'qid'),
         use_mastery_head=config.get('use_mastery_head', True),
         use_gain_head=config.get('use_gain_head', True),
+        intrinsic_gain_attention=config.get('intrinsic_gain_attention', False),
         non_negative_loss_weight=config.get('non_negative_loss_weight', 0.1),
         monotonicity_loss_weight=config.get('monotonicity_loss_weight', 0.1),
         mastery_performance_loss_weight=config.get('mastery_performance_loss_weight', 0.1),

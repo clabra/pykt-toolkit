@@ -1,0 +1,83 @@
+nohup: ignoring input
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - ================================================================================
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - ================================================================================
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Dataset: assist2015
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Epochs: 12
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Learning rate: 0.000174
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Batch size: 64
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Enhanced constraints: True
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 - Constraint weights:
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 -   Non-negative loss: 0.0
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 -   Monotonicity loss: 0.1
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 -   Mastery performance loss: 0.8
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 -   Gain performance loss: 0.8
+2025-11-07 02:01:29,495 - INFO - gainakt2exp.optimal_v1 -   Sparsity loss: 0.2
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 -   Consistency loss: 0.3
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Alignment loss enabled (weight=0.25, warmup_epochs=8, adaptive=True, target_min_corr=0.05)
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Global alignment pass ENABLED (students=600, residual=True)
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Retention loss ENABLED (delta=0.005, weight=0.14)
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Lag gain loss ENABLED (max_lag=3, weight=0.06)
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Using device: cuda
+2025-11-07 02:01:29,496 - INFO - gainakt2exp.optimal_v1 - Loading dataset: assist2015
+dataset_name:assist2015
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_0.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 3082, rlen: 3082
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv_1_2_3_4.pkl
+file path: /workspaces/pykt-toolkit/data/assist2015/train_valid_sequences.csv, qlen: 0, clen: 12344, rlen: 12344
+2025-11-07 02:01:29,543 - INFO - gainakt2exp.optimal_v1 - Dataset loaded successfully
+2025-11-07 02:01:29,543 - INFO - gainakt2exp.optimal_v1 - [ArchFallback] No config.json loaded; using CLI architecture values as model_config.
+2025-11-07 02:01:29,543 - INFO - gainakt2exp.optimal_v1 - Enhanced constraints preset applied (no individual overrides provided)
+2025-11-07 02:01:29,543 - INFO - gainakt2exp.optimal_v1 - Resolved constraint weights (final): non_neg=0.0 | mono=0.1 | mastery_perf=0.8 | gain_perf=0.8 | sparsity=0.2 | consistency=0.3
+2025-11-07 02:01:29,543 - INFO - gainakt2exp.optimal_v1 - [Repro] Auto-created experiment_dir for manual run: /workspaces/pykt-toolkit/examples/experiments/20251107_020129_gainakt2exp_manual
+2025-11-07 02:01:29,544 - INFO - gainakt2exp.optimal_v1 - [Repro] Writing artifacts into /workspaces/pykt-toolkit/examples/experiments/20251107_020129_gainakt2exp_manual
+2025-11-07 02:01:29,544 - INFO - gainakt2exp.optimal_v1 - Creating GainAKT2Exp (mastery_head=False, gain_head=False) with CUMULATIVE MASTERY...
+2025-11-07 02:01:29,897 - INFO - gainakt2exp.optimal_v1 - [GPU] source=heuristic_<70% or external default CUDA_VISIBLE_DEVICES='' | torch.cuda.device_count()=8
+2025-11-07 02:01:29,898 - INFO - gainakt2exp.optimal_v1 - [GPU] Device names: ['Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB', 'Tesla V100-SXM2-32GB']
+2025-11-07 02:01:29,898 - INFO - gainakt2exp.optimal_v1 - Multi-GPU detected (n=8). Wrapping model with nn.DataParallel for simple data parallelism.
+2025-11-07 02:01:29,899 - INFO - gainakt2exp.optimal_v1 - Model created with 12,738,265 parameters
+2025-11-07 02:01:29,899 - INFO - gainakt2exp.optimal_v1 - Perfect consistency guaranteed by architectural constraints
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - \nStarting training for 12 epochs...
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - Warm-up constraint epochs: 8
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - Max semantic students per consistency sample: 50
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - Semantic trajectory path (will be written at end): paper/results/gainakt2exp_semantic_trajectory_optimal_v1_20251107_020129.json
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - Global alignment sampling active: will compute global correlations after each epoch.
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - 
+Epoch 1/12
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - --------------------------------------------------
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - Warm-up scale applied: 0.12 (mastery_perf=0.100, gain_perf=0.100)
+2025-11-07 02:01:29,900 - INFO - gainakt2exp.optimal_v1 - [Retention] No retention penalty (no decay detected)
+2025-11-07 02:01:34,402 - WARNING - gainakt2exp.optimal_v1 - [DeterminismFallback] CuBLAS deterministic failure detected; disabling deterministic algorithms and retrying batch once.
+2025-11-07 02:02:39,783 - INFO - gainakt2exp.optimal_v1 -   Running consistency validation...
+2025-11-07 02:02:41,255 - INFO - gainakt2exp.optimal_v1 - ============================================================
+2025-11-07 02:02:41,256 - INFO - gainakt2exp.optimal_v1 - 📊 EPOCH 1/12 RESULTS:
+2025-11-07 02:02:41,256 - INFO - gainakt2exp.optimal_v1 -   🚂 Train - Loss: 0.5351 (Main: 0.5351, Constraint: 0.0000), AUC: 0.6806, Acc: 0.7404
+2025-11-07 02:02:41,256 - INFO - gainakt2exp.optimal_v1 -   ✅ Valid - Loss: 0.5185, AUC: 0.7115, Acc: 0.7486
+2025-11-07 02:02:41,256 - INFO - gainakt2exp.optimal_v1 -   🧠 Peak GPU memory this epoch (global): 3414.6 MiB
+2025-11-07 02:02:41,258 - INFO - gainakt2exp.optimal_v1 -   🔍 Per-GPU memory: GPU0: alloc=512.4MiB reserved=3932.0MiB | GPU1: alloc=357.4MiB reserved=1250.0MiB | GPU2: alloc=357.4MiB reserved=1250.0MiB | GPU3: alloc=355.9MiB reserved=1250.0MiB | GPU4: alloc=352.0MiB reserved=1250.0MiB | GPU5: alloc=355.9MiB reserved=1250.0MiB | GPU6: alloc=356.9MiB reserved=1250.0MiB | GPU7: alloc=355.9MiB reserved=1250.0MiB
+2025-11-07 02:02:41,258 - INFO - gainakt2exp.optimal_v1 -   🏆 Current Best AUC: 0.0000
+2025-11-07 02:02:41,258 - INFO - gainakt2exp.optimal_v1 - ============================================================
+2025-11-07 02:02:41,571 - INFO - gainakt2exp.optimal_v1 -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7115 (Epoch 1)
+2025-11-07 02:02:41,992 - INFO - gainakt2exp.optimal_v1 - [Repro] Appending metrics row for epoch 1 to /workspaces/pykt-toolkit/examples/experiments/20251107_020129_gainakt2exp_manual/metrics_epoch.csv
+2025-11-07 02:02:41,992 - INFO - gainakt2exp.optimal_v1 - 
+Epoch 2/12
+2025-11-07 02:02:41,992 - INFO - gainakt2exp.optimal_v1 - --------------------------------------------------
+2025-11-07 02:02:41,992 - INFO - gainakt2exp.optimal_v1 - Warm-up scale applied: 0.25 (mastery_perf=0.200, gain_perf=0.200)
+2025-11-07 02:02:41,993 - INFO - gainakt2exp.optimal_v1 - [Retention] No retention penalty (no decay detected)
+2025-11-07 02:03:43,135 - INFO - gainakt2exp.optimal_v1 -   Running consistency validation...
+2025-11-07 02:03:44,632 - INFO - gainakt2exp.optimal_v1 - ============================================================
+2025-11-07 02:03:44,632 - INFO - gainakt2exp.optimal_v1 - 📊 EPOCH 2/12 RESULTS:
+2025-11-07 02:03:44,632 - INFO - gainakt2exp.optimal_v1 -   🚂 Train - Loss: 0.5178 (Main: 0.5178, Constraint: 0.0000), AUC: 0.7181, Acc: 0.7496
+2025-11-07 02:03:44,632 - INFO - gainakt2exp.optimal_v1 -   ✅ Valid - Loss: 0.5129, AUC: 0.7197, Acc: 0.7519
+2025-11-07 02:03:44,633 - INFO - gainakt2exp.optimal_v1 -   🧠 Peak GPU memory this epoch (global): 3390.0 MiB
+2025-11-07 02:03:44,635 - INFO - gainakt2exp.optimal_v1 -   🔍 Per-GPU memory: GPU0: alloc=811.9MiB reserved=3932.0MiB | GPU1: alloc=703.1MiB reserved=1250.0MiB | GPU2: alloc=698.7MiB reserved=1250.0MiB | GPU3: alloc=701.1MiB reserved=1250.0MiB | GPU4: alloc=696.7MiB reserved=1250.0MiB | GPU5: alloc=702.8MiB reserved=1250.0MiB | GPU6: alloc=703.3MiB reserved=1250.0MiB | GPU7: alloc=703.3MiB reserved=1250.0MiB
+2025-11-07 02:03:44,635 - INFO - gainakt2exp.optimal_v1 -   🏆 Current Best AUC: 0.7115
+2025-11-07 02:03:44,635 - INFO - gainakt2exp.optimal_v1 - ============================================================
+2025-11-07 02:03:44,961 - INFO - gainakt2exp.optimal_v1 -   🎉 NEW BEST MODEL SAVED! Val AUC: 0.7197 (Epoch 2)
+2025-11-07 02:03:45,475 - INFO - gainakt2exp.optimal_v1 - [Repro] Appending metrics row for epoch 2 to /workspaces/pykt-toolkit/examples/experiments/20251107_020129_gainakt2exp_manual/metrics_epoch.csv
+2025-11-07 02:03:45,475 - INFO - gainakt2exp.optimal_v1 - 
+Epoch 3/12
+2025-11-07 02:03:45,475 - INFO - gainakt2exp.optimal_v1 - --------------------------------------------------
+2025-11-07 02:03:45,475 - INFO - gainakt2exp.optimal_v1 - Warm-up scale applied: 0.38 (mastery_perf=0.300, gain_perf=0.300)
+2025-11-07 02:03:45,476 - INFO - gainakt2exp.optimal_v1 - [Retention] No retention penalty (no decay detected)

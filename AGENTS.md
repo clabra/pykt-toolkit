@@ -35,6 +35,8 @@ We treat every training or evaluation run as a formal experiment requiring full 
 
 We want to avoid the risks of having parameter defaults hardcoded. Changes in hardcoded values would not be reflected unless parameter_default.json is manually update first; moreover, evaluation could keep using another values, producing divergent checkpoints and invalid reproducibility claims. Hard-coding also prevents per-experiment architectural variation via overrides.
 
+when you change any parameter default value (the reference values are in paper/parameters.cvs) follow guidelines in "Parameter Evolution Protocol" section. 
+
 
 ### Important Constraints
 - Always work within the activated conda pykt virtual environment (`.pykt-env`)

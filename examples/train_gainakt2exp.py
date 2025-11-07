@@ -467,7 +467,8 @@ def train_gainakt2exp_model(args):
         'emb_type': resolved_emb_type,
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
-        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True))
+        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True)),
+        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False))
     }
     
     # Constraint resolution logic:
@@ -758,7 +759,9 @@ def train_gainakt2exp_model(args):
                     alignment_loss = torch.zeros(1, device=device)
                     alignment_corr_mastery = torch.zeros(1, device=device)
                     alignment_corr_gain = torch.zeros(1, device=device)
-                    if enable_alignment_loss and model_core.mastery_head is not None and model_core.gain_head is not None and 'projected_mastery' in outputs and 'projected_gains' in outputs:
+                    if (enable_alignment_loss and hasattr(model_core, 'mastery_head') and hasattr(model_core, 'gain_head') and
+                        model_core.mastery_head is not None and model_core.gain_head is not None and 
+                        'projected_mastery' in outputs and 'projected_gains' in outputs):
                         # Sample subset of students/time steps for efficiency
                         # projected_mastery shape: [B, T, C] *maybe*, we average across concepts
                         pm = outputs['projected_mastery']  # B x T x C
@@ -941,7 +944,9 @@ def train_gainakt2exp_model(args):
                             alignment_loss = torch.zeros(1, device=device)
                             alignment_corr_mastery = torch.zeros(1, device=device)
                             alignment_corr_gain = torch.zeros(1, device=device)
-                            if enable_alignment_loss and model_core.mastery_head is not None and model_core.gain_head is not None and 'projected_mastery' in outputs and 'projected_gains' in outputs:
+                            if (enable_alignment_loss and hasattr(model_core, 'mastery_head') and hasattr(model_core, 'gain_head') and
+                                model_core.mastery_head is not None and model_core.gain_head is not None and 
+                                'projected_mastery' in outputs and 'projected_gains' in outputs):
                                 pm = outputs['projected_mastery']
                                 pg = outputs['projected_gains']
                                 perf = responses_shifted
@@ -1142,7 +1147,8 @@ def train_gainakt2exp_model(args):
         )
 
         # Global alignment pass (sequence-level sampling separate from lightweight consistency check)
-        if enable_global_alignment_pass and model_core.mastery_head is not None and model_core.gain_head is not None:
+        if (enable_global_alignment_pass and hasattr(model_core, 'mastery_head') and hasattr(model_core, 'gain_head') and
+            model_core.mastery_head is not None and model_core.gain_head is not None):
             model.eval()
             mastery_corrs = []
             gain_corrs = []
@@ -1593,6 +1599,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_gain_head', action='store_true',
                         help='Enable gain head (default: enabled). Use --disable_gain_head to turn off.')
     parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head (overrides --use_gain_head)')
+    parser.add_argument('--intrinsic_gain_attention', action='store_true',
+                        help='Enable intrinsic gain attention mode (Values are skill-space gains, h_t = Σ α g)')
+    parser.add_argument('--disable_intrinsic_gain_attention', action='store_true', help='Disable intrinsic gain attention')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')
@@ -1675,6 +1684,8 @@ if __name__ == '__main__':
         args.use_mastery_head = False
     if getattr(args, 'disable_gain_head', False):
         args.use_gain_head = False
+    if getattr(args, 'disable_intrinsic_gain_attention', False):
+        args.intrinsic_gain_attention = False
     if getattr(args, 'pure_bce', False):
         args.enhanced_constraints = False
     if getattr(args, 'disable_alignment_loss', False):
