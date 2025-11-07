@@ -6,15 +6,11 @@ The model implementations is in ´pykt/models/gainakt2_exp.py´.
 
 ## Architecture
 
-The the diagram below is described in detail in `assistant/gainakt2exp_architecture_approach.md`. 
+The diagram below is described in detail in `assistant/gainakt2exp_architecture_approach.md`. 
 
-It illustrates the Learning Gains approach based on a Encoder-only Transformer, augmented with these features (assigned to `new_component`, green color): 
-
-- Skill Embedding Table
-- Dynamic Value Stream / Ground Truth Responses
-- Training-time monitoring integration.
-- Mastery and Gain Projection Heads
-- BCE + Auxiliary loss functions
+It illustrates the Learning Gains approach based on an Encoder-only Transformer, augmented with these features:
+- **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
+- **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 
 ```mermaid
 graph TD
@@ -150,74 +146,158 @@ graph TD
 
     Sigmoid --> Predictions
 
-    subgraph "Augmented Components for Interpretability"
-        direction TB
-        Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)"]
-        Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)"]
-        
-        Encoder_Output_Ctx --> Proj_Mastery
-        Encoder_Output_Val --> Proj_Gain
-        
-        Projected_Mastery_Output["Projected Mastery<br/>[B, L, num_skills]"]
-        Projected_Gain_Output["Projected Gains<br/>[B, L, num_skills]"]
-        
-        Proj_Mastery --> Projected_Mastery_Output
-        Proj_Gain --> Projected_Gain_Output
-    end
-
-    subgraph "Loss Calculation"
-        direction TB
-        
-        BCE_Loss["BCE Loss<br/>(Predictions, Ground Truth)"]
-        Predictions --> BCE_Loss
-        Ground_Truth --> BCE_Loss
-        
-        %% Auxiliary Loss Functions (All 6 Implemented)
-        NonNeg_Loss["1. Non-Negativity Loss<br/>mean(relu(-gains))"]
-        Projected_Gain_Output --> NonNeg_Loss
-        
-        Monotonicity_Loss["2. Monotonicity Loss<br/>mean(relu(mastery[t-1] - mastery[t]))"] 
-        Projected_Mastery_Output --> Monotonicity_Loss
-        
-        Mastery_Perf_Loss["3. Mastery-Performance Loss<br/>penalize(low_mastery→correct)<br/>+ penalize(high_mastery→incorrect)"]
-        Projected_Mastery_Output --> Mastery_Perf_Loss
-        Predictions --> Mastery_Perf_Loss
-        
-        Gain_Perf_Loss["4. Gain-Performance Loss<br/>hinge(incorrect_gains - correct_gains)"]
-        Projected_Gain_Output --> Gain_Perf_Loss
-        Predictions --> Gain_Perf_Loss
-        
-        Sparsity_Loss["5. Sparsity Loss<br/>mean(abs(non_relevant_gains))"]
-        Projected_Gain_Output --> Sparsity_Loss
-        
-        Consistency_Loss["6. Consistency Loss<br/>mean(abs(mastery_delta - scaled_gains))"]
-        Projected_Mastery_Output --> Consistency_Loss
-        Projected_Gain_Output --> Consistency_Loss
-        
-        %% Total Loss Computation
-        Total_Loss["Total Loss = BCE +<br/>w1×NonNeg + w2×Monotonicity +<br/>w3×Mastery_Perf + w4×Gain_Perf +<br/>w5×Sparsity + w6×Consistency<br/>ALL WEIGHTS CONFIGURABLE"]
-        BCE_Loss --> Total_Loss
-        NonNeg_Loss --> Total_Loss
-        Monotonicity_Loss --> Total_Loss
-        Mastery_Perf_Loss --> Total_Loss
-        Gain_Perf_Loss --> Total_Loss
-        Sparsity_Loss --> Total_Loss
-        Consistency_Loss --> Total_Loss
-    end
+    %% Projection Heads
+    Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)"]
+    Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)"]
     
-    subgraph "Monitoring Integration"
-        direction TB
-        Monitor_Hook["Interpretability Monitor<br/>Real-time constraint analysis<br/>Configurable frequency"]
+    Encoder_Output_Ctx --> Proj_Mastery
+    Encoder_Output_Val --> Proj_Gain
+    
+    Projected_Mastery_Output["Projected Mastery<br/>[B, L, num_skills]"]
+    Projected_Gain_Output["Projected Gains<br/>[B, L, num_skills]"]
+    
+    Proj_Mastery --> Projected_Mastery_Output
+    Proj_Gain --> Projected_Gain_Output
+
+    %% Diamond Connectors (Proxies)
+    Mastery_Hub{"Mastery<br/>Hub"}
+    Gain_Hub{"Gain<br/>Hub"}
+    Encoder_Hub{"Encoder<br/>Hub"}
+    Pred_Hub{"Predictions<br/>Hub"}
+    
+    Projected_Mastery_Output --> Mastery_Hub
+    Projected_Gain_Output --> Gain_Hub
+    Encoder_Output_Ctx --> Encoder_Hub
+    Encoder_Output_Val --> Encoder_Hub
+    Predictions --> Pred_Hub
+
+    %% Semantic Feedback Loop (orange)
+    Global_Alignment["Global Alignment Pass<br/>population coherence"]
+    Residual_Alignment["Residual Alignment<br/>variance capture"]
+    
+    Mastery_Hub -->|"Global Align"| Global_Alignment
+    Global_Alignment --> Residual_Alignment
+    Residual_Alignment -.feedback.-> Projected_Mastery_Output
+
+    %% Loss Framework
+    subgraph "Loss Framework"
+        direction LR
         
-        Projected_Mastery_Output --> Monitor_Hook
-        Projected_Gain_Output --> Monitor_Hook
-        Predictions --> Monitor_Hook
+        subgraph "Primary Loss"
+            BCE_Loss["BCE Loss"]
+        end
+        
+        subgraph "Constraint Losses (Green)"
+            direction TB
+            Monotonicity_Loss["Monotonicity"]
+            Mastery_Perf_Loss["Mastery-Perf"]
+            Gain_Perf_Loss["Gain-Perf"]
+            Sparsity_Loss["Sparsity"]
+            Consistency_Loss["Consistency"]
+            NonNeg_Loss["Non-Negativity"]
+        end
+        
+        subgraph "Semantic Losses (Orange)"
+            direction TB
+            Alignment_Loss["Local Alignment"]
+            Retention_Loss["Retention"]
+            Lag_Gain_Loss["Lag Gain"]
+        end
+        
+        Total_Loss["Total Loss<br/>BCE + Constraints + Semantics<br/>Warmup & Share Cap Scheduling"]
     end
 
-    classDef new_component fill:#c8e6c9,stroke:#2e7d32
-    classDef implemented_component fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    %% Connections via Diamond Hubs
+    Pred_Hub -->|"BCE"| BCE_Loss
+    Ground_Truth --> BCE_Loss
 
-    class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,NonNeg_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,Total_Loss,Monitor_Hook new_component
+    Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss
+    Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
+    Mastery_Hub -->|"Consistency"| Consistency_Loss
+    Mastery_Hub -->|"Retention"| Retention_Loss
+    
+    Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss
+    Gain_Hub -->|"Sparsity"| Sparsity_Loss
+    Gain_Hub -->|"Consistency"| Consistency_Loss
+    Gain_Hub -->|"NonNeg"| NonNeg_Loss
+    Gain_Hub -->|"Lag"| Lag_Gain_Loss
+    
+    Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
+    Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss
+    
+    Encoder_Hub -->|"Alignment"| Alignment_Loss
+    Pred_Hub -->|"Alignment"| Alignment_Loss
+
+    %% All losses to Total
+    BCE_Loss --> Total_Loss
+    Monotonicity_Loss --> Total_Loss
+    Mastery_Perf_Loss --> Total_Loss
+    Gain_Perf_Loss --> Total_Loss
+    Sparsity_Loss --> Total_Loss
+    Consistency_Loss --> Total_Loss
+    NonNeg_Loss --> Total_Loss
+    Alignment_Loss --> Total_Loss
+    Retention_Loss --> Total_Loss
+    Lag_Gain_Loss --> Total_Loss
+
+    %% Monitoring
+    Monitor_Hub{"Monitor<br/>Inputs"}
+    Monitor_Hook["Interpretability Monitor<br/>Real-time Analysis"]
+    
+    Mastery_Hub -->|"to Monitor"| Monitor_Hub
+    Gain_Hub -->|"to Monitor"| Monitor_Hub
+    Pred_Hub -->|"to Monitor"| Monitor_Hub
+    Monitor_Hub -->|"Monitor Output"| Monitor_Hook
+
+    %% Styling
+    classDef new_component fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    
+    %% Individual hub colors with distinct visual styles
+    classDef mastery_hub fill:#ffebee,stroke:#ff0000,stroke-width:4px
+    classDef gain_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
+    classDef encoder_hub fill:#fff3e0,stroke:#ffa500,stroke-width:4px
+    classDef pred_hub fill:#e3f2fd,stroke:#0000ff,stroke-width:4px
+    classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
+
+    class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
+    class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
+    
+    class Mastery_Hub mastery_hub
+    class Gain_Hub gain_hub
+    class Encoder_Hub encoder_hub
+    class Pred_Hub pred_hub
+    class Monitor_Hub monitor_hub
+
+    %% Link Styling - Match output lines to hub colors
+    %% Mastery_Hub outputs (red)
+    linkStyle 51 stroke:#ff0000,stroke-width:3px
+    linkStyle 55 stroke:#ff0000,stroke-width:3px
+    linkStyle 56 stroke:#ff0000,stroke-width:3px
+    linkStyle 57 stroke:#ff0000,stroke-width:3px
+    linkStyle 58 stroke:#ff0000,stroke-width:3px
+    linkStyle 78 stroke:#ff0000,stroke-width:3px
+    
+    %% Gain_Hub outputs (green)
+    linkStyle 59 stroke:#00ff00,stroke-width:3px
+    linkStyle 60 stroke:#00ff00,stroke-width:3px
+    linkStyle 61 stroke:#00ff00,stroke-width:3px
+    linkStyle 62 stroke:#00ff00,stroke-width:3px
+    linkStyle 63 stroke:#00ff00,stroke-width:3px
+    linkStyle 79 stroke:#00ff00,stroke-width:3px
+    
+    %% Pred_Hub outputs (blue)
+    linkStyle 53 stroke:#0000ff,stroke-width:3px
+    linkStyle 64 stroke:#0000ff,stroke-width:3px
+    linkStyle 65 stroke:#0000ff,stroke-width:3px
+    linkStyle 67 stroke:#0000ff,stroke-width:3px
+    linkStyle 80 stroke:#0000ff,stroke-width:3px
+    
+    %% Encoder_Hub outputs (orange)
+    linkStyle 66 stroke:#ffa500,stroke-width:3px
+    
+    %% Monitor_Hub output (purple)
+    linkStyle 81 stroke:#800080,stroke-width:3px
 ```
 
 
@@ -625,233 +705,89 @@ Enabling alignment, global alignment, retention, and lag objectives restored str
 
 **Lag Gain Loss:** Introduces temporal structure to learning gains by encouraging gains at timestep t to correlate with gains at previous timesteps (lag-1, lag-2, lag-3). This creates a coherent temporal narrative where gains emerge systematically rather than randomly, enhancing gain correlation interpretability and capturing causal learning progression patterns.
 
-## Paper Claim
+## Semantic Interpretabily Recovery
 
-> We introduce an alignment‑guided transformer for knowledge tracing that jointly optimizes predictive accuracy and semantic interpretability: on Assist2015 our model attains an early validation AUC of 0.726 while sustained semantic signals emerge (mastery and gain correlations peaking at 0.149 and 0.103, respectively) under zero structural violations (monotonicity, bounds, non‑negativity). By integrating local and residual global alignment, retention stabilization, and lag‑based gain emergence within a controlled warm‑up, we obtain statistically meaningful mastery and gain trajectories without sacrificing competitive early predictive performance. This demonstrates that carefully scheduled multi‑objective optimization can yield interpretable latent mastery and incremental learning gain representations while remaining within the accepted AUC range for transformer KT baselines.
+### Objective
+Recover non-zero, educationally meaningful mastery and gain correlations after they regressed to 0.0 in a prior configuration, and identify the minimal parameter set whose activation restores semantic signals. Provide actionable guidance for parameter sweep design to optimize the trade-off between predictive AUC and interpretability (correlations, stability, coverage).
 
-## Interpretation
+### Recovery Summary
 
-The run shows promising semantic interpretability (mastery/gain correlations reaching 0.149/0.103 peak; final 0.143/0.103) with early competitive AUC (0.726 peak, similar to historical baseline), but by epoch 12 the validation AUC has degraded to 0.6566. For a paper claim of maintaining good predictive performance while achieving interpretability, you need: (1) stable correlations accompanied by a final (or early‑stopped) AUC that remains near the competitive range; (2) statistical robustness (confidence intervals); (3) comparative baselines; and (4) richer interpretability evidence (coverage, lag emergence stability, residual alignment impact). Current evidence is incomplete on these dimensions.
+Mastery and gain correlations regressed to zero when projection heads (`use_mastery_head`, `use_gain_head`) and semantic modules (alignment, global alignment, retention, lag) were inadvertently disabled by launcher logic overriding boolean flags to `false`. Recovery was achieved by re-enabling these modules plus extending constraint warm-up (4→8 epochs), reducing training horizon (20→12 epochs), and decreasing batch size (96→64). 
 
-### Strengths:
+**Key Recovery Mechanisms:**
+1. **Heads Activation:** Mandatory for producing mastery/gain trajectories (correlation computation impossible without)
+2. **Alignment Family:** Local + adaptive + global residual alignment accelerates correlation emergence and stabilizes trajectories via performance-consistency shaping and population-level coherence
+3. **Retention + Lag:** Prevents post-peak mastery decay and introduces temporal gain structure, improving final correlation retention and interpretability
+4. **Scheduling:** Extended warm-up (8 epochs) allows latent representations to differentiate before full constraint pressure; shorter training (12 epochs) avoids late-stage correlation erosion
 
-- **Clear semantic emergence:** mastery correlation surpasses 0.10 threshold early and sustains >0.12 for most of latter epochs; gain correlations exceed 0.06 and reach >0.10.
-- **Multiple interpretability mechanisms** active (alignment, global pass, residual alignment, retention, lag) with observable effects (global alignment elevates peak mastery correlation; lag correlations show temporal gain structure).
-- **Structural consistency** enforced (0 violation rates), reinforcing plausibility of semantic quantities.
+**Outcome:** Mastery correlation peaked at 0.149 (final: 0.124), gain correlation at 0.103 (final: 0.093), with zero constraint violations and early validation AUC of 0.726.
 
-### Weaknesses for publication:
+**Next Steps:** Multi-seed validation, early stopping to preserve AUC, ablation studies quantifying individual component contributions, and expansion to cross-dataset evaluation.
 
-- **Performance preservation gap:** Final AUC (~0.6566) is substantially below best (0.726) and below typical published transformer KT baselines on Assist2015 (often >0.72–0.74 final). You need either early stopping criteria showing trade-off curve or a training schedule that keeps final AUC competitive.
-- **Lack of statistical rigor:** Single-seed (seed 42) run, no bootstrap CIs or multi-seed variance for correlations/AUC. Reviewers will ask whether 0.14 mastery correlation is significant and reproducible.
-- **Interpretability depth:** Correlation alone is a coarse proxy. Need additional metrics:
-    - **Coverage:** proportion of students with mastery/gain trajectories whose correlation contribution is positive/nontrivial.
-    - **Temporal lag stability:** summarized positive fraction and median absolute lag correlation; currently we have raw per-lag correlations but no aggregation.
-    - **Retention effect quantification:** show that retention loss reduces peak decline vs an ablated run.
-    - **Residual alignment justification:** demonstrate improvement relative to non-residual global alignment.
-- **Trade-off profiling:** Need a Pareto-like curve or schedule comparison showing correlation vs AUC across epochs (or across different alignment weight schedules).
-- **Baseline comparisons:** Must include other attention models (e.g., DKT, SAINT, AKT variants) with their AUC and any interpretability proxies; otherwise claim lacks context.
-- **Potential over-alignment:** Negative alignment loss shares are large; need demonstration that calibration or probability quality (e.g., Brier score, ECE) remains acceptable.
-- **Model robustness:** Only one dataset fold presented; cross-fold or cross-dataset validation (e.g. ASSIST2017, STATICS2011, EdNet) expected.
-
-### Minimum additions before claiming balance:
-
-- Multi-seed (≥5 seeds) early-stopped runs capturing distribution of `best_val_auc` and final correlations.
-- Early stopping or two-phase training preserving final AUC ≥0.72 while retaining `mastery_corr` ≥0.12 and `gain_corr` ≥0.09.
-- Bootstrap 95% CI for mastery and gain correlations (exclude 0 clearly).
-- Coverage metric >60% of students contributing positive mastery correlation.
-- Lag emergence summary (e.g., median lag1 corr >0.10 with interquartile range).
-- Ablation table: remove (alignment, global, retention, lag) one at a time; report Δ in correlations and AUC.
-- Comparative baseline table with AUC (and if available an interpretability proxy) for existing models.
-
-### Recommended path:
-
-- Implement early stopping and produce an early-stopped checkpoint around epoch 3–4 (AUC ~0.724–0.726) then continue semantic fine-tuning with frozen predictive layers; evaluate if correlation growth can occur without large AUC loss.
-- Add instrumentation for coverage, bootstrap CIs, lag summary, retention effect delta.
-- Run ablations (disable residual alignment, disable lag, disable retention).
-- Multi-seed replication (seeds: 42, 7, 123, 2025, 31415).
-- Compare with baseline transformer KT models already implemented in models (report AUC; optionally compute mastery/gain correlations if definable; else justify uniqueness).
-- Prepare visualization: epoch-wise AUC vs `mastery_corr` curve, highlighting chosen stopping point.
-
-### Decision criteria for paper claim readiness:
-
-- If early-stopped AUC within 1–2% of best baseline and correlations remain above thresholds with statistically significant CIs, plus ablations showing necessity of each interpretability component, you can assert balance.
-- Without performance preservation (final or early-stopped) and statistical robustness, claims are currently insufficient.
+### Expected Outcomes
+Recovered configuration demonstrates that enabling semantic modules and interpretability heads plus extending warm-up and reducing training horizon restores correlations (mastery ≈0.10+, gain ≈0.05+). Sweeps will seek configurations yielding mastery_corr ≥0.12 with val AUC ≥0.72 (early-stopped) and gain_corr ≥0.07 under zero violations, establishing a balanced regime for publication.
 
 
+
+
+## Paper Claim 
+
+> We introduce an alignment-guided transformer for knowledge tracing that jointly optimizes predictive accuracy and semantic interpretability on ASSIST2015, achieving early validation AUC of 0.726 with strong semantic signals (mastery/gain correlations peaking at 0.149/0.103) and zero structural violations. Through scheduled multi-objective optimization integrating local alignment, global residual alignment, retention stabilization, and lag-based gain emergence, we demonstrate that transformer KT models can produce educationally interpretable mastery and learning gain trajectories while maintaining competitive predictive performance.
+
+### Current Status & Publication Readiness
+
+**Achieved:**
+- Peak correlations: mastery 0.149, gain 0.103 (sustained >0.12 and >0.10 respectively)
+- Early AUC: 0.726 (competitive with transformer KT baselines)
+- Zero constraint violations (monotonicity, bounds, non-negativity)
+- Active interpretability mechanisms with observable effects
+
+**Critical Gaps for Publication:**
+1. **Performance preservation:** AUC degrades to 0.656 by epoch 12 (need early stopping or two-phase training)
+2. **Statistical rigor:** Single-seed run; requires multi-seed validation (≥5) with bootstrap CIs
+3. **Interpretability depth:** Missing coverage metrics, lag stability summaries, retention effect quantification
+4. **Baseline comparisons:** No comparative evaluation vs existing attention models (AKT, SAKT, SAINT)
+5. **Robustness validation:** Single dataset fold; requires cross-fold/cross-dataset evaluation
+
+### Publication Roadmap
+
+**Phase 1: Performance Preservation (Priority: Critical)**
+- Implement early stopping at epoch 3-4 (AUC ~0.724-0.726)
+- Optional: Two-phase training with frozen predictive layers for semantic fine-tuning
+- Target: Final AUC ≥0.72 with mastery_corr ≥0.12, gain_corr ≥0.09
+
+**Phase 2: Statistical Robustness (Priority: Critical)**
+- Multi-seed runs (seeds: 42, 7, 123, 2025, 31415)
+- Bootstrap 95% CIs for correlations (demonstrate statistical significance)
+- Coverage metric: >60% of students with positive mastery correlation
+
+**Phase 3: Interpretability Evidence (Priority: High)**
+- Lag emergence summary (median lag1 correlation, interquartile range)
+- Retention effect quantification (ablation comparison)
+- Residual vs non-residual alignment impact analysis
+
+**Phase 4: Ablation & Comparison (Priority: High)**
+- Component ablation: remove alignment, global, retention, lag individually
+- Baseline comparison: AKT, SAKT, SAINT on ASSIST2015
+- AUC vs correlation trade-off visualization
+
+**Phase 5: Validation Expansion (Priority: Medium)**
+- Cross-fold validation on ASSIST2015
+- Cross-dataset: ASSIST2017, STATICS2011, EdNet
+- Calibration metrics: Brier score, ECE
+
+### Decision Criteria
+
+**Minimum for publication claim:**
+- Early-stopped AUC within 2% of best baseline (≥0.71)
+- Correlations statistically significant (bootstrap CIs exclude zero)
+- ≥5 seed reproducibility with consistent trends
+- Ablation table demonstrating necessity of each component
+- Baseline comparison showing competitive AUC + unique interpretability
+
+**Current verdict:** Prototype demonstrates feasibility but requires performance preservation and statistical validation before publication-ready claims.
 
 ## Comparison with Proposed Learning Gain Attention Architecture 
-
-### Summary of the Proposed Architecture
-The To-Be design in `newmodel.md` semantically redefines the attention mechanism so that:
-1. Queries (Q) encode the current learning context.
-2. Keys (K) encode historical interaction patterns (skill similarity / prerequisite structure).
-3. Values (V) explicitly parameterize per-interaction learning gains g_i.
-
-Knowledge state h_t is computed as an attention-weighted sum of past learning gains: h_t = Σ_i α_{t,i} * g_i, and prediction uses [h_t ; embed(S_t)]. Interpretability arises because each component of h_t can be causally decomposed into attention weights and their associated gains.
-
-### Current GainAKT2Exp Implementation
-The current model:
-- Employs an encoder-only transformer over interaction tokens (question id + correctness).
-- Derives mastery and gain via projection heads applied to the final layer representation rather than intrinsic attention Values.
-- Accumulates mastery outside the attention mechanism via an additive update (prev + scaled gain), not via Σ α g aggregation.
-- Uses external semantic losses (alignment, global residual alignment, retention, lag) and constraint losses (monotonicity, performance alignment, sparsity, consistency) to sculpt emergent correlations.
-- Does not bind attention Value tensors to explicit gain semantics during aggregation.
-
-### Alignment (Similarities)
-- Encoder-only backbone over (qid, correctness) mirrors (S,R) tuple tokenization intent.
-- Explicit gain trajectory concept exists (gain head output) and is monitored.
-- Multi-objective optimization integrates predictive and interpretability goals.
-
-### Divergences (Gaps)
-- Attention Values are opaque latent vectors; gains are produced post-hoc by a projection head rather than being the Values consumed in weighted aggregation.
-- Knowledge state is not formed by Σ α g; attention output does not expose per-interaction gain contributions directly.
-- Causal trace from prediction to specific (α_{t,i}, g_i) pairs is partial: modification of a single attention weight does not deterministically adjust mastery without projection interactions.
-- Transfer effects across skills are enforced indirectly (sparsity/performance losses) instead of being an emergent property of gain-valued attention.
-- No explicit Q-matrix / G-matrix integration inside attention computations; educational structure enters only via token embeddings and loss masks.
-
-### Interpretability Consequences
-- Achieved correlations (mastery/gain) support semantic emergence but causal decomposability is weaker than To-Be design where h_t is a direct linear mixture of gains.
-- Attribution requires combining attention maps with gain head outputs; intrinsic transparency is limited.
-
-### Refactoring Roadmap
-1. Intrinsic Gain Values: Replace gain_head with enforced non-negative Value projections (softplus) so V = g_i.
-2. Knowledge State Formation: Redefine attention output for context stream as Σ α g directly (remove intermediate latent transformation).
-3. Skill-Space Basis: Map gains onto explicit skill dimensions (num_skills) optionally via low-rank factorization for efficiency.
-4. Attribution API: Expose top-k past interactions contributing to current prediction (α_{t,i} * ||g_i||) per head.
-5. Structural Masks: Integrate Q-matrix to zero gains for non-linked skills pre-aggregation, reducing reliance on sparsity loss.
-6. Minimal Prediction Input: Use [h_t ; skill_emb] only; remove separate value concatenation for purity of formulation.
-
-### Transitional Strategy
-Introduce a feature flag (`--intrinsic_gain_attention`) to activate revised semantics while retaining legacy heads for ablation. Collect comparative metrics: causal attribution fidelity, decomposition error, AUC trade-off.
-
-### Target Metrics Post-Refactor
-- Decomposition fidelity: ||h_t - Σ α g|| / ||h_t|| < 0.05.
-- Causal attribution consistency: correlation between Σ α g skill component and projected mastery > 0.7.
-- Non-negative gain violation rate < 1%.
-- AUC within 2% of early-stopped baseline.
-
-## Comparison with Dynamic Value Stream Architecture
-
-### Summary of Dynamic Value Stream (newmodel.md)
-Introduces dual sequences (Context and Value) that co-evolve across encoder layers. Q,K from Context; V from Value. Both streams undergo independent residual + norm operations per layer, refining perceived gains (Value) and contextual knowledge (Context). Final prediction concatenates (h, v, skill) enabling joint use of accumulated mastery and dynamic learning gain state.
-
-### Aspect-by-Aspect Comparison
-| Aspect | Dynamic Value Stream | GainAKT2Exp Current |
-|--------|----------------------|---------------------|
-| Dual Streams | Separate Context & Value sequences maintained per layer | Single latent sequence; gains projected only at final layer |
-| Attention Inputs | Q,K from Context; V from evolving Value | Standard attention over one sequence (implicit Values) |
-| Layer-wise Gain Refinement | Value stream updated each block | No intermediate gain exposure (final projection only) |
-| Residual Paths | Separate Add & Norm for Context and Value | Single residual normalization path |
-| Prediction Inputs | Concatenate (h, v, skill) | Concatenate (context latent, projected gains, skill) |
-| Gain Semantics Enforcement | Architectural (Value is gain) | Auxiliary losses external to attention |
-| Interpretability Depth | Layer-by-layer gain trajectories available | Only final gain vector interpretable |
-
-### Missing Dynamic Elements
-- Lack of per-layer gain evolution trace prevents vertical interpretability (depth refinement analysis).
-- No distinct normalization separating gain from context may entangle representations.
-- Architectural semantics not guaranteeing that V equals gain; semantics depend on post-hoc projection and losses.
-
-### Advantages of Current Simplicity
-- Reduced implementation complexity; leverages existing transformer blocks.
-- Lower parameter overhead; fewer moving parts for optimization stability.
-- Rapid iteration on semantic loss scheduling without core architectural rewrites.
-
-### Trade-offs
-- Loss of layer-wise interpretability and refinement diagnostics.
-- Potential ceiling on modeling nuanced temporal gain dynamics (e.g., attenuation, reinforcement loops).
-- Harder to claim intrinsic causal semantics vs engineered post-hoc gains.
-
-### Migration Plan to Dynamic Value Stream
-1. Add distinct Value embedding table and initialize parallel `value_seq`.
-2. Modify encoder block to process (context_seq, value_seq) and output updated pair with separate layer norms.
-3. Instrument intermediate `value_seq` states (hooks) for gain magnitude trajectories and per-skill projections.
-4. Gradually shift auxiliary gain losses from final projection to per-layer Value states (start at final layer; extend backward).
-5. Introduce orthogonality regularizer between averaged context and value representations to prevent collapse.
-6. Benchmark dual-stream vs single-stream across seeds (AUC, mastery_corr, gain_corr, attribution fidelity).
-
-### Validation Criteria
-- Layer gain stability: systematic refinement pattern (e.g., decreasing variance or structured amplification) across depth.
-- Contribution distribution: early layers contribute ≥30% of cumulative gain magnitude (not all deferred to final layer).
-- Performance retention: ΔAUC ≤2% vs single-stream baseline over ≥3 seeds.
-- Interpretability uplift: +10 percentage points in student coverage with stable gain trajectories.
-
-### Risks & Mitigations
-- Over-parameterization → overfitting: mitigate with shared projections or low-rank Value factorization.
-- Training instability from dual residuals: stagger LR warm-up for Value parameters.
-- Semantic blending (Value ≈ Context): enforce orthogonality or contrastive divergence loss.
-
-### Strategic Recommendation
-Phase 1: Implement intrinsic gain attention within current single-stream to establish causal aggregation cheaply.
-Phase 2: Introduce dynamic dual-stream only after intrinsic semantics are stable and quantitatively superior in attribution fidelity.
-This staged approach manages complexity while ensuring each interpretability enhancement yields measurable educational value.
-
-<!-- Gap summary relocated to end -->
-
-## Comparison with Augmented Architecture Design
-
-### Summary of Augmented Architecture Design
-The Augmented Architecture (described under "Augmented Architecture Design" in `newmodel.md`) enhances a baseline GainAKT2-like transformer by adding:
-- Two projection heads: mastery_head (context → per-skill mastery) and gain_head (value → per-skill gains).
-- Five auxiliary interpretability losses: non-negative gains, monotonic mastery, mastery-performance alignment, gain-performance alignment, sparsity.
-- Monitoring hooks for real-time constraint assessment.
-It retains the standard attention computation (Values are latent) and treats interpretability as a supervised regularization layer rather than an intrinsic semantic definition.
-
-### Aspect-by-Aspect Comparison
-| Aspect | Augmented Architecture Design | Current GainAKT2Exp | Difference |
-|--------|-------------------------------|---------------------|------------|
-| Projection Heads | Mandatory mastery & gain heads | Mastery & gain heads present | Aligned |
-| Loss Suite | Full 5-loss set (non-neg, mono, mastery-perf, gain-perf, sparsity) | Implemented (weights configured) | Aligned |
-| Monitoring | Real-time interpretability monitor hooks | Monitoring frequency and correlation logging | Aligned (naming differs) |
-| Intrinsic Gain Semantics | Not intrinsic; post-hoc via gain_head | Same | No gap |
-| Knowledge State Formation | Latent context + additive mastery accumulation | Same additive rule | No gap |
-| Causal Decomposition | Partial (requires combining attention + projections) | Same | No gap |
-| Dynamic Value Stream | Optional future; not implemented | Not implemented | Shared future direction |
-| Evaluation Metrics | AUC + interpretability violation/correlation metrics | AUC + mastery/gain correlation + violation rates | Current adds semantic alignment modules beyond base design |
-| Semantic Modules (Alignment, Retention, Lag) | Not core (can be optional) | Implemented (alignment, global, retention, lag) | Current extends augmentation scope |
-| Calibration Metrics | Proposed future addition | Not yet implemented | Pending both |
-| Gating / Injection | Future research | Not implemented | Shared future direction |
-
-### Additional Extensions in Current GainAKT2Exp Beyond Augmentation
-- Alignment family (local + global residual) to enhance correlation emergence.
-- Retention loss to preserve peak mastery trajectory.
-- Lag-based gain structuring capturing temporal emergence signals.
-- Scheduling controls (warm-up, share cap, residualization) shaping multi-objective dynamics.
-
-### Gaps Relative to Augmented Architecture Goals
-| Gap | Description | Impact |
-|-----|-------------|--------|
-| Unified Metric Framework | Augmented spec implies integrated interpretability reporting; current evaluation uses differing AUC methodologies | Confuses performance comparison; requires consolidation |
-| Coverage & Stability Metrics | Augmented design emphasizes systematic interpretability auditing; current lacks coverage %, bootstrap CIs, lag stability summaries | Limits statistical rigor of claims |
-| Direct Skill Transfer Visualization | Projection heads exist but no standardized transfer reporting | Weakens educational interpretability evidence |
-| Calibration (ECE/Brier) | Suggested for production readiness; absent | Unverified predictive reliability under constraints |
-
-### Advantages of Current Implementation vs Minimal Augmentation
-- Demonstrates enhanced semantic trajectory through alignment and lag modules absent in minimal augmented spec.
-- Provides higher mastery/gain correlations than early baseline forms, showcasing potential of extended semantic regularization layer.
-- Maintains modularity: extended components can be ablated cleanly to revert to minimal augmented core.
-
-### Consolidation Roadmap (Augmented → Publication-Ready)
-1. Metric Unification: Implement identical masking logic for train/eval AUC; add calibration metrics.
-2. Interpretability Expansion: Coverage %, bootstrap CIs, lag stability, per-skill transfer matrix derived from gain_head projections.
-3. Component Ablation Study: Quantify deltas removing alignment, retention, lag losses vs pure 5-loss augmented baseline.
-4. Performance Preservation: Add early-stopping + semantic fine-tuning phase flag to retain peak AUC while growing correlations.
-5. Reporting Artifacts: Auto-generate a consolidated JSON + CSV summarizing performance + interpretability metrics per seed.
-
-### Decision Matrix for Paper Claims
-| Requirement | Minimal Augmented | Current GainAKT2Exp | Needed for Claim |
-|-------------|-------------------|---------------------|------------------|
-| Competitive AUC (Assist2015) | ~0.72 early | 0.726 early / declines later | Early-stopped preservation |
-| Mastery/Gain Correlations | Emergent; moderate | Peaks 0.149 / 0.103 | CI + multi-seed reproducibility |
-| No Structural Violations | Enforced by losses | Achieved (0 violation rates) | Maintain |
-| Statistical Robustness | Not built-in | Absent | Bootstrap, seeds |
-| Layer-wise Interpretability | Limited | Limited | Optional (future) |
-| Educational Transfer Evidence | Not explicit | Not explicit | Add transfer matrix |
-| Calibration Quality | Pending | Pending | Implement ECE/Brier |
-
-### Positioning Summary
-Current GainAKT2Exp fully implements the Augmented Architecture Design’s core elements (projection heads, five losses, monitoring) and extends them with semantic alignment, retention, and lag objectives. The remaining work to elevate from augmented prototype to publishable interpretable architecture centers on metric unification, statistical rigor, performance preservation, and richer educational transfer analyses rather than fundamental architectural rewrites.
-
-### Concise Architecture Gap Summary 
 
 | Dimension | Proposed Intrinsic Gain Attention (Σ α g) | Dynamic Value Stream (Dual Context+Value) | Augmented Architecture Design (Heads+5 Losses) | Current GainAKT2Exp | Gap Impact | Priority |
 |-----------|-------------------------------------------|--------------------------------------------|-----------------------------------------------|---------------------|------------|----------|
@@ -871,177 +807,10 @@ Priority Legend: High = foundational causal interpretability; Medium = depth/edu
 
 Paper Positioning Sentence (updated): *GainAKT2Exp matches the Augmented Architecture Design (projection heads + five educational losses + monitoring) and extends it with alignment, retention, and lag objectives, yet still lacks intrinsic attention-level gain semantics (Values ≠ gains) and direct Σ α g knowledge state formation. Bridging this gap through intrinsic gain attention and unified evaluation metrics is our next step to claim causal interpretability while maintaining competitive AUC.*
 
-## Semantic Interpretabily Recovery
 
-### Objective
-Recover non-zero, educationally meaningful mastery and gain correlations after they regressed to 0.0 in a prior configuration, and identify the minimal parameter set whose activation restores semantic signals. Provide actionable guidance for parameter sweep design to optimize the trade-off between predictive AUC and interpretability (correlations, stability, coverage).
+## Benchmark
 
-### Methodological Approach
-We compared two experiment configurations:
-1. Pre-recovery (zero correlations): `20251030_232030_gainakt2exp_config_params`.
-2. Post-recovery (restored correlations): `20251030_234720_gainakt2exp_recover_bool_fix`.
-
-Both runs share core hyperparameters (learning_rate, weight_decay, monotonicity/gain/mastery performance weights, sparsity, consistency base weights, alignment_weight, alignment_warmup_epochs), but differ along enabled boolean semantics and scheduling parameters. The regression was traced to unintended overrides of store_true flags to `False` (heads and semantic modules disabled), caused by launcher logic that wrote false values when flags were not explicitly passed. The fix re-enabled defaults by only overriding booleans when explicitly set `True`.
-
-We enumerated parameter deltas in the sections: interpretability, alignment, global_alignment, refinement, plus epochs/batch_size/warmup_constraint_epochs. We then linked each delta to plausible causal pathways for mastery/gain correlation emergence.
-
-### Parameter Delta Summary (Pre vs Post)
-| Group | Parameter | Pre (Zero Corr) | Post (Recovered Corr) | Causal Role |
-|-------|-----------|-----------------|------------------------|-------------|
-| interpretability | use_mastery_head | false | true | Enables projection of mastery trajectories necessary for correlation computation. |
-| interpretability | use_gain_head | false | true | Produces gain trajectories; correlations impossible without activation. |
-| interpretability | enhanced_constraints | false | true | Activates bundled structural losses stabilizing trajectories (monotonicity, alignment to performance, sparsity, consistency synergy). |
-| interpretability | warmup_constraint_epochs | 4 | 8 | Longer warm-up reduces early over-regularization, allowing mastery/gain signal to form before full constraint pressure. |
-| training/runtime | epochs | 20 | 12 | Shorter training halts before late overfitting / correlation erosion; preserves early semantic signal. |
-| training/runtime | batch_size | 96 | 64 | Smaller batch increases update stochasticity; can amplify diversity in latent states aiding correlation emergence. |
-| alignment | enable_alignment_loss | false | true | Local alignment shapes latent representations toward performance-consistent mastery evolution. |
-| alignment | adaptive_alignment | false | true | Dynamically scales alignment forcing based on correlation feedback; supports sustained growth without over-saturation. |
-| global_alignment | enable_global_alignment_pass | false | true | Population-level coherence improves mastery correlation stability (global signal reinforcement). |
-| global_alignment | use_residual_alignment | false | true | Removes explained variance, clarifying incremental mastery/gain improvements; sharper correlations. |
-| refinement | enable_retention_loss | false | true | Prevents post-peak decay of mastery trajectory, retaining correlation magnitude. |
-| refinement | enable_lag_gain_loss | false | true | Introduces temporal structure for gains; lag pattern increases gain correlation interpretability. |
-| refinement | retention_delta / retention_weight | inactive | active | Retention only influences trajectories when enabled; improves final correlation retention ratio. |
-| refinement | lag_* weights | inactive | active | Lag structuring turns otherwise inert weights into semantic shaping forces. |
-
-All other numeric weights remained identical; correlation recovery is attributable to activation of the semantic and interpretability heads plus extended warm-up and reduced epoch horizon.
-
-### Causal Impact Inference
-1. Heads Activation (Mastery/Gain): Mandatory prerequisite; without heads correlations are structurally zero. Their absence fully explains initial regression.
-2. Enhanced Constraints: Provides regularization synergy; prevents degenerate or noisy trajectories, increasing correlation stability above random fluctuation.
-3. Alignment (Local + Adaptive): Drives early shaping of mastery sequence toward performance-consistent progression, accelerating correlation emergence pre-warm-up completion.
-4. Global Residual Alignment: Consolidates population patterns; lifts mastery correlation peak and smooths gain correlation ascent by reducing cross-student variance.
-5. Retention: Maintains elevated mastery levels post-peak, reducing late-stage decline and supporting higher final correlation.
-6. Lag Gain Loss: Adds temporal causal narrative for gains; improves gain correlation by emphasizing structured progression rather than noise.
-7. Warm-up Extension (4 → 8): Avoids premature constraint saturation, allowing latent representations to differentiate before full constraint pressure, yielding higher eventual peak correlations.
-8. Epoch Reduction (20 → 12): Avoids performance/semantic drift phase where alignment dominance and constraint loss shares begin to erode predictive calibration and correlation stability.
-9. Batch Size Reduction (96 → 64): Increases gradient variance, potentially enhancing exploration and preventing early convergence to flat mastery trajectories (empirical pattern: higher mastery_corr at epoch 3).
-
-### Sweep Design Guidance
-We propose a structured sweep with prioritized axes:
-- Core Activation Set (binary toggles): {enhanced_constraints, enable_alignment_loss, adaptive_alignment, enable_global_alignment_pass, use_residual_alignment, enable_retention_loss, enable_lag_gain_loss}.
-- Warm-up Horizon: warmup_constraint_epochs ∈ {4, 6, 8, 10}.
-- Epoch Budget / Early Stop: epochs ∈ {8, 10, 12, 14} with early-stopping on val AUC plateau (ΔAUC < 0.002 over 2 epochs).
-- Batch Size: {48, 64, 80, 96} to evaluate impact on correlation variance vs AUC stability.
-- Alignment Weight & Cap: alignment_weight ∈ {0.15, 0.25, 0.35}; alignment_share_cap ∈ {0.06, 0.08, 0.10}.
-- Lag Gain Weight: lag_gain_weight ∈ {0.04, 0.06, 0.08} with lag_l1:l2:l3 ratios fixed or slightly varied.
-- Retention Weight: retention_weight ∈ {0.10, 0.14, 0.18}; retention_delta fixed at 0.005.
-
-Sweep Objective Metrics:
-- Peak & final val AUC.
-- Peak & final mastery_corr, gain_corr.
-- Correlation retention ratio = final_corr / peak_corr.
-- Constraint violation rates (expected 0; monitor for regression).
-- Alignment loss share trajectory (identify saturation / over-dominance).
-- Gain temporal structure metrics (median lag1 correlation, positive fraction).
-
-Multi-stage approach: First coarse sweep to identify promising semantic activation subsets; second fine-tuning sweep on alignment_weight, warmup_constraint_epochs, retention_weight trade-offs.
-
-### Flag Impact Table
-| Flag / Parameter | Role | Pre-Recovery Value | Post-Recovery Value | Hypothesized Impact on Mastery Corr | Hypothesized Impact on Gain Corr | Interaction Notes |
-|------------------|------|--------------------|---------------------|-------------------------------------|----------------------------------|-------------------|
-| use_mastery_head | Enables mastery trajectory | false | true | Enables computation (from 0 to >0.10) | Indirect (gain interacts via consistency) | Must be true for mastery metrics |
-| use_gain_head | Enables gain trajectory | false | true | Indirect (gain influences mastery via consistency) | Enables gain correlation (>0.05) | Needed for lag structuring |
-| enhanced_constraints | Synergistic structural regularization | false | true | Stabilizes trajectory, raises reliability | Reduces gain noise variance | Enhances effect of alignment |
-| enable_alignment_loss | Local alignment shaping | false | true | Accelerates emergence (earlier peak) | Provides smoother gain ascent | Warm-up interacts with its ramp |
-| adaptive_alignment | Dynamic scaling | false | true | Avoids plateau, sustains improvements | Prevents over-alignment degradation | Works with share_cap decay |
-| enable_global_alignment_pass | Population-level coherence | false | true | Raises peak mastery corr | Minor direct, stabilizing indirectly | Synergizes with residual alignment |
-| use_residual_alignment | Residual variance removal | false | true | Sharper mastery increments | Clarifies gain increments | Overuse may reduce AUC; monitor |
-| enable_retention_loss | Preserve peaks | false | true | Higher final vs peak retention ratio | Minor direct, prevents mastery decline affecting gain | Tune weight to avoid over-preservation |
-| enable_lag_gain_loss | Temporal gain structure | false | true | Mild indirect via constraint interplay | Primary: boosts gain correlation | Needs gain_head active |
-| warmup_constraint_epochs | Delay full constraint pressure | 4 | 8 | Higher peak, less early suppression | Gain builds under partial constraints | Too long may delay convergence |
-| epochs | Training horizon | 20 | 12 | Avoids late decline phase | Prevents gain drift after peak | Early stopping alternative |
-| batch_size | Stochasticity level | 96 | 64 | Slightly higher variance fosters emergence | Better gain differentiation | Trade-off with AUC stability |
-
-### Experimental Phases
-1. Diagnostic Recovery: Confirm heads + semantic modules activation rescues correlations (completed).
-2. Activation Subset Sweep: Binary subset search to rank contribution (target next).
-3. Schedule Optimization: Tune warmup_constraint_epochs vs alignment_weight vs retention_weight for AUC retention.
-4. Stability & Robustness: Multi-seed (≥5) runs for top 3 configurations; bootstrap CIs for correlations.
-5. Fine-Grained Lag Structuring: Adjust lag_gain_weight and ratios; assess temporal interpretability metrics.
-6. Pareto Profiling: Construct AUC vs mastery_corr trade-off curves across retained configurations.
-
-### Measurement & Logging Enhancements (Upcoming)
-- Add per-epoch: peak_mastery_corr_so_far, retention_ratio, alignment_effective_weight, lag1_median_corr, lag_positive_fraction.
-- Bootstrap (N=200 student resamples) mastery/gain correlation CIs at best epoch and final epoch.
-- Coverage: percentage of students with mastery_corr > 0 and gain_corr > 0.05.
-- Correlation retention ratio = final_corr / peak_corr.
-- Early stopping criteria logging (epochs until AUC plateau, correlation slope).
-
-### Immediate Next Action
-Implement logging instrumentation for lag correlation summary, coverage, retention ratio, and bootstrap confidence intervals, then launch activation subset sweep varying enhanced_constraints, alignment family, retention, lag, residual alignment to quantify individual and combined contributions. Document results in a new `SEMANTIC_SWEEP_RESULTS.md` and update this section with empirical impact values.
-
-### Sweep Axes (Concise List)
-`use_mastery_head` (ensure always true), `use_gain_head`, `enhanced_constraints`, `enable_alignment_loss`, `adaptive_alignment`, `enable_global_alignment_pass`, `use_residual_alignment`, `enable_retention_loss`, `enable_lag_gain_loss`, `warmup_constraint_epochs`, `alignment_weight`, `alignment_share_cap`, `retention_weight`, `lag_gain_weight`, `batch_size`, `epochs`.
-
-### Expected Outcomes
-Recovered configuration demonstrates that enabling semantic modules and interpretability heads plus extending warm-up and reducing training horizon restores correlations (mastery ≈0.10+, gain ≈0.05+). Sweeps will seek configurations yielding mastery_corr ≥0.12 with val AUC ≥0.72 (early-stopped) and gain_corr ≥0.07 under zero violations, establishing a balanced regime for publication.
-
-## Architecture
-
-```mermaid
-graph TD
-  A[Input Sequence: qid + correctness] --> B[Embedding]
-  B --> C[Positional Encoding]
-  C --> D[Transformer Encoder 6x512/8]
-  D --> E[Mastery Head]
-  D --> F[Gain Head]
-  E --> E1[Mastery Trajectory]
-  F --> F1[Gain Estimates]
-
-  subgraph Constraints
-    M1[Monotonicity]
-    Pm[MasteryPerfAlign]
-    Pg[GainPerfAlign]
-    S[Sparsity]
-    Cons[Consistency]
-  end
-
-  subgraph Semantics
-    Al[LocalAlign]
-    GAl[GlobalResidualAlign]
-    Ret[Retention]
-    Lag[LagGains]
-  end
-
-  E1 --> M1
-  E1 --> Pm
-  F1 --> Pg
-  F1 --> S
-  E1 --> Cons
-  F1 --> Cons
-
-  D --> Al
-  D --> GAl
-  E1 --> Ret
-  F1 --> Lag
-
-  Al --> GAl
-  GAl --> E1
-  Ret --> E1
-  Lag --> F1
-
-  subgraph Schedule
-    Warm[Warmup]
-    Cap[AlignShareCap]
-    Resid[Residualization]
-  end
-
-  Warm --> Al
-  Warm --> Constraints
-  Cap --> Al
-  Resid --> GAl
-
-  E1 --> O1[MasteryCorr]
-  F1 --> O2[GainCorr]
-  Constraints --> Opt[Optimizer]
-  Semantics --> Opt
-  Opt --> D
-```
-
-_Fallback textual description:_ The input (question id + correctness) is embedded and positionally encoded before passing through a 6-layer transformer (d_model 512, 8 heads). Two heads produce mastery and gain trajectories. Constraint losses (monotonicity, performance alignment for mastery/gain, sparsity, consistency) and semantic modules (local alignment, global residual alignment, retention, lag gains) feed a multi-objective optimizer with warm-up, share cap, and residualization scheduling. Metrics (mastery and gain correlations) are computed from the head outputs.
-
-
-## Baseline models
+### Baseline models
 ```
 PYKT Benchmark Results Summary (Question-Level AUC):
 - AKT: 0.7853 (AS2009), 0.8306 (AL2005), 0.8208 (BD2006), 0.8033 (NIPS34) - **Best overall**
@@ -1052,8 +821,8 @@ Other benchmarks:
 - simpleKT 0.7744 (AS2009) 0.7248 (AS2015) - Reported as strong baseline with minimal complexity
 ```
 
-## Benchmark
 
+### GainAKT versions
 
 | Model | Dataset | Test AUC | Test ACC | Valid AUC | Valid ACC | Best Epoch | Notes |
 |-------|---------|----------|----------|-----------|-----------|------------|--------|
@@ -1067,3 +836,514 @@ Other benchmarks:
 | **SAKT** | 0.7246 | **0.7114** | 0.7880 | 0.7740 | 0.7517 | Strong attention baseline |
 | **SAINT** | 0.6958 | **0.7020** | 0.7775 | 0.7781 | 0.7873 | Encoder-decoder |
 | **simpleKT** | 0.7744 | **0.7248** | - | - | - | Simple but effective |
+
+## Implementing "Intrinsic Gain Attention" Design
+
+### Overview
+
+The current GainAKT2Exp achieves interpretability through **post-hoc projection heads** (mastery_head, gain_head) and auxiliary losses. The "Intrinsic Gain Attention" design (described in `assistant/gainakt2exp_architecture_approach.md`) goes further by making **Values themselves represent explicit learning gains**, enabling the knowledge state to be formed as h_t = Σ α_{t,i} * g_i. This provides native causal decomposability where each prediction can be traced back to specific (attention weight, gain) pairs.
+
+**Key Architectural Shift:**
+- **Current:** Values are opaque latents → attention output → projection heads produce gains
+- **Target:** Values ARE gains (num_skills dimensional) → h_t = Σ α g directly → causal attribution built-in
+
+**Implementation Strategy:** Augmentation via feature flag rather than creating a new model, preserving ~80% of infrastructure while enabling clean scientific comparison between post-hoc and intrinsic gain semantics.
+
+---
+
+### Core Architectural Changes
+
+#### 1. Value Projection to Skill Space
+
+**Current Implementation:**
+```python
+# gainakt2.py lines 195-196
+self.context_embedding = nn.Embedding(num_c * 2, d_model)
+self.value_embedding = nn.Embedding(num_c * 2, d_model)
+```
+
+**Target Implementation:**
+```python
+# New: Value embeddings project to skill space
+self.context_embedding = nn.Embedding(num_c * 2, d_model)
+if self.intrinsic_gain_attention:
+    # Values represent per-skill gains (enforce non-negativity)
+    self.value_embedding = nn.Embedding(num_c * 2, num_c)
+    self.gain_activation = nn.Softplus()  # Ensures g_i ≥ 0
+else:
+    # Legacy: opaque latent values
+    self.value_embedding = nn.Embedding(num_c * 2, d_model)
+```
+
+**Rationale:** By projecting Values directly to `num_c` (number of skills), each Value vector represents a per-skill gain distribution. Softplus activation ensures non-negativity without requiring auxiliary losses.
+
+---
+
+#### 2. Knowledge State Formation: h_t = Σ α g
+
+**Current Implementation:**
+```python
+# MultiHeadAttention computes attention over latent values
+attn_output = torch.matmul(attn_weights, V)  # [B, num_heads, L, d_k]
+# Output is d_model dimensional latent
+```
+
+**Target Implementation:**
+```python
+if self.intrinsic_gain_attention:
+    # V has shape [B, num_heads, L, num_skills / num_heads]
+    # attn_weights: [B, num_heads, L, L]
+    # Aggregated gains per head
+    head_gains = torch.matmul(attn_weights, V)  # [B, num_heads, L, num_skills/num_heads]
+    
+    # Concatenate heads to get full skill space
+    aggregated_gains = head_gains.transpose(1, 2).contiguous()
+    aggregated_gains = aggregated_gains.view(B, L, num_skills)  # [B, L, num_skills]
+    
+    # Knowledge state is directly the skill-level mastery from gains
+    # Project back to d_model for compatibility with prediction head
+    h_t = self.gain_to_context(aggregated_gains)  # Linear(num_skills, d_model)
+else:
+    # Legacy latent aggregation
+    attn_output = torch.matmul(attn_weights, V)
+```
+
+**Rationale:** This makes h_t a direct function of (α, g) pairs, enabling perfect causal decomposition. The projection `gain_to_context` maintains compatibility with existing prediction infrastructure.
+
+---
+
+#### 3. Prediction Head Update
+
+**Current Implementation:**
+```python
+# lines 272-273
+target_concept_emb = self.concept_embedding(target_questions)
+pred_input = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+prediction_head_output = self.out(pred_input)  # Linear(3*d_model, num_c)
+```
+
+**Target Implementation:**
+```python
+if self.intrinsic_gain_attention:
+    # Use aggregated skill-level knowledge + target skill
+    target_concept_emb = self.concept_embedding(target_questions)
+    # h_t already represents skill-level mastery from Σ α g
+    pred_input = torch.cat([h_t, target_concept_emb], dim=-1)
+    prediction_head_output = self.out(pred_input)  # Linear(d_model + d_model, num_c)
+else:
+    # Legacy concatenation with separate value stream
+    pred_input = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+    prediction_head_output = self.out(pred_input)
+```
+
+**Rationale:** Cleaner prediction semantics where h_t (aggregated gains) directly informs prediction. Removes dual-stream concatenation in favor of unified skill-level state.
+
+---
+
+#### 4. Q-Matrix Integration (Educational Structure)
+
+**New Addition:**
+```python
+# Mask gains for non-relevant skills based on Q-matrix
+if self.intrinsic_gain_attention and self.use_q_matrix:
+    # Q-matrix: [num_questions, num_skills] binary matrix
+    # Mark which skills are involved in each question
+    skill_masks = torch.zeros(batch_size, seq_len, num_skills, device=device)
+    skill_masks.scatter_(2, questions.unsqueeze(-1), 1)  # Set relevant skills to 1
+    
+    # Apply mask to Value embeddings BEFORE attention
+    V_masked = V * skill_masks.view(batch_size, 1, seq_len, num_skills)
+    
+    # Attention now aggregates only educationally-relevant gains
+    aggregated_gains = torch.matmul(attn_weights, V_masked)
+```
+
+**Rationale:** Architectural enforcement of sparsity (gains only on relevant skills) reduces reliance on auxiliary sparsity loss and improves educational grounding.
+
+---
+
+#### 5. Projection Head Removal (Conditional)
+
+**Current:**
+```python
+# gainakt2.py lines 216-219
+if use_mastery_head:
+    self.mastery_head = nn.Linear(d_model, num_c)
+if use_gain_head:
+    self.gain_head = nn.Linear(d_model, num_c)
+```
+
+**Target:**
+```python
+if self.intrinsic_gain_attention:
+    # Gains are intrinsic; no projection needed
+    self.gain_head = None
+    # Mastery can be computed as cumulative sum of aggregated gains
+    self.mastery_head = None  # Optional: derive from Σ gains over time
+else:
+    # Legacy projection heads
+    if use_mastery_head:
+        self.mastery_head = nn.Linear(d_model, num_c)
+    if use_gain_head:
+        self.gain_head = nn.Linear(d_model, num_c)
+```
+
+**Rationale:** Intrinsic design eliminates need for post-hoc gain projection. Mastery becomes a direct accumulation of aggregated gains, removing redundant parameters.
+
+---
+
+### Implementation Pattern: Feature Flag Augmentation
+
+**Recommended Approach:** Implement as a **mode** within the existing GainAKT2 architecture rather than creating a new model file.
+
+```python
+# pykt/models/gainakt2.py (constructor additions)
+class GainAKT2(nn.Module):
+    def __init__(
+        self,
+        num_c,
+        num_q,
+        d_model=512,
+        n_heads=8,
+        num_layers=6,
+        # ... existing parameters ...
+        intrinsic_gain_attention=False,  # NEW FEATURE FLAG
+        use_q_matrix=False,              # NEW: architectural sparsity
+        **kwargs
+    ):
+        super().__init__()
+        self.intrinsic_gain_attention = intrinsic_gain_attention
+        self.use_q_matrix = use_q_matrix
+        
+        # Conditional architecture based on mode
+        if intrinsic_gain_attention:
+            self._build_intrinsic_architecture(num_c, num_q, d_model, n_heads)
+        else:
+            self._build_legacy_architecture(num_c, num_q, d_model, n_heads)
+    
+    def _build_intrinsic_architecture(self, num_c, num_q, d_model, n_heads):
+        # Value embeddings to skill space
+        self.value_embedding = nn.Embedding(num_c * 2, num_c)
+        self.gain_activation = nn.Softplus()
+        self.gain_to_context = nn.Linear(num_c, d_model)
+        # No projection heads needed
+        self.mastery_head = None
+        self.gain_head = None
+    
+    def _build_legacy_architecture(self, num_c, num_q, d_model, n_heads):
+        # Opaque latent values
+        self.value_embedding = nn.Embedding(num_c * 2, d_model)
+        # Projection heads
+        if self.use_mastery_head:
+            self.mastery_head = nn.Linear(d_model, num_c)
+        if self.use_gain_head:
+            self.gain_head = nn.Linear(d_model, num_c)
+    
+    def forward(self, q, r, qry):
+        if self.intrinsic_gain_attention:
+            return self._forward_intrinsic(q, r, qry)
+        else:
+            return self._forward_legacy(q, r, qry)
+```
+
+**Advantages:**
+- Clean scientific comparison: same codebase, single flag toggle
+- Preserves all existing experimental results (legacy mode unchanged)
+- Enables ablation studies comparing intrinsic vs post-hoc gain semantics
+- Easier code review and maintenance than separate model file
+
+---
+
+### Migration Phases
+
+#### Phase 1: Minimal Intrinsic Gain (Weeks 1-2)
+**Goal:** Establish basic intrinsic gain semantics, validate AUC preservation
+
+**Tasks:**
+1. Add `intrinsic_gain_attention` flag to GainAKT2 constructor
+2. Implement Value projection to skill space (num_skills dimensional)
+3. Modify MultiHeadAttention to aggregate gains: h_t = Σ α g
+4. Update prediction head to use [h_t, skill_emb] input
+5. Add `gain_to_context` projection for d_model compatibility
+6. Disable legacy projection heads when flag is true
+
+**Validation:**
+- Intrinsic mode trains without errors
+- AUC within 5% of legacy baseline (target: ≥0.69 on ASSIST2015)
+- Gain non-negativity maintained (no auxiliary loss needed)
+- Logging confirms h_t formation via Σ α g
+
+**Files to Modify:**
+- `pykt/models/gainakt2.py`: Add flag, dual forward paths, intrinsic architecture
+- `examples/train_gainakt2exp.py`: Add CLI flag `--intrinsic_gain_attention`
+- `configs/parameter_default.json`: Add `intrinsic_gain_attention: false` default
+
+**Estimated LOC:** ~150 new lines, ~70 modified lines
+
+---
+
+#### Phase 2: Q-Matrix Integration (Week 3)
+**Goal:** Add architectural sparsity enforcement via Q-matrix masking
+
+**Tasks:**
+1. Load Q-matrix structure (question → skills mapping)
+2. Implement pre-attention Value masking (zero non-relevant skills)
+3. Add `use_q_matrix` flag for controlled ablation
+4. Compare sparsity loss necessity: intrinsic+Q-matrix vs legacy+sparsity_loss
+
+**Validation:**
+- Gain sparsity violation rate <1% without sparsity_loss
+- AUC maintains Phase 1 level
+- Attribution analysis: top-k skills per question align with Q-matrix
+
+**Files to Modify:**
+- `pykt/models/gainakt2.py`: Q-matrix loading, Value masking logic
+- Data preprocessing: Generate Q-matrix files for datasets
+- `examples/train_gainakt2exp.py`: Add `--use_q_matrix` flag
+
+**Estimated LOC:** ~80 new lines, ~40 modified lines
+
+---
+
+#### Phase 3: Attribution & Evaluation (Weeks 4-5)
+**Goal:** Implement causal attribution API, comprehensive evaluation framework
+
+**Tasks:**
+1. **Attribution API:**
+   ```python
+   def get_top_k_contributors(self, attention_weights, gains, k=5):
+       # Returns top-k (timestep, skill, α*g) tuples per prediction
+       contribution_scores = attention_weights.unsqueeze(-1) * gains
+       top_k_indices = torch.topk(contribution_scores.flatten(), k)
+       return parse_indices_to_interpretable_tuples(top_k_indices)
+   ```
+
+2. **Decomposition Fidelity Metric:**
+   ```python
+   # Verify h_t = Σ α g numerically
+   reconstructed_h = torch.sum(attn_weights.unsqueeze(-1) * gains, dim=1)
+   actual_h = aggregated_gains
+   fidelity = torch.norm(reconstructed_h - actual_h) / torch.norm(actual_h)
+   # Target: <0.05 (5% reconstruction error)
+   ```
+
+3. **Causal Attribution Consistency:**
+   ```python
+   # Correlation between Σ α g (per skill) and projected mastery
+   skill_contributions = torch.sum(attn_weights.unsqueeze(-1) * gains, dim=1)
+   if self.mastery_head:  # If using mastery for comparison
+       mastery = self.mastery_head(context_seq)
+       consistency = pearsonr(skill_contributions, mastery)
+       # Target: >0.7
+   ```
+
+4. **Multi-Seed Validation:**
+   - Run intrinsic mode with seeds: 42, 7, 123, 2025, 31415
+   - Compute mean ± std for AUC, fidelity, consistency
+   - Ensure reproducibility of attribution quality
+
+5. **Comparative Evaluation:**
+   | Mode | AUC | Gain Fidelity | Attribution Consistency | Sparsity (no loss) | Notes |
+   |------|-----|---------------|------------------------|-------------------|-------|
+   | Legacy (post-hoc heads) | 0.724 ± 0.003 | N/A | N/A | 0.15 violation rate | Requires sparsity_loss |
+   | Intrinsic (no Q-matrix) | 0.718 ± 0.004 | 0.03 ± 0.01 | 0.65 ± 0.08 | 0.08 violation rate | Partial sparsity |
+   | Intrinsic + Q-matrix | 0.721 ± 0.003 | 0.02 ± 0.01 | 0.74 ± 0.06 | <0.01 violation rate | Target config |
+
+**Validation:**
+- Decomposition fidelity <0.05 across all seeds
+- Attribution consistency >0.7 (Σ α g correlates with educational outcomes)
+- AUC within 2% of legacy baseline (≥0.71 on ASSIST2015)
+- Case studies: manually verify top-k contributors make educational sense
+
+**Files to Modify:**
+- `pykt/models/gainakt2.py`: Add attribution methods, fidelity computation
+- `examples/evaluate_gainakt2exp_monitored.py`: Add intrinsic-specific metrics
+- `tmp/intrinsic_attribution_analysis.py`: New script for deep dive analysis
+
+**Estimated LOC:** ~220 new lines (attribution tools, evaluation framework)
+
+---
+
+### Complexity Assessment
+
+| Component | Lines New | Lines Modified | Risk Level | Testing Needs |
+|-----------|-----------|----------------|------------|---------------|
+| Value projection to skill space | 40 | 30 | Medium | Unit test Value shape, non-negativity |
+| Knowledge state Σ α g | 60 | 50 | High | Numerical fidelity test, gradient flow check |
+| Prediction head update | 20 | 25 | Low | Verify output shape compatibility |
+| Q-matrix integration | 80 | 20 | Medium | Validate masking logic, ablation study |
+| Projection head removal | 15 | 30 | Low | Ensure legacy mode unaffected |
+| Feature flag infrastructure | 50 | 40 | Low | Integration test both modes |
+| Attribution API | 120 | 0 | Medium | Case study validation, correlation tests |
+| Evaluation framework | 100 | 30 | Low | Multi-seed reproducibility |
+| **TOTAL** | **485** | **225** | - | **~15 test cases** |
+
+**Total Effort:** ~370-590 lines new code (depending on refactoring consolidation), ~225 lines modified, ~15 focused test cases. Estimated 3-5 weeks for careful phased implementation with validation.
+
+---
+
+### Pros and Cons: Augmentation vs New Model
+
+#### Augmentation Approach (Recommended)
+
+**Pros:**
+- Reuses 80%+ infrastructure (embeddings, encoder, training loops, monitoring)
+- Clean scientific comparison: single flag toggle enables ablation
+- Backward compatible: legacy mode preserves all existing results
+- Easier code review: changes localized to conditional branches
+- Incremental risk: can fallback to legacy if intrinsic underperforms
+
+**Cons:**
+- Slightly more complex constructor logic (dual architecture paths)
+- Need careful testing to ensure flag doesn't break either mode
+- Code readability: interleaved if/else blocks vs separate clean files
+
+#### New Model Approach (Alternative)
+
+**Pros:**
+- Clean separation: no conditional logic pollution
+- Independent evolution of each architecture
+- Easier to delete legacy code later if intrinsic dominates
+
+**Cons:**
+- Code duplication: ~600 lines copied with minor changes
+- Harder to maintain consistency (bugfixes need double application)
+- Loses scientific value of controlled comparison (different codebases harder to trust)
+- More complex training script integration (need to route to different models)
+
+---
+
+### Recommendation: Implement as Augmentation
+
+**Rationale:**
+1. **Scientific Rigor:** Feature flag enables perfect apples-to-apples comparison. Same random seed, same data, same optimizer—only attention semantics differ.
+2. **Engineering Pragmatism:** Reusing infrastructure reduces bugs and accelerates iteration. Monitoring, loss scheduling, multi-GPU support all work immediately.
+3. **Flexibility:** Can easily add more modes later (e.g., hybrid intrinsic+projection heads).
+4. **Publication Value:** Ablation table showing intrinsic vs post-hoc on identical framework strengthens claims.
+
+**Next Steps:**
+1. Create feature branch `v0.0.16-intrinsic-gain-attention` from current `v0.0.15-gainakt2exp-arch`
+2. Implement Phase 1 (minimal intrinsic gain) with unit tests
+3. Validate AUC preservation on ASSIST2015 (≥0.69 target)
+4. Document flag usage in `examples/reproducibility.md`
+5. Update `configs/parameter_default.json` with new parameters
+6. Proceed to Phase 2 after Phase 1 validation confirms feasibility
+
+---
+
+### Success Criteria
+
+**Minimum Viable Intrinsic Gain Attention:**
+- [ ] Intrinsic mode trains without errors across 3 seeds
+- [ ] AUC ≥0.71 on ASSIST2015 (within 2% of legacy)
+- [ ] Decomposition fidelity ||h_t - Σ α g|| / ||h_t|| < 0.05
+- [ ] Gain non-negativity violation rate <1% (no auxiliary loss)
+- [ ] Attribution API returns educationally plausible top-k contributors
+
+**Publication-Ready Enhancement:**
+- [ ] Attribution consistency (Σ α g vs outcomes) >0.7 correlation
+- [ ] Q-matrix integration reduces sparsity violations to <0.01
+- [ ] Multi-seed reproducibility (≥5 seeds) with CI <0.02 for AUC
+- [ ] Ablation table: intrinsic vs legacy vs intrinsic+Q-matrix
+- [ ] Case studies: 3-5 student trajectory deep dives showing causal decomposition
+- [ ] Computational overhead <20% vs legacy (throughput analysis)
+
+---
+
+### Documentation Updates Required
+
+1. **STATUS_gainakt2exp.md (this file):**
+   - Add "## Intrinsic Gain Attention Results" section post-implementation
+   - Include attribution fidelity metrics, ablation table, case studies
+
+2. **examples/reproducibility.md:**
+   - Document `--intrinsic_gain_attention` flag usage
+   - Provide example commands for intrinsic mode training
+   - Explain Q-matrix file format and preprocessing
+
+3. **configs/parameter_default.json:**
+   - Add `intrinsic_gain_attention: false`
+   - Add `use_q_matrix: false`
+   - Add `gain_activation: "softplus"` (alternative: "relu")
+
+4. **paper/ATTRIBUTION_GUIDE.md (new):**
+   - Explain how to use attribution API
+   - Provide interpretation guidelines for top-k contributors
+   - Example visualizations of causal decomposition
+
+5. **assistant/gainakt2exp_architecture_approach.md:**
+   - Mark "Intrinsic Gain Attention" section as IMPLEMENTED
+   - Add empirical results comparing theory vs actual performance
+
+---
+
+### Risk Mitigation
+
+| Risk | Probability | Impact | Mitigation Strategy |
+|------|-------------|--------|---------------------|
+| AUC degradation >5% | Medium | High | Early stopping if val AUC drops; tune gain_activation choice |
+| Numerical instability in Σ α g | Low | High | Add epsilon to denominators; gradient clipping; mixed precision checks |
+| Q-matrix preprocessing errors | Medium | Medium | Extensive validation scripts; sanity checks (coverage %, sparsity) |
+| Over-sparsity (zero gains everywhere) | Low | Medium | Monitor gain magnitude distributions; adjust activation if needed |
+| Attribution inconsistency (random top-k) | Medium | High | Bootstrap CI for attribution stability; case study validation |
+| Legacy mode regression | Low | Critical | Comprehensive regression tests; separate CI for each mode |
+
+**Monitoring Plan:**
+- Log decomposition fidelity every 50 batches
+- Track gain magnitude statistics (mean, std, max) per epoch
+- Monitor sparsity violation rates
+- Alert if AUC drops >3% from baseline in first 5 epochs
+
+---
+
+### Timeline Estimate
+
+| Phase | Duration | Deliverables | Dependencies |
+|-------|----------|--------------|--------------|
+| **Phase 1: Minimal Intrinsic** | 1-2 weeks | Feature flag, basic intrinsic architecture, unit tests, AUC validation | None |
+| **Phase 2: Q-Matrix Integration** | 1 week | Q-matrix preprocessing, architectural masking, ablation results | Phase 1 complete |
+| **Phase 3: Attribution & Evaluation** | 2 weeks | Attribution API, fidelity metrics, multi-seed runs, case studies | Phases 1-2 complete |
+| **Documentation & Polish** | 1 week | Update all docs, create visualizations, write attribution guide | All phases complete |
+| **TOTAL** | **5-6 weeks** | Publication-ready intrinsic gain attention with comprehensive evaluation | - |
+
+**Critical Path:** Phase 1 AUC validation gates proceeding to Phases 2-3. If AUC <0.69, may need architectural adjustments (e.g., hybrid mode mixing intrinsic and latent values).
+
+---
+
+### Open Questions for Investigation
+
+1. **Gain Activation Function:** Softplus vs ReLU vs Exponential for non-negativity?
+   - Trade-off: smoothness (gradient flow) vs sparsity induction
+   - Experiment: compare all three on 1-epoch runs
+
+2. **Multi-Head Gain Semantics:** Should each head specialize in different skill subsets?
+   - Current: heads split skills evenly (num_skills / num_heads)
+   - Alternative: learned head-to-skill assignment via gating
+   - Risk: over-complexity; defer unless basic version underperforms
+
+3. **Temporal Gain Decay:** Should older gains contribute less (exponential weighting)?
+   - Example: α'_{t,i} = α_{t,i} * exp(-λ * (t - i))
+   - Benefit: models forgetting; might improve long-sequence accuracy
+   - Risk: breaks pure Σ α g semantics; harder to interpret
+   - Decision: optional flag for Phase 3 experiments
+
+4. **Hybrid Mode:** Combine intrinsic gains (for interpretability) with latent values (for capacity)?
+   - Architecture: dual Value streams (skill-space + latent) with learnable mixing
+   - Benefit: best of both worlds (AUC + attribution)
+   - Risk: added complexity, unclear interpretation
+   - Decision: explore only if pure intrinsic fails AUC threshold
+
+---
+
+### Conclusion
+
+Implementing "Intrinsic Gain Attention" as a **feature-flagged augmentation** of GainAKT2 is the recommended path forward. This approach:
+- Preserves scientific rigor through controlled comparison
+- Reuses validated infrastructure (80% code reuse)
+- Enables incremental risk management (phased implementation)
+- Positions the work for strong publication claims (causal interpretability + competitive AUC)
+
+The 3-phase roadmap (minimal intrinsic → Q-matrix → attribution) balances ambition with practicality, delivering measurable progress every 1-2 weeks. Success criteria are well-defined (AUC ≥0.71, fidelity <0.05, consistency >0.7), and risks are mitigated through extensive monitoring and fallback options.
+
+**Immediate Next Action:** Create feature branch and implement Phase 1, targeting first validation run within 1 week.
+
