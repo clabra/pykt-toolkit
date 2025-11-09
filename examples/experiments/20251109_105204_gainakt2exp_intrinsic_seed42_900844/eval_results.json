@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251109_105204_gainakt2exp_intrinsic_seed42_900844",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7380270581393777,
+  "train_acc": 0.7564459963018237,
+  "train_mastery_correlation": 0.04564573543323003,
+  "train_gain_correlation": 0.017543563864388875,
+  "train_correlation_students": 267,
+  "valid_auc": 0.7193815307377749,
+  "valid_acc": 0.7521435731734616,
+  "test_auc": 0.7138626894490322,
+  "test_acc": 0.7467085710889206,
+  "test_mastery_correlation": 0.032950276085916344,
+  "test_gain_correlation": 0.023367902009843556,
+  "test_correlation_students": 262,
+  "timestamp": "2025-11-09T17:26:05.773667Z"
+}

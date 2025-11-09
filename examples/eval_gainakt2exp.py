@@ -134,6 +134,31 @@ def main():
     
     args = parser.parse_args()
     
+    # ARCHITECTURAL CONSTRAINT: Intrinsic gain attention and projection heads are mutually exclusive
+    # Intrinsic mode uses attention-derived gains; projection heads would be unused (wasting ~2M parameters)
+    if args.intrinsic_gain_attention:
+        if args.use_mastery_head or args.use_gain_head:
+            print("=" * 100)
+            print("⚠️  WARNING: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
+            print("=" * 100)
+            print("intrinsic_gain_attention=True is INCOMPATIBLE with projection heads")
+            print("")
+            print("  Intrinsic mode uses attention-derived gains directly from the model.")
+            print("  Projection heads (use_mastery_head, use_gain_head) are NOT used in this mode.")
+            print("  Enabling them wastes ~2M parameters without any benefit.")
+            print("")
+            print("AUTOMATIC CORRECTION APPLIED:")
+            if args.use_mastery_head:
+                print("  • use_mastery_head: True → False")
+            if args.use_gain_head:
+                print("  • use_gain_head: True → False")
+            print("")
+            print("Model will be loaded in pure intrinsic mode (attention-derived gains only).")
+            print("Expected parameters: ~12.7M (vs ~14.7M with unused projection heads)")
+            print("=" * 100)
+            args.use_mastery_head = False
+            args.use_gain_head = False
+    
     # Find checkpoint
     primary_ckpt = os.path.join(args.run_dir, 'model_best.pth')
     fallback_ckpt = os.path.join(args.run_dir, 'best_model.pth')

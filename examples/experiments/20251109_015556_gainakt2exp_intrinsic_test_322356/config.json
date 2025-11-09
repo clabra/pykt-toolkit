@@ -1,4 +1,27 @@
 {
+  "input": {
+    "short_title": "intrinsic_test",
+    "epochs": 12,
+    "intrinsic_gain_attention": true
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title intrinsic_test --epochs 12 --intrinsic_gain_attention True",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt2exp.py --adaptive_alignment --alignment_global_students 600 --alignment_min_correlation 0.05 --alignment_residual_window 5 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_warmup_epochs 8 --alignment_weight 0.25 --auto_shifted_eval --batch_size 64 --consistency_loss_weight 0.3 --consistency_rebalance_epoch 8 --consistency_rebalance_new_weight 0.2 --consistency_rebalance_threshold 0.1 --d_ff 1024 --d_model 512 --dataset assist2015 --dropout 0.2 --emb_type qid --enable_alignment_loss --enable_global_alignment_pass --enable_lag_gain_loss --enable_retention_loss --enhanced_constraints --epochs 12 --fold 0 --gain_performance_loss_weight 0.8 --gradient_clip 1.0 --intrinsic_gain_attention --lag_gain_weight 0.06 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --lag_max_lag 3 --learning_rate 0.000174 --mastery_performance_loss_weight 0.8 --max_semantic_students 50 --monitor_freq 50 --monotonicity_loss_weight 0.1 --n_heads 8 --non_negative_loss_weight 0.0 --num_encoder_blocks 6 --optimizer Adam --patience 20 --retention_delta 0.005 --retention_weight 0.14 --seed 42 --seq_len 200 --sparsity_loss_weight 0.2 --use_gain_head --use_mastery_head --use_residual_alignment --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --warmup_constraint_epochs 8 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt2exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251109_015556_gainakt2exp_intrinsic_test_322356 --max_correlation_students 300 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 --emb_type qid --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.8 --gain_performance_loss_weight 0.8 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --use_mastery_head --use_gain_head --intrinsic_gain_attention",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 322356"
+  },
+  "experiment": {
+    "id": "20251109_015556_gainakt2exp_intrinsic_test_322356",
+    "short_title": "intrinsic_test",
+    "experiment_id": "322356",
+    "created": "20251109_015556"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
   "defaults": {
     "model": "gainakt2exp",
     "dataset": "assist2015",
@@ -65,6 +88,9 @@
     "max_correlation_students": 300,
     "enable_cosine_perf_schedule": false,
     "no_dataparallel_loss_fix": false
+  },
+  "overrides": {
+    "intrinsic_gain_attention": true
   },
   "types": {
     "launcher": [
@@ -146,5 +172,8 @@
       "variance_floor_reduce_factor"
     ]
   },
-  "md5": "060603894fe6705d109530d884fe6992"
+  "md5": "060603894fe6705d109530d884fe6992",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
 }

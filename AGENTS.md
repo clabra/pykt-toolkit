@@ -64,6 +64,7 @@ when you change any parameter default value (the reference values are in paper/p
 - Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon.
 - Use "we" instead of "you" following academic writing conventions. 
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
+- Avoid creating documentation files unless specifically asked for them. Provide feedback directly in responses instead.
 
 
 ## Copyright and License

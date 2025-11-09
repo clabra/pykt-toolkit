@@ -422,7 +422,7 @@ def train_gainakt2exp_model(args):
             'dropout': getattr(args, 'dropout'),
             'emb_type': getattr(args, 'emb_type', 'qid')
         }
-        logger.info("[ArchFallback] No config.json loaded; using CLI architecture values as model_config.")
+        logger.info("[ArchCLI] Using CLI architecture parameter values following the approach based on explicit parameters, zero defaults")
     
     # Remove the old validation code that was here
     mandatory_arch = ['seq_len','d_model','n_heads','num_encoder_blocks','d_ff','dropout']
@@ -1087,6 +1087,21 @@ def train_gainakt2exp_model(args):
             alignment_loss_share = (total_alignment_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_alignment_loss else 0.0
             lag_loss_share = (total_lag_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_lag_gain_loss else 0.0
             retention_loss_share = (total_retention_component / len(train_loader)) / (total_loss / len(train_loader)) if enable_retention_loss else 0.0
+            
+            # Validate loss share normalization (Bug 1 fix)
+            total_share = main_loss_share + constraint_loss_share + alignment_loss_share + lag_loss_share + retention_loss_share
+            
+            # Log warning if shares don't sum to ~1.0 or contain unexpected negatives
+            if abs(total_share - 1.0) > 0.1:  # Tolerance of 10%
+                logger.warning(f"[Loss Share Validation] Total share = {total_share:.4f} (expected ~1.0)")
+                logger.warning(f"  Components: main={main_loss_share:.4f}, constraint={constraint_loss_share:.4f}, "
+                             f"alignment={alignment_loss_share:.4f}, lag={lag_loss_share:.4f}, retention={retention_loss_share:.4f}")
+            
+            # Note: alignment_loss can be legitimately negative (correlation-based reward)
+            # This is expected behavior when correlations are positive (encouraging them means negative loss)
+            if alignment_loss_share < -0.1:  # Warning if magnitude > 10%
+                logger.info(f"[Loss Share Info] Alignment loss share is notably negative: {alignment_loss_share:.4f} "
+                          f"(positive correlations produce negative correlation-based losses)")
         else:
             main_loss_share = constraint_loss_share = alignment_loss_share = lag_loss_share = retention_loss_share = 0.0
         mean_mastery_variance = float(np.mean(batch_mastery_variances)) if batch_mastery_variances else None
@@ -1306,6 +1321,13 @@ def train_gainakt2exp_model(args):
         logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
         logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
                    f"Constraint: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
+        
+        # Log loss composition (Bug 1 fix - enhanced transparency)
+        total_share = main_loss_share + constraint_loss_share + alignment_loss_share + lag_loss_share + retention_loss_share
+        logger.info(f"  📊 Loss Composition (shares sum to {total_share:.3f}):")
+        logger.info(f"     Main: {main_loss_share:.1%}, Constraint: {constraint_loss_share:.1%}, "
+                   f"Alignment: {alignment_loss_share:+.1%}, Lag: {lag_loss_share:.1%}, Retention: {retention_loss_share:.1%}")
+        
         logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
         if device.type == 'cuda':
             peak_mem = torch.cuda.max_memory_allocated() / (1024 ** 2)
@@ -1686,6 +1708,32 @@ if __name__ == '__main__':
         args.use_gain_head = False
     if getattr(args, 'disable_intrinsic_gain_attention', False):
         args.intrinsic_gain_attention = False
+    
+    # ARCHITECTURAL CONSTRAINT: Intrinsic gain attention and projection heads are mutually exclusive
+    # Intrinsic mode uses attention-derived gains; projection heads would be unused (wasting ~2M parameters)
+    if args.intrinsic_gain_attention:
+        if args.use_mastery_head or args.use_gain_head:
+            print("=" * 100)
+            print("⚠️  WARNING: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
+            print("=" * 100)
+            print("intrinsic_gain_attention=True is INCOMPATIBLE with projection heads")
+            print("")
+            print("  Intrinsic mode uses attention-derived gains directly from the model.")
+            print("  Projection heads (use_mastery_head, use_gain_head) are NOT used in this mode.")
+            print("  Enabling them wastes ~2M parameters without any benefit.")
+            print("")
+            print("AUTOMATIC CORRECTION APPLIED:")
+            if args.use_mastery_head:
+                print("  • use_mastery_head: True → False")
+            if args.use_gain_head:
+                print("  • use_gain_head: True → False")
+            print("")
+            print("Model will be created in pure intrinsic mode (attention-derived gains only).")
+            print("Expected parameters: ~12.7M (vs ~14.7M with unused projection heads)")
+            print("=" * 100)
+            args.use_mastery_head = False
+            args.use_gain_head = False
+    
     if getattr(args, 'pure_bce', False):
         args.enhanced_constraints = False
     if getattr(args, 'disable_alignment_loss', False):
