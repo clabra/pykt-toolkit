@@ -39,6 +39,7 @@ class ParameterAuditor:
         self.root_dir = Path(__file__).parent.parent
         self.checks_passed = []
         self.checks_failed = []
+        self.detailed_issues = []  # Store detailed issue descriptions
         
     def log(self, message: str, level: str = "INFO"):
         """Log message if verbose mode enabled."""
@@ -57,7 +58,7 @@ class ParameterAuditor:
         print(f"\n📋 CHECK {check_num}: {title}")
         print("-" * 80)
     
-    def check_md5_integrity(self) -> bool:
+    def check_md5_integrity(self) -> Tuple[bool, str]:
         """Check 1: Verify parameter_default.json MD5 integrity."""
         self.print_check_header(1, "parameter_default.json MD5 Integrity")
         
@@ -78,17 +79,32 @@ class ParameterAuditor:
             print(f"  Total parameters: {len(defaults)}")
             
             if stored_md5 == computed_md5:
-                print(f"  ✅ Match: YES")
+                print("  ✅ Match: YES")
                 self.log("MD5 integrity verified", "SUCCESS")
                 return True
             else:
-                print(f"  ❌ Match: NO")
+                print("  ❌ Match: NO")
+                issue = {
+                    'check': 'MD5 Integrity',
+                    'problem': "MD5 hash mismatch in parameter_default.json",
+                    'details': f"Stored: {stored_md5}\nComputed: {computed_md5}",
+                    'fix': "Run: python examples/parameters_fix.py"
+                }
+                self.detailed_issues.append(issue)
+                print(f"\n  💡 ISSUE: {issue['problem']}")
+                print("  💡 FIX: Run 'python examples/parameters_fix.py'")
                 self.log("MD5 MISMATCH - Config may be corrupted or modified", "ERROR")
-                self.log(f"Run with --fix-md5 to update to {computed_md5}", "WARNING")
                 return False
                 
         except Exception as e:
-            self.log(f"Error checking MD5: {e}", "ERROR")
+            issue = {
+                'check': 'MD5 Integrity',
+                'problem': f"Error checking MD5: {e}",
+                'details': str(e),
+                'fix': "Check parameter_default.json file exists and is valid JSON"
+            }
+            self.detailed_issues.append(issue)
+            self.log(issue['problem'], "ERROR")
             return False
     
     def check_fallback_synchronization(self) -> bool:
@@ -136,6 +152,15 @@ class ParameterAuditor:
                 print(f"\n  Result: ✅ PASS - All {len(critical_params)} fallback values synchronized")
                 return True
             else:
+                # Add detailed issue
+                issue = {
+                    'check': 'Hardcoded Fallback Synchronization',
+                    'problem': f"{mismatches} critical parameter(s) have hardcoded fallback values that don't match parameter_default.json",
+                    'details': f"Check the parameters marked with ❌ above in examples/train_gainakt2exp.py",
+                    'fix': "Update getattr() fallback values to match parameter_default.json\n     Or run: python examples/parameters_fix.py"
+                }
+                self.detailed_issues.append(issue)
+                
                 print(f"\n  Result: ❌ FAIL - {mismatches} mismatches found")
                 return False
                 
@@ -360,6 +385,25 @@ class ParameterAuditor:
                 print(f"           ({len(boolean_flags)} boolean flags, {len(params_with_argparse) - len(boolean_flags)} with required=True)")
                 return True
             else:
+                # Add detailed issue
+                details_list = []
+                if missing_argparse:
+                    details_list.append(f"Missing argparse entries ({len(missing_argparse)}):")
+                    for param in sorted(missing_argparse):
+                        details_list.append(f"  • {param}")
+                if missing_required:
+                    details_list.append(f"\nMissing required=True ({len(missing_required)}):")
+                    for param in sorted(missing_required):
+                        details_list.append(f"  • {param}")
+                
+                issue = {
+                    'check': 'Argparse Completeness',
+                    'problem': f"{issues} parameter(s) missing proper argparse configuration",
+                    'details': '\n'.join(details_list),
+                    'fix': "Add missing argparse entries with required=True in examples/train_gainakt2exp.py\n     (Boolean flags use action='store_true' and don't need required=True)"
+                }
+                self.detailed_issues.append(issue)
+                
                 print(f"\n  Result: ❌ FAIL - {issues} issues found")
                 print(f"\n  💡 Fix: Add missing argparse entries with required=True in train_gainakt2exp.py")
                 print(f"          (Boolean flags with action='store_true' don't need required=True)")
@@ -428,8 +472,21 @@ class ParameterAuditor:
             
             if mismatches:
                 print(f"  ❌ Mismatched fallbacks: {len(mismatches)}")
+                
+                # Add detailed issue
+                mismatch_details = []
                 for param, fallback, expected in mismatches:
+                    mismatch_details.append(f"  • {param}: fallback={fallback}, expected={expected}")
                     self.log(f"Mismatch {param}: fallback={fallback}, expected={expected}", "ERROR")
+                
+                issue = {
+                    'check': 'Dynamic Fallback Synchronization',
+                    'problem': f"{len(mismatches)} parameter(s) have fallback values that don't match parameter_default.json",
+                    'details': '\n'.join(mismatch_details),
+                    'fix': "Update getattr() fallback values in examples/train_gainakt2exp.py to match defaults\n     Or run: python examples/parameters_fix.py"
+                }
+                self.detailed_issues.append(issue)
+                
                 print(f"\n  Result: ❌ FAIL - {len(mismatches)} mismatches found")
                 return False
             else:
@@ -561,46 +618,59 @@ class ParameterAuditor:
             print("\nSafe to launch training/evaluation experiments.")
             return True
         else:
-            print(f"⚠️  SOME CHECKS FAILED ({passed}/{total} passed)")
+            failed_count = total - passed
+            print(f"⚠️  {failed_count} CHECK(S) FAILED ({passed}/{total} passed)")
             print("❌ REPRODUCIBILITY INFRASTRUCTURE: NEEDS ATTENTION")
             print("=" * 80)
-            print("\nPlease fix the issues above before launching experiments.")
-            print("See examples/reproducibility.md and tmp/REPRODUCIBILITY_AUDIT_20251110.md")
-            return False
-    
-    def fix_md5(self) -> bool:
-        """Fix MD5 hash in parameter_default.json."""
-        try:
-            param_file = self.root_dir / "configs" / "parameter_default.json"
-            with open(param_file, 'r') as f:
-                data = json.load(f)
             
-            # Compute correct MD5
-            defaults = data['defaults']
-            defaults_json = json.dumps(defaults, sort_keys=True)
-            new_md5 = hashlib.md5(defaults_json.encode()).hexdigest()
+            # List failed checks
+            print("\n❌ Failed checks:")
+            for name, result in checks:
+                if not result:
+                    print(f"   • {name}")
             
-            old_md5 = data.get('md5', 'NOT FOUND')
+            # Show detailed issues if any were collected
+            if self.detailed_issues:
+                print("\n" + "=" * 80)
+                print("DETAILED ISSUES FOUND:")
+                print("=" * 80)
+                for i, issue in enumerate(self.detailed_issues, 1):
+                    print(f"\n{i}. [{issue['check']}]")
+                    print(f"   Problem: {issue['problem']}")
+                    if issue.get('details'):
+                        print(f"   Details: {issue['details']}")
+                    print(f"   Fix: {issue['fix']}")
             
-            if old_md5 == new_md5:
-                print(f"✅ MD5 already correct: {new_md5}")
-                return True
+            print("\n" + "=" * 80)
+            print("NEXT STEPS:")
+            print("=" * 80)
             
-            # Update MD5
-            data['md5'] = new_md5
+            print("\n1️⃣  AUTOMATIC FIX (recommended):")
+            print("   python examples/parameters_fix.py")
+            print("\n   This script will:")
+            print("   • Detect all inconsistencies")
+            print("   • Apply Parameter Evolution Protocol automatically")
+            print("   • Update parameter_default.json MD5 hash")
+            print("   • Check for code synchronization issues")
+            print("   • Generate commit message following conventions")
             
-            # Save updated file
-            with open(param_file, 'w') as f:
-                json.dump(data, f, indent=2)
+            print("\n2️⃣  SKIP AUDIT (not recommended):")
+            print("   Set environment variable to bypass checks:")
+            print("   export SKIP_PARAMETER_AUDIT=1")
+            print("   python examples/train_gainakt2exp.py ...")
+            print("\n   ⚠️  WARNING: Skipping audit risks reproducibility violations!")
             
-            print(f"✅ Updated MD5 in parameter_default.json")
-            print(f"   Old: {old_md5}")
-            print(f"   New: {new_md5}")
-            print(f"\n⚠️  Remember to commit this change following Parameter Evolution Protocol")
-            return True
+            print("\n3️⃣  MANUAL FIX (for understanding):")
+            print("   Follow Parameter Evolution Protocol in examples/reproducibility.md")
+            print("   Section: 'Parameter Evolution Protocol (Section 7)'")
             
-        except Exception as e:
-            print(f"❌ Error fixing MD5: {e}")
+            print("\n" + "=" * 80)
+            print("📚 Documentation:")
+            print("   • Full protocol: examples/reproducibility.md")
+            print("   • Gap analysis: tmp/PARAMETER_AUDIT_GAPS_ANALYSIS.md")
+            print("   • Audit details: tmp/REPRODUCIBILITY_AUDIT_20251110.md")
+            print("=" * 80)
+            
             return False
     
     def run_audit(self) -> bool:
@@ -636,17 +706,14 @@ Examples:
   
   # Run with verbose output
   python examples/parameters_audit.py --verbose
-  
-  # Fix MD5 mismatch
-  python examples/parameters_audit.py --fix-md5
-  
-  # Run audit and fix MD5 if needed
-  python examples/parameters_audit.py --fix-md5 --verbose
 
 Exit codes:
   0: All checks passed
   1: Some checks failed
   2: Critical error
+
+To fix issues found by audit:
+  python examples/parameters_fix.py
 
 See also: examples/reproducibility.md
         """
@@ -654,22 +721,11 @@ See also: examples/reproducibility.md
     
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Enable verbose output')
-    parser.add_argument('--fix-md5', action='store_true',
-                       help='Automatically fix MD5 hash if mismatched')
     
     args = parser.parse_args()
     
     try:
         auditor = ParameterAuditor(verbose=args.verbose)
-        
-        # Fix MD5 first if requested
-        if args.fix_md5:
-            print("=" * 80)
-            print("FIXING MD5 HASH")
-            print("=" * 80)
-            if not auditor.fix_md5():
-                return 2
-            print()
         
         # Run audit
         passed = auditor.run_audit()

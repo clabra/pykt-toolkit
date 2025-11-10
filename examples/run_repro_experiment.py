@@ -179,7 +179,8 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
         'non_negative_loss_weight', 'monotonicity_loss_weight',  # constraints
         'mastery_performance_loss_weight', 'gain_performance_loss_weight',
-        'sparsity_loss_weight', 'consistency_loss_weight'
+        'sparsity_loss_weight', 'consistency_loss_weight',
+        'monitor_freq'  # monitoring frequency needed by model
     ]
     
     # Boolean flags - ARCHITECTURAL AND INTERPRETABILITY MODES
@@ -738,6 +739,15 @@ def main():
             print("\nTo reproduce this experiment:")
             print("  python examples/run_repro_experiment.py \\")
             print(f"    --repro_experiment_id {experiment_id}")
+            
+            # Also output the eval command for convenience
+            config_path = os.path.join(experiment_folder, 'config.json')
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    saved_config = json.load(f)
+                    if 'commands' in saved_config and 'eval_explicit' in saved_config['commands']:
+                        print("\nTo evaluate this model:")
+                        print(f"  {saved_config['commands']['eval_explicit']}")
         else:
             print("\n" + "=" * 80)
             print("❌ TRAINING FAILED")

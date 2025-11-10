@@ -10,6 +10,7 @@ The diagram below is described in detail in `assistant/gainakt2exp_architecture_
 
 It illustrates the Learning Gains approach based on an Encoder-only Transformer, augmented with these features:
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
+- **Blue components**: Recursive Mastery Accumulation (deterministic temporal constraint: mastery_{t+1} = mastery_t + α·ReLU(gain_t))
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components**: Intrinsic gain attention mode (architectural constraint enforcement, attention-derived gains, projection head bypass)
 - **Yellow diamonds (OR gates)**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
@@ -178,6 +179,35 @@ graph TD
     Mastery_OR --> Projected_Mastery_Output
     Gain_OR --> Projected_Gain_Output
 
+    %% Recursive Mastery Accumulation (Key Architectural Constraint)
+    subgraph "Recursive Mastery Accumulation"
+        direction TB
+        
+        Gain_Input["Gains at t<br/>gain_t[c]"]
+        Mastery_Prev["Previous Mastery<br/>mastery_{t-1}[c]"]
+        
+        ReLU_Op["ReLU<br/>(non-negativity)"]
+        Scale_Op["× α<br/>(α=0.1)"]
+        Sum_Op["+ (accumulation)<br/>mastery_t = mastery_{t-1} + α·ReLU(gain_t)"]
+        Clamp_Op["Clamp[0,1]<br/>(bounded mastery)"]
+        
+        Mastery_Current["Current Mastery<br/>mastery_t[c]"]
+        
+        Gain_Input --> ReLU_Op
+        ReLU_Op --> Scale_Op
+        Scale_Op --> Sum_Op
+        Mastery_Prev --> Sum_Op
+        Sum_Op --> Clamp_Op
+        Clamp_Op --> Mastery_Current
+        
+        %% Temporal feedback loop
+        Mastery_Current -.->|"becomes mastery_{t-1}<br/>for next timestep"| Mastery_Prev
+    end
+    
+    %% Connect to recursive accumulation
+    Projected_Gain_Output -->|"gain_t"| Gain_Input
+    Mastery_Current -->|"accumulated<br/>mastery"| Projected_Mastery_Output
+
     %% Circle Connectors (Aggregation/Distribution Hubs)
     Mastery_Hub(("Mastery<br/>Hub"))
     Gain_Hub(("Gain<br/>Hub"))
@@ -273,6 +303,7 @@ graph TD
     classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
     classDef intrinsic_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5
     classDef or_gate fill:#fff59d,stroke:#f57f17,stroke-width:3px
+    classDef accumulation_component fill:#b3e5fc,stroke:#0277bd,stroke-width:3px
     
     %% Individual hub colors with distinct visual styles
     classDef mastery_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
@@ -282,6 +313,7 @@ graph TD
     classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
 
     class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
+    class Gain_Input,Mastery_Prev,ReLU_Op,Scale_Op,Sum_Op,Clamp_Op,Mastery_Current accumulation_component
     class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
     class Attention_Derived_Gains intrinsic_component
     class Mastery_OR,Gain_OR or_gate
@@ -359,6 +391,27 @@ graph TD
     linkStyle 81 stroke:#800080,stroke-width:3px
 ```
 
+### Key Architectural Feature: Recursive Mastery Accumulation
+
+The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic recursive accumulation** mechanism:
+
+$$\text{mastery}_{t+1}^{(c)} = \text{mastery}_t^{(c)} + \alpha \cdot \text{ReLU}(\text{gain}_t^{(c)})$$
+
+This is implemented in the model's forward pass (`gainakt2_exp.py` lines 145, 162):
+
+```python
+accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+```
+
+**Key Properties:**
+1. **Non-negative gains**: ReLU ensures learning gains ≥ 0 (no unlearning)
+2. **Monotonic mastery**: Mastery can only increase or stay constant over time
+3. **Bounded accumulation**: Clamp keeps mastery in [0,1] range (probabilistic interpretation)
+4. **Transparent causality**: Each mastery state is the sum of all previous learning gains
+5. **Evidence-based confidence**: More interactions ($n_t^{(c)}$) → more accumulated gains → higher confidence
+
+This architectural constraint makes the relationship between evidence accumulation and knowledge states **explicit and interpretable**, supporting the confidence interval estimation methods described in the paper (Monte Carlo Dropout, Attention Entropy, Evidence Accumulation).
 
 ## Implementation Summary
 

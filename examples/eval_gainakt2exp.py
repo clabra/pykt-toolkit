@@ -134,6 +134,8 @@ def main():
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
     parser.add_argument('--max_correlation_students', type=int, required=True)
+    parser.add_argument('--monitor_freq', type=int, required=True,
+                        help='How often to compute interpretability metrics during training')
     
     # Optional
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
@@ -212,7 +214,8 @@ def main():
         'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
         'gain_performance_loss_weight': args.gain_performance_loss_weight,
         'sparsity_loss_weight': args.sparsity_loss_weight,
-        'consistency_loss_weight': args.consistency_loss_weight
+        'consistency_loss_weight': args.consistency_loss_weight,
+        'monitor_frequency': args.monitor_freq  # Map monitor_freq -> monitor_frequency for model
     }
     
     # Create and load model
