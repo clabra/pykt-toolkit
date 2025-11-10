@@ -17,6 +17,7 @@ REPRODUCTION MODE:
 """
 import argparse
 import json
+import os
 import sys
 import subprocess
 import hashlib
@@ -236,7 +237,58 @@ def compute_training_md5(config):
     return defaults_md5
 
 
+def run_parameter_audit():
+    """
+    Run reproducibility infrastructure audit before launching training/evaluation.
+    
+    Returns:
+        bool: True if audit passed, False otherwise
+    """
+    print("=" * 80)
+    print("REPRODUCIBILITY PRE-FLIGHT CHECK")
+    print("=" * 80)
+    print("Running parameter audit to verify infrastructure compliance...")
+    print()
+    
+    # Run audit script
+    audit_script = Path(__file__).parent / "parameters_audit.py"
+    if not audit_script.exists():
+        print(f"⚠️  WARNING: Audit script not found: {audit_script}")
+        print("Proceeding without audit (not recommended)")
+        return True
+    
+    result = subprocess.run([sys.executable, str(audit_script)], 
+                          capture_output=False)
+    
+    if result.returncode == 0:
+        print("\n✅ Pre-flight check PASSED - Safe to proceed")
+        return True
+    else:
+        print("\n❌ Pre-flight check FAILED")
+        print("\nReproducibility infrastructure has issues that must be fixed before launching.")
+        print("See error messages above for details.")
+        print("\nTo bypass this check (NOT RECOMMENDED), set environment variable:")
+        print("  export SKIP_PARAMETER_AUDIT=1")
+        return False
+
+
 def main():
+    # PRE-FLIGHT: Run parameter audit before processing any arguments
+    # This ensures reproducibility infrastructure is sound before launching experiments
+    skip_audit = os.environ.get('SKIP_PARAMETER_AUDIT', '0') == '1'
+    
+    if not skip_audit:
+        if not run_parameter_audit():
+            print("\n" + "=" * 80)
+            print("LAUNCH ABORTED - Fix reproducibility issues first")
+            print("=" * 80)
+            sys.exit(1)
+        print()  # Extra newline for readability
+    else:
+        print("⚠️  WARNING: Parameter audit SKIPPED (SKIP_PARAMETER_AUDIT=1)")
+        print("Reproducibility guarantees may be compromised!")
+        print()
+    
     # First, load defaults to know what parameters are available
     defaults_path = Path(__file__).parent.parent / "configs" / "parameter_default.json"
     if not defaults_path.exists():
