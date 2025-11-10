@@ -134,6 +134,267 @@ Mastery Correlation       0.5234        0.5231        0.0003        ✅ PASS
 Gain Correlation          0.4123        0.4122        0.0001        ✅ PASS
 ```
 
+### 5. Parameter Audit (Automatic Pre-Flight Check)
+
+**Purpose:** Verify reproducibility infrastructure integrity before launching experiments.
+
+The parameter audit script (`examples/parameters_audit.py`) performs comprehensive checks to ensure the "Explicit Parameters, Zero Defaults" philosophy is maintained across all code.
+
+#### Automatic Execution
+
+**The audit runs automatically** before every training/evaluation launch:
+
+```bash
+python examples/run_repro_experiment.py --short_title test
+
+# Output:
+# ================================================================================
+# REPRODUCIBILITY INFRASTRUCTURE AUDIT
+# ================================================================================
+# Verifying 'Explicit Parameters, Zero Defaults' compliance...
+# 
+# 📋 CHECK 1: parameter_default.json MD5 Integrity
+# --------------------------------------------------------------------------------
+#   Stored MD5:   060603894fe6705d109530d884fe6992
+#   Computed MD5: 060603894fe6705d109530d884fe6992
+#   Total parameters: 64
+#   ✅ Match: YES
+# 
+# 📋 CHECK 2: Hardcoded Fallback Synchronization (Priority 1)
+# --------------------------------------------------------------------------------
+#   ✅ alignment_weight                 fallback=0.25   (expected 0.25)
+#   ✅ batch_size                       fallback=64     (expected 64)
+#   ✅ enable_alignment_loss            fallback=True   (expected True)
+#   ... (8 parameters checked)
+# 
+#   Result: ✅ PASS - All 8 fallback values synchronized
+# 
+# ... (checks 3-6) ...
+# 
+# ================================================================================
+# REPRODUCIBILITY AUDIT SUMMARY
+# ================================================================================
+# ✅ PASS  MD5 Integrity
+# ✅ PASS  Fallback Synchronization (8 params)
+# ✅ PASS  Model Init Fallback Removal
+# ✅ PASS  Eval Script Documentation
+# ✅ PASS  Parameter Coverage
+# ✅ PASS  No Suspicious Values
+# 
+# ================================================================================
+# 🎉 ALL CHECKS PASSED (6/6)
+# ✅ REPRODUCIBILITY INFRASTRUCTURE: FULLY COMPLIANT
+# ================================================================================
+# 
+# ✅ Pre-flight check PASSED - Safe to proceed
+# 
+# ================================================================================
+# TRAINING MODE
+# ================================================================================
+# ... (normal training proceeds) ...
+```
+
+**If audit fails**, experiment launch is blocked:
+
+```bash
+# ❌ Pre-flight check FAILED
+# 
+# Reproducibility infrastructure has issues that must be fixed before launching.
+# See error messages above for details.
+# 
+# ================================================================================
+# LAUNCH ABORTED - Fix reproducibility issues first
+# ================================================================================
+```
+
+#### Manual Execution
+
+Run audit independently for diagnostics:
+
+```bash
+# Standard audit
+python examples/parameters_audit.py
+
+# With verbose output
+python examples/parameters_audit.py --verbose
+
+# Auto-fix MD5 mismatch (follows Parameter Evolution Protocol)
+python examples/parameters_audit.py --fix-md5
+
+# Show help
+python examples/parameters_audit.py --help
+```
+
+#### What the Audit Checks
+
+**Check 1: MD5 Integrity**
+- Verifies `configs/parameter_default.json` MD5 hash matches defaults section
+- **Purpose:** Detect if parameters changed without updating MD5 (Parameter Evolution Protocol violation)
+- **Fix:** `python examples/parameters_audit.py --fix-md5`
+
+**Check 2: Hardcoded Fallback Synchronization**
+- Verifies 8 critical `getattr(args, 'param', fallback)` values in `train_gainakt2exp.py` match `parameter_default.json`
+- **Purpose:** Prevent silent wrong values if argparse fails
+- **Parameters checked:** alignment_weight, batch_size, enable_alignment_loss, enable_global_alignment_pass, enable_lag_gain_loss, enable_retention_loss, epochs, use_residual_alignment
+
+**Check 3: Model Initialization Fallback Removal**
+- Verifies `pykt/models/gainakt2_exp.py` uses `config['key']` instead of `config.get(key, fallback)`
+- **Purpose:** Fail-fast if parameters missing (no silent wrong defaults)
+- **Expected:** 0 `.get()` calls, 18+ direct dictionary accesses
+
+**Check 4: Eval Script Documentation**
+- Verifies `examples/eval_gainakt2exp.py` documents critical architectural flags
+- **Purpose:** Prevent evaluation with wrong architecture parameters
+- **Flags:** use_mastery_head, use_gain_head, intrinsic_gain_attention
+
+**Check 5: Parameter Coverage**
+- Verifies all 18 essential parameters exist in `parameter_default.json`
+- **Purpose:** Catch missing parameters before training
+- **Critical params:** d_model, n_heads, epochs, learning_rate, loss weights, etc.
+
+**Check 6: No Suspicious Hardcoded Values**
+- Scans for old wrong fallback values that were previously fixed
+- **Purpose:** Detect regressions (accidental reintroduction of bugs)
+- **Examples:** alignment_weight=0.1 (should be 0.25), batch_size=96 (should be 64)
+
+#### Interpreting Audit Output
+
+**All checks pass (exit code 0):**
+```
+🎉 ALL CHECKS PASSED (6/6)
+✅ REPRODUCIBILITY INFRASTRUCTURE: FULLY COMPLIANT
+
+Safe to launch training/evaluation experiments.
+```
+➜ **Action:** Continue normally. Infrastructure is healthy.
+
+**Some checks fail (exit code 1):**
+```
+⚠️  SOME CHECKS FAILED (4/6 passed)
+❌ REPRODUCIBILITY INFRASTRUCTURE: NEEDS ATTENTION
+
+Please fix the issues above before launching experiments.
+```
+➜ **Action:** Review error messages, fix issues, re-run audit. Do NOT launch experiments until all checks pass.
+
+**Critical error (exit code 2):**
+```
+❌ CRITICAL ERROR: configs/parameter_default.json not found
+```
+➜ **Action:** File system issue or wrong directory. Check working directory and file existence.
+
+#### Common Issues and Fixes
+
+**Issue: MD5 Mismatch**
+```
+❌ Check 1: MD5 Integrity - FAIL
+  Stored MD5:   11eefd5ba6cb23103bc7d40db8c1aaa7
+  Computed MD5: 060603894fe6705d109530d884fe6992
+  MD5 MISMATCH - Config may be corrupted or modified
+```
+**Fix:**
+```bash
+python examples/parameters_audit.py --fix-md5
+# Then commit following Parameter Evolution Protocol (see below)
+```
+
+**Issue: Fallback Mismatch**
+```
+❌ Check 2: Fallback Synchronization (8 params) - FAIL
+  ❌ alignment_weight   fallback=0.1    (expected 0.25)
+  ❌ batch_size         fallback=96     (expected 64)
+```
+**Fix:** Edit `examples/train_gainakt2exp.py`, update getattr fallbacks to match `parameter_default.json`
+
+**Issue: Model Still Uses .get()**
+```
+❌ Check 3: Model Init Fallback Removal - FAIL
+  config.get() calls: 5
+  Model still has .get() fallbacks
+```
+**Fix:** Edit `pykt/models/gainakt2_exp.py`, replace `config.get(key, fallback)` with `config['key']`
+
+#### Bypassing Audit (NOT RECOMMENDED)
+
+For debugging ONLY:
+```bash
+export SKIP_PARAMETER_AUDIT=1
+python examples/run_repro_experiment.py --short_title test
+
+# Output:
+# ⚠️  WARNING: Parameter audit SKIPPED (SKIP_PARAMETER_AUDIT=1)
+# Reproducibility guarantees may be compromised!
+```
+
+**Warning:** Bypassing audit can lead to:
+- Silent wrong parameter values
+- Non-reproducible experiments
+- MD5 verification failures
+- Corrupted experiment records
+
+#### When Audit Runs
+
+**Automatic execution (recommended):**
+- Every call to `run_repro_experiment.py` (training mode)
+- Every call to `run_repro_experiment.py --repro_experiment_id` (reproduction mode)
+- Before generating experiment folder
+- Before saving config.json
+- Before launching training
+
+**Manual execution (diagnostics):**
+- After modifying `parameter_default.json`
+- After editing training/evaluation scripts
+- After pulling code changes from git
+- Before committing code changes
+- During CI/CD pipeline (recommended)
+
+#### Exit Codes
+
+Use in scripts and CI/CD:
+
+```bash
+python examples/parameters_audit.py
+if [ $? -eq 0 ]; then
+    echo "Audit passed - safe to proceed"
+    python examples/run_repro_experiment.py --short_title test
+else
+    echo "Audit failed - fix issues first"
+    exit 1
+fi
+```
+
+**Exit codes:**
+- `0`: All checks passed ✅
+- `1`: Some checks failed ❌
+- `2`: Critical error (file not found, etc.) ❌
+
+#### Integration with Version Control
+
+**Pre-commit check** (recommended):
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+python examples/parameters_audit.py
+if [ $? -ne 0 ]; then
+    echo "❌ Commit rejected: Parameter audit failed"
+    exit 1
+fi
+```
+
+**CI/CD pipeline** (recommended):
+```yaml
+# .github/workflows/test.yml
+- name: Reproducibility Audit
+  run: |
+    python examples/parameters_audit.py
+    if [ $? -ne 0 ]; then
+      echo "Reproducibility infrastructure broken"
+      exit 1
+    fi
+```
+
+---
+
 ## Reproducibility Architecture
 
 ### Core Principle: Explicit Parameters, Zero Defaults
@@ -647,3 +908,11 @@ python examples/run_repro_experiment.py \
 - After launcher code changes
 - Before multi-seed production runs (catches issues before scaling)
 - Before paper submission (validates reproducibility claims)
+
+### Audit of Parameter Evolution Protocol
+
+Check that all script and code involved in training and evaluation comply with these requirements: 
+ 1) all parameters that are relevant to improve and refine the model are specified in /workspaces/pykt-toolkit/configs/parameter_default.json 
+ 2) they are properly set in config.json and properly overriden by parameters in command input
+ 3) all of them are made explicit in the launching command
+ 4) all the code use parameters passed explicitly in the launching command, i.e. there are no hidden defaults or harcoded values  in the code
