@@ -12,7 +12,8 @@ It illustrates the Learning Gains approach based on an Encoder-only Transformer,
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components**: Intrinsic gain attention mode (architectural constraint enforcement, attention-derived gains, projection head bypass)
-- **Yellow OR gates**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
+- **Yellow diamonds (OR gates)**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
+- **Circles (Hubs)**: Convergence/distribution points where multiple data flows aggregate and route to multiple outputs
 
 ```mermaid
 graph TD
@@ -177,11 +178,11 @@ graph TD
     Mastery_OR --> Projected_Mastery_Output
     Gain_OR --> Projected_Gain_Output
 
-    %% Diamond Connectors (Proxies)
-    Mastery_Hub{"Mastery<br/>Hub"}
-    Gain_Hub{"Gain<br/>Hub"}
-    Encoder_Hub{"Encoder<br/>Hub"}
-    Pred_Hub{"Predictions<br/>Hub"}
+    %% Circle Connectors (Aggregation/Distribution Hubs)
+    Mastery_Hub(("Mastery<br/>Hub"))
+    Gain_Hub(("Gain<br/>Hub"))
+    Encoder_Hub(("Encoder<br/>Hub"))
+    Pred_Hub(("Predictions<br/>Hub"))
     
     Projected_Mastery_Output --> Mastery_Hub
     Projected_Gain_Output --> Gain_Hub
@@ -259,7 +260,7 @@ graph TD
     Lag_Gain_Loss --> Total_Loss
 
     %% Monitoring
-    Monitor_Hub{"Monitor<br/>Inputs"}
+    Monitor_Hub(("Monitor<br/>Inputs"))
     Monitor_Hook["Interpretability Monitor<br/>Real-time Analysis"]
     
     Mastery_Hub -->|"to Monitor"| Monitor_Hub
