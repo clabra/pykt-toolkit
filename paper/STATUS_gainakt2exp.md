@@ -12,6 +12,7 @@ It illustrates the Learning Gains approach based on an Encoder-only Transformer,
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components**: Intrinsic gain attention mode (architectural constraint enforcement, attention-derived gains, projection head bypass)
+- **Yellow OR gates**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
 
 ```mermaid
 graph TD
@@ -151,26 +152,30 @@ graph TD
     Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)<br/>(Baseline Mode)"]
     Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)<br/>(Baseline Mode)"]
     
-    Encoder_Output_Ctx --> Proj_Mastery
-    Encoder_Output_Val --> Proj_Gain
+    %% Intrinsic Mode Components (Red)
+    Attention_Derived_Gains["Attention-Derived Gains<br/>Cumulative mastery from<br/>attention weights<br/>(Intrinsic Mode)"]
     
+    %% OR Gates showing mutually exclusive paths
+    Mastery_OR{"OR<br/>Mastery<br/>Source"}
+    Gain_OR{"OR<br/>Gain<br/>Source"}
+    
+    %% Baseline Mode Paths
+    Encoder_Output_Ctx -->|"Standard Mode"| Proj_Mastery
+    Encoder_Output_Val -->|"Standard Mode"| Proj_Gain
+    Proj_Mastery --> Mastery_OR
+    Proj_Gain --> Gain_OR
+    
+    %% Intrinsic Mode Paths
+    Weights -->|"Intrinsic Mode"| Attention_Derived_Gains
+    Attention_Derived_Gains -->|"bypasses heads"| Mastery_OR
+    Attention_Derived_Gains -->|"bypasses heads"| Gain_OR
+    
+    %% Output after OR gates (mutually exclusive sources converge)
     Projected_Mastery_Output["Projected Mastery<br/>[B, L, num_skills]"]
     Projected_Gain_Output["Projected Gains<br/>[B, L, num_skills]"]
     
-    Proj_Mastery --> Projected_Mastery_Output
-    Proj_Gain --> Projected_Gain_Output
-
-    %% Intrinsic Mode Components (Red)
-    Intrinsic_Switch["Intrinsic Mode Flag<br/>--intrinsic_gain_attention"]
-    Intrinsic_Constraint["Architectural Constraint<br/>Disables Projection Heads"]
-    Attention_Derived_Gains["Attention-Derived Gains<br/>Cumulative mastery from<br/>attention weights"]
-    
-    Intrinsic_Switch -.enforces.-> Intrinsic_Constraint
-    Intrinsic_Constraint -.bypasses.-> Proj_Mastery
-    Intrinsic_Constraint -.bypasses.-> Proj_Gain
-    Weights -.derives.-> Attention_Derived_Gains
-    Attention_Derived_Gains -.alternative path.-> Projected_Mastery_Output
-    Attention_Derived_Gains -.alternative path.-> Projected_Gain_Output
+    Mastery_OR --> Projected_Mastery_Output
+    Gain_OR --> Projected_Gain_Output
 
     %% Diamond Connectors (Proxies)
     Mastery_Hub{"Mastery<br/>Hub"}
@@ -266,6 +271,7 @@ graph TD
     classDef new_component fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
     classDef intrinsic_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5
+    classDef or_gate fill:#fff59d,stroke:#f57f17,stroke-width:3px
     
     %% Individual hub colors with distinct visual styles
     classDef mastery_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
@@ -276,7 +282,8 @@ graph TD
 
     class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
     class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
-    class Intrinsic_Switch,Intrinsic_Constraint,Attention_Derived_Gains intrinsic_component
+    class Attention_Derived_Gains intrinsic_component
+    class Mastery_OR,Gain_OR or_gate
     
     class Mastery_Hub mastery_hub
     class Gain_Hub gain_hub
