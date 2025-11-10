@@ -490,7 +490,10 @@ def train_gainakt2exp_model(args):
         'use_causal_mastery': resolve_param(cfg, 'interpretability', 'use_causal_mastery', getattr(args, 'use_causal_mastery', False)),
         'alpha_learning_rate': resolve_param(cfg, 'interpretability', 'alpha_learning_rate', getattr(args, 'alpha_learning_rate', 1.0)),
         'num_students': num_students,
-        'use_learnable_alpha': resolve_param(cfg, 'interpretability', 'use_learnable_alpha', getattr(args, 'use_learnable_alpha', False))
+        'use_learnable_alpha': resolve_param(cfg, 'interpretability', 'use_learnable_alpha', getattr(args, 'use_learnable_alpha', False)),
+        'use_learnable_threshold': resolve_param(cfg, 'interpretability', 'use_learnable_threshold', getattr(args, 'use_learnable_threshold', False)),
+        'threshold_temperature': resolve_param(cfg, 'interpretability', 'threshold_temperature', getattr(args, 'threshold_temperature', 0.1)),
+        'threshold_loss_weight': resolve_param(cfg, 'interpretability', 'threshold_loss_weight', getattr(args, 'threshold_loss_weight', 0.5))
     }
     
     # Constraint resolution logic:
@@ -1657,6 +1660,12 @@ if __name__ == '__main__':
                         help='Learning rate parameter for sigmoid mastery curve (default: 1.0, DEPRECATED if use_learnable_alpha=True)')
     parser.add_argument('--use_learnable_alpha', action='store_true',
                         help='Enable learnable IRT-inspired alpha parameters (per-skill difficulty + per-student ability)')
+    parser.add_argument('--use_learnable_threshold', action='store_true',
+                        help='Enable learnable threshold for skill mastery saturation effect (conjunctive Q-matrix logic)')
+    parser.add_argument('--threshold_temperature', type=float, required=True,
+                        help='Temperature for soft thresholding (lower = sharper transition, default: 0.1)')
+    parser.add_argument('--threshold_loss_weight', type=float, required=True,
+                        help='Weight for threshold consistency loss (aligns threshold with performance, default: 0.5)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')

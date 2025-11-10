@@ -12,6 +12,7 @@ It illustrates the Learning Gains approach based on an Encoder-only Transformer,
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components**: Causal Mastery Architecture with Learnable Alpha (skill-specific causal masking, cumulative gain aggregation, IRT-inspired personalized learning rates α[s,k] = α_skill[k] + α_student[s], sigmoid learning curves)
+- **Purple components**: Learnable Threshold Architecture (saturation effect modeling, differentiable binarization with temperature, Q-matrix conjunctive logic, skill readiness signal, threshold consistency loss)
 
 ```mermaid
 graph TD
@@ -124,14 +125,16 @@ graph TD
         Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
         Pred_Input_v["Input: Value State (v)<br/>[B, L, D]"]
         Pred_Input_s["Input: Target Skill (s)<br/>[B, L, D]"]
+        Pred_Input_readiness["Input: Skill Readiness<br/>[B, L, 1]"]
 
-        Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]"]
-        MLP["MLP Head"]
+        Concat["Concatenate<br/>[h, v, s, readiness]<br/>[B, L, 3*D + 1]"]
+        MLP["MLP Head<br/>(+1 dimension for threshold signal)"]
         Sigmoid["Sigmoid"]
         
         Pred_Input_h --> Concat
         Pred_Input_v --> Concat
         Pred_Input_s --> Concat
+        Pred_Input_readiness --> Concat
         Concat --> MLP
         MLP --> Sigmoid
     end
@@ -186,17 +189,48 @@ graph TD
     
     Learning_Curve --> Projected_Mastery_Output
 
+    %% Learnable Threshold Architecture (Purple - Feature 8)
+    Threshold_Raw["Learnable Threshold<br/>threshold_raw (nn.Parameter)<br/>sigmoid → [0,1]<br/>Init: 0.5"]
+    
+    Threshold_Sigmoid["Threshold Value<br/>θ = sigmoid(threshold_raw)<br/>Learned: 0.3-0.7"]
+    
+    Threshold_Raw --> Threshold_Sigmoid
+    
+    Soft_Threshold["Soft Thresholding<br/>mastery_binary = sigmoid((mastery - θ) / T)<br/>Temperature T=0.1 (differentiable)<br/>Shape: [B, L, num_skills]"]
+    
+    Projected_Mastery_Output --> Soft_Threshold
+    Threshold_Sigmoid --> Soft_Threshold
+    
+    Q_Matrix_Logic["Q-Matrix Logic<br/>Conjunctive skill requirements<br/>skill_readiness[t] = AND(mastery_binary[t, skills])<br/>ASSIST2015: one skill per question"]
+    
+    Soft_Threshold --> Q_Matrix_Logic
+    Input_q -.provides Q-matrix.-> Q_Matrix_Logic
+    
+    Skill_Readiness["Skill Readiness Signal<br/>Saturation indicator<br/>[B, L, 1]<br/>Range: [0, 1]"]
+    
+    Q_Matrix_Logic --> Skill_Readiness
+    
+    Threshold_Loss["Threshold Consistency Loss<br/>BCE(skill_readiness, responses)<br/>Aligns threshold with performance<br/>Weight: 0.5"]
+    
+    Skill_Readiness --> Threshold_Loss
+    Ground_Truth --> Threshold_Loss
+
     %% Diamond Connectors (Proxies)
     Mastery_Hub{"Mastery<br/>Hub"}
     Gain_Hub{"Gain<br/>Hub"}
     Encoder_Hub{"Encoder<br/>Hub"}
     Pred_Hub{"Predictions<br/>Hub"}
+    Readiness_Hub{"Skill<br/>Readiness<br/>Hub"}
     
     Projected_Mastery_Output --> Mastery_Hub
     Projected_Gain_Output --> Gain_Hub
     Encoder_Output_Ctx --> Encoder_Hub
     Encoder_Output_Val --> Encoder_Hub
     Predictions --> Pred_Hub
+    Skill_Readiness --> Readiness_Hub
+    
+    %% Connect skill readiness to prediction head
+    Readiness_Hub --> Pred_Input_readiness
 
     %% Semantic Feedback Loop (orange)
     Global_Alignment["Global Alignment Pass<br/>population coherence"]
@@ -224,6 +258,11 @@ graph TD
             NonNeg_Loss["Non-Negativity"]
         end
         
+        subgraph "Threshold Losses (Purple)"
+            direction TB
+            Threshold_Consistency_Loss["Threshold Consistency<br/>BCE(readiness, labels)"]
+        end
+        
         subgraph "Semantic Losses (Orange)"
             direction TB
             Alignment_Loss["Local Alignment"]
@@ -231,7 +270,7 @@ graph TD
             Lag_Gain_Loss["Lag Gain"]
         end
         
-        Total_Loss["Total Loss<br/>BCE + Constraints + Semantics<br/>Warmup & Share Cap Scheduling"]
+        Total_Loss["Total Loss<br/>BCE + Constraints + Semantics + Threshold<br/>Warmup & Share Cap Scheduling"]
     end
 
     %% Connections via Diamond Hubs
@@ -254,6 +293,9 @@ graph TD
     
     Encoder_Hub -->|"Alignment"| Alignment_Loss
     Pred_Hub -->|"Alignment"| Alignment_Loss
+    
+    Readiness_Hub -->|"Threshold"| Threshold_Consistency_Loss
+    Threshold_Loss --> Threshold_Consistency_Loss
 
     %% All losses to Total
     BCE_Loss --> Total_Loss
@@ -266,6 +308,7 @@ graph TD
     Alignment_Loss --> Total_Loss
     Retention_Loss --> Total_Loss
     Lag_Gain_Loss --> Total_Loss
+    Threshold_Consistency_Loss --> Total_Loss
 
     %% Monitoring
     Monitor_Hub{"Monitor<br/>Inputs"}
@@ -274,12 +317,14 @@ graph TD
     Mastery_Hub -->|"to Monitor"| Monitor_Hub
     Gain_Hub -->|"to Monitor"| Monitor_Hub
     Pred_Hub -->|"to Monitor"| Monitor_Hub
+    Readiness_Hub -->|"to Monitor"| Monitor_Hub
     Monitor_Hub -->|"Monitor Output"| Monitor_Hook
 
     %% Styling
     classDef new_component fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
     classDef causal_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px
+    classDef threshold_component fill:#e1bee7,stroke:#6a1b9a,stroke-width:3px
     
     %% Individual hub colors with distinct visual styles
     classDef mastery_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
@@ -287,16 +332,19 @@ graph TD
     classDef encoder_hub fill:#fff3e0,stroke:#ffa500,stroke-width:4px
     classDef pred_hub fill:#e3f2fd,stroke:#888888,stroke-width:4px
     classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
+    classDef readiness_hub fill:#f3e5f5,stroke:#6a1b9a,stroke-width:4px
 
     class Proj_Gain,Projected_Gain_Output,Projected_Mastery_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
     class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
     class Skill_Causal_Mask,Cumulative_Gains,Learning_Curve causal_component
+    class Threshold_Raw,Threshold_Sigmoid,Soft_Threshold,Q_Matrix_Logic,Skill_Readiness,Threshold_Loss,Threshold_Consistency_Loss threshold_component
     
     class Mastery_Hub mastery_hub
     class Gain_Hub gain_hub
     class Encoder_Hub encoder_hub
     class Pred_Hub pred_hub
     class Monitor_Hub monitor_hub
+    class Readiness_Hub readiness_hub
 
     %% Link Styling - TEMPORARILY DISABLED - Need to recompute indexes after architecture change
     %% NOTE: Mermaid does not support class-based link styling; manual indexing required

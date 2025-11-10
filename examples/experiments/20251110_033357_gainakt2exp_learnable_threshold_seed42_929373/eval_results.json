@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251110_033357_gainakt2exp_learnable_threshold_seed42_929373",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7560050768406373,
+  "train_acc": 0.7632557091769211,
+  "train_mastery_correlation": 0.024068737329683648,
+  "train_gain_correlation": 0.08649503770927598,
+  "train_correlation_students": 267,
+  "valid_auc": 0.725356454929334,
+  "valid_acc": 0.7535839764863892,
+  "test_auc": 0.7191031025231756,
+  "test_acc": 0.7468274488825487,
+  "test_mastery_correlation": 0.004234016157742762,
+  "test_gain_correlation": 0.02943123393949394,
+  "test_correlation_students": 262,
+  "timestamp": "2025-11-10T03:53:00.602035Z"
+}

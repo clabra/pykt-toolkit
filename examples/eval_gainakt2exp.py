@@ -27,7 +27,15 @@ def compute_correlations(model, data_loader, device, max_students=300):
     core = model.module if isinstance(model, torch.nn.DataParallel) else model
     mastery_corrs = []
     gain_corrs = []
+    skill_readiness_corrs = []
     checked = 0
+    
+    # Extract learned threshold if available
+    learned_threshold = None
+    if hasattr(core, 'use_learnable_threshold') and core.use_learnable_threshold:
+        if hasattr(core, 'threshold_raw'):
+            learned_threshold = torch.sigmoid(core.threshold_raw).item()
+    
     with torch.no_grad():
         for batch in data_loader:
             if checked >= max_students:
@@ -40,6 +48,7 @@ def compute_correlations(model, data_loader, device, max_students=300):
                 break
             pm = out['projected_mastery']
             pg = out['projected_gains']
+            skill_readiness = out.get('skill_readiness')  # May be None if threshold not used
             responses = batch.get('shft_rseqs', r).to(device)
             mask = batch['masks'].to(device)
             B = q.size(0)
@@ -60,12 +69,20 @@ def compute_correlations(model, data_loader, device, max_students=300):
                             mastery_corrs.append(mc)
                         if not np.isnan(gc):
                             gain_corrs.append(gc)
+                        
+                        # If skill_readiness is available, compute correlation
+                        if skill_readiness is not None:
+                            readiness_seq = skill_readiness[i][m].cpu().numpy()
+                            rc = np.corrcoef(readiness_seq, perf_seq)[0,1]
+                            if not np.isnan(rc):
+                                skill_readiness_corrs.append(rc)
                     except Exception:
                         pass
                 checked += 1
     mastery_mean = float(np.mean(mastery_corrs)) if mastery_corrs else 0.0
     gain_mean = float(np.mean(gain_corrs)) if gain_corrs else 0.0
-    return mastery_mean, gain_mean, len(mastery_corrs)
+    readiness_mean = float(np.mean(skill_readiness_corrs)) if skill_readiness_corrs else None
+    return mastery_mean, gain_mean, readiness_mean, learned_threshold, len(mastery_corrs)
 
 
 def evaluate_predictions(model, data_loader, device):
@@ -122,6 +139,9 @@ def main():
     parser.add_argument('--intrinsic_gain_attention', action='store_true')
     parser.add_argument('--use_causal_mastery', action='store_true')
     parser.add_argument('--use_learnable_alpha', action='store_true')
+    parser.add_argument('--use_learnable_threshold', action='store_true')
+    parser.add_argument('--threshold_temperature', type=float, default=0.1)
+    parser.add_argument('--threshold_loss_weight', type=float, default=0.5)
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
@@ -216,6 +236,9 @@ def main():
         'intrinsic_gain_attention': args.intrinsic_gain_attention,
         'use_causal_mastery': args.use_causal_mastery,
         'use_learnable_alpha': args.use_learnable_alpha,
+        'use_learnable_threshold': args.use_learnable_threshold,
+        'threshold_temperature': args.threshold_temperature,
+        'threshold_loss_weight': args.threshold_loss_weight,
         'num_students': num_students,
         'non_negative_loss_weight': args.non_negative_loss_weight,
         'monotonicity_loss_weight': args.monotonicity_loss_weight,
@@ -249,10 +272,10 @@ def main():
     
     # Evaluate
     train_auc, train_acc = evaluate_predictions(model, train_loader, device)
-    train_mastery_corr, train_gain_corr, train_n = compute_correlations(model, train_loader, device, args.max_correlation_students)
+    train_mastery_corr, train_gain_corr, train_readiness_corr, learned_threshold, train_n = compute_correlations(model, train_loader, device, args.max_correlation_students)
     valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
     test_auc, test_acc = evaluate_predictions(model, test_loader, device)
-    test_mastery_corr, test_gain_corr, test_n = compute_correlations(model, test_loader, device, args.max_correlation_students)
+    test_mastery_corr, test_gain_corr, test_readiness_corr, _, test_n = compute_correlations(model, test_loader, device, args.max_correlation_students)
     
     experiment_id = args.experiment_id or os.path.basename(args.run_dir)
     
@@ -274,6 +297,14 @@ def main():
         'test_correlation_students': int(test_n),
         'timestamp': datetime.utcnow().isoformat() + 'Z'
     }
+    
+    # Add threshold metrics if available
+    if learned_threshold is not None:
+        results['learned_threshold'] = float(learned_threshold)
+    if train_readiness_corr is not None:
+        results['train_skill_readiness_correlation'] = float(train_readiness_corr)
+    if test_readiness_corr is not None:
+        results['test_skill_readiness_correlation'] = float(test_readiness_corr)
     
     # Save results
     with open(os.path.join(args.run_dir, 'eval_results.json'), 'w') as f:

@@ -8,6 +8,7 @@ This is an enhanced version of the GainAKT2 model that includes:
 """
 
 import torch
+import torch.nn as nn
 import os
 from .gainakt2 import GainAKT2
 
@@ -30,7 +31,9 @@ class GainAKT2Exp(GainAKT2):
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, monitor_frequency=50, 
                  alpha_learning_rate=1.0, use_causal_mastery=False, 
-                 num_students=10000, use_learnable_alpha=False):
+                 num_students=10000, use_learnable_alpha=False,
+                 use_learnable_threshold=False, threshold_temperature=0.1,
+                 threshold_loss_weight=0.5):
         """
         Initialize the monitored GainAKT2Exp model.
         
@@ -42,6 +45,9 @@ class GainAKT2Exp(GainAKT2):
             use_causal_mastery (bool): If True, use causal mastery architecture with skill-specific masking
             num_students (int): Total number of unique students in training set (for learnable alpha)
             use_learnable_alpha (bool): If True, use learnable IRT-inspired alpha parameters
+            use_learnable_threshold (bool): If True, use learnable threshold for skill mastery saturation
+            threshold_temperature (float): Temperature for soft thresholding (lower = sharper, default: 0.1)
+            threshold_loss_weight (float): Weight for threshold consistency loss (default: 0.5)
             Other args: Same as base GainAKT2 model
         """
         # Allow disabling heads for a pure predictive baseline; otherwise enable.
@@ -87,6 +93,35 @@ class GainAKT2Exp(GainAKT2):
             # Default alpha for unseen students (test time)
             # Represents "average" student learning speed
             self.alpha_student_default_raw = torch.nn.Parameter(torch.tensor(0.5))
+        
+        # Learnable threshold parameters (Saturation Effect)
+        self.use_learnable_threshold = use_learnable_threshold
+        self.threshold_temperature = threshold_temperature
+        self.threshold_loss_weight = threshold_loss_weight
+        
+        if self.use_learnable_threshold:
+            # Global threshold: value above which a skill is considered "learned"
+            # Initialize at 0.5 (logit space = 0.0)
+            # After sigmoid: threshold ∈ [0, 1]
+            self.threshold_raw = torch.nn.Parameter(torch.tensor(0.0))  # logit of 0.5
+            
+            # Redefine prediction_head to include skill_readiness input (+1 dimension)
+            if self.intrinsic_gain_attention:
+                # Intrinsic mode: [h_t, concept_embedding, skill_readiness]
+                self.prediction_head = nn.Sequential(
+                    nn.Linear(d_model * 2 + 1, d_ff),  # +1 for skill_readiness
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(d_ff, 1)
+                )
+            else:
+                # Legacy mode: [context_seq, value_seq, concept_embedding, skill_readiness]
+                self.prediction_head = nn.Sequential(
+                    nn.Linear(d_model * 3 + 1, d_ff),  # +1 for skill_readiness
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(d_ff, 1)
+                )
         
     def set_monitor(self, monitor):
         """Set the interpretability monitor hook."""
@@ -235,6 +270,65 @@ class GainAKT2Exp(GainAKT2):
         alpha_combined = (alpha_student_expanded + alpha_skill_expanded).expand(batch_size, seq_len, self.num_c)
         
         return alpha_combined
+    
+    def apply_soft_threshold(self, mastery):
+        """
+        Apply soft (differentiable) thresholding to mastery values.
+        
+        Uses sigmoid with temperature for smooth approximation of step function:
+        mastery_binary ≈ sigmoid((mastery - threshold) / temperature)
+        
+        When temperature → 0: approaches hard threshold (Heaviside step)
+        When temperature is large: smooth transition
+        
+        Args:
+            mastery (torch.Tensor): Continuous mastery values [batch_size, seq_len, num_skills]
+        
+        Returns:
+            torch.Tensor: Soft-binarized mastery [batch_size, seq_len, num_skills]
+            torch.Tensor: Threshold value (scalar, after sigmoid)
+        """
+        # Apply sigmoid to threshold_raw to get threshold ∈ [0, 1]
+        threshold = torch.sigmoid(self.threshold_raw)
+        
+        # Soft thresholding: sigmoid((mastery - threshold) / temperature)
+        # When mastery >> threshold: output ≈ 1
+        # When mastery << threshold: output ≈ 0
+        # When mastery ≈ threshold: smooth transition controlled by temperature
+        mastery_soft_binary = torch.sigmoid((mastery - threshold) / self.threshold_temperature)
+        
+        return mastery_soft_binary, threshold
+    
+    def compute_skill_readiness(self, mastery, questions):
+        """
+        Compute skill readiness using Q-matrix logic (conjunctive).
+        
+        For each question at time t:
+        - ASSIST2015: Q-matrix is implicit (one skill per question)
+          readiness[t] = mastery[t, q[t]]  (mastery of the required skill)
+        
+        - Multi-skill datasets: Q-matrix is explicit
+          readiness[t] = min(mastery[t, required_skills])  (bottleneck skill)
+        
+        Args:
+            mastery (torch.Tensor): Mastery values [batch_size, seq_len, num_skills]
+            questions (torch.Tensor): Question IDs [batch_size, seq_len]
+        
+        Returns:
+            torch.Tensor: Skill readiness [batch_size, seq_len]
+        """
+        batch_size, seq_len = questions.shape
+        
+        # For ASSIST2015: one skill per question (implicit Q-matrix)
+        # Extract mastery[b, t, q[b,t]] for each time step
+        # Result shape: [batch_size, seq_len]
+        readiness = torch.gather(
+            mastery,  # [B, L, C]
+            dim=2,  # select along skill dimension
+            index=questions.unsqueeze(-1)  # [B, L, 1]
+        ).squeeze(-1)  # [B, L]
+        
+        return readiness
         
     def forward_with_states(self, q, r, qry=None, batch_idx=None, student_ids=None):
         """
@@ -290,19 +384,17 @@ class GainAKT2Exp(GainAKT2):
         for block in self.encoder_blocks:
             context_seq, value_seq = block(context_seq, value_seq, mask)
         
-        # 4. Generate predictions
+        # 4. Generate predictions - Part 1: Prepare base concatenation
         target_concept_emb = self.concept_embedding(target_concepts)
         
+        # Note: We'll add skill_readiness later after computing projected_mastery
+        # For now, create concatenated WITHOUT skill_readiness
         if self.intrinsic_gain_attention:
             # Intrinsic mode: [h_t, concept_embedding]
-            concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
+            concatenated_base = torch.cat([context_seq, target_concept_emb], dim=-1)
         else:
             # Legacy mode: [context_seq, value_seq, concept_embedding]
-            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
-            
-        logits = self.prediction_head(concatenated).squeeze(-1)
-        # Defer sigmoid until evaluation to allow using BCEWithLogitsLoss safely under AMP
-        predictions = torch.sigmoid(logits)
+            concatenated_base = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
         
         # 5. Optionally compute interpretability projections
         if self.use_causal_mastery and self.use_gain_head:
@@ -358,6 +450,30 @@ class GainAKT2Exp(GainAKT2):
             projected_mastery = None
             projected_gains = None
 
+        # 4b. Complete prediction computation (with optional threshold)
+        if self.use_learnable_threshold and projected_mastery is not None:
+            # Apply soft threshold to mastery
+            mastery_soft_binary, threshold_value = self.apply_soft_threshold(projected_mastery)
+            
+            # Compute skill readiness using Q-matrix logic (conjunctive for multi-skill)
+            skill_readiness = self.compute_skill_readiness(mastery_soft_binary, q)
+            
+            # Add skill readiness to prediction input
+            concatenated = torch.cat([concatenated_base, skill_readiness.unsqueeze(-1)], dim=-1)
+            
+            # Store threshold and readiness for output
+            output_threshold = threshold_value.item()
+            output_readiness = skill_readiness
+        else:
+            # No threshold: use base concatenation
+            concatenated = concatenated_base
+            output_threshold = None
+            output_readiness = None
+        
+        # Compute logits and predictions
+        logits = self.prediction_head(concatenated).squeeze(-1)
+        predictions = torch.sigmoid(logits)
+
         # 6. Prepare output with internal states
         output = {
             'predictions': predictions,
@@ -365,6 +481,10 @@ class GainAKT2Exp(GainAKT2):
             'context_seq': context_seq,
             'value_seq': value_seq
         }
+        if output_threshold is not None:
+            output['threshold'] = output_threshold
+        if output_readiness is not None:
+            output['skill_readiness'] = output_readiness
         if projected_mastery is not None:
             output['projected_mastery'] = projected_mastery
         if projected_gains is not None:
@@ -506,6 +626,26 @@ class GainAKT2Exp(GainAKT2):
             consistency_residual = torch.abs(mastery_delta - scaled_gains)
             consistency_loss = consistency_residual.mean()
             total_loss += self.consistency_loss_weight * consistency_loss
+
+        # 7. Threshold Consistency Loss (Saturation Effect)
+        # Force alignment between thresholded mastery and actual performance
+        if self.use_learnable_threshold and self.threshold_loss_weight > 0:
+            # Apply soft threshold to mastery
+            mastery_soft_binary, _ = self.apply_soft_threshold(projected_mastery)
+            
+            # Compute skill readiness using Q-matrix logic
+            skill_readiness = self.compute_skill_readiness(mastery_soft_binary, questions)
+            
+            # Binary cross-entropy loss: skill_readiness should predict responses
+            # When skill_readiness > 0.5 → predict correct (response=1)
+            # When skill_readiness < 0.5 → predict incorrect (response=0)
+            labels = responses.float()
+            threshold_loss = torch.nn.functional.binary_cross_entropy(
+                skill_readiness,
+                labels,
+                reduction='mean'
+            )
+            total_loss += self.threshold_loss_weight * threshold_loss
 
         return total_loss
 
