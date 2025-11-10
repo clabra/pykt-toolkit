@@ -82,8 +82,13 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
             responses_shifted = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device)
             
+            # Extract student IDs for learnable alpha (if available)
+            student_ids = batch.get('uids', None)
+            if student_ids is not None:
+                student_ids = student_ids.to(device)
+            
             # Use underlying module's forward_with_states when DataParallel is active
-            outputs = core_model.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+            outputs = core_model.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
 
             # If interpretability heads are disabled, skip detailed consistency checks
             if 'projected_mastery' not in outputs or 'projected_gains' not in outputs:
@@ -384,6 +389,19 @@ def train_gainakt2exp_model(args):
     train_loader, valid_loader = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
     logger.info("Dataset loaded successfully")
     
+    # Extract number of students from training dataset (for learnable alpha)
+    try:
+        train_dataset = train_loader.dataset
+        if hasattr(train_dataset, 'dori') and 'num_students' in train_dataset.dori:
+            num_students = train_dataset.dori['num_students']
+            logger.info(f"Extracted num_students={num_students} from training dataset")
+        else:
+            num_students = 10000  # Default fallback
+            logger.warning(f"Could not extract num_students from dataset, using default={num_students}")
+    except Exception as e:
+        num_students = 10000  # Default fallback
+        logger.warning(f"Error extracting num_students: {e}, using default={num_students}")
+    
     # Create model with architecture from input/defaults sections
     num_c = data_config[dataset_name]['num_c']
     
@@ -470,7 +488,9 @@ def train_gainakt2exp_model(args):
         'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True)),
         'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False)),
         'use_causal_mastery': resolve_param(cfg, 'interpretability', 'use_causal_mastery', getattr(args, 'use_causal_mastery', False)),
-        'alpha_learning_rate': resolve_param(cfg, 'interpretability', 'alpha_learning_rate', getattr(args, 'alpha_learning_rate', 1.0))
+        'alpha_learning_rate': resolve_param(cfg, 'interpretability', 'alpha_learning_rate', getattr(args, 'alpha_learning_rate', 1.0)),
+        'num_students': num_students,
+        'use_learnable_alpha': resolve_param(cfg, 'interpretability', 'use_learnable_alpha', getattr(args, 'use_learnable_alpha', False))
     }
     
     # Constraint resolution logic:
@@ -733,6 +753,11 @@ def train_gainakt2exp_model(args):
             questions_shifted = batch['shft_cseqs'].to(device)
             responses_shifted = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device)
+            
+            # Extract student IDs for learnable alpha (if available)
+            student_ids = batch.get('uids', None)
+            if student_ids is not None:
+                student_ids = student_ids.to(device)
 
             optimizer.zero_grad()
             try:
@@ -745,13 +770,13 @@ def train_gainakt2exp_model(args):
                     # Solution: temporarily add attribute access: if DataParallel, gather states from model.module after call.
                     if isinstance(model, torch.nn.DataParallel):
                         # Call collective forward to trigger scatter
-                        fwd_basic = model(questions, responses, qry=questions_shifted, qtest=False)
+                        fwd_basic = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
                         # After collective forward, call forward_with_states on primary module with full batch (already on device 0)
                         # Note: This duplicates computation on device0; acceptable for short diagnostic. For true efficiency,
                         # implement custom DataParallel subclass to return states from replicas.
-                        outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                        outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                     else:
-                        outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                        outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                     logits = outputs['logits']
                     interpretability_loss = outputs['interpretability_loss']
                     valid_mask = mask.bool()
@@ -1629,7 +1654,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_causal_mastery', action='store_true',
                         help='Enable causal mastery architecture with skill-specific cumulative gains')
     parser.add_argument('--alpha_learning_rate', type=float, required=True,
-                        help='Learning rate parameter for sigmoid mastery curve (default: 1.0)')
+                        help='Learning rate parameter for sigmoid mastery curve (default: 1.0, DEPRECATED if use_learnable_alpha=True)')
+    parser.add_argument('--use_learnable_alpha', action='store_true',
+                        help='Enable learnable IRT-inspired alpha parameters (per-skill difficulty + per-student ability)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')

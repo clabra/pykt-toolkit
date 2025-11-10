@@ -29,7 +29,8 @@ class GainAKT2Exp(GainAKT2):
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, monitor_frequency=50, 
-                 alpha_learning_rate=1.0, use_causal_mastery=False):
+                 alpha_learning_rate=1.0, use_causal_mastery=False, 
+                 num_students=10000, use_learnable_alpha=False):
         """
         Initialize the monitored GainAKT2Exp model.
         
@@ -37,7 +38,10 @@ class GainAKT2Exp(GainAKT2):
             monitor_frequency (int): How often to compute interpretability metrics during training
             intrinsic_gain_attention (bool): If True, use intrinsic gain attention mode
             alpha_learning_rate (float): Learning rate parameter for sigmoid mastery curve (default: 1.0)
+                                        [DEPRECATED if use_learnable_alpha=True]
             use_causal_mastery (bool): If True, use causal mastery architecture with skill-specific masking
+            num_students (int): Total number of unique students in training set (for learnable alpha)
+            use_learnable_alpha (bool): If True, use learnable IRT-inspired alpha parameters
             Other args: Same as base GainAKT2 model
         """
         # Allow disabling heads for a pure predictive baseline; otherwise enable.
@@ -62,6 +66,27 @@ class GainAKT2Exp(GainAKT2):
         # Causal mastery architecture parameters
         self.use_causal_mastery = use_causal_mastery
         self.alpha_learning_rate = alpha_learning_rate
+        
+        # Learnable alpha parameters (IRT-inspired)
+        self.use_learnable_alpha = use_learnable_alpha
+        self.num_students = num_students
+        
+        if self.use_learnable_alpha:
+            # Per-skill learning steepness parameter (related to skill difficulty)
+            # Lower α_skill → harder skill (shallow learning curve)
+            # Higher α_skill → easier skill (steep learning curve)
+            self.alpha_skill_raw = torch.nn.Parameter(torch.empty(num_c))
+            torch.nn.init.uniform_(self.alpha_skill_raw, 0.0, 1.0)
+            
+            # Per-student learning speed parameter (related to student ability)
+            # Lower α_student → slower learner
+            # Higher α_student → faster learner
+            self.alpha_student_raw = torch.nn.Parameter(torch.empty(num_students))
+            torch.nn.init.uniform_(self.alpha_student_raw, 0.0, 1.0)
+            
+            # Default alpha for unseen students (test time)
+            # Represents "average" student learning speed
+            self.alpha_student_default_raw = torch.nn.Parameter(torch.tensor(0.5))
         
     def set_monitor(self, monitor):
         """Set the interpretability monitor hook."""
@@ -132,9 +157,12 @@ class GainAKT2Exp(GainAKT2):
         
         return cumulative_gains
     
-    def apply_learning_curve(self, cumulative_gains, alpha=None):
+    def apply_learning_curve(self, cumulative_gains, alpha=None, student_ids=None, questions=None):
         """
         Apply sigmoid learning curve transformation to cumulative gains.
+        
+        If use_learnable_alpha=True and student_ids provided, uses personalized alpha.
+        Otherwise, uses global alpha parameter.
         
         Transforms unbounded cumulative gains into bounded mastery [0,1] with S-shaped growth:
         mastery = sigmoid(alpha * cumulative_gains)
@@ -142,20 +170,73 @@ class GainAKT2Exp(GainAKT2):
         Args:
             cumulative_gains (torch.Tensor): Cumulative gains [batch_size, seq_len, num_skills]
             alpha (float, optional): Learning rate parameter controlling curve steepness.
-                                    If None, uses self.alpha_learning_rate
+                                    If None, uses self.alpha_learning_rate (ignored if learnable alpha)
+            student_ids (torch.Tensor, optional): Student indices [batch_size] for personalized alpha
+            questions (torch.Tensor, optional): Question/skill indices [batch_size, seq_len]
                                     
         Returns:
             torch.Tensor: Mastery levels [batch_size, seq_len, num_skills] in range (0, 1)
         """
-        if alpha is None:
-            alpha = self.alpha_learning_rate
-            
-        # Apply sigmoid transformation with alpha scaling
-        mastery = torch.sigmoid(alpha * cumulative_gains)
+        if self.use_learnable_alpha and student_ids is not None:
+            # Use personalized IRT-inspired alpha
+            alpha_combined = self.compute_alpha_combined(student_ids, questions)
+            mastery = torch.sigmoid(alpha_combined * cumulative_gains)
+        else:
+            # Use global alpha (backward compatibility)
+            if alpha is None:
+                alpha = self.alpha_learning_rate
+            mastery = torch.sigmoid(alpha * cumulative_gains)
         
         return mastery
+    
+    def compute_alpha_combined(self, student_ids, questions):
+        """
+        Compute personalized alpha for each (student, skill) pair using IRT-inspired formulation.
         
-    def forward_with_states(self, q, r, qry=None, batch_idx=None):
+        Combines per-skill difficulty and per-student learning speed:
+        α[s,k] = softplus(α_skill_raw[k]) + softplus(α_student_raw[s])
+        
+        Where:
+        - α_skill[k]: Skill-specific learning steepness (inversely related to difficulty)
+        - α_student[s]: Student-specific learning speed (related to ability)
+        - softplus ensures positivity: softplus(x) = log(1 + exp(x))
+        
+        Args:
+            student_ids (torch.Tensor): Student indices [batch_size]
+            questions (torch.Tensor): Question/skill indices [batch_size, seq_len]
+        
+        Returns:
+            torch.Tensor: Personalized alpha values [batch_size, seq_len, num_skills]
+        """
+        batch_size, seq_len = questions.shape
+        
+        # Apply softplus to ensure positivity
+        alpha_skill = torch.nn.functional.softplus(self.alpha_skill_raw)  # [num_skills]
+        alpha_student = torch.nn.functional.softplus(self.alpha_student_raw)  # [num_students]
+        alpha_default = torch.nn.functional.softplus(self.alpha_student_default_raw)  # scalar
+        
+        # Handle unseen students (student_ids >= num_students)
+        # This happens during test time with new students
+        valid_mask = student_ids < self.num_students
+        student_alphas = torch.where(
+            valid_mask,
+            alpha_student[student_ids],
+            alpha_default.expand(batch_size)
+        )
+        
+        # Expand dimensions for broadcasting
+        # alpha_skill: [num_skills] → [1, 1, num_skills]
+        # student_alphas: [batch_size] → [batch_size, 1, 1]
+        alpha_skill_expanded = alpha_skill.unsqueeze(0).unsqueeze(0)
+        alpha_student_expanded = student_alphas.unsqueeze(1).unsqueeze(2)
+        
+        # Combine: [batch_size, 1, 1] + [1, 1, num_skills] → [batch_size, 1, num_skills]
+        # Then expand to [batch_size, seq_len, num_skills] for all time steps
+        alpha_combined = (alpha_student_expanded + alpha_skill_expanded).expand(batch_size, seq_len, self.num_skills)
+        
+        return alpha_combined
+        
+    def forward_with_states(self, q, r, qry=None, batch_idx=None, student_ids=None):
         """
         Forward pass that returns internal states for interpretability monitoring.
         
@@ -233,8 +314,13 @@ class GainAKT2Exp(GainAKT2):
             # Step 2: Compute cumulative gains using skill-specific causal masking
             cumulative_gains = self.compute_cumulative_gains(projected_gains, q, q.device)
             
-            # Step 3: Apply sigmoid learning curve transformation
-            projected_mastery = self.apply_learning_curve(cumulative_gains, self.alpha_learning_rate)
+            # Step 3: Apply sigmoid learning curve transformation (personalized if learnable alpha)
+            projected_mastery = self.apply_learning_curve(
+                cumulative_gains, 
+                alpha=self.alpha_learning_rate,
+                student_ids=student_ids,
+                questions=q
+            )
             
         elif self.intrinsic_gain_attention:
             # Intrinsic mode: retrieve aggregated gains directly from attention mechanism
@@ -322,12 +408,19 @@ class GainAKT2Exp(GainAKT2):
         
         return output
     
-    def forward(self, q, r, qry=None, qtest=False):
+    def forward(self, q, r, qry=None, qtest=False, student_ids=None):
         """
         Standard forward method maintaining compatibility with PyKT framework.
+        
+        Args:
+            q: Question IDs
+            r: Responses
+            qry: Query (optional)
+            qtest: Test mode flag
+            student_ids: Student indices for learnable alpha (optional)
         """
         # For standard forward, just return basic outputs
-        output = self.forward_with_states(q, r, qry)
+        output = self.forward_with_states(q, r, qry, student_ids=student_ids)
         
         # Return only the standard outputs for PyKT compatibility
         result = {'predictions': output['predictions']}
@@ -441,6 +534,8 @@ def create_exp_model(config):
         intrinsic_gain_attention=config.get('intrinsic_gain_attention', False),
         use_causal_mastery=config.get('use_causal_mastery', False),
         alpha_learning_rate=config.get('alpha_learning_rate', 1.0),
+        num_students=config.get('num_students', 10000),
+        use_learnable_alpha=config.get('use_learnable_alpha', False),
         non_negative_loss_weight=config.get('non_negative_loss_weight', 0.1),
         monotonicity_loss_weight=config.get('monotonicity_loss_weight', 0.1),
         mastery_performance_loss_weight=config.get('mastery_performance_loss_weight', 0.1),

@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251110_003819_gainakt2exp_causal_pilot_seed42_354769",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7560584898403175,
+  "train_acc": 0.7631853124208037,
+  "train_mastery_correlation": 0.057911032577067034,
+  "train_gain_correlation": 0.10112003992687607,
+  "train_correlation_students": 267,
+  "valid_auc": 0.7255638768253064,
+  "valid_acc": 0.7540803316820601,
+  "test_auc": 0.719163684565487,
+  "test_acc": 0.7475109961959105,
+  "test_mastery_correlation": 0.04887685791483839,
+  "test_gain_correlation": 0.10203114767551569,
+  "test_correlation_students": 262,
+  "timestamp": "2025-11-10T01:00:01.107050Z"
+}
