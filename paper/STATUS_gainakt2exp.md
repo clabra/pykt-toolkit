@@ -592,11 +592,13 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 6: Intrinsic Gain Attention Mode ✅ FULLY IMPLEMENTED
+### Feature 6: Intrinsic Gain Attention Mode ❌ DISCARDED
 
 **Objective:** Provide an alternative architectural mode that achieves parameter efficiency by deriving gains directly from attention mechanisms, eliminating the need for post-hoc projection heads. This explores the trade-off between model compactness and interpretability while maintaining competitive predictive performance.
 
 **Expected (from architectural exploration):** A feature flag (`--intrinsic_gain_attention`) that conditionally disables projection heads and computes mastery/gains from cumulative attention weights, reducing parameter count while preserving the ability to track learning trajectories.
+
+**Current Status:**: Given the results detailed before we will **deactivate the Intrinsic Gain Attention Mode by default**. So, we set "intrinsic_gain_attention": false in configs/parameter_default.json
 
 **Implementation Status:**
 
@@ -670,7 +672,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 6 Experimental Validation: Multi-Seed Analysis
+#### Feature 6 Experimental Validation: Multi-Seed Analysis
 
 **Validation Protocol:**
 - **Dataset:** ASSIST2015, fold 0
@@ -787,9 +789,8 @@ for reliable interpretability. Intrinsic mode is suitable for parameter-efficien
 deployment when interpretability is not required.
 ```
 
----
 
-### Feature 6 Recommendations
+#### Feature 6 Recommendations
 
 **For Current Paper (Immediate Publication Goal):**
 
@@ -883,7 +884,7 @@ deployment when interpretability is not required.
 
 **Multi-Seed Validation (N=5) Establishes:**
 - ✅ **Baseline Mode:** Reproducible, interpretable, educationally valid (CV=0.07%, all seeds positive)
-- ⚠️ **Intrinsic Mode:** Reproducible for prediction, unstable for interpretation (60% seeds with negative gain correlations)
+- ⚠️ **Intrinsic Mode:** Reproducible for prediction, unstable for interpretation (60% seeds with negative gain correlations). 
 
 **Publication Readiness:**
 - **Primary contribution:** Baseline mode demonstrates that projection heads + explicit supervision are necessary and sufficient for educationally meaningful interpretability
