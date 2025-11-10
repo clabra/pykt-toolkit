@@ -180,11 +180,33 @@ python examples/run_repro_experiment.py --short_title test
 # ✅ PASS  Eval Script Documentation
 # ✅ PASS  Parameter Coverage
 # ✅ PASS  No Suspicious Values
+# ✅ PASS  Argparse Completeness (Priority 1)
+# ✅ PASS  Dynamic Fallback Sync (Priority 1)
+# ✅ PASS  Launcher Filter Validation (Priority 1)
 # 
 # ================================================================================
-# 🎉 ALL CHECKS PASSED (6/6)
+# 🎉 ALL CHECKS PASSED (9/9)
 # ✅ REPRODUCIBILITY INFRASTRUCTURE: FULLY COMPLIANT
 # ================================================================================
+# 
+# All reproducibility requirements verified:
+#   • Priority 1 (Critical Protection):
+#     - All parameters have argparse with required=True ✅
+#     - All getattr() fallbacks synchronized dynamically ✅
+#     - Launcher filter logic validated ✅
+#   • Priority 2 (Model Quality):
+#     - Model .get() fallbacks removed ✅
+#   • Priority 3 (Documentation):
+#     - Eval documentation present ✅
+#   • Infrastructure Integrity:
+#     - MD5 integrity maintained ✅
+#     - Parameter coverage complete ✅
+#     - No suspicious values ✅
+# 
+# ✅ Protocol Coverage: ~85% (up from 60%)
+# ✅ Risk Level: LOW (down from MEDIUM)
+# 
+# Safe to launch training/evaluation experiments.
 # 
 # ✅ Pre-flight check PASSED - Safe to proceed
 # 
@@ -227,15 +249,18 @@ python examples/parameters_audit.py --help
 
 #### What the Audit Checks
 
+**Enhanced audit with 9 checks** (~85% protocol coverage, LOW risk level):
+
 **Check 1: MD5 Integrity**
 - Verifies `configs/parameter_default.json` MD5 hash matches defaults section
 - **Purpose:** Detect if parameters changed without updating MD5 (Parameter Evolution Protocol violation)
 - **Fix:** `python examples/parameters_audit.py --fix-md5`
 
-**Check 2: Hardcoded Fallback Synchronization**
+**Check 2: Hardcoded Fallback Synchronization (Legacy)**
 - Verifies 8 critical `getattr(args, 'param', fallback)` values in `train_gainakt2exp.py` match `parameter_default.json`
 - **Purpose:** Prevent silent wrong values if argparse fails
 - **Parameters checked:** alignment_weight, batch_size, enable_alignment_loss, enable_global_alignment_pass, enable_lag_gain_loss, enable_retention_loss, epochs, use_residual_alignment
+- **Note:** Superseded by Check 8 (dynamic scanner), kept for backward compatibility
 
 **Check 3: Model Initialization Fallback Removal**
 - Verifies `pykt/models/gainakt2_exp.py` uses `config['key']` instead of `config.get(key, fallback)`
@@ -256,6 +281,50 @@ python examples/parameters_audit.py --help
 - Scans for old wrong fallback values that were previously fixed
 - **Purpose:** Detect regressions (accidental reintroduction of bugs)
 - **Examples:** alignment_weight=0.1 (should be 0.25), batch_size=96 (should be 64)
+
+**Check 7: Argparse Completeness Validation (Priority 1) 🆕**
+- **Critical protection:** Verifies ALL 60 parameters (excluding 4 launcher-only) have argparse entries
+- Validates `required=True` for 46 non-boolean parameters
+- Handles 14 boolean flags (action='store_true') correctly
+- **Purpose:** Prevent Failure Scenario A - new parameter added to defaults but forgotten in argparse
+- **What it prevents:**
+  ```python
+  # Someone adds new param to parameter_default.json
+  "new_feature_weight": 0.5
+  
+  # But forgets to add argparse entry in train_gainakt2exp.py
+  # Audit detects: "new_feature_weight has no argparse entry"
+  # ❌ Launch blocked until argparse added
+  ```
+
+**Check 8: Dynamic Fallback Synchronization (Priority 1) 🆕**
+- **Critical protection:** Dynamically scans ALL 67 `getattr()` calls in training script
+- Validates every fallback matches `parameter_default.json`
+- Replaces hardcoded 8-parameter list with comprehensive scanner
+- **Purpose:** Prevent Failure Scenario B - wrong fallback values for any parameter
+- **What it prevents:**
+  ```python
+  # Someone adds getattr with wrong fallback
+  lr = getattr(args, 'learning_rate', 0.001)  # default is 0.000174
+  
+  # Audit detects: "learning_rate fallback=0.001, expected=0.000174"
+  # ❌ Launch blocked until fallback corrected
+  ```
+- **Coverage:** 67 getattr() calls checked (vs. 8 in Check 2)
+
+**Check 9: Launcher Filter Validation (Priority 1) 🆕**
+- **Critical protection:** Verifies launcher correctly excludes 4 launcher-only parameters
+- Validates 60 training parameters passed correctly to training command
+- **Purpose:** Prevent Failure Scenario C - launcher filter logic broken
+- **What it prevents:**
+  ```python
+  # Someone accidentally excludes training parameter in launcher
+  excluded = {'model', 'train_script', 'eval_script', 'batch_size'}  # wrong!
+  
+  # Audit detects: "batch_size should not be excluded"
+  # ❌ Launch blocked until filter fixed
+  ```
+- **Launcher-only params:** model, train_script, eval_script, max_correlation_students
 
 #### Interpreting Audit Output
 
@@ -313,6 +382,40 @@ python examples/parameters_audit.py --fix-md5
   Model still has .get() fallbacks
 ```
 **Fix:** Edit `pykt/models/gainakt2_exp.py`, replace `config.get(key, fallback)` with `config['key']`
+
+**Issue: Missing Argparse Entry (Priority 1)**
+```
+❌ Check 7: Argparse Completeness (Priority 1) - FAIL
+  Missing argparse entries: 1
+    - new_feature_weight
+```
+**Fix:** Add missing parameter to argparse in `examples/train_gainakt2exp.py`:
+```python
+parser.add_argument('--new_feature_weight', type=float, required=True,
+                    help='Weight for new feature loss')
+```
+
+**Issue: Wrong Fallback Value (Priority 1)**
+```
+❌ Check 8: Dynamic Fallback Sync (Priority 1) - FAIL
+  ❌ learning_rate  fallback=0.001  expected=0.000174
+```
+**Fix:** Update getattr fallback in `examples/train_gainakt2exp.py`:
+```python
+# Before:
+lr = getattr(args, 'learning_rate', 0.001)
+
+# After:
+lr = getattr(args, 'learning_rate', 0.000174)
+```
+
+**Issue: Launcher Filter Broken (Priority 1)**
+```
+❌ Check 9: Launcher Filter Validation (Priority 1) - FAIL
+  Missing from exclusion list:
+    - max_correlation_students
+```
+**Fix:** Add missing parameter to excluded_from_training in `examples/run_repro_experiment.py`
 
 #### Bypassing Audit (NOT RECOMMENDED)
 
