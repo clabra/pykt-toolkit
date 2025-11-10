@@ -63,8 +63,7 @@
     "warmup_constraint_epochs": 8,
     "max_semantic_students": 50,
     "max_correlation_students": 300,
-    "enable_cosine_perf_schedule": false,
-    "no_dataparallel_loss_fix": false
+    "enable_cosine_perf_schedule": false
   },
   "types": {
     "launcher": [
@@ -146,5 +145,5 @@
       "variance_floor_reduce_factor"
     ]
   },
-  "md5": "11eefd5ba6cb23103bc7d40db8c1aaa7"
+  "md5": "060603894fe6705d109530d884fe6992"
 }
