@@ -468,7 +468,9 @@ def train_gainakt2exp_model(args):
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
         'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True)),
-        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False))
+        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False)),
+        'use_causal_mastery': resolve_param(cfg, 'interpretability', 'use_causal_mastery', getattr(args, 'use_causal_mastery', False)),
+        'alpha_learning_rate': resolve_param(cfg, 'interpretability', 'alpha_learning_rate', getattr(args, 'alpha_learning_rate', 1.0))
     }
     
     # Constraint resolution logic:
@@ -1624,6 +1626,10 @@ if __name__ == '__main__':
     parser.add_argument('--intrinsic_gain_attention', action='store_true',
                         help='Enable intrinsic gain attention mode (Values are skill-space gains, h_t = Σ α g)')
     parser.add_argument('--disable_intrinsic_gain_attention', action='store_true', help='Disable intrinsic gain attention')
+    parser.add_argument('--use_causal_mastery', action='store_true',
+                        help='Enable causal mastery architecture with skill-specific cumulative gains')
+    parser.add_argument('--alpha_learning_rate', type=float, required=True,
+                        help='Learning rate parameter for sigmoid mastery curve (default: 1.0)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')
