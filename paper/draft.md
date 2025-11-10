@@ -37,7 +37,7 @@ This work contributes: (1) a novel interpretability-by-design architecture demon
 
 A critical advantage of our interpretability-by-design architecture is the ability to extract **per-skill, per-timestep mastery states** with quantifiable confidence estimates—capabilities absent in black-box models. The dual-stream architecture with explicit projection heads enables direct computation of interpretable knowledge states that reveal student learning trajectories, providing transparency into how the model represents evolving proficiency levels throughout instruction. 
 
-**Mastery State Computation:**
+#### Mastery State Computation:
 
 At each timestep $t$ in a student's learning trajectory, the model maintains a context representation $h_t \in \mathbb{R}^{d_{model}}$ that flows through the mastery projection head:
 
@@ -49,7 +49,7 @@ $$\text{mastery}_{t+1} = \text{mastery}_t + \alpha \cdot \text{ReLU}(\text{GainH
 
 where $v_t$ is the value stream representation, $\alpha=0.1$ is the scaling factor, and ReLU ensures non-negative learning gains. This architectural constraint guarantees monotonicity (mastery cannot decrease), aligning with educational learning theory.
 
-**Key Properties:**
+#### Key Properties
 
 1. **Skill-specific granularity:** Each of the $|\mathcal{C}|$ skills has an independent mastery trajectory, enabling fine-grained knowledge state analysis (e.g., "Student A has 0.73 mastery on linear equations but only 0.42 on quadratic equations at timestep 15").
 
@@ -57,7 +57,7 @@ where $v_t$ is the value stream representation, $\alpha=0.1$ is the scaling fact
 
 3. **Interpretability validation:** The mastery-performance alignment loss ($\mathcal{L}_{\text{mastery-perf}}$) explicitly supervises these estimates against actual student accuracy, ensuring that high mastery predictions correspond to high observed performance (correlation: 0.1069 in our experiments, p=0.0012).
 
-**Confidence Interval Estimation:**
+#### Confidence Interval Estimation
 
 While the architecture produces point estimates of mastery, we can quantify estimation uncertainty through two complementary approaches:
 
@@ -113,7 +113,7 @@ where $q_i$ is the skill/question at timestep $i$. Skills with low $n_t^{(c)}$ (
 
 This differs from black-box models where the relationship between evidence accumulation and confidence is opaque. Our architecture makes the **causal chain explicit**: more interactions → more learning gains → more accumulated mastery → higher confidence.
 
-**Practical Applications:**
+#### Practical Applications
 
 1. **Adaptive assessment:** If confidence intervals for a skill are wide, administer additional diagnostic questions targeting that skill to reduce uncertainty before making high-stakes decisions.
 
@@ -123,9 +123,107 @@ This differs from black-box models where the relationship between evidence accum
 
 4. **Model calibration analysis:** Compare predicted confidence intervals against actual student performance variance to validate that the model's uncertainty estimates are well-calibrated.
 
-**Architectural Advantage:**
+#### Architectural Advantage
 
 Unlike post-hoc interpretability methods that attempt to explain black-box predictions after training, our architecture produces mastery states and confidence estimates as **first-class outputs** with explicit supervision. The mastery-performance alignment loss ensures these estimates are grounded in observable educational outcomes, while the monotonicity constraint prevents educationally implausible trajectories (e.g., unlearning). This interpretability-by-design approach enables not just prediction, but **transparent reasoning** about student knowledge states—a critical requirement for educational AI systems where stakeholders must understand and trust model decisions.
+
+#### Hypothesis 3: Construct Validity of Mastery Representations
+
+**The Construct Validity Problem**: A fundamental challenge in interpretable AI is ensuring that internal representations actually measure what we claim they measure. While we label our predictions "mastery," we must validate that these values genuinely reflect educational proficiency rather than arbitrary patterns that merely correlate with correctness. This parallels the classic challenge in psychometrics: demonstrating that latent factors (e.g., "intelligence," "anxiety") measured by tests truly represent the theoretical constructs they purport to capture.
+
+**Our Claim**: The mastery values $\text{mastery}_t^{(c)} \in [0,1]$ produced by our architecture represent **educationally meaningful skill proficiency** that satisfies key properties expected from authentic learning trajectories:
+
+1. **Discriminative validity**: Mastery should distinguish between students who demonstrate high vs. low performance on a skill
+2. **Predictive validity**: Higher mastery should predict higher future performance on that skill
+3. **Convergent validity**: Mastery should correlate with external measures of skill proficiency (e.g., skill-specific accuracy)
+4. **Temporal coherence**: Mastery trajectories should exhibit educationally plausible patterns (monotonic growth, saturation effects, transfer between related skills)
+5. **Confidence calibration**: Uncertainty estimates should align with actual performance variability
+
+**Hypothesis 3 (Construct Validity of Mastery)**: The per-skill mastery estimates $\text{mastery}_t^{(c)}$ produced by our architecture exhibit strong construct validity as measures of educational proficiency. Specifically, we hypothesize that:
+
+**(H₃a) Discriminative Validity**: Students in the top mastery quartile for skill $c$ demonstrate significantly higher accuracy on skill $c$ than students in the bottom quartile, with effect size $d > 0.8$ (large effect by Cohen's conventions).
+
+**(H₃b) Predictive Validity**: Mastery at timestep $t$ significantly predicts performance at timestep $t+k$ ($k > 0$), with correlation $r > 0.3$ even when controlling for prior performance history (partial correlation analysis).
+
+**(H₃c) Convergent Validity**: The mastery-performance correlation $r(\text{mastery}_t^{(c)}, \text{accuracy}^{(c)})$ significantly exceeds the correlation between arbitrary internal representations (e.g., random projection of hidden states) and accuracy, demonstrating that mastery captures skill-specific information beyond generic predictive features.
+
+**(H₃d) Temporal Coherence**: Mastery trajectories exhibit educationally expected patterns:
+- Monotonicity: $\text{mastery}_{t+1}^{(c)} \geq \text{mastery}_t^{(c)}$ (enforced architecturally, 0% violations)
+- Saturation: Growth rate $\Delta \text{mastery}_t = \text{mastery}_{t+1} - \text{mastery}_t$ decreases as mastery approaches 1 (diminishing returns)
+- Transfer: Mastery gains on skill $c$ correlate with prior mastery on prerequisite skills (e.g., mastery on "quadratic equations" predicts gains on "completing the square")
+
+**(H₃e) Confidence Calibration**: The model's confidence intervals are well-calibrated: when the model predicts mastery $m \pm \sigma$ for a skill, the student's actual performance falls within this interval with coverage probability close to the nominal level (e.g., 95% coverage for 95% CI).
+
+**Null Hypothesis (H₀)**: The mastery estimates lack construct validity as measures of educational proficiency. At least one of the following holds:
+- (H₀a) No discriminative power: Top vs. bottom quartile mastery does not predict performance (effect size $d < 0.2$, negligible)
+- (H₀b) No predictive utility: Mastery does not predict future performance beyond prior accuracy (partial correlation $r < 0.1$)
+- (H₀c) No convergent validity: Mastery-performance correlation is not significantly stronger than random projection baseline ($\Delta r < 0.05$)
+- (H₀d) Temporal incoherence: Mastery trajectories violate educational expectations (>5% monotonicity violations, no saturation pattern, no transfer effects)
+- (H₀e) Miscalibration: Confidence intervals systematically over- or under-cover actual performance (coverage <85% or >99% for nominal 95% CI)
+
+**Why This Matters**: If H₃ is rejected (H₀ supported), our "mastery" labels are misleading—the model may predict well but lacks genuine educational interpretability. The representations would be arbitrary internal features that happen to correlate with performance, similar to hidden layers in black-box models, undermining claims of interpretability-by-design. Conversely, supporting H₃ demonstrates that architectural constraints and explicit supervision produce representations with genuine construct validity, suitable for educational decision-making.
+
+**Experimental Design for Validation**:
+
+**Test H₃a (Discriminative Validity)**:
+1. Compute per-student, per-skill mastery at test time: $\text{mastery}_{\text{final}}^{(s,c)}$ for student $s$, skill $c$
+2. Compute per-student, per-skill accuracy: $\text{accuracy}^{(s,c)} = \frac{\text{correct responses on skill } c}{\text{total responses on skill } c}$
+3. For each skill $c$, partition students into quartiles by $\text{mastery}_{\text{final}}^{(s,c)}$
+4. Compare accuracy: $\text{accuracy}_{\text{Q4}}^{(c)}$ (top quartile) vs. $\text{accuracy}_{\text{Q1}}^{(c)}$ (bottom quartile)
+5. Compute Cohen's $d$: $d = \frac{\mu_{\text{Q4}} - \mu_{\text{Q1}}}{\sigma_{\text{pooled}}}$
+6. **Success criterion**: $d > 0.8$ (large effect), $p < 0.05$ (statistically significant)
+
+**Test H₃b (Predictive Validity)**:
+1. For each student, split trajectory at timestep $t$: history $[1, t]$, future $[t+1, T]$
+2. Compute mastery at cutoff: $\text{mastery}_t^{(c)}$
+3. Compute future accuracy: $\text{accuracy}_{t+1:T}^{(c)}$
+4. Compute partial correlation: $r_{\text{partial}}(\text{mastery}_t^{(c)}, \text{accuracy}_{t+1:T}^{(c)} \mid \text{accuracy}_{1:t}^{(c)})$
+5. **Success criterion**: $r_{\text{partial}} > 0.3$ (medium effect), $p < 0.05$
+
+**Test H₃c (Convergent Validity)**:
+1. **Mastery baseline**: Correlation $r_{\text{mastery}} = \text{corr}(\text{mastery}_t^{(c)}, \text{accuracy}^{(c)})$
+2. **Random projection baseline**: Project final hidden state $h_T$ via random matrix $W_{\text{rand}} \in \mathbb{R}^{d \times |\mathcal{C}|}$: $\text{random}_t^{(c)} = \sigma(W_{\text{rand}}^T h_T)$; compute $r_{\text{random}} = \text{corr}(\text{random}_t^{(c)}, \text{accuracy}^{(c)})$
+3. **Generic prediction baseline**: Use final-layer representations before mastery head; compute $r_{\text{generic}}$
+4. Test difference: $\Delta r = r_{\text{mastery}} - r_{\text{random}}$
+5. **Success criterion**: $\Delta r > 0.05$, $p < 0.05$ (Fisher's z-test)
+
+**Test H₃d (Temporal Coherence)**:
+1. **Monotonicity**: Count violations where $\text{mastery}_{t+1}^{(c)} < \text{mastery}_t^{(c)}$ (should be 0% due to architectural constraint)
+2. **Saturation**: Compute growth rate $\Delta_t = \text{mastery}_{t+1} - \text{mastery}_t$; test if $\Delta_t$ negatively correlates with $\text{mastery}_t$ (diminishing returns)
+3. **Transfer**: For skill pairs with known prerequisite relationships (from curriculum structure), test if $\text{mastery}_t^{(\text{prereq})}$ predicts $\Delta \text{mastery}_{t+1}^{(\text{target})}$
+4. **Success criteria**: 0% monotonicity violations, $r(\Delta_t, \text{mastery}_t) < -0.2$, significant transfer effects ($r > 0.15$, $p < 0.05$)
+
+**Test H₃e (Confidence Calibration)**:
+1. Compute confidence intervals via Monte Carlo Dropout: $\text{CI}_{95\%}^{(s,c)} = [\mu^{(s,c)} - 1.96\sigma^{(s,c)}, \mu^{(s,c)} + 1.96\sigma^{(s,c)}]$
+2. Compute actual accuracy: $\text{accuracy}^{(s,c)}$
+3. Count coverage: $\text{coverage} = \frac{1}{N}\sum_{s,c} \mathbb{1}[\text{accuracy}^{(s,c)} \in \text{CI}_{95\%}^{(s,c)}]$
+4. Test calibration: $|\text{coverage} - 0.95| < 0.10$ (within 10% of nominal level)
+5. **Success criterion**: $0.85 < \text{coverage} < 0.99$ (reasonable calibration)
+
+**Expected Outcomes**:
+
+**Strong Support for H₃** (all sub-hypotheses validated):
+- Mastery exhibits large discriminative power ($d > 0.8$)
+- Predictive utility beyond history ($r_{\text{partial}} > 0.3$)
+- Significantly better than random baseline ($\Delta r > 0.05$)
+- Educationally coherent trajectories (monotonic, saturating, transfer effects)
+- Well-calibrated confidence (85-99% coverage)
+→ **Interpretation**: Mastery has genuine construct validity; suitable for educational interpretation and decision-making
+
+**Partial Support** (some sub-hypotheses validated):
+- Discriminative and convergent validity confirmed, but weak predictive utility or miscalibration
+→ **Interpretation**: Mastery captures skill state but confidence estimates need refinement
+
+**Weak/No Support** (most sub-hypotheses rejected):
+- Poor discriminative power, no advantage over random baseline, or severe miscalibration
+→ **Interpretation**: "Mastery" is misleading label; representations lack educational meaning despite architectural constraints
+
+**Connection to Experiment 1**: Our mastery-performance correlation of 0.1069 (Experiment 1 treatment) provides initial evidence for H₃c (convergent validity), but comprehensive validation across all five dimensions (H₃a-e) is required to establish full construct validity. The 15.2% improvement in gain correlation further suggests that the architectural constraints successfully capture educationally meaningful patterns rather than arbitrary features.
+
+**Practical Implications**: 
+- If H₃ validated → Model outputs can be trusted for formative assessment, adaptive testing, and educator dashboards
+- If H₃ rejected → Model remains useful for prediction but cannot make interpretability claims; outputs should not be used for educational decision-making without human oversight
+
 
 
 

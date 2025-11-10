@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251110_201954_gainakt2exp_ablation_simplified_591617",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7536814744659576,
+  "train_acc": 0.7625141966791503,
+  "train_mastery_correlation": 0.08592378778337127,
+  "train_gain_correlation": 0.059492209894398025,
+  "train_correlation_students": 3334,
+  "valid_auc": 0.7255093624420091,
+  "valid_acc": 0.754051134317609,
+  "test_auc": 0.7194049832791514,
+  "test_acc": 0.747622444127437,
+  "test_mastery_correlation": 0.08765105271073509,
+  "test_gain_correlation": 0.044422975311568046,
+  "test_correlation_students": 3177,
+  "timestamp": "2025-11-10T21:10:38.808826Z"
+}
