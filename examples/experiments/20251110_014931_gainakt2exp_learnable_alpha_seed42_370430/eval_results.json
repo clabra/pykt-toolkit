@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251110_014931_gainakt2exp_learnable_alpha_seed42_370430",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7558646989803645,
+  "train_acc": 0.7631078759890744,
+  "train_mastery_correlation": 0.023946232134654678,
+  "train_gain_correlation": 0.08659850518989516,
+  "train_correlation_students": 267,
+  "valid_auc": 0.7252059508475186,
+  "valid_acc": 0.753194678293706,
+  "test_auc": 0.7187559312267503,
+  "test_acc": 0.7465302543984783,
+  "test_mastery_correlation": 0.004373684928999946,
+  "test_gain_correlation": 0.03141688619906792,
+  "test_correlation_students": 262,
+  "timestamp": "2025-11-10T02:11:34.698499Z"
+}

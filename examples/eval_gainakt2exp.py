@@ -120,6 +120,8 @@ def main():
     parser.add_argument('--use_mastery_head', action='store_true')
     parser.add_argument('--use_gain_head', action='store_true')
     parser.add_argument('--intrinsic_gain_attention', action='store_true')
+    parser.add_argument('--use_causal_mastery', action='store_true')
+    parser.add_argument('--use_learnable_alpha', action='store_true')
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
@@ -187,6 +189,18 @@ def main():
         }
     }
     
+    # Determine num_students from checkpoint if using learnable alpha
+    num_students = 10000  # Default value
+    if args.use_learnable_alpha:
+        # Load checkpoint to extract num_students from alpha_student_raw shape
+        state = torch.load(ckpt_path, map_location='cpu')
+        candidate = state.get('model_state_dict') or state.get('state_dict') or state
+        for k, v in candidate.items():
+            if 'alpha_student_raw' in k:
+                num_students = v.shape[0]
+                print(f"Detected num_students={num_students} from checkpoint '{k}' parameter")
+                break
+    
     # Model config
     model_config = {
         'num_c': data_config[args.dataset]['num_c'],
@@ -200,6 +214,9 @@ def main():
         'use_mastery_head': args.use_mastery_head,
         'use_gain_head': args.use_gain_head,
         'intrinsic_gain_attention': args.intrinsic_gain_attention,
+        'use_causal_mastery': args.use_causal_mastery,
+        'use_learnable_alpha': args.use_learnable_alpha,
+        'num_students': num_students,
         'non_negative_loss_weight': args.non_negative_loss_weight,
         'monotonicity_loss_weight': args.monotonicity_loss_weight,
         'mastery_performance_loss_weight': args.mastery_performance_loss_weight,

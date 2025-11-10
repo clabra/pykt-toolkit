@@ -92,7 +92,8 @@ class KTDataset(Dataset):
             dcur["shft_"+key] = shft_seqs
         dcur["masks"] = mseqs
         dcur["smasks"] = self.dori["smasks"][index]
-        dcur["uids"] = self.dori["uids"][index]  # Add student ID (scalar per sequence)
+        # Add student ID if available (may not exist in test datasets)
+        dcur["uids"] = self.dori["uids"][index] if "uids" in self.dori else -1
         # print("tseqs", dcur["tseqs"])
         if not self.qtest:
             return dcur
