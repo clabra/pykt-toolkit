@@ -1072,6 +1072,214 @@ The learnable alpha architecture achieves its **primary goal** (personalization 
 - **INVESTIGATE** for understanding individual learning differences
 - **BASELINE MODE REMAINS** the recommended configuration for educational analysis
 
+### Feature 8: Learnable Threshold Architecture (ABANDONED)
+
+**Status:** ❌ EXPERIMENTAL FAILURE (November 2025)
+
+#### Motivation
+
+Analysis revealed that neither baseline nor learnable alpha models exhibit a natural "saturation effect" - a threshold above which skills are considered fully learned. Initial threshold analysis on both models showed optimal thresholds near 0.1 (essentially treating all mastery values as "not learned"), suggesting the absence of meaningful skill mastery representation.
+
+**Hypothesis:** Implementing a learnable threshold mechanism could enable the model to discover when skills transition from "learning" to "learned" state, providing a discrete interpretability signal for skill acquisition.
+
+#### Approach
+
+Implemented a complete differentiable threshold architecture with Q-matrix integration:
+
+**Mathematical Formulation:**
+```
+threshold = sigmoid(threshold_raw)  // Learnable parameter ∈ (0,1)
+mastery_soft_binary[t,k] = sigmoid((mastery[t,k] - threshold) / temperature)
+skill_readiness[t] = AND(mastery_soft_binary[t, skills_required])  // Q-matrix conjunctive logic
+prediction_head_input = [h[t], v[t], s[t], skill_readiness[t]]  // +1 dimension
+threshold_loss = BCE(skill_readiness, responses)  // Consistency with correctness
+```
+
+**Design Principles:**
+1. **Differentiable Binarization:** Soft threshold with temperature=0.1 for gradient flow
+2. **Q-Matrix Logic:** Conjunctive AND for multi-skill requirements (all skills must exceed threshold)
+3. **Architectural Integration:** skill_readiness fed to prediction head (+1 input dimension: 1536→1537)
+4. **Threshold Consistency Loss:** BCE encourages alignment between skill readiness and correctness
+5. **Learnable Discovery:** threshold_raw initialized at 0.0 (sigmoid→0.5), learned from data
+
+#### Implementation Details
+
+**Model Modifications (`pykt/models/gainakt2_exp.py`):**
+- Added parameters: `threshold_raw` (nn.Parameter), `threshold_temperature`, `threshold_loss_weight`
+- `apply_soft_threshold(mastery)`: Differentiable binarization with sigmoid and temperature
+- `compute_skill_readiness(mastery_soft_binary, questions)`: Q-matrix conjunctive AND logic
+- Modified `forward_with_states()`: Compute skill_readiness and integrate into prediction head
+- Updated `prediction_head`: Input dimension 1536→1537 to accept skill_readiness signal
+- `compute_interpretability_loss()`: Added threshold consistency loss (BCE with responses)
+- Fixed `create_exp_model()`: Pass threshold parameters to constructor (critical bug fix)
+
+**Configuration (`configs/parameter_default.json`):**
+- `use_learnable_threshold`: false (default, interpretability type)
+- `threshold_temperature`: 0.1 (soft binarization steepness)
+- `threshold_loss_weight`: 0.5 (balance with other losses)
+- MD5: 8b55985a140a7b5ce9cff0d012bacdd3
+
+**Training/Evaluation Scripts:**
+- `train_gainakt2exp.py`: Added argparse for threshold flags, pass to model_config
+- `eval_gainakt2exp.py`: Extract learned_threshold from checkpoint, compute skill_readiness correlations
+
+#### Bugs Fixed During Development
+
+**Bug 1: Old Code Training**
+- First training run (v1) used code before threshold implementation was committed
+- Fixed by committing all changes before launching subsequent runs
+
+**Bug 2: Missing Factory Parameters**
+- `create_exp_model()` did not pass threshold parameters to constructor
+- Model config showed `use_learnable_threshold=True` but parameter never created
+- Fixed by adding three lines to factory function (use_learnable_threshold, threshold_temperature, threshold_loss_weight)
+
+#### Experimental Results
+
+**Experiment:** 20251110_041636_gainakt2exp_threshold_v3_seed42_370193
+- **Dataset:** ASSIST2015, Fold 0, Seed 42
+- **Training:** 8 epochs (stopped early after diagnostic analysis)
+- **Configuration:** All bugs fixed, correct implementation validated
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| **Learned Threshold** | 0.5248 | ⚠️ Barely moved from initialization (0.5) |
+| **Mastery Correlation** | 0.0195 | ❌ CRITICAL: Near-zero (expected >0.5) |
+| **Gain Correlation** | 0.0355 | Low but not improved |
+| **Validation AUC** | 0.7252 | ✓ Maintained performance |
+| **Training Loss** | ~0.63 | Stable training |
+
+**Correlation Evolution Across Epochs:**
+
+| Epoch | Train Mastery | Test Mastery | Train Gain | Test Gain |
+|-------|---------------|--------------|------------|-----------|
+| 1 | 0.0192 | 0.0158 | 0.0231 | 0.0198 |
+| 2 | 0.0262 | 0.0217 | 0.0325 | 0.0278 |
+| 4 | 0.0209 | 0.0172 | 0.0386 | 0.0330 |
+| 6 | 0.0186 | 0.0153 | 0.0355 | 0.0304 |
+| 8 | 0.0195 | 0.0160 | 0.0355 | 0.0304 |
+
+**Observations:**
+- Mastery correlation stuck at ~0.02 throughout training (no improvement)
+- Threshold learned nothing (0.5→0.525, essentially no movement)
+- Model maintains predictive performance (AUC~0.72) by ignoring interpretability components
+
+#### Diagnostic Analysis
+
+**Comprehensive Diagnostic (`tmp/quick_threshold_diagnostic.py`) Verified:**
+
+1. ✅ **Threshold Parameter Exists:** `threshold_raw=0.099324` (sigmoid→0.5248) present in checkpoint
+2. ✅ **Prediction Head Modified:** 1537 input dimensions (correctly +1 for skill_readiness)
+3. ✅ **Forward Pass Works:** skill_readiness tensor present in output
+4. ✅ **Methods Implemented:** `apply_soft_threshold()`, `compute_skill_readiness()` functional
+5. ✅ **Training Completed:** 8 epochs with all losses computed
+
+**Conclusion:** All implementation components technically correct but approach fundamentally ineffective.
+
+#### Root Cause Analysis
+
+**Why the Approach Failed:**
+
+1. **Mastery Values Don't Reflect Skill Levels**
+   - Mastery-performance correlation = 0.02 (essentially random)
+   - Expected correlation >0.5 for meaningful mastery representation
+   - Mastery projection head produces values uncorrelated with actual correctness
+
+2. **Garbage In, Garbage Out**
+   - Threshold operates on mastery values: `mastery_binary = threshold(mastery)`
+   - If mastery is meaningless, thresholded mastery is also meaningless
+   - No amount of learnable threshold tuning can fix bad input representations
+
+3. **Model Learns to Ignore Interpretability**
+   - Auxiliary losses have weight=0.8, main BCE loss has weight=1.0
+   - Model learns to predict from context/value directly, bypassing mastery/gain signals
+   - Interpretability components become vestigial (trained but unused)
+
+**Why Threshold Learned Nothing:**
+- Threshold loss: `BCE(skill_readiness, responses)` requires skill_readiness to align with correctness
+- But mastery doesn't correlate with performance (r=0.02)
+- No gradient signal to move threshold meaningfully
+- Threshold stays near initialization (0.5→0.525)
+
+#### Conceptual Flaw
+
+**The Saturation Problem is a Symptom, Not the Root Cause:**
+
+Original observation: "No natural threshold exists in mastery values"
+↓
+Hypothesis: "Adding learnable threshold will fix this"
+↓
+Reality: "Threshold cannot fix uncorrelated mastery values"
+
+**Correct Diagnosis:**
+- Problem: Mastery projection produces values uncorrelated with skill proficiency
+- Solution: Fix mastery quality FIRST, then consider threshold mechanisms
+- Lesson: Post-hoc interpretability requires meaningful underlying representations
+
+#### Lessons Learned
+
+1. **Post-Hoc Interpretability is Hard**
+   - Adding interpretability mechanisms on top of opaque representations often fails
+   - Models can learn to route around auxiliary losses
+   - Correlation metrics are critical early warning signals
+
+2. **Auxiliary Loss Limitations**
+   - Weight=0.8 insufficient to enforce strong supervision on mastery/gain
+   - Main predictive loss (weight=1.0) dominates optimization
+   - Need stronger architectural constraints, not just loss terms
+
+3. **Diagnostic Methodology Validated**
+   - Correlation evolution tracking caught the problem early (epoch 1-2)
+   - Component-level diagnostics essential (threshold exists ≠ threshold helps)
+   - Multi-level validation: implementation correctness ≠ approach effectiveness
+
+4. **Research Process Insight**
+   - Failed experiments are valuable when properly analyzed
+   - Root cause identification prevents future similar mistakes
+   - Complete documentation enables informed future decisions
+
+#### Recommendations
+
+**DO NOT USE** this approach for interpretability analysis. The threshold mechanism is:
+- ❌ Technically correct (implementation works)
+- ❌ Conceptually flawed (fixes symptom not cause)
+- ❌ Experimentally invalid (correlations remain near-zero)
+
+**Alternative Approaches to Explore:**
+
+1. **Fix Mastery Quality First:**
+   - Increase mastery-performance loss weight (0.8 → 2.0+)
+   - Add explicit correlation loss: `-corr(mastery, responses)`
+   - Use ranking loss instead of BCE for mastery alignment
+   - Consider architectural constraints forcing prediction to depend on mastery
+
+2. **Intrinsic Interpretability (Not Post-Hoc):**
+   - Attention-as-mastery: derive mastery directly from attention weights
+   - Gating mechanisms: force predictions through interpretability bottleneck
+   - Disentangled representations: separate content (what) from proficiency (how well)
+
+3. **Supervised Pre-training:**
+   - Pre-train mastery head on explicit skill labels (if available)
+   - Transfer from models with better mastery alignment
+   - Multi-task learning with external proficiency estimates
+
+4. **Hybrid Approaches:**
+   - Combine multiple mastery signals (attention + projection + external)
+   - Ensemble interpretability: vote across different mechanisms
+   - Calibration post-processing on validated subset
+
+**Code Retention Decision:**
+- Code remains in repository as **reference implementation** and **cautionary example**
+- Disabled by default (`use_learnable_threshold=false` in parameter_default.json)
+- Documentation serves as warning against similar approaches
+- May be useful if mastery quality improves in future iterations
+
+**Research Impact:**
+- Validates importance of mastery-performance correlation as evaluation metric
+- Demonstrates limitations of post-hoc interpretability on opaque representations
+- Provides complete failure analysis methodology for future experiments
+- Emphasizes "fix the cause, not the symptom" principle
+
 ---
 
 ## Overall Architecture Compliance
@@ -1086,6 +1294,7 @@ The learnable alpha architecture achieves its **primary goal** (personalization 
 | **Monitoring** | Real-time interpretability analysis, configurable frequency | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety | ✅ Perfect |
 | **Intrinsic Gain Attention** | Alternative parameter-efficient mode | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ✅ Complete with validated trade-offs |
 | **Causal Mastery + Learnable Alpha** | IRT-inspired personalization with skill-specific and student-specific learning rates | `use_causal_mastery` + `use_learnable_alpha` flags, α[s,k] = α_student[s] × α_skill[k], sigmoid learning curves | ⚠️ Implemented, requires validation |
+| **Learnable Threshold** | Differentiable saturation detection with Q-matrix logic | `use_learnable_threshold` flag, soft thresholding, skill_readiness integration | ❌ Implemented but ABANDONED (mastery values uncorrelated with performance) |
 
 ### Key Implementation Strengths
 
