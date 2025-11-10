@@ -28,13 +28,16 @@ class GainAKT2Exp(GainAKT2):
                  non_negative_loss_weight=0.1,
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
-                 consistency_loss_weight=0.1, monitor_frequency=50):
+                 consistency_loss_weight=0.1, monitor_frequency=50, 
+                 alpha_learning_rate=1.0, use_causal_mastery=False):
         """
         Initialize the monitored GainAKT2Exp model.
         
         Args:
             monitor_frequency (int): How often to compute interpretability metrics during training
             intrinsic_gain_attention (bool): If True, use intrinsic gain attention mode
+            alpha_learning_rate (float): Learning rate parameter for sigmoid mastery curve (default: 1.0)
+            use_causal_mastery (bool): If True, use causal mastery architecture with skill-specific masking
             Other args: Same as base GainAKT2 model
         """
         # Allow disabling heads for a pure predictive baseline; otherwise enable.
@@ -56,9 +59,101 @@ class GainAKT2Exp(GainAKT2):
         self.interpretability_monitor = None
         self.step_count = 0
         
+        # Causal mastery architecture parameters
+        self.use_causal_mastery = use_causal_mastery
+        self.alpha_learning_rate = alpha_learning_rate
+        
     def set_monitor(self, monitor):
         """Set the interpretability monitor hook."""
         self.interpretability_monitor = monitor
+    
+    def build_skill_causal_mask(self, questions, device):
+        """
+        Build a skill-specific causal mask for cumulative mastery computation.
+        
+        This mask enforces two constraints:
+        1. Temporal causality: Only past interactions (i <= t) can contribute to mastery at time t
+        2. Skill relevance: Only interactions involving skill k can contribute to mastery[k]
+        
+        Args:
+            questions (torch.Tensor): Question IDs [batch_size, seq_len]
+            device: Device to create the mask on
+            
+        Returns:
+            torch.Tensor: Boolean mask of shape [batch_size, seq_len, seq_len, num_skills]
+                         mask[b,t,i,k] = True if:
+                         - interaction i occurred at or before time t (i <= t)
+                         - interaction i involved skill k (questions[b,i] == k)
+        """
+        batch_size, seq_len = questions.shape
+        num_c = self.num_c
+        
+        # 1. Temporal causality: i <= t (lower triangular mask including diagonal)
+        # Shape: [seq_len, seq_len]
+        temporal_mask = torch.tril(torch.ones((seq_len, seq_len), device=device)).bool()
+        
+        # 2. Skill relevance: questions[b,i] == k
+        # Create one-hot encoding: skill_mask[b,i,k] = (questions[b,i] == k)
+        # Shape: [batch_size, seq_len, num_skills]
+        skill_mask = torch.zeros((batch_size, seq_len, num_c), device=device).bool()
+        skill_mask.scatter_(2, questions.unsqueeze(-1), 1)
+        
+        # 3. Combine both constraints: [B, L, L, C]
+        # temporal_mask[t,i]: can time t see time i?
+        # skill_mask[b,i,k]: does interaction i involve skill k?
+        # Broadcast: [1, L, L, 1] & [B, 1, L, C] -> [B, L, L, C]
+        causal_mask = temporal_mask.unsqueeze(0).unsqueeze(-1) & skill_mask.unsqueeze(1)
+        
+        return causal_mask
+    
+    def compute_cumulative_gains(self, gains, questions, device):
+        """
+        Compute cumulative gains per skill using causal masking.
+        
+        For each skill k at time t, sum all gains from past interactions involving skill k:
+        cumulative_gains[t,k] = Σ_{i≤t, q[i]=k} gains[i,k]
+        
+        Args:
+            gains (torch.Tensor): Learning gains [batch_size, seq_len, num_skills]
+            questions (torch.Tensor): Question IDs [batch_size, seq_len]
+            device: Device for computation
+            
+        Returns:
+            torch.Tensor: Cumulative gains [batch_size, seq_len, num_skills]
+        """
+        # Build skill-specific causal mask: [B, L, L, C]
+        causal_mask = self.build_skill_causal_mask(questions, device)
+        
+        # Aggregate gains using einsum:
+        # causal_mask[b,t,i,c]: can time t use gain from time i for skill c?
+        # gains[b,i,c]: gain at time i for skill c
+        # Sum over i: cumulative_gains[b,t,c] = Σ_i mask[b,t,i,c] * gains[b,i,c]
+        cumulative_gains = torch.einsum('btic,bic->btc', causal_mask.float(), gains)
+        
+        return cumulative_gains
+    
+    def apply_learning_curve(self, cumulative_gains, alpha=None):
+        """
+        Apply sigmoid learning curve transformation to cumulative gains.
+        
+        Transforms unbounded cumulative gains into bounded mastery [0,1] with S-shaped growth:
+        mastery = sigmoid(alpha * cumulative_gains)
+        
+        Args:
+            cumulative_gains (torch.Tensor): Cumulative gains [batch_size, seq_len, num_skills]
+            alpha (float, optional): Learning rate parameter controlling curve steepness.
+                                    If None, uses self.alpha_learning_rate
+                                    
+        Returns:
+            torch.Tensor: Mastery levels [batch_size, seq_len, num_skills] in range (0, 1)
+        """
+        if alpha is None:
+            alpha = self.alpha_learning_rate
+            
+        # Apply sigmoid transformation with alpha scaling
+        mastery = torch.sigmoid(alpha * cumulative_gains)
+        
+        return mastery
         
     def forward_with_states(self, q, r, qry=None, batch_idx=None):
         """
@@ -129,7 +224,19 @@ class GainAKT2Exp(GainAKT2):
         predictions = torch.sigmoid(logits)
         
         # 5. Optionally compute interpretability projections
-        if self.intrinsic_gain_attention:
+        if self.use_causal_mastery and self.use_gain_head:
+            # Causal Mastery Mode: Architecturally enforce cumulative learning principle
+            # Step 1: Project gains with sigmoid activation (bounded [0,1])
+            projected_gains_raw = self.gain_head(value_seq)
+            projected_gains = torch.sigmoid(projected_gains_raw)  # Sigmoid for [0,1] bounds
+            
+            # Step 2: Compute cumulative gains using skill-specific causal masking
+            cumulative_gains = self.compute_cumulative_gains(projected_gains, q, q.device)
+            
+            # Step 3: Apply sigmoid learning curve transformation
+            projected_mastery = self.apply_learning_curve(cumulative_gains, self.alpha_learning_rate)
+            
+        elif self.intrinsic_gain_attention:
             # Intrinsic mode: retrieve aggregated gains directly from attention mechanism
             aggregated_gains = self.get_aggregated_gains()
             
@@ -137,7 +244,7 @@ class GainAKT2Exp(GainAKT2):
                 # Apply non-negativity activation to aggregated gains
                 projected_gains = torch.relu(aggregated_gains)  # Ensure non-negativity
                 
-                # Compute cumulative mastery from gains
+                # Compute cumulative mastery from gains (recursive approach)
                 batch_size, seq_len, num_c = projected_gains.shape
                 projected_mastery = torch.zeros_like(projected_gains)
                 projected_mastery[:, 0, :] = torch.clamp(projected_gains[:, 0, :] * 0.1, min=0.0, max=1.0)
@@ -148,7 +255,7 @@ class GainAKT2Exp(GainAKT2):
                 projected_mastery = None
                 projected_gains = None
         elif self.use_gain_head and self.use_mastery_head:
-            # Legacy mode: use projection heads
+            # Baseline (Recursive) Mode: use projection heads with recursive accumulation
             projected_gains_raw = self.gain_head(value_seq)  
             projected_gains = torch.relu(projected_gains_raw)  # enforce non-negativity
 
@@ -332,6 +439,8 @@ def create_exp_model(config):
         use_mastery_head=config.get('use_mastery_head', True),
         use_gain_head=config.get('use_gain_head', True),
         intrinsic_gain_attention=config.get('intrinsic_gain_attention', False),
+        use_causal_mastery=config.get('use_causal_mastery', False),
+        alpha_learning_rate=config.get('alpha_learning_rate', 1.0),
         non_negative_loss_weight=config.get('non_negative_loss_weight', 0.1),
         monotonicity_loss_weight=config.get('monotonicity_loss_weight', 0.1),
         mastery_performance_loss_weight=config.get('mastery_performance_loss_weight', 0.1),
