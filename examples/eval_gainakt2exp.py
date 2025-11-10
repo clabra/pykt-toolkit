@@ -117,9 +117,16 @@ def main():
     parser.add_argument('--d_ff', type=int, required=True)
     parser.add_argument('--dropout', type=float, required=True)
     parser.add_argument('--emb_type', type=str, required=True)
-    parser.add_argument('--use_mastery_head', action='store_true')
-    parser.add_argument('--use_gain_head', action='store_true')
-    parser.add_argument('--intrinsic_gain_attention', action='store_true')
+    # CRITICAL ARCHITECTURAL FLAGS: These determine model structure and MUST match training
+    # Note: action='store_true' means flag absent=False, present=True
+    # Launcher (run_repro_experiment.py) explicitly passes these based on config
+    # If evaluating manually, MUST specify these flags correctly to match training architecture
+    parser.add_argument('--use_mastery_head', action='store_true',
+                        help='Enable mastery projection head (REQUIRED for correct model loading)')
+    parser.add_argument('--use_gain_head', action='store_true',
+                        help='Enable gain projection head (REQUIRED for correct model loading)')
+    parser.add_argument('--intrinsic_gain_attention', action='store_true',
+                        help='Use intrinsic gain attention mode (changes architecture)')
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)

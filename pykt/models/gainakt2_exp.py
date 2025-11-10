@@ -314,29 +314,39 @@ def create_exp_model(config):
     """
     Factory function to create a GainAKT2Exp model from config.
     
+    All parameters must be present in config dict (no fallback defaults).
+    Fails fast with clear KeyError if any parameter is missing.
+    
     Args:
-        config (dict): Model configuration parameters
+        config (dict): Model configuration parameters (all required)
         
     Returns:
         GainAKT2Exp: Configured model instance
+        
+    Raises:
+        KeyError: If any required parameter is missing from config
     """
-    return GainAKT2Exp(
-        num_c=config.get('num_c', 100),
-        seq_len=config.get('seq_len', 200), 
-        d_model=config.get('d_model', 256),
-        n_heads=config.get('n_heads', 8),
-        num_encoder_blocks=config.get('num_encoder_blocks', 4),
-        d_ff=config.get('d_ff', 768),
-        dropout=config.get('dropout', 0.2),
-        emb_type=config.get('emb_type', 'qid'),
-        use_mastery_head=config.get('use_mastery_head', True),
-        use_gain_head=config.get('use_gain_head', True),
-        intrinsic_gain_attention=config.get('intrinsic_gain_attention', False),
-        non_negative_loss_weight=config.get('non_negative_loss_weight', 0.1),
-        monotonicity_loss_weight=config.get('monotonicity_loss_weight', 0.1),
-        mastery_performance_loss_weight=config.get('mastery_performance_loss_weight', 0.1),
-        gain_performance_loss_weight=config.get('gain_performance_loss_weight', 0.1),
-        sparsity_loss_weight=config.get('sparsity_loss_weight', 0.1),
-        consistency_loss_weight=config.get('consistency_loss_weight', 0.1),
-        monitor_frequency=config.get('monitor_frequency', 50)
-    )
+    try:
+        return GainAKT2Exp(
+            num_c=config['num_c'],
+            seq_len=config['seq_len'], 
+            d_model=config['d_model'],
+            n_heads=config['n_heads'],
+            num_encoder_blocks=config['num_encoder_blocks'],
+            d_ff=config['d_ff'],
+            dropout=config['dropout'],
+            emb_type=config['emb_type'],
+            use_mastery_head=config['use_mastery_head'],
+            use_gain_head=config['use_gain_head'],
+            intrinsic_gain_attention=config['intrinsic_gain_attention'],
+            non_negative_loss_weight=config['non_negative_loss_weight'],
+            monotonicity_loss_weight=config['monotonicity_loss_weight'],
+            mastery_performance_loss_weight=config['mastery_performance_loss_weight'],
+            gain_performance_loss_weight=config['gain_performance_loss_weight'],
+            sparsity_loss_weight=config['sparsity_loss_weight'],
+            consistency_loss_weight=config['consistency_loss_weight'],
+            monitor_frequency=config['monitor_frequency']
+        )
+    except KeyError as e:
+        raise ValueError(f"Missing required parameter in model config: {e}. "
+                        f"All parameters must be explicitly provided (no defaults).") from e
