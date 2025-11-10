@@ -2907,28 +2907,223 @@ python examples/eval_gainakt2exp.py [arguments from config.json eval_explicit fi
 
 ---
 
-## Next Steps for Publication (Priority: IMMEDIATE)
+## Current Status Summary (November 2025)
 
-### Status Summary
+### Experimental Validation Complete
 
-**✅ EXPERIMENTS COMPLETE:**
-- Baseline multi-seed validation (N=5): Test AUC 0.720±0.001, Mastery 0.095±0.018, Gain 0.028±0.004
-- Intrinsic multi-seed validation (N=5): Test AUC 0.714±0.001, 13% parameter reduction
-- Statistical analysis complete: Paired t-tests, bootstrap CIs, comprehensive comparison
-- All data persisted: 10 experiment folders with config.json, results.json, eval_results.json
-- Analysis scripts ready: `tmp/intrinsic_multi_seed_analysis.py` generates all tables/figures
+**✅ BASELINE ARCHITECTURE (Features 1-5):**
+- Multi-seed validation (N=5): Test AUC 0.720±0.001, Mastery 0.095±0.018, Gain 0.028±0.004
+- Competitive predictive performance maintained across seeds
+- Dual-stream architecture + projection heads + auxiliary losses fully implemented
+- Statistical rigor demonstrated (paired t-tests, bootstrap CIs)
 
-**✅ CORE NARRATIVE ESTABLISHED:**
-- **Main claim:** Projection heads + explicit supervision necessary for interpretable gains
-- **Empirical support:** Multi-seed ablation (baseline vs intrinsic) proves necessity
-- **Practical contribution:** Reproducible interpretability metrics + clear design guidelines
-- **Honest reporting:** Intrinsic mode trade-offs transparently documented
+**⚠️ INTERPRETABILITY STATUS: PRELIMINARY**
+- Mastery correlation: 0.095±0.018 (LOW - expected >0.5 for robust interpretation)
+- Gain correlation: 0.028±0.004 (VERY LOW)
+- Correlations insufficient for validated educational insights
+- Auxiliary loss weight (0.8) provides inadequate supervision
 
-**✅ NO ADDITIONAL EXPERIMENTS NEEDED:**
-- All claims supported by current data
-- Statistical rigor demonstrated (N=5, paired testing)
-- Ablation complete (architectural comparison)
-- Limitation analysis thorough (intrinsic mode failure well-documented)
+**❌ FEATURE 6 (INTRINSIC GAIN): DISCARDED**
+- Multi-seed validation (N=5): Test AUC 0.714±0.001, 13% parameter reduction
+- Gain correlation: -0.0065±0.020 (60% seeds negative, unstable)
+- Conclusion: Attention ≠ Learning, explicit supervision necessary
+- Documented trade-offs: efficiency vs interpretability cannot be "free"
+
+**❌ FEATURE 7 (LEARNABLE ALPHA): REQUIRES VALIDATION**
+- Single-seed experiment: Test AUC 0.7188 (performance parity maintained)
+- **CRITICAL ISSUE:** Mastery correlation dropped 95% (0.089 → 0.004)
+- Gain correlation: 0.0314 (marginally improved +10%)
+- Personalization implemented but interpretability severely degraded
+- **STATUS:** Needs multi-seed validation + mastery quality investigation
+
+**❌ FEATURE 8 (LEARNABLE THRESHOLD): ABANDONED**
+- Implemented complete differentiable threshold architecture
+- Experimental validation failed: threshold barely learned (0.5 → 0.525)
+- Root cause: Mastery values uncorrelated with performance (r=0.02)
+- Lesson: Post-hoc interpretability mechanisms fail on bad representations
+- **Conclusion:** Fix mastery quality first, threshold second
+
+### Critical Issue Identified: Mastery Quality
+
+**The Interpretability Bottleneck:**
+
+All interpretability experiments (Features 6, 7, 8) revealed the same root problem:
+- **Mastery projection produces values uncorrelated with skill proficiency**
+- Mastery-performance correlation stuck at r=0.02-0.10 (expected r>0.5)
+- Auxiliary losses (weight 0.8) insufficient to enforce educational validity
+- Model learns to bypass interpretability components and predict from context alone
+
+**Why This Matters for Publication:**
+1. **Cannot claim interpretability** with correlations <0.1
+2. **Projection heads are technically functional** but educationally meaningless
+3. **Architecture is sound** but supervision strategy is inadequate
+4. Must reframe contribution OR fix mastery quality before publication
+
+### Publication Options Analysis
+
+**OPTION 1: ARCHITECTURE PAPER (Fast Track - 2 weeks)**
+
+**Claim:** "Novel dual-stream Transformer architecture maintaining competitive performance while providing framework for future interpretability research"
+
+**What We Can Say:**
+- ✅ Dual-stream design separates knowledge state from response context (novel in KT)
+- ✅ Projection heads and auxiliary loss framework implemented (technical contribution)
+- ✅ Competitive AUC 0.72 on ASSIST2015 (performance parity with SOTA)
+- ✅ Ablation studies validate architectural design choices
+- ✅ Framework enables future interpretability through stronger supervision
+
+**What We CANNOT Say:**
+- ❌ "Interpretable knowledge tracing model" (correlations too low)
+- ❌ "Validated educational insights from learned representations"
+- ❌ "Skill mastery estimates align with proficiency" (r=0.02-0.10)
+- ❌ "Superior to black-box models in interpretability"
+
+**Honest Framing:**
+```
+"While our architecture includes projection heads for mastery/gain estimation,
+preliminary correlations (r=0.02-0.10) indicate current auxiliary losses 
+provide insufficient supervision for robust educational interpretation. We 
+position this work as an architectural foundation that future research can 
+build upon through stronger supervisory signals, architectural constraints, 
+or hybrid approaches."
+```
+
+**Target Venues:**
+- ML conferences (NeurIPS/ICML workshops): Architecture novelty sufficient
+- AI conferences (AAAI/IJCAI short papers): Need strong motivation
+- NOT education conferences (EDM/LAK): Would require validated interpretability
+
+**Publication Strength:** Honest technical contribution, but weaker impact than originally envisioned
+
+---
+
+**OPTION 2: FIX MASTERY QUALITY FIRST (Medium Track - 3-4 weeks)**
+
+**Strategy:** Address root cause before publication to enable stronger interpretability claims
+
+**Phase 1: Mastery Quality Fix (1 week)**
+1. **Increase supervision weight:** Mastery loss 0.8 → 5.0 (or higher)
+2. **Add correlation loss:** `-torch.corrcoef(mastery, responses)[0,1]` with weight 2.0
+3. **Architectural constraints:** Consider gating mechanism forcing predictions through mastery
+4. **Ablation study:** Test weights [0.8, 2.0, 5.0, 10.0] to find optimal balance
+
+**Target Metric:** Mastery correlation >0.3 (acceptable for publication claim)
+
+**Phase 2: Multi-Seed Validation (1 week)**
+- Run improved model on 5 seeds (42, 7, 2025, 12345, 99999)
+- Verify mastery improvements are stable (not seed-dependent)
+- Check predictive performance maintained (AUC should stay ~0.72)
+
+**Phase 3: Feature 7 Revalidation (1 week)**
+- Re-run learnable alpha experiments with improved mastery quality
+- Check if personalization still degrades correlations
+- If correlations stable, include Feature 7 in paper
+
+**Phase 4: Paper Writing (1 week)**
+- NOW can claim: "Interpretable knowledge tracing with validated mastery estimates"
+- Strong correlations justify educational analysis and case studies
+- Feature 7 (learnable alpha) becomes compelling personalization contribution
+
+**Publication Strength:** Much stronger interpretability claims, competitive with or superior to related work
+
+**Risk:** No guarantee mastery fix will work (might need architectural changes beyond loss weights)
+
+---
+
+**OPTION 3: TWO-PAPER STRATEGY (Recommended for Risk Mitigation)**
+
+**Paper 1 (NOW - 2 weeks):** Architecture + Performance
+- Submit to workshop or conference short paper track
+- Focus on dual-stream design, competitive performance
+- Frame interpretability as "future work" direction
+- Lower barrier, faster publication
+
+**Paper 2 (LATER - after mastery fix):** Interpretability Validation
+- Full conference paper or journal article
+- Strong interpretability claims with validated correlations
+- Include Feature 7 (learnable alpha) and other extensions
+- Cite Paper 1 as foundational architecture work
+
+**Benefits:**
+- ✅ Get publication credit NOW (Paper 1 establishes priority)
+- ✅ Reduce risk (mastery fix uncertain, don't block first paper on it)
+- ✅ Better story (two focused papers > one mixed-message paper)
+- ✅ More citations (Paper 2 cites Paper 1, builds narrative)
+
+---
+
+### Recommended Action Plan
+
+**MY RECOMMENDATION: Option 1 + Parallel mastery work (Hybrid approach)**
+
+**Immediate Actions (Week 1-2):**
+1. **Start writing Paper 1** focusing on architecture contribution
+   - Target: Workshop paper or conference short paper (4-6 pages)
+   - Frame: "Framework for interpretable KT" not "interpretable KT achieved"
+   - Include honest limitations section about current correlation values
+   
+2. **Launch mastery quality experiments in parallel**
+   - Test increased loss weights (5.0, 10.0) on single seed first
+   - If promising (mastery_corr >0.3), proceed to multi-seed validation
+   - This doesn't block Paper 1 writing
+
+**Decision Point (Week 3):**
+- **If mastery fix works:** Upgrade Paper 1 claims, extend to full paper
+- **If mastery fix fails:** Submit Paper 1 as-is to workshop, continue research
+
+**Contingency Planning:**
+- Paper 1 gets accepted → establishes credibility, validates architecture
+- Paper 1 gets rejected → feedback guides mastery fix approach
+- Mastery fix works → strengthens Paper 1 or enables Paper 2
+- Mastery fix fails → Paper 1 still publishable, pivot research direction
+
+---
+
+### Next Concrete Steps (IMMEDIATE - Next 48 hours)
+
+**Step 1: Launch Quick Mastery Ablation**
+```bash
+# Test mastery loss weight = 5.0 (single seed 42, quick validation)
+python examples/run_repro_experiment.py \
+  --model_name gainakt2exp \
+  --dataset_name assist2015 \
+  --fold 0 \
+  --seed 42 \
+  --use_causal_mastery \
+  --mastery_loss_weight 5.0 \
+  --tag mastery_weight5
+```
+
+**Step 2: Start Paper Outline**
+```bash
+# Create paper directory structure
+mkdir -p paper/gainakt2exp_v1/{sections,figures,tables}
+touch paper/gainakt2exp_v1/outline.md
+```
+
+**Step 3: Decide Publication Strategy**
+**YOUR INPUT NEEDED:** Which option do you prefer?
+- A. **Fast (Option 1)**: Architecture paper in 2 weeks, weaker claims
+- B. **Quality (Option 2)**: Fix mastery first, 4 weeks, stronger claims  
+- C. **Hybrid (My recommendation)**: Start both, decide based on results
+
+---
+
+### Key Metrics for Publication Decision
+
+| Metric | Current | Minimum for Publication | Ideal for Strong Claims |
+|--------|---------|------------------------|-------------------------|
+| **Test AUC** | 0.720±0.001 | >0.70 ✅ | >0.75 |
+| **Mastery Correlation** | 0.095±0.018 | >0.20 ⚠️ | >0.50 |
+| **Gain Correlation** | 0.028±0.004 | >0.10 ⚠️ | >0.30 |
+| **Multi-seed N** | 5 ✅ | ≥3 | ≥5 |
+| **Statistical Testing** | Yes ✅ | Required | Required |
+
+**Current Status:** Performance metrics sufficient, interpretability metrics marginal
+
+**Path to Publication:**
+- **Architecture focus:** Already meets criteria (AUC sufficient, multi-seed done)
+- **Interpretability focus:** Need to improve mastery/gain correlations first
 
 ### Immediate Action Plan (4-Week Timeline)
 
@@ -3132,18 +3327,366 @@ python examples/eval_gainakt2exp.py [arguments from config.json eval_explicit fi
 
 ---
 
-### Decision Point: PROCEED WITH WRITING NOW
+---
 
-**Rationale:**
-- ✅ All critical experiments complete
-- ✅ Core claims validated and defensible
-- ✅ Narrative clear and differentiated
-- ✅ No blocking issues identified
+## CRITICAL DECISION REQUIRED (November 10, 2025)
 
-**Recommendation:** **START WRITING IMMEDIATELY.** Additional experiments have diminishing returns at this stage. The current results provide sufficient novelty and rigor for a strong conference submission. Focus energy on clear presentation and honest reporting, not more experiments.
+### The Core Dilemma
 
-**Target Submission:** EDM 2025 (Educational Data Mining) — typically values methodological rigor and practical educational impact, aligns perfectly with our contribution.
+**What We Built:** Technically sound dual-stream architecture with projection heads, auxiliary losses, competitive performance
+
+**What We Hoped For:** Validated interpretability with mastery/gain correlations >0.5
+
+**What We Got:** Correlations 0.02-0.10 (too low for robust educational interpretation)
+
+**The Question:** Do we publish what we have (architecture focus) or fix interpretability first (quality focus)?
 
 ---
+
+### Three Paths Forward
+
+#### PATH A: Architecture Paper (FAST - 2 weeks to submission)
+
+**Timeline:** 2 weeks  
+**Risk Level:** LOW  
+**Publication Probability:** MEDIUM (workshop/short paper likely, full paper uncertain)
+
+**What to Claim:**
+- "Novel dual-stream Transformer architecture for knowledge tracing"
+- "Competitive performance (AUC 0.72) with framework for interpretability"
+- "Comprehensive ablation validating architectural design choices"
+
+**What NOT to Claim:**
+- Interpretability achieved (correlations too low)
+- Educational insights validated (insufficient evidence)
+- Superior to existing models (only performance parity)
+
+**Honest Abstract Example:**
+```
+"We propose GainAKT, a dual-stream Transformer architecture that separates 
+knowledge state estimation from response context modeling. While projection 
+heads for skill mastery and learning gains achieve competitive predictive 
+performance (AUC 0.72±0.001), preliminary mastery-performance correlations 
+(r=0.095) remain below thresholds for robust educational interpretation. 
+We position this work as an architectural framework enabling future 
+interpretability research through stronger supervision or architectural 
+constraints."
+```
+
+**Best Venue:** 
+- NeurIPS/ICML workshop papers
+- AAAI/IJCAI short papers
+- arXiv preprint (establish priority, no peer review delay)
+
+**Pros:**
+- ✅ Fast publication establishes priority
+- ✅ Low risk (claims are defensible as-is)
+- ✅ Framework contribution still valuable
+- ✅ Allows iterative improvement (Paper 2 later)
+
+**Cons:**
+- ❌ Weaker impact (architecture-only less novel)
+- ❌ May face "why not just use AKT?" criticism
+- ❌ Doesn't deliver on original interpretability vision
+- ❌ Workshop papers have lower prestige
+
+**Next Steps if Chosen:**
+1. Start paper outline TODAY (focus on architecture + performance)
+2. Generate figures from existing experiments (3-4 days)
+3. Write sections 1-6 (1.5 weeks)
+4. Submit to workshop by end of November
+
+---
+
+#### PATH B: Fix Mastery First (QUALITY - 4 weeks to submission)
+
+**Timeline:** 4 weeks  
+**Risk Level:** MEDIUM-HIGH  
+**Publication Probability:** HIGH (full conference paper if mastery fix works)
+
+**Strategy:**
+
+**Week 1: Mastery Quality Ablation**
+- Test mastery loss weights: [2.0, 5.0, 10.0, 20.0]
+- Add explicit correlation loss: `-corr(mastery, responses)` with weight [1.0, 2.0, 5.0]
+- Target: Achieve mastery correlation >0.3 on single seed
+- Experiment count: ~4-8 runs (faster than multi-seed)
+
+**Week 2: Multi-Seed Validation**
+- Run best configuration on 5 seeds (42, 7, 2025, 12345, 99999)
+- Verify mastery improvements stable across seeds
+- Check predictive performance maintained (AUC ~0.72)
+- Validate gain correlations also improve
+
+**Week 3: Feature 7 Revalidation (Optional)**
+- Re-run learnable alpha with improved mastery
+- If correlations stable, include as key contribution
+- If still degraded, exclude from paper
+
+**Week 4: Write Paper**
+- NOW can claim interpretability with validated evidence
+- Include case studies showing educational insights
+- Strong discussion of design principles for interpretable KT
+
+**What to Claim (if successful):**
+- "Interpretable knowledge tracing with validated mastery estimates (r>0.3)"
+- "Explicit supervision via projection heads necessary for interpretability"
+- "Multi-seed validated reproducibility of interpretability metrics"
+- "IRT-inspired personalization maintaining interpretability" (if Feature 7 works)
+
+**Best Venue:**
+- EDM 2025 (Educational Data Mining) - full paper
+- AIED 2025 (AI in Education) - full paper
+- KDD 2025 (workshop track on educational ML)
+
+**Pros:**
+- ✅ Stronger claims justify full conference paper
+- ✅ Delivers on original interpretability vision
+- ✅ Competitive advantage over pure performance models
+- ✅ Educational validity enables real-world applications
+
+**Cons:**
+- ❌ 4 weeks delay (publication priority risk)
+- ❌ NO GUARANTEE mastery fix will work
+- ❌ May require architectural changes (not just loss weights)
+- ❌ If fails, wasted 4 weeks (back to Path A anyway)
+
+**Risk Mitigation:**
+- Week 1 quick experiments reveal if approach viable
+- Can abort after Week 1 if no improvement, switch to Path A
+- Worst case: 1 week delay vs. Path A
+
+**Next Steps if Chosen:**
+1. Launch mastery ablation experiments TOMORROW
+2. Decision point after 3-4 days: continue or abort?
+3. If promising, proceed to multi-seed validation
+4. If not, immediately switch to Path A
+
+---
+
+#### PATH C: Hybrid Approach (RECOMMENDED - 2-4 weeks adaptive)
+
+**Timeline:** 2-4 weeks (adaptive based on results)  
+**Risk Level:** LOW  
+**Publication Probability:** HIGH (guaranteed at least workshop paper, possible full paper)
+
+**Strategy:**
+
+**Week 1: PARALLEL EFFORTS**
+
+**Track 1 (Paper Writing):**
+- Start drafting architecture-focused paper (Path A version)
+- Sections 1-3 (Intro, Related Work, Method) independent of mastery results
+- Generate figures from existing baseline experiments
+- Target: Complete 50% of paper regardless of mastery experiments
+
+**Track 2 (Mastery Experiments):**
+- Launch quick ablation: loss weights [5.0, 10.0] on seed 42
+- Run overnight, analyze results next morning
+- If mastery_corr >0.3: PROCEED to multi-seed
+- If mastery_corr still <0.2: ABORT, focus on Track 1
+
+**Week 2: DECISION POINT**
+
+**Scenario A: Mastery fix worked (corr >0.3)**
+- Continue multi-seed validation (Track 2)
+- Upgrade paper claims from architecture to interpretability (Track 1)
+- Timeline extends to Week 4, but stronger paper
+
+**Scenario B: Mastery fix failed (corr <0.2)**
+- Abort Track 2, document findings as "future work"
+- Complete architecture paper (Track 1)
+- Submit to workshop by end of Week 3
+
+**Week 3-4: COMPLETION**
+- If Scenario A: Write interpretability sections, prepare full paper
+- If Scenario B: Polish architecture paper, submit to workshop
+
+**What to Claim:**
+- **Minimum (Scenario B):** Architecture contribution (Path A claims)
+- **Maximum (Scenario A):** Interpretability validation (Path B claims)
+- **Adaptive:** Let experimental results determine scope
+
+**Best Venues:**
+- **Scenario A:** EDM/AIED full paper
+- **Scenario B:** NeurIPS/ICML workshop or AAAI short paper
+- **Both:** arXiv preprint (establish priority immediately)
+
+**Pros:**
+- ✅ GUARANTEED publication (at least Path A)
+- ✅ POTENTIAL for stronger claims (if Path B works)
+- ✅ Low risk (parallel tracks hedge uncertainty)
+- ✅ Week 1 decision point minimizes wasted effort
+- ✅ Writing proceeds regardless of experiments
+
+**Cons:**
+- ❌ Requires parallel effort (more intense Week 1)
+- ❌ Paper direction uncertain until Week 2
+- ❌ May need to rewrite sections if claims change
+
+**Next Steps if Chosen:**
+1. **TONIGHT:** Launch mastery weight=10.0 experiment (seed 42)
+2. **TOMORROW:** Start paper outline + Section 1 (Introduction)
+3. **Day 3:** Check experiment results, make go/no-go decision
+4. **Day 4-7:** Continue paper + experiments based on Day 3 decision
+
+---
+
+### My Recommendation: PATH C (Hybrid)
+
+**Why:**
+
+1. **Risk Management:** Guarantees at least workshop paper, potential for full paper
+2. **Efficient:** Parallel tracks maximize productivity, minimize delays
+3. **Adaptive:** Early decision point (Day 3) prevents wasted effort
+4. **Psychological:** Making progress on paper maintains momentum
+5. **Strategic:** arXiv preprint establishes priority while continuing improvements
+
+**Critical Success Factors:**
+
+✅ **Quick decision point:** Don't spend >1 week on mastery experiments without evidence of improvement  
+✅ **Parallel execution:** Write paper sections that are stable regardless of experiments  
+✅ **Honest framing:** Architecture paper is legitimate contribution even without interpretability  
+✅ **Version control:** Maintain two paper versions (architecture-focused vs. interpretability-focused)
+
+**Failure Modes to Avoid:**
+
+❌ Spending 3-4 weeks on mastery experiments that don't improve correlations  
+❌ Waiting for "perfect" results before starting to write  
+❌ Overpromising interpretability in paper if correlations remain low  
+❌ Missing submission deadlines due to scope creep
+
+---
+
+## IMMEDIATE ACTION ITEMS (Next 48 Hours)
+
+### Action 1: Launch Mastery Ablation Experiment (TONIGHT)
+
+```bash
+# Activate environment
+source /home/vscode/.pykt-env/bin/activate
+
+# Quick test: mastery_loss_weight = 10.0 (5x current baseline)
+python examples/run_repro_experiment.py \
+  --model_name gainakt2exp \
+  --dataset_name assist2015 \
+  --fold 0 \
+  --seed 42 \
+  --use_causal_mastery \
+  --mastery_loss_weight 10.0 \
+  --emb_size 64 \
+  --n_blocks 4 \
+  --n_heads 8 \
+  --batch_size 32 \
+  --learning_rate 1e-3 \
+  --tag mastery_weight10 \
+  --max_epochs 20 \
+  --use_wandb 0
+
+# Runtime: ~4-6 hours, can run overnight
+# Output: examples/experiments/YYYYMMDD_HHMMSS_gainakt2exp_mastery_weight10_seed42_*/
+```
+
+**Success Criterion:** Mastery correlation >0.3 by epoch 20
+
+### Action 2: Start Paper Outline (TOMORROW MORNING)
+
+```bash
+# Create paper directory
+mkdir -p paper/gainakt2exp_v1/{sections,figures,tables}
+
+# Create outline template
+cat > paper/gainakt2exp_v1/outline.md << 'EOF'
+# GainAKT: Dual-Stream Transformer Architecture for Knowledge Tracing
+
+## Paper Outline (Architecture Focus - Path A Version)
+
+### 1. Introduction (2 pages)
+- Problem: Transformer KT models are black boxes
+- Gap: No validated interpretability in attention-based KT
+- Contribution: Architecture framework for interpretable KT
+- Key finding: Explicit supervision necessary (Multi-seed ablation evidence)
+
+### 2. Related Work (1.5 pages)
+- Transformer KT: AKT, SAKT, SAINT (performance but no interpretability)
+- Interpretability attempts: Attention visualization (not validated)
+- Learning gain modeling: Cognitive science foundations
+
+### 3. Method (3 pages)
+- 3.1 Architecture: Dual-stream, projection heads, auxiliary losses
+- 3.2 Baseline Mode: Explicit projection heads (Figure 1: architecture diagram)
+- 3.3 Intrinsic Mode: Attention-derived gains (ablation baseline)
+
+### 4. Experiments (2 pages)
+- 4.1 Setup: ASSIST2015, 5 seeds, metrics
+- 4.2 Baseline Results: Multi-seed validation (Table 1)
+- 4.3 Ablation Study: Baseline vs Intrinsic (Table 2)
+
+### 5. Results & Discussion (2 pages)
+- 5.1 Performance: AUC 0.72±0.001 (competitive)
+- 5.2 Interpretability: Mastery 0.095±0.018 (preliminary, insufficient)
+- 5.3 Ablation: Explicit supervision necessary (Figure 2: correlation comparison)
+
+### 6. Limitations & Future Work (1 page)
+- Single dataset (cross-validation deferred)
+- Low correlations (stronger supervision needed)
+- Framework extensibility (Q-matrix, hybrid approaches)
+
+### 7. Conclusion (0.5 page)
+- Architecture contribution validated
+- Path forward for interpretability research clear
+EOF
+```
+
+### Action 3: Decision Point (DAY 3 - Check Experiment Results)
+
+```bash
+# Check mastery ablation results
+cd /workspaces/pykt-toolkit
+
+# Find experiment directory
+EXPDIR=$(ls -td examples/experiments/*mastery_weight10* 2>/dev/null | head -1)
+
+# Extract mastery correlation from last epoch
+python -c "
+import json
+with open('$EXPDIR/eval_results.json') as f:
+    data = json.load(f)
+    mastery_corr = data.get('mastery_mean_corr', 0.0)
+    print(f'Mastery Correlation: {mastery_corr:.4f}')
+    
+    if mastery_corr > 0.3:
+        print('✅ SUCCESS: Proceed to multi-seed validation (Path B/C)')
+    elif mastery_corr > 0.2:
+        print('⚠️  MARGINAL: Consider additional weight increase or abort')
+    else:
+        print('❌ FAILED: Abort mastery experiments, focus on architecture paper (Path A)')
+"
+```
+
+**Decision Rules:**
+- `mastery_corr > 0.3`: ✅ **PROCEED** to multi-seed validation
+- `mastery_corr 0.2-0.3`: ⚠️ **TEST HIGHER WEIGHT** (try 20.0) for 1 more day
+- `mastery_corr < 0.2`: ❌ **ABORT** mastery track, complete architecture paper
+
+---
+
+## YOUR DECISION NEEDED
+
+**Which path do you choose?**
+
+**A.** Fast architecture paper (2 weeks, lower impact, guaranteed workshop paper)  
+**B.** Fix mastery first (4 weeks, higher impact, uncertain success)  
+**C.** Hybrid approach (2-4 weeks adaptive, recommended, hedged risk)
+
+**Please respond with: A, B, or C**
+
+Once you decide, I will:
+1. Launch appropriate experiments immediately
+2. Create detailed weekly task breakdown
+3. Set up paper directory structure
+4. Generate timeline with milestones
+
+**Time is critical - the longer we wait, the higher the priority risk from competing research.**
 
 
