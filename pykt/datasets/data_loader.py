@@ -6,11 +6,9 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 import numpy as np
-
-if torch.cuda.is_available():
-    from torch.cuda import FloatTensor, LongTensor
-else:
-    from torch import FloatTensor, LongTensor
+# Always use CPU tensors in Dataset - training loop will move to GPU
+# This avoids CUDA initialization issues in DataLoader worker processes
+from torch import FloatTensor, LongTensor
 
 class KTDataset(Dataset):
     """Dataset for KT
