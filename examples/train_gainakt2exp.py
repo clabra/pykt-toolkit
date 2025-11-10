@@ -502,14 +502,14 @@ def train_gainakt2exp_model(args):
         logger.info("Enhanced constraints: weights sourced from config.json interpretability section")
     elif enhanced_constraints and cfg is None:
         model_config.update({
-            'non_negative_loss_weight': 0.0,  # enforced architecturally
-            'monotonicity_loss_weight': 0.1,
-            'mastery_performance_loss_weight': 0.8,
-            'gain_performance_loss_weight': 0.8,
-            'sparsity_loss_weight': 0.2,
-            'consistency_loss_weight': 0.3
+            'non_negative_loss_weight': non_negative_loss_weight,
+            'monotonicity_loss_weight': monotonicity_loss_weight,
+            'mastery_performance_loss_weight': mastery_performance_loss_weight,
+            'gain_performance_loss_weight': gain_performance_loss_weight,
+            'sparsity_loss_weight': sparsity_loss_weight,
+            'consistency_loss_weight': consistency_loss_weight
         })
-        logger.info("Enhanced constraints preset applied (no individual overrides provided)")
+        logger.info("Enhanced constraints: weights from CLI arguments (no config file)")
     else:
         model_config.update({
             'non_negative_loss_weight': non_negative_loss_weight,
