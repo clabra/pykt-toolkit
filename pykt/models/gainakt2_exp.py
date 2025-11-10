@@ -230,9 +230,9 @@ class GainAKT2Exp(GainAKT2):
         alpha_skill_expanded = alpha_skill.unsqueeze(0).unsqueeze(0)
         alpha_student_expanded = student_alphas.unsqueeze(1).unsqueeze(2)
         
-        # Combine: [batch_size, 1, 1] + [1, 1, num_skills] → [batch_size, 1, num_skills]
-        # Then expand to [batch_size, seq_len, num_skills] for all time steps
-        alpha_combined = (alpha_student_expanded + alpha_skill_expanded).expand(batch_size, seq_len, self.num_skills)
+        # Combine: [batch_size, 1, 1] + [1, 1, num_c] → [batch_size, 1, num_c]
+        # Then expand to [batch_size, seq_len, num_c] for all time steps
+        alpha_combined = (alpha_student_expanded + alpha_skill_expanded).expand(batch_size, seq_len, self.num_c)
         
         return alpha_combined
         
