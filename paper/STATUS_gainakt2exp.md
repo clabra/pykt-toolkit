@@ -421,7 +421,7 @@ The `pykt/models/gainakt2_exp.py` model successfully implements all five augment
 
 Below is a comprehensive analysis of each component's implementation status and alignment with the Augmented Architecture Design shown in the diagram.
 
-### Feature 1: Skill Embedding Table ✅ FULLY IMPLEMENTED
+### Feature 1: Skill Embedding Table 
 
 **Expected (from diagram):** A separate embedding table that maps question IDs to skill representations, used in the prediction head to provide skill-specific context for response prediction.
 
@@ -432,7 +432,7 @@ Below is a comprehensive analysis of each component's implementation status and 
   target_concept_emb = self.concept_embedding(target_concepts)
   concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
   ```
-- **Architecture Alignment:** ✅ Perfect match
+- **Architecture Alignment:** 
   - Separate embedding table for skills/concepts (distinct from interaction embeddings)
   - Embedded size: `d_model` (consistent with context/value streams)
   - Concatenated with context and value sequences as input to prediction head
@@ -442,7 +442,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 2: Dynamic Value Stream ✅ FULLY IMPLEMENTED
+### Feature 2: Dynamic Value Stream 
 
 **Expected (from diagram):** Dual-stream architecture where context and value sequences evolve independently through encoder blocks, with Q/K computed from context and V from value stream.
 
@@ -473,7 +473,7 @@ Below is a comprehensive analysis of each component's implementation status and 
   V = self.value_proj(value_sequence)    # V from value stream
   ```
 
-**Architecture Alignment:** ✅ Perfect match
+**Architecture Alignment:** 
 - Dual independent sequences maintained throughout encoder stack
 - Separate Add & Norm operations for context and value (as shown in diagram)
 - Q/K from context, V from value exactly as specified
@@ -483,7 +483,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 3: Ground Truth Responses / Training-time Monitoring ✅ FULLY IMPLEMENTED
+### Feature 3: Ground Truth Responses / Training-time Monitoring 
 
 **Expected (from diagram):** Ground truth responses flow into loss calculation; interpretability monitor hook for real-time constraint analysis with configurable frequency.
 
@@ -523,7 +523,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 - **Configurable Frequency:** `monitor_frequency` parameter (default: 50 batches)
 - **DataParallel Safety:** Primary device guard prevents duplicate monitoring under multi-GPU training
 
-**Architecture Alignment:** ✅ Perfect match
+**Architecture Alignment:** 
 - Ground truth responses integrated into all constraint loss computations
 - Monitoring hook provides real-time interpretability analysis
 - Frequency control matches diagram's "Configurable frequency" specification
@@ -533,7 +533,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 4: Mastery and Gain Projection Heads ✅ FULLY IMPLEMENTED
+### Feature 4: Mastery and Gain Projection Heads 
 
 **Expected (from diagram):** Two linear projection heads mapping internal representations to per-skill mastery and gain estimates (shape: `[B, L, num_skills]`).
 
@@ -562,7 +562,7 @@ Below is a comprehensive analysis of each component's implementation status and 
   projected_gains = torch.relu(projected_gains_raw)  # enforce non-negativity
   ```
 
-**Architecture Alignment:** ✅ Perfect match with educational enhancements
+**Architecture Alignment:** 
 - Mastery head: `Linear(d_model, num_c)` projects context → per-skill mastery
 - Gain head: `Linear(d_model, num_c)` projects value → per-skill gains
 - Output shapes: `[batch_size, seq_len, num_c]` as specified
@@ -574,7 +574,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 ---
 
-### Feature 5: BCE + Auxiliary Loss Functions ✅ FULLY IMPLEMENTED
+### Feature 5: BCE + Auxiliary Loss Functions 
 
 **Expected (from diagram):** BCE loss for prediction accuracy plus five auxiliary losses (Non-Negative, Monotonicity, Mastery-Performance, Gain-Performance, Sparsity) with configurable weights, all integrated into total loss.
 
@@ -643,17 +643,17 @@ Below is a comprehensive analysis of each component's implementation status and 
 - Each loss has configurable weight parameter (constructor lines 27-32)
 - Skill masks computed from Q-matrix structure (line 213)
 
-**Architecture Alignment:** ✅ Exceeds specification
+**Architecture Alignment:** 
 - All 5 diagram losses implemented exactly as shown
 - 6th loss (Consistency) added for tighter mastery-gain coupling
-- Weight configuration matches diagram's "ALL WEIGHTS CONFIGURABLE" annotation
+- All weights configurable
 - Total loss formula: `BCE + w1×NonNeg + w2×Monotonicity + w3×Mastery_Perf + w4×Gain_Perf + w5×Sparsity + w6×Consistency`
 
 **Verification:** The diagram shows 5 auxiliary loss nodes feeding into "Total Loss"—implementation provides these plus an additional consistency loss, all with independently tunable weights.
 
 ---
 
-### Feature 6: Intrinsic Gain Attention Mode ❌ DISCARDED
+### Feature 6: Intrinsic Gain Attention Mode ❌ DEACTIVATED
 
 **Objective:** Provide an alternative architectural mode that achieves parameter efficiency by deriving gains directly from attention mechanisms, eliminating the need for post-hoc projection heads. This explores the trade-off between model compactness and interpretability while maintaining competitive predictive performance.
 
@@ -727,11 +727,10 @@ Below is a comprehensive analysis of each component's implementation status and 
 - **Default:** `False` (baseline mode with projection heads)
 - **Parameter File:** Added to `configs/parameter_default.json` as `"intrinsic_gain_attention": false`
 
-**Architecture Alignment:** ✅ Complete implementation with validated trade-offs
+**Architecture Alignment:** Complete implementation with validated trade-offs
 
 **Verification:** The updated architecture diagram (red components) shows intrinsic mode as conditional bypass of projection heads, with attention-derived gains feeding directly to mastery/gain outputs.
 
----
 
 #### Feature 6 Experimental Validation: Multi-Seed Analysis
 
@@ -837,7 +836,7 @@ Below is a comprehensive analysis of each component's implementation status and 
 **Empirical Reality (Post-Validation):**
 > "Intrinsic mode achieves 13% parameter reduction with <1% AUC loss, but sacrifices interpretability: 66% weaker mastery correlations and 60% of seeds exhibit negative gain correlations. Attention weights optimize prediction, not pedagogical semantics. Explicit supervision via projection heads is necessary for educationally valid gain estimation."
 
-**Honest Reporting Recommendation:**
+**Reporting Recommendation:**
 ```
 Multi-seed validation (N=5) revealed intrinsic mode interpretability instability: 
 60% of seeds exhibited negative gain correlations (range: -0.036 to +0.023, CV=366%), 
@@ -908,15 +907,15 @@ deployment when interpretability is not required.
 
 ## Overall Architecture Compliance
 
-| Feature | Diagram Specification | Implementation Status | Alignment |
-|---------|----------------------|----------------------|-----------|
-| **Skill Embedding Table** | Separate embedding for target skills in prediction | `concept_embedding` used in `[h, v, s]` concatenation | ✅ Perfect |
-| **Dynamic Value Stream** | Dual context/value sequences, separate norms, Q/K from context, V from value | Dual embeddings + separate `norm1_ctx/val`, `norm2_ctx` + correct attention | ✅ Perfect |
-| **Ground Truth Integration** | Used in loss calculation + monitoring hooks | Integrated in all losses + `set_monitor()` + periodic execution | ✅ Perfect |
-| **Projection Heads** | Mastery (context→skills), Gain (value→skills) | `mastery_head`, `gain_head` with recursive accumulation | ✅ Perfect + enhanced |
-| **Auxiliary Losses** | 5 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity) | All 5 + Consistency (bonus) with configurable weights | ✅ Exceeds spec |
-| **Monitoring** | Real-time interpretability analysis, configurable frequency | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety | ✅ Perfect |
-| **Intrinsic Gain Attention** | Alternative parameter-efficient mode | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ✅ Complete with validated trade-offs |
+| **Feature**                | **Diagram Specification**                                      | **Implementation Details**                                                                 | **Status**          |
+|----------------------------|---------------------------------------------------------------|-------------------------------------------------------------------------------------------|---------------------|
+| **Skill Embedding Table**  | Separate embedding for target skills in prediction            | `concept_embedding` used in `[h, v, s]` concatenation                                     | ✅ Activated         |
+| **Dynamic Value Stream**   | Dual context/value sequences, separate norms, Q/K from context, V from value | Dual embeddings + separate `norm1_ctx/val`, `norm2_ctx` + correct attention               | ✅ Activated         |
+| **Ground Truth Integration** | Used in loss calculation + monitoring hooks                  | Integrated in all losses + `set_monitor()` + periodic execution                           | ✅ Activated         |
+| **Projection Heads**       | Mastery (context→skills), Gain (value→skills)                 | `mastery_head`, `gain_head` with recursive accumulation                                   | ✅ Activated + enhanced |
+| **Auxiliary Losses**       | 5 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity) | All 5 + Consistency (bonus) with configurable weights                                     | ✅ Activated         |
+| **Monitoring**             | Real-time interpretability analysis, configurable frequency   | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety              | ✅ Activated         |
+| **Intrinsic Gain Attention** | Alternative parameter-efficient mode                        | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ❌ Deactivated       |
 
 ### Key Implementation Strengths
 
@@ -947,12 +946,14 @@ deployment when interpretability is not required.
 - ✅ **Baseline Mode:** Reproducible, interpretable, educationally valid (CV=0.07%, all seeds positive)
 - ⚠️ **Intrinsic Mode:** Reproducible for prediction, unstable for interpretation (60% seeds with negative gain correlations). 
 
-**Publication Readiness:**
-- **Primary contribution:** Baseline mode demonstrates that projection heads + explicit supervision are necessary and sufficient for educationally meaningful interpretability
-- **Ablation contribution:** Intrinsic mode validates the necessity of explicit supervision through its interpretability failure
-- **Practical outcome:** Clear use-case guidance (baseline for analysis, intrinsic for edge deployment)
 
-The model is ready for paper writeup with honest reporting of both successes (baseline interpretability) and limitations (intrinsic mode trade-offs).
+> **Publication Readiness:**
+> - Primary contribution: Baseline mode demonstrates that **projection heads + explicit supervision are necessary and sufficient for educationally meaningful interpretability**
+> - **Ablation** contribution: Intrinsic mode validates the necessity of explicit supervision through its interpretability failure
+> - Practical outcome: Clear use-case guidance (baseline for analysis, intrinsic for edge deployment)
+>
+> The model is ready for paper writeup with reporting of both successes (baseline interpretability) and limitations (intrinsic mode trade-offs).
+
 
 ## Parameters
 
@@ -1027,6 +1028,8 @@ When adding/changing parameters:
 
 Total Loss = BCE Loss + Constraint Losses + Semantic Module Losses
 
+### Loss Parameters
+
 | Category | Name | Parameter Name | Default Value | Description |
 |----------|------|----------------|---------------|-------------|
 | **Main** | BCE Loss | - | - | Binary cross-entropy for response prediction |
@@ -1071,15 +1074,29 @@ All constraint losses are subject to warm-up scheduling (`warmup_constraint_epoc
 
 Enabling alignment, global alignment, retention, and lag objectives restored strong semantic interpretability: mastery and gain correlations surpass prior breakthrough levels and remain stable, with modest decline from peak. Predictive AUC peaks early and declines due to interpretability emphasis; scheduling and stabilization adjustments can mitigate this without sacrificing correlation strength. Recommended enhancements focus on smoothing alignment, stabilizing lag objectives, adding statistical robustness and coverage metrics, and protecting validation AUC with phased optimization.
 
-**Alignment Loss (Local):** Encourages the model's projected mastery estimates to align with actual student performance on individual interactions. Specifically, it penalizes low mastery when students answer correctly and high mastery when they answer incorrectly. This local constraint shapes mastery trajectories to be performance-consistent at the interaction level, accelerating the emergence of educationally meaningful correlations.
+**Alignment Loss (Local)** (`alignment_weight = 0.25`): Encourages the model's projected mastery estimates to align with actual student performance on individual interactions. Specifically, it penalizes low mastery when students answer correctly and high mastery when they answer incorrectly. This local constraint shapes mastery trajectories to be performance-consistent at the interaction level, accelerating the emergence of educationally meaningful correlations.
 
-**Global Alignment Pass:** Computes population-level mastery statistics (mean/variance across students) and uses them to regularize individual mastery trajectories toward global coherence patterns. This cross-student alignment improves mastery correlation stability by reducing inter-student variance and reinforcing common learning progressions.
+**Global Alignment Pass** (`enable_global_alignment_pass = true`): Computes population-level mastery statistics (mean/variance across students) and uses them to regularize individual mastery trajectories toward global coherence patterns. This cross-student alignment improves mastery correlation stability by reducing inter-student variance and reinforcing common learning progressions.
 
-**Residual Alignment:** Applied after global alignment to capture unexplained variance. By removing the global signal component, residual alignment clarifies incremental mastery improvements specific to individual learning contexts, yielding sharper and more interpretable correlation patterns.
+**Residual Alignment** (`use_residual_alignment = true`): Applied after global alignment to capture unexplained variance. By removing the global signal component, residual alignment clarifies incremental mastery improvements specific to individual learning contexts, yielding sharper and more interpretable correlation patterns.
 
-**Retention Loss:** Prevents post-peak decay of mastery trajectories by penalizing decreases in mastery levels after they reach local maxima. This ensures that once students demonstrate mastery, the model maintains elevated mastery estimates rather than allowing degradation, supporting higher final correlation retention ratios.
+**Retention Loss** (`retention_weight = 0.14`): Prevents post-peak decay of mastery trajectories by penalizing decreases in mastery levels after they reach local maxima. This ensures that once students demonstrate mastery, the model maintains elevated mastery estimates rather than allowing degradation, supporting higher final correlation retention ratios.
 
-**Lag Gain Loss:** Introduces temporal structure to learning gains by encouraging gains at timestep t to correlate with gains at previous timesteps (lag-1, lag-2, lag-3). This creates a coherent temporal narrative where gains emerge systematically rather than randomly, enhancing gain correlation interpretability and capturing causal learning progression patterns.
+**Lag Gain Loss** (`lag_gain_weight = 0.06`): Introduces temporal structure to learning gains by encouraging gains at timestep t to correlate with gains at previous timesteps (lag-1, lag-2, lag-3). This creates a coherent temporal narrative where gains emerge systematically rather than randomly, enhancing gain correlation interpretability and capturing causal learning progression patterns.
+
+#### Alignment Schedule Parameters
+
+The semantic module losses, particularly alignment loss, use scheduling mechanisms to balance interpretability emergence with predictive performance:
+
+**Warm-up Scheduling** (`alignment_warmup_epochs = 8`): Alignment loss is gradually ramped from zero to full weight over the first 8 epochs, allowing the model to establish baseline representations before enforcing strict alignment constraints. This prevents early optimization conflicts where the model hasn't yet learned discriminative features, which could cause training instability or degrade predictive performance.
+
+**Share Cap** (`alignment_share_cap = 0.08`): Limits the maximum proportion of total loss contributed by alignment to 8%. This prevents alignment from dominating the optimization objective, which could sacrifice predictive accuracy (BCE loss) for interpretability. The cap acts as a soft constraint ensuring that performance remains competitive while still benefiting from alignment-driven trajectory shaping.
+
+**Rationale:** Early experiments showed that uncapped alignment loss could improve mastery correlation by 15-20% but degrade AUC by 2-3%. The combination of warm-up + share cap enables a balanced regime where interpretability improves (mastery correlation: 0.095±0.018) while maintaining competitive AUC (0.720±0.001). The 8-epoch warm-up aligns with constraint warm-up (`warmup_constraint_epochs = 8`), creating a coordinated two-phase training strategy: (1) Phase 1 (epochs 1-8): representation learning with gradual constraint introduction, (2) Phase 2 (epochs 9-12): full multi-objective optimization with alignment capped at 8% of total loss.
+
+**Implementation Note:** The share cap is dynamically computed per batch as `min(alignment_loss * alignment_weight, total_loss * alignment_share_cap)`, ensuring the constraint applies regardless of batch-level loss magnitude fluctuations. This provides stable training dynamics across different dataset characteristics and batch compositions.
+
+
 
 ## Semantic Interpretabily Recovery
 

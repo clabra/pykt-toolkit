@@ -1,0 +1,184 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7253668115045334,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.09859203534577263,
+    "gain_correlation": 0.05025641024396069
+  },
+  "train_history": {
+    "train_loss": [
+      0.5283654923574912,
+      0.5081007394148278,
+      0.4948894123648115,
+      0.48136806009346955
+    ],
+    "train_auc": [
+      0.6933753193837564,
+      0.7249692217596648,
+      0.7378165857836076,
+      0.7490339462451443
+    ],
+    "val_auc": [
+      0.7177356239453063,
+      0.7245721820409863,
+      0.7253668115045334,
+      0.7224949988170284
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.156703318845904,
+        "gain_correlation": -0.004140419729379364
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.15394387755988992,
+        "gain_correlation": -0.0008526096365852441
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.1569331122554533,
+        "gain_correlation": 0.03579164749187058
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.14143262753846425,
+        "gain_correlation": 0.026872965582621415
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.156703318845904,
+        "gain_correlation": -0.004140419729379364,
+        "warmup_scale": 0.125,
+        "alignment_corr_mastery": 0.011421850882470608,
+        "alignment_corr_gain": 0.15187999606132507,
+        "global_alignment_mastery_corr": 0.12750405189519665,
+        "global_alignment_gain_corr": 0.011925350311236494,
+        "effective_alignment_weight": 0.01875,
+        "peak_mastery_corr": 0.12750405189519665,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 1.0006680248094115,
+          "constraint_total": -0.0006680261816286966,
+          "alignment": -0.0029488204151907507,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.023276377498405054,
+        "min_mastery_variance": 0.01590445451438427,
+        "max_mastery_variance": 0.06162163242697716,
+        "per_lag_correlations": []
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.15394387755988992,
+        "gain_correlation": -0.0008526096365852441,
+        "warmup_scale": 0.25,
+        "alignment_corr_mastery": 0.01652669347822666,
+        "alignment_corr_gain": 0.19921140372753143,
+        "global_alignment_mastery_corr": 0.12897567086956796,
+        "global_alignment_gain_corr": 0.012993025486260497,
+        "effective_alignment_weight": 0.0375,
+        "peak_mastery_corr": 0.12897567086956796,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 1.0109058554043298,
+          "constraint_total": -0.010905852332300738,
+          "alignment": -0.011774117244170785,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.02752515078170003,
+        "min_mastery_variance": 0.01882716454565525,
+        "max_mastery_variance": 0.03453389182686806,
+        "per_lag_correlations": []
+      },
+      {
+        "epoch": 3,
+        "mastery_correlation": 0.1569331122554533,
+        "gain_correlation": 0.03579164749187058,
+        "warmup_scale": 0.375,
+        "alignment_corr_mastery": 0.015285196714103222,
+        "alignment_corr_gain": 0.20009121298789978,
+        "global_alignment_mastery_corr": 0.12336400142405182,
+        "global_alignment_gain_corr": 0.03755187300356435,
+        "effective_alignment_weight": 0.056249999999999994,
+        "peak_mastery_corr": 0.12897567086956796,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 1.0209373169247487,
+          "constraint_total": -0.020937313152456342,
+          "alignment": -0.02189962789772436,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.04230113947098119,
+        "min_mastery_variance": 0.03301967680454254,
+        "max_mastery_variance": 0.04972488805651665,
+        "per_lag_correlations": []
+      },
+      {
+        "epoch": 4,
+        "mastery_correlation": 0.14143262753846425,
+        "gain_correlation": 0.026872965582621415,
+        "warmup_scale": 0.5,
+        "alignment_corr_mastery": 0.019367165863513947,
+        "alignment_corr_gain": 0.23101767897605896,
+        "global_alignment_mastery_corr": 0.11961059550720772,
+        "global_alignment_gain_corr": 0.044223121976756374,
+        "effective_alignment_weight": 0.075,
+        "peak_mastery_corr": 0.12897567086956796,
+        "retention_loss_value": 0.0,
+        "mean_lag_corr": 0.0,
+        "lag_corr_count": 0,
+        "consistency_loss_weight_current": 0.3,
+        "sparsity_loss_weight_current": 0.2,
+        "loss_shares": {
+          "main": 1.033593015180565,
+          "constraint_total": -0.03359301467824028,
+          "alignment": -0.03458962389377057,
+          "lag": 0.0,
+          "retention": 0.0
+        },
+        "mean_mastery_variance": 0.06329610353152369,
+        "min_mastery_variance": 0.047722700983285904,
+        "max_mastery_variance": 0.07850152999162674,
+        "per_lag_correlations": []
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 4,
+    "local_mastery_corr": 0.14143262753846425,
+    "local_gain_corr": 0.026872965582621415,
+    "global_mastery_corr": 0.11961059550720772,
+    "global_gain_corr": 0.044223121976756374,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

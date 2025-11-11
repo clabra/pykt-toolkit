@@ -486,6 +486,40 @@ def main():
             print("=" * 80)
             print(f"\nResults saved to: {repro_folder}")
             
+            # Launch evaluation automatically
+            if 'commands' in config and 'eval_explicit' in config['commands']:
+                # Update eval command with repro folder path
+                eval_cmd = config['commands']['eval_explicit']
+                # Replace the run_dir path in the eval command with repro_folder
+                eval_cmd = eval_cmd.replace(str(original_folder.absolute()), str(repro_folder.absolute()))
+                # Also handle case where relative paths were used
+                eval_cmd = eval_cmd.replace(str(original_folder), str(repro_folder))
+                
+                print("\n" + "=" * 80)
+                print("LAUNCHING EVALUATION")
+                print("=" * 80)
+                print("\nEvaluation command:")
+                print(f"  {eval_cmd}\n")
+                
+                # Launch evaluation
+                eval_result = subprocess.run(eval_cmd, shell=True)
+                
+                if eval_result.returncode == 0:
+                    print("\n" + "=" * 80)
+                    print("✓ EVALUATION COMPLETED SUCCESSFULLY")
+                    print("=" * 80)
+                    print(f"\nResults saved to: {repro_folder}")
+                else:
+                    print("\n" + "=" * 80)
+                    print("⚠️  EVALUATION FAILED")
+                    print("=" * 80)
+                    print(f"Training succeeded but evaluation encountered an error (exit code: {eval_result.returncode})")
+                    print("\nYou can manually run evaluation later with:")
+                    print(f"  {eval_cmd}")
+            else:
+                print("\n⚠️  WARNING: eval_explicit command not found in config.json")
+                print("Skipping automatic evaluation")
+            
             # Suggest comparison with external script
             print("\n" + "=" * 80)
             print("VERIFY REPRODUCIBILITY")
@@ -740,14 +774,37 @@ def main():
             print("  python examples/run_repro_experiment.py \\")
             print(f"    --repro_experiment_id {experiment_id}")
             
-            # Also output the eval command for convenience
+            # Load saved config to get eval command
             config_path = os.path.join(experiment_folder, 'config.json')
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
                     saved_config = json.load(f)
                     if 'commands' in saved_config and 'eval_explicit' in saved_config['commands']:
-                        print("\nTo evaluate this model:")
-                        print(f"  {saved_config['commands']['eval_explicit']}")
+                        eval_cmd = saved_config['commands']['eval_explicit']
+                        print("\n" + "=" * 80)
+                        print("LAUNCHING EVALUATION")
+                        print("=" * 80)
+                        print(f"\nEvaluation command:")
+                        print(f"  {eval_cmd}\n")
+                        
+                        # Launch evaluation
+                        eval_result = subprocess.run(eval_cmd, shell=True)
+                        
+                        if eval_result.returncode == 0:
+                            print("\n" + "=" * 80)
+                            print("✓ EVALUATION COMPLETED SUCCESSFULLY")
+                            print("=" * 80)
+                            print(f"\nResults saved to: {experiment_folder}")
+                        else:
+                            print("\n" + "=" * 80)
+                            print("⚠️  EVALUATION FAILED")
+                            print("=" * 80)
+                            print(f"Training succeeded but evaluation encountered an error (exit code: {eval_result.returncode})")
+                            print(f"\nYou can manually run evaluation later with:")
+                            print(f"  {eval_cmd}")
+                    else:
+                        print("\n⚠️  WARNING: eval_explicit command not found in config.json")
+                        print("Skipping automatic evaluation")
         else:
             print("\n" + "=" * 80)
             print("❌ TRAINING FAILED")

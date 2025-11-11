@@ -1,0 +1,41 @@
+{
+  "runtime": {
+    "eval_command": "examples/eval_gainakt2exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251111_214733_gainakt2exp_alignment_sweep_0.25_724276 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 512 --n_heads 8 --num_encoder_blocks 6 --d_ff 1024 --dropout 0.2 --emb_type qid --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.0 --gain_performance_loss_weight 0.0 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --monitor_freq 50 --use_mastery_head --use_gain_head",
+    "timestamp": "2025-11-11T22:03:29.209468Z",
+    "device": "cuda",
+    "checkpoint_path": "/workspaces/pykt-toolkit/examples/experiments/20251111_214733_gainakt2exp_alignment_sweep_0.25_724276/model_best.pth"
+  },
+  "evaluation": {
+    "batch_size": 64,
+    "max_correlation_students": 3800
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 512,
+    "n_heads": 8,
+    "num_encoder_blocks": 6,
+    "d_ff": 1024,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": true,
+    "intrinsic_gain_attention": false,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.1,
+    "mastery_performance_loss_weight": 0.0,
+    "gain_performance_loss_weight": 0.0,
+    "sparsity_loss_weight": 0.2,
+    "consistency_loss_weight": 0.3,
+    "monitor_frequency": 50
+  },
+  "experiment": {
+    "id": "20251111_214733_gainakt2exp_alignment_sweep_0.25_724276",
+    "source_run_dir": "/workspaces/pykt-toolkit/examples/experiments/20251111_214733_gainakt2exp_alignment_sweep_0.25_724276",
+    "model": "gainakt2exp"
+  }
+}
