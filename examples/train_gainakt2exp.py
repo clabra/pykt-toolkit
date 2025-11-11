@@ -265,7 +265,7 @@ def train_gainakt2exp_model(args):
     use_amp = resolve_param(cfg, 'runtime', 'use_amp', getattr(args, 'use_amp', False))
     # Alignment / semantic emergence new arguments (may be absent in older runs)
     enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', True))  # Fixed: was False, now matches parameter_default.json
-    alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.25)))  # Fixed: was 0.1, now matches parameter_default.json
+    alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.15)))  # Fixed: updated to 0.15 from alignment sweep experiments
     alignment_warmup_epochs = int(resolve_param(cfg, 'alignment', 'alignment_warmup_epochs', getattr(args, 'alignment_warmup_epochs', 8)))
     adaptive_alignment = resolve_param(cfg, 'alignment', 'adaptive_alignment', getattr(args, 'adaptive_alignment', True))
     alignment_min_correlation = float(resolve_param(cfg, 'alignment', 'alignment_min_correlation', getattr(args, 'alignment_min_correlation', 0.05)))
@@ -300,8 +300,8 @@ def train_gainakt2exp_model(args):
     # Individual constraint weights - OPTIMAL values from parameter sweep
     non_negative_loss_weight = resolve_param(cfg, 'interpretability', 'non_negative_loss_weight', getattr(args, 'non_negative_loss_weight', 0.0))
     monotonicity_loss_weight = resolve_param(cfg, 'interpretability', 'monotonicity_loss_weight', getattr(args, 'monotonicity_loss_weight', 0.1))
-    mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.8))
-    gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.8))
+    mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.0))  # Fixed: validated by experiments 451877, 542954
+    gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.0))  # Fixed: validated by experiments 451877, 542954
     sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.2))
     consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.3))
     

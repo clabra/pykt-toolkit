@@ -124,7 +124,7 @@ class ParameterAuditor:
             
             # Check critical parameters that were previously mismatched
             critical_params = {
-                'alignment_weight': '0.25',
+                'alignment_weight': '0.15',  # Updated from 0.25 based on alignment sweep experiments
                 'batch_size': '64',
                 'enable_alignment_loss': 'True',
                 'enable_global_alignment_pass': 'True',
