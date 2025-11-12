@@ -1,8 +1,65 @@
-# Interpretability-by-Design: Synergistic Optimization of Performance and Interpretability in Knowledge Tracing
+# Interpretability-by-Design: Optimization of Performance and Interpretability in Knowledge Tracing
 
-**Anonymous Authors**
+## Approach: 
 
----
+- Tradicionalmente se ha considerado que en los modelos de deep learning Performance e Interpretabilidad están reñidos. En este artículo demostramos que esto no tiene porqué ser así. Para ello proponemos una nueva arquitectura con interpretibility-by-design que nos permite explorar las condiciones de este trade-off y controlarlo en funcion de los escnarios educacionales y sus necesidades de interpretabilidad
+- Desarrollar nuestra propuesta basandonos en dos puntos
+
+1) Explicar la arquitectura del nuevo modelo transformer que proponemos, llamado GainAKT2Exp
+
+```
+Proponemos una arquitectura basada en: 
+    1.1) Master/Gain Heads
+    1.2) Constraint losses
+    1.3) Semantic losses
+```
+
+2) Demostrando una **hipótesis 0 de partida** a partir del modelo propuesto
+
+    2.1) **Hipótesis 0: no es posible encontrar un diseño de modelos Transformer para Knowledge Tracing que nos permita ofrecer interpretabilidad sin una pérdida significativa de performance (medida en términos de AUC)**
+
+    2.2) Cómo demostrar nuestra hipótesis
+
+```
+    i) Heads + constraints losses permiten calcular mastery states como suma de learning gains. Esto se puede demostrar mediante correlación Pearson(gain(t), Δmastery(t→t+1))
+    ii) Los mastery states calculados de esta manera permitan explicar la performance. Definimos una variable llamada *mastery correlation* como la correlación entre mastery states y performance (AUC). Esta variable *mastery correlation* es una especie de proxy de la interpretabilidad del modelo, i.e. cuanto mayor es la *mastery correlation* mayor es la interpretabilidad. 
+    iii) La *mastery correlation* es controlada en nuestra arquitectura mediante un parámetro `alignment_weight` de forma que variar este parámetro equivale a variar la interpretabilidad del modelo (y también la AUC). Por tanto, nuestra arquitectura permite controlar el trade-off entre interpretabilidad y performance a traves de ese parametro (que llamaremos también parámetro alpha)
+    iv) Calcular la curva de Pareto (AUC / semantic correlation) que surge al modificar el valor de alpha. Interpretar resultados para demostrar la hipótesis 0 de partida. 
+```
+
+## Contribution/s 
+
+1) Interpetability-by-design based on translating domain-knowledge into architectural mechanisms through Mastery/Gain Projection Heads and constraint/semantic losses 
+    - Mastery correlation: shows relation between mastery and performance
+    - Ablation study to show the impact of removing architectural mechanisms and constraints on mastery correlation
+    - Hypothesis 0: remove the aligment enforcement provided by semantic losses doesn't have statistical significative impact on mastery correlation
+        - Removing alignment (alignment_weight=0) causes -43.9% mastery correlation drop
+        - Impact of removing heads?
+        - Impatc of removing heads and semantic losses?
+2) Parameter to control tradeoff performance/intereptability (Pareto curve). 
+    Hypothesis: there is an optimal value. If not, explore trade-off values
+    - Ablation1
+        - Remove heads, constraints and semantic losses. Pure BCE loss -> AUC impact?
+        - Activate heads, fix constraints, vary semantic losses -> Pareto Curve (AUC/Interpretability measured by mastery correlation)
+
+3) Explanation of *mastery states* evolution based on the concept of learning gains 
+    - Mastery evolution causally explained as an agregation of the learning gains induced by interactions of the student with the itemworks
+    - Pearson(gain(t), Δmastery(t→t+1))
+    - Removal of gain mechanisms should degrade mastery tracking
+    - Create a unified unique parameter for ablation:  
+
+    ```python
+    python examples/run_repro_experiment.py \
+    --short_title h0_learninggains_ablation \
+    --use_gain_head false \
+    --consistency_loss_weight 0.0 \
+    --enable_lag_gain_loss false \
+    --enable_retention_loss false \
+    --sparsity_loss_weight 0.0
+    ```
+
+
+
 
 ## Abstract
 

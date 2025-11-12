@@ -3,14 +3,14 @@
 ## Fixed Parameters (in configs/parameter_default.json)
 
 ### 1. intrinsic_gain_attention = false
-- **Rationale**: Experimentally determined to be redundant or harmful
-- **Experiments**: []
+- Rationale: Experimentally determined to be redundant or harmful
+- Experiments: []
 
 ### 2. mastery_performance_loss_weight = 0.0
 ### 3. gain_performance_loss_weight = 0.0
-- **Rationale**: Redundant with alignment loss; removing both improves mastery correlation by 13.6% without affecting AUC
-- **Experiments**: ["724276", "542954"]
-- **Key Finding**: Alignment loss alone is sufficient for semantic supervision; performance losses add no value
+- Rationale: Redundant with alignment loss; removing both improves mastery correlation by 13.6% without affecting AUC
+- Experiments: ["724276", "542954"]
+- Key Finding: **Alignment loss alone, controlled by alignment_weight, is sufficient for semantic supervision; performance losses add no value**
 
 ### 4. alignment_weight = 0.15 (UPDATED FROM 0.25)
 - **Rationale**: Optimal balance between mastery correlation and gain correlation
