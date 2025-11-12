@@ -12,7 +12,7 @@ It illustrates the Learning Gains approach based on an Encoder-only Transformer,
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Projection Heads, Constraint Losses, Monitoring)
 - **Blue components**: Recursive Mastery Accumulation (deterministic temporal constraint: mastery_{t+1} = mastery_t + α·ReLU(gain_t))
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
-- **Red components**: Intrinsic gain attention mode (architectural constraint enforcement, attention-derived gains, projection head bypass)
+- **Red components**: DEACTIVATED features - Intrinsic gain attention mode (intrinsic_gain_attention=false), Mastery-Performance loss (mastery_performance_loss_weight=0.0), Gain-Performance loss (gain_performance_loss_weight=0.0). These were experimentally determined to be redundant or harmful to interpretability.
 - **Yellow diamonds (OR gates)**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
 - **Circles (Hubs)**: Convergence/distribution points where multiple data flows aggregate and route to multiple outputs
 
@@ -154,8 +154,8 @@ graph TD
     Proj_Mastery["Mastery Projection Head<br/>Linear(D, num_skills)<br/>(Baseline Mode)"]
     Proj_Gain["Gain Projection Head<br/>Linear(D, num_skills)<br/>(Baseline Mode)"]
     
-    %% Intrinsic Mode Components (Red)
-    Attention_Derived_Gains["Attention-Derived Gains<br/>Cumulative mastery from<br/>attention weights<br/>(Intrinsic Mode)"]
+    %% Intrinsic Mode Components (Red - DEACTIVATED)
+    Attention_Derived_Gains["Attention-Derived Gains<br/>Cumulative mastery from<br/>attention weights<br/>(DEACTIVATED: intrinsic_gain_attention=false)"]
     
     %% OR Gates showing mutually exclusive paths
     Mastery_OR{"OR<br/>Mastery<br/>Source"}
@@ -239,8 +239,8 @@ graph TD
         subgraph "Constraint Losses (Green)"
             direction TB
             Monotonicity_Loss["Monotonicity"]
-            Mastery_Perf_Loss["Mastery-Perf"]
-            Gain_Perf_Loss["Gain-Perf"]
+            Mastery_Perf_Loss["Mastery-Perf<br/>(DEACTIVATED: weight=0.0)"]
+            Gain_Perf_Loss["Gain-Perf<br/>(DEACTIVATED: weight=0.0)"]
             Sparsity_Loss["Sparsity"]
             Consistency_Loss["Consistency"]
             NonNeg_Loss["Non-Negativity"]
@@ -301,7 +301,7 @@ graph TD
     %% Styling
     classDef new_component fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
     classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
-    classDef intrinsic_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5
+    classDef intrinsic_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5,font-style:italic
     classDef or_gate fill:#fff59d,stroke:#f57f17,stroke-width:3px
     classDef accumulation_component fill:#b3e5fc,stroke:#0277bd,stroke-width:3px
     
@@ -312,10 +312,10 @@ graph TD
     classDef pred_hub fill:#e3f2fd,stroke:#888888,stroke-width:4px
     classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
 
-    class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
+    class Proj_Mastery,Proj_Gain,Projected_Mastery_Output,Projected_Gain_Output,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
     class Gain_Input,Mastery_Prev,ReLU_Op,Scale_Op,Sum_Op,Clamp_Op,Mastery_Current accumulation_component
     class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
-    class Attention_Derived_Gains intrinsic_component
+    class Attention_Derived_Gains,Mastery_Perf_Loss,Gain_Perf_Loss intrinsic_component
     class Mastery_OR,Gain_OR or_gate
     
     class Mastery_Hub mastery_hub
