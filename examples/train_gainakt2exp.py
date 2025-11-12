@@ -1601,6 +1601,68 @@ def train_gainakt2exp_model(args):
             logger.info(f"[Repro] Legacy results.json written to {repro_results_json}")
         except Exception as e:
             logger.warning(f"[Repro] Failed to write legacy results.json: {e}")
+    
+    # Auto-evaluation after successful training
+    if experiment_dir:
+        logger.info("\n" + "=" * 80)
+        logger.info("LAUNCHING AUTO-EVALUATION ON TEST SET")
+        logger.info("=" * 80)
+        
+        import subprocess
+        
+        # Build evaluation command from training arguments and model config
+        eval_cmd = [
+            sys.executable,
+            'examples/eval_gainakt2exp.py',
+            '--run_dir', experiment_dir,
+            '--max_correlation_students', str(getattr(args, 'max_correlation_students', 3800)),
+            '--dataset', dataset_name,
+            '--fold', str(fold),
+            '--batch_size', str(batch_size),
+            '--seq_len', str(model_config['seq_len']),
+            '--d_model', str(model_config['d_model']),
+            '--n_heads', str(model_config['n_heads']),
+            '--num_encoder_blocks', str(model_config['num_encoder_blocks']),
+            '--d_ff', str(model_config['d_ff']),
+            '--dropout', str(model_config['dropout']),
+            '--emb_type', model_config['emb_type'],
+            '--num_students', str(model_config['num_students']),
+            '--non_negative_loss_weight', str(model_config['non_negative_loss_weight']),
+            '--monotonicity_loss_weight', str(model_config['monotonicity_loss_weight']),
+            '--mastery_performance_loss_weight', str(model_config['mastery_performance_loss_weight']),
+            '--gain_performance_loss_weight', str(model_config['gain_performance_loss_weight']),
+            '--sparsity_loss_weight', str(model_config['sparsity_loss_weight']),
+            '--consistency_loss_weight', str(model_config['consistency_loss_weight']),
+            '--monitor_freq', str(model_config['monitor_frequency'])
+        ]
+        
+        # Add optional flags
+        if model_config['use_mastery_head']:
+            eval_cmd.append('--use_mastery_head')
+        if model_config['use_gain_head']:
+            eval_cmd.append('--use_gain_head')
+        if model_config['intrinsic_gain_attention']:
+            eval_cmd.append('--intrinsic_gain_attention')
+        if model_config['use_skill_difficulty']:
+            eval_cmd.append('--use_skill_difficulty')
+        if model_config['use_student_speed']:
+            eval_cmd.append('--use_student_speed')
+        
+        logger.info(f"Evaluation command: {' '.join(eval_cmd)}")
+        
+        try:
+            result = subprocess.run(eval_cmd, check=True, capture_output=True, text=True, cwd='/workspaces/pykt-toolkit')
+            logger.info("✅ Evaluation completed successfully")
+            logger.info(result.stdout)
+            if result.stderr:
+                logger.warning(f"Evaluation stderr: {result.stderr}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ Evaluation failed with exit code {e.returncode}")
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
+        except Exception as e:
+            logger.error(f"❌ Evaluation failed with exception: {e}")
+    
     return final_results
 
 

@@ -127,6 +127,12 @@ def main():
                         help='Enable gain projection head (REQUIRED for correct model loading)')
     parser.add_argument('--intrinsic_gain_attention', action='store_true',
                         help='Use intrinsic gain attention mode (changes architecture)')
+    parser.add_argument('--use_skill_difficulty', action='store_true',
+                        help='Enable learnable per-skill difficulty parameters (Phase 1)')
+    parser.add_argument('--use_student_speed', action='store_true',
+                        help='Enable learnable per-student learning speed embeddings (Phase 2)')
+    parser.add_argument('--num_students', type=int, required=True,
+                        help='Number of unique students in dataset (required for student_speed)')
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
@@ -209,6 +215,9 @@ def main():
         'use_mastery_head': args.use_mastery_head,
         'use_gain_head': args.use_gain_head,
         'intrinsic_gain_attention': args.intrinsic_gain_attention,
+        'use_skill_difficulty': args.use_skill_difficulty,
+        'use_student_speed': args.use_student_speed,
+        'num_students': args.num_students,
         'non_negative_loss_weight': args.non_negative_loss_weight,
         'monotonicity_loss_weight': args.monotonicity_loss_weight,
         'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
