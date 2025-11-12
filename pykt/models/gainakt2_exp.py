@@ -369,7 +369,7 @@ def create_exp_model(config):
             intrinsic_gain_attention=config['intrinsic_gain_attention'],
             use_skill_difficulty=config['use_skill_difficulty'],
             use_student_speed=config['use_student_speed'],
-            num_students=config.get('num_students'),  # May be None if not using student_speed
+            num_students=config['num_students'],  # Set dynamically from dataset, fallback handled in training script
             non_negative_loss_weight=config['non_negative_loss_weight'],
             monotonicity_loss_weight=config['monotonicity_loss_weight'],
             mastery_performance_loss_weight=config['mastery_performance_loss_weight'],

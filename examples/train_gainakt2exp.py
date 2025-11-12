@@ -1642,6 +1642,8 @@ if __name__ == '__main__':
                         help='Enable learnable per-skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)')
     parser.add_argument('--use_student_speed', action='store_true',
                         help='Enable learnable per-student learning speed embeddings (Phase 2: Architectural Improvements)')
+    parser.add_argument('--num_students', type=int, required=True,
+                        help='Number of unique students in dataset (used for student_speed embeddings)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')
