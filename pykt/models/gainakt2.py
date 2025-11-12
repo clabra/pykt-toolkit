@@ -236,7 +236,8 @@ class GainAKT2(nn.Module):
                  use_mastery_head=False, use_gain_head=False, intrinsic_gain_attention=False,
                  non_negative_loss_weight=0.0, 
                  monotonicity_loss_weight=0.0, mastery_performance_loss_weight=0.0,
-                 gain_performance_loss_weight=0.0, sparsity_loss_weight=0.0, consistency_loss_weight=0.0):
+                 gain_performance_loss_weight=0.0, sparsity_loss_weight=0.0, consistency_loss_weight=0.0,
+                 use_skill_difficulty=False, use_student_speed=False, num_students=None):
         super().__init__()
         self.model_name = "gainakt2"
         self.num_c = num_c
@@ -249,6 +250,9 @@ class GainAKT2(nn.Module):
         self.intrinsic_gain_attention = intrinsic_gain_attention
         self.use_mastery_head = use_mastery_head and not intrinsic_gain_attention  # Disable in intrinsic mode
         self.use_gain_head = use_gain_head and not intrinsic_gain_attention  # Disable in intrinsic mode
+        self.use_skill_difficulty = use_skill_difficulty
+        self.use_student_speed = use_student_speed
+        self.num_students = num_students
         self.non_negative_loss_weight = non_negative_loss_weight
         self.monotonicity_loss_weight = monotonicity_loss_weight
         self.mastery_performance_loss_weight = mastery_performance_loss_weight
@@ -307,8 +311,46 @@ class GainAKT2(nn.Module):
             self.mastery_head = nn.Linear(self.d_model, self.num_c)
         if self.use_gain_head:
             self.gain_head = nn.Linear(self.d_model, self.num_c)
+        
+        # Skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)
+        if self.use_skill_difficulty:
+            # Learnable per-skill difficulty scale: modulates embedding magnitude
+            # Initialized to 1.0 (neutral), constrained to [0.5, 2.0] range
+            # Scale > 1.0 = harder skills (larger embeddings → more attention)
+            # Scale < 1.0 = easier skills (smaller embeddings → less attention)
+            self.skill_difficulty_scale = nn.Parameter(torch.ones(num_c))
+            print(f"[GainAKT2] Skill difficulty (embedding modulation) enabled: +{num_c} parameters")
+        
+        # Student learning speed parameters (Phase 2: Architectural Improvements)
+        if self.use_student_speed:
+            assert num_students is not None, "num_students required for student_speed feature"
+            # Per-student learning speed embedding (16-dim rich representation)
+            # Applied across all 200 sequence positions → stronger gradient signal
+            # Captures individual differences in learning rate/aptitude
+            self.student_speed_embedding = nn.Embedding(num_students, 16)
+            # Xavier init for student embeddings
+            nn.init.xavier_uniform_(self.student_speed_embedding.weight)
+            print(f"[GainAKT2] Student learning speed enabled: +{num_students * 16} parameters ({num_students} students)")
+            
+            # Update prediction head input dimension
+            if intrinsic_gain_attention:
+                # Intrinsic mode: [h_t, concept_embedding, student_speed] = d_model*2 + 16
+                self.prediction_head = nn.Sequential(
+                    nn.Linear(d_model * 2 + 16, d_ff),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(d_ff, 1)
+                )
+            else:
+                # Legacy mode: [context_seq, value_seq, concept_embedding, student_speed] = d_model*3 + 16
+                self.prediction_head = nn.Sequential(
+                    nn.Linear(d_model * 3 + 16, d_ff),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(d_ff, 1)
+                )
 
-    def forward(self, q, r, qry=None, qtest=False):
+    def forward(self, q, r, qry=None, qtest=False, student_ids=None):
         """
         Forward pass for the GainAKT2 model, following PyKT conventions.
         
@@ -321,6 +363,9 @@ class GainAKT2(nn.Module):
                                           If None, `q` is used as the target.
                                           Shape: [batch_size, seq_len]
             qtest (bool): If True, the output dictionary will include the final context sequence.
+            student_ids (torch.Tensor, optional): Student IDs for each sequence in batch.
+                                                  Shape: [batch_size] (scalar per sequence)
+                                                  Required if use_student_speed=True.
         
         Returns:
             dict: A dictionary containing the model's outputs, including:
@@ -367,17 +412,44 @@ class GainAKT2(nn.Module):
         # 4. Prepare inputs for the prediction head
         target_concept_emb = self.concept_embedding(target_concepts)
         
+        # Apply skill difficulty modulation (if enabled)
+        if self.use_skill_difficulty:
+            # Get difficulty scale for each target concept [batch_size, seq_len]
+            difficulty_scale = torch.gather(
+                self.skill_difficulty_scale.unsqueeze(0).expand(batch_size, -1),
+                1, target_concepts
+            )  # [batch_size, seq_len]
+            # Expand to match embedding dimension and apply constrained scaling
+            # Scale > 1.0 = harder skills (amplified embeddings)
+            # Scale < 1.0 = easier skills (dampened embeddings)
+            difficulty_scale = torch.clamp(difficulty_scale, 0.5, 2.0).unsqueeze(-1)  # [batch_size, seq_len, 1]
+            target_concept_emb = target_concept_emb * difficulty_scale  # [batch_size, seq_len, d_model]
+        
+        # Add student learning speed embedding (if enabled)
+        if self.use_student_speed:
+            assert student_ids is not None, "student_ids required when use_student_speed=True"
+            # Get student embedding [batch_size, 16]
+            student_emb = self.student_speed_embedding(student_ids)
+            # Expand to match sequence length [batch_size, seq_len, 16]
+            student_emb = student_emb.unsqueeze(1).expand(-1, seq_len, -1)
+        
         if self.intrinsic_gain_attention:
-            # Intrinsic mode: [h_t, concept_embedding]
+            # Intrinsic mode: [h_t, concept_embedding] or [h_t, concept_embedding, student_speed]
             # context_seq already represents h_t from Σ α g
-            concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
+            if self.use_student_speed:
+                concatenated = torch.cat([context_seq, target_concept_emb, student_emb], dim=-1)
+            else:
+                concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
         else:
-            # Legacy mode: [context_seq, value_seq, concept_embedding]
-            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+            # Legacy mode: [context_seq, value_seq, concept_embedding] or [..., student_speed]
+            if self.use_student_speed:
+                concatenated = torch.cat([context_seq, value_seq, target_concept_emb, student_emb], dim=-1)
+            else:
+                concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
         
         # 5. Generate predictions
-        logits = self.prediction_head(concatenated)
-        predictions = torch.sigmoid(logits.squeeze(-1))
+        logits = self.prediction_head(concatenated).squeeze(-1)
+        predictions = torch.sigmoid(logits)
         
         # 6. Prepare output dictionary
         output = {'predictions': predictions}

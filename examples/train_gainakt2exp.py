@@ -81,9 +81,10 @@ def validate_model_consistency(model, data_loader, device, logger, max_students=
             questions_shifted = batch['shft_cseqs'].to(device)
             responses_shifted = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device)
+            student_ids = batch['uids'].to(device)
             
             # Use underlying module's forward_with_states when DataParallel is active
-            outputs = core_model.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+            outputs = core_model.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
 
             # If interpretability heads are disabled, skip detailed consistency checks
             if 'projected_mastery' not in outputs or 'projected_gains' not in outputs:
@@ -456,6 +457,12 @@ def train_gainakt2exp_model(args):
             override_msgs.append(f"{k}: config={config_val} -> cli={v}")
     if override_msgs:
         logger.info("[ArchOverride] CLI architecture overrides applied: " + "; ".join(override_msgs))
+    # Get num_students from dataset (required for student_speed feature)
+    num_students = train_loader.dataset.dori.get('num_students', 0)
+    if num_students == 0:
+        logger.warning("num_students not found in dataset; using fallback value 10000")
+        num_students = 10000
+    
     model_config = {
         'num_c': num_c,
         'seq_len': resolved_seq_len,
@@ -468,7 +475,10 @@ def train_gainakt2exp_model(args):
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
         'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True)),
-        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False))
+        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False)),
+        'use_skill_difficulty': resolve_param(cfg, 'interpretability', 'use_skill_difficulty', getattr(args, 'use_skill_difficulty', False)),
+        'use_student_speed': resolve_param(cfg, 'interpretability', 'use_student_speed', getattr(args, 'use_student_speed', False)),
+        'num_students': num_students
     }
     
     # Constraint resolution logic:
@@ -731,6 +741,7 @@ def train_gainakt2exp_model(args):
             questions_shifted = batch['shft_cseqs'].to(device)
             responses_shifted = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device)
+            student_ids = batch['uids'].to(device)
 
             optimizer.zero_grad()
             try:
@@ -743,13 +754,13 @@ def train_gainakt2exp_model(args):
                     # Solution: temporarily add attribute access: if DataParallel, gather states from model.module after call.
                     if isinstance(model, torch.nn.DataParallel):
                         # Call collective forward to trigger scatter
-                        fwd_basic = model(questions, responses, qry=questions_shifted, qtest=False)
+                        fwd_basic = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
                         # After collective forward, call forward_with_states on primary module with full batch (already on device 0)
                         # Note: This duplicates computation on device0; acceptable for short diagnostic. For true efficiency,
                         # implement custom DataParallel subclass to return states from replicas.
-                        outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                        outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                     else:
-                        outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                        outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                     logits = outputs['logits']
                     interpretability_loss = outputs['interpretability_loss']
                     valid_mask = mask.bool()
@@ -931,10 +942,10 @@ def train_gainakt2exp_model(args):
                         torch.backends.cudnn.deterministic = False
                         with torch.cuda.amp.autocast(enabled=use_amp and device.type == 'cuda'):
                             if isinstance(model, torch.nn.DataParallel):
-                                _ = model(questions, responses, qry=questions_shifted, qtest=False)
-                                outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                                _ = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                                outputs = model.module.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                             else:
-                                outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx)
+                                outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                             logits = outputs['logits']
                             interpretability_loss = outputs['interpretability_loss']
                             valid_mask = mask.bool()
@@ -1124,15 +1135,16 @@ def train_gainakt2exp_model(args):
                 questions_shifted = batch['shft_cseqs'].to(device)
                 responses_shifted = batch['shft_rseqs'].to(device)
                 mask = batch['masks'].to(device)
+                student_ids = batch['uids'].to(device)
 
                 # Use forward_with_states to ensure logits are present for BCEWithLogitsLoss
                 # Use model_core to access underlying module when DataParallel is active
                 # Validation: for efficiency avoid duplicate forward; single GPU uses forward_with_states directly.
                 if isinstance(model, torch.nn.DataParallel):
-                    _ = model(questions, responses, qry=questions_shifted, qtest=False)
-                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                    _ = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                 else:
-                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                    outputs = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                 logits = outputs.get('logits')
                 if logits is None:
                     # Fallback: if logits absent (legacy path), approximate by inverse sigmoid of predictions
@@ -1175,11 +1187,12 @@ def train_gainakt2exp_model(args):
                     questions_shifted = batch['shft_cseqs'].to(device)
                     responses_shifted = batch['shft_rseqs'].to(device)
                     mask = batch['masks'].to(device)
+                    student_ids = batch['uids'].to(device)
                     if isinstance(model, torch.nn.DataParallel):
-                        _ = model(questions, responses, qry=questions_shifted, qtest=False)
-                        outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                        _ = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                        outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                     else:
-                        outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                        outputs_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                     if 'projected_mastery' not in outputs_full:
                         continue
                     pm = outputs_full['projected_mastery']
@@ -1226,11 +1239,12 @@ def train_gainakt2exp_model(args):
                         questions_shifted = batch['shft_cseqs'].to(device)
                         responses_shifted = batch['shft_rseqs'].to(device)
                         mask = batch['masks'].to(device)
+                        student_ids = batch['uids'].to(device)
                         if isinstance(model, torch.nn.DataParallel):
-                            _ = model(questions, responses, qry=questions_shifted, qtest=False)
-                            out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                            _ = model(questions, responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                            out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                         else:
-                            out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted)
+                            out_full = model_core.forward_with_states(q=questions, r=responses, qry=questions_shifted, student_ids=student_ids)
                         if 'projected_mastery' not in out_full:
                             continue
                         pm_all = out_full['projected_mastery']
@@ -1457,7 +1471,7 @@ def train_gainakt2exp_model(args):
         scheduler.step(val_auc)
         
         # Early stopping
-        patience = getattr(args, 'patience', 20)
+        patience = getattr(args, 'patience', 4)
         if patience_counter >= patience:
             logger.info(f"  Early stopping triggered (patience: {patience})")
             break
@@ -1624,6 +1638,10 @@ if __name__ == '__main__':
     parser.add_argument('--intrinsic_gain_attention', action='store_true',
                         help='Enable intrinsic gain attention mode (Values are skill-space gains, h_t = Σ α g)')
     parser.add_argument('--disable_intrinsic_gain_attention', action='store_true', help='Disable intrinsic gain attention')
+    parser.add_argument('--use_skill_difficulty', action='store_true',
+                        help='Enable learnable per-skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)')
+    parser.add_argument('--use_student_speed', action='store_true',
+                        help='Enable learnable per-student learning speed embeddings (Phase 2: Architectural Improvements)')
     # Enhanced constraints (core semantic shaping) ON by default; use --pure_bce to disable.
     parser.add_argument('--enhanced_constraints', action='store_true',
                         help='Use enhanced constraint preset (default: enabled). Use --pure_bce for pure BCE baseline.')

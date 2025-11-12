@@ -28,13 +28,16 @@ class GainAKT2Exp(GainAKT2):
                  non_negative_loss_weight=0.1,
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
-                 consistency_loss_weight=0.1, monitor_frequency=50):
+                 consistency_loss_weight=0.1, monitor_frequency=50, use_skill_difficulty=False,
+                 use_student_speed=False, num_students=None):
         """
         Initialize the monitored GainAKT2Exp model.
         
         Args:
             monitor_frequency (int): How often to compute interpretability metrics during training
             intrinsic_gain_attention (bool): If True, use intrinsic gain attention mode
+            use_student_speed (bool): If True, add per-student learning speed embeddings
+            num_students (int): Number of unique students (required if use_student_speed=True)
             Other args: Same as base GainAKT2 model
         """
         # Allow disabling heads for a pure predictive baseline; otherwise enable.
@@ -49,7 +52,10 @@ class GainAKT2Exp(GainAKT2):
             mastery_performance_loss_weight=mastery_performance_loss_weight,
             gain_performance_loss_weight=gain_performance_loss_weight,
             sparsity_loss_weight=sparsity_loss_weight,
-            consistency_loss_weight=consistency_loss_weight
+            consistency_loss_weight=consistency_loss_weight,
+            use_skill_difficulty=use_skill_difficulty,
+            use_student_speed=use_student_speed,
+            num_students=num_students
         )
         
         self.monitor_frequency = monitor_frequency
@@ -60,13 +66,14 @@ class GainAKT2Exp(GainAKT2):
         """Set the interpretability monitor hook."""
         self.interpretability_monitor = monitor
         
-    def forward_with_states(self, q, r, qry=None, batch_idx=None):
+    def forward_with_states(self, q, r, qry=None, batch_idx=None, student_ids=None):
         """
         Forward pass that returns internal states for interpretability monitoring.
         
         Args:
             q, r, qry: Same as base forward method
             batch_idx: Current batch index for monitoring frequency
+            student_ids: Student IDs [batch_size] (required if use_student_speed=True)
         
         Returns:
             dict: Standard model outputs plus internal states:
@@ -117,12 +124,33 @@ class GainAKT2Exp(GainAKT2):
         # 4. Generate predictions
         target_concept_emb = self.concept_embedding(target_concepts)
         
+        # Apply skill difficulty modulation (if enabled)
+        if self.use_skill_difficulty:
+            difficulty_scale = torch.gather(
+                self.skill_difficulty_scale.unsqueeze(0).expand(batch_size, -1),
+                1, target_concepts
+            )
+            difficulty_scale = torch.clamp(difficulty_scale, 0.5, 2.0).unsqueeze(-1)
+            target_concept_emb = target_concept_emb * difficulty_scale
+        
+        # Add student learning speed embedding (if enabled)
+        if self.use_student_speed:
+            assert student_ids is not None, "student_ids required when use_student_speed=True"
+            student_emb = self.student_speed_embedding(student_ids)
+            student_emb = student_emb.unsqueeze(1).expand(-1, seq_len, -1)
+        
         if self.intrinsic_gain_attention:
-            # Intrinsic mode: [h_t, concept_embedding]
-            concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
+            # Intrinsic mode: [h_t, concept_embedding] or [h_t, concept_embedding, student_speed]
+            if self.use_student_speed:
+                concatenated = torch.cat([context_seq, target_concept_emb, student_emb], dim=-1)
+            else:
+                concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
         else:
-            # Legacy mode: [context_seq, value_seq, concept_embedding]
-            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
+            # Legacy mode: [context_seq, value_seq, concept_embedding] or [..., student_speed]
+            if self.use_student_speed:
+                concatenated = torch.cat([context_seq, value_seq, target_concept_emb, student_emb], dim=-1)
+            else:
+                concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
             
         logits = self.prediction_head(concatenated).squeeze(-1)
         # Defer sigmoid until evaluation to allow using BCEWithLogitsLoss safely under AMP
@@ -215,12 +243,12 @@ class GainAKT2Exp(GainAKT2):
         
         return output
     
-    def forward(self, q, r, qry=None, qtest=False):
+    def forward(self, q, r, qry=None, qtest=False, student_ids=None):
         """
         Standard forward method maintaining compatibility with PyKT framework.
         """
         # For standard forward, just return basic outputs
-        output = self.forward_with_states(q, r, qry)
+        output = self.forward_with_states(q, r, qry, student_ids=student_ids)
         
         # Return only the standard outputs for PyKT compatibility
         result = {'predictions': output['predictions']}
@@ -339,6 +367,9 @@ def create_exp_model(config):
             use_mastery_head=config['use_mastery_head'],
             use_gain_head=config['use_gain_head'],
             intrinsic_gain_attention=config['intrinsic_gain_attention'],
+            use_skill_difficulty=config['use_skill_difficulty'],
+            use_student_speed=config['use_student_speed'],
+            num_students=config.get('num_students'),  # May be None if not using student_speed
             non_negative_loss_weight=config['non_negative_loss_weight'],
             monotonicity_loss_weight=config['monotonicity_loss_weight'],
             mastery_performance_loss_weight=config['mastery_performance_loss_weight'],

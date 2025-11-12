@@ -79,7 +79,7 @@ class KTDataset(Dataset):
         dcur = dict()
         mseqs = self.dori["masks"][index]
         for key in self.dori:
-            if key in ["masks", "smasks"]:
+            if key in ["masks", "smasks", "uids", "uid_to_index", "num_students"]:
                 continue
             if len(self.dori[key]) == 0:
                 dcur[key] = self.dori[key]
@@ -92,6 +92,8 @@ class KTDataset(Dataset):
             dcur["shft_"+key] = shft_seqs
         dcur["masks"] = mseqs
         dcur["smasks"] = self.dori["smasks"][index]
+        # Add student ID (scalar per sequence) - fallback to 0 if not available (legacy datasets)
+        dcur["uids"] = self.dori.get("uids", [0] * len(self.dori["masks"]))[index]
         # print("tseqs", dcur["tseqs"])
         if not self.qtest:
             return dcur
@@ -114,13 +116,20 @@ class KTDataset(Dataset):
             - **r_seqs (torch.tensor)**: response id sequence of the 0~seqlen-1 interactions
             - **mask_seqs (torch.tensor)**: masked value sequence, shape is seqlen-1
             - **select_masks (torch.tensor)**: is select to calculate the performance or not, 0 is not selected, 1 is selected, only available for 1~seqlen-1, shape is seqlen-1
+            - **uids (torch.tensor)**: student IDs for each sequence
             - **dqtest (dict)**: not null only self.qtest is True, for question level evaluation
         """
-        dori = {"qseqs": [], "cseqs": [], "rseqs": [], "tseqs": [], "utseqs": [], "smasks": []}
+        dori = {"qseqs": [], "cseqs": [], "rseqs": [], "tseqs": [], "utseqs": [], "smasks": [], "uids": []}
 
         # seq_qids, seq_cids, seq_rights, seq_mask = [], [], [], []
         df = pd.read_csv(sequence_path)#[0:1000]
         df = df[df["fold"].isin(folds)]
+        
+        # Build student ID mapping from uid to sequential index
+        # This ensures consistent student indices across train/val/test
+        unique_uids = sorted(df["uid"].unique())
+        uid_to_index = {uid: idx for idx, uid in enumerate(unique_uids)}
+        
         interaction_num = 0
         # seq_qidxs, seq_rests = [], []
         dqtest = {"qidxs": [], "rests":[], "orirow":[]}
@@ -137,6 +146,9 @@ class KTDataset(Dataset):
                 
             dori["rseqs"].append([int(_) for _ in row["responses"].split(",")])
             dori["smasks"].append([int(_) for _ in row["selectmasks"].split(",")])
+            
+            # Add student ID (mapped to sequential index)
+            dori["uids"].append(uid_to_index[row["uid"]])
 
             interaction_num += dori["smasks"][-1].count(1)
 
@@ -145,7 +157,10 @@ class KTDataset(Dataset):
                 dqtest["rests"].append([int(_) for _ in row["rest"].split(",")])
                 dqtest["orirow"].append([int(_) for _ in row["orirow"].split(",")])
         for key in dori:
-            if key not in ["rseqs"]:#in ["smasks", "tseqs"]:
+            if key == "uids":
+                # uids are scalars (one per sequence), not sequences
+                dori[key] = LongTensor(dori[key])
+            elif key not in ["rseqs"]:#in ["smasks", "tseqs"]:
                 dori[key] = LongTensor(dori[key])
             else:
                 dori[key] = FloatTensor(dori[key])
@@ -154,8 +169,12 @@ class KTDataset(Dataset):
         dori["masks"] = mask_seqs
 
         dori["smasks"] = (dori["smasks"][:, 1:] != pad_val)
-        print(f"interaction_num: {interaction_num}")
+        print(f"interaction_num: {interaction_num}, num_students: {len(uid_to_index)}")
         # print("load data tseqs: ", dori["tseqs"])
+        
+        # Store the uid mapping for reference
+        dori["uid_to_index"] = uid_to_index
+        dori["num_students"] = len(uid_to_index)
 
         if self.qtest:
             for key in dqtest:
