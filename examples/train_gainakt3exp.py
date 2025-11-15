@@ -611,8 +611,10 @@ def train_gainakt3exp_model(args):
                     writer.writerow([
                         'epoch','train_loss','train_auc','val_loss','val_auc','val_accuracy',
                         'monotonicity_violation_rate','negative_gain_rate','bounds_violation_rate',
-                        'mastery_correlation','gain_correlation','main_loss_share','constraint_loss_share',
-                        'alignment_loss_share','lag_loss_share','retention_loss_share'
+                        'mastery_correlation','gain_correlation',
+                        'bce_loss_share','incremental_mastery_loss_share'
+                        # SIMPLIFIED (2025-11-15): Commented out constraint and semantic loss shares
+                        # 'constraint_loss_share','alignment_loss_share','lag_loss_share','retention_loss_share'
                     ])
             logger.info(f"[Repro] Writing artifacts into {experiment_dir}")
         except Exception as e:
@@ -1134,30 +1136,30 @@ def train_gainakt3exp_model(args):
         train_loss = total_loss / len(train_loader)
         train_main_loss = total_main_loss / len(train_loader)
         train_constraint_loss = total_interpretability_loss / len(train_loader)
-        # Loss share instrumentation
+        # SIMPLIFIED (2025-11-15): Loss share instrumentation for BCE + Incremental Mastery only
         if total_loss > 0:
-            main_loss_share = train_main_loss / (total_loss / len(train_loader))
-            constraint_loss_share = train_constraint_loss / (total_loss / len(train_loader))
-            alignment_loss_share = (total_alignment_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_alignment_loss else 0.0
-            lag_loss_share = (total_lag_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_lag_gain_loss else 0.0
-            retention_loss_share = (total_retention_component / len(train_loader)) / (total_loss / len(train_loader)) if enable_retention_loss else 0.0
+            bce_loss_share = train_main_loss / (total_loss / len(train_loader))
+            incremental_mastery_loss_share = train_constraint_loss / (total_loss / len(train_loader))
             
-            # Validate loss share normalization (Bug 1 fix)
-            total_share = main_loss_share + constraint_loss_share + alignment_loss_share + lag_loss_share + retention_loss_share
+            # COMMENTED OUT: Constraint and semantic loss shares (architecture simplification)
+            # main_loss_share = train_main_loss / (total_loss / len(train_loader))
+            # constraint_loss_share = train_constraint_loss / (total_loss / len(train_loader))
+            # alignment_loss_share = (total_alignment_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_alignment_loss else 0.0
+            # lag_loss_share = (total_lag_loss / len(train_loader)) / (total_loss / len(train_loader)) if enable_lag_gain_loss else 0.0
+            # retention_loss_share = (total_retention_component / len(train_loader)) / (total_loss / len(train_loader)) if enable_retention_loss else 0.0
             
-            # Log warning if shares don't sum to ~1.0 or contain unexpected negatives
+            # Validate loss share normalization (simplified: only 2 losses)
+            total_share = bce_loss_share + incremental_mastery_loss_share
+            
+            # Log warning if shares don't sum to ~1.0
             if abs(total_share - 1.0) > 0.1:  # Tolerance of 10%
                 logger.warning(f"[Loss Share Validation] Total share = {total_share:.4f} (expected ~1.0)")
-                logger.warning(f"  Components: main={main_loss_share:.4f}, constraint={constraint_loss_share:.4f}, "
-                             f"alignment={alignment_loss_share:.4f}, lag={lag_loss_share:.4f}, retention={retention_loss_share:.4f}")
-            
-            # Note: alignment_loss can be legitimately negative (correlation-based reward)
-            # This is expected behavior when correlations are positive (encouraging them means negative loss)
-            if alignment_loss_share < -0.1:  # Warning if magnitude > 10%
-                logger.info(f"[Loss Share Info] Alignment loss share is notably negative: {alignment_loss_share:.4f} "
-                          f"(positive correlations produce negative correlation-based losses)")
+                logger.warning(f"  Components: BCE={bce_loss_share:.4f}, Incremental_Mastery={incremental_mastery_loss_share:.4f}")
         else:
-            main_loss_share = constraint_loss_share = alignment_loss_share = lag_loss_share = retention_loss_share = 0.0
+            bce_loss_share = incremental_mastery_loss_share = 0.0
+            
+        # COMMENTED OUT: Legacy loss share variables for old constraint/semantic losses
+        # main_loss_share = constraint_loss_share = alignment_loss_share = lag_loss_share = retention_loss_share = 0.0
         mean_mastery_variance = float(np.mean(batch_mastery_variances)) if batch_mastery_variances else None
         min_mastery_variance = float(np.min(batch_mastery_variances)) if batch_mastery_variances else None
         max_mastery_variance = float(np.max(batch_mastery_variances)) if batch_mastery_variances else None
@@ -1376,14 +1378,19 @@ def train_gainakt3exp_model(args):
         # Log epoch results with enhanced formatting
         logger.info("=" * 60)
         logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
-        logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (Main: {train_main_loss:.4f}, "
-                   f"Constraint: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
+        logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (BCE: {train_main_loss:.4f}, "
+                   f"Incremental Mastery: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
         
-        # Log loss composition (Bug 1 fix - enhanced transparency)
-        total_share = main_loss_share + constraint_loss_share + alignment_loss_share + lag_loss_share + retention_loss_share
+        # SIMPLIFIED (2025-11-15): Log loss composition for BCE + Incremental Mastery only
+        total_share = bce_loss_share + incremental_mastery_loss_share
         logger.info(f"  📊 Loss Composition (shares sum to {total_share:.3f}):")
-        logger.info(f"     Main: {main_loss_share:.1%}, Constraint: {constraint_loss_share:.1%}, "
-                   f"Alignment: {alignment_loss_share:+.1%}, Lag: {lag_loss_share:.1%}, Retention: {retention_loss_share:.1%}")
+        logger.info(f"     BCE: {bce_loss_share:.1%}, Incremental Mastery: {incremental_mastery_loss_share:.1%}")
+        
+        # COMMENTED OUT: Old loss composition logging for constraint/semantic losses
+        # total_share = main_loss_share + constraint_loss_share + alignment_loss_share + lag_loss_share + retention_loss_share
+        # logger.info(f"  📊 Loss Composition (shares sum to {total_share:.3f}):")
+        # logger.info(f"     Main: {main_loss_share:.1%}, Constraint: {constraint_loss_share:.1%}, "
+        #            f"Alignment: {alignment_loss_share:+.1%}, Lag: {lag_loss_share:.1%}, Retention: {retention_loss_share:.1%}")
         
         logger.info(f"  ✅ Valid - Loss: {val_loss:.4f}, AUC: {val_auc:.4f}, Acc: {val_acc:.4f}")
         if device.type == 'cuda':
@@ -1418,50 +1425,48 @@ def train_gainakt3exp_model(args):
         train_history['train_auc'].append(train_auc)
         train_history['val_auc'].append(val_auc)
         train_history['consistency_metrics'].append(consistency_metrics)
+        # SIMPLIFIED (2025-11-15): Semantic trajectory now only includes BCE and Incremental Mastery losses
         train_history['semantic_trajectory'].append({
             'epoch': epoch + 1,
             'mastery_correlation': consistency_metrics['mastery_correlation'],
             'gain_correlation': consistency_metrics['gain_correlation'],
             'warmup_scale': scale,
-            'alignment_corr_mastery': float(alignment_corr_mastery.detach().cpu()) if 'alignment_corr_mastery' in locals() else None,
-            'alignment_corr_gain': float(alignment_corr_gain.detach().cpu()) if 'alignment_corr_gain' in locals() else None,
-            'global_alignment_mastery_corr': global_mastery_corr,
-            'global_alignment_gain_corr': global_gain_corr,
-            'effective_alignment_weight': global_alignment_state.get('effective_alignment_weight_last'),
-            'peak_mastery_corr': retention_state['peak_mastery_corr'],
-            'retention_loss_value': retention_loss_value,
-            'mean_lag_corr': float(mean_lag_corr.detach().cpu()) if 'mean_lag_corr' in locals() else None,
-            'lag_corr_count': lag_corr_count if 'lag_corr_count' in locals() else 0,
-            'consistency_loss_weight_current': getattr(model_core, 'consistency_loss_weight', consistency_loss_weight),
-            'sparsity_loss_weight_current': getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight),
             'loss_shares': {
-                'main': main_loss_share,
-                'constraint_total': constraint_loss_share,
-                'alignment': alignment_loss_share,
-                'lag': lag_loss_share,
-                'retention': retention_loss_share
+                'bce': bce_loss_share,
+                'incremental_mastery': incremental_mastery_loss_share
             },
             'mean_mastery_variance': mean_mastery_variance,
             'min_mastery_variance': min_mastery_variance,
-            'max_mastery_variance': max_mastery_variance,
-            'per_lag_correlations': epoch_lag_corrs
+            'max_mastery_variance': max_mastery_variance
+            # COMMENTED OUT: Legacy semantic module metrics (alignment, retention, lag gains, etc.)
+            # 'alignment_corr_mastery': float(alignment_corr_mastery.detach().cpu()) if 'alignment_corr_mastery' in locals() else None,
+            # 'alignment_corr_gain': float(alignment_corr_gain.detach().cpu()) if 'alignment_corr_gain' in locals() else None,
+            # 'global_alignment_mastery_corr': global_mastery_corr,
+            # 'global_alignment_gain_corr': global_gain_corr,
+            # 'effective_alignment_weight': global_alignment_state.get('effective_alignment_weight_last'),
+            # 'peak_mastery_corr': retention_state['peak_mastery_corr'],
+            # 'retention_loss_value': retention_loss_value,
+            # 'mean_lag_corr': float(mean_lag_corr.detach().cpu()) if 'mean_lag_corr' in locals() else None,
+            # 'lag_corr_count': lag_corr_count if 'lag_corr_count' in locals() else 0,
+            # 'consistency_loss_weight_current': getattr(model_core, 'consistency_loss_weight', consistency_loss_weight),
+            # 'sparsity_loss_weight_current': getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight),
+            # 'per_lag_correlations': epoch_lag_corrs
         })
 
-        # Alignment share cap enforcement (post logging so share recorded) with decay
-        if enable_alignment_loss and alignment_loss_share is not None and abs(alignment_loss_share) > alignment_share_cap:
-            # Plateau detection: only decay if mastery correlation improvement < 0.005 epoch-over-epoch
-            prev_prev = global_alignment_state.get('prev_prev_global_mastery_corr')
-            prev_curr = global_alignment_state.get('prev_global_mastery_corr')
-            corr_improvement = None
-            if prev_prev is not None and prev_curr is not None:
-                corr_improvement = prev_curr - prev_prev
-            if corr_improvement is None or corr_improvement < 0.005:
-                old_w = global_alignment_state['alignment_weight_current']
-                new_w = max(0.05, old_w * alignment_share_decay_factor)  # floor to avoid starvation
-                global_alignment_state['alignment_weight_current'] = new_w
-                logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > {alignment_share_cap:.2f} and plateau (Δcorr={corr_improvement}); decay {old_w:.4f} -> {new_w:.4f}")
-            else:
-                logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > cap but corr improving (Δcorr={corr_improvement:.4f}); no decay applied.")
+        # COMMENTED OUT: Alignment share cap enforcement (not applicable in simplified architecture)
+        # if enable_alignment_loss and alignment_loss_share is not None and abs(alignment_loss_share) > alignment_share_cap:
+        #     prev_prev = global_alignment_state.get('prev_prev_global_mastery_corr')
+        #     prev_curr = global_alignment_state.get('prev_global_mastery_corr')
+        #     corr_improvement = None
+        #     if prev_prev is not None and prev_curr is not None:
+        #         corr_improvement = prev_curr - prev_prev
+        #     if corr_improvement is None or corr_improvement < 0.005:
+        #         old_w = global_alignment_state['alignment_weight_current']
+        #         new_w = max(0.05, old_w * alignment_share_decay_factor)
+        #         global_alignment_state['alignment_weight_current'] = new_w
+        #         logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > {alignment_share_cap:.2f} and plateau (Δcorr={corr_improvement}); decay {old_w:.4f} -> {new_w:.4f}")
+        #     else:
+        #         logger.info(f"[AlignCap] Alignment share {alignment_loss_share:.4f} > cap but corr improving (Δcorr={corr_improvement:.4f}); no decay applied.")
         
         # Wandb logging
         if args.use_wandb:
@@ -1543,11 +1548,14 @@ def train_gainakt3exp_model(args):
                         consistency_metrics.get('bounds_violation_rate'),
                         consistency_metrics.get('mastery_correlation'),
                         consistency_metrics.get('gain_correlation'),
-                        train_history['semantic_trajectory'][-1]['loss_shares']['main'],
-                        train_history['semantic_trajectory'][-1]['loss_shares']['constraint_total'],
-                        train_history['semantic_trajectory'][-1]['loss_shares']['alignment'],
-                        train_history['semantic_trajectory'][-1]['loss_shares']['lag'],
-                        train_history['semantic_trajectory'][-1]['loss_shares']['retention']
+                        train_history['semantic_trajectory'][-1]['loss_shares']['bce'],
+                        train_history['semantic_trajectory'][-1]['loss_shares']['incremental_mastery']
+                        # SIMPLIFIED (2025-11-15): Commented out constraint and semantic loss shares
+                        # train_history['semantic_trajectory'][-1]['loss_shares']['main'],
+                        # train_history['semantic_trajectory'][-1]['loss_shares']['constraint_total'],
+                        # train_history['semantic_trajectory'][-1]['loss_shares']['alignment'],
+                        # train_history['semantic_trajectory'][-1]['loss_shares']['lag'],
+                        # train_history['semantic_trajectory'][-1]['loss_shares']['retention']
                     ])
             except Exception as e:
                 logger.warning(f"[Repro] Failed to append metrics row: {e}")
