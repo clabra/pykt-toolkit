@@ -489,17 +489,22 @@ graph TD
 - ✅ **Mastery Output**: `projected_mastery` included in model output dictionary
 - ✅ **Base Predictions Output**: `predictions` from prediction head in model output dictionary
 - ✅ **Incremental Mastery Predictions Output**: `incremental_mastery_predictions` from threshold mechanism in output dictionary
-- ✅ **Dual Loss Functions**:
+- ✅ **Dual Loss Functions (SIMPLIFIED 2025-11-15)**:
   - **BCE Loss**: Binary cross-entropy on **base predictions** vs ground truth (primary loss)
   - **Incremental Mastery Loss**: Binary cross-entropy on **incremental mastery predictions** vs ground truth (weight=0.1)
-- ✅ **Constraint Losses**: ALL ACTIVE - `compute_interpretability_loss()` called with mastery and internal gains:
-  - Monotonicity Loss (weight=0.1) - ✅ enforces mastery non-decrease
-  - Mastery-Performance Loss (weight=0.5) - ✅ aligns mastery with correctness
-  - Gain-Performance Loss (weight=0.5) - ✅ correlates gains with performance
-  - Sparsity Loss (weight=0.2) - ✅ encourages sparse gain attribution
-  - Consistency Loss (weight=0.3) - ✅ aligns mastery changes with gains
-  - Non-Negativity Loss (weight=0.0) - ✅ active but zero weight
-- ✅ **Semantic Losses**: Alignment, Retention, Lag Gain (optional, controlled by weights)
+- ❌ **Constraint Losses**: ALL COMMENTED OUT - `compute_interpretability_loss()` returns 0.0 (all weights=0.0):
+  - Monotonicity Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Mastery-Performance Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Gain-Performance Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Sparsity Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Consistency Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Non-Negativity Loss (weight=0.0) - ❌ COMMENTED OUT
+- ❌ **Semantic Losses**: ALL COMMENTED OUT (all enable flags=false, all weights=0.0):
+  - Alignment Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Global Alignment (enable=false) - ❌ COMMENTED OUT
+  - Residual Alignment (enable=false) - ❌ COMMENTED OUT
+  - Retention Loss (weight=0.0) - ❌ COMMENTED OUT
+  - Lag Gain Loss (weight=0.0) - ❌ COMMENTED OUT
 
 **What's SUPPRESSED** (computed but not included in output):
 - ⚠️ **Gains Head Output**: `projected_gains` computed internally for mastery but **NOT included** in output dictionary (controlled by `use_gain_head=false`)
@@ -640,11 +645,11 @@ sequenceDiagram
                 deactivate Monitor
             end
             
-            Model-->>TrainScript: {predictions, logits,<br/>context_seq, value_seq,<br/>mastery, gains, interp_loss}
+            Model-->>TrainScript: {predictions, logits,<br/>context_seq, value_seq,<br/>mastery, gains,<br/>incremental_mastery_loss}
             deactivate Model
             
-            TrainScript->>TrainScript: Compute BCE loss<br/>(from logits)
-            TrainScript->>TrainScript: total_loss = BCE + interp_loss
+            TrainScript->>TrainScript: Compute BCE loss<br/>(from base logits)
+            TrainScript->>TrainScript: total_loss = BCE + incremental_mastery_loss<br/>(SIMPLIFIED: constraint losses = 0.0)
             
             TrainScript->>Optimizer: Backward pass
             Optimizer->>Model: Update parameters
@@ -674,7 +679,9 @@ sequenceDiagram
 **Key Training Flow Characteristics:**
 - **Zero Defaults**: All parameters explicitly loaded from config or CLI
 - **Monitoring Hooks**: Periodic state capture every N batches (default: 50)
-- **Dual Loss**: BCE (prediction accuracy) + interpretability loss (constraints + semantics)
+- **Dual Loss (SIMPLIFIED 2025-11-15)**: BCE (base prediction accuracy) + Incremental Mastery Loss (threshold predictions, weight=0.1)
+  - Constraint losses: ALL commented out (weights=0.0)
+  - Semantic losses: ALL commented out (disabled)
 - **Artifact Persistence**: Complete reproducibility via saved config + checkpoints
 - **Correlation Tracking**: Mastery/gain correlations computed per epoch
 
@@ -950,21 +957,22 @@ sequenceDiagram
     Losses->>Losses: Compute skill masks<br/>(Q-matrix structure)
     
     par Constraint Losses (6 losses computed in parallel)
-        Losses->>Losses: L1: Non-Negative Gains<br/>clamp(-gains, min=0).mean()
+        Note over Losses: ❌ ALL CONSTRAINT LOSSES COMMENTED OUT (weights=0.0)
+        Losses->>Losses: L1: Non-Negative Gains (INACTIVE)<br/>clamp(-gains, min=0).mean()
     and
-        Losses->>Losses: L2: Monotonicity<br/>clamp(mastery[t] - mastery[t+1], min=0).mean()
+        Losses->>Losses: L2: Monotonicity (INACTIVE)<br/>clamp(mastery[t] - mastery[t+1], min=0).mean()
     and
-        Losses->>Losses: L3: Mastery-Performance<br/>low_mastery_correct + high_mastery_incorrect
+        Losses->>Losses: L3: Mastery-Performance (INACTIVE)<br/>low_mastery_correct + high_mastery_incorrect
     and
-        Losses->>Losses: L4: Gain-Performance<br/>clamp(incorrect_gains - correct_gains + 0.1, min=0)
+        Losses->>Losses: L4: Gain-Performance (INACTIVE)<br/>clamp(incorrect_gains - correct_gains + 0.1, min=0)
     and
-        Losses->>Losses: L5: Sparsity<br/>abs(non_relevant_gains).mean()
+        Losses->>Losses: L5: Sparsity (INACTIVE)<br/>abs(non_relevant_gains).mean()
     and
-        Losses->>Losses: L6: Consistency<br/>abs(mastery_delta - scaled_gains).mean()
+        Losses->>Losses: L6: Consistency (INACTIVE)<br/>abs(mastery_delta - scaled_gains).mean()
     end
     
-    Losses->>Losses: Total interpretability_loss =<br/>w1*L1 + w2*L2 + w3*L3 + w4*L4 + w5*L5 + w6*L6
-    Losses->>Output: interpretability_loss (scalar)
+    Losses->>Losses: Total interpretability_loss = 0.0<br/>(all weights w1-w6 = 0.0 in simplified architecture)
+    Losses->>Output: interpretability_loss = 0.0 (scalar)
     
     alt Monitoring enabled AND batch_idx % monitor_frequency == 0
         Output->>Monitor: Pass all states:<br/>context_seq, value_seq,<br/>mastery, gains, predictions,<br/>questions, responses
@@ -972,7 +980,7 @@ sequenceDiagram
         Monitor-->>Output: Monitoring complete
     end
     
-    Output->>Output: Assemble final dict:<br/>{predictions, logits,<br/>context_seq, value_seq,<br/>projected_mastery, projected_gains,<br/>interpretability_loss}
+    Output->>Output: Assemble final dict:<br/>{predictions, logits,<br/>context_seq, value_seq,<br/>projected_mastery, incremental_mastery_predictions,<br/>interpretability_loss (=0.0),<br/>incremental_mastery_loss}
 ```
 
 **Key Flow Insights:**
@@ -1287,13 +1295,21 @@ for t in range(seq_len):
 
 **Expected (from diagram):** BCE loss for prediction accuracy plus five auxiliary losses (Non-Negative, Monotonicity, Mastery-Performance, Gain-Performance, Sparsity) with configurable weights, all integrated into total loss.
 
-**Implementation Status:**
+**Implementation Status (SIMPLIFIED 2025-11-15):**
 
 **5a. BCE Loss:**
-- Computed externally in training script using `predictions` output
+- ✅ **ACTIVE**: Computed externally in training script using `predictions` output
 - Model provides both `predictions` (sigmoid) and `logits` for flexible loss computation
 
-**5b. Auxiliary Losses (all in `compute_interpretability_loss()` lines 202-277):**
+**5b. Incremental Mastery Loss:**
+- ✅ **ACTIVE**: Computed in model (lines 511-519) using incremental mastery predictions from threshold mechanism
+- Binary cross-entropy on threshold-based predictions vs ground truth
+- Weight = 0.1 in current configuration
+- Extracted and used by training loop (commit 07b63e3)
+
+**5c. Auxiliary Constraint Losses - ❌ ALL COMMENTED OUT (all weights=0.0):**
+
+**Implementation preserved in `compute_interpretability_loss()` (lines 202-277) but inactive:**
 
 1. **Non-Negative Gains Loss** (lines 217-220):
    ```python
@@ -1347,19 +1363,21 @@ for t in range(seq_len):
    total_loss += self.consistency_loss_weight * consistency_loss
    ```
 
-**5c. Integration:**
-- All losses computed in single `compute_interpretability_loss()` method
-- Returned as `interpretability_loss` in `forward_with_states()` output dict (line 149)
+**5d. Integration:**
+- ❌ All constraint losses computed in single `compute_interpretability_loss()` method but **INACTIVE** (all weights=0.0)
+- ❌ Returned as `interpretability_loss = 0.0` in `forward_with_states()` output dict (line 149)
+- ✅ Incremental mastery loss computed separately and returned in output dict
 - Each loss has configurable weight parameter (constructor lines 27-32)
 - Skill masks computed from Q-matrix structure (line 213)
 
-**Architecture Alignment:** 
-- All 5 diagram losses implemented exactly as shown
-- 6th loss (Consistency) added for tighter mastery-gain coupling
-- All weights configurable
-- Total loss formula: `BCE + w1×NonNeg + w2×Monotonicity + w3×Mastery_Perf + w4×Gain_Perf + w5×Sparsity + w6×Consistency`
+**Architecture Alignment (SIMPLIFIED 2025-11-15):** 
+- ❌ All 5 diagram constraint losses COMMENTED OUT (weights=0.0)
+- ❌ 6th loss (Consistency) also COMMENTED OUT (weight=0.0)
+- ✅ Active loss formula: `BCE + incremental_mastery_loss` (weight=0.1)
+- ⚠️ All constraint loss code preserved but inactive: `interpretability_loss = 0.0`
+- **Total training loss:** `BCE + 0.1 × incremental_mastery_loss + 0.0 × interpretability_loss`
 
-**Verification:** The diagram shows 5 auxiliary loss nodes feeding into "Total Loss"—implementation provides these plus an additional consistency loss, all with independently tunable weights.
+**Verification:** The simplified architecture focuses solely on BCE and Incremental Mastery Loss, with all constraint and semantic losses preserved in code but disabled via zero weights and false flags.
 
 
 ### Feature 6: Monitoring
@@ -1415,19 +1433,21 @@ for t in range(seq_len):
 
 **6e. State Dictionary Returned:**
 - **Location:** `forward_with_states()` return statement (line 182-189)
-- **Contents:**
+- **Contents (SIMPLIFIED 2025-11-15):**
   ```python
   return {
-      'predictions': predictions,
-      'logits': logits,
-      'context_seq': context_seq,
-      'value_seq': value_seq,
-      'projected_mastery': projected_mastery,
-      'projected_gains': projected_gains,
-      'interpretability_loss': interpretability_loss
+      'predictions': predictions,  # Base predictions from prediction head
+      'logits': logits,  # Raw logits before sigmoid
+      'context_seq': context_seq,  # Context stream (h)
+      'value_seq': value_seq,  # Value stream (v) = learning gains
+      'projected_mastery': projected_mastery,  # Mastery trajectories
+      'incremental_mastery_predictions': incremental_mastery_predictions,  # Threshold-based predictions
+      'interpretability_loss': interpretability_loss,  # = 0.0 (all constraints commented out)
+      'incremental_mastery_loss': incremental_mastery_loss  # BCE on threshold predictions (weight=0.1)
   }
   ```
 - **Purpose:** Enables both real-time monitoring (via hook) and post-hoc analysis (via returned states)
+- **Note:** `interpretability_loss` always returns 0.0 in simplified architecture; `incremental_mastery_loss` is the active auxiliary loss
 
 **Architecture Alignment:** 
 - Complete monitoring infrastructure matching diagram's "Monitor Hub" and "Interpretability Monitor" nodes
@@ -1674,46 +1694,87 @@ This section documents ALL loss functions (active and commented out) for referen
 
 ### Loss Parameters
 
-| Category | Name | Parameter Name | Default Value | Description |
-|----------|------|----------------|---------------|-------------|
-| **Main** | BCE Loss | - | - | Binary cross-entropy for response prediction |
-| **Constraint** | Non-Negative Gains | `non_negative_loss_weight` | 0.0 | Penalizes negative learning gains (disabled) |
-| **Constraint** | Monotonicity | `monotonicity_loss_weight` | 0.1 | Enforces non-decreasing mastery over time |
-| **Constraint** | Mastery-Performance | `mastery_performance_loss_weight` | 0.8 | Penalizes low mastery on correct, high on incorrect |
-| **Constraint** | Gain-Performance | `gain_performance_loss_weight` | 0.8 | Enforces higher gains for correct responses |
-| **Constraint** | Sparsity | `sparsity_loss_weight` | 0.2 | Penalizes gains on non-relevant skills |
-| **Constraint** | Consistency | `consistency_loss_weight` | 0.3 | Aligns mastery changes with scaled gains |
-| **Semantic** | Alignment (Local) | `alignment_weight` | 0.25 | Maximizes correlation between mastery/gains and performance |
-| **Semantic** | Global Alignment | `enable_global_alignment_pass` | true | Population-level mastery coherence regularization |
-| **Semantic** | Residual Alignment | `use_residual_alignment` | true | Alignment on variance unexplained by global signal |
-| **Semantic** | Retention | `retention_weight` | 0.14 | Prevents post-peak mastery decay |
-| **Semantic** | Lag Gain | `lag_gain_weight` | 0.06 | Introduces temporal structure to gains (lag-1,2,3) |
-| **Schedule** | Constraint Warmup | `warmup_constraint_epochs` | 8 | Epochs to ramp constraint losses from 0 to full |
-| **Schedule** | Alignment Warmup | `alignment_warmup_epochs` | 8 | Epochs to ramp alignment loss from 0 to full |
-| **Schedule** | Alignment Share Cap | `alignment_share_cap` | 0.08 | Maximum proportion of total loss from alignment |
+| Category | Name | Parameter Name | Current Value | Description | Status |
+|----------|------|----------------|---------------|-------------|--------|
+| **Main** | BCE Loss | - | - | Binary cross-entropy for base response prediction | ✅ ACTIVE |
+| **Main** | Incremental Mastery Loss | `incremental_mastery_loss_weight` | 0.1 | BCE on threshold-based mastery predictions | ✅ ACTIVE |
+| **Constraint** | Non-Negative Gains | `non_negative_loss_weight` | 0.0 | Penalizes negative learning gains | ❌ COMMENTED OUT |
+| **Constraint** | Monotonicity | `monotonicity_loss_weight` | 0.0 | Enforces non-decreasing mastery over time | ❌ COMMENTED OUT |
+| **Constraint** | Mastery-Performance | `mastery_performance_loss_weight` | 0.0 | Penalizes low mastery on correct, high on incorrect | ❌ COMMENTED OUT |
+| **Constraint** | Gain-Performance | `gain_performance_loss_weight` | 0.0 | Enforces higher gains for correct responses | ❌ COMMENTED OUT |
+| **Constraint** | Sparsity | `sparsity_loss_weight` | 0.0 | Penalizes gains on non-relevant skills | ❌ COMMENTED OUT |
+| **Constraint** | Consistency | `consistency_loss_weight` | 0.0 | Aligns mastery changes with scaled gains | ❌ COMMENTED OUT |
+| **Semantic** | Alignment (Local) | `alignment_weight` | 0.0 | Maximizes correlation between mastery/gains and performance | ❌ COMMENTED OUT |
+| **Semantic** | Global Alignment | `enable_global_alignment_pass` | false | Population-level mastery coherence regularization | ❌ COMMENTED OUT |
+| **Semantic** | Residual Alignment | `use_residual_alignment` | false | Alignment on variance unexplained by global signal | ❌ COMMENTED OUT |
+| **Semantic** | Retention | `retention_weight` | 0.0 | Prevents post-peak mastery decay | ❌ COMMENTED OUT |
+| **Semantic** | Lag Gain | `lag_gain_weight` | 0.0 | Introduces temporal structure to gains (lag-1,2,3) | ❌ COMMENTED OUT |
+| **Schedule** | Constraint Warmup | `warmup_constraint_epochs` | 8 | Epochs to ramp constraint losses from 0 to full | ⚠️ NOT USED (constraints disabled) |
+| **Schedule** | Alignment Warmup | `alignment_warmup_epochs` | 8 | Epochs to ramp alignment loss from 0 to full | ⚠️ NOT USED (alignment disabled) |
+| **Schedule** | Alignment Share Cap | `alignment_share_cap` | 0.08 | Maximum proportion of total loss from alignment | ⚠️ NOT USED (alignment disabled) |
 
-### BCE Loss
+### Active Losses (SIMPLIFIED ARCHITECTURE)
 
-Binary Cross-Entropy (BCE) Loss: Core loss for response correctness prediction. 
+#### BCE Loss (✅ ACTIVE)
 
-### Constraint Losses
+**Binary Cross-Entropy (BCE) Loss**: Primary loss function for base response correctness prediction.
+- Applied to: **Base predictions** from standard prediction head
+- Implementation: `torch.nn.BCEWithLogitsLoss()` applied to logits
+- Purpose: Optimizes the model's primary task of predicting student responses
+- Weight: Implicit weight = 1.0 (not a configurable parameter)
 
-Constraint losses enforce structural validity and educational plausibility of the projected mastery and gain trajectories. Implemented in the model's `compute_interpretability_loss()` method (`pykt/models/gainakt3_exp.py`), these losses operate at the **interaction level**, penalizing specific violations of educational expectations. Unlike semantic module losses that shape overall trajectory correlations, constraint losses act as **hard regularizers** preventing degenerate or nonsensical states.
+#### Incremental Mastery Loss (✅ ACTIVE, NEW in Simplified Architecture)
 
-**Semantic Constraints**
+**Incremental Mastery Loss** (`incremental_mastery_loss_weight = 0.1`): Secondary loss function for threshold-based mastery predictions.
+
+**Purpose**: Provides an interpretability-driven learning signal through the dual-prediction mechanism:
+- Applied to: **Incremental mastery predictions** from threshold mechanism
+- Formula: `sigmoid((skill_mastery - skill_threshold) / temperature)`
+- Implementation: Binary cross-entropy between threshold predictions and ground truth responses
+- Weight: 0.1 (contributes ~5-15% of total loss)
+
+**Rationale**: This loss creates a **second independent prediction branch** that:
+1. Forces mastery values to be semantically meaningful (high mastery → correct predictions)
+2. Makes learnable thresholds adapt to represent "sufficient mastery for success"
+3. Provides gradient signal to mastery accumulation mechanism
+4. Improves interpretability without relying on complex constraint losses
+
+**Code Location**: 
+- Model computation: `pykt/models/gainakt3_exp.py` lines 511-519
+- Training integration: `examples/train_gainakt3exp.py` lines 811, 965, 1133-1137, 1157
+
+**Expected Behavior**:
+- Loss share: ~5-15% of total loss (weight=0.1, but actual contribution varies by epoch)
+- Should be non-zero in all training epochs (if 0.0, indicates bug in training loop)
+- Gradients flow through: mastery values → threshold mechanism → incremental predictions
+
+---
+
+### Commented Out Losses (Code Preserved for Future Restoration)
+
+The following losses are **COMMENTED OUT** in the simplified architecture (all weights=0.0 or disabled). Code is preserved in comments for potential future restoration. See commit 4849b72 for simplification details.
+
+#### Constraint Losses (❌ ALL COMMENTED OUT)
+
+**⚠️ STATUS**: All constraint losses are COMMENTED OUT (weights=0.0). The `compute_interpretability_loss()` method in `pykt/models/gainakt3_exp.py` (lines 572-649) now returns `torch.tensor(0.0)`. Original code preserved in comments for potential future restoration.
+
+**Original Purpose** (when active): Constraint losses enforced structural validity and educational plausibility of the projected mastery and gain trajectories. They operated at the **interaction level**, penalizing specific violations of educational expectations. Unlike semantic module losses that shaped overall trajectory correlations, constraint losses acted as **hard regularizers** preventing degenerate or nonsensical states.
+
+**Semantic Constraints** (original design):
 1. **Non-negative gains**: Learning gains are always positive (>=0)
-2. **Monotonic mastery**: Mastery can only increase or stay constant over time. Mastery level is in [0,1] range (probabilistic interpretation)
-3. **Consistency**: Mastery increments are consistent with learning gains
-4. **Sparsity**: Practice with an item/question produces mastery increments only in the relevant skills (those skills related to the item according to the Q-Matrix)
+2. **Monotonic mastery**: Mastery can only increase or stay constant over time
+3. **Consistency**: Mastery increments consistent with learning gains
+4. **Sparsity**: Gains only on relevant skills per Q-Matrix
 
+---
 
-**Non-Negative Gains** (`non_negative_loss_weight = 0.0`): Penalizes negative learning gains by computing `clamp(-projected_gains, min=0).mean()`. Currently disabled (weight 0.0) as gains are naturally non-negative due to model architecture, but available for architectural variants.
+**Non-Negative Gains** (`non_negative_loss_weight = 0.0`, ❌ COMMENTED OUT): Originally penalized negative learning gains by computing `clamp(-projected_gains, min=0).mean()`. Code preserved but disabled as gains are naturally non-negative due to model architecture.
 
-**Monotonicity** (`monotonicity_loss_weight = 0.1`): Enforces non-decreasing mastery over time by penalizing `clamp(mastery[t] - mastery[t+1], min=0).mean()`. Ensures mastery cannot regress, reflecting the assumption that learning is cumulative and students do not "unlearn" previously mastered skills.
+**Monotonicity** (`monotonicity_loss_weight = 0.0`, ❌ COMMENTED OUT): Originally enforced non-decreasing mastery over time by penalizing `clamp(mastery[t] - mastery[t+1], min=0).mean()`. Code preserved but disabled in simplified architecture.
 
-**Mastery-Performance Alignment** (`mastery_performance_loss_weight = 0.8`): Penalizes interaction-level mismatches between mastery and performance. Specifically: (1) penalizes low mastery (`clamp(1 - mastery, min=0)`) when students answer correctly, and (2) penalizes high mastery (`clamp(mastery, min=0)`) when students answer incorrectly. This hinge-style constraint prevents obvious violations (e.g., mastery=0.1 on correct response, mastery=0.9 on incorrect response) and complements the trajectory-level Alignment Loss by enforcing point-wise consistency.
+**Mastery-Performance Alignment** (`mastery_performance_loss_weight = 0.0`, ❌ COMMENTED OUT): Originally penalized interaction-level mismatches between mastery and performance with hinge-style constraints. Code preserved but disabled - this functionality is now partially covered by Incremental Mastery Loss.
 
-**Gain-Performance Alignment** (`gain_performance_loss_weight = 0.8`): Enforces that correct responses should yield higher gains than incorrect responses via hinge loss: `clamp(mean(incorrect_gains) - mean(correct_gains) + 0.1, min=0)`. The 0.1 margin ensures a clear separation, reflecting the educational assumption that successful problem-solving produces greater learning increments.
+**Gain-Performance Alignment** (`gain_performance_loss_weight = 0.0`, ❌ COMMENTED OUT): Originally enforced that correct responses yield higher gains than incorrect responses via hinge loss. Code preserved but disabled.
 
 **Sparsity** (`sparsity_loss_weight = 0.2`): Penalizes non-zero gains for skills not directly involved in the current interaction via `abs(non_relevant_gains).mean()`. Encourages skill-specific learning (gains concentrated on the question's target skill) rather than diffuse updates across all skills, improving interpretability and alignment with skill-specific educational theories. **Skill Mask Computation:** Uses Q-matrix structure via `skill_masks.scatter_(2, questions.unsqueeze(-1), 1)` to identify relevant skills—correctly implements sparsity constraint based on problem-skill mappings.
 
@@ -1723,29 +1784,33 @@ All constraint losses are subject to warm-up scheduling (`warmup_constraint_epoc
 
 ### Semantic Module Losses
 
-Enabling alignment, global alignment, retention, and lag objectives restored strong semantic interpretability: mastery and gain correlations surpass prior breakthrough levels and remain stable, with modest decline from peak. Predictive AUC peaks early and declines due to interpretability emphasis; scheduling and stabilization adjustments can mitigate this without sacrificing correlation strength. Recommended enhancements focus on smoothing alignment, stabilizing lag objectives, adding statistical robustness and coverage metrics, and protecting validation AUC with phased optimization.
+**⚠️ STATUS**: All semantic module losses are **COMMENTED OUT** in the simplified architecture (2025-11-15). All semantic module enable flags are set to `false` and weights are `0.0` in the current configuration. Code implementing these losses is preserved in `pykt/models/gainakt3_exp.py` but not active.
 
-**Alignment Loss (Local)** (`alignment_weight = 0.25`): Encourages the model's projected mastery estimates to align with actual student performance on individual interactions. Specifically, it penalizes low mastery when students answer correctly and high mastery when they answer incorrectly. This local constraint shapes mastery trajectories to be performance-consistent at the interaction level, accelerating the emergence of educationally meaningful correlations.
+**Original Purpose** (when active): Semantic module losses enabled alignment, global alignment, retention, and lag objectives to restore strong semantic interpretability. When active, these losses produced mastery and gain correlations surpassing prior breakthrough levels with stable trajectories. The current simplified architecture focuses on BCE + Incremental Mastery Loss only, with semantic losses preserved for future architectural exploration.
 
-**Global Alignment Pass** (`enable_global_alignment_pass = true`): Computes population-level mastery statistics (mean/variance across students) and uses them to regularize individual mastery trajectories toward global coherence patterns. This cross-student alignment improves mastery correlation stability by reducing inter-student variance and reinforcing common learning progressions.
+**❌ COMMENTED OUT - Alignment Loss (Local)** (`alignment_weight = 0.0`): When active, this loss encourages the model's projected mastery estimates to align with actual student performance on individual interactions. It penalizes low mastery when students answer correctly and high mastery when they answer incorrectly. This local constraint shapes mastery trajectories to be performance-consistent at the interaction level, accelerating the emergence of educationally meaningful correlations.
 
-**Residual Alignment** (`use_residual_alignment = true`): Applied after global alignment to capture unexplained variance. By removing the global signal component, residual alignment clarifies incremental mastery improvements specific to individual learning contexts, yielding sharper and more interpretable correlation patterns.
+**❌ COMMENTED OUT - Global Alignment Pass** (`enable_global_alignment_pass = false`): When active, computes population-level mastery statistics (mean/variance across students) and uses them to regularize individual mastery trajectories toward global coherence patterns. This cross-student alignment improves mastery correlation stability by reducing inter-student variance and reinforcing common learning progressions.
 
-**Retention Loss** (`retention_weight = 0.14`): Prevents post-peak decay of mastery trajectories by penalizing decreases in mastery levels after they reach local maxima. This ensures that once students demonstrate mastery, the model maintains elevated mastery estimates rather than allowing degradation, supporting higher final correlation retention ratios.
+**❌ COMMENTED OUT - Residual Alignment** (`use_residual_alignment = false`): When active, applied after global alignment to capture unexplained variance. By removing the global signal component, residual alignment clarifies incremental mastery improvements specific to individual learning contexts, yielding sharper and more interpretable correlation patterns.
 
-**Lag Gain Loss** (`lag_gain_weight = 0.06`): Introduces temporal structure to learning gains by encouraging gains at timestep t to correlate with gains at previous timesteps (lag-1, lag-2, lag-3). This creates a coherent temporal narrative where gains emerge systematically rather than randomly, enhancing gain correlation interpretability and capturing causal learning progression patterns.
+**❌ COMMENTED OUT - Retention Loss** (`retention_weight = 0.0`): When active, prevents post-peak decay of mastery trajectories by penalizing decreases in mastery levels after they reach local maxima. This ensures that once students demonstrate mastery, the model maintains elevated mastery estimates rather than allowing degradation, supporting higher final correlation retention ratios.
+
+**❌ COMMENTED OUT - Lag Gain Loss** (`lag_gain_weight = 0.0`): When active, introduces temporal structure to learning gains by encouraging gains at timestep t to correlate with gains at previous timesteps (lag-1, lag-2, lag-3). This creates a coherent temporal narrative where gains emerge systematically rather than randomly, enhancing gain correlation interpretability and capturing causal learning progression patterns.
 
 #### Alignment Schedule Parameters
 
-The semantic module losses, particularly alignment loss, use scheduling mechanisms to balance interpretability emergence with predictive performance:
+**⚠️ STATUS**: These parameters are **NOT USED** in the simplified architecture since all semantic losses are commented out. Documentation preserved for future reference.
 
-**Warm-up Scheduling** (`alignment_warmup_epochs = 8`): Alignment loss is gradually ramped from zero to full weight over the first 8 epochs, allowing the model to establish baseline representations before enforcing strict alignment constraints. This prevents early optimization conflicts where the model hasn't yet learned discriminative features, which could cause training instability or degrade predictive performance.
+**Original Functionality** (when semantic losses are active): The semantic module losses, particularly alignment loss, use scheduling mechanisms to balance interpretability emergence with predictive performance:
 
-**Share Cap** (`alignment_share_cap = 0.08`): Limits the maximum proportion of total loss contributed by alignment to 8%. This prevents alignment from dominating the optimization objective, which could sacrifice predictive accuracy (BCE loss) for interpretability. The cap acts as a soft constraint ensuring that performance remains competitive while still benefiting from alignment-driven trajectory shaping.
+**⚠️ NOT USED - Warm-up Scheduling** (`alignment_warmup_epochs = 8`): When active, alignment loss is gradually ramped from zero to full weight over the first 8 epochs, allowing the model to establish baseline representations before enforcing strict alignment constraints. This prevents early optimization conflicts where the model hasn't yet learned discriminative features, which could cause training instability or degrade predictive performance.
 
-**Rationale:** Early experiments showed that uncapped alignment loss could improve mastery correlation by 15-20% but degrade AUC by 2-3%. The combination of warm-up + share cap enables a balanced regime where interpretability improves (mastery correlation: 0.095±0.018) while maintaining competitive AUC (0.720±0.001). The 8-epoch warm-up aligns with constraint warm-up (`warmup_constraint_epochs = 8`), creating a coordinated two-phase training strategy: (1) Phase 1 (epochs 1-8): representation learning with gradual constraint introduction, (2) Phase 2 (epochs 9-12): full multi-objective optimization with alignment capped at 8% of total loss.
+**⚠️ NOT USED - Share Cap** (`alignment_share_cap = 0.08`): When active, limits the maximum proportion of total loss contributed by alignment to 8%. This prevents alignment from dominating the optimization objective, which could sacrifice predictive accuracy (BCE loss) for interpretability. The cap acts as a soft constraint ensuring that performance remains competitive while still benefiting from alignment-driven trajectory shaping.
 
-**Implementation Note:** The share cap is dynamically computed per batch as `min(alignment_loss * alignment_weight, total_loss * alignment_share_cap)`, ensuring the constraint applies regardless of batch-level loss magnitude fluctuations. This provides stable training dynamics across different dataset characteristics and batch compositions.
+**Historical Rationale:** Early experiments showed that uncapped alignment loss could improve mastery correlation by 15-20% but degrade AUC by 2-3%. The combination of warm-up + share cap enabled a balanced regime where interpretability improved (mastery correlation: 0.095±0.018) while maintaining competitive AUC (0.720±0.001). The 8-epoch warm-up aligned with constraint warm-up (`warmup_constraint_epochs = 8`), creating a coordinated two-phase training strategy: (1) Phase 1 (epochs 1-8): representation learning with gradual constraint introduction, (2) Phase 2 (epochs 9-12): full multi-objective optimization with alignment capped at 8% of total loss.
+
+**Implementation Note:** The share cap was dynamically computed per batch as `min(alignment_loss * alignment_weight, total_loss * alignment_share_cap)`, ensuring the constraint applied regardless of batch-level loss magnitude fluctuations. This provided stable training dynamics across different dataset characteristics and batch compositions.
 
 
 
