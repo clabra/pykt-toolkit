@@ -81,323 +81,202 @@ The diagram below illustrates the **complete architecture** inherited from GainA
 - **Data Flow**: Values → ReLU → Aggregated Gains → Mastery Accumulation (recursive) → Threshold Predictions → Output (predictions + mastery only)
 
 
-**⚠️ ARCHITECTURE STATUS**: The diagram shows the complete architecture. All mastery-related computation is ACTIVE (lines 318-465). Gains are computed internally for mastery accumulation but the `use_gain_head` parameter controls whether gains appear in the output dictionary. Current config: mastery output ✅ included, gains output ❌ suppressed.
+**🔄 DUAL-ENCODER ARCHITECTURE (PROPOSED 2025-11-15)**: Complete separation of predictive and interpretability pathways via two independent encoder stacks:
+- **Encoder 1 (Performance Path)**: Tokenization → Dual-Stream Encoder → Prediction Head → Base Predictions → **BCE Loss**
+- **Encoder 2 (Interpretability Path)**: Same inputs → Independent Dual-Stream Encoder → Mastery Accumulation → Threshold → Incremental Mastery Predictions → **Incremental Mastery Loss**
+- **Total Loss**: `λ₁ × BCE_Loss + λ₂ × IM_Loss` where λ₁, λ₂ are configurable weights for performance/interpretability trade-off tuning
+
+**Key Innovation**: Two completely independent encoder stacks process the same input, one optimized purely for prediction accuracy, the other for interpretable mastery trajectories. No shared representations between pathways ensures clean separation of concerns.
 
 ```mermaid
 graph TD
-    subgraph "Input Layer"
+    subgraph "Input Layer (Shared)"
         direction LR
         Input_q[["Input Questions (q)<br/>Shape: [B, L]"]]
         Input_r[["Input Responses (r)<br/>Shape: [B, L]"]]
         Ground_Truth[["Ground Truth Responses"]]
     end
 
-    subgraph "Tokenization & Embedding"
-        direction TB
-
-        
-        Tokens[["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]]
-        
-        Context_Emb["Context Embedding Table"]
-        Value_Emb["Value Embedding Table"]
-        Skill_Emb["Skill Embedding Table"]
-
-        Tokens --> Context_Emb
-        Tokens --> Value_Emb
-        Input_q --> Skill_Emb
-
-        Context_Seq[["Context Sequence<br/>Shape: [B, L, D]"]]
-        Value_Seq[["Value Sequence<br/>Shape: [B, L, D]"]]
-        Pos_Emb[["Positional Embeddings<br/>Shape: [B, L, D]"]]
-        
-        Context_Emb --> Context_Seq
-        Value_Emb --> Value_Seq
-
-        Context_Seq_Pos[["Context + Positional<br/>Shape: [B, L, D]"]]
-        Value_Seq_Pos[["Value + Positional<br/>Shape: [B, L, D]"]]
-        
-        Context_Seq --"Add"--> Context_Seq_Pos
-        Pos_Emb --"Add"--> Context_Seq_Pos
-        Value_Seq --"Add"--> Value_Seq_Pos
-        Pos_Emb --"Add"--> Value_Seq_Pos
-    end
-
-    Input_q --> Tokens
-    Input_r --> Tokens
-
-    subgraph "Dynamic Encoder Block"
+    %% ========== ENCODER 1: PERFORMANCE PATH ========== %%
+    subgraph "Encoder 1: Performance Path (Prediction-Optimized)"
         direction TB
         
-        Encoder_Input_Context[["Input: Context Sequence<br/>[B, L, D]"]]
-        Encoder_Input_Value[["Input: Value Sequence<br/>[B, L, D]"]]
-
-        subgraph "Attention Mechanism"
-            direction TB
+        subgraph "Tokenization & Embedding 1"
+            Tokens1[["Interaction Tokens 1<br/>(q + num_c * r)"]]
+            Context_Emb1["Context Embedding Table 1"]
+            Value_Emb1["Value Embedding Table 1"]
+            Skill_Emb1["Skill Embedding Table 1"]
             
-            Attn_Input_Context[["Input: Context<br/>[B, L, D]"]]
-            Attn_Input_Value[["Input: Value<br/>[B, L, D]"]]
-
-            Proj_Q["Q = Linear(Context)<br/>[B, H, L, Dk]"]
-            Proj_K["K = Linear(Context)<br/>[B, H, L, Dk]"]
-            Proj_V["V = Linear(Value)<br/>[B, H, L, Dk]"]
+            Context_Seq1[["Context Sequence 1<br/>[B, L, D]"]]
+            Value_Seq1[["Value Sequence 1<br/>[B, L, D]"]]
+            Pos_Emb1["Positional Embeddings 1"]
             
-            Attn_Input_Context --> Proj_Q
-            Attn_Input_Context --> Proj_K
-            Attn_Input_Value --> Proj_V
-
-            Scores["Scores = $\\frac{Q \\cdot K^T}{\\sqrt{D_k}}$<br/>[B, H, L, L]"]
-            Proj_Q --> Scores
-            Proj_K --> Scores
-            
-            Weights[["Weights = softmax(Scores)<br/>[B, H, L, L]"]]
-            Scores --> Weights
-
-            Attn_Output_Heads[["Attn Output (Heads)<br/>[B, H, L, Dk]"]]
-            Weights --> Attn_Output_Heads
-            Proj_V --> Attn_Output_Heads
-
-            Attn_Output[["Reshaped Attn Output<br/>[B, L, D]"]]
-            Attn_Output_Heads --> Attn_Output
+            Context_Seq_Pos1[["Context + Pos 1<br/>[B, L, D]"]]
+            Value_Seq_Pos1[["Value + Pos 1<br/>[B, L, D]"]]
         end
-
-        Encoder_Input_Context --> Attn_Input_Context
-        Encoder_Input_Value --> Attn_Input_Value
-
-        AddNorm_Ctx["Add & Norm (Context)"]
-        Attn_Output --> AddNorm_Ctx
-        Encoder_Input_Context --"Residual"--> AddNorm_Ctx
-
-        AddNorm_Val["Add & Norm (Value)<br/>"]
-        Attn_Output --> AddNorm_Val
-        Encoder_Input_Value --"Residual"--> AddNorm_Val
-
-        FFN["Feed-Forward Network"]
-        AddNorm_Ctx --> FFN
         
-        AddNorm2["Add & Norm"]
-        FFN --> AddNorm2
-        AddNorm_Ctx --"Residual"--> AddNorm2
+        subgraph "Dual-Stream Encoder Stack 1 (N blocks)"
+            Encoder1_In_Ctx[["Input Context 1"]]
+            Encoder1_In_Val[["Input Value 1"]]
+            
+            Encoder1_Block["Encoder Block 1<br/>Q/K from Context 1<br/>V from Value 1<br/>Dual Add&Norm + FFN"]
+            
+            Encoder1_Out_Ctx[["Output Context 1 (h₁)<br/>[B, L, D]"]]
+            Encoder1_Out_Val[["Output Value 1 (v₁)<br/>[B, L, D]"]]
+        end
         
-        Encoder_Output_Ctx[["Output: Context (h)<br/>[B, L, D]"]]
-        AddNorm2 --> Encoder_Output_Ctx
-
-        Encoder_Output_Val[["Output: Value (v)<br/>[B, L, D]"]]
-        AddNorm_Val --> Encoder_Output_Val
+        subgraph "Prediction Head"
+            Pred_Input_h1[["Knowledge State (h₁)"]]
+            Pred_Input_v1[["Value State (v₁)"]]
+            Pred_Input_s1[["Target Skill (s₁)"]]
+            
+            Concat1["Concatenate<br/>[h₁, v₁, s₁]"]
+            MLP1["MLP Head 1"]
+            Sigmoid1["Sigmoid 1"]
+            
+            Base_Predictions[["Base Predictions<br/>[B, L]<br/>✅ Performance Output"]]
+        end
     end
 
-    Context_Seq_Pos --> Encoder_Input_Context
-    Value_Seq_Pos --> Encoder_Input_Value
-
-    subgraph "Prediction Head (Base Predictions)"
+    %% ========== ENCODER 2: INTERPRETABILITY PATH ========== %%
+    subgraph "Encoder 2: Interpretability Path (Mastery-Optimized)"
         direction TB
         
-        Pred_Input_h[["Input: Knowledge State (h)<br/>[B, L, D]"]]
-        Pred_Input_v[["Input: Value State (v)<br/>[B, L, D]"]]
-        Pred_Input_s[["Input: Target Skill (s)<br/>[B, L, D]"]]
-
-        Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]"]
-        MLP["MLP Head"]
-        Sigmoid["Sigmoid"]
+        subgraph "Tokenization & Embedding 2"
+            Tokens2[["Interaction Tokens 2<br/>(q + num_c * r)"]]
+            Context_Emb2["Context Embedding Table 2<br/>(Independent)"]
+            Value_Emb2["Value Embedding Table 2<br/>(Independent)"]
+            
+            Context_Seq2[["Context Sequence 2<br/>[B, L, D]"]]
+            Value_Seq2[["Value Sequence 2<br/>[B, L, D]"]]
+            Pos_Emb2["Positional Embeddings 2"]
+            
+            Context_Seq_Pos2[["Context + Pos 2<br/>[B, L, D]"]]
+            Value_Seq_Pos2[["Value + Pos 2<br/>[B, L, D]"]]
+        end
         
-        Pred_Input_h --> Concat
-        Pred_Input_v --> Concat
-        Pred_Input_s --> Concat
-        Concat --> MLP
-        MLP --> Sigmoid
+        subgraph "Dual-Stream Encoder Stack 2 (N blocks)"
+            Encoder2_In_Ctx[["Input Context 2"]]
+            Encoder2_In_Val[["Input Value 2"]]
+            
+            Encoder2_Block["Encoder Block 2<br/>Q/K from Context 2<br/>V from Value 2<br/>Dual Add&Norm + FFN<br/>(Independent Parameters)"]
+            
+            Encoder2_Out_Ctx[["Output Context 2 (h₂)<br/>[B, L, D]"]]
+            Encoder2_Out_Val[["Output Value 2 (v₂)<br/>[B, L, D]"]]
+        end
+        
+        subgraph "Recursive Mastery Accumulation"
+            Learning_Gains[["Learning Gains<br/>ReLU(v₂)"]]
+            Projected_Gains[["Projected Gains<br/>[B, L, num_c]"]]
+            
+            Gain_Input[["Gain Input<br/>gain_t"]]
+            Mastery_Prev[["Mastery_{t-1}"]]
+            
+            Scale_Op["× α (α=0.1)"]
+            Sum_Op["mastery_t = mastery_{t-1} + α·gain_t"]
+            Clamp_Op["Clamp[0,1]"]
+            
+            Mastery_Current[["Mastery_t"]]
+            Projected_Mastery[["Projected Mastery<br/>[B, L, num_c]<br/>✅ Interpretability Output"]]
+            
+            Mastery_Current -.->|"temporal<br/>persistence"| Mastery_Prev
+        end
+        
+        subgraph "Threshold Mechanism"
+            Learnable_Threshold[["Learnable Threshold<br/>per skill [num_c]<br/>(trainable)"]]
+            Threshold_Compute["sigmoid((mastery - threshold) / temp)"]
+            
+            IM_Predictions[["Incremental Mastery Predictions<br/>[B, L]<br/>✅ Interpretability Predictions"]]
+        end
     end
-    
-    Encoder_Output_Ctx --> Pred_Input_h
-    Encoder_Output_Val --> Pred_Input_v
-    Skill_Emb --"Lookup"--> Pred_Input_s
 
-    subgraph "Final Outputs (Dual Prediction Architecture)"
-        direction TB
-        Base_Predictions[["Base Predictions<br/>(from Prediction Head)<br/>[B, L]"]]
-        IM_Predictions[["Incremental Mastery Predictions<br/>(from Threshold Mechanism)<br/>[B, L]<br/>✅ ACTIVE when use_mastery_head=true"]]
-    end
-
-    Sigmoid --> Base_Predictions
-
-    %% Learning Gains and Mastery Computation (ACTIVE in GainAKT3Exp)
-    Learning_Gains_D[["Learning Gains (D-dim)<br/>ReLU(Value Sequence)<br/>[B, L, D]"]]
-    Aggregated_Gains[["Aggregated Gains (scalar)<br/>mean(Learning_Gains_D, dim=-1)<br/>[B, L, 1]"]]
-    Projected_Gains_Internal[["Projected Gains (per-skill)<br/>sigmoid(Aggregated) expanded<br/>[B, L, num_skills]<br/>(Internal only - not in output⚠️)"]]
-    
-    Encoder_Output_Val --> Learning_Gains_D
-    Learning_Gains_D --> Aggregated_Gains
-    Aggregated_Gains --> Projected_Gains_Internal
-    
-    %% Mastery accumulation output (ACTIVE - included in output)
-    Projected_Mastery_Output[["Projected Mastery<br/>[B, L, num_skills]<br/>(✅ Included in output)"]]
-
-    %% Recursive Mastery Accumulation (ACTIVE in GainAKT3Exp)
-    subgraph "Recursive Mastery Accumulation<br/>(✅ ACTIVE - use_mastery_head=true)"
-        direction TB
-        
-        Gain_Input[["Learning Gain from Projected Gains<br/>gain_t (interaction's contribution)<br/>[B, 1] per skill"]]
-        Mastery_Prev[["Previous Skill Mastery<br/>mastery_{t-1}[skill]<br/>[B, 1]"]]
-        
-        Scale_Op["× α<br/>(learning rate α=0.1)"]
-        Sum_Op["+ (mastery accumulation)<br/>mastery_t[skill] = mastery_{t-1}[skill] + α·gain_t"]
-        Tanh_Op["tanh normalization<br/>(soft boundary)"]
-        Clamp_Op["Clamp[0,1]<br/>(bounded mastery)"]
-        
-        Mastery_Current[["Updated Skill Mastery<br/>mastery_t[skill]<br/>[B, 1]"]]
-        
-        Gain_Input --> Scale_Op
-        Scale_Op --> Sum_Op
-        Mastery_Prev --> Sum_Op
-        Sum_Op --> Tanh_Op
-        Tanh_Op --> Clamp_Op
-        Clamp_Op --> Mastery_Current
-        
-        %% Temporal feedback loop - mastery persists across interactions
-        Mastery_Current -.->|"persists as mastery_{t-1}<br/>for next interaction with this skill"| Mastery_Prev
-    end
-    
-    %% Active connections in GainAKT3Exp
-    Projected_Gains_Internal -->|"✅ ACTIVE<br/>(used for mastery)"| Gain_Input
-    Mastery_Current -->|"✅ ACTIVE<br/>(accumulates to output)"| Projected_Mastery_Output
-    
-    %% Incremental Mastery Predictions (ACTIVE - separate from base predictions)
-    Learnable_Threshold[["Learnable Mastery Threshold<br/>per skill [num_skills]<br/>(trainable parameter)"]]
-    Threshold_Pred["Incremental Mastery Prediction<br/>sigmoid((mastery - threshold) / temperature)<br/>✅ Separate prediction branch"]
-    
-    Projected_Mastery_Output --> Threshold_Pred
-    Learnable_Threshold --> Threshold_Pred
-    Threshold_Pred --> IM_Predictions
-
-    %% Circle Connectors (Aggregation/Distribution Hubs)
-    Mastery_Hub(("Mastery<br/>Hub<br/>✅ ACTIVE"))
-    Gain_Hub(("Gain<br/>Hub<br/>⚠️ INTERNAL"))
-    Encoder_Hub(("Encoder<br/>Hub"))
-    Base_Pred_Hub(("Base<br/>Predictions<br/>Hub"))
-    IM_Pred_Hub(("Incremental<br/>Mastery<br/>Predictions<br/>Hub"))
-    
-    Projected_Mastery_Output --> Mastery_Hub
-    Projected_Gains_Internal --> Gain_Hub
-    Encoder_Output_Ctx --> Encoder_Hub
-    Encoder_Output_Val --> Encoder_Hub
-    Base_Predictions --> Base_Pred_Hub
-    IM_Predictions --> IM_Pred_Hub
-
-    %% Semantic Feedback Loop (orange)
-    Global_Alignment["Global Alignment Pass<br/>population coherence"]
-    Residual_Alignment["Residual Alignment<br/>variance capture"]
-    
-    Mastery_Hub -->|"Global Align"| Global_Alignment
-    Global_Alignment --> Residual_Alignment
-    Residual_Alignment -.feedback.-> Projected_Mastery_Output
-
-    %% Loss Framework - SIMPLIFIED (2025-11-15)
-    subgraph "Loss Framework (Dual-Prediction Architecture - SIMPLIFIED)"
+    %% ========== LOSS COMPUTATION ========== %%
+    subgraph "Loss Framework (Dual-Encoder Architecture)"
         direction LR
         
-        subgraph "Primary Losses (✅ ACTIVE)"
-            direction TB
-            BCE_Loss["BCE Loss<br/>(Base Predictions)"]
-            IM_Loss["Incremental Mastery Loss<br/>weight=0.1<br/>(✅ NEW - Threshold Predictions)"]
-        end
+        BCE_Loss["BCE Loss<br/>(Performance)<br/>weight = λ₁"]
+        IM_Loss["Incremental Mastery Loss<br/>(Interpretability)<br/>weight = λ₂"]
         
-        %% COMMENTED OUT: Constraint Losses (code preserved, weights=0.0)
-        %% subgraph "Constraint Losses (❌ COMMENTED OUT - weight=0.0)"
-        %%     direction TB
-        %%     Monotonicity_Loss["Monotonicity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %%     Mastery_Perf_Loss["Mastery-Perf<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %%     Gain_Perf_Loss["Gain-Perf<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %%     Sparsity_Loss["Sparsity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %%     Consistency_Loss["Consistency<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %%     NonNeg_Loss["Non-Negativity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
-        %% end
-        
-        %% COMMENTED OUT: Semantic Losses (code preserved, all disabled)
-        %% subgraph "Semantic Losses (❌ COMMENTED OUT)"
-        %%     direction TB
-        %%     Alignment_Loss["Local Alignment<br/>(❌ COMMENTED OUT)"]
-        %%     Retention_Loss["Retention<br/>(❌ COMMENTED OUT)"]
-        %%     Lag_Gain_Loss["Lag Gain<br/>(❌ COMMENTED OUT)"]
-        %% end
-        
-        Total_Loss["Total Loss<br/>BCE + IM_Loss ONLY<br/>(Simplified Architecture)"]
+        Total_Loss["Total Loss<br/>λ₁ × BCE + λ₂ × IM<br/>(Weighted Combination)"]
     end
 
-    %% Connections via Hubs - Dual Prediction Architecture (SIMPLIFIED)
-    Base_Pred_Hub -->|"BCE"| BCE_Loss
+    %% ========== CONNECTIONS ========== %%
+    
+    %% Input to both encoders (same input, different processing)
+    Input_q --> Tokens1
+    Input_r --> Tokens1
+    Input_q --> Tokens2
+    Input_r --> Tokens2
+    
+    %% Encoder 1 Flow (Performance Path)
+    Tokens1 --> Context_Emb1 --> Context_Seq1
+    Tokens1 --> Value_Emb1 --> Value_Seq1
+    Input_q --> Skill_Emb1
+    
+    Context_Seq1 --> Context_Seq_Pos1
+    Value_Seq1 --> Value_Seq_Pos1
+    Pos_Emb1 --> Context_Seq_Pos1
+    Pos_Emb1 --> Value_Seq_Pos1
+    
+    Context_Seq_Pos1 --> Encoder1_In_Ctx --> Encoder1_Block
+    Value_Seq_Pos1 --> Encoder1_In_Val --> Encoder1_Block
+    
+    Encoder1_Block --> Encoder1_Out_Ctx --> Pred_Input_h1
+    Encoder1_Block --> Encoder1_Out_Val --> Pred_Input_v1
+    Skill_Emb1 --> Pred_Input_s1
+    
+    Pred_Input_h1 --> Concat1
+    Pred_Input_v1 --> Concat1
+    Pred_Input_s1 --> Concat1
+    Concat1 --> MLP1 --> Sigmoid1 --> Base_Predictions
+    
+    %% Encoder 2 Flow (Interpretability Path)
+    Tokens2 --> Context_Emb2 --> Context_Seq2
+    Tokens2 --> Value_Emb2 --> Value_Seq2
+    
+    Context_Seq2 --> Context_Seq_Pos2
+    Value_Seq2 --> Value_Seq_Pos2
+    Pos_Emb2 --> Context_Seq_Pos2
+    Pos_Emb2 --> Value_Seq_Pos2
+    
+    Context_Seq_Pos2 --> Encoder2_In_Ctx --> Encoder2_Block
+    Value_Seq_Pos2 --> Encoder2_In_Val --> Encoder2_Block
+    
+    Encoder2_Block --> Encoder2_Out_Val --> Learning_Gains
+    Learning_Gains --> Projected_Gains --> Gain_Input
+    
+    Gain_Input --> Scale_Op --> Sum_Op
+    Mastery_Prev --> Sum_Op --> Clamp_Op --> Mastery_Current
+    Mastery_Current --> Projected_Mastery
+    
+    Projected_Mastery --> Threshold_Compute
+    Learnable_Threshold --> Threshold_Compute
+    Threshold_Compute --> IM_Predictions
+    
+    %% Loss Connections
+    Base_Predictions --> BCE_Loss
     Ground_Truth --> BCE_Loss
     
-    IM_Pred_Hub -->|"✅ NEW"| IM_Loss
+    IM_Predictions --> IM_Loss
     Ground_Truth --> IM_Loss
-
-    %% COMMENTED OUT: Constraint and Semantic Loss Connections
-    %% Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss
-    %% Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
-    %% Mastery_Hub -->|"Consistency"| Consistency_Loss
-    %% Mastery_Hub -->|"Retention"| Retention_Loss
-    %% 
-    %% Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss
-    %% Gain_Hub -->|"Sparsity"| Sparsity_Loss
-    %% Gain_Hub -->|"Consistency"| Consistency_Loss
-    %% Gain_Hub -->|"NonNeg"| NonNeg_Loss
-    %% Gain_Hub -->|"Lag"| Lag_Gain_Loss
-    %% 
-    %% Base_Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
-    %% Base_Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss
-    %% 
-    %% Encoder_Hub -->|"Alignment"| Alignment_Loss
-    %% Base_Pred_Hub -->|"Alignment"| Alignment_Loss
-
-    %% Only BCE and IM losses to Total (SIMPLIFIED)
+    
     BCE_Loss --> Total_Loss
     IM_Loss --> Total_Loss
-    %% COMMENTED OUT: All constraint and semantic losses
-    %% Monotonicity_Loss --> Total_Loss
-    %% Mastery_Perf_Loss --> Total_Loss
-    %% Gain_Perf_Loss --> Total_Loss
-    %% Sparsity_Loss --> Total_Loss
-    %% Consistency_Loss --> Total_Loss
-    %% NonNeg_Loss --> Total_Loss
-    %% Alignment_Loss --> Total_Loss
-    %% Retention_Loss --> Total_Loss
-    %% Lag_Gain_Loss --> Total_Loss
-
-    %% Monitoring
-    Monitor_Hub(("Monitor<br/>Inputs"))
-    Monitor_Hook["Interpretability Monitor<br/>Real-time Analysis"]
-    
-    Mastery_Hub -->|"to Monitor"| Monitor_Hub
-    Gain_Hub -->|"to Monitor"| Monitor_Hub
-    Base_Pred_Hub -->|"to Monitor"| Monitor_Hub
-    IM_Pred_Hub -->|"to Monitor"| Monitor_Hub
-    Monitor_Hub -->|"Monitor Output"| Monitor_Hook
 
     %% Styling
-    classDef new_component fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-    classDef semantic_component fill:#ffe0b2,stroke:#e65100,stroke-width:2px
-    classDef deactivated_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5,font-style:italic
-    classDef accumulation_component fill:#e0e0e0,stroke:#757575,stroke-width:2px,stroke-dasharray:3 3
-    classDef io_data fill:#ffffff,stroke:#333333,stroke-width:3px
-    classDef io_data_unused fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray:3 3
+    classDef encoder1_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef encoder2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef loss_style fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
+    classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
+    classDef output_style fill:#e8f5e9,stroke:#43a047,stroke-width:3px
+    classDef mastery_style fill:#fce4ec,stroke:#c2185b,stroke-width:2px
     
-    %% Individual hub colors with distinct visual styles
-    classDef mastery_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
-    classDef gain_hub fill:#e8f5e8,stroke:#008800,stroke-width:4px
-    classDef encoder_hub fill:#fff3e0,stroke:#ffa500,stroke-width:4px
-    classDef pred_hub fill:#e3f2fd,stroke:#888888,stroke-width:4px
-    classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
-
-    class Ground_Truth,Skill_Emb,BCE_Loss,Total_Loss,Monitor_Hook new_component
-    class Proj_Mastery,Proj_Gain,Monotonicity_Loss,Mastery_Perf_Loss,Gain_Perf_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss deactivated_component
-    class Gain_Input,Mastery_Prev,Mastery_Current,ReLU_Op,Scale_Op,Sum_Op,Clamp_Op accumulation_component
-    class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
-    class Projected_Mastery_Output,Projected_Gain_Output io_data_unused
-    
-    class Mastery_Hub mastery_hub
-    class Gain_Hub gain_hub
-    class Encoder_Hub encoder_hub
-    class Pred_Hub pred_hub
-    class Monitor_Hub monitor_hub
-    
-    %% Input/Output data boxes with darker borders
+    class Tokens1,Context_Emb1,Value_Emb1,Skill_Emb1,Context_Seq1,Value_Seq1,Encoder1_Block,Encoder1_Out_Ctx,Encoder1_Out_Val,Concat1,MLP1,Sigmoid1 encoder1_style
+    class Tokens2,Context_Emb2,Value_Emb2,Context_Seq2,Value_Seq2,Encoder2_Block,Encoder2_Out_Val,Learning_Gains encoder2_style
+    class Scale_Op,Sum_Op,Clamp_Op,Mastery_Current,Projected_Mastery,Threshold_Compute mastery_style
+    class BCE_Loss,IM_Loss,Total_Loss loss_style
+    class Input_q,Input_r,Ground_Truth input_style
+    class Base_Predictions,IM_Predictions,Projected_Mastery output_style
     class Input_q,Input_r,Tokens,Context_Seq,Value_Seq,Pos_Emb,Context_Seq_Pos,Value_Seq_Pos io_data
     class Encoder_Input_Context,Encoder_Input_Value,Attn_Input_Context,Attn_Input_Value io_data
     class Weights,Attn_Output_Heads,Attn_Output,Encoder_Output_Ctx,Encoder_Output_Val io_data
