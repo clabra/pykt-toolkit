@@ -162,6 +162,16 @@ def build_explicit_train_command(train_script, params):
     
     return " ".join(cmd_parts)
 
+def build_trajectory_command(experiment_folder, num_students=10, min_steps=10):
+    """
+    Build command to extract and display learning trajectories.
+    """
+    python_path = sys.executable
+    trajectory_script = "examples/learning_trajectories.py"
+    cmd = f"{python_path} {trajectory_script} --run_dir {experiment_folder} --num_students {num_students} --min_steps {min_steps}"
+    return cmd
+
+
 def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
     Build explicit evaluation command with ALL parameters.
@@ -669,6 +679,7 @@ def main():
         
         train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
+        trajectory_command = build_trajectory_command(experiment_dir_abs, num_students=10, min_steps=10)
         repro_command = build_repro_command(sys.argv[0], experiment_id)
         
         # Build new config structure - NO redundant typed sections
@@ -679,6 +690,7 @@ def main():
                 "run_repro_original": original_command,
                 "train_explicit": train_command_explicit,
                 "eval_explicit": eval_command_explicit,
+                "learning_trajectories": trajectory_command,
                 "reproduce": repro_command
             },
             "experiment": {

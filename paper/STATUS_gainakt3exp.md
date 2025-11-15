@@ -1,40 +1,74 @@
 # GainAKT3Exp Model Status
 
-## Model 
+**Document Version**: Updated 2025-01-15  
+**Model Version**: GainAKT3Exp with monitoring and interpretability features  
+**Status**: Active implementation with full training/evaluation pipeline
 
-The model implementations is in ´pykt/models/gainakt3_exp.py´.  
+---
+
+## Model Overview
+
+**Implementation Files**:
+- **Model**: `pykt/models/gainakt3_exp.py` (477 lines) - extends `GainAKT3` base class
+- **Training**: `examples/train_gainakt3exp.py` (1893 lines) - zero defaults, explicit parameters
+- **Evaluation**: `examples/eval_gainakt3exp.py` (308 lines) - test metrics + correlations
+- **Trajectories**: `examples/learning_trajectories.py` (365 lines) - individual student analysis
+- **Launcher**: `examples/run_repro_experiment.py` - loads defaults, manages experiments
+- **Factory**: `create_exp_model(config)` (line 435 in `gainakt3_exp.py`) - requires 22 explicit parameters
+
+### What is GainAKT3Exp?
+
+GainAKT3Exp extends the GainAKT3 base model (`pykt/models/gainakt3.py`) with training-time interpretability monitoring and enhanced gain semantics:
+
+**Core Innovation**: Treats encoder **Values directly as learning gains** (after ReLU non-negativity), which are then projected to per-skill gains via `gain_head`. This semantic interpretation of attention Values enables:
+- Direct extraction of learning increments per timestep
+- Recursive mastery accumulation: `mastery_t = mastery_{t-1} + 0.1 × gain_t`
+- Interpretable trajectory analysis showing how students learn over time
+
+**Architecture**: Encoder-only Transformer with dual-stream processing:
+- **Context Stream**: Query/Key computation for attention, projected to mastery estimates
+- **Value Stream**: Treated as learning gains, projected to per-skill gains
+- **Prediction Head**: Concatenates context, value, and skill embeddings for response prediction
+
+**Monitoring Enhancements**:
+- `forward_with_states()` method returns internal representations (context, value, mastery, gains)
+- Configurable monitoring hooks for real-time interpretability analysis during training
+- Periodic state capture (every N batches) with multi-GPU safety guards
+- Auxiliary loss computation for interpretability constraints (monotonicity, sparsity, alignment, etc.)
+
+**Reproducibility**: All experiments follow "zero defaults" pattern—every parameter must be explicit via CLI or config file, ensuring complete reproducibility from saved `config.json` files.  
 
 ## Architecture
 
-The diagram below is described in detail in `assistant/gainakt3exp_architecture_approach.md`. 
+The architecture follows a modular design where features such as projection heads or losses can be controlled via parameters in config/parameteres_default.json
 
-It illustrates the Learning Gains approach based on an Encoder-only Transformer, augmented with these features:
-- **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Constraint Losses, Monitoring)
+The diagram below illustrates the architecture based on an Encoder-only Transformer, augmented with these features:
+
+**Visual Legend:**
+- **Double-border boxes** (`[[...]]`): **Input/Output data** (tensors, embeddings, intermediate representations) - white background with dark borders
+- **Single-border boxes** (`[...]`): **Processing operations** (embeddings tables, transformations, neural network layers)
+- **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Auxiliary Losses, Monitoring)
 - **Blue components**: Recursive Mastery Accumulation (deterministic temporal constraint: mastery_{t+1} = mastery_t + α·ReLU(gain_t))
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components**: DEACTIVATED features - **Gain Projection Head** (Values used directly as gains), Intrinsic gain attention mode (intrinsic_gain_attention=false), Mastery-Performance loss (mastery_performance_loss_weight=0.0), Gain-Performance loss (gain_performance_loss_weight=0.0). The Gain Projection Head is architecturally bypassed - encoder Values flow directly to the Recursive Mastery Accumulation as learning gains, enabling the attention mechanism to learn gain representations directly.
 - **Yellow diamonds (OR gates)**: Mutually exclusive paths - Standard Mode (via projection heads) OR Intrinsic Mode (via attention weights), never both simultaneously
 - **Circles (Hubs)**: Convergence/distribution points where multiple data flows aggregate and route to multiple outputs
 
-**GainAKT3Exp Key Innovation**: Unlike GainAKT2Exp, the Gain Projection Head is deactivated. Encoder **Values** (v) are treated directly as **learning gains**, learned via the attention mechanism. This architectural simplification enables:
-- Direct interpretability: attention values represent gains without intermediate projections
-- Reduced architectural complexity: one fewer projection head
-- Enhanced semantic alignment: values optimize directly for gain-related losses
 
 ```mermaid
 graph TD
     subgraph "Input Layer"
         direction LR
-        Input_q["Input Questions (q)<br/>Shape: [B, L]"]
-        Input_r["Input Responses (r)<br/>Shape: [B, L]"]
-        Ground_Truth["Ground Truth Responses"]
+        Input_q[["Input Questions (q)<br/>Shape: [B, L]"]]
+        Input_r[["Input Responses (r)<br/>Shape: [B, L]"]]
+        Ground_Truth[["Ground Truth Responses"]]
     end
 
     subgraph "Tokenization & Embedding"
         direction TB
 
         
-        Tokens["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]
+        Tokens[["Interaction Tokens<br/>(q + num_c * r)<br/>Shape: [B, L]"]]
         
         Context_Emb["Context Embedding Table"]
         Value_Emb["Value Embedding Table"]
@@ -44,15 +78,15 @@ graph TD
         Tokens --> Value_Emb
         Input_q --> Skill_Emb
 
-        Context_Seq["Context Sequence<br/>Shape: [B, L, D]"]
-        Value_Seq["Value Sequence<br/>Shape: [B, L, D]"]
-        Pos_Emb["Positional Embeddings<br/>Shape: [B, L, D]"]
+        Context_Seq[["Context Sequence<br/>Shape: [B, L, D]"]]
+        Value_Seq[["Value Sequence<br/>Shape: [B, L, D]"]]
+        Pos_Emb[["Positional Embeddings<br/>Shape: [B, L, D]"]]
         
         Context_Emb --> Context_Seq
         Value_Emb --> Value_Seq
 
-        Context_Seq_Pos["Context + Positional<br/>Shape: [B, L, D]"]
-        Value_Seq_Pos["Value + Positional<br/>Shape: [B, L, D]"]
+        Context_Seq_Pos[["Context + Positional<br/>Shape: [B, L, D]"]]
+        Value_Seq_Pos[["Value + Positional<br/>Shape: [B, L, D]"]]
         
         Context_Seq --"Add"--> Context_Seq_Pos
         Pos_Emb --"Add"--> Context_Seq_Pos
@@ -66,14 +100,14 @@ graph TD
     subgraph "Dynamic Encoder Block"
         direction TB
         
-        Encoder_Input_Context["Input: Context Sequence<br/>[B, L, D]"]
-        Encoder_Input_Value["Input: Value Sequence<br/>[B, L, D]"]
+        Encoder_Input_Context[["Input: Context Sequence<br/>[B, L, D]"]]
+        Encoder_Input_Value[["Input: Value Sequence<br/>[B, L, D]"]]
 
         subgraph "Attention Mechanism"
             direction TB
             
-            Attn_Input_Context["Input: Context<br/>[B, L, D]"]
-            Attn_Input_Value["Input: Value<br/>[B, L, D]"]
+            Attn_Input_Context[["Input: Context<br/>[B, L, D]"]]
+            Attn_Input_Value[["Input: Value<br/>[B, L, D]"]]
 
             Proj_Q["Q = Linear(Context)<br/>[B, H, L, Dk]"]
             Proj_K["K = Linear(Context)<br/>[B, H, L, Dk]"]
@@ -87,14 +121,14 @@ graph TD
             Proj_Q --> Scores
             Proj_K --> Scores
             
-            Weights["Weights = $\\text{softmax}(\\text{Scores})$<br/>[B, H, L, L]"]
+            Weights[["Weights = softmax(Scores)<br/>[B, H, L, L]"]]
             Scores --> Weights
 
-            Attn_Output_Heads["Attn Output (Heads)<br/>[B, H, L, Dk]"]
+            Attn_Output_Heads[["Attn Output (Heads)<br/>[B, H, L, Dk]"]]
             Weights --> Attn_Output_Heads
             Proj_V --> Attn_Output_Heads
 
-            Attn_Output["Reshaped Attn Output<br/>[B, L, D]"]
+            Attn_Output[["Reshaped Attn Output<br/>[B, L, D]"]]
             Attn_Output_Heads --> Attn_Output
         end
 
@@ -116,10 +150,10 @@ graph TD
         FFN --> AddNorm2
         AddNorm_Ctx --"Residual"--> AddNorm2
         
-        Encoder_Output_Ctx["Output: Context (h)<br/>[B, L, D]"]
+        Encoder_Output_Ctx[["Output: Context (h)<br/>[B, L, D]"]]
         AddNorm2 --> Encoder_Output_Ctx
 
-        Encoder_Output_Val["Output: Value (v)<br/>[B, L, D]"]
+        Encoder_Output_Val[["Output: Value (v)<br/>[B, L, D]"]]
         AddNorm_Val --> Encoder_Output_Val
     end
 
@@ -129,9 +163,9 @@ graph TD
     subgraph "Prediction Head"
         direction TB
         
-        Pred_Input_h["Input: Knowledge State (h)<br/>[B, L, D]"]
-        Pred_Input_v["Input: Value State (v)<br/>[B, L, D]"]
-        Pred_Input_s["Input: Target Skill (s)<br/>[B, L, D]"]
+        Pred_Input_h[["Input: Knowledge State (h)<br/>[B, L, D]"]]
+        Pred_Input_v[["Input: Value State (v)<br/>[B, L, D]"]]
+        Pred_Input_s[["Input: Target Skill (s)<br/>[B, L, D]"]]
 
         Concat["Concatenate<br/>[h, v, s]<br/>[B, L, 3*D]"]
         MLP["MLP Head"]
@@ -150,7 +184,7 @@ graph TD
 
     subgraph "Final Output"
         direction LR
-        Predictions["Predictions<br/>[B, L]"]
+        Predictions[["Predictions<br/>[B, L]"]]
     end
 
     Sigmoid --> Predictions
@@ -181,8 +215,8 @@ graph TD
     Attention_Derived_Gains -->|"bypasses heads"| Gain_OR
     
     %% Output after OR gates (mutually exclusive sources converge)
-    Projected_Mastery_Output["Projected Mastery<br/>[B, L, num_skills]"]
-    Projected_Gain_Output["Encoder Values (Direct Gains)<br/>[B, L, D]<br/>(GainAKT3Exp: bypass projection)"]
+    Projected_Mastery_Output[["Projected Mastery<br/>[B, L, num_skills]"]]
+    Projected_Gain_Output[["Encoder Values (Direct Gains)<br/>[B, L, D]<br/>(GainAKT3Exp: bypass projection)"]]
     
     Mastery_OR --> Projected_Mastery_Output
     Gain_OR --> Projected_Gain_Output
@@ -191,15 +225,15 @@ graph TD
     subgraph "Recursive Mastery Accumulation"
         direction TB
         
-        Gain_Input["Gains at t<br/>gain_t[c]<br/>[B, num_c]"]
-        Mastery_Prev["Previous Mastery<br/>mastery_{t-1}[c]<br/>[B, num_c]"]
+        Gain_Input[["Gains at t<br/>gain_t[c]<br/>[B, num_c]"]]
+        Mastery_Prev[["Previous Mastery<br/>mastery_{t-1}[c]<br/>[B, num_c]"]]
         
         ReLU_Op["ReLU<br/>(non-negativity)"]
         Scale_Op["× α<br/>(α=0.1)"]
         Sum_Op["+ (accumulation)<br/>mastery_t = mastery_{t-1} + α·ReLU(gain_t)"]
         Clamp_Op["Clamp[0,1]<br/>(bounded mastery)"]
         
-        Mastery_Current["Current Mastery<br/>mastery_t[c]<br/>[B, num_c]"]
+        Mastery_Current[["Current Mastery<br/>mastery_t[c]<br/>[B, num_c]"]]
         
         Gain_Input --> ReLU_Op
         ReLU_Op --> Scale_Op
@@ -312,6 +346,7 @@ graph TD
     classDef intrinsic_component fill:#ffcdd2,stroke:#c62828,stroke-width:3px,stroke-dasharray:5 5,font-style:italic
     classDef or_gate fill:#fff59d,stroke:#f57f17,stroke-width:3px
     classDef accumulation_component fill:#b3e5fc,stroke:#0277bd,stroke-width:3px
+    classDef io_data fill:#ffffff,stroke:#333333,stroke-width:3px
     
     %% Individual hub colors with distinct visual styles
     classDef mastery_hub fill:#e8f5e8,stroke:#00ff00,stroke-width:4px
@@ -321,9 +356,8 @@ graph TD
     classDef monitor_hub fill:#f3e5f5,stroke:#800080,stroke-width:4px
 
     class Proj_Mastery,Ground_Truth,Skill_Emb,BCE_Loss,Monotonicity_Loss,Sparsity_Loss,Consistency_Loss,NonNeg_Loss,Total_Loss,Monitor_Hook new_component
-    class Proj_Gain,Projected_Gain_Output,Attention_Derived_Gains,Mastery_Perf_Loss,Gain_Perf_Loss intrinsic_component
-    class Projected_Mastery_Output new_component
-    class Gain_Input,Mastery_Prev,ReLU_Op,Scale_Op,Sum_Op,Clamp_Op,Mastery_Current accumulation_component
+    class Proj_Gain,Attention_Derived_Gains,Mastery_Perf_Loss,Gain_Perf_Loss intrinsic_component
+    class Gain_Input,Mastery_Prev,Mastery_Current accumulation_component
     class Alignment_Loss,Global_Alignment,Residual_Alignment,Retention_Loss,Lag_Gain_Loss semantic_component
     class Mastery_OR,Gain_OR or_gate
     
@@ -332,6 +366,13 @@ graph TD
     class Encoder_Hub encoder_hub
     class Pred_Hub pred_hub
     class Monitor_Hub monitor_hub
+    
+    %% Input/Output data boxes with darker borders
+    class Input_q,Input_r,Tokens,Context_Seq,Value_Seq,Pos_Emb,Context_Seq_Pos,Value_Seq_Pos io_data
+    class Encoder_Input_Context,Encoder_Input_Value,Attn_Input_Context,Attn_Input_Value io_data
+    class Weights,Attn_Output_Heads,Attn_Output,Encoder_Output_Ctx,Encoder_Output_Val io_data
+    class Pred_Input_h,Pred_Input_v,Pred_Input_s,Predictions io_data
+    class Projected_Mastery_Output,Projected_Gain_Output io_data
 
     %% Link Styling - Match output lines to hub colors
     %% NOTE: Mermaid does not support class-based link styling; manual indexing required
@@ -408,81 +449,105 @@ graph TD
 - **num_q**: Number of questions in the dataset (varies by dataset)
 - **H**: Number of attention heads in multi-head attention
 
-### Key Architectural Feature: Recursive Mastery Accumulation
 
-The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic recursive accumulation** mechanism:
 
-$$\text{mastery}_{t+1}^{(c)} = \text{mastery}_t^{(c)} + \alpha \cdot \text{ReLU}(\text{gain}_t^{(c)})$$
-
-This is implemented in the model's forward pass (`gainakt3_exp.py` lines 145, 162):
-
-```python
-accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
-projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
-```
-
-**Input/Output Dimensions:**
-- **Input `projected_mastery[:, t-1, :]`**: Previous mastery levels, shape `[B, num_c]` (mastery for all concepts at time t-1)
-- **Input `projected_gains[:, t, :]`**: Current learning gains, shape `[B, num_c]` (gains for all concepts at time t)
-- **Output `projected_mastery[:, t, :]`**: Updated mastery levels, shape `[B, num_c]` (mastery for all concepts at time t)
-- **Scaling factor α**: 0.1 (controls accumulation rate to prevent runaway growth)
-
-**Key Properties:**
-1. **Non-negative gains**: ReLU ensures learning gains ≥ 0 (no unlearning)
-2. **Monotonic mastery**: Mastery can only increase or stay constant over time
-3. **Bounded accumulation**: Clamp keeps mastery in [0,1] range (probabilistic interpretation)
-4. **Transparent causality**: Each mastery state is the sum of all previous learning gains
-5. **Evidence-based confidence**: More interactions ($n_t^{(c)}$) → more accumulated gains → higher confidence
-
-This architectural constraint makes the relationship between evidence accumulation and knowledge states **explicit and interpretable**, supporting the confidence interval estimation methods described in the paper (Monte Carlo Dropout, Attention Entropy, Evidence Accumulation).
-
-### GainAKT3Exp Architectural Innovation: Values as Direct Gains
-
-**GainAKT3Exp** introduces a fundamental architectural simplification compared to GainAKT2Exp:
-
-**GainAKT2Exp Flow:**
-```
-Encoder Values (v) → Gain Projection Head → Projected Gains → Recursive Mastery
-```
-
-**GainAKT3Exp Flow:**
-```
-Encoder Values (v) → Direct Gains → Recursive Mastery
-               └──────────────────→ Gain Hub (for losses)
-```
-
-**Key Differences:**
-
-1. **Direct Gain Representation**: Encoder attention Values are treated directly as learning gains without intermediate projection:
-   - **Eliminated**: `Gain Projection Head` Linear(D, num_skills)
-   - **New**: Values maintain dimension `[B, L, D]` as gains (vs. projected `[B, L, num_skills]`)
-   
-2. **Attention-Learned Gains**: The attention mechanism learns to produce Values that directly represent meaningful learning gains:
-   - Values optimize for gain-related constraints (sparsity, non-negativity, consistency)
-   - Attention learns gain semantics intrinsically (not via post-hoc projection)
-   - Simpler architecture with fewer trainable parameters
-
-3. **Dual Routing**: Same Value output serves two purposes:
-   - **Mastery Accumulation**: `mastery_t = mastery_{t-1} + α·ReLU(values_t)`
-   - **Loss Computation**: Gain Hub routes Values to constraint losses
-
-**Hypothesized Benefits:**
-- **Enhanced Interpretability**: Attention values have direct semantic meaning (gains), no projection indirection
-- **Stronger Constraints**: Gain-related losses optimize attention directly, not projection weights
-- **Architectural Simplicity**: One fewer component to tune/debug
-- **Potential Performance**: Direct optimization may improve mastery correlation
-
-**Implementation Status**: Currently GainAKT3Exp is initialized identical to GainAKT2Exp (training baseline). The architectural modification to bypass the Gain Projection Head and use Values directly will be implemented after baseline training completes.
 
 ## Implementation Summary
 
-The `pykt/models/gainakt3_exp.py` model is currently initialized identical to GainAKT2Exp as a baseline. The GainAKT3Exp architectural innovation (Values as Direct Gains, bypassing the Gain Projection Head) will be implemented after baseline training completes.
+The GainAKT3Exp model (`pykt/models/gainakt3_exp.py`) is an enhanced version of the GainAKT3 base model that adds training-time interpretability monitoring and auxiliary loss computation. The implementation follows PyKT framework standards:
 
-This section describes the current implementation, which successfully implements all five augmented features from the **Augmented Architecture Design** shown in the architecture diagram above (GainAKT2Exp baseline). The diagram shows the TARGET GainAKT3Exp architecture with the Gain Projection Head marked as DEACTIVATED (red) to illustrate the planned modification.
+**Training Pipeline** (`examples/train_gainakt3exp.py`):
+- Zero hardcoded defaults—all 60+ parameters must be explicit
+- Launched via `run_repro_experiment.py` which loads defaults from `configs/parameter_default.json`
+- Saves complete experiment artifacts: checkpoints, config, trajectories, metrics
+- Supports semantic trajectory tracking (mastery/gain correlations per epoch)
 
-**Important Context:** The "Concise Architecture Gap Summary" section (below) compares the baseline implementation against THREE additional, more advanced architectural proposals from `assistant/gainakt2exp_architecture_approach.md`, including the "Intrinsic Gain Attention" design where attention Values directly represent learning gains (enabling h_t = Σ α g knowledge state formation). The current GainAKT3Exp baseline uses the "Augmented Design" (GainAKT2Exp), which achieves interpretability through post-hoc projection heads and auxiliary losses. The planned GainAKT3Exp modification moves toward the intrinsic attention semantics by using Values directly as gains.
+**Evaluation Pipeline** (`examples/eval_gainakt3exp.py`):
+- Loads trained model and computes test metrics (AUC, accuracy)
+- Computes mastery/gain correlations (configurable student sample size)
+- Saves evaluation results with timestamp
 
-Below is a comprehensive analysis of each component's implementation status and alignment with the Augmented Architecture Design shown in the diagram.
+**Learning Trajectory Analysis** (`examples/learning_trajectories.py`):
+- Standalone script to extract and display individual student learning trajectories
+- Shows timestep-by-timestep: skills practiced, gains, mastery, predictions vs truth
+- Compact tabular format with student summary statistics
+- Command automatically added to `config.json` for easy access
+
+**Model Creation**: Models are instantiated via `create_exp_model(config)` which requires all parameters in the config dict (no defaults), ensuring reproducibility.
+
+### Training and Evaluation Workflow
+
+Following PyKT framework standards (see `assistant/quickstart.pdf` and `assistant/contribute.pdf`):
+
+**1. Launch Training:**
+```bash
+python examples/run_repro_experiment.py \
+  --model gainakt3exp \
+  --dataset assist2015 \
+  --short_title baseline_test \
+  --epochs 12 \
+  [--param_override value ...]
+```
+
+This launcher:
+- Loads defaults from `configs/parameter_default.json`
+- Applies CLI overrides for specified parameters
+- Creates timestamped experiment directory: `saved_model/{timestamp}_{model}_{title}_{uid}/`
+- Saves complete config (including trajectory command) to `{run_dir}/config.json`
+- Saves checkpoints, metrics, and trajectory data
+
+**2. Evaluate Model:**
+```bash
+python examples/eval_gainakt3exp.py \
+  --run_dir saved_model/{experiment_dir} \
+  --ckpt_name {checkpoint}.pt
+```
+
+Outputs test AUC, accuracy, and mastery/gain correlations.
+
+**3. Analyze Learning Trajectories:**
+```bash
+python examples/learning_trajectories.py \
+  --run_dir saved_model/{experiment_dir} \
+  --num_students 10 \
+  --min_steps 10
+```
+
+Displays individual student learning progressions with mastery/gain states and prediction accuracy.
+
+**Note:** The trajectory command is automatically included in `config.json` during training, enabling easy post-hoc analysis without manual parameter reconstruction.
+
+### Reproducibility System
+
+Following the "zero defaults" pattern documented in `examples/reproducibility.md`:
+
+**Experiment Structure**: Each training run creates a timestamped directory:
+```
+saved_model/{timestamp}_{model}_{title}_{uid}/
+  ├── config.json           # Complete parameter set + trajectory command
+  ├── model_*.pt            # Checkpoints
+  ├── metrics.json          # Training metrics (AUC, accuracy, correlations)
+  ├── trajectory_*.json     # Semantic trajectory data (optional)
+  └── eval_results_*.json   # Evaluation results
+```
+
+**Config File Contents**:
+- `defaults`: All parameter default values (from `parameter_default.json`)
+- `train_explicit`: Full training command with all parameters
+- `eval_explicit`: Full evaluation command with all parameters  
+- `trajectory_command`: Trajectory analysis command (10 students, min 10 steps)
+- `metadata`: Timestamp, git hash, hostname, GPU info
+
+**Reproducibility Guarantees**:
+1. No hardcoded defaults in model or training code
+2. All parameters explicitly passed via CLI
+3. Complete config saved with every experiment
+4. Commands reconstructable from config alone
+5. Git hash and environment info captured
+
+See `examples/reproducibility.md` for complete parameter evolution protocol.
+
+Below is a comprehensive analysis of each architectural component's implementation status.
 
 ### Feature 1: Skill Embedding Table 
 
@@ -594,59 +659,65 @@ Below is a comprehensive analysis of each component's implementation status and 
 
 **Verification:** The diagram shows "Ground Truth Responses" flowing into "BCE Loss" and monitoring receiving multiple state tensors—implementation provides this via `forward_with_states()` returning all required outputs.
 
----
 
 ### Feature 4: Mastery and Gain Projection Heads 
 
-**Expected (from diagram):** Two linear projection heads mapping internal representations to per-skill mastery and gain estimates (shape: `[B, L, num_skills]`). **Note:** In GainAKT3Exp, the Gain Projection Head is architecturally DEACTIVATED—encoder Values flow directly as learning gains.
+**Expected (from diagram):** Two linear projection heads mapping internal representations to per-skill mastery and gain estimates (shape: `[B, L, num_skills]`).
 
-**Implementation Status (Current Baseline):**
-- **Head Creation:** `gainakt3.py` lines 216-219:
-  ```python
-  if self.use_mastery_head:
-      self.mastery_head = nn.Linear(self.d_model, self.num_c)
-  if self.use_gain_head:
-      self.gain_head = nn.Linear(self.d_model, self.num_c)
-  ```
-- **Mastery Projection:** `gainakt3_exp.py` lines 115-127:
-  ```python
-  projected_mastery_raw = self.mastery_head(context_seq)
-  initial_mastery = torch.sigmoid(projected_mastery_raw)
-  # Recursive accumulation with clamping:
-  projected_mastery = torch.zeros_like(initial_mastery)
-  projected_mastery[:, 0, :] = initial_mastery[:, 0, :]
-  for t in range(1, seq_len):
-      accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
-      projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
-  ```
-- **Gain Projection (TO BE MODIFIED):** Lines 113-114:
-  ```python
-  projected_gains_raw = self.gain_head(value_seq)
-  projected_gains = torch.relu(projected_gains_raw)  # enforce non-negativity
-  ```
+**Implementation Status:**
 
-**GainAKT3Exp Target Architecture (Planned Modification):**
+**4a. Head Creation** (`gainakt3.py` lines 216-219):
 ```python
-# CURRENT (Baseline - GainAKT2Exp approach):
-projected_gains_raw = self.gain_head(value_seq)  # Project via linear layer
-projected_gains = torch.relu(projected_gains_raw)
-
-# TARGET (GainAKT3Exp - Direct Values as Gains):
-projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-negativity
-# Gain Projection Head bypassed - no self.gain_head() call
+if self.use_mastery_head:
+    self.mastery_head = nn.Linear(self.d_model, self.num_c)
+if self.use_gain_head:
+    self.gain_head = nn.Linear(self.d_model, self.num_c)
 ```
 
-**Architecture Alignment:** 
-- Mastery head: `Linear(d_model, num_c)` projects context → per-skill mastery
-- **Gain head (GainAKT3Exp):** DEACTIVATED - encoder Values used directly as gains (dimension `[B, L, D]` instead of `[B, L, num_skills]`)
-- Output shapes: Mastery `[batch_size, seq_len, num_c]`, Gains `[batch_size, seq_len, d_model]` (GainAKT3Exp modification)
-- **Educational Enhancement:** Recursive mastery accumulation enforces consistency between mastery changes and scaled gains (factor: 0.1)
-- Non-negativity enforced architecturally via ReLU on gains (applies to raw Values in GainAKT3Exp)
-- Bounded mastery [0, 1] via sigmoid initialization and clamping
+**4b. GainAKT3Exp Gain Processing** (`gainakt3_exp.py` lines 189-205):
+```python
+# GainAKT3Exp mode: Values directly as gains foundation
+gains_d = torch.relu(value_seq)  # ReLU ensures positive gains [B, L, D]
 
-**Verification:** The diagram shows "Encoder Values (Direct Gains)" with shape `[B, L, D]` and the Gain Projection Head marked RED (DEACTIVATED)—target implementation will use Values directly, bypassing the projection layer.
+# Project D-dimensional gains to per-skill gains [B, L, num_c]
+if hasattr(self, 'gain_head') and self.gain_head is not None:
+    projected_gains_raw = torch.relu(self.gain_head(gains_d))  # [B, L, num_c]
+else:
+    # Fallback: aggregate D-dimensional gains across dimensions
+    aggregated_gains = gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
+    projected_gains_raw = aggregated_gains.expand(-1, -1, self.num_c)
 
----
+# Normalize gains to [0, 1] range using sigmoid
+projected_gains = torch.sigmoid(projected_gains_raw)  # [B, L, num_c] in [0, 1]
+```
+
+**Key Innovation**: GainAKT3Exp treats **encoder Values directly as learning gains** (after ReLU for non-negativity). The gain_head then projects these D-dimensional gains to per-skill gains. This differs from GainAKT2Exp where Values are not explicitly treated as gains.
+
+**4c. Recursive Mastery Accumulation** (`gainakt3_exp.py` lines 208-217):
+```python
+# Initialize per-skill mastery at 0.0
+projected_mastery = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
+projected_mastery[:, 0, :] = torch.clamp(projected_gains[:, 0, :] * 0.1, min=0.0, max=1.0)
+
+# Recursively accumulate mastery from gains
+for t in range(1, seq_len):
+    accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+    projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+```
+
+**Architecture Alignment:**
+- **Mastery Head**: `Linear(d_model, num_c)` - Projects context → per-skill mastery estimates
+- **Gain Head**: `Linear(d_model, num_c)` - Projects D-dimensional gains → per-skill gains
+- **GainAKT3Exp Innovation**: Values (`value_seq`) treated as **foundational gain representation** before projection
+- **Output Shapes**: Both mastery and gains produce `[B, L, num_c]` tensors for per-skill interpretability
+- **Educational Semantics**: 
+  - Gains represent learning increments per timestep
+  - Mastery accumulates gains with scaling factor α=0.1
+  - Clamping ensures mastery ∈ [0, 1], gains ∈ [0, 1] (via sigmoid)
+  - Recursive constraint enforces: `mastery_t = mastery_{t-1} + 0.1 × gain_t`
+
+**Verification:** The implementation provides both projection heads, with GainAKT3Exp's distinctive feature being the treatment of Values as the direct source of learning gains (with ReLU non-negativity), which are then projected to per-skill granularity via gain_head.
+
 
 ### Feature 5: BCE + Auxiliary Loss Functions 
 
@@ -702,6 +773,7 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
    total_loss += self.sparsity_loss_weight * sparsity_loss
    ```
 
+
 6. **Consistency Loss** (lines 261-266):
    ```python
    mastery_delta = projected_mastery[:, 1:, :] - projected_mastery[:, :-1, :]
@@ -725,9 +797,86 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
 
 **Verification:** The diagram shows 5 auxiliary loss nodes feeding into "Total Loss"—implementation provides these plus an additional consistency loss, all with independently tunable weights.
 
+
+### Feature 6: Monitoring
+
+**Expected (from diagram):** Real-time interpretability analysis during training via a monitoring hook that periodically captures internal model states (context, value, mastery, gains, predictions) for analysis, with configurable frequency to balance overhead and insight granularity.
+
+**Implementation Status:**
+
+**6a. Monitor Hook Infrastructure:**
+- **Location:** `gainakt3_exp.py` lines 40-41, 54-56
+- **Hook Registration:**
+  ```python
+  self.interpretability_monitor = None
+  
+  def set_monitor(self, monitor): 
+      """Set the interpretability monitor hook."""
+      self.interpretability_monitor = monitor
+  ```
+- **Usage Pattern:** Training scripts instantiate a monitor object and inject it via `model.set_monitor(monitor_instance)`, enabling modular monitoring strategies without model code changes.
+
+**6b. Periodic State Capture:**
+- **Location:** `gainakt3_exp.py` lines 164-178 (within `forward_with_states()`)
+- **Execution Logic:**
+  ```python
+  if (self.interpretability_monitor is not None and 
+      batch_idx is not None and 
+      batch_idx % self.monitor_frequency == 0 and primary_device):
+      with torch.no_grad():
+          self.interpretability_monitor(
+              batch_idx=batch_idx,
+              context_seq=context_seq,
+              value_seq=value_seq,
+              projected_mastery=projected_mastery,
+              projected_gains=projected_gains,
+              predictions=predictions,
+              questions=q,
+              responses=r
+          )
+  ```
+- **State Exposure:** Captures all interpretability-critical tensors at training time
+- **No-Gradient Context:** Monitoring wrapped in `torch.no_grad()` to prevent gradient computation overhead
+
+**6c. Configurable Frequency:**
+- **Parameter:** `monitor_frequency` (default: 50 batches)
+- **Location:** Constructor parameter (`gainakt3_exp.py` line 35)
+- **Purpose:** Controls monitoring granularity—higher values reduce overhead but provide coarser temporal resolution
+- **CLI Integration:** `--monitor_freq` parameter in training scripts
+
+**6d. Multi-GPU Safety:**
+- **Primary Device Guard:** `primary_device = (not hasattr(self, 'device_ids') or q.device == torch.device(f'cuda:{self.device_ids[0]}'))`
+- **Rationale:** Under `DataParallel`, multiple model replicas process different batches; guard ensures monitoring executes only once per global batch (on primary GPU)
+- **Location:** `gainakt3_exp.py` lines 160-163
+
+**6e. State Dictionary Returned:**
+- **Location:** `forward_with_states()` return statement (line 182-189)
+- **Contents:**
+  ```python
+  return {
+      'predictions': predictions,
+      'logits': logits,
+      'context_seq': context_seq,
+      'value_seq': value_seq,
+      'projected_mastery': projected_mastery,
+      'projected_gains': projected_gains,
+      'interpretability_loss': interpretability_loss
+  }
+  ```
+- **Purpose:** Enables both real-time monitoring (via hook) and post-hoc analysis (via returned states)
+
+**Architecture Alignment:** 
+- Complete monitoring infrastructure matching diagram's "Monitor Hub" and "Interpretability Monitor" nodes
+- Configurable frequency control as specified in diagram annotation
+- All internal states exposed for comprehensive interpretability analysis
+- Multi-GPU safe implementation for production training environments
+- Zero-gradient overhead via `torch.no_grad()` wrapper
+
+**Verification:** The architecture diagram shows "Monitor Hub" receiving inputs from Mastery Hub, Gain Hub, and Predictions Hub, then routing to "Interpretability Monitor"—implementation provides exactly this via the `forward_with_states()` method capturing all relevant tensors and passing them to the registered monitor hook.
+
 ---
 
-### Feature 6: Intrinsic Gain Attention Mode ❌ DEACTIVATED
+### Feature 7: Intrinsic Gain Attention Mode ❌ DEACTIVATED
 
 **Objective:** Provide an alternative architectural mode that achieves parameter efficiency by deriving gains directly from attention mechanisms, eliminating the need for post-hoc projection heads. This explores the trade-off between model compactness and interpretability while maintaining competitive predictive performance.
 
@@ -737,7 +886,7 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
 
 **Implementation Status:**
 
-**6a. Architectural Constraint Enforcement:**
+**7a. Architectural Constraint Enforcement:**
 - **Location:** `gainakt3_exp.py` lines 58-74
 - **Mechanism:** 
   ```python
@@ -752,7 +901,7 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
   ```
 - **Rationale:** Prevents conflicting architectural configurations where both projection-based and attention-derived gains would coexist, ensuring clean experimental comparison.
 
-**6b. Attention-Derived Gain Computation:**
+**7b. Attention-Derived Gain Computation:**
 - **Location:** `gainakt3_exp.py` lines 102-111
 - **Implementation:**
   ```python
@@ -770,7 +919,7 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
   ```
 - **Gain Extraction:** Uses attention weights from final encoder layer as indicators of "information flow" between timesteps, treating high attention as proxy for learning influence.
 
-**6c. Cumulative Mastery from Attention:**
+**7c. Cumulative Mastery from Attention:**
 - **Location:** `gainakt3_exp.py` lines 113-133
 - **Recursive Accumulation:**
   ```python
@@ -788,14 +937,14 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
   ```
 - **Educational Semantics:** Treats attention weights as learning increments, cumulative mastery as integrated knowledge over time.
 
-**6d. Parameter Reduction:**
+**7d. Parameter Reduction:**
 - **Baseline Mode:** 14,658,761 params
 - **Intrinsic Mode:** 12,738,265 params
 - **Reduction: 1,920,496 params (13.1%)**
   
   *Note: Reduction comes from disabled projection heads (mastery_head + gain_head) plus associated architectural optimizations.*
 
-**6e. CLI Integration:**
+**7e. CLI Integration:**
 - **Location:** `examples/run_repro_experiment.py` line 89
 - **Usage:** `python examples/run_repro_experiment.py --intrinsic_gain_attention --epochs 12`
 - **Default:** `False` (baseline mode with projection heads)
@@ -806,178 +955,28 @@ projected_gains = torch.relu(value_seq)  # Use Values directly, enforce non-nega
 **Verification:** The updated architecture diagram (red components) shows intrinsic mode as conditional bypass of projection heads, with attention-derived gains feeding directly to mastery/gain outputs.
 
 
-#### Feature 6 Experimental Validation: Multi-Seed Analysis
+### Feature 8: Recursive Mastery Accumulation
 
-**Validation Protocol:**
-- **Dataset:** ASSIST2015, fold 0
-- **Seeds:** 42, 7, 123, 2025, 31415 (same as baseline for paired comparison)
-- **Epochs:** 12 (matching baseline configuration)
-- **Hardware:** 8× Tesla V100-SXM2-32GB
-- **Training Duration:** ~25 minutes per experiment
-
-**6f. Predictive Performance Results:**
-
-| Metric | Baseline (N=5) | Intrinsic (N=5) | Difference | Statistical Sig. |
-|--------|----------------|-----------------|------------|------------------|
-| **Test AUC** | 0.7196 ± 0.0005 | 0.7142 ± 0.0007 | -0.0054 (-0.75%) | p=0.0001 (t=16.35) |
-| **Test Accuracy** | 0.7474 ± 0.0002 | 0.7460 ± 0.0006 | -0.0014 (-0.19%) | p=0.0131 (t=4.25) |
-| **Valid AUC** | 0.7255 ± 0.0002 | 0.7204 ± 0.0006 | -0.0051 (-0.70%) | p=0.0001 (t=15.98) |
-| **Reproducibility (CV)** | 0.07% | 0.10% | +0.03% | Both excellent |
-
-**Key Findings:**
-- ✅ **Performance preserved:** <1% AUC degradation (statistically significant but practically negligible)
-- ✅ **Excellent reproducibility:** CV < 0.2% for both modes
-- ✅ **Parameter efficiency validated:** 13.1% reduction with minimal performance cost
-
-**6g. Interpretability Analysis Results:**
-
-| Metric | Baseline (N=5) | Intrinsic (N=5) | Difference | Statistical Sig. |
-|--------|----------------|-----------------|------------|------------------|
-| **Mastery Correlation** | 0.0952 ± 0.0177 | 0.0322 ± 0.0008 | -0.0630 (-66.2%) | p=0.0013 (t=8.02) |
-| **Gain Correlation** | 0.0276 ± 0.0035 | **-0.0065 ± 0.0238** | -0.0341 (-124%) | p=0.0329 (t=3.20) |
-| **Seeds with Negative Gains** | 0/5 (0%) | **3/5 (60%)** | - | Critical issue |
-| **Gain Correlation Range** | [0.0216, 0.0312] | **[-0.0362, +0.0234]** | - | Extreme variance |
-
-**Critical Observations:**
-
-1. **Mastery Correlation Collapse (66% loss):**
-   - Baseline maintains stable ~0.095 correlation across all seeds
-   - Intrinsic mode converges to near-zero ~0.032 with tight variance
-   - **Interpretation:** Attention-derived mastery lacks educational grounding; cumulative sum of attention weights does not reflect true learning progression
-
-2. **Gain Correlation Instability (negative mean):**
-   - **Seed-level breakdown:**
-     - Seed 42: +0.0234 ✓ (positive, acceptable)
-     - Seed 7: +0.0084 ✓ (positive, weak)
-     - Seed 123: **-0.0362** ✗ (negative, violates pedagogy)
-     - Seed 2025: **-0.0226** ✗ (negative, violates pedagogy)
-     - Seed 31415: **-0.0055** ✗ (negative, violates pedagogy)
-   - **Mean:** -0.0065 (negative!)
-   - **CV:** 366% (extreme instability)
-   - **Pedagogical Violation:** Negative correlations imply "unlearning" when students answer correctly—educationally nonsensical
-
-3. **Reproducibility Paradox:**
-   - Predictive metrics: Excellent reproducibility (CV < 0.2%)
-   - Interpretability metrics: Catastrophic variance (CV > 300%)
-   - **Conclusion:** Model converges reliably for prediction, but interpretability is unstable and unreliable
-
-**6h. Root Cause Analysis:**
-
-**Why Intrinsic Mode Fails at Interpretability:**
-
-1. **Lack of Explicit Supervision:**
-   - Baseline: Projection heads trained with `mastery_performance_loss` and `gain_performance_loss`
-   - Intrinsic: Gains derived purely from attention (no educational constraint)
-   - Result: Gains optimize information flow for prediction, not pedagogical validity
-
-2. **Attention ≠ Learning Gains (Conceptual Mismatch):**
-   - Attention weights reflect **"what information is useful for next prediction"**
-   - Learning gains reflect **"how much knowledge increased from interaction"**
-   - These are fundamentally different: high attention can occur for remediation (reviewing weak skills) or consolidation (reinforcing strong skills)
-   - Intrinsic mode conflates predictive utility with learning magnitude
-
-3. **Cumulative Drift:**
-   - Recursive mastery = Σ attention-derived "gains" over time
-   - Without explicit mastery supervision, cumulative sum drifts from true skill levels
-   - Small biases in per-timestep gains amplify across sequence length
-
-4. **Loss Function Mismatch:**
-   - Baseline: BCE + mastery_perf_loss + gain_perf_loss + sparsity + ...
-   - Intrinsic: Only BCE (interpretability losses disabled when heads are off)
-   - Result: No gradient signal to shape attention weights into educationally meaningful gains
-
-**6i. Trade-off Assessment:**
-
-| Dimension | Baseline Mode | Intrinsic Mode | Winner |
-|-----------|---------------|----------------|--------|
-| **Predictive AUC** | 0.7196 ± 0.0005 | 0.7142 ± 0.0007 | Baseline (marginal) |
-| **Parameter Count** | 14.66M | 12.74M | Intrinsic (-13%) |
-| **Mastery Interpretability** | 0.095 ± 0.018 | 0.032 ± 0.001 | Baseline (3× stronger) |
-| **Gain Interpretability** | 0.028 ± 0.004 | -0.007 ± 0.024 | Baseline (stable & positive) |
-| **Reproducibility (Prediction)** | CV=0.07% | CV=0.10% | Both excellent |
-| **Reproducibility (Interp)** | CV=13% | CV=366% | Baseline (stable) |
-| **Educational Validity** | ✅ All seeds positive | ❌ 60% seeds negative | Baseline (clear) |
-
-**Verdict:**
-- **Use Baseline Mode:** For any application requiring interpretability, educational analysis, or student modeling
-- **Use Intrinsic Mode:** Only for resource-constrained deployment where prediction suffices (edge devices, mobile apps) and interpretability is optional
-
-**6j. Publication Positioning:**
-
-**Original Hypothesis (Pre-Validation):**
-> "Intrinsic gain attention enables native causal decomposability where attention weights directly represent learning gains."
-
-**Empirical Reality (Post-Validation):**
-> "Intrinsic mode achieves 13% parameter reduction with <1% AUC loss, but sacrifices interpretability: 66% weaker mastery correlations and 60% of seeds exhibit negative gain correlations. Attention weights optimize prediction, not pedagogical semantics. Explicit supervision via projection heads is necessary for educationally valid gain estimation."
-
-**Reporting Recommendation:**
+Values are considere4d as Direct Gains
 ```
-Multi-seed validation (N=5) revealed intrinsic mode interpretability instability: 
-60% of seeds exhibited negative gain correlations (range: -0.036 to +0.023, CV=366%), 
-violating pedagogical assumptions. In contrast, baseline mode with projection heads 
-achieved stable positive correlations across all seeds (gain: 0.0276±0.0035, CV=13%). 
-
-We conclude attention weights optimize predictive utility rather than educational 
-semantics, necessitating explicit supervision (projection heads + constraint losses) 
-for reliable interpretability. Intrinsic mode is suitable for parameter-efficient 
-deployment when interpretability is not required.
+Encoder Values (v) → Direct Gains → Recursive Mastery
+               └──────────────────→ Gain Hub (for losses)
 ```
 
+The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic recursive accumulation** mechanism:
 
-#### Feature 6 Recommendations
+$$\text{mastery}_{t+1}^{(c)} = \text{mastery}_t^{(c)} + \alpha \cdot \text{ReLU}(\text{gain}_t^{(c)})$$
 
-**For Current Paper (Immediate Publication Goal):**
+This is implemented in the model's forward pass (`gainakt3_exp.py` lines 145, 162):
 
-1. **Primary Contribution:** Baseline mode (projection heads + auxiliary losses)
-   - Report: Test AUC 0.7196 ± 0.0005, Mastery Corr 0.095 ± 0.018, Gain Corr 0.028 ± 0.004
-   - Emphasize: Stable interpretability across all seeds, zero pedagogical violations
-   - Positioning: "Interpretability-first transformer for knowledge tracing"
-
-2. **Intrinsic Mode as Ablation/Alternative:**
-   - Present as architectural variant demonstrating parameter efficiency
-   - Transparent reporting: 13% reduction, <1% AUC loss, but 66% interpretability loss
-   - Use Case Table:
-     | Application | Recommended Mode | Rationale |
-     |-------------|------------------|-----------|
-     | Pedagogical analysis | Baseline | Stable, valid correlations |
-     | Student modeling | Baseline | Explicit educational supervision |
-     | Edge deployment | Intrinsic | 13% smaller, prediction-only |
-     | Mobile apps | Intrinsic | Efficiency critical, interp optional |
-
-3. **Paper Structure Adjustment:**
-   ```
-   Section 4: Experimental Validation
-     4.1 Multi-Seed Reproducibility (N=5, CV=0.07%)
-     4.2 Baseline Performance & Interpretability (PRIMARY)
-     4.3 Architectural Ablation: Intrinsic Mode Analysis
-     4.4 Interpretability Trade-offs & Limitations
-     4.5 Use Case Guidance
-   ```
-
-4. **Avoid Over-Claiming:**
-   - ❌ Do NOT claim: "Intrinsic mode provides causal interpretability"
-   - ❌ Do NOT claim: "Attention weights represent learning gains"
-   - ✅ DO claim: "Projection heads with explicit supervision necessary for interpretable gains"
-   - ✅ DO claim: "13% parameter reduction feasible for prediction-only applications"
-
-**For Future Work (Post-Publication Improvements):**
-
-1. **Hybrid Architecture:**
-   - Retain attention-derived gains for parameter efficiency
-   - Add lightweight projection heads (e.g., 64-dim intermediate) with partial supervision
-   - Goal: Balance efficiency and interpretability
-
-2. **Supervised Attention:**
-   - Modify attention mechanism to receive pedagogical gradients
-   - Add per-head gain losses to shape attention semantics
-   - Requires architectural innovation
-
-3. **Q-Matrix Integration (Phase 2):**
-   - Architectural sparsity enforcement via pre-attention masking
-   - May stabilize intrinsic gains by constraining to relevant skills
-   - Lower priority given current instability
+```python
+accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+```
 
 ---
+
+
 
 ## Overall Architecture Compliance
 
@@ -990,71 +989,58 @@ deployment when interpretability is not required.
 | **Auxiliary Losses**       | 5 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity) | All 5 + Consistency (bonus) with configurable weights                                     | ✅ Activated         |
 | **Monitoring**             | Real-time interpretability analysis, configurable frequency   | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety              | ✅ Activated         |
 | **Intrinsic Gain Attention** | Alternative parameter-efficient mode                        | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ❌ Deactivated       |
+| **Recursive Mastery Accumulation** | Deterministic temporal constraint: mastery_{t+1} = mastery_t + α·ReLU(gain_t) | Recursive loop with scaling (α=0.1) and clamping [0,1], enforces consistency between mastery and gains | ✅ Activated         |
 
-### Key Implementation Strengths
-
-1. **Modular Design:** Projection heads and auxiliary losses controlled by boolean flags (`use_mastery_head`, `use_gain_head`) enabling clean ablation studies.
-
-2. **Educational Consistency:** Recursive mastery accumulation (mastery[t] = mastery[t-1] + 0.1 × gains[t]) enforces architectural constraint beyond just auxiliary losses.
-
-3. **Training Stability:** Mixed-precision safety (dtype-aware masking in attention), DataParallel guards, gradient-friendly operations (clamp, hinge losses).
-
-4. **PyKT Framework Compliance:** Dual forward methods (`forward()` for compatibility, `forward_with_states()` for monitoring) maintain integration with existing evaluation scripts.
-
-5. **Interpretability Infrastructure:** Complete state exposure (context, value, mastery, gains, predictions, questions, responses) enables rich post-hoc analysis and real-time monitoring.
-
-### Minor Observations
-  
-- **Non-Negative Loss Default:** The `non_negative_loss_weight` is currently 0.0 in default parameters because non-negativity is enforced architecturally (ReLU on gains). The loss remains available for architectural variants.
-
-- **Skill Mask Computation:** Uses Q-matrix structure via `skill_masks.scatter_(2, questions.unsqueeze(-1), 1)` to identify relevant skills—correctly implements sparsity constraint based on problem-skill mappings.
-
-### Conclusion
-
-**The current baseline implementation in `pykt/models/gainakt3_exp.py` achieves 100% compliance with the GainAKT2Exp Augmented Architecture Design.** The target GainAKT3Exp architecture (shown in the diagram with Gain Projection Head marked RED/DEACTIVATED) represents a planned modification to use encoder Values directly as learning gains. All six augmented features are currently implemented following the GainAKT2Exp baseline:
-
-1. **Features 1-5 (Baseline Mode):** Production-ready with excellent interpretability (mastery corr: 0.095 ± 0.018, gain corr: 0.028 ± 0.004)
-2. **Feature 6 (Intrinsic Mode):** Validated alternative achieving 13% parameter reduction with <1% AUC loss, but 66% interpretability degradation
-
-**GainAKT3Exp Planned Modification:**
-- **Target:** Bypass Gain Projection Head, use `value_seq` directly as gains (dimension `[B, L, D]`)
-- **Benefit:** Direct attention-learned gains, simpler architecture, potentially stronger mastery correlations
-- **Implementation:** Modify `gainakt3_exp.py` forward pass to route Values directly to recursive mastery accumulation and Gain Hub
-
-**Multi-Seed Validation (N=5) Establishes (for current GainAKT2Exp baseline):**
-- ✅ **Baseline Mode:** Reproducible, interpretable, educationally valid (CV=0.07%, all seeds positive)
-- ⚠️ **Intrinsic Mode:** Reproducible for prediction, unstable for interpretation (60% seeds with negative gain correlations). 
-
-
-> **Publication Readiness:**
-> - Primary contribution: Baseline mode demonstrates that **projection heads + explicit supervision are necessary and sufficient for educationally meaningful interpretability**
-> - GainAKT3Exp innovation: Direct Values as Gains represents an architectural simplification hypothesis to be validated after baseline training
-> - **Ablation** contribution: Intrinsic mode validates the necessity of explicit supervision through its interpretability failure
-> - Practical outcome: Clear use-case guidance (baseline for analysis, intrinsic for edge deployment)
->
-> The model is ready for paper writeup with reporting of both successes (baseline interpretability) and limitations (intrinsic mode trade-offs).
 
 
 ## Parameters
 
-The complete list of parameters including category and description is in ´paper/parameters.csv´. 
+The complete list of parameters including category and description is in `paper/parameters.csv`.
+
+### Model Instantiation
+
+Models are created via `create_exp_model(config)` (`gainakt3_exp.py` line 435), which requires all parameters explicitly in the config dictionary:
+
+**Required Parameters** (22 total):
+- **Architecture**: `num_c`, `seq_len`, `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`
+- **Interpretability Features**: `use_mastery_head`, `use_gain_head`, `intrinsic_gain_attention`, `use_skill_difficulty`, `use_student_speed`
+- **Training Context**: `num_students` (for student_speed embedding when enabled)
+- **Loss Weights** (6): `non_negative_loss_weight`, `monotonicity_loss_weight`, `mastery_performance_loss_weight`, `gain_performance_loss_weight`, `sparsity_loss_weight`, `consistency_loss_weight`
+- **Monitoring**: `monitor_frequency` (batches between monitoring calls)
+
+**Zero Defaults Policy**: The factory function raises errors if required parameters are missing, ensuring no hidden defaults. All defaults are defined in `configs/parameter_default.json`, which is loaded by `run_repro_experiment.py` and can be overridden via CLI. 
 
 ## Evolving the Model
 
-We'll try to improve and evaluate variants of the model, being essential to maintain consistency in the definition of the parameters across all these possible changes. 
+We follow a rigorous parameter evolution protocol to maintain reproducibility across model variants and hyperparameter sweeps. See `examples/reproducibility.md` for complete details.
 
-Do these consistency updates/tests after making changes to the codebase (model, training/evaluation/reproduction scripts, etc.) in any of the scenarios described below 
-  - Check that there are no hidden parameters with hardcoded default values that can change without notice, distorting the interpretation of the impact of hyperparameter changes.
-  - If parameters are added or changed (name or default value), update "defaults" section of configs/parameter_default.json needs to be updated accordingly. 
+### Parameter Evolution Protocol
 
-Launch a consistency test after each change in the codebase and output warnings (only inform) or errors (inform and await for remediation)
+All parameter defaults live in `configs/parameter_default.json`. When adding or modifying parameters:
 
-### Scenarios
+1. **Update `parameter_default.json`** with new parameter and default value
+2. **Update `examples/run_repro_experiment.py`** to add CLI argument for new parameter
+3. **Update `paper/parameters.csv`** with parameter documentation (category, description, default value)
+4. **Verify no hardcoded defaults** exist in model/training code that could diverge from `parameter_default.json`
 
-#### Scenario 1: Hyperparameter Sweep
+### Consistency Verification
 
-Objective: By doing a sweep, we mean systematically exploring different combinations of hyperparameters to find the configuration that yields the best performance.
-Guidelines: We can use default values in configs/parameter_default.json as starting points. Once a optimal combination is found, current defaults in configs/parameter_default.json should be updated. 
+After any codebase modification (model, training/evaluation scripts, etc.):
+- Check that no hidden parameters with hardcoded defaults exist
+- Verify all model parameters are passed explicitly via `create_exp_model(config)`
+- Ensure training scripts require all parameters via CLI (no fallback defaults)
+- Confirm `parameter_default.json` matches actual code behavior
+
+### Hyperparameter Optimization
+
+**Objective**: Systematically explore parameter combinations to find optimal configuration.
+
+**Process**:
+1. Use defaults from `configs/parameter_default.json` as starting point
+2. Run experiments with parameter variations via CLI overrides
+3. Document results in experiment-specific config files (auto-generated in run directories)
+4. When optimal configuration is found, update `configs/parameter_default.json` with new defaults
+5. Document change in `paper/parameters.csv` with rationale and date 
 
 #### Scenario 2: Ablation Studies
 
@@ -1104,6 +1090,10 @@ When adding/changing parameters:
    - Add to appropriate category table above
    - Document purpose and default value
 
+## Trajectories
+
+
+
 ## Loss Functions
 
 Total Loss = BCE Loss + Constraint Losses + Semantic Module Losses
@@ -1136,6 +1126,13 @@ Binary Cross-Entropy (BCE) Loss: Core loss for response correctness prediction.
 
 Constraint losses enforce structural validity and educational plausibility of the projected mastery and gain trajectories. Implemented in the model's `compute_interpretability_loss()` method (`pykt/models/gainakt3_exp.py`), these losses operate at the **interaction level**, penalizing specific violations of educational expectations. Unlike semantic module losses that shape overall trajectory correlations, constraint losses act as **hard regularizers** preventing degenerate or nonsensical states.
 
+**Semantic Constraints**
+1. **Non-negative gains**: Learning gains are always positive (>=0)
+2. **Monotonic mastery**: Mastery can only increase or stay constant over time. Mastery level is in [0,1] range (probabilistic interpretation)
+3. **Consistency**: Mastery increments are consistent with learning gains
+4. **Sparsity**: Practice with an item/question produces mastery increments only in the relevant skills (those skills related to the item according to the Q-Matrix)
+
+
 **Non-Negative Gains** (`non_negative_loss_weight = 0.0`): Penalizes negative learning gains by computing `clamp(-projected_gains, min=0).mean()`. Currently disabled (weight 0.0) as gains are naturally non-negative due to model architecture, but available for architectural variants.
 
 **Monotonicity** (`monotonicity_loss_weight = 0.1`): Enforces non-decreasing mastery over time by penalizing `clamp(mastery[t] - mastery[t+1], min=0).mean()`. Ensures mastery cannot regress, reflecting the assumption that learning is cumulative and students do not "unlearn" previously mastered skills.
@@ -1144,7 +1141,7 @@ Constraint losses enforce structural validity and educational plausibility of th
 
 **Gain-Performance Alignment** (`gain_performance_loss_weight = 0.8`): Enforces that correct responses should yield higher gains than incorrect responses via hinge loss: `clamp(mean(incorrect_gains) - mean(correct_gains) + 0.1, min=0)`. The 0.1 margin ensures a clear separation, reflecting the educational assumption that successful problem-solving produces greater learning increments.
 
-**Sparsity** (`sparsity_loss_weight = 0.2`): Penalizes non-zero gains for skills not directly involved in the current interaction via `abs(non_relevant_gains).mean()`. Encourages skill-specific learning (gains concentrated on the question's target skill) rather than diffuse updates across all skills, improving interpretability and alignment with skill-specific educational theories.
+**Sparsity** (`sparsity_loss_weight = 0.2`): Penalizes non-zero gains for skills not directly involved in the current interaction via `abs(non_relevant_gains).mean()`. Encourages skill-specific learning (gains concentrated on the question's target skill) rather than diffuse updates across all skills, improving interpretability and alignment with skill-specific educational theories. **Skill Mask Computation:** Uses Q-matrix structure via `skill_masks.scatter_(2, questions.unsqueeze(-1), 1)` to identify relevant skills—correctly implements sparsity constraint based on problem-skill mappings.
 
 **Consistency** (`consistency_loss_weight = 0.3`): Enforces temporal coherence between mastery changes and scaled gains via `|mastery_delta - scaled_gains * 0.1|.mean()`. Ensures that mastery increments align with the projected gain magnitudes, preventing the model from producing contradictory mastery and gain trajectories (e.g., large gains with flat mastery, or mastery jumps with zero gains).
 
@@ -1201,190 +1198,6 @@ Mastery and gain correlations regressed to zero when projection heads (`use_mast
 Recovered configuration demonstrates that enabling semantic modules and interpretability heads plus extending warm-up and reducing training horizon restores correlations (mastery ≈0.10+, gain ≈0.05+). Sweeps will seek configurations yielding mastery_corr ≥0.12 with val AUC ≥0.72 (early-stopped) and gain_corr ≥0.07 under zero violations, establishing a balanced regime for publication.
 
 
-
-
-## Paper Claim 
-
-**UPDATED (GainAKT3Exp Development Status):**
-
-> We introduce GainAKT3Exp, an interpretability-first transformer for knowledge tracing that models learning gains and mastery trajectories through a simplified architecture where encoder **Values directly represent learning gains** (bypassing the Gain Projection Head). This architectural innovation builds on GainAKT2Exp's validated baseline (mastery correlation: 0.095±0.018, gain correlation: 0.028±0.004, test AUC: 0.720±0.001, N=5 seeds) by enabling the attention mechanism to learn gain semantics intrinsically rather than through post-hoc projection. GainAKT3Exp hypothesizes that direct Value-as-Gain representation will improve mastery correlations while maintaining competitive predictive performance through tighter coupling between attention learning and pedagogical constraints.
-
-**GainAKT2Exp Baseline Reference (Validated):**
-
-> GainAKT2Exp is an interpretability-first transformer for knowledge tracing that explicitly models learning gains and mastery trajectories through projection heads and auxiliary pedagogical losses. Multi-seed validation (N=5) on ASSIST2015 demonstrates stable interpretability (mastery correlation: 0.095±0.018, gain correlation: 0.028±0.004, CV<1%) with competitive predictive performance (test AUC: 0.720±0.001). Through architectural ablation comparing projection-based (baseline) versus attention-derived (intrinsic) gain estimation, we empirically established that explicit supervision is necessary for educationally valid interpretability: intrinsic mode achieves 13% parameter reduction with <1% AUC loss but suffers 66% interpretability degradation and negative gain correlations in 60% of seeds.
-
-### Current Status & Publication Readiness
-
-**🔄 IN DEVELOPMENT (GainAKT3Exp):**
-
-1. **Baseline Training Complete (Epoch 9/12 in progress):**
-   - Model: GainAKT3Exp initialized identical to GainAKT2Exp
-   - Current metrics: Valid AUC 0.7101, Best AUC 0.7243
-   - Correlations: Mastery 0.087, Gains 0.048
-   - Purpose: Establish baseline before architectural modification
-
-2. **Architectural Modification Planned:**
-   - Target: Bypass Gain Projection Head, use Values directly as gains
-   - Expected benefit: Enhanced mastery correlations through direct attention-gain coupling
-   - Implementation: Modify `gainakt3_exp.py` forward pass after baseline completes
-
-**✅ VALIDATED (GainAKT2Exp Baseline - Reference Architecture):**
-
-1. **Multi-Seed Statistical Validation (N=5):**
-   - Baseline mode: Test AUC 0.7196 ± 0.0005 (CV: 0.07%)
-   - Mastery correlation: 0.0952 ± 0.0177 (all seeds positive)
-   - Gain correlation: 0.0276 ± 0.0035 (all seeds positive)
-   - Paired t-tests demonstrate statistical significance
-
-2. **Architectural Ablation Complete:**
-   - Baseline mode (14.66M params): Interpretable, educationally valid
-   - Intrinsic mode (12.74M params): Parameter-efficient, interpretability compromised
-   - Rigorous paired comparison establishes necessity of explicit supervision
-
-3. **Reproducibility Demonstrated:**
-   - Excellent predictive reproducibility (CV < 0.2% for both modes)
-   - Stable interpretability in baseline mode (CV = 13-19%)
-   - Complete experimental tracking (config.json, MD5 checksums)
-
-4. **Zero Constraint Violations:**
-   - Monotonicity, non-negativity, bounded mastery maintained
-   - Educational plausibility constraints satisfied
-
-5. **Honest Limitation Reporting:**
-   - Intrinsic mode interpretability failure documented
-   - Clear trade-off analysis provided
-   - Use-case guidance table included
-
-**✅ PUBLICATION-READY STRENGTHS:**
-
-- **Novel Contribution:** First systematic multi-seed validation of interpretability metrics in transformer KT
-- **Methodological Rigor:** Paired statistical testing, architectural ablation, transparent limitation reporting
-- **Practical Value:** Clear guidance on when to use projection heads vs attention-derived gains
-- **Reproducibility:** Full parameter manifests, deterministic training, open implementation
-
-**⚠️ OPTIONAL ENHANCEMENTS (Can defer to future work):**
-
-1. **Baseline Model Comparisons (Low priority for v1):**
-   - AKT, SAKT, SAINT comparisons on same dataset
-   - Can cite published numbers, add full reproduction in extended version
-   
-2. **Coverage Metrics (Medium priority):**
-   - Per-student correlation distributions
-   - % students with positive mastery/gain correlations
-   - Can include in supplementary materials
-
-3. **Cross-Dataset Validation (Future work):**
-   - ASSIST2017, STATICS2011, EdNet
-   - Demonstrates generalization but not critical for initial publication
-   
-4. **Ablation of Semantic Modules (Medium priority):**
-   - Retention, lag, global alignment individual contributions
-   - Strong ablation already exists (baseline vs intrinsic)
-   - Finer-grained ablations can be future work
-
-### Immediate Publication Strategy (Speed-Focused)
-
-**Target Venue:** Educational Data Mining (EDM) or AI in Education (AIED) conference
-
-**Core Narrative:**
-1. **Problem:** Transformer KT models lack interpretable learning gain estimation
-2. **Solution:** Projection heads + auxiliary pedagogical losses
-3. **Validation:** Multi-seed reproducibility (N=5) demonstrates stable interpretability
-4. **Key Finding:** Attention-derived gains (intrinsic mode) fail interpretability despite parameter efficiency
-5. **Impact:** First rigorous demonstration that explicit supervision is necessary for interpretable gains
-
-**Paper Structure (Optimized for Speed):**
-
-```
-1. Introduction (2 pages)
-   - Knowledge tracing + interpretability challenge
-   - Contribution: Reproducible interpretability with explicit supervision
-   
-2. Related Work (1.5 pages)
-   - Transformer KT (AKT, SAKT, SAINT)
-   - Interpretability in KT (DKT interpretability issues)
-   - Learning gain modeling
-   
-3. Method (3 pages)
-   - Architecture: Projection heads, auxiliary losses
-   - Training: Multi-objective optimization, warm-up scheduling
-   - Intrinsic mode: Attention-derived gains (ablation)
-   
-4. Experimental Setup (1.5 pages)
-   - Dataset: ASSIST2015 (fold 0)
-   - Multi-seed protocol (N=5)
-   - Metrics: AUC, accuracy, mastery/gain correlations
-   
-5. Results (3 pages)
-   - Table 1: Baseline multi-seed performance (AUC, correlations)
-   - Table 2: Baseline vs Intrinsic paired comparison
-   - Figure 1: Seed-level gain correlation distribution
-   - Figure 2: Mastery trajectory example (high vs low performing student)
-   
-6. Discussion (2 pages)
-   - Why explicit supervision matters (empirical evidence)
-   - Trade-off analysis (efficiency vs interpretability)
-   - Use case guidance (when to use each mode)
-   
-7. Limitations & Future Work (1 page)
-   - Single dataset (cross-dataset validation deferred)
-   - Hybrid architectures for future exploration
-   
-8. Conclusion (0.5 page)
-   - Reproducible interpretability achieved
-   - Clear design guidelines for practitioners
-```
-
-**Total:** ~14-15 pages (typical conference format)
-
-**Timeline for Draft:**
-- **Week 1:** Write Sections 1-3 (Intro, Related Work, Method)
-- **Week 2:** Write Sections 4-5 (Experiments, Results)
-- **Week 3:** Write Sections 6-8, polish, proofread
-- **Week 4:** Internal review, revisions, submit
-
-**No Additional Experiments Needed:**
-- ✅ All data collected (baseline N=5, intrinsic N=5)
-- ✅ Statistical analysis complete (paired t-tests, CIs)
-- ✅ Key figures ready (can generate from existing logs)
-
-### Decision Criteria (UPDATED)
-
-**✅ MINIMUM CRITERIA MET FOR PUBLICATION:**
-- ✅ Multi-seed validation (N=5) with excellent reproducibility
-- ✅ Statistically significant correlations (paired t-tests p<0.05)
-- ✅ Architectural ablation (baseline vs intrinsic) demonstrating necessity
-- ✅ Honest limitation reporting (intrinsic mode interpretability failure)
-- ✅ Competitive AUC (0.720, within range of SAKT 0.711, simpleKT 0.725)
-
-**Current verdict:** ✅ **READY FOR PAPER WRITING.** All critical experiments complete, core claims validated, narrative clear. Focus should shift to writing, not additional experiments.
-
-## Architectural Modes Comparison (Implemented & Validated)
-
-| Dimension | Baseline Mode (Projection Heads) | Intrinsic Mode (Attention-Derived) | Empirical Winner | Publication Status |
-|-----------|----------------------------------|-------------------------------------|------------------|--------------------|
-| **Parameter Count** | 14.66M | 12.74M (-13.1%) | Intrinsic (efficiency) | ✅ Validated N=5 |
-| **Test AUC** | 0.7196 ± 0.0005 | 0.7142 ± 0.0007 (-0.75%) | Baseline (marginal) | ✅ Validated N=5 |
-| **Mastery Correlation** | 0.0952 ± 0.0177 | 0.0322 ± 0.0008 (-66%) | Baseline (3× stronger) | ✅ Validated N=5 |
-| **Gain Correlation** | 0.0276 ± 0.0035 | -0.0065 ± 0.0238 (-124%) | Baseline (positive) | ✅ Validated N=5 |
-| **Reproducibility (AUC)** | CV = 0.07% | CV = 0.10% | Both excellent | ✅ Validated N=5 |
-| **Reproducibility (Gain)** | CV = 13% | CV = 366% | Baseline (stable) | ✅ Validated N=5 |
-| **Educational Validity** | 5/5 seeds positive | 2/5 seeds positive | Baseline (100% vs 40%) | ✅ Validated N=5 |
-| **Explicit Supervision** | ✅ mastery_perf_loss + gain_perf_loss | ❌ Only BCE loss | Baseline (necessary) | ✅ Empirically proven |
-| **Use Cases** | Analysis, modeling, research | Edge deployment, mobile | Context-dependent | ✅ Clear guidance |
-
-**Key Empirical Finding (GainAKT2Exp - Validated, GainAKT3Exp - Under Development):**
-
-**GainAKT2Exp (Reference Architecture):**
-> Multi-seed validation (N=5) demonstrates that **explicit supervision via projection heads is necessary for educationally valid interpretability**. Intrinsic mode (attention-derived gains) achieves parameter efficiency (13% reduction, <1% AUC loss) but fails interpretability: 60% of seeds exhibit negative gain correlations (mean: -0.007 ± 0.024, CV=366%), violating pedagogical assumptions. Baseline mode maintains stable positive correlations across all seeds (gain: 0.028 ± 0.004, CV=13%), supporting its use for student modeling and educational analysis.
-
-**GainAKT3Exp (Current Development):**
-> GainAKT3Exp explores whether **Values-as-Direct-Gains** can improve upon GainAKT2Exp's baseline by enabling the attention mechanism to learn gain semantics intrinsically while maintaining explicit supervision through auxiliary losses. Unlike the failed intrinsic mode (which eliminated ALL supervision), GainAKT3Exp retains constraint losses but routes them to raw attention Values instead of projected outputs. Hypothesis: Direct Value optimization for gain-related losses may strengthen mastery correlations beyond GainAKT2Exp's 0.095±0.018 baseline.
-
-**Paper Positioning (Updated for GainAKT3Exp Development):**
-*GainAKT2Exp established projection heads + auxiliary losses as a sufficient architecture for interpretable transformer KT through rigorous multi-seed ablation. GainAKT3Exp extends this by testing whether Values themselves can serve as gains when supervised by the same auxiliary losses, potentially achieving the benefits of intrinsic representation (direct attention-gain coupling) without sacrificing interpretability. We provide empirical comparison of three architectural variants: projection-based (GainAKT2Exp baseline), attention-derived without supervision (intrinsic mode - failed), and attention-derived with supervision (GainAKT3Exp - under evaluation).*
-
-
 ## Benchmark
 
 ### Baseline models
@@ -1397,7 +1210,6 @@ PYKT Benchmark Results Summary (Question-Level AUC):
 Other benchmarks: 
 - simpleKT 0.7744 (AS2009) 0.7248 (AS2015) - Reported as strong baseline with minimal complexity
 ```
-
 
 ### GinAKT Results Comparison
 

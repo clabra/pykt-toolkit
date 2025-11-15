@@ -239,7 +239,7 @@ class GainAKT3(nn.Module):
                  gain_performance_loss_weight=0.0, sparsity_loss_weight=0.0, consistency_loss_weight=0.0,
                  use_skill_difficulty=False, use_student_speed=False, num_students=None):
         super().__init__()
-        self.model_name = "gainakt2"
+        self.model_name = "gainakt3"
         self.num_c = num_c
         self.seq_len = seq_len
         self.d_model = d_model

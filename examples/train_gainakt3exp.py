@@ -357,7 +357,7 @@ def train_gainakt3exp_model(args):
     logger.propagate = False
     
     logger.info("=" * 80)
-    logger.info("TRAINING GAINAKT2Exp WITH CUMULATIVE MASTERY")
+    logger.info("TRAINING GAINAKT3Exp WITH CUMULATIVE MASTERY")
     logger.info("=" * 80)
     logger.info(f"Dataset: {dataset_name}")
     logger.info(f"Epochs: {num_epochs}")
@@ -703,14 +703,9 @@ def train_gainakt3exp_model(args):
     # Tier B semantic emergence parameters
     warmup_constraint_epochs = getattr(args, 'warmup_constraint_epochs', 8)
     max_semantic_students = getattr(args, 'max_semantic_students', 50)
-    semantic_trajectory_path = getattr(
-        args,
-        'semantic_trajectory_path',
-        f"paper/results/gainakt3exp_semantic_trajectory_{experiment_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    )
     logger.info(f"Warm-up constraint epochs: {warmup_constraint_epochs}")
     logger.info(f"Max semantic students per consistency sample: {max_semantic_students}")
-    logger.info(f"Semantic trajectory path (will be written at end): {semantic_trajectory_path}")
+    logger.info("Semantic trajectory will be embedded in experiment results files")
     if enable_global_alignment_pass:
         logger.info("Global alignment sampling active: will compute global correlations after each epoch.")
 
@@ -1703,6 +1698,28 @@ def train_gainakt3exp_model(args):
             logger.error(f"Stderr: {e.stderr}")
         except Exception as e:
             logger.error(f"❌ Evaluation failed with exception: {e}")
+        
+        # Print learning trajectories command
+        logger.info("\n" + "="*80)
+        logger.info("INDIVIDUAL STUDENT LEARNING TRAJECTORIES")
+        logger.info("="*80)
+        logger.info("To analyze detailed learning trajectories for individual students, run:")
+        logger.info("")
+        trajectory_cmd = [
+            sys.executable,
+            'examples/learning_trajectories.py',
+            '--run_dir', experiment_dir,
+            '--num_students', '10',
+            '--min_steps', '10'
+        ]
+        logger.info(f"  {' '.join(trajectory_cmd)}")
+        logger.info("")
+        logger.info("This will display timestep-by-timestep progression showing:")
+        logger.info("  - Skills practiced at each interaction")
+        logger.info("  - Learning gains for each skill")
+        logger.info("  - Mastery levels after each interaction")
+        logger.info("  - Actual student performance (correct/incorrect)")
+        logger.info("="*80 + "\n")
     
     return final_results
 
