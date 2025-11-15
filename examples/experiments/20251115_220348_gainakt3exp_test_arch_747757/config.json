@@ -1,4 +1,27 @@
 {
+  "input": {
+    "short_title": "test_arch",
+    "epochs": 1
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title test_arch --epochs 1",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --adaptive_alignment --alignment_global_students 600 --alignment_min_correlation 0.05 --alignment_residual_window 5 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_warmup_epochs 8 --alignment_weight 0.15 --auto_shifted_eval --batch_size 64 --consistency_loss_weight 0.3 --consistency_rebalance_epoch 8 --consistency_rebalance_new_weight 0.2 --consistency_rebalance_threshold 0.1 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --enable_alignment_loss --enable_global_alignment_pass --enable_lag_gain_loss --enable_retention_loss --enhanced_constraints --epochs 1 --fold 0 --gain_performance_loss_weight 0.5 --gradient_clip 1.0 --incremental_mastery_loss_weight 0.1 --lag_gain_weight 0.06 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --lag_max_lag 3 --learning_rate 0.000174 --mastery_performance_loss_weight 0.5 --mastery_threshold_init 0.85 --max_semantic_students 50 --monitor_freq 50 --monotonicity_loss_weight 0.1 --n_heads 4 --non_negative_loss_weight 0.0 --num_encoder_blocks 4 --num_students 3055 --optimizer Adam --patience 4 --retention_delta 0.005 --retention_weight 0.14 --seed 42 --seq_len 200 --sparsity_loss_weight 0.2 --threshold_temperature 0.1 --use_mastery_head --use_residual_alignment --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --warmup_constraint_epochs 8 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251115_220348_gainakt3exp_test_arch_747757 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.5 --gain_performance_loss_weight 0.5 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.3 --monitor_freq 50 --use_mastery_head",
+    "learning_trajectories": "/home/vscode/.pykt-env/bin/python examples/learning_trajectories.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251115_220348_gainakt3exp_test_arch_747757 --num_students 10 --min_steps 10",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 747757"
+  },
+  "experiment": {
+    "id": "20251115_220348_gainakt3exp_test_arch_747757",
+    "short_title": "test_arch",
+    "experiment_id": "747757",
+    "created": "20251115_220348"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
   "defaults": {
     "model": "gainakt3exp",
     "dataset": "assist2015",
@@ -70,6 +93,9 @@
     "max_semantic_students": 50,
     "max_correlation_students": 3800,
     "enable_cosine_perf_schedule": false
+  },
+  "overrides": {
+    "epochs": 1
   },
   "types": {
     "launcher": [
@@ -154,26 +180,8 @@
       "variance_floor_reduce_factor"
     ]
   },
-  "fixed": {
-    "non_negative_loss_weight": {
-      "value": 0.0,
-      "rationale": "Non-negativity enforced architecturally via ReLU on gains; loss redundant but kept for architectural variants",
-      "validated_by_experiments": []
-    },
-    "intrinsic_gain_attention": {
-      "value": false,
-      "rationale": "DEPRECATED: Attention-Derived Gains feature. This alternative architecture extracted gains directly from attention weights instead of using Values stream. Deactivated in favor of 'Values as Learning Gains' approach which provides superior interpretability. Feature code commented out in gainakt3_exp.py.",
-      "validated_by_experiments": []
-    },
-    "alignment_weight": {
-      "value": 0.15,
-      "rationale": "Optimal balance between mastery correlation and gain correlation; sweep experiments show 0.15 provides best trade-off (0.10 best for mastery +9.6%, 0.25 best for gains +39.8%, 0.15 balanced)",
-      "validated_by_experiments": [
-        "977548",
-        "470340",
-        "724276"
-      ]
-    }
-  },
-  "md5": "c4ddf4a71ea305bd8a9a9ffd6a7c2e3a"
+  "md5": "c4ddf4a71ea305bd8a9a9ffd6a7c2e3a",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
 }

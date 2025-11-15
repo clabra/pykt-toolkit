@@ -309,8 +309,25 @@ class GainAKT3(nn.Module):
         # Optional projection heads for interpretability
         if self.use_mastery_head:
             self.mastery_head = nn.Linear(self.d_model, self.num_c)
-        if self.use_gain_head:
-            self.gain_head = nn.Linear(self.d_model, self.num_c)
+        
+        # COMMENTED OUT: Gain Head projection layer (DEPRECATED in GainAKT3Exp)
+        # ============================================================================
+        # Conceptual Shift: Values ARE Learning Gains
+        # ============================================================================
+        # Old approach: Value → gain_head projection → per-skill gains
+        # New approach: Values directly represent learning gains (no projection)
+        # 
+        # Rationale:
+        # - Direct Value→Gain mapping maximizes interpretability
+        # - Projection layer obscured the educational meaning
+        # - Values from encoder already encode learning contributions
+        # - Simpler architecture, clearer semantics
+        # 
+        # The gain_head parameter is kept in configs for backward compatibility
+        # but the layer is not instantiated. GainAKT3Exp uses Values directly.
+        # ============================================================================
+        # if self.use_gain_head:
+        #     self.gain_head = nn.Linear(self.d_model, self.num_c)
         
         # Skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)
         if self.use_skill_difficulty:

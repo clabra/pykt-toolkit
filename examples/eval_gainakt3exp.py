@@ -139,6 +139,7 @@ def main():
     parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
+    parser.add_argument('--incremental_mastery_loss_weight', type=float, required=True)
     parser.add_argument('--max_correlation_students', type=int, required=True)
     parser.add_argument('--monitor_freq', type=int, required=True,
                         help='How often to compute interpretability metrics during training')
@@ -224,6 +225,7 @@ def main():
         'gain_performance_loss_weight': args.gain_performance_loss_weight,
         'sparsity_loss_weight': args.sparsity_loss_weight,
         'consistency_loss_weight': args.consistency_loss_weight,
+        'incremental_mastery_loss_weight': args.incremental_mastery_loss_weight,
         'monitor_frequency': args.monitor_freq  # Map monitor_freq -> monitor_frequency for model
     }
     

@@ -344,6 +344,7 @@ def train_gainakt3exp_model(args):
     gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.5))  # Fixed: validated by experiments 451877, 542954
     sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.2))
     consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.3))
+    incremental_mastery_loss_weight = resolve_param(cfg, 'interpretability', 'incremental_mastery_loss_weight', getattr(args, 'incremental_mastery_loss_weight', 0.1))
     
     # Setup logging with experiment-specific logger name for parallel disambiguation
     logger_name = f"gainakt3exp.{experiment_suffix}"
@@ -513,7 +514,7 @@ def train_gainakt3exp_model(args):
         'emb_type': resolved_emb_type,
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
         'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
-        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', True)),
+        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', False)),
         'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False)),
         'use_skill_difficulty': resolve_param(cfg, 'interpretability', 'use_skill_difficulty', getattr(args, 'use_skill_difficulty', False)),
         'use_student_speed': resolve_param(cfg, 'interpretability', 'use_student_speed', getattr(args, 'use_student_speed', False)),
@@ -528,7 +529,8 @@ def train_gainakt3exp_model(args):
     # 3. Otherwise use individually supplied weights
     individual_params = [
         'non_negative_loss_weight', 'monotonicity_loss_weight', 'mastery_performance_loss_weight',
-        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight'
+        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight',
+        'incremental_mastery_loss_weight'
     ]
     if not enhanced_constraints:
         model_config.update({
@@ -537,7 +539,8 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': 0.5,
             'gain_performance_loss_weight': 0.5,
             'sparsity_loss_weight': 0.0,
-            'consistency_loss_weight': 0.0
+            'consistency_loss_weight': 0.0,
+            'incremental_mastery_loss_weight': 0.0
         })
         logger.info("PURE BCE baseline: all constraint weights forced to 0.0")
     elif enhanced_constraints and cfg is not None and all(p in cfg.get('interpretability', {}) for p in individual_params):
@@ -548,7 +551,8 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight
+            'consistency_loss_weight': consistency_loss_weight,
+            'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Enhanced constraints: weights sourced from config.json interpretability section")
     elif enhanced_constraints and cfg is None:
@@ -558,7 +562,8 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight
+            'consistency_loss_weight': consistency_loss_weight,
+            'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Enhanced constraints: weights from CLI arguments (no config file)")
     else:
@@ -568,7 +573,8 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight
+            'consistency_loss_weight': consistency_loss_weight,
+            'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Using individually supplied constraint weights")
 
@@ -579,7 +585,8 @@ def train_gainakt3exp_model(args):
                 f"mastery_perf={model_config['mastery_performance_loss_weight']} | "
                 f"gain_perf={model_config['gain_performance_loss_weight']} | "
                 f"sparsity={model_config['sparsity_loss_weight']} | "
-                f"consistency={model_config['consistency_loss_weight']}")
+                f"consistency={model_config['consistency_loss_weight']} | "
+                f"incremental_mastery={model_config['incremental_mastery_loss_weight']}")
     # Repro integration: detect EXPERIMENT_DIR
     experiment_dir = os.environ.get('EXPERIMENT_DIR')
     # If not launched via run_repro_experiment (no EXPERIMENT_DIR), create a manual containment folder.
@@ -1669,6 +1676,7 @@ def train_gainakt3exp_model(args):
             '--gain_performance_loss_weight', str(model_config['gain_performance_loss_weight']),
             '--sparsity_loss_weight', str(model_config['sparsity_loss_weight']),
             '--consistency_loss_weight', str(model_config['consistency_loss_weight']),
+            '--incremental_mastery_loss_weight', str(model_config['incremental_mastery_loss_weight']),
             '--monitor_freq', str(model_config['monitor_frequency'])
         ]
         
@@ -1778,6 +1786,7 @@ if __name__ == '__main__':
     parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
+    parser.add_argument('--incremental_mastery_loss_weight', type=float, required=True)
     # Semantic alignment & refinement flags (Phase 1+ reproducibility)
     parser.add_argument('--enable_alignment_loss', action='store_true',
                         help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
