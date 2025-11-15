@@ -1,4 +1,30 @@
 {
+  "input": {
+    "short_title": "debug_thresholds_v3",
+    "epochs": 1,
+    "batch_size": 16,
+    "patience": 1,
+    "monitor_freq": 1,
+    "consistency_loss_weight": 0.0
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title debug_thresholds_v3 --epochs 1 --batch_size 16 --patience 1 --monitor_freq 1 --consistency_loss_weight 0.0",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --adaptive_alignment --alignment_global_students 600 --alignment_min_correlation 0.05 --alignment_residual_window 5 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_warmup_epochs 8 --alignment_weight 0.15 --auto_shifted_eval --batch_size 16 --consistency_loss_weight 0.0 --consistency_rebalance_epoch 8 --consistency_rebalance_new_weight 0.2 --consistency_rebalance_threshold 0.1 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --enable_alignment_loss --enable_global_alignment_pass --enable_lag_gain_loss --enable_retention_loss --enhanced_constraints --epochs 1 --fold 0 --gain_performance_loss_weight 0.5 --gradient_clip 1.0 --lag_gain_weight 0.06 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --lag_max_lag 3 --learning_rate 0.000174 --mastery_performance_loss_weight 0.5 --mastery_threshold_init 0.85 --max_semantic_students 50 --monitor_freq 1 --monotonicity_loss_weight 0.1 --n_heads 4 --non_negative_loss_weight 0.0 --num_encoder_blocks 4 --num_students 3055 --optimizer Adam --patience 1 --retention_delta 0.005 --retention_weight 0.14 --seed 42 --seq_len 200 --sparsity_loss_weight 0.2 --threshold_temperature 0.1 --use_gain_head --use_mastery_head --use_residual_alignment --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --warmup_constraint_epochs 8 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251114_180421_gainakt3exp_debug_thresholds_v3_688724 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 16 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.1 --mastery_performance_loss_weight 0.5 --gain_performance_loss_weight 0.5 --sparsity_loss_weight 0.2 --consistency_loss_weight 0.0 --monitor_freq 1 --use_mastery_head --use_gain_head",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 688724"
+  },
+  "experiment": {
+    "id": "20251114_180421_gainakt3exp_debug_thresholds_v3_688724",
+    "short_title": "debug_thresholds_v3",
+    "experiment_id": "688724",
+    "created": "20251114_180421"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
   "defaults": {
     "model": "gainakt3exp",
     "dataset": "assist2015",
@@ -69,6 +95,13 @@
     "max_semantic_students": 50,
     "max_correlation_students": 3800,
     "enable_cosine_perf_schedule": false
+  },
+  "overrides": {
+    "epochs": 1,
+    "batch_size": 16,
+    "patience": 1,
+    "monitor_freq": 1,
+    "consistency_loss_weight": 0.0
   },
   "types": {
     "launcher": [
@@ -153,30 +186,8 @@
       "variance_floor_reduce_factor"
     ]
   },
-  "fixed": {
-    "intrinsic_gain_attention": {
-      "value": false,
-      "rationale": "Experimentally determined to be redundant or harmful",
-      "validated_by_experiments": []
-    },
-    "alignment_weight": {
-      "value": 0.15,
-      "rationale": "Optimal balance between mastery correlation and gain correlation; sweep experiments show 0.15 provides best trade-off (0.10 best for mastery +9.6%, 0.25 best for gains +39.8%, 0.15 balanced)",
-      "validated_by_experiments": [
-        "977548",
-        "470340",
-        "724276"
-      ]
-    },
-    "patience": {
-      "value": 4,
-      "rationale": "Early stopping patience to prevent catastrophic overfitting; capacity experiments (Nov 12, 2025) showed all models peak at epoch 3-5 then collapse 8-9% by epoch 11-13. Patience=4 allows peak detection while preventing memorization.",
-      "validated_by_experiments": [
-        "506636",
-        "624681",
-        "423250"
-      ]
-    }
-  },
-  "md5": "c5503676a35a1535d40070f8983caf03"
+  "md5": "c5503676a35a1535d40070f8983caf03",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
 }

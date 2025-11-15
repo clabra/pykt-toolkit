@@ -41,6 +41,7 @@ from .robustkt import Robustkt
 # from .simakt import SimAKT
 # from .gainsakt import GainSAKT
 from .gainakt2 import GainAKT2
+from .gainakt3 import GainAKT3
 #from .gainakt2_enhanced import GainAKT2Enhanced
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -158,6 +159,14 @@ def init_model(model_name, model_config, data_config, emb_type):
                           'use_wandb', 'add_uuid', 'num_epochs']
         gainakt2_config = {k: v for k, v in model_config.items() if k not in excluded_params}
         model = GainAKT2(data_config["num_c"], **gainakt2_config, emb_type=emb_type, 
+                        emb_path=data_config["emb_path"]).to(device)
+    elif model_name == "gainakt3":
+        # Filter out training-specific parameters
+        excluded_params = ['learning_rate', 
+                          'non_negative_loss_weight', 'consistency_loss_weight', 
+                          'use_wandb', 'add_uuid', 'num_epochs']
+        gainakt3_config = {k: v for k, v in model_config.items() if k not in excluded_params}
+        model = GainAKT3(data_config["num_c"], **gainakt3_config, emb_type=emb_type, 
                         emb_path=data_config["emb_path"]).to(device)
     # elif model_name == "gainakt2_enhanced":
     #     # Filter out training-specific and legacy parameters for enhanced model

@@ -317,7 +317,8 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Load training script
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            train_script_path = defaults.get('train_script', 'examples/train_gainakt2exp.py')
+            train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
@@ -424,7 +425,8 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Load training script
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            train_script_path = defaults.get('train_script', 'examples/train_gainakt2exp.py')
+            train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
