@@ -404,71 +404,75 @@ graph TD
     class Pred_Input_h,Pred_Input_v,Pred_Input_s,Predictions io_data
     class Projected_Mastery_Output,Projected_Gain_Output io_data
 
-    %% Link Styling - Match output lines to hub colors
-    %% NOTE: Mermaid does not support class-based link styling; manual indexing required
+    %% Link Styling - SIMPLIFIED: Most styling removed due to commented-out connections
+    %% NOTE: After commenting out constraint and semantic losses, link indices changed.
+    %% Keeping only essential link styles for active connections to avoid rendering errors.
     
-    %% Pred_Hub outputs (black) - ALL 5 connections from Pred_Hub styled blue
-    %% Pred_Hub -->|"BCE"| BCE_Loss (line 224)
-    %% Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss (line 238)
-    %% Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss (line 239)
-    %% Pred_Hub -->|"Alignment"| Alignment_Loss (line 242)
-    %% Pred_Hub -->|"to Monitor"| Monitor_Hub (line 262)
-    linkStyle 60 stroke:#888888,stroke-width:3px
-    linkStyle 71 stroke:#888888,stroke-width:3px
-    linkStyle 72 stroke:#888888,stroke-width:3px
-    linkStyle 74 stroke:#888888,stroke-width:3px
-    linkStyle 87 stroke:#888888,stroke-width:3px
-    
-    %% Mastery_Hub outputs (red) - ALL 6 connections from Mastery_Hub styled red
-    %% Mastery_Hub -->|"Global Align"| Global_Alignment (line 195)
-    %% Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss (line 227)
-    %% Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss (line 228)
-    %% Mastery_Hub -->|"Consistency"| Consistency_Loss (line 229)
-    %% Mastery_Hub -->|"Retention"| Retention_Loss (line 230)
-    %% Mastery_Hub -->|"to Monitor"| Monitor_Hub (line 260)
-    linkStyle 57 stroke:#00ff00,stroke-width:3px
-    linkStyle 62 stroke:#00ff00,stroke-width:3px
-    linkStyle 63 stroke:#00ff00,stroke-width:3px
-    linkStyle 64 stroke:#00ff00,stroke-width:3px
-    linkStyle 65 stroke:#00ff00,stroke-width:3px
-    linkStyle 85 stroke:#00ff00,stroke-width:3px
-    
-    %% Gain_Hub outputs (green) - ALL 6 connections from Gain_Hub styled green
-    %% Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss (line 232)
-    %% Gain_Hub -->|"Sparsity"| Sparsity_Loss (line 233)
-    %% Gain_Hub -->|"Consistency"| Consistency_Loss (line 234)
-    %% Gain_Hub -->|"NonNeg"| NonNeg_Loss (line 235)
-    %% Gain_Hub -->|"Lag"| Lag_Gain_Loss (line 236)
-    %% Gain_Hub -->|"to Monitor"| Monitor_Hub (line 261)
-    linkStyle 66 stroke:#008800,stroke-width:3px
-    linkStyle 67 stroke:#008800,stroke-width:3px
-    linkStyle 68 stroke:#008800,stroke-width:3px
-    linkStyle 69 stroke:#008800,stroke-width:3px
-    linkStyle 70 stroke:#008800,stroke-width:3px
-    linkStyle 86 stroke:#008800,stroke-width:3px
-    
-    %% Encoder_Output_Ctx outputs (purple) - ALL 3 connections from Encoder_Output_Ctx styled purple
-    %% Encoder_Output_Ctx --> Pred_Input_h (line 135)
-    %% Encoder_Output_Ctx --> Proj_Mastery (line 157)
-    %% Encoder_Output_Ctx --> Encoder_Hub (line 186)
-    linkStyle 38 stroke:#800080,stroke-width:3px
-    linkStyle 42 stroke:#800080,stroke-width:3px
-    linkStyle 54 stroke:#800080,stroke-width:3px
-    
-    %% Encoder_Output_Val outputs (pink) - ALL 3 connections from Encoder_Output_Val styled pink
-    %% Encoder_Output_Val --> Pred_Input_v (line 136)
-    %% Encoder_Output_Val --> Proj_Gain (line 158)
-    %% Encoder_Output_Val --> Encoder_Hub (line 187)
-    linkStyle 39 stroke:#ff69b4,stroke-width:3px
-    linkStyle 43 stroke:#ff69b4,stroke-width:3px
-    linkStyle 55 stroke:#ff69b4,stroke-width:3px
-    
-    %% Encoder_Hub outputs (orange) - 1 connection from Encoder_Hub styled orange
-    %% Encoder_Hub -->|"Alignment"| Alignment_Loss (line 241)
-    linkStyle 73 stroke:#ffa500,stroke-width:3px
-    
-    %% Monitor_Hub output (purple)
-    linkStyle 81 stroke:#800080,stroke-width:3px
+    %% COMMENTED OUT: Original link styling referenced indices that no longer exist
+    %% after simplification. To restore styling, recalculate indices if losses are reactivated.
+    %%
+    %% %% Pred_Hub outputs (black) - ALL 5 connections from Pred_Hub styled blue
+    %% %% Pred_Hub -->|"BCE"| BCE_Loss (line 224)
+    %% %% Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss (line 238)
+    %% %% Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss (line 239)
+    %% %% Pred_Hub -->|"Alignment"| Alignment_Loss (line 242)
+    %% %% Pred_Hub -->|"to Monitor"| Monitor_Hub (line 262)
+    %% linkStyle 60 stroke:#888888,stroke-width:3px
+    %% linkStyle 71 stroke:#888888,stroke-width:3px
+    %% linkStyle 72 stroke:#888888,stroke-width:3px
+    %% linkStyle 74 stroke:#888888,stroke-width:3px
+    %% linkStyle 87 stroke:#888888,stroke-width:3px
+    %% 
+    %% %% Mastery_Hub outputs (red) - ALL 6 connections from Mastery_Hub styled red
+    %% %% Mastery_Hub -->|"Global Align"| Global_Alignment (line 195)
+    %% %% Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss (line 227)
+    %% %% Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss (line 228)
+    %% %% Mastery_Hub -->|"Consistency"| Consistency_Loss (line 229)
+    %% %% Mastery_Hub -->|"Retention"| Retention_Loss (line 230)
+    %% %% Mastery_Hub -->|"to Monitor"| Monitor_Hub (line 260)
+    %% linkStyle 57 stroke:#00ff00,stroke-width:3px
+    %% linkStyle 62 stroke:#00ff00,stroke-width:3px
+    %% linkStyle 63 stroke:#00ff00,stroke-width:3px
+    %% linkStyle 64 stroke:#00ff00,stroke-width:3px
+    %% linkStyle 65 stroke:#00ff00,stroke-width:3px
+    %% linkStyle 85 stroke:#00ff00,stroke-width:3px
+    %% 
+    %% %% Gain_Hub outputs (green) - ALL 6 connections from Gain_Hub styled green
+    %% %% Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss (line 232)
+    %% %% Gain_Hub -->|"Sparsity"| Sparsity_Loss (line 233)
+    %% %% Gain_Hub -->|"Consistency"| Consistency_Loss (line 234)
+    %% %% Gain_Hub -->|"NonNeg"| NonNeg_Loss (line 235)
+    %% %% Gain_Hub -->|"Lag"| Lag_Gain_Loss (line 236)
+    %% %% Gain_Hub -->|"to Monitor"| Monitor_Hub (line 261)
+    %% linkStyle 66 stroke:#008800,stroke-width:3px
+    %% linkStyle 67 stroke:#008800,stroke-width:3px
+    %% linkStyle 68 stroke:#008800,stroke-width:3px
+    %% linkStyle 69 stroke:#008800,stroke-width:3px
+    %% linkStyle 70 stroke:#008800,stroke-width:3px
+    %% linkStyle 86 stroke:#008800,stroke-width:3px
+    %% 
+    %% %% Encoder_Output_Ctx outputs (purple) - ALL 3 connections from Encoder_Output_Ctx styled purple
+    %% %% Encoder_Output_Ctx --> Pred_Input_h (line 135)
+    %% %% Encoder_Output_Ctx --> Proj_Mastery (line 157)
+    %% %% Encoder_Output_Ctx --> Encoder_Hub (line 186)
+    %% linkStyle 38 stroke:#800080,stroke-width:3px
+    %% linkStyle 42 stroke:#800080,stroke-width:3px
+    %% linkStyle 54 stroke:#800080,stroke-width:3px
+    %% 
+    %% %% Encoder_Output_Val outputs (pink) - ALL 3 connections from Encoder_Output_Val styled pink
+    %% %% Encoder_Output_Val --> Pred_Input_v (line 136)
+    %% %% Encoder_Output_Val --> Proj_Gain (line 158)
+    %% %% Encoder_Output_Val --> Encoder_Hub (line 187)
+    %% linkStyle 39 stroke:#ff69b4,stroke-width:3px
+    %% linkStyle 43 stroke:#ff69b4,stroke-width:3px
+    %% linkStyle 55 stroke:#ff69b4,stroke-width:3px
+    %% 
+    %% %% Encoder_Hub outputs (orange) - 1 connection from Encoder_Hub styled orange
+    %% %% Encoder_Hub -->|"Alignment"| Alignment_Loss (line 241)
+    %% linkStyle 73 stroke:#ffa500,stroke-width:3px
+    %% 
+    %% %% Monitor_Hub output (purple)
+    %% linkStyle 81 stroke:#800080,stroke-width:3px
 ```
 
 ---
