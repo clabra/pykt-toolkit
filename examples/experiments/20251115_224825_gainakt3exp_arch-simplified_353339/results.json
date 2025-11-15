@@ -1,0 +1,101 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7224234944090626,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.0,
+    "gain_correlation": 0.0
+  },
+  "train_history": {
+    "train_loss": [
+      0.5352856796331357,
+      0.5195688535821252,
+      0.5121273625391135
+    ],
+    "train_auc": [
+      0.679196957256595,
+      0.7152679135411261,
+      0.7272574453138899
+    ],
+    "val_auc": [
+      0.7083996630251018,
+      0.7186107358305793,
+      0.7224234944090626
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 1.0,
+          "incremental_mastery": 0.0
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 1.0,
+          "incremental_mastery": 0.0
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 3,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 1.0,
+          "incremental_mastery": 0.0
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 3,
+    "local_mastery_corr": 0.0,
+    "local_gain_corr": 0.0,
+    "global_mastery_corr": null,
+    "global_gain_corr": null,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

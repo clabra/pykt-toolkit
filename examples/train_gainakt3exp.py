@@ -766,6 +766,7 @@ def train_gainakt3exp_model(args):
         total_loss = 0.0
         total_main_loss = 0.0
         total_interpretability_loss = 0.0
+        total_incremental_mastery_loss = 0.0  # SIMPLIFIED (2025-11-15): Track incremental mastery loss separately
         total_alignment_loss = 0.0
         total_lag_loss = 0.0
         total_retention_component = 0.0
@@ -807,7 +808,8 @@ def train_gainakt3exp_model(args):
                     else:
                         outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                     logits = outputs['logits']
-                    interpretability_loss = outputs['interpretability_loss']
+                    interpretability_loss = outputs['interpretability_loss']  # Constraint losses (now 0.0 in simplified arch)
+                    incremental_mastery_loss = outputs.get('incremental_mastery_loss', torch.tensor(0.0, device=device))  # NEW: Incremental mastery loss
                     valid_mask = mask.bool()
                     valid_predictions = logits[valid_mask]
                     valid_targets = responses_shifted[valid_mask].float()
@@ -956,10 +958,14 @@ def train_gainakt3exp_model(args):
                     if enable_retention_loss and pending_retention_penalty > 0:
                         retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
                         total_retention_component += float(retention_component.detach().cpu())
+                    
+                    # SIMPLIFIED (2025-11-15): Total loss = BCE + Incremental Mastery (+ legacy components if active)
+                    # interpretability_loss is now 0.0 (constraint losses commented out)
+                    # incremental_mastery_loss is the NEW dual-prediction loss
                     if enable_alignment_loss:
-                        total_batch_loss = main_loss + interpretability_loss + alignment_loss + retention_component
+                        total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + alignment_loss + retention_component
                     else:
-                        total_batch_loss = main_loss + interpretability_loss + retention_component
+                        total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + retention_component
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
@@ -992,7 +998,8 @@ def train_gainakt3exp_model(args):
                             else:
                                 outputs = model.forward_with_states(q=questions, r=responses, qry=questions_shifted, batch_idx=batch_idx, student_ids=student_ids)
                             logits = outputs['logits']
-                            interpretability_loss = outputs['interpretability_loss']
+                            interpretability_loss = outputs['interpretability_loss']  # Constraint losses (now 0.0 in simplified arch)
+                            incremental_mastery_loss = outputs.get('incremental_mastery_loss', torch.tensor(0.0, device=device))  # NEW: Incremental mastery loss
                             valid_mask = mask.bool()
                             valid_predictions = logits[valid_mask]
                             valid_targets = responses_shifted[valid_mask].float()
@@ -1091,10 +1098,12 @@ def train_gainakt3exp_model(args):
                             if enable_retention_loss and pending_retention_penalty > 0:
                                 retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
                                 total_retention_component += float(retention_component.detach().cpu())
+                            
+                            # SIMPLIFIED (2025-11-15): Total loss = BCE + Incremental Mastery (+ legacy components if active)
                             if enable_alignment_loss:
-                                total_batch_loss = main_loss + interpretability_loss + alignment_loss + retention_component
+                                total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + alignment_loss + retention_component
                             else:
-                                total_batch_loss = main_loss + interpretability_loss + retention_component
+                                total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + retention_component
                         if use_amp and device.type == 'cuda':
                             scaler.scale(total_batch_loss).backward()
                             clip_val = getattr(args, 'gradient_clip', 1.0)
@@ -1124,6 +1133,11 @@ def train_gainakt3exp_model(args):
                 total_interpretability_loss += interpretability_loss.item()
             else:
                 total_interpretability_loss += float(interpretability_loss)
+            # SIMPLIFIED (2025-11-15): Track incremental mastery loss separately
+            if isinstance(incremental_mastery_loss, torch.Tensor):
+                total_incremental_mastery_loss += incremental_mastery_loss.item()
+            else:
+                total_incremental_mastery_loss += float(incremental_mastery_loss)
             if enable_alignment_loss:
                 total_interpretability_loss += alignment_loss.item()
             # alignment_loss already decomposed; nothing extra needed here
@@ -1135,11 +1149,12 @@ def train_gainakt3exp_model(args):
         # Compute training metrics (post minibatch loop)
         train_loss = total_loss / len(train_loader)
         train_main_loss = total_main_loss / len(train_loader)
-        train_constraint_loss = total_interpretability_loss / len(train_loader)
+        train_constraint_loss = total_interpretability_loss / len(train_loader)  # Old constraint losses (now 0.0)
+        train_incremental_mastery_loss = total_incremental_mastery_loss / len(train_loader)  # NEW: Incremental mastery loss
         # SIMPLIFIED (2025-11-15): Loss share instrumentation for BCE + Incremental Mastery only
         if total_loss > 0:
             bce_loss_share = train_main_loss / (total_loss / len(train_loader))
-            incremental_mastery_loss_share = train_constraint_loss / (total_loss / len(train_loader))
+            incremental_mastery_loss_share = train_incremental_mastery_loss / (total_loss / len(train_loader))
             
             # COMMENTED OUT: Constraint and semantic loss shares (architecture simplification)
             # main_loss_share = train_main_loss / (total_loss / len(train_loader))
@@ -1379,7 +1394,7 @@ def train_gainakt3exp_model(args):
         logger.info("=" * 60)
         logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
         logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (BCE: {train_main_loss:.4f}, "
-                   f"Incremental Mastery: {train_constraint_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
+                   f"Incremental Mastery: {train_incremental_mastery_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
         
         # SIMPLIFIED (2025-11-15): Log loss composition for BCE + Incremental Mastery only
         total_share = bce_loss_share + incremental_mastery_loss_share
