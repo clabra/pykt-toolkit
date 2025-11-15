@@ -32,30 +32,30 @@
     "num_students": 3055,
     "mastery_threshold_init": 0.85,
     "threshold_temperature": 0.1,
-    "enhanced_constraints": true,
+    "enhanced_constraints": false,
     "non_negative_loss_weight": 0.0,
-    "monotonicity_loss_weight": 0.1,
-    "mastery_performance_loss_weight": 0.5,
-    "gain_performance_loss_weight": 0.5,
-    "sparsity_loss_weight": 0.2,
-    "consistency_loss_weight": 0.3,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.0,
+    "gain_performance_loss_weight": 0.0,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0,
     "incremental_mastery_loss_weight": 0.1,
-    "enable_alignment_loss": true,
-    "alignment_weight": 0.15,
+    "enable_alignment_loss": false,
+    "alignment_weight": 0.0,
     "alignment_warmup_epochs": 8,
-    "adaptive_alignment": true,
+    "adaptive_alignment": false,
     "alignment_min_correlation": 0.05,
     "alignment_share_cap": 0.08,
     "alignment_share_decay_factor": 0.7,
-    "enable_global_alignment_pass": true,
+    "enable_global_alignment_pass": false,
     "alignment_global_students": 600,
-    "use_residual_alignment": true,
+    "use_residual_alignment": false,
     "alignment_residual_window": 5,
-    "enable_retention_loss": true,
+    "enable_retention_loss": false,
     "retention_delta": 0.005,
-    "retention_weight": 0.14,
-    "enable_lag_gain_loss": true,
-    "lag_gain_weight": 0.06,
+    "retention_weight": 0.0,
+    "enable_lag_gain_loss": false,
+    "lag_gain_weight": 0.0,
     "lag_max_lag": 3,
     "lag_l1_weight": 0.5,
     "lag_l2_weight": 0.3,
@@ -157,7 +157,17 @@
   "fixed": {
     "non_negative_loss_weight": {
       "value": 0.0,
-      "rationale": "Non-negativity enforced architecturally via ReLU on gains; loss redundant but kept for architectural variants",
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): Non-negativity enforced architecturally via ReLU on gains; loss redundant but kept for architectural variants. ALL CONSTRAINT LOSSES COMMENTED OUT - focusing on BCE + Incremental Mastery only.",
+      "validated_by_experiments": []
+    },
+    "constraint_losses_all": {
+      "value": 0.0,
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All constraint losses (monotonicity, mastery-perf, gain-perf, sparsity, consistency) set to 0.0. Code preserved in gainakt3_exp.py (commented out) for potential future restoration. Simplified architecture focuses on dual-prediction mechanism (BCE + Incremental Mastery) for improved clarity and debugging.",
+      "validated_by_experiments": []
+    },
+    "semantic_losses_all": {
+      "value": "disabled",
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All semantic module losses (alignment, global alignment, retention, lag gains) disabled. enable_alignment_loss=false, enable_global_alignment_pass=false, enable_retention_loss=false, enable_lag_gain_loss=false. Code preserved for potential future restoration.",
       "validated_by_experiments": []
     },
     "intrinsic_gain_attention": {
@@ -166,8 +176,8 @@
       "validated_by_experiments": []
     },
     "alignment_weight": {
-      "value": 0.15,
-      "rationale": "Optimal balance between mastery correlation and gain correlation; sweep experiments show 0.15 provides best trade-off (0.10 best for mastery +9.6%, 0.25 best for gains +39.8%, 0.15 balanced)",
+      "value": 0.0,
+      "rationale": "COMMENTED OUT (2025-11-15): Was 0.15 (optimal balance from sweep experiments). Now set to 0.0 as part of architecture simplification. Previous experiments: 977548, 470340, 724276 showed 0.15 provided best trade-off. Code preserved for future use.",
       "validated_by_experiments": [
         "977548",
         "470340",
@@ -175,5 +185,5 @@
       ]
     }
   },
-  "md5": "c4ddf4a71ea305bd8a9a9ffd6a7c2e3a"
+  "md5": "f40594c647801319ce904d8308e380b9"
 }

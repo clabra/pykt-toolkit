@@ -573,6 +573,10 @@ class GainAKT3Exp(GainAKT3):
         """
         Compute auxiliary loss based on interpretability constraints.
         
+        ⚠️ ARCHITECTURE SIMPLIFICATION (2025-11-15): ALL CONSTRAINT LOSSES COMMENTED OUT
+        Only returning 0.0 to maintain interface compatibility.
+        Code preserved below for potential future restoration.
+        
         Args:
             projected_mastery: [batch_size, seq_len, num_c] - mastery projections
             projected_gains: [batch_size, seq_len, num_c] - gain projections  
@@ -581,68 +585,75 @@ class GainAKT3Exp(GainAKT3):
             responses: [batch_size, seq_len] - correct/incorrect responses
             
         Returns:
-            torch.Tensor: Auxiliary loss value
+            torch.Tensor: Auxiliary loss value (currently 0.0 - all constraints commented out)
         """
-        total_loss = 0.0
-        batch_size, seq_len, num_c = projected_mastery.shape
-
-        # Create masks for relevant skills
-        skill_masks = torch.zeros((batch_size, seq_len, num_c), device=questions.device).bool()
-        skill_masks.scatter_(2, questions.unsqueeze(-1), 1)
-
-        # 1. Non-negative learning gains
-        if self.non_negative_loss_weight > 0:
-            negative_gains = torch.clamp(-projected_gains, min=0)
-            non_negative_loss = negative_gains.mean()
-            total_loss += self.non_negative_loss_weight * non_negative_loss
-
-        # 2. Monotonicity of mastery
-        if self.monotonicity_loss_weight > 0 and seq_len > 1:
-            mastery_decrease = torch.clamp(projected_mastery[:, :-1] - projected_mastery[:, 1:], min=0)
-            monotonicity_loss = mastery_decrease.mean()
-            total_loss += self.monotonicity_loss_weight * monotonicity_loss
-
-        # 3. Mastery-performance correlation
-        if self.mastery_performance_loss_weight > 0:
-            relevant_mastery = projected_mastery[skill_masks]
-            correct_mask = (responses == 1).flatten()
-            incorrect_mask = (responses == 0).flatten()
-
-            # Penalize low mastery for correct answers
-            low_mastery_on_correct = torch.clamp(1 - relevant_mastery[correct_mask], min=0)
-            # Penalize high mastery for incorrect answers
-            high_mastery_on_incorrect = torch.clamp(relevant_mastery[incorrect_mask], min=0)
-
-            mastery_performance_loss = low_mastery_on_correct.mean() + high_mastery_on_incorrect.mean()
-            total_loss += self.mastery_performance_loss_weight * mastery_performance_loss
-
-        # 4. Gain-performance correlation
-        if self.gain_performance_loss_weight > 0:
-            relevant_gains = projected_gains[skill_masks]
-            correct_gains = relevant_gains[(responses == 1).flatten()]
-            incorrect_gains = relevant_gains[(responses == 0).flatten()]
-
-            if correct_gains.numel() > 0 and incorrect_gains.numel() > 0:
-                # Hinge loss: incorrect gains should be smaller than correct gains
-                gain_performance_loss = torch.clamp(incorrect_gains.mean() - correct_gains.mean() + 0.1, min=0) # 0.1 margin
-                total_loss += self.gain_performance_loss_weight * gain_performance_loss
-
-        # 5. Sparsity of gains
-        if self.sparsity_loss_weight > 0:
-            non_relevant_gains = projected_gains[~skill_masks]
-            sparsity_loss = torch.abs(non_relevant_gains).mean()
-            total_loss += self.sparsity_loss_weight * sparsity_loss
-
-        # 6. Consistency between mastery increments and gains (architectural scaling factor 0.1)
-        #    Penalize deviation between actual mastery change and scaled gains.
-        if self.consistency_loss_weight > 0 and seq_len > 1:
-            mastery_delta = projected_mastery[:, 1:, :] - projected_mastery[:, :-1, :]
-            scaled_gains = projected_gains[:, 1:, :] * 0.1
-            consistency_residual = torch.abs(mastery_delta - scaled_gains)
-            consistency_loss = consistency_residual.mean()
-            total_loss += self.consistency_loss_weight * consistency_loss
-
-        return total_loss
+        # SIMPLIFIED ARCHITECTURE: Return 0.0 (all constraint losses commented out)
+        return torch.tensor(0.0, device=projected_mastery.device)
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # COMMENTED OUT: All constraint losses (2025-11-15)
+        # Code preserved for potential future restoration
+        # ═══════════════════════════════════════════════════════════════════════════
+        # total_loss = 0.0
+        # batch_size, seq_len, num_c = projected_mastery.shape
+        #
+        # # Create masks for relevant skills
+        # skill_masks = torch.zeros((batch_size, seq_len, num_c), device=questions.device).bool()
+        # skill_masks.scatter_(2, questions.unsqueeze(-1), 1)
+        #
+        # # 1. Non-negative learning gains
+        # if self.non_negative_loss_weight > 0:
+        #     negative_gains = torch.clamp(-projected_gains, min=0)
+        #     non_negative_loss = negative_gains.mean()
+        #     total_loss += self.non_negative_loss_weight * non_negative_loss
+        #
+        # # 2. Monotonicity of mastery
+        # if self.monotonicity_loss_weight > 0 and seq_len > 1:
+        #     mastery_decrease = torch.clamp(projected_mastery[:, :-1] - projected_mastery[:, 1:], min=0)
+        #     monotonicity_loss = mastery_decrease.mean()
+        #     total_loss += self.monotonicity_loss_weight * monotonicity_loss
+        #
+        # # 3. Mastery-performance correlation
+        # if self.mastery_performance_loss_weight > 0:
+        #     relevant_mastery = projected_mastery[skill_masks]
+        #     correct_mask = (responses == 1).flatten()
+        #     incorrect_mask = (responses == 0).flatten()
+        #
+        #     # Penalize low mastery for correct answers
+        #     low_mastery_on_correct = torch.clamp(1 - relevant_mastery[correct_mask], min=0)
+        #     # Penalize high mastery for incorrect answers
+        #     high_mastery_on_incorrect = torch.clamp(relevant_mastery[incorrect_mask], min=0)
+        #
+        #     mastery_performance_loss = low_mastery_on_correct.mean() + high_mastery_on_incorrect.mean()
+        #     total_loss += self.mastery_performance_loss_weight * mastery_performance_loss
+        #
+        # # 4. Gain-performance correlation
+        # if self.gain_performance_loss_weight > 0:
+        #     relevant_gains = projected_gains[skill_masks]
+        #     correct_gains = relevant_gains[(responses == 1).flatten()]
+        #     incorrect_gains = relevant_gains[(responses == 0).flatten()]
+        #
+        #     if correct_gains.numel() > 0 and incorrect_gains.numel() > 0:
+        #         # Hinge loss: incorrect gains should be smaller than correct gains
+        #         gain_performance_loss = torch.clamp(incorrect_gains.mean() - correct_gains.mean() + 0.1, min=0) # 0.1 margin
+        #         total_loss += self.gain_performance_loss_weight * gain_performance_loss
+        #
+        # # 5. Sparsity of gains
+        # if self.sparsity_loss_weight > 0:
+        #     non_relevant_gains = projected_gains[~skill_masks]
+        #     sparsity_loss = torch.abs(non_relevant_gains).mean()
+        #     total_loss += self.sparsity_loss_weight * sparsity_loss
+        #
+        # # 6. Consistency between mastery increments and gains (architectural scaling factor 0.1)
+        # #    Penalize deviation between actual mastery change and scaled gains.
+        # if self.consistency_loss_weight > 0 and seq_len > 1:
+        #     mastery_delta = projected_mastery[:, 1:, :] - projected_mastery[:, :-1, :]
+        #     scaled_gains = projected_gains[:, 1:, :] * 0.1
+        #     consistency_residual = torch.abs(mastery_delta - scaled_gains)
+        #     consistency_loss = consistency_residual.mean()
+        #     total_loss += self.consistency_loss_weight * consistency_loss
+        #
+        # return total_loss
 
 
 def create_exp_model(config):

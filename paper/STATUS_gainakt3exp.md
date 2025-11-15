@@ -4,16 +4,19 @@
 **Model Version**: GainAKT3Exp - Dual-stream transformer with Mastery Accumulation (Gains Head output deactivated)  
 **Status**: Active implementation with full training/evaluation pipeline
 
-**⚠️ CURRENT CONFIGURATION (2025-11-15)**: 
+**⚠️ CURRENT CONFIGURATION (2025-11-15 - SIMPLIFIED ARCHITECTURE)**: 
 - **Dual-Prediction Architecture**: ✅ TWO independent prediction branches with TWO loss functions
   - **Base Predictions** → BCE Loss (primary)
   - **Incremental Mastery Predictions** → Incremental Mastery Loss (weight=0.1)
+- **Constraint Losses**: ❌ **COMMENTED OUT** (all weights set to 0.0, code preserved for potential future use)
+- **Semantic Module Losses**: ❌ **COMMENTED OUT** (all disabled, code preserved for potential future use)
 - **Mastery Accumulation**: ✅ ACTIVE (`use_mastery_head=true`) - Recursive mastery tracking with learnable thresholds
 - **Gains Head Output**: ❌ DEACTIVATED (`use_gain_head=false`) - Gains computed internally for mastery but not exposed as output
 - **Architecture Flow**: 
   - Path 1: Encoder → [Context, Value, Skill] → Prediction Head → Base Predictions → BCE Loss
   - Path 2: Values → Learning Gains → Mastery → Threshold → Incremental Mastery Predictions → IM Loss
 - **Code Location**: `gainakt3_exp.py` lines 318-516 (dual predictions, dual losses)
+- **Rationale**: Simplified architecture focuses on core dual-prediction mechanism for improved clarity and debugging. Constraint and semantic losses remain documented and preserved in code (commented out) for potential future restoration.
 
 See "Architecture Summary" section below for detailed flow.
 
@@ -47,12 +50,13 @@ See "Architecture Summary" section below for detailed flow.
 - ✅ **Dual Loss Functions**: 
   - BCE Loss on Base Predictions (standard)
   - Incremental Mastery Loss on Threshold Predictions (weight=0.1, new)
-- ✅ **Constraint Losses**: ACTIVE - Interpretability losses computed on mastery and internal gains
+- ❌ **Constraint Losses**: **COMMENTED OUT** (all weights=0.0, code preserved) - Non-negative, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity, Consistency
+- ❌ **Semantic Module Losses**: **COMMENTED OUT** (all disabled, code preserved) - Alignment, Global Alignment, Retention, Lag Gains
 - ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`) - Gains not exposed in model output
 - ❌ **Gains D-dimensional Output**: DEACTIVATED - `projected_gains_d` not included in output
 - ❌ **Attention-Derived Gains** (intrinsic_gain_attention mode): DEACTIVATED (all related code commented out)
 
-**Result**: The model produces two independent predictions: (1) Base predictions from the standard prediction head for primary BCE loss, and (2) Incremental mastery predictions from the threshold mechanism for interpretability-driven mastery loss. Mastery and base predictions are included in output, gains remain internal.
+**Result**: The model produces two independent predictions: (1) Base predictions from the standard prediction head for primary BCE loss, and (2) Incremental mastery predictions from the threshold mechanism for interpretability-driven mastery loss. Mastery and base predictions are included in output, gains remain internal. **SIMPLIFIED ARCHITECTURE**: All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
 
 ## Architecture
 
@@ -285,72 +289,76 @@ graph TD
     Global_Alignment --> Residual_Alignment
     Residual_Alignment -.feedback.-> Projected_Mastery_Output
 
-    %% Loss Framework
-    subgraph "Loss Framework (Dual-Prediction Architecture)"
+    %% Loss Framework - SIMPLIFIED (2025-11-15)
+    subgraph "Loss Framework (Dual-Prediction Architecture - SIMPLIFIED)"
         direction LR
         
-        subgraph "Primary Losses"
+        subgraph "Primary Losses (✅ ACTIVE)"
             direction TB
             BCE_Loss["BCE Loss<br/>(Base Predictions)"]
             IM_Loss["Incremental Mastery Loss<br/>weight=0.1<br/>(✅ NEW - Threshold Predictions)"]
         end
         
-        subgraph "Constraint Losses (✅ ACTIVE)"
-            direction TB
-            Monotonicity_Loss["Monotonicity<br/>weight=0.1<br/>(✅ ACTIVE on mastery)"]
-            Mastery_Perf_Loss["Mastery-Perf<br/>weight=0.5<br/>(✅ ACTIVE on mastery)"]
-            Gain_Perf_Loss["Gain-Perf<br/>weight=0.5<br/>(✅ ACTIVE on internal gains)"]
-            Sparsity_Loss["Sparsity<br/>weight=0.2<br/>(✅ ACTIVE on internal gains)"]
-            Consistency_Loss["Consistency<br/>weight=0.3<br/>(✅ ACTIVE on mastery/gains)"]
-            NonNeg_Loss["Non-Negativity<br/>weight=0.0<br/>(✅ ACTIVE - effectively 0)"]
-        end
+        %% COMMENTED OUT: Constraint Losses (code preserved, weights=0.0)
+        %% subgraph "Constraint Losses (❌ COMMENTED OUT - weight=0.0)"
+        %%     direction TB
+        %%     Monotonicity_Loss["Monotonicity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %%     Mastery_Perf_Loss["Mastery-Perf<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %%     Gain_Perf_Loss["Gain-Perf<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %%     Sparsity_Loss["Sparsity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %%     Consistency_Loss["Consistency<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %%     NonNeg_Loss["Non-Negativity<br/>weight=0.0<br/>(❌ COMMENTED OUT)"]
+        %% end
         
-        subgraph "Semantic Losses (Orange)"
-            direction TB
-            Alignment_Loss["Local Alignment"]
-            Retention_Loss["Retention"]
-            Lag_Gain_Loss["Lag Gain"]
-        end
+        %% COMMENTED OUT: Semantic Losses (code preserved, all disabled)
+        %% subgraph "Semantic Losses (❌ COMMENTED OUT)"
+        %%     direction TB
+        %%     Alignment_Loss["Local Alignment<br/>(❌ COMMENTED OUT)"]
+        %%     Retention_Loss["Retention<br/>(❌ COMMENTED OUT)"]
+        %%     Lag_Gain_Loss["Lag Gain<br/>(❌ COMMENTED OUT)"]
+        %% end
         
-        Total_Loss["Total Loss<br/>BCE + IM_Loss + Constraints + Semantics<br/>Warmup & Share Cap Scheduling"]
+        Total_Loss["Total Loss<br/>BCE + IM_Loss ONLY<br/>(Simplified Architecture)"]
     end
 
-    %% Connections via Hubs - Dual Prediction Architecture
+    %% Connections via Hubs - Dual Prediction Architecture (SIMPLIFIED)
     Base_Pred_Hub -->|"BCE"| BCE_Loss
     Ground_Truth --> BCE_Loss
     
     IM_Pred_Hub -->|"✅ NEW"| IM_Loss
     Ground_Truth --> IM_Loss
 
-    Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss
-    Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
-    Mastery_Hub -->|"Consistency"| Consistency_Loss
-    Mastery_Hub -->|"Retention"| Retention_Loss
-    
-    Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss
-    Gain_Hub -->|"Sparsity"| Sparsity_Loss
-    Gain_Hub -->|"Consistency"| Consistency_Loss
-    Gain_Hub -->|"NonNeg"| NonNeg_Loss
-    Gain_Hub -->|"Lag"| Lag_Gain_Loss
-    
-    Base_Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
-    Base_Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss
-    
-    Encoder_Hub -->|"Alignment"| Alignment_Loss
-    Base_Pred_Hub -->|"Alignment"| Alignment_Loss
+    %% COMMENTED OUT: Constraint and Semantic Loss Connections
+    %% Mastery_Hub -->|"Monotonicity"| Monotonicity_Loss
+    %% Mastery_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
+    %% Mastery_Hub -->|"Consistency"| Consistency_Loss
+    %% Mastery_Hub -->|"Retention"| Retention_Loss
+    %% 
+    %% Gain_Hub -->|"Gain-Perf"| Gain_Perf_Loss
+    %% Gain_Hub -->|"Sparsity"| Sparsity_Loss
+    %% Gain_Hub -->|"Consistency"| Consistency_Loss
+    %% Gain_Hub -->|"NonNeg"| NonNeg_Loss
+    %% Gain_Hub -->|"Lag"| Lag_Gain_Loss
+    %% 
+    %% Base_Pred_Hub -->|"Mastery-Perf"| Mastery_Perf_Loss
+    %% Base_Pred_Hub -->|"Gain-Perf"| Gain_Perf_Loss
+    %% 
+    %% Encoder_Hub -->|"Alignment"| Alignment_Loss
+    %% Base_Pred_Hub -->|"Alignment"| Alignment_Loss
 
-    %% All losses to Total
+    %% Only BCE and IM losses to Total (SIMPLIFIED)
     BCE_Loss --> Total_Loss
     IM_Loss --> Total_Loss
-    Monotonicity_Loss --> Total_Loss
-    Mastery_Perf_Loss --> Total_Loss
-    Gain_Perf_Loss --> Total_Loss
-    Sparsity_Loss --> Total_Loss
-    Consistency_Loss --> Total_Loss
-    NonNeg_Loss --> Total_Loss
-    Alignment_Loss --> Total_Loss
-    Retention_Loss --> Total_Loss
-    Lag_Gain_Loss --> Total_Loss
+    %% COMMENTED OUT: All constraint and semantic losses
+    %% Monotonicity_Loss --> Total_Loss
+    %% Mastery_Perf_Loss --> Total_Loss
+    %% Gain_Perf_Loss --> Total_Loss
+    %% Sparsity_Loss --> Total_Loss
+    %% Consistency_Loss --> Total_Loss
+    %% NonNeg_Loss --> Total_Loss
+    %% Alignment_Loss --> Total_Loss
+    %% Retention_Loss --> Total_Loss
+    %% Lag_Gain_Loss --> Total_Loss
 
     %% Monitoring
     Monitor_Hub(("Monitor<br/>Inputs"))
@@ -1648,7 +1656,17 @@ When adding/changing parameters:
 
 ## Loss Functions
 
-Total Loss = BCE Loss + Constraint Losses + Semantic Module Losses
+**⚠️ ARCHITECTURE SIMPLIFICATION (2025-11-15)**: 
+**ACTIVE LOSSES**: BCE Loss + Incremental Mastery Loss ONLY
+**COMMENTED OUT**: All Constraint Losses + All Semantic Module Losses (weights set to 0.0, code preserved)
+
+This section documents ALL loss functions (active and commented out) for reference and potential future restoration.
+
+---
+
+**Original Total Loss** = BCE Loss + Constraint Losses + Semantic Module Losses
+
+**Simplified Total Loss (Current)** = BCE Loss + Incremental Mastery Loss
 
 ### Loss Parameters
 

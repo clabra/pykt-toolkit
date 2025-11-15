@@ -299,28 +299,28 @@ def train_gainakt3exp_model(args):
     batch_size = resolve_param(cfg, 'training', 'batch_size', getattr(args, 'batch_size', 64))  # Fixed: was 96, now matches parameter_default.json
     learning_rate = resolve_param(cfg, 'training', 'learning_rate', getattr(args, 'learning_rate', 0.000174))
     weight_decay = resolve_param(cfg, 'training', 'weight_decay', getattr(args, 'weight_decay', 1.7571e-05))
-    enhanced_constraints = resolve_param(cfg, 'interpretability', 'enhanced_constraints', getattr(args, 'enhanced_constraints', True))
+    enhanced_constraints = resolve_param(cfg, 'interpretability', 'enhanced_constraints', getattr(args, 'enhanced_constraints', False))  # SIMPLIFIED: disabled (2025-11-15)
     experiment_suffix = getattr(args, 'experiment_suffix', 'optimal_v1')
     use_wandb = resolve_param(cfg, 'runtime', 'use_wandb', getattr(args, 'use_wandb', False))
     use_amp = resolve_param(cfg, 'runtime', 'use_amp', getattr(args, 'use_amp', False))
-    # Alignment / semantic emergence new arguments (may be absent in older runs)
-    enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', True))  # Fixed: was False, now matches parameter_default.json
-    alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.15)))  # Fixed: updated to 0.15 from alignment sweep experiments
+    # Alignment / semantic emergence new arguments (SIMPLIFIED: all disabled 2025-11-15)
+    enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', False))  # SIMPLIFIED: disabled (2025-11-15)
+    alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.0)))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_warmup_epochs = int(resolve_param(cfg, 'alignment', 'alignment_warmup_epochs', getattr(args, 'alignment_warmup_epochs', 8)))
-    adaptive_alignment = resolve_param(cfg, 'alignment', 'adaptive_alignment', getattr(args, 'adaptive_alignment', True))
+    adaptive_alignment = resolve_param(cfg, 'alignment', 'adaptive_alignment', getattr(args, 'adaptive_alignment', False))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_min_correlation = float(resolve_param(cfg, 'alignment', 'alignment_min_correlation', getattr(args, 'alignment_min_correlation', 0.05)))
-    # Global alignment / residual options (Tier B refinements)
-    enable_global_alignment_pass = resolve_param(cfg, 'global_alignment', 'enable_global_alignment_pass', getattr(args, 'enable_global_alignment_pass', True))  # Fixed: was False, now matches parameter_default.json
+    # Global alignment / residual options (SIMPLIFIED: all disabled 2025-11-15)
+    enable_global_alignment_pass = resolve_param(cfg, 'global_alignment', 'enable_global_alignment_pass', getattr(args, 'enable_global_alignment_pass', False))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_global_students = int(resolve_param(cfg, 'global_alignment', 'alignment_global_students', getattr(args, 'alignment_global_students', 600)))
-    use_residual_alignment = resolve_param(cfg, 'global_alignment', 'use_residual_alignment', getattr(args, 'use_residual_alignment', True))  # Fixed: was False, now matches parameter_default.json
+    use_residual_alignment = resolve_param(cfg, 'global_alignment', 'use_residual_alignment', getattr(args, 'use_residual_alignment', False))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_residual_window = int(resolve_param(cfg, 'global_alignment', 'alignment_residual_window', getattr(args, 'alignment_residual_window', 5)))
     # Refinement cycle new arguments
-    # Phase 0–2 semantic emergence controls (updated defaults)
-    enable_retention_loss = resolve_param(cfg, 'refinement', 'enable_retention_loss', getattr(args, 'enable_retention_loss', True))  # Fixed: was False, now matches parameter_default.json
+    # Phase 0–2 semantic emergence controls (SIMPLIFIED: all disabled 2025-11-15)
+    enable_retention_loss = resolve_param(cfg, 'refinement', 'enable_retention_loss', getattr(args, 'enable_retention_loss', False))  # SIMPLIFIED: disabled (2025-11-15)
     retention_delta = float(resolve_param(cfg, 'refinement', 'retention_delta', getattr(args, 'retention_delta', 0.005)))
-    retention_weight = float(resolve_param(cfg, 'refinement', 'retention_weight', getattr(args, 'retention_weight', 0.14)))
-    enable_lag_gain_loss = resolve_param(cfg, 'refinement', 'enable_lag_gain_loss', getattr(args, 'enable_lag_gain_loss', True))  # Fixed: was False, now matches parameter_default.json
-    lag_gain_weight = float(resolve_param(cfg, 'refinement', 'lag_gain_weight', getattr(args, 'lag_gain_weight', 0.06)))
+    retention_weight = float(resolve_param(cfg, 'refinement', 'retention_weight', getattr(args, 'retention_weight', 0.0)))  # SIMPLIFIED: disabled (2025-11-15)
+    enable_lag_gain_loss = resolve_param(cfg, 'refinement', 'enable_lag_gain_loss', getattr(args, 'enable_lag_gain_loss', False))  # SIMPLIFIED: disabled (2025-11-15)
+    lag_gain_weight = float(resolve_param(cfg, 'refinement', 'lag_gain_weight', getattr(args, 'lag_gain_weight', 0.0)))  # SIMPLIFIED: disabled (2025-11-15)
     lag_max_lag = int(resolve_param(cfg, 'refinement', 'lag_max_lag', getattr(args, 'lag_max_lag', 3)))
     # Weighted multi-lag scheme (L1 emphasis)
     lag_l1_weight = float(resolve_param(cfg, 'refinement', 'lag_l1_weight', getattr(args, 'lag_l1_weight', 0.5)))
@@ -339,11 +339,11 @@ def train_gainakt3exp_model(args):
     
     # Individual constraint weights - OPTIMAL values from parameter sweep
     non_negative_loss_weight = resolve_param(cfg, 'interpretability', 'non_negative_loss_weight', getattr(args, 'non_negative_loss_weight', 0.0))
-    monotonicity_loss_weight = resolve_param(cfg, 'interpretability', 'monotonicity_loss_weight', getattr(args, 'monotonicity_loss_weight', 0.1))
-    mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.5))  # Fixed: validated by experiments 451877, 542954
-    gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.5))  # Fixed: validated by experiments 451877, 542954
-    sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.2))
-    consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.3))
+    monotonicity_loss_weight = resolve_param(cfg, 'interpretability', 'monotonicity_loss_weight', getattr(args, 'monotonicity_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
+    mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
+    gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
+    sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
+    consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     incremental_mastery_loss_weight = resolve_param(cfg, 'interpretability', 'incremental_mastery_loss_weight', getattr(args, 'incremental_mastery_loss_weight', 0.1))
     
     # Setup logging with experiment-specific logger name for parallel disambiguation
