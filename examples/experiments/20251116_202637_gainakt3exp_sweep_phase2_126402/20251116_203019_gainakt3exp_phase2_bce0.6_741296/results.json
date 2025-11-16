@@ -1,0 +1,7 @@
+{
+  "best_val_auc": 0.6894467025807907,
+  "final_epoch": 7,
+  "dataset": "assist2015",
+  "fold": 0,
+  "model": "gainakt3exp"
+}

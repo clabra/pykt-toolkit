@@ -1,0 +1,1622 @@
+[
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g0.9_o2.5_413332",
+    "status": "success",
+    "duration_minutes": 4.981736938158671
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g1.1_o1.5_118868",
+    "status": "success",
+    "duration_minutes": 4.985433109601339
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g0.9_o2.0_557382",
+    "status": "success",
+    "duration_minutes": 5.025052567323049
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g1.0_o2.0_903182",
+    "status": "success",
+    "duration_minutes": 5.02730759382248
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g1.0_o2.5_648661",
+    "status": "success",
+    "duration_minutes": 5.058592156569163
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g1.0_o1.5_150623",
+    "status": "success",
+    "duration_minutes": 5.097502040863037
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_174852_gainakt3exp_lc_b1.5_m0.7_g0.9_o1.5_675093",
+    "status": "success",
+    "duration_minutes": 5.2422462145487465
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175351_gainakt3exp_lc_b1.5_m0.7_g1.1_o2.0_562161",
+    "status": "success",
+    "duration_minutes": 5.094313414891561
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175352_gainakt3exp_lc_b1.5_m0.7_g1.1_o2.5_740667",
+    "status": "success",
+    "duration_minutes": 5.098436105251312
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175356_gainakt3exp_lc_b1.5_m0.8_g0.9_o2.5_132457",
+    "status": "success",
+    "duration_minutes": 5.042424559593201
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175354_gainakt3exp_lc_b1.5_m0.8_g0.9_o2.0_490673",
+    "status": "success",
+    "duration_minutes": 5.086032895247142
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175358_gainakt3exp_lc_b1.5_m0.8_g1.0_o1.5_892137",
+    "status": "success",
+    "duration_minutes": 5.043306557337443
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175354_gainakt3exp_lc_b1.5_m0.8_g0.9_o1.5_498523",
+    "status": "success",
+    "duration_minutes": 5.198715504010519
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175407_gainakt3exp_lc_b1.5_m0.8_g1.0_o2.0_735120",
+    "status": "success",
+    "duration_minutes": 5.163379732767741
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175859_gainakt3exp_lc_b1.5_m0.8_g1.1_o2.5_727130",
+    "status": "success",
+    "duration_minutes": 5.048976719379425
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175857_gainakt3exp_lc_b1.5_m0.8_g1.0_o2.5_967664",
+    "status": "success",
+    "duration_minutes": 5.087534073988596
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175859_gainakt3exp_lc_b1.5_m0.8_g1.1_o2.0_862952",
+    "status": "success",
+    "duration_minutes": 5.0653166254361475
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o2.0",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175906_gainakt3exp_lc_b1.5_m0.9_g0.9_o2.0_274803",
+    "status": "success",
+    "duration_minutes": 5.070317387580872
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175857_gainakt3exp_lc_b1.5_m0.8_g1.1_o1.5_152447",
+    "status": "success",
+    "duration_minutes": 5.223159404595693
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o1.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175901_gainakt3exp_lc_b1.5_m0.9_g0.9_o1.5_401598",
+    "status": "success",
+    "duration_minutes": 5.18221842845281
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o2.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_175917_gainakt3exp_lc_b1.5_m0.9_g0.9_o2.5_249548",
+    "status": "success",
+    "duration_minutes": 5.017655225594838
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180402_gainakt3exp_lc_b1.5_m0.9_g1.0_o2.5_129964",
+    "status": "success",
+    "duration_minutes": 4.976412808895111
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180402_gainakt3exp_lc_b1.5_m0.9_g1.0_o1.5_926475",
+    "status": "success",
+    "duration_minutes": 5.042319782574972
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180411_gainakt3exp_lc_b1.5_m0.9_g1.1_o2.0_798988",
+    "status": "success",
+    "duration_minutes": 5.03416162331899
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180410_gainakt3exp_lc_b1.5_m0.9_g1.1_o1.5_743364",
+    "status": "success",
+    "duration_minutes": 5.0517197251319885
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180402_gainakt3exp_lc_b1.5_m0.9_g1.0_o2.0_597055",
+    "status": "success",
+    "duration_minutes": 5.20461308558782
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180412_gainakt3exp_lc_b1.5_m0.9_g1.1_o2.5_487731",
+    "status": "success",
+    "duration_minutes": 5.052708645661672
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180418_gainakt3exp_lc_b2.0_m0.7_g0.9_o1.5_486795",
+    "status": "success",
+    "duration_minutes": 5.075680275758107
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180901_gainakt3exp_lc_b2.0_m0.7_g0.9_o2.0_496516",
+    "status": "success",
+    "duration_minutes": 5.07240993976593
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180905_gainakt3exp_lc_b2.0_m0.7_g0.9_o2.5_862973",
+    "status": "success",
+    "duration_minutes": 5.100307122866313
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180915_gainakt3exp_lc_b2.0_m0.7_g1.0_o2.5_520537",
+    "status": "success",
+    "duration_minutes": 5.025306717554728
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180915_gainakt3exp_lc_b2.0_m0.7_g1.1_o1.5_765067",
+    "status": "success",
+    "duration_minutes": 5.018906096617381
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180913_gainakt3exp_lc_b2.0_m0.7_g1.0_o2.0_120879",
+    "status": "success",
+    "duration_minutes": 5.102274409929911
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180913_gainakt3exp_lc_b2.0_m0.7_g1.0_o1.5_102155",
+    "status": "success",
+    "duration_minutes": 5.145483716328939
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_180922_gainakt3exp_lc_b2.0_m0.7_g1.1_o2.0_602236",
+    "status": "success",
+    "duration_minutes": 5.0517323533693945
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181405_gainakt3exp_lc_b2.0_m0.7_g1.1_o2.5_432102",
+    "status": "success",
+    "duration_minutes": 5.097843690713247
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181411_gainakt3exp_lc_b2.0_m0.8_g0.9_o1.5_504189",
+    "status": "success",
+    "duration_minutes": 5.066122615337372
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181416_gainakt3exp_lc_b2.0_m0.8_g0.9_o2.5_553091",
+    "status": "success",
+    "duration_minutes": 5.007517719268799
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181416_gainakt3exp_lc_b2.0_m0.8_g0.9_o2.0_771161",
+    "status": "success",
+    "duration_minutes": 5.051318148771922
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o1.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181419_gainakt3exp_lc_b2.0_m0.8_g1.0_o1.5_677223",
+    "status": "success",
+    "duration_minutes": 5.05074444214503
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o2.0",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181422_gainakt3exp_lc_b2.0_m0.8_g1.0_o2.0_833000",
+    "status": "success",
+    "duration_minutes": 5.025267549355825
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o2.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181425_gainakt3exp_lc_b2.0_m0.8_g1.0_o2.5_697701",
+    "status": "success",
+    "duration_minutes": 5.087065315246582
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181911_gainakt3exp_lc_b2.0_m0.8_g1.1_o1.5_262832",
+    "status": "success",
+    "duration_minutes": 5.044130901495616
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181917_gainakt3exp_lc_b2.0_m0.8_g1.1_o2.5_741735",
+    "status": "success",
+    "duration_minutes": 4.989025310675303
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181915_gainakt3exp_lc_b2.0_m0.8_g1.1_o2.0_115936",
+    "status": "success",
+    "duration_minutes": 5.09466716448466
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181922_gainakt3exp_lc_b2.0_m0.9_g0.9_o2.0_824588",
+    "status": "success",
+    "duration_minutes": 4.989049649238586
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181919_gainakt3exp_lc_b2.0_m0.9_g0.9_o1.5_316838",
+    "status": "success",
+    "duration_minutes": 5.109067034721375
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181923_gainakt3exp_lc_b2.0_m0.9_g0.9_o2.5_809520",
+    "status": "success",
+    "duration_minutes": 5.078065307935079
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_181931_gainakt3exp_lc_b2.0_m0.9_g1.0_o1.5_454293",
+    "status": "success",
+    "duration_minutes": 5.05668398141861
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182416_gainakt3exp_lc_b2.0_m0.9_g1.0_o2.5_108805",
+    "status": "success",
+    "duration_minutes": 5.008965718746185
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182414_gainakt3exp_lc_b2.0_m0.9_g1.0_o2.0_137007",
+    "status": "success",
+    "duration_minutes": 5.0910243193308515
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182422_gainakt3exp_lc_b2.0_m0.9_g1.1_o2.0_712901",
+    "status": "success",
+    "duration_minutes": 5.001712735493978
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182420_gainakt3exp_lc_b2.0_m0.9_g1.1_o1.5_818900",
+    "status": "success",
+    "duration_minutes": 5.1203468600908915
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182426_gainakt3exp_lc_b2.0_m0.9_g1.1_o2.5_597399",
+    "status": "success",
+    "duration_minutes": 5.039846416314443
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g0.9_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182428_gainakt3exp_lc_b2.5_m0.7_g0.9_o1.5_887659",
+    "status": "success",
+    "duration_minutes": 5.046467399597168
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g0.9_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182434_gainakt3exp_lc_b2.5_m0.7_g0.9_o2.0_619811",
+    "status": "success",
+    "duration_minutes": 5.040496285756429
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.0_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182919_gainakt3exp_lc_b2.5_m0.7_g1.0_o1.5_478332",
+    "status": "success",
+    "duration_minutes": 5.018602677186331
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g0.9_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182916_gainakt3exp_lc_b2.5_m0.7_g0.9_o2.5_977447",
+    "status": "success",
+    "duration_minutes": 5.0918911019961035
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.0_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182922_gainakt3exp_lc_b2.5_m0.7_g1.0_o2.0_465677",
+    "status": "success",
+    "duration_minutes": 5.049345521132151
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.0_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182928_gainakt3exp_lc_b2.5_m0.7_g1.0_o2.5_580932",
+    "status": "success",
+    "duration_minutes": 4.956319860617319
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.1_o1.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182928_gainakt3exp_lc_b2.5_m0.7_g1.1_o1.5_241844",
+    "status": "success",
+    "duration_minutes": 5.061984225114187
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.1_o2.0",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182931_gainakt3exp_lc_b2.5_m0.7_g1.1_o2.0_321174",
+    "status": "success",
+    "duration_minutes": 5.070758688449859
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g1.1_o2.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_182937_gainakt3exp_lc_b2.5_m0.7_g1.1_o2.5_186420",
+    "status": "success",
+    "duration_minutes": 5.019908491770426
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g0.9_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183422_gainakt3exp_lc_b2.5_m0.8_g0.9_o2.0_525323",
+    "status": "success",
+    "duration_minutes": 5.007902610301971
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g0.9_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183425_gainakt3exp_lc_b2.5_m0.8_g0.9_o2.5_747786",
+    "status": "success",
+    "duration_minutes": 4.976466472943624
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g0.9_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183420_gainakt3exp_lc_b2.5_m0.8_g0.9_o1.5_587178",
+    "status": "success",
+    "duration_minutes": 5.0927258412043255
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.0_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183425_gainakt3exp_lc_b2.5_m0.8_g1.0_o1.5_639461",
+    "status": "success",
+    "duration_minutes": 5.055707975228628
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.0_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183435_gainakt3exp_lc_b2.5_m0.8_g1.0_o2.5_526122",
+    "status": "success",
+    "duration_minutes": 5.042030660311381
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.0_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183432_gainakt3exp_lc_b2.5_m0.8_g1.0_o2.0_884567",
+    "status": "success",
+    "duration_minutes": 5.169367559750875
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.1_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183438_gainakt3exp_lc_b2.5_m0.8_g1.1_o1.5_312773",
+    "status": "success",
+    "duration_minutes": 5.075534236431122
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.1_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183922_gainakt3exp_lc_b2.5_m0.8_g1.1_o2.0_215181",
+    "status": "success",
+    "duration_minutes": 5.070649027824402
+  },
+  {
+    "short_title": "lc_b2.5_m0.8_g1.1_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183923_gainakt3exp_lc_b2.5_m0.8_g1.1_o2.5_498544",
+    "status": "success",
+    "duration_minutes": 5.072306430339813
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g0.9_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183928_gainakt3exp_lc_b2.5_m0.9_g0.9_o2.0_276683",
+    "status": "success",
+    "duration_minutes": 5.131662845611572
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g0.9_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183926_gainakt3exp_lc_b2.5_m0.9_g0.9_o1.5_694625",
+    "status": "success",
+    "duration_minutes": 5.196361883481344
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g0.9_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183937_gainakt3exp_lc_b2.5_m0.9_g0.9_o2.5_116360",
+    "status": "success",
+    "duration_minutes": 5.027326476573944
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.0_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183942_gainakt3exp_lc_b2.5_m0.9_g1.0_o1.5_153088",
+    "status": "success",
+    "duration_minutes": 5.036633388201396
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.0_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_183942_gainakt3exp_lc_b2.5_m0.9_g1.0_o2.0_595327",
+    "status": "success",
+    "duration_minutes": 5.061930680274964
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.1_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_184428_gainakt3exp_lc_b2.5_m0.9_g1.1_o1.5_833443",
+    "status": "success",
+    "duration_minutes": 5.115644363562266
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.0_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_184427_gainakt3exp_lc_b2.5_m0.9_g1.0_o2.5_607891",
+    "status": "success",
+    "duration_minutes": 5.1564798275629675
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.1_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_184436_gainakt3exp_lc_b2.5_m0.9_g1.1_o2.0_946340",
+    "status": "success",
+    "duration_minutes": 5.054536521434784
+  },
+  {
+    "short_title": "lc_b2.5_m0.9_g1.1_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "metrics": {
+      "encoder1_test_auc": 0.0,
+      "encoder2_test_auc": 0.0,
+      "test_auc": 0.0,
+      "test_acc": 0.0
+    },
+    "exp_dir": "examples/experiments/20251116_184438_gainakt3exp_lc_b2.5_m0.9_g1.1_o2.5_200529",
+    "status": "success",
+    "duration_minutes": 5.197146089871724
+  }
+]

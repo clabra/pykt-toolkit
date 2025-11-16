@@ -2315,6 +2315,59 @@ Guidelines: Check current value of the parameter to ablate in configs/parameter_
 Objective: compare metrics of different models or model variants. 
 Guidelines: use defaults to launch training and evaluation.
 
+### Learning Curve Parameter Calibration
+
+**Objective**: Optimize the four sigmoid learning curve parameters (beta_skill_init, m_sat_init, gamma_student_init, sigmoid_offset) that control Encoder 2's mastery accumulation formula.
+
+**Two-Phase Strategy**:
+
+**Phase 1: Optimize Learning Curve Parameters** ✅ **COMPLETE (2025-11-16)**
+
+**Experimental Design**:
+- **Fixed**: bce_loss_weight = 0.2 (80% signal to Encoder 2 via IM loss)
+- **Grid**: 81 experiments (3×3×3×3 combinations)
+  - beta_skill_init: [1.5, 2.0, 2.5] - Learning rate amplification
+  - m_sat_init: [0.7, 0.8, 0.9] - Maximum mastery saturation
+  - gamma_student_init: [0.9, 1.0, 1.1] - Student learning velocity
+  - sigmoid_offset: [1.5, 2.0, 2.5] - Sigmoid inflection point
+- **Dataset**: assist2015, fold 0, 6 epochs per experiment
+- **Hardware**: 7 GPUs parallel, ~6 hours total, 100% success rate
+- **Artifacts**: All experiments in `examples/experiments/20251116_174547_gainakt3exp_sweep_861908/`
+
+**Results Summary** (E2 AUC statistics):
+- **Best**: 0.5443 (Beta=2.5, M_sat=0.7, Gamma=1.1, Offset=1.5) → **+6.7% vs baseline 0.51**
+- Mean: 0.5223, Median: 0.5219, Std: 0.0080
+- Range: 0.5075 to 0.5443 (span: 0.0368)
+
+**Parameter Impact** (correlation with E2 AUC):
+1. **beta_skill_init**: +0.72 ⭐⭐⭐ STRONG (most important - steeper curves = better interpretability)
+2. **sigmoid_offset**: -0.54 ⭐⭐ MODERATE (earlier inflection = faster mastery emergence)
+3. **gamma_student_init**: +0.41 ⭐ WEAK-MODERATE (personalization helps tracking)
+4. **m_sat_init**: -0.10 ○ MINIMAL (saturation level less critical)
+
+**Key Finding - "Steep Early Learning" Pattern**:
+The optimal configuration (Beta=2.5, Offset=1.5) creates interpretable mastery trajectories where:
+- Students show measurable mastery after just 1-2 practice attempts (low offset)
+- Sharp transitions between "not mastered" and "mastered" states (high beta)
+- Personalized learning pace for faster learners (gamma=1.1)
+- Conservative mastery ceiling prevents overconfidence (m_sat=0.7)
+
+**Validation**: Strategy validated - high IM loss weight (0.8) successfully optimized Encoder 2 parameters without degrading Encoder 1 performance (stable at 0.6860 across all configs).
+
+**Updated Defaults** (effective 2025-11-16):
+- `beta_skill_init`: 2.0 → **2.5** (+0.5)
+- `m_sat_init`: 0.8 → **0.7** (-0.1)
+- `gamma_student_init`: 1.0 → **1.1** (+0.1)
+- `sigmoid_offset`: 2.0 → **1.5** (-0.5)
+
+**Documentation**: See `paper/PHASE1_SWEEP_REPORT.md` for complete analysis and `paper/PHASE1_SWEEP_SUMMARY.md` for quick reference.
+
+**Phase 2: Balance Loss Weights** ⏳ **PENDING**
+- **Fixed**: Optimal learning curve parameters from Phase 1 (Beta=2.5, M_sat=0.7, Gamma=1.1, Offset=1.5)
+- **Sweep**: bce_loss_weight in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+- **Metric**: Combined score (Encoder 1 AUC + α × Encoder 2 AUC, where α balances performance vs interpretability)
+- **Rationale**: Find optimal loss balance that maximizes both prediction accuracy and interpretability using the validated learning curve parameters.
+
 
 ### Parameter Evolution Best Practices
 

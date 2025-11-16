@@ -57,6 +57,7 @@ when you change any parameter default value (the reference values are in paper/p
 - Training and evaluation should be launched using the commands desribed in ´examples/reproducibility.md´
 - Avoid launching commands terminating scripts tha are running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions). 
 - Launch scripts in such a way that we leverage available GPUs (less than 75% if not set otherwise) and CPUs (less than 75% of CPU power). 
+- All files related to a sweep experiments should be saved in a folder under examples/experiments following this naming pattern: ´examples/experiments/[YYMMDD]_[HHMMSS]_[model]_sweep_[unique_id]´, e.g. ´examples/experiments/20251116_174547_gainakt3exp_sweep_861908´. This includes all he scripts necessary to launch the sweep amd also a detailed report.md in the folder explaining the sweep rationale and experimental approach. One the sweep experiments finish the report will be updated with results, interpretation and recommendations abut the optimal default parameter values. Centralize all the information about the sweep in this unique doc.
 
 ### Code and Style Guidelines
 - Code documentation should include usage examples

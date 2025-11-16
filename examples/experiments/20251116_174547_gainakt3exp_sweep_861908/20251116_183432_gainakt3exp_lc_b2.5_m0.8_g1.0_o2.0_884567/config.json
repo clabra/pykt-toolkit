@@ -1,0 +1,132 @@
+{
+  "input": {
+    "short_title": "lc_b2.5_m0.8_g1.0_o2.0",
+    "epochs": 6,
+    "bce_loss_weight": 0.2,
+    "beta_skill_init": 2.5,
+    "m_sat_init": 0.8,
+    "gamma_student_init": 1.0,
+    "sigmoid_offset": 2.0
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title lc_b2.5_m0.8_g1.0_o2.0 --epochs 6 --bce_loss_weight 0.2 --beta_skill_init 2.5 --m_sat_init 0.8 --gamma_student_init 1.0 --sigmoid_offset 2.0",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --auto_shifted_eval --batch_size 64 --bce_loss_weight 0.2 --beta_skill_init 2.5 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 6 --fold 0 --gamma_student_init 1.0 --gradient_clip 1.0 --learning_rate 0.000174 --m_sat_init 0.8 --mastery_threshold_init 0.6 --max_correlation_students 3800 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 4 --num_students 3055 --optimizer Adam --patience 4 --seed 42 --seq_len 200 --sigmoid_offset 2.0 --threshold_temperature 1.5 --use_mastery_head --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251116_183432_gainakt3exp_lc_b2.5_m0.8_g1.0_o2.0_884567 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --num_students 3055 --bce_loss_weight 0.2 --mastery_threshold_init 0.6 --threshold_temperature 1.5 --beta_skill_init 2.5 --m_sat_init 0.8 --gamma_student_init 1.0 --sigmoid_offset 2.0 --monitor_freq 50 --use_mastery_head",
+    "learning_trajectories": "/home/vscode/.pykt-env/bin/python examples/learning_trajectories.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251116_183432_gainakt3exp_lc_b2.5_m0.8_g1.0_o2.0_884567 --num_students 10 --min_steps 10",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 884567"
+  },
+  "experiment": {
+    "id": "20251116_183432_gainakt3exp_lc_b2.5_m0.8_g1.0_o2.0_884567",
+    "short_title": "lc_b2.5_m0.8_g1.0_o2.0",
+    "experiment_id": "884567",
+    "created": "20251116_183432"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "seed": 42,
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "max_correlation_students": 3800,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "bce_loss_weight": 0.8,
+    "beta_skill_init": 2.0,
+    "m_sat_init": 0.8,
+    "gamma_student_init": 1.0,
+    "sigmoid_offset": 2.0,
+    "mastery_threshold_init": 0.6,
+    "threshold_temperature": 1.5,
+    "num_students": 3055,
+    "dataset": "assist2015",
+    "fold": 0,
+    "train_script": "examples/train_gainakt3exp.py",
+    "eval_script": "examples/eval_gainakt3exp.py",
+    "model": "gainakt3exp"
+  },
+  "overrides": {
+    "epochs": 6,
+    "bce_loss_weight": 0.2,
+    "beta_skill_init": 2.5
+  },
+  "types": {
+    "launcher": [
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval",
+      "max_correlation_students"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "interpretability": [
+      "use_mastery_head",
+      "use_gain_head",
+      "use_skill_difficulty",
+      "use_student_speed",
+      "bce_loss_weight",
+      "mastery_threshold_init",
+      "threshold_temperature",
+      "num_students"
+    ],
+    "learningcurves": [
+      "beta_skill_init",
+      "m_sat_init",
+      "gamma_student_init",
+      "sigmoid_offset"
+    ],
+    "legacy": [
+      "model",
+      "enhanced_constraints"
+    ]
+  },
+  "md5": "9813693304eabb14195e9a50d7d91c4f",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}

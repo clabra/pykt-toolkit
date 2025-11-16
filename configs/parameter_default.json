@@ -1,5 +1,7 @@
 {
-  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-16 after deprecation",
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-16: Phase 1+2 sweep optimal parameters",
+  "_phase1_sweep": "Learning curve parameters updated based on 81-experiment sweep (Beta=2.5, M_sat=0.7, Gamma=1.1, Offset=1.5 achieved E2 AUC=0.5443, +6.7% improvement)",
+  "_phase2_sweep": "Loss weight updated based on 6-experiment sweep (bce_loss_weight=0.3 achieved best combined score: E1 AUC=0.6853, E2 AUC=0.5438)",
   "defaults": {
     "seed": 42,
     "epochs": 12,
@@ -25,11 +27,11 @@
     "use_gain_head": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "bce_loss_weight": 0.8,
-    "beta_skill_init": 2.0,
-    "m_sat_init": 0.8,
-    "gamma_student_init": 1.0,
-    "sigmoid_offset": 2.0,
+    "bce_loss_weight": 0.3,
+    "beta_skill_init": 2.5,
+    "m_sat_init": 0.7,
+    "gamma_student_init": 1.1,
+    "sigmoid_offset": 1.5,
     "mastery_threshold_init": 0.6,
     "threshold_temperature": 1.5,
     "num_students": 3055,
@@ -261,6 +263,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "9813693304eabb14195e9a50d7d91c4f",
+  "md5": "a1e2fd59c3b2f7b3dcde97e3515619e1",
   "_md5_computed": "2025-11-16"
 }

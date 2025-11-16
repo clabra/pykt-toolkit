@@ -1,0 +1,52 @@
+{
+  "runtime": {
+    "eval_command": "examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251116_210414_gainakt3exp_baseline-before-warm_223545 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --num_students 3055 --bce_loss_weight 0.3 --mastery_threshold_init 0.6 --threshold_temperature 1.5 --beta_skill_init 2.5 --m_sat_init 0.7 --gamma_student_init 1.1 --sigmoid_offset 1.5 --monitor_freq 50 --use_mastery_head",
+    "timestamp": "2025-11-16T21:11:50.904046Z",
+    "device": "cuda",
+    "checkpoint_path": "/workspaces/pykt-toolkit/examples/experiments/20251116_210414_gainakt3exp_baseline-before-warm_223545/model_best.pth"
+  },
+  "evaluation": {
+    "batch_size": 64,
+    "max_correlation_students": 3800
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "intrinsic_gain_attention": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "num_students": 3055,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.0,
+    "gain_performance_loss_weight": 0.0,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0,
+    "bce_loss_weight": 0.3,
+    "incremental_mastery_loss_weight": 0.7,
+    "mastery_threshold_init": 0.6,
+    "threshold_temperature": 1.5,
+    "beta_skill_init": 2.5,
+    "m_sat_init": 0.7,
+    "gamma_student_init": 1.1,
+    "sigmoid_offset": 1.5,
+    "monitor_frequency": 50
+  },
+  "experiment": {
+    "id": "20251116_210414_gainakt3exp_baseline-before-warm_223545",
+    "source_run_dir": "/workspaces/pykt-toolkit/examples/experiments/20251116_210414_gainakt3exp_baseline-before-warm_223545",
+    "model": "gainakt3exp"
+  }
+}

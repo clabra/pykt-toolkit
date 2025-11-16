@@ -1,0 +1,786 @@
+[
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08535643815994262
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08547499974568686
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08549429575602213
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g0.9_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08718736966451009
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0872579574584961
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08727904558181762
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.0_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.09016466935475667
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08395766019821167
+  },
+  {
+    "short_title": "lc_b1.5_m0.7_g1.1_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08507837057113647
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08450369040171306
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08176758289337158
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08736886580785115
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08742367426554362
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g0.9_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08920065959294637
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.0_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08067098061243692
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08129541079203288
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o2.0",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0817697564760844
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08695259094238281
+  },
+  {
+    "short_title": "lc_b1.5_m0.8_g1.1_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08550625642140706
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o2.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0818314790725708
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g0.9_o1.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08636928796768188
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08769732713699341
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0855100154876709
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08112425009409586
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08380296230316162
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08245946963628133
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.0_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08753607670466106
+  },
+  {
+    "short_title": "lc_b1.5_m0.9_g1.1_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 1.5,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08660213549931844
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0795739769935608
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08271762927373251
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g0.9_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0826135516166687
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.07960626284281412
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.0_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08315236568450927
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08084727525711059
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08403770526250204
+  },
+  {
+    "short_title": "lc_b2.0_m0.7_g1.1_o2.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08240405718485515
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o1.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08181133270263671
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o2.0",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0817214290301005
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g0.9_o2.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08318973382314046
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o1.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08170505762100219
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o2.0",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.084947403271993
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.0_o2.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08568671147028604
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o1.5",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08010265032450357
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o2.0",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08120289643605551
+  },
+  {
+    "short_title": "lc_b2.0_m0.8_g1.1_o2.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.8,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0839529037475586
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o1.5",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08256837526957193
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o2.0",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08219983180363973
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g0.9_o2.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08109063307444254
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o1.5",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.07924229701360067
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o2.0",
+    "gpu_id": 0,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08337201674779256
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o2.0",
+    "gpu_id": 3,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08042538563410441
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.0_o2.5",
+    "gpu_id": 1,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.0,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08420093456904093
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o1.5",
+    "gpu_id": 2,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0823936104774475
+  },
+  {
+    "short_title": "lc_b2.0_m0.9_g1.1_o2.5",
+    "gpu_id": 4,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.0,
+      "m_sat_init": 0.9,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 2.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08219045003255208
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g0.9_o1.5",
+    "gpu_id": 5,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 1.5
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.0813193678855896
+  },
+  {
+    "short_title": "lc_b2.5_m0.7_g0.9_o2.0",
+    "gpu_id": 6,
+    "parameters": {
+      "bce_loss_weight": 0.2,
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 0.9,
+      "sigmoid_offset": 2.0
+    },
+    "status": "failed",
+    "error": "as/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n  File \"/home/vscode/.pykt-env/lib/python3.8/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\nFileNotFoundError: [Errno 2] No such file or directory: '/workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv'\n",
+    "duration_minutes": 0.08605170249938965
+  }
+]

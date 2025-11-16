@@ -66,10 +66,11 @@ data_original/*
 
 TSMini/
 
-experiments/*/*.pth
-examples/experiments/*/*.pth
-experiments/*/*.pt
-examples/experiments/*/*.pt
+# Ignore model checkpoint files in experiments folders (at any depth)
+experiments/**/*.pth
+examples/experiments/**/*.pth
+experiments/**/*.pt
+examples/experiments/**/*.pt
 
 data/difficulty/
 data/peer_index/

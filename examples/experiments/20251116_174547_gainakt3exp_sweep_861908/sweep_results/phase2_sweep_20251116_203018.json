@@ -1,0 +1,97 @@
+{
+  "timestamp": "20251116_203018",
+  "sweep_id": 381514,
+  "config": {
+    "epochs": 12,
+    "dataset": "assist2015",
+    "fold": 0,
+    "bce_loss_weights": [
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8
+    ],
+    "fixed_params": {
+      "beta_skill_init": 2.5,
+      "m_sat_init": 0.7,
+      "gamma_student_init": 1.1,
+      "sigmoid_offset": 1.5
+    }
+  },
+  "results": [
+    {
+      "success": true,
+      "short_title": "phase2_bce0.7",
+      "bce_loss_weight": 0.7,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.7_106625",
+      "duration_min": 5.822873318195343,
+      "encoder1_test_auc": 0.6854892128870315,
+      "encoder2_test_auc": 0.5347284841437568,
+      "test_auc": 0.6854892128870315,
+      "test_acc": 0.0
+    },
+    {
+      "success": true,
+      "short_title": "phase2_bce0.8",
+      "bce_loss_weight": 0.8,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.8_133173",
+      "duration_min": 5.868588244915008,
+      "encoder1_test_auc": 0.6856333250935105,
+      "encoder2_test_auc": 0.5342731528207633,
+      "test_auc": 0.6856333250935105,
+      "test_acc": 0.0
+    },
+    {
+      "success": true,
+      "short_title": "phase2_bce0.6",
+      "bce_loss_weight": 0.6,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.6_741296",
+      "duration_min": 5.910537413756052,
+      "encoder1_test_auc": 0.6852701289863321,
+      "encoder2_test_auc": 0.534962041966896,
+      "test_auc": 0.6852701289863321,
+      "test_acc": 0.0
+    },
+    {
+      "success": true,
+      "short_title": "phase2_bce0.3",
+      "bce_loss_weight": 0.3,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.3_423788",
+      "duration_min": 7.338148991266887,
+      "encoder1_test_auc": 0.6853390327788583,
+      "encoder2_test_auc": 0.5437688787656747,
+      "test_auc": 0.6853390327788583,
+      "test_acc": 0.0
+    },
+    {
+      "success": true,
+      "short_title": "phase2_bce0.5",
+      "bce_loss_weight": 0.5,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.5_836356",
+      "duration_min": 7.396305954456329,
+      "encoder1_test_auc": 0.6848107737101994,
+      "encoder2_test_auc": 0.5430192268966954,
+      "test_auc": 0.6848107737101994,
+      "test_acc": 0.0
+    },
+    {
+      "success": true,
+      "short_title": "phase2_bce0.4",
+      "bce_loss_weight": 0.4,
+      "exp_dir": "examples/experiments/20251116_203019_gainakt3exp_phase2_bce0.4_660850",
+      "duration_min": 7.596288462479909,
+      "encoder1_test_auc": 0.6848684658520434,
+      "encoder2_test_auc": 0.5433187442665761,
+      "test_auc": 0.6848684658520434,
+      "test_acc": 0.0
+    }
+  ],
+  "summary": {
+    "total_experiments": 6,
+    "successful": 6,
+    "failed": 0,
+    "total_time_hours": 0.12660939494768778
+  }
+}
