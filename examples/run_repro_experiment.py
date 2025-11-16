@@ -194,6 +194,7 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         # 'sparsity_loss_weight', 'consistency_loss_weight',  # DEPRECATED: constraints removed
         'bce_loss_weight',  # dual-encoder loss weight
         'mastery_threshold_init', 'threshold_temperature',  # encoder2 prediction parameters
+        'beta_skill_init', 'm_sat_init', 'gamma_student_init', 'sigmoid_offset',  # learning curve parameters
         'monitor_freq'  # monitoring frequency needed by model
     ]
     

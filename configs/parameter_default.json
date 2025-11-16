@@ -25,9 +25,13 @@
     "use_gain_head": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "bce_loss_weight": 0.9,
-    "mastery_threshold_init": 0.85,
-    "threshold_temperature": 1.0,
+    "bce_loss_weight": 0.8,
+    "beta_skill_init": 2.0,
+    "m_sat_init": 0.8,
+    "gamma_student_init": 1.0,
+    "sigmoid_offset": 2.0,
+    "mastery_threshold_init": 0.6,
+    "threshold_temperature": 1.5,
     "num_students": 3055,
     "dataset": "assist2015",
     "fold": 0,
@@ -241,6 +245,12 @@
       "threshold_temperature",
       "num_students"
     ],
+    "learningcurves": [
+      "beta_skill_init",
+      "m_sat_init",
+      "gamma_student_init",
+      "sigmoid_offset"
+    ],
     "legacy": [
       "model",
       "enhanced_constraints"
@@ -251,6 +261,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "9b25e22be5887cc6f218b7d37fcb57d5",
+  "md5": "9813693304eabb14195e9a50d7d91c4f",
   "_md5_computed": "2025-11-16"
 }

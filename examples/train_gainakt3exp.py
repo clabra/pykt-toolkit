@@ -74,8 +74,9 @@ def train_gainakt3exp_dual_encoder(
     dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs,
     optimizer_name, seed, d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len,
     use_mastery_head, use_gain_head, use_skill_difficulty, use_student_speed, num_students,
-    bce_loss_weight, mastery_threshold_init, threshold_temperature, use_wandb, use_amp,
-    auto_shifted_eval, monitor_freq, gradient_clip, patience, weight_decay, max_correlation_students,
+    bce_loss_weight, mastery_threshold_init, threshold_temperature, beta_skill_init, m_sat_init,
+    gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, monitor_freq, 
+    gradient_clip, patience, weight_decay, max_correlation_students,
     cfg=None, experiment_suffix="", log_level=logging.INFO
 ):
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight
@@ -135,6 +136,8 @@ def train_gainakt3exp_dual_encoder(
         'use_gain_head': use_gain_head, 'use_skill_difficulty': use_skill_difficulty,
         'use_student_speed': use_student_speed, 'num_students': num_students,
         'mastery_threshold_init': mastery_threshold_init, 'threshold_temperature': threshold_temperature,
+        'beta_skill_init': beta_skill_init, 'm_sat_init': m_sat_init,
+        'gamma_student_init': gamma_student_init, 'sigmoid_offset': sigmoid_offset,
         'emb_type': emb_type,
         # Deprecated parameters (set to 0 for dual-encoder mode)
         'intrinsic_gain_attention': False,
@@ -375,6 +378,82 @@ def train_gainakt3exp_dual_encoder(
     if use_wandb:
         wandb.finish()
     
+    # Auto-evaluation after successful training
+    if exp_dir and auto_shifted_eval:
+        logger.info("\n" + "=" * 80)
+        logger.info("LAUNCHING AUTO-EVALUATION ON TEST SET")
+        logger.info("=" * 80)
+        
+        import subprocess
+        
+        # Build evaluation command from training arguments and model config
+        eval_cmd = [
+            sys.executable,
+            'examples/eval_gainakt3exp.py',
+            '--run_dir', exp_dir,
+            '--max_correlation_students', str(max_correlation_students),
+            '--dataset', dataset_name,
+            '--fold', str(fold),
+            '--batch_size', str(batch_size),
+            '--seq_len', str(model_config['seq_len']),
+            '--d_model', str(model_config['d_model']),
+            '--n_heads', str(model_config['n_heads']),
+            '--num_encoder_blocks', str(model_config['num_encoder_blocks']),
+            '--d_ff', str(model_config['d_ff']),
+            '--dropout', str(model_config['dropout']),
+            '--emb_type', model_config['emb_type'],
+            '--num_students', str(model_config['num_students']),
+            '--bce_loss_weight', str(bce_loss_weight),
+            '--mastery_threshold_init', str(model_config['mastery_threshold_init']),
+            '--threshold_temperature', str(model_config['threshold_temperature']),
+            '--beta_skill_init', str(model_config['beta_skill_init']),
+            '--m_sat_init', str(model_config['m_sat_init']),
+            '--gamma_student_init', str(model_config['gamma_student_init']),
+            '--sigmoid_offset', str(model_config['sigmoid_offset']),
+            '--monitor_freq', str(model_config['monitor_frequency'])
+        ]
+        
+        # Add optional flags
+        if model_config['use_mastery_head']:
+            eval_cmd.append('--use_mastery_head')
+        if model_config['use_gain_head']:
+            eval_cmd.append('--use_gain_head')
+        if model_config['use_skill_difficulty']:
+            eval_cmd.append('--use_skill_difficulty')
+        if model_config['use_student_speed']:
+            eval_cmd.append('--use_student_speed')
+        
+        logger.info(f"Evaluation command: {' '.join(eval_cmd)}")
+        
+        try:
+            result = subprocess.run(eval_cmd, check=True, capture_output=True, text=True, cwd='/workspaces/pykt-toolkit')
+            logger.info("✅ Evaluation completed successfully")
+            logger.info(result.stdout)
+            if result.stderr:
+                logger.warning(f"Evaluation stderr: {result.stderr}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ Evaluation failed with exit code {e.returncode}")
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
+        except Exception as e:
+            logger.error(f"❌ Evaluation failed with exception: {e}")
+        
+        # Print learning trajectories command
+        logger.info("\n" + "="*80)
+        logger.info("INDIVIDUAL STUDENT LEARNING TRAJECTORIES")
+        logger.info("="*80)
+        logger.info("To analyze detailed learning trajectories for individual students, run:")
+        logger.info("")
+        trajectory_cmd = [
+            sys.executable,
+            'examples/learning_trajectories.py',
+            '--run_dir', exp_dir,
+            '--num_students', '10',
+            '--min_steps', '10'
+        ]
+        logger.info(f"  {' '.join(trajectory_cmd)}")
+        logger.info("")
+    
     return {'best_valid_auc': best_valid_auc, 'final_epoch': epoch+1, 'exp_dir': exp_dir}
 
 if __name__ == '__main__':
@@ -413,6 +492,10 @@ if __name__ == '__main__':
     parser.add_argument('--mastery_threshold_init', type=float, required=True)
     parser.add_argument('--threshold_temperature', type=float, required=True)
     parser.add_argument('--bce_loss_weight', type=float, required=True)
+    parser.add_argument('--beta_skill_init', type=float, required=True)
+    parser.add_argument('--m_sat_init', type=float, required=True)
+    parser.add_argument('--gamma_student_init', type=float, required=True)
+    parser.add_argument('--sigmoid_offset', type=float, required=True)
     args = parser.parse_args()
     
     cfg = None
@@ -441,6 +524,8 @@ if __name__ == '__main__':
         use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
         num_students=args.num_students, bce_loss_weight=args.bce_loss_weight,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
+        beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
+        gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,
         use_wandb=args.use_wandb, use_amp=args.use_amp, auto_shifted_eval=args.auto_shifted_eval,
         monitor_freq=args.monitor_freq, gradient_clip=args.gradient_clip, patience=args.patience,
         weight_decay=args.weight_decay, max_correlation_students=args.max_correlation_students,

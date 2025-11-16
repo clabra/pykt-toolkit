@@ -97,8 +97,9 @@ class GainAKT3Exp(nn.Module):
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, incremental_mastery_loss_weight=0.1,
                  monitor_frequency=50, use_skill_difficulty=False,
-                 use_student_speed=False, num_students=None, mastery_threshold_init=0.85,
-                 threshold_temperature=1.0):
+                 use_student_speed=False, num_students=None, mastery_threshold_init=0.6,
+                 threshold_temperature=1.5, beta_skill_init=2.0, m_sat_init=0.8, 
+                 gamma_student_init=1.0, sigmoid_offset=2.0):
         """
         Initialize the monitored GainAKT3Exp model.
         
@@ -144,8 +145,12 @@ class GainAKT3Exp(nn.Module):
             use_skill_difficulty (bool): Enable per-skill difficulty embeddings (default: False, DO NOT RELY ON THIS)
             use_student_speed (bool): Enable per-student learning speed embeddings (default: False, DO NOT RELY ON THIS)
             num_students (int): Number of unique students (default: None, DO NOT RELY ON THIS)
-            mastery_threshold_init (float): Initial learnable mastery threshold (default: 0.85, DO NOT RELY ON THIS)
-            threshold_temperature (float): Temperature for sigmoid threshold function (default: 1.0, DO NOT RELY ON THIS)
+            mastery_threshold_init (float): Initial learnable mastery threshold (default: 0.6, DO NOT RELY ON THIS)
+            threshold_temperature (float): Temperature for sigmoid threshold function (default: 1.5, DO NOT RELY ON THIS)
+            beta_skill_init (float): Initial β_skill for learning rate amplification (default: 2.0, DO NOT RELY ON THIS)
+            m_sat_init (float): Initial M_sat for mastery saturation level (default: 0.8, DO NOT RELY ON THIS)
+            gamma_student_init (float): Initial γ_student for learning velocity (default: 1.0, DO NOT RELY ON THIS)
+            sigmoid_offset (float): Sigmoid inflection point offset (default: 2.0, DO NOT RELY ON THIS)
         """
         # ═══════════════════════════════════════════════════════════════════════════
         # REPRODUCIBILITY ENFORCEMENT: Warn if strict mode enabled
@@ -288,13 +293,16 @@ class GainAKT3Exp(nn.Module):
         # ═══════════════════════════════════════════════════════════════════════════
         
         # Per-skill learnable parameters (shared across students)
-        self.beta_skill = torch.nn.Parameter(torch.ones(num_c))  # Skill difficulty (curve steepness)
-        self.M_sat = torch.nn.Parameter(torch.ones(num_c) * 0.8)  # Saturation level (max mastery)
+        # FIX (2025-11-16): Now configurable via beta_skill_init parameter
+        # With β=1, effective_practice of 1-5 gives weak sigmoid response
+        # With β=2, practice is amplified 2x, providing better dynamic range
+        self.beta_skill = torch.nn.Parameter(torch.ones(num_c) * beta_skill_init)  # Skill difficulty (curve steepness)
+        self.M_sat = torch.nn.Parameter(torch.ones(num_c) * m_sat_init)  # Saturation level (max mastery)
         
         # Per-student learnable parameters (if num_students provided)
         # Note: If num_students not provided, γ_student will be learned per batch dynamically
         if num_students is not None and num_students > 0:
-            self.gamma_student = torch.nn.Parameter(torch.ones(num_students))  # Learning velocity
+            self.gamma_student = torch.nn.Parameter(torch.ones(num_students) * gamma_student_init)  # Learning velocity
             self.has_fixed_student_params = True
         else:
             # Dynamic mode: will be handled per-batch
@@ -303,7 +311,13 @@ class GainAKT3Exp(nn.Module):
         
         # Global learnable parameters
         self.theta_global = torch.nn.Parameter(torch.tensor(mastery_threshold_init))  # Performance threshold
-        self.offset = torch.nn.Parameter(torch.tensor(3.0))  # Sigmoid inflection point
+        # FIX (2025-11-16): Now configurable via sigmoid_offset parameter
+        # Formula: mastery = M_sat × sigmoid(β × γ × practice - offset)
+        # With β=2, offset=2, practice count of 1 → sigmoid_input = 2×1 - 2 = 0 → sigmoid = 0.5 → mastery = 0.4
+        # With β=2, offset=2, practice count of 2 → sigmoid_input = 2×2 - 2 = 2 → sigmoid = 0.88 → mastery = 0.70
+        # With β=2, offset=2, practice count of 5 → sigmoid_input = 2×5 - 2 = 8 → sigmoid = 1.0 → mastery = 0.8
+        # This provides good dynamic range for typical practice counts (1-10)
+        self.offset = torch.nn.Parameter(torch.tensor(sigmoid_offset))  # Sigmoid inflection point
         
         # Config parameter (hybrid approach - can upgrade to learnable later)
         self.threshold_temperature = threshold_temperature
@@ -620,33 +634,101 @@ class GainAKT3Exp(nn.Module):
             # These are separate from the base predictions and used for interpretability loss
             incremental_mastery_predictions = torch.sigmoid((skill_mastery - theta_clamped) / self.threshold_temperature)
             
-            # DEBUG: Log sigmoid learning curve and prediction stats for first batch
+            # DEBUG: Comprehensive diagnostics for first batch of each epoch
             if batch_idx == 0:  # Log for first batch of each epoch
+                import numpy as np
+                
+                # Basic statistics
                 im_pred_range = incremental_mastery_predictions.max() - incremental_mastery_predictions.min()
                 im_pred_std = incremental_mastery_predictions.std()
                 base_pred_range = predictions.max() - predictions.min()
                 base_pred_std = predictions.std()
                 
-                print("DEBUG GainAKT3Exp - Sigmoid Learning Curve and Prediction Stats:")
-                print(f"  Global Threshold (θ_global): {theta_clamped:.4f}")
-                print(f"  Temperature: {self.threshold_temperature}")
-                print(f"  Learnable Parameters:")
-                print(f"    β_skill (first 5): {self.beta_skill[:5].cpu().detach().numpy()}")
-                print(f"    M_sat (first 5): {self.M_sat[:5].cpu().detach().numpy()}")
-                if self.has_fixed_student_params:
-                    print(f"    γ_student (first 5): {self.gamma_student[:5].cpu().detach().numpy()}")
+                # Mastery value statistics (CRITICAL DIAGNOSTIC)
+                mastery_min = skill_mastery.min().item()
+                mastery_max = skill_mastery.max().item()
+                mastery_mean = skill_mastery.mean().item()
+                mastery_std = skill_mastery.std().item()
+                
+                # Mastery-performance correlation (CRITICAL DIAGNOSTIC)
+                # Flatten and filter valid positions (use r which is the response tensor)
+                valid_mask = (r >= 0) & (r <= 1)
+                valid_mastery = skill_mastery[valid_mask].cpu().detach().numpy()
+                valid_responses = r[valid_mask].cpu().detach().numpy()
+                
+                if len(valid_mastery) > 1:
+                    mastery_perf_corr = np.corrcoef(valid_mastery, valid_responses)[0, 1]
+                    # Also check correlation between IM predictions and responses
+                    valid_im_preds = incremental_mastery_predictions[valid_mask].cpu().detach().numpy()
+                    im_pred_perf_corr = np.corrcoef(valid_im_preds, valid_responses)[0, 1]
                 else:
-                    print(f"    γ_student: Dynamic per-batch (mean={gamma.mean():.4f})")
-                print(f"    offset: {self.offset.item():.4f}")
-                print(f"  Base Predictions - range: {base_pred_range:.4f}, std: {base_pred_std:.4f}")
-                print(f"  Incremental Mastery Predictions - range: {im_pred_range:.4f}, std: {im_pred_std:.4f}")
-                print(f"  Sample base predictions: {predictions[0, :10].cpu().detach().numpy()}")
-                print(f"  Sample incremental predictions: {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
-                print("  Sample effective practice (quality-weighted, first student, first 5 skills at t=5):")
-                if seq_len > 5:
-                    print(f"    {effective_practice[0, 5, :5].cpu().detach().numpy()}")
-                print("  Sample gain quality (Encoder 2 output, first 5 interactions):")
-                print(f"    {gain_quality[0, :min(5, seq_len), 0].cpu().detach().numpy()}")
+                    mastery_perf_corr = 0.0
+                    im_pred_perf_corr = 0.0
+                
+                # Theta gradient check (is it learning?)
+                theta_grad = self.theta_global.grad
+                theta_has_grad = theta_grad is not None
+                theta_grad_norm = theta_grad.abs().item() if theta_has_grad else 0.0
+                
+                print("\n" + "="*80)
+                print("DEBUG GainAKT3Exp - COMPREHENSIVE DIAGNOSTICS (batch_idx=0)")
+                print("="*80)
+                
+                print("\n[1] MASTERY VALUE DISTRIBUTION (CRITICAL):")
+                print(f"  Min:  {mastery_min:.4f}")
+                print(f"  Max:  {mastery_max:.4f}")
+                print(f"  Mean: {mastery_mean:.4f}")
+                print(f"  Std:  {mastery_std:.4f}")
+                print(f"  ⚠️  Expected: min≈0, max≈1, std>0.2 for good variance")
+                if mastery_std < 0.1:
+                    print(f"  ❌ LOW VARIANCE! Mastery values too compressed (std={mastery_std:.4f})")
+                if mastery_mean < 0.1 or mastery_mean > 0.9:
+                    print(f"  ❌ EXTREME MEAN! Mastery values biased (mean={mastery_mean:.4f})")
+                
+                print("\n[2] MASTERY-PERFORMANCE CORRELATION (CRITICAL):")
+                print(f"  Mastery ↔ Response:     {mastery_perf_corr:.4f}")
+                print(f"  IM_Prediction ↔ Response: {im_pred_perf_corr:.4f}")
+                print(f"  ⚠️  Expected: >0.4 for predictive mastery, >0.5 ideal")
+                if abs(mastery_perf_corr) < 0.2:
+                    print(f"  ❌ MASTERY NOT PREDICTIVE! Correlation too low ({mastery_perf_corr:.4f})")
+                
+                print("\n[3] THETA GRADIENT FLOW:")
+                print(f"  θ_global value:    {theta_clamped:.4f}")
+                print(f"  Has gradient:      {theta_has_grad}")
+                print(f"  Gradient magnitude: {theta_grad_norm:.6f}")
+                if not theta_has_grad:
+                    print(f"  ❌ NO GRADIENT! Theta not learning")
+                elif theta_grad_norm < 1e-6:
+                    print(f"  ⚠️  VANISHING GRADIENT! ({theta_grad_norm:.6f})")
+                
+                print("\n[4] PREDICTION DISTRIBUTIONS:")
+                print(f"  Base (Encoder1):   range={base_pred_range:.4f}, std={base_pred_std:.4f}")
+                print(f"  IM (Encoder2):     range={im_pred_range:.4f}, std={im_pred_std:.4f}")
+                print(f"  ⚠️  IM range should be >0.3 for useful predictions")
+                if im_pred_range < 0.2:
+                    print(f"  ❌ COMPRESSED PREDICTIONS! IM range too narrow ({im_pred_range:.4f})")
+                
+                print("\n[5] TEMPERATURE & THRESHOLD:")
+                print(f"  Temperature:  {self.threshold_temperature}")
+                print(f"  θ_global:     {theta_clamped:.4f}")
+                print(f"  Formula: sigmoid((mastery - {theta_clamped:.4f}) / {self.threshold_temperature})")
+                
+                print("\n[6] SAMPLE VALUES (first student, first 10 steps):")
+                print(f"  Mastery:      {skill_mastery[0, :10].cpu().detach().numpy()}")
+                print(f"  Base preds:   {predictions[0, :10].cpu().detach().numpy()}")
+                print(f"  IM preds:     {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
+                print(f"  True labels:  {r[0, :10].cpu().detach().numpy()}")
+                
+                print("\n[7] LEARNABLE PARAMETERS (first 5):")
+                print(f"  β_skill:   {self.beta_skill[:5].cpu().detach().numpy()}")
+                print(f"  M_sat:     {self.M_sat[:5].cpu().detach().numpy()}")
+                if self.has_fixed_student_params:
+                    print(f"  γ_student: {self.gamma_student[:5].cpu().detach().numpy()}")
+                else:
+                    print(f"  γ_student: Dynamic (batch mean={gamma.mean():.4f})")
+                print(f"  offset:    {self.offset.item():.4f}")
+                
+                print("="*80 + "\n")
             
             # Do NOT override base predictions - keep both for dual loss computation
         else:
@@ -880,6 +962,10 @@ def create_exp_model(config):
         - monitor_frequency (int): How often to compute interpretability metrics
         - mastery_threshold_init (float): Initial value for global threshold θ_global
         - threshold_temperature (float): Temperature for sigmoid threshold function
+        - beta_skill_init (float): Initial β_skill for learning rate amplification
+        - m_sat_init (float): Initial M_sat for mastery saturation level
+        - gamma_student_init (float): Initial γ_student for learning velocity
+        - sigmoid_offset (float): Sigmoid inflection point offset
     
     Args:
         config (dict): Model configuration parameters (all required)
@@ -915,7 +1001,11 @@ def create_exp_model(config):
             incremental_mastery_loss_weight=config['incremental_mastery_loss_weight'],
             monitor_frequency=config['monitor_frequency'],
             mastery_threshold_init=config['mastery_threshold_init'],
-            threshold_temperature=config['threshold_temperature']
+            threshold_temperature=config['threshold_temperature'],
+            beta_skill_init=config['beta_skill_init'],
+            m_sat_init=config['m_sat_init'],
+            gamma_student_init=config['gamma_student_init'],
+            sigmoid_offset=config['sigmoid_offset']
         )
     except KeyError as e:
         raise ValueError(f"Missing required parameter in model config: {e}. "

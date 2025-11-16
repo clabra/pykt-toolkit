@@ -198,6 +198,14 @@ def main():
                         help='Initial mastery threshold (θ_global)')
     parser.add_argument('--threshold_temperature', type=float, required=True,
                         help='Temperature for sigmoid threshold functions')
+    parser.add_argument('--beta_skill_init', type=float, required=True,
+                        help='Initial beta_skill for learning rate amplification')
+    parser.add_argument('--m_sat_init', type=float, required=True,
+                        help='Initial M_sat for mastery saturation level')
+    parser.add_argument('--gamma_student_init', type=float, required=True,
+                        help='Initial gamma_student for learning velocity')
+    parser.add_argument('--sigmoid_offset', type=float, required=True,
+                        help='Sigmoid inflection point offset')
     parser.add_argument('--max_correlation_students', type=int, required=True)
     parser.add_argument('--monitor_freq', type=int, required=True,
                         help='How often to compute interpretability metrics during training')
@@ -289,6 +297,10 @@ def main():
         'incremental_mastery_loss_weight': 1.0 - args.bce_loss_weight,  # Lambda2 = 1 - Lambda1
         'mastery_threshold_init': args.mastery_threshold_init,
         'threshold_temperature': args.threshold_temperature,
+        'beta_skill_init': args.beta_skill_init,
+        'm_sat_init': args.m_sat_init,
+        'gamma_student_init': args.gamma_student_init,
+        'sigmoid_offset': args.sigmoid_offset,
         'monitor_frequency': args.monitor_freq  # Map monitor_freq -> monitor_frequency for model
     }
     
