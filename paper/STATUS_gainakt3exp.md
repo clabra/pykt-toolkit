@@ -1,22 +1,25 @@
 # GainAKT3Exp Model Status
 
-**Document Version**: Updated 2025-11-15  
-**Model Version**: GainAKT3Exp - Dual-stream transformer with Mastery Accumulation (Gains Head output deactivated)  
+**Document Version**: Updated 2025-11-16  
+**Model Version**: GainAKT3Exp - Dual-stream transformer with Sigmoid Learning Curve Mastery (Gains Head output deactivated)  
 **Status**: Active implementation with full training/evaluation pipeline
 
-**⚠️ CURRENT CONFIGURATION (2025-11-15 - SIMPLIFIED ARCHITECTURE)**: 
+**⚠️ CURRENT CONFIGURATION (2025-11-16 - SIMPLIFIED ARCHITECTURE WITH SIGMOID LEARNING CURVES)**: 
 - **Dual-Prediction Architecture**: ✅ TWO independent prediction branches with TWO loss functions
-  - **Base Predictions** → BCE Loss (primary)
-  - **Incremental Mastery Predictions** → Incremental Mastery Loss (weight=0.1)
+  - **Base Predictions** → BCE Loss (primary, weight ≈ 1.0)
+  - **Incremental Mastery Predictions** (from sigmoid curves) → Incremental Mastery Loss (weight=0.1)
+- **Sigmoid Learning Curve Mastery**: ✅ ACTIVE - Practice count-driven sigmoid curves with learnable parameters
+  - Learnable: β_skill[s] (skill difficulty), γ_student[i] (learning velocity), M_sat[s] (saturation), θ_global (threshold), offset (inflection)
+  - Config: threshold_temperature=1.0 (prediction sharpness control, hybrid approach)
+  - Three automatic learning phases: Initial (warm-up) → Growth (rapid learning) → Saturation (consolidation)
 - **Constraint Losses**: ❌ **COMMENTED OUT** (all weights set to 0.0, code preserved for potential future use)
 - **Semantic Module Losses**: ❌ **COMMENTED OUT** (all disabled, code preserved for potential future use)
-- **Mastery Accumulation**: ✅ ACTIVE (`use_mastery_head=true`) - Recursive mastery tracking with learnable thresholds
-- **Gains Head Output**: ❌ DEACTIVATED (`use_gain_head=false`) - Gains computed internally for mastery but not exposed as output
+- **Gains Head Output**: ❌ DEACTIVATED (`use_gain_head=false`) - Gains computed internally but not exposed as output
 - **Architecture Flow**: 
   - Path 1: Encoder → [Context, Value, Skill] → Prediction Head → Base Predictions → BCE Loss
-  - Path 2: Values → Learning Gains → Mastery → Threshold → Incremental Mastery Predictions → IM Loss
-- **Code Location**: `gainakt3_exp.py` lines 318-516 (dual predictions, dual losses)
-- **Rationale**: Simplified architecture focuses on core dual-prediction mechanism for improved clarity and debugging. Constraint and semantic losses remain documented and preserved in code (commented out) for potential future restoration.
+  - Path 2: Attention Values → Learning Gains → Practice Count → Sigmoid Learning Curve → Mastery → Threshold (with temp) → Incremental Mastery Predictions → IM Loss
+- **Code Location**: `gainakt3_exp.py` lines 318-516 (dual predictions, dual losses, sigmoid curves)
+- **Rationale**: Simplified architecture focuses on core dual-prediction mechanism with educationally-realistic sigmoid learning curves. The sigmoid model captures warm-up, growth, and saturation phases automatically via learnable skill/student parameters. Temperature parameter uses hybrid config approach (can upgrade to learnable later). Constraint and semantic losses remain documented and preserved in code (commented out) for potential future restoration.
 
 See "Architecture Summary" section below for detailed flow.
 
@@ -32,31 +35,199 @@ See "Architecture Summary" section below for detailed flow.
 - **Launcher**: `examples/run_repro_experiment.py` - loads defaults, manages experiments
 - **Factory**: `create_exp_model(config)` (line 435 in `gainakt3_exp.py`) - requires 22 explicit parameters
 
+### Description
 
-## Core Architecture: Dual-Stream Transformer with Dual-Prediction Mechanism
+## Core Architecture: Dual-Stream Transformer with Sigmoid Learning Curve Mastery
 
-**GainAKT3Exp Current State**: The model uses recursive mastery accumulation to track skill mastery over time and generates **TWO SEPARATE** prediction outputs with **TWO SEPARATE** loss functions.
+**GainAKT3Exp Current State**: The model uses **sigmoid learning curves** driven by practice count to track skill mastery evolution over time, generating **TWO SEPARATE** prediction outputs with **TWO SEPARATE** loss functions. Mastery follows educationally-realistic sigmoid curves that automatically capture three learning phases: warm-up (minimal gains), growth (rapid improvement), and saturation (diminishing returns).
 
 **Dual-Prediction Architecture**:
-1. **Base Predictions Path**: Encoder → [Context, Value, Skill] → Prediction Head → **Base Predictions** → **BCE Loss**
-2. **Incremental Mastery Path**: Values → Learning Gains → Mastery Accumulation → Threshold Mechanism → **Incremental Mastery Predictions** → **Incremental Mastery Loss**
+1. **Base Predictions Path**: Encoder → [Context, Value, Skill] → Prediction Head → **Base Predictions** → **BCE Loss** (primary, weight ≈ 1.0)
+2. **Sigmoid Learning Curve Mastery Path**: 
+   - Attention Values → Learning Gains Estimation
+   - Practice Count Tracking (per student-skill)
+   - Sigmoid Learning Curve: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+   - Threshold Mechanism: `sigmoid((mastery - θ_global) / temperature)` → **Incremental Mastery Predictions** → **Incremental Mastery Loss** (interpretability, weight=0.1)
+
+### Incremental Mastery Loss Mechanism
+
+The Incremental Mastery Loss provides interpretability-driven supervision by comparing ground truth responses (correct/incorrect) with predictions derived from learned mastery trajectories that follow sigmoid learning curves. This mechanism enforces educational constraints while maintaining differentiability for end-to-end training.
+
+**Calculation Pipeline**:
+
+1. **Learning Gains Estimation** (Encoder 2 - Interpretability Path):
+   - The attention mechanism in Encoder 2 learns to output Values that represent raw learning potential per interaction
+   - For each interaction t with skill s: `raw_gain[s,t] = Value_output[t]`
+   - Values are constrained to [0.0, 1.0] via ReLU + sigmoid transformations
+   - The attention head learns which interaction patterns (question difficulty, response correctness, temporal context) produce learning opportunities
+
+2. **Sigmoid Learning Curve Mastery Accumulation**:
+   
+   Mastery evolves following a **sigmoid learning curve** modulated by skill difficulty and student learning velocity:
+   
+   **Learnable Parameters**:
+   - **β_skill[s]**: Skill difficulty parameter (learned, shared across students)
+     - Controls the slope of the sigmoid curve (steepness of learning progression)
+     - Higher β_skill → steeper learning curve (easier to learn, faster mastery growth)
+     - Lower β_skill → flatter curve (harder to learn, slower mastery growth)
+     - Range: β_skill ∈ (0, ∞), typically initialized around 1.0
+   
+   - **γ_student[i]**: Student learning velocity parameter (learned per student)
+     - Modulates how quickly a student progresses through the learning curve
+     - Higher γ_student → faster learner (reaches saturation with fewer interactions)
+     - Lower γ_student → slower learner (requires more practice to reach saturation)
+     - Range: γ_student ∈ (0, ∞), typically initialized around 1.0
+   
+   - **M_sat[s]**: Saturation mastery level per skill (learned parameter)
+     - Maximum achievable mastery level for each skill after infinite practice
+     - Some skills may have M_sat < 1.0 (inherently difficult, never fully mastered)
+     - Other skills may have M_sat ≈ 1.0 (fully masterable with sufficient practice)
+     - Range: M_sat[s] ∈ [0.0, 1.0]
+   
+   **Practice Count**:
+   ```
+   practice_count[i, s, t] = Σ(k=1 to t) 𝟙[question[k] targets skill s]
+   ```
+   Number of times student i has practiced skill s up to timestep t.
+   
+   **Sigmoid Learning Curve Formula**:
+   ```
+   mastery[i, s, t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i, s, t] - offset)
+   ```
+   
+   Where:
+   - `offset` is a learnable parameter controlling the inflection point of the curve
+   - `sigmoid(x) = 1 / (1 + exp(-x))`
+   
+   **Learning Curve Phases**:
+   
+   1. **Initial Phase** (practice_count ≈ 0):
+      - Mastery ≈ 0 (no learning yet)
+      - Early practice produces minimal mastery increments
+      - Corresponds to "warm-up" or familiarization period
+   
+   2. **Growth Phase** (intermediate practice_count):
+      - Mastery increases with learnable slope β_skill × γ_student
+      - Rate of learning depends on:
+        - **Skill difficulty** (β_skill): Easier skills → faster growth
+        - **Student ability** (γ_student): Faster learners → steeper slope
+      - This is the most effective learning period
+   
+   3. **Saturation Phase** (high practice_count):
+      - Mastery approaches M_sat[s] asymptotically
+      - Additional practice produces diminishing returns
+      - Corresponds to skill consolidation and maintenance
+   
+   **Effective Learning Gain** (implicit in sigmoid curve):
+   ```
+   effective_gain[i, s, t] = mastery[i, s, t] - mastery[i, s, t-1]
+   ```
+   - Not explicitly computed, but emerges from sigmoid curve dynamics
+   - Automatically captures: slow start → rapid growth → saturation
+   - Modulated by raw_gain[s,t] from attention (practice quality factor)
+   
+   **Monotonicity Guarantee**: 
+   - Sigmoid function ensures mastery never decreases (practice_count only increases)
+   - Knowledge retention enforced by design
+
+3. **Threshold-Based Performance Prediction**:
+   
+   The model learns a **global threshold parameter** θ_global (shared across all skills and students):
+   
+   **Mastery-to-Prediction Mapping**:
+   ```
+   incremental_mastery_prediction[i, s, t] = sigmoid((mastery[i, s, t] - θ_global) / temperature)
+   ```
+   
+   - **θ_global**: Learnable threshold (scalar parameter)
+     - Defines the mastery level required for correct performance
+     - Same threshold applied to all skills and students (simplification)
+     - Typically θ_global ∈ [0.3, 0.7] after training
+   
+   - **Temperature**: Prediction sharpness parameter
+     - **Implementation**: Config parameter (hybrid approach)
+     - Controls steepness of mastery-to-prediction mapping
+     - Lower temperature (e.g., 0.5): Sharper sigmoid, more decisive predictions
+     - Higher temperature (e.g., 2.0): Smoother sigmoid, more gradual transitions
+     - Default: 1.0 (standard sigmoid steepness)
+     - **Rationale**: Start with config parameter for easier debugging and interpretation
+       - Sufficient learnable parameters already (β_skill, γ_student, M_sat, θ_global, offset)
+       - Can be tuned via hyperparameter search
+       - Can upgrade to learnable parameter later if experiments show benefit
+       - Consistent with other hyperparameters (learning rate, dropout)
+   
+   **Interpretation**:
+   - If `mastery[i, s, t] > θ_global`: Student likely to answer correctly (prediction → 1.0)
+   - If `mastery[i, s, t] < θ_global`: Student likely to answer incorrectly (prediction → 0.0)
+   - Skill is "mastered" when `M_sat[s] > θ_global` (saturation level exceeds threshold)
+   
+   **Educational Logic**:
+   - Skills with low saturation (M_sat[s] < θ_global) remain challenging even after extensive practice
+   - Skills with high saturation (M_sat[s] > θ_global) become reliably correct once sufficient practice occurs
+   - Students with high γ_student reach mastery threshold faster (fewer interactions needed)
+   - Skills with high β_skill have steeper learning curves (faster mastery growth per interaction)
+
+4. **Loss Computation**:
+   ```
+   incremental_mastery_loss = BCE(incremental_mastery_predictions, ground_truth_responses)
+   ```
+   - Binary cross-entropy between sigmoid-based predictions and true responses (1=correct, 0=incorrect)
+   - Backpropagation through this loss updates:
+     - **Encoder 2 attention weights**: Learn to produce better raw learning gain estimates
+     - **β_skill[s]**: Calibrate learning curve slope per skill (skill difficulty)
+     - **γ_student[i]**: Calibrate learning velocity per student (individual ability)
+     - **M_sat[s]**: Learn maximum achievable mastery per skill (skill complexity)
+     - **θ_global**: Calibrate performance threshold (global mastery-to-correctness boundary)
+     - **offset**: Adjust inflection point of sigmoid curve (when learning accelerates)
+   - Loss weight: 0.1 (balances with primary BCE loss on Base Predictions)
+
+**Educational Semantics**:
+- **Raw Learning Gains**: Attention-derived estimates of learning opportunity per interaction
+- **Practice Count**: Number of interactions with each skill (drives sigmoid curve progression)
+- **Mastery Trajectories**: Sigmoid curves tracking skill competence evolution (automatic acceleration → saturation)
+- **Skill Difficulty** (β_skill): Controls learning curve steepness (easier skills → faster mastery growth)
+- **Student Learning Velocity** (γ_student): Modulates progression speed (faster learners → fewer interactions to mastery)
+- **Saturation Level** (M_sat): Maximum achievable mastery per skill (skill complexity ceiling)
+- **Global Threshold** (θ_global): Mastery level required for correct performance (decision boundary)
+
+**Key Properties**:
+- **Sigmoid Learning Dynamics**: Automatic progression through slow-start → growth → saturation phases
+- **Monotonicity**: Mastery never decreases (sigmoid curve with monotonic input: practice_count)
+- **Boundedness**: Mastery ∈ [0, M_sat[s]] ⊆ [0.0, 1.0] (normalized scale with skill-specific ceiling)
+- **Differentiability**: Entire pipeline supports gradient flow (end-to-end training)
+- **Interpretability**: All parameters have clear educational meaning:
+  - β_skill: How quickly skill can be learned
+  - γ_student: How fast student learns
+  - M_sat: How masterable the skill is
+  - θ_global: What mastery level indicates competence
+- **Personalization**: Student-specific learning velocity (γ_student) adapts to individual abilities
+- **Realistic Learning Dynamics**: Captures educational phenomena:
+  - Initial practice may show little progress (warm-up phase)
+  - Mid-stage practice shows rapid improvement (growth phase)
+  - Advanced practice shows diminishing returns (saturation phase)
 
 **Architecture Notes**:
 - ✅ **Dual Predictions**: TWO independent prediction branches (base + incremental mastery)
-- ✅ **Mastery Accumulation**: ACTIVE (`use_mastery_head=true`) - Recursive tracking of skill mastery with learnable thresholds
-- ✅ **Learning Gains Computation**: ACTIVE - Computed from Values to update mastery (internal use only)
-- ✅ **Incremental Mastery Predictions**: ACTIVE - Separate predictions from threshold mechanism (sigmoid((mastery - threshold) / temperature))
-- ✅ **Base Predictions**: ACTIVE - Standard predictions from concatenation head (NOT overridden)
+- ✅ **Sigmoid Learning Curve Mastery**: ACTIVE - Mastery evolves via sigmoid curve driven by practice count
+  - Learnable parameters: β_skill[s] (skill difficulty), γ_student[i] (learning velocity), M_sat[s] (saturation level)
+  - Global learnable threshold: θ_global (mastery-to-performance boundary)
+  - Formula: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+- ✅ **Learning Gains Computation**: ACTIVE - Computed from Values via attention mechanism (internal use only)
+- ✅ **Incremental Mastery Predictions**: ACTIVE - Threshold-based predictions from sigmoid learning curves
+  - Formula: `sigmoid((mastery - θ_global) / temperature)` where temperature=1.0 (config parameter)
+- ✅ **Base Predictions**: ACTIVE - Standard predictions from concatenation head [context, value, skill] → MLP
 - ✅ **Dual Loss Functions**: 
-  - BCE Loss on Base Predictions (standard)
-  - Incremental Mastery Loss on Threshold Predictions (weight=0.1, new)
+  - BCE Loss on Base Predictions (standard, weight ≈ 1.0)
+  - Incremental Mastery Loss on Threshold Predictions (weight=0.1, interpretability-driven)
+- ✅ **Temperature Parameter**: Config-based (threshold_temperature=1.0) - controls prediction sharpness
+  - Hybrid approach: Start with config parameter, can upgrade to learnable later if needed
 - ❌ **Constraint Losses**: **COMMENTED OUT** (all weights=0.0, code preserved) - Non-negative, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity, Consistency
 - ❌ **Semantic Module Losses**: **COMMENTED OUT** (all disabled, code preserved) - Alignment, Global Alignment, Retention, Lag Gains
 - ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`) - Gains not exposed in model output
 - ❌ **Gains D-dimensional Output**: DEACTIVATED - `projected_gains_d` not included in output
 - ❌ **Attention-Derived Gains** (intrinsic_gain_attention mode): DEACTIVATED (all related code commented out)
 
-**Result**: The model produces two independent predictions: (1) Base predictions from the standard prediction head for primary BCE loss, and (2) Incremental mastery predictions from the threshold mechanism for interpretability-driven mastery loss. Mastery and base predictions are included in output, gains remain internal. **SIMPLIFIED ARCHITECTURE**: All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
+**Result**: The model produces two independent predictions: (1) Base predictions from the standard prediction head for primary BCE loss, and (2) Incremental mastery predictions from sigmoid learning curves via threshold mechanism for interpretability-driven mastery loss. The sigmoid curves automatically capture three learning phases (warm-up, growth, saturation) with learnable skill-specific and student-specific parameters. Mastery and base predictions are included in output, gains remain internal. **SIMPLIFIED ARCHITECTURE**: All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
 
 ## Architecture
 
@@ -68,7 +239,10 @@ The diagram below illustrates the **complete architecture** inherited from GainA
 - **Double-border boxes** (`[[...]]`): **Input/Output data** (tensors, embeddings, intermediate representations) - white background with dark borders
 - **Single-border boxes** (`[...]`): **Processing operations** (embeddings tables, transformations, neural network layers)
 - **Green components**: Core augmented architecture (Skill Embedding, Dynamic Value Stream, Auxiliary Losses, Monitoring)
-- **Blue components**: Recursive Mastery Accumulation (deterministic temporal constraint: mastery_{t+1} = mastery_t + α·gain_t where gain_t comes from Value stream) - **ACTIVE**
+- **Blue components**: Sigmoid Learning Curve Mastery Accumulation - **ACTIVE**
+  - Practice count-driven sigmoid curves: mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
+  - Learnable parameters: β_skill (skill difficulty), γ_student (student velocity), M_sat (saturation), θ_global (threshold), offset (inflection point)
+  - Three automatic learning phases: Initial (warm-up) → Growth (rapid learning) → Saturation (consolidation)
 - **Orange components**: Semantic modules (Alignment, Global Alignment, Retention, Lag Gains) that enable interpretability recovery
 - **Red components with ⚠️**: Features with restricted output visibility
   - **Gains Output** (use_gain_head=false) - Computed internally for mastery but NOT exposed in model output
@@ -76,9 +250,14 @@ The diagram below illustrates the **complete architecture** inherited from GainA
 - **Circles (Hubs)**: Convergence/distribution points where multiple data flows aggregate and route to multiple outputs
 
 **Key Architectural Note**: 
-- **Mastery Accumulation**: ✅ FULLY ACTIVE (`use_mastery_head=true`) - Gains computed from Values, accumulated into mastery, used for threshold predictions, mastery included in output
-- **Gains Head**: ⚠️ OUTPUT SUPPRESSED (`use_gain_head=false`) - Gains computed internally for mastery accumulation but NOT included in model output (lines 479-482)
-- **Data Flow**: Values → ReLU → Aggregated Gains → Mastery Accumulation (recursive) → Threshold Predictions → Output (predictions + mastery only)
+- **Sigmoid Learning Curve Mastery**: ✅ FULLY ACTIVE (`use_mastery_head=true`) - Mastery evolves via sigmoid curves driven by practice count
+  - Learnable parameters per skill: β_skill (difficulty), M_sat (saturation level)
+  - Learnable parameters per student: γ_student (learning velocity)
+  - Global learnable threshold: θ_global (mastery-to-performance mapping)
+  - Config parameter: threshold_temperature=1.0 (prediction sharpness control)
+- **Gains Head**: ⚠️ OUTPUT SUPPRESSED (`use_gain_head=false`) - Gains computed internally from attention Values but NOT included in model output (lines 479-482)
+- **Data Flow**: Values (from attention) → Learning Gains → Practice Count Tracking → Sigmoid Learning Curve → Mastery Evolution → Threshold Predictions → Output (predictions + mastery only)
+- **Three Learning Phases**: Automatically captured by sigmoid curve (warm-up → growth → saturation)
 
 
 **🔄 DUAL-ENCODER ARCHITECTURE (PROPOSED 2025-11-15)**: Complete separation of predictive and interpretability pathways via two independent encoder stacks:
@@ -177,7 +356,7 @@ graph TD
             Clamp_Op["Clamp[0,1]"]
             
             Mastery_Current[["Mastery_t"]]
-            Projected_Mastery[["Projected Mastery<br/>[B, L, num_c]<br/>✅ Interpretability Output"]]
+            Projected_Mastery[["Incremental Mastery Levels<br/>[B, L, num_c]<br/>✅ Interpretability Output"]]
             
             Mastery_Current -.->|"temporal<br/>persistence"| Mastery_Prev
         end
@@ -360,17 +539,22 @@ graph TD
 
 **What's ACTIVE** (actually executed):
 - ✅ **Dual-Stream Encoder**: Context and Value streams through transformer blocks
-- ✅ **Learning Gains Computation**: ReLU(Values) → aggregated to scalar → expanded per-skill
-- ✅ **Recursive Mastery Accumulation**: For t in 1..seq_len: mastery[skill,t] = mastery[skill,t-1] + α × gain[t]
+- ✅ **Learning Gains Estimation**: Attention mechanism outputs Values representing raw learning potential
+- ✅ **Practice Count Tracking**: Per-student-skill interaction counting drives sigmoid curve progression
+- ✅ **Sigmoid Learning Curve Mastery**: Mastery evolves via practice count-driven sigmoid curves
+  - Formula: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+  - Learnable parameters: β_skill[s] (skill difficulty), γ_student[i] (learning velocity), M_sat[s] (saturation level), θ_global (threshold), offset (inflection point)
+  - Automatic three-phase learning: Initial (warm-up) → Growth (rapid learning) → Saturation (consolidation)
 - ✅ **Dual-Prediction Architecture**: TWO independent prediction outputs:
   - **Base Predictions**: From standard prediction head [context, value, skill] → MLP → sigmoid
-  - **Incremental Mastery Predictions**: From threshold mechanism sigmoid((mastery - learnable_threshold) / temperature)
-- ✅ **Mastery Output**: `projected_mastery` included in model output dictionary
+  - **Incremental Mastery Predictions**: From sigmoid curves via threshold mechanism `sigmoid((mastery - θ_global) / temperature)`
+- ✅ **Temperature Parameter**: Config-based (threshold_temperature=1.0, hybrid approach) - controls prediction sharpness
+- ✅ **Mastery Output**: `projected_mastery` (sigmoid learning curves per skill) included in model output dictionary
 - ✅ **Base Predictions Output**: `predictions` from prediction head in model output dictionary
 - ✅ **Incremental Mastery Predictions Output**: `incremental_mastery_predictions` from threshold mechanism in output dictionary
 - ✅ **Dual Loss Functions (SIMPLIFIED 2025-11-15)**:
-  - **BCE Loss**: Binary cross-entropy on **base predictions** vs ground truth (primary loss)
-  - **Incremental Mastery Loss**: Binary cross-entropy on **incremental mastery predictions** vs ground truth (weight=0.1)
+  - **BCE Loss**: Binary cross-entropy on **base predictions** vs ground truth (primary loss, weight ≈ 1.0)
+  - **Incremental Mastery Loss**: Binary cross-entropy on **incremental mastery predictions** vs ground truth (interpretability loss, weight=0.1)
 - ❌ **Constraint Losses**: ALL COMMENTED OUT - `compute_interpretability_loss()` returns 0.0 (all weights=0.0):
   - Monotonicity Loss (weight=0.0) - ❌ COMMENTED OUT
   - Mastery-Performance Loss (weight=0.0) - ❌ COMMENTED OUT
@@ -399,18 +583,23 @@ logits = self.prediction_head(concatenated).squeeze(-1)
 predictions = torch.sigmoid(logits)  # Base predictions - NOT overridden
 
 if self.use_mastery_head:  # Currently true
-    # Compute learning gains from Values
-    learning_gains_d = torch.relu(value_seq)
-    aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)
-    projected_gains = torch.sigmoid(aggregated_gains).expand(-1, -1, self.num_c)
+    # Track practice count per student-skill pair
+    practice_count = torch.zeros(batch_size, num_c, device=q.device)
+    for t in range(seq_len):
+        skill_idx = q[t]
+        practice_count[:, skill_idx] += 1
     
-    # Recursive mastery accumulation
-    for t in range(1, seq_len):
-        # Update mastery for practiced skill
-        ...
+    # Compute mastery using sigmoid learning curve
+    # mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
+    sigmoid_input = (self.beta_skill.unsqueeze(0).unsqueeze(0) * 
+                    self.gamma_student.unsqueeze(1).unsqueeze(2) * 
+                    practice_count.unsqueeze(1) - 
+                    self.offset)
+    mastery = self.M_sat.unsqueeze(0).unsqueeze(0) * torch.sigmoid(sigmoid_input)
     
-    # Incremental mastery predictions (SEPARATE from base predictions)
-    incremental_mastery_predictions = sigmoid((mastery - threshold) / temperature)
+    # Incremental mastery predictions via threshold mechanism (SEPARATE from base predictions)
+    threshold_diff = (mastery - self.theta_global) / self.threshold_temperature  # temperature from config
+    incremental_mastery_predictions = torch.sigmoid(threshold_diff)
     # NOTE: Does NOT override predictions - both coexist for dual loss
 ```
 
@@ -436,7 +625,7 @@ if incremental_mastery_predictions is not None:
     )
 ```
 
-**Result**: The model produces TWO independent predictions and computes TWO losses. Base predictions train the standard prediction head, while incremental mastery predictions provide interpretability-driven supervision on the mastery evolution. Gains remain internal.
+**Result**: The model produces TWO independent predictions and computes TWO losses. Base predictions train the standard prediction head for performance, while incremental mastery predictions (derived from sigmoid learning curves) provide interpretability-driven supervision on mastery evolution. The sigmoid curves automatically capture three learning phases (warm-up, growth, saturation) with learnable skill difficulty (β_skill), student learning velocity (γ_student), and saturation levels (M_sat). Temperature parameter (config-based, default=1.0) controls prediction sharpness.
 
 ---
 
@@ -866,39 +1055,48 @@ sequenceDiagram
 
 ### Context Stream (h) - 3 Destinations:
 1. **→ Prediction Head**: Concatenated with value and skill embeddings for response prediction
-2. **→ Mastery Head**: Provides initial mastery estimate (refined by recursive accumulation)
+2. **→ Mastery Computation**: Provides contextual information (not directly used in current sigmoid curve implementation)
 3. **→ Output/Monitor**: Returned for monitoring and analysis
 
 ### Value Stream (v) - 3 Destinations (GainAKT3Exp Core Innovation):
-**Values ARE learning gains** - each interaction's Value output directly represents the learning gain for that (skill, response) tuple.
+**Values encode raw learning potential** - each interaction's Value output represents potential learning gain for that (skill, response) tuple.
 
 1. **→ Prediction Head**: Concatenated with context and skill embeddings for response prediction
-2. **→ Recursive Mastery Accumulation**: **Direct flow as learning gains**
-   - Each Value output represents: "How much did the student learn from this interaction?"
-   - For the skill associated with each question: `mastery[skill, t] = mastery[skill, t-1] + α × ReLU(value[t])`
-   - Scaling factor α = 0.1 ensures bounded increments
-   - ReLU ensures non-negative gains (no knowledge loss)
-   - Mastery clamped to [0, 1] range (normalized competence)
+2. **→ Sigmoid Learning Curve Mastery**: **Direct flow as learning gain estimates**
+   - Each Value output represents: "What is the learning potential from this interaction?"
+   - Practice count tracking: Number of times each student practiced each skill
+   - Sigmoid learning curve: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+   - Learnable parameters modulate curve shape:
+     - β_skill[s]: Skill difficulty (curve steepness)
+     - γ_student[i]: Student learning velocity (progression speed)
+     - M_sat[s]: Maximum achievable mastery (saturation level)
+   - Automatic three-phase learning: Initial (warm-up) → Growth (rapid) → Saturation (consolidation)
 3. **→ Output/Monitor**: Returned for monitoring and analysis
 
-**Educational Semantics**: The transformer learns to output Values that encode meaningful learning gains per interaction. When a student interacts with a question (targeting specific skill) and provides a response (correct/incorrect), the Value output quantifies the learning gain from that experience.
+**Educational Semantics**: The transformer learns to output Values that encode learning potential. Combined with practice count tracking and learnable skill/student parameters, the sigmoid learning curve captures realistic learning dynamics: slow initial progress, rapid mid-stage improvement, and eventual saturation.
 
 ### Loss Computation Sources:
 Interpretability losses receive inputs from multiple stages:
 - **predictions**: From Prediction Head (sigmoid outputs)
-- **projected_mastery**: From Recursive Accumulation (mastery trajectory across timesteps)
-- **learning_gains**: Directly from Value stream (per-interaction learning)
+- **projected_mastery**: From Sigmoid Learning Curves (mastery trajectories following practice-driven sigmoid curves)
+- **learning_gains**: Estimated from Value stream (raw learning potential per interaction)
 - **responses (r)**: Ground truth from input (for performance alignment)
-- **questions (q)**: Input questions (for Q-matrix skill masks)
+- **questions (q)**: Input questions (for Q-matrix skill masks and practice count tracking)
 
-**Recursive Accumulation**: The key architectural principle where Values directly flow into mastery computation:
+**Sigmoid Learning Curve Mastery**: The key architectural principle where practice count drives sigmoid curve progression:
 ```
-For each interaction t with skill s:
-  learning_gain[t] = ReLU(value[t])  # Non-negative learning
-  mastery[s, t] = clamp(mastery[s, t-1] + α × learning_gain[t], min=0, max=1)
+# Track practice count per student-skill pair
+practice_count[i, s, t] = Σ(k=1 to t) 𝟙[question[k] targets skill s]
+
+# Compute mastery via sigmoid learning curve
+sigmoid_input = β_skill[s] × γ_student[i] × practice_count[i, s, t] - offset
+mastery[i, s, t] = M_sat[s] × sigmoid(sigmoid_input)
+
+# Threshold-based prediction
+incremental_mastery_prediction[i, s, t] = sigmoid((mastery[i, s, t] - θ_global) / temperature)
 ```
 
-This direct mapping from Values → Learning Gains → Mastery Accumulation enforces interpretability-by-design and provides educational transparency.
+This practice count-driven sigmoid curve enforces interpretability-by-design and provides educationally-realistic learning dynamics with automatic phase transitions.
 
 
 ## Implementation Summary
@@ -1109,65 +1307,77 @@ Below is a comprehensive analysis of each architectural component's implementati
 **Verification:** The diagram shows "Ground Truth Responses" flowing into "BCE Loss" and monitoring receiving multiple state tensors—implementation provides this via `forward_with_states()` returning all required outputs.
 
 
-### Feature 4: Recursive Mastery Accumulation from Value Stream
+### Feature 4: Sigmoid Learning Curve Mastery from Practice Count
 
-**Expected (from diagram):** Values from encoder directly represent learning gains per interaction. These gains drive recursive accumulation of skill mastery across timesteps.
+**Expected (from diagram):** Mastery evolves via practice count-driven sigmoid curves with learnable skill and student parameters, capturing three automatic learning phases (warm-up, growth, saturation).
 
 **Implementation Status:**
 
-**4a. Mastery Head** (`gainakt3.py` lines 216-217):
+**4a. Practice Count Tracking** (`gainakt3_exp.py`):
 ```python
-if self.use_mastery_head:
-    self.mastery_head = nn.Linear(self.d_model, self.num_c)
-```
-Provides initial mastery estimate from context, used as starting point.
-
-**4b. GainAKT3Exp Core Innovation: Values ARE Learning Gains** (`gainakt3_exp.py` lines 189-205):
-```python
-# GainAKT3Exp: Values directly represent learning gains
-# Each interaction's Value output = how much the student learned from (skill, response) tuple
-learning_gains = torch.relu(value_seq)  # [B, L, D] - Non-negative learning only
-
-# For multi-skill scenarios, values can be mapped to per-skill gains via question mapping
-# (Implementation detail: gains applied to skill associated with each question)
-```
-
-**Key Conceptual Shift**: 
-- **Old interpretation**: "Values are processed via ReLU then projected to gains via gain_head"
-- **Clearer interpretation**: "Values ARE the learning gains—each interaction's Value output directly quantifies the learning contribution"
-- **Educational meaning**: When a student interacts with a question (skill, response), the transformer learns to output a Value that represents: "How much did they learn from this experience?"
-
-**4c. Recursive Mastery Accumulation** (`gainakt3_exp.py` lines 208-217):
-```python
-# Initialize skill mastery tracking
-projected_mastery = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
-
-# For each timestep, increment the mastery of the relevant skill by the learning gain
+# Track how many times each student has practiced each skill
+practice_count = torch.zeros(batch_size, num_c, device=q.device)
 for t in range(seq_len):
-    skill_idx = question[t]  # Which skill this interaction targets
-    learning_gain_t = ReLU(value_seq[t]) * α  # α = 0.1 (scaling factor)
-    
-    if t == 0:
-        mastery[skill_idx, t] = clamp(learning_gain_t, 0, 1)
-    else:
-        mastery[skill_idx, t] = clamp(mastery[skill_idx, t-1] + learning_gain_t, 0, 1)
+    skill_idx = q[t]  # Which skill this interaction targets
+    practice_count[:, skill_idx] += 1  # Increment practice count
+```
+
+**4b. Learnable Parameters for Sigmoid Curves** (`gainakt3_exp.py` initialization):
+```python
+# Per-skill parameters (shared across students)
+self.beta_skill = nn.Parameter(torch.ones(num_c))  # Skill difficulty (curve steepness)
+self.M_sat = nn.Parameter(torch.ones(num_c) * 0.8)  # Saturation level (max mastery)
+
+# Per-student parameters
+self.gamma_student = nn.Parameter(torch.ones(num_students))  # Learning velocity
+
+# Global parameters
+self.theta_global = nn.Parameter(torch.tensor(0.5))  # Performance threshold
+self.offset = nn.Parameter(torch.tensor(3.0))  # Sigmoid inflection point
+
+# Config parameter (hybrid approach)
+self.threshold_temperature = config.get('threshold_temperature', 1.0)  # Prediction sharpness
+```
+
+**4c. Sigmoid Learning Curve Computation** (`gainakt3_exp.py`):
+```python
+# Compute sigmoid learning curve for each student-skill pair
+sigmoid_input = (self.beta_skill.unsqueeze(0).unsqueeze(0) *  # [1, 1, num_c]
+                self.gamma_student.unsqueeze(1).unsqueeze(2) *  # [batch, 1, 1]
+                practice_count.unsqueeze(1) -  # [batch, 1, num_c]
+                self.offset)  # Scalar
+
+mastery = self.M_sat.unsqueeze(0).unsqueeze(0) * torch.sigmoid(sigmoid_input)  # [batch, seq_len, num_c]
+
+# Threshold-based prediction
+threshold_diff = (mastery - self.theta_global) / self.threshold_temperature
+incremental_mastery_predictions = torch.sigmoid(threshold_diff)
 ```
 
 **Architecture Alignment:**
-- **Value Stream Output**: `[B, L, D]` represents learning gains per interaction
-- **Mastery Head**: Provides initial context-based mastery estimate (refined by recursion)
-- **Recursive Update**: For each interaction with skill s: `mastery[s, t] = mastery[s, t-1] + α × ReLU(value[t])`
-- **Output Shapes**: Mastery produces `[B, L, num_c]` tensors tracking per-skill mastery evolution
+- **Practice Count Tracking**: Monotonic counter per student-skill pair drives sigmoid progression
+- **Sigmoid Learning Curve**: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+- **Output Shapes**: Mastery produces `[B, L, num_c]` tensors tracking sigmoid curve evolution per skill
+- **Three Automatic Learning Phases**:
+  1. **Initial Phase** (practice_count ≈ 0): mastery ≈ 0, slow learning (warm-up/familiarization)
+  2. **Growth Phase** (intermediate): rapid mastery increase, slope = β_skill × γ_student (effective learning)
+  3. **Saturation Phase** (high practice_count): mastery → M_sat[s], diminishing returns (consolidation)
 - **Educational Semantics**: 
-  - **Learning Gains**: Value output directly represents knowledge increment from this interaction
-  - **Mastery Trajectory**: Accumulated learning across all interactions with each skill
-  - **Scaling Factor**: α=0.1 bounds individual increments (max +0.1 per interaction)
-  - **Clamping**: Ensures mastery ∈ [0, 1] (normalized competence scale)
-  - **Non-Negativity**: ReLU ensures gains ≥ 0 (no knowledge loss)
+  - **β_skill[s]**: How steep the learning curve is (easier skills → higher β, steeper curves)
+  - **γ_student[i]**: How fast the student learns (faster learners → higher γ, fewer interactions to saturation)
+  - **M_sat[s]**: Maximum achievable mastery (some skills may cap below 1.0, indicating inherent difficulty)
+  - **θ_global**: Mastery level required for correct performance (decision boundary)
+  - **offset**: Controls where rapid learning phase begins (inflection point)
+  - **threshold_temperature**: Config parameter controlling prediction sharpness (default 1.0, hybrid approach)
 
-**Interpretability Guarantee**: The direct mapping from Values → Learning Gains → Mastery Accumulation means the model's internal representations have clear educational meaning. We can inspect any interaction's Value output and understand: "This is how much the student learned." We can trace mastery evolution and understand: "This is the accumulated learning for each skill."
+**Interpretability Guarantee**: The sigmoid learning curve model enforces educationally-realistic learning dynamics by design. We can interpret each parameter:
+- β_skill tells us relative skill difficulty
+- γ_student tells us relative student ability
+- M_sat tells us skill mastérability ceiling
+- Practice count progression shows automatic phase transitions
+- Mastery trajectories follow interpretable sigmoid curves
 
-**Verification:** The architecture enforces that Values ARE learning gains by design—no intermediate projection layer obscures this relationship. The recursive accumulation directly uses these gains to build interpretable mastery trajectories.
+**Verification:** The architecture enforces realistic learning dynamics via practice-driven sigmoid curves with clear educational parameters. No linear accumulation—mastery follows educationally-grounded sigmoid progressions with automatic phase transitions.
 
 
 ### Feature 5: BCE + Auxiliary Loss Functions 
@@ -1418,24 +1628,49 @@ for t in range(seq_len):
 **Verification:** The updated architecture diagram (red components) shows intrinsic mode as conditional bypass of projection heads, with attention-derived gains feeding directly to mastery/gain outputs.
 
 
-### Feature 8: Recursive Mastery Accumulation
+### Feature 8: Sigmoid Learning Curve Mastery
 
-Values are considere4d as Direct Gains
+Practice Count Drives Sigmoid Learning Curves
 ```
-Encoder Values (v) → Direct Gains → Recursive Mastery
-               └──────────────────→ Gain Hub (for losses)
+Practice Count Tracking → Sigmoid Curve Parameters → Mastery Evolution
+                       ↑                              ↓
+                  β_skill, γ_student, M_sat     Threshold Mechanism
 ```
 
-The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic recursive accumulation** mechanism:
+The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic sigmoid learning curve** mechanism:
 
-$$\text{mastery}_{t+1}^{(c)} = \text{mastery}_t^{(c)} + \alpha \cdot \text{ReLU}(\text{gain}_t^{(c)})$$
+$$\text{mastery}^{(i,s,t)} = M_{\text{sat}}^{(s)} \times \sigma\left(\beta_{\text{skill}}^{(s)} \times \gamma_{\text{student}}^{(i)} \times \text{practice\_count}^{(i,s,t)} - \text{offset}\right)$$
 
-This is implemented in the model's forward pass (`gainakt3_exp.py` lines 145, 162):
+Where:
+- **practice_count[i,s,t]**: Number of times student i has practiced skill s up to timestep t (monotonically increasing)
+- **β_skill[s]**: Learnable skill difficulty parameter (controls curve steepness)
+- **γ_student[i]**: Learnable student learning velocity (modulates progression speed)
+- **M_sat[s]**: Learnable saturation level (maximum achievable mastery for skill s)
+- **offset**: Learnable inflection point (controls when rapid learning begins)
+- **σ**: Sigmoid function (ensures bounded, S-shaped learning curves)
+
+This is implemented in the model's forward pass (`gainakt3_exp.py`):
 
 ```python
-accumulated_mastery = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
-projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
+# Track practice count per student-skill
+practice_count = torch.zeros(batch_size, num_c, device=q.device)
+for t in range(seq_len):
+    skill_idx = q[t]
+    practice_count[:, skill_idx] += 1
+
+# Compute sigmoid learning curve
+sigmoid_input = (self.beta_skill * self.gamma_student.unsqueeze(1) * 
+                practice_count - self.offset)
+mastery = self.M_sat * torch.sigmoid(sigmoid_input)
+
+# Threshold-based prediction
+incremental_mastery_predictions = torch.sigmoid((mastery - self.theta_global) / self.threshold_temperature)
 ```
+
+**Three Automatic Learning Phases**:
+1. **Initial Phase**: practice_count ≈ 0 → mastery ≈ 0 (warm-up, minimal gains)
+2. **Growth Phase**: intermediate practice_count → rapid mastery increase (effective learning)
+3. **Saturation Phase**: high practice_count → mastery → M_sat[s] (consolidation, diminishing returns)
 
 ---
 
@@ -1448,7 +1683,7 @@ projected_mastery[:, t, :] = torch.clamp(accumulated_mastery, min=0.0, max=1.0)
 | **Skill Embedding Table**  | Separate embedding for target skills in prediction            | `concept_embedding` used in `[h, v, s]` concatenation                                     | ✅ Activated         |
 | **Dynamic Value Stream**   | Dual context/value sequences, separate norms, Q/K from context, V from value | Dual embeddings + separate `norm1_ctx/val`, `norm2_ctx` + correct attention               | ✅ Activated         |
 | **Ground Truth Integration** | Used in loss calculation + monitoring hooks                  | Integrated in all losses + `set_monitor()` + periodic execution                           | ✅ Activated         |
-| **Projection Heads**       | Mastery (context→skills), Gain (value→skills)                 | `mastery_head`, `gain_head` with recursive accumulation                                   | ✅ Activated + enhanced |
+| **Projection Heads**       | Mastery via sigmoid learning curves, Gains from attention Values | Sigmoid learning curve with learnable parameters (β_skill, γ_student, M_sat, θ_global, offset) | ✅ Activated + enhanced |
 | **Auxiliary Losses**       | 5 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity) | All 5 + Consistency (bonus) with configurable weights                                     | ✅ Activated         |
 | **Monitoring**             | Real-time interpretability analysis, configurable frequency   | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety              | ✅ Activated         |
 | **Intrinsic Gain Attention** | Alternative parameter-efficient mode                        | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ❌ Deactivated       |

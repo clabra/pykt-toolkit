@@ -25,6 +25,7 @@ dropout,0.2,model_config,Dropout rate
 emb_type,qid,model_config,Embedding type (question ID)
 use_mastery_head,true,interpretability,Enable mastery projection head
 use_gain_head,true,interpretability,Enable gain projection head
+threshold_temperature,1.0,interpretability,Sigmoid temperature for mastery-to-prediction mapping
 enhanced_constraints,true,interpretability,Enable enhanced constraint losses
 non_negative_loss_weight,0.0,interpretability,Non-negative gain constraint
 monotonicity_loss_weight,0.1,interpretability,Monotonic mastery constraint

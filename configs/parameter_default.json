@@ -31,7 +31,7 @@
     "use_student_speed": false,
     "num_students": 3055,
     "mastery_threshold_init": 0.85,
-    "threshold_temperature": 0.1,
+    "threshold_temperature": 1.0,
     "enhanced_constraints": false,
     "non_negative_loss_weight": 0.0,
     "monotonicity_loss_weight": 0.0,
@@ -185,5 +185,5 @@
       ]
     }
   },
-  "md5": "f40594c647801319ce904d8308e380b9"
+  "md5": "cbd4b6a2ce8b7429cfda8e1d93068f3f"
 }
