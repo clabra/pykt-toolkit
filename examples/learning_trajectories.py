@@ -51,14 +51,18 @@ def load_model_and_config(run_dir):
         'dropout': defaults['dropout'],
         'emb_type': defaults['emb_type'],
         'num_students': defaults['num_students'],
-        'non_negative_loss_weight': defaults['non_negative_loss_weight'],
-        'monotonicity_loss_weight': defaults['monotonicity_loss_weight'],
-        'mastery_performance_loss_weight': defaults['mastery_performance_loss_weight'],
-        'gain_performance_loss_weight': defaults['gain_performance_loss_weight'],
-        'sparsity_loss_weight': defaults['sparsity_loss_weight'],
-        'consistency_loss_weight': defaults['consistency_loss_weight'],
+        # DEPRECATED (2025-11-16): Constraint loss weights removed in dual-encoder architecture
+        'non_negative_loss_weight': defaults.get('non_negative_loss_weight', 0.0),
+        'monotonicity_loss_weight': defaults.get('monotonicity_loss_weight', 0.0),
+        'mastery_performance_loss_weight': defaults.get('mastery_performance_loss_weight', 0.0),
+        'gain_performance_loss_weight': defaults.get('gain_performance_loss_weight', 0.0),
+        'sparsity_loss_weight': defaults.get('sparsity_loss_weight', 0.0),
+        'consistency_loss_weight': defaults.get('consistency_loss_weight', 0.0),
         'use_mastery_head': defaults['use_mastery_head'],
         'use_gain_head': defaults['use_gain_head'],
+        'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),  # DEPRECATED (2025-11-16)
+        'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
+        'use_student_speed': defaults.get('use_student_speed', False),
         'mastery_threshold_init': defaults['mastery_threshold_init'],
         'threshold_temperature': defaults['threshold_temperature']
     }
@@ -415,6 +419,19 @@ def main():
     # Compute incremental_mastery_loss_weight from bce_loss_weight if needed
     if 'bce_loss_weight' in complete_config and 'incremental_mastery_loss_weight' not in complete_config:
         complete_config['incremental_mastery_loss_weight'] = 1.0 - complete_config['bce_loss_weight']
+    
+    # Add deprecated parameters if missing (2025-11-16)
+    if 'intrinsic_gain_attention' not in complete_config:
+        complete_config['intrinsic_gain_attention'] = False
+    if 'use_skill_difficulty' not in complete_config:
+        complete_config['use_skill_difficulty'] = False
+    if 'use_student_speed' not in complete_config:
+        complete_config['use_student_speed'] = False
+    for loss_param in ['non_negative_loss_weight', 'monotonicity_loss_weight', 
+                       'mastery_performance_loss_weight', 'gain_performance_loss_weight',
+                       'sparsity_loss_weight', 'consistency_loss_weight']:
+        if loss_param not in complete_config:
+            complete_config[loss_param] = 0.0
     
     model = create_exp_model(complete_config)
     

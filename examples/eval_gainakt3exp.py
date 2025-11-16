@@ -208,9 +208,10 @@ def main():
     
     args = parser.parse_args()
     
+    # DEPRECATED (2025-11-16): Intrinsic gain attention validation removed
     # ARCHITECTURAL CONSTRAINT: Intrinsic gain attention and projection heads are mutually exclusive
     # Intrinsic mode uses attention-derived gains; projection heads would be unused (wasting ~2M parameters)
-    if args.intrinsic_gain_attention:
+    if False:  # args.intrinsic_gain_attention DEPRECATED
         if args.use_mastery_head or args.use_gain_head:
             print("=" * 100)
             print("⚠️  WARNING: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
@@ -273,16 +274,17 @@ def main():
         'emb_type': args.emb_type,
         'use_mastery_head': args.use_mastery_head,
         'use_gain_head': args.use_gain_head,
-        'intrinsic_gain_attention': args.intrinsic_gain_attention,
+        'intrinsic_gain_attention': False,  # DEPRECATED (2025-11-16)
         'use_skill_difficulty': args.use_skill_difficulty,
         'use_student_speed': args.use_student_speed,
         'num_students': args.num_students,
-        'non_negative_loss_weight': args.non_negative_loss_weight,
-        'monotonicity_loss_weight': args.monotonicity_loss_weight,
-        'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
-        'gain_performance_loss_weight': args.gain_performance_loss_weight,
-        'sparsity_loss_weight': args.sparsity_loss_weight,
-        'consistency_loss_weight': args.consistency_loss_weight,
+        # DEPRECATED (2025-11-16): Constraint loss weights removed in dual-encoder architecture
+        'non_negative_loss_weight': 0.0,
+        'monotonicity_loss_weight': 0.0,
+        'mastery_performance_loss_weight': 0.0,
+        'gain_performance_loss_weight': 0.0,
+        'sparsity_loss_weight': 0.0,
+        'consistency_loss_weight': 0.0,
         'bce_loss_weight': args.bce_loss_weight,
         'incremental_mastery_loss_weight': 1.0 - args.bce_loss_weight,  # Lambda2 = 1 - Lambda1
         'mastery_threshold_init': args.mastery_threshold_init,
