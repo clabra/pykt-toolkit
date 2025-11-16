@@ -1,0 +1,115 @@
+{
+  "input": {
+    "short_title": "dual-test",
+    "epochs": 1
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title dual-test --epochs 1",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --auto_shifted_eval --batch_size 64 --bce_loss_weight 0.9 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 1 --fold 0 --gradient_clip 1.0 --learning_rate 0.000174 --mastery_threshold_init 0.85 --max_correlation_students 3800 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 4 --num_students 3055 --optimizer Adam --patience 4 --seed 42 --seq_len 200 --threshold_temperature 1.0 --use_mastery_head --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251116_161535_gainakt3exp_dual-test_852785 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --num_students 3055 --monitor_freq 50 --use_mastery_head",
+    "learning_trajectories": "/home/vscode/.pykt-env/bin/python examples/learning_trajectories.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251116_161535_gainakt3exp_dual-test_852785 --num_students 10 --min_steps 10",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 852785"
+  },
+  "experiment": {
+    "id": "20251116_161535_gainakt3exp_dual-test_852785",
+    "short_title": "dual-test",
+    "experiment_id": "852785",
+    "created": "20251116_161535"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "seed": 42,
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "max_correlation_students": 3800,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "bce_loss_weight": 0.9,
+    "mastery_threshold_init": 0.85,
+    "threshold_temperature": 1.0,
+    "num_students": 3055,
+    "dataset": "assist2015",
+    "fold": 0,
+    "train_script": "examples/train_gainakt3exp.py",
+    "eval_script": "examples/eval_gainakt3exp.py",
+    "model": "gainakt3exp"
+  },
+  "overrides": {
+    "epochs": 1
+  },
+  "types": {
+    "launcher": [
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval",
+      "max_correlation_students"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "interpretability": [
+      "use_mastery_head",
+      "use_gain_head",
+      "use_skill_difficulty",
+      "use_student_speed",
+      "bce_loss_weight",
+      "mastery_threshold_init",
+      "threshold_temperature",
+      "num_students"
+    ],
+    "legacy": [
+      "model",
+      "enhanced_constraints"
+    ]
+  },
+  "md5": "9b25e22be5887cc6f218b7d37fcb57d5",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}

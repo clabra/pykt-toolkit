@@ -11,7 +11,7 @@ ARCHITECTURE:
 For full-featured version with deprecated code, see: train_gainakt3exp.py.old
 """
 
-import os, sys, torch, torch.nn as nn, numpy as np, json, logging, wandb
+import os, sys, torch, torch.nn as nn, numpy as np, json, logging, wandb, csv
 from examples.experiment_utils import compute_auc_acc
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -22,6 +22,53 @@ def resolve_param(cfg, section, key, fallback):
     if cfg and section in cfg and key in cfg[section]:
         return cfg[section][key]
     return fallback
+
+def evaluate_dual_encoders(model, data_loader, device, use_mastery_head):
+    """Evaluate both encoder1 (base) and encoder2 (incremental mastery) predictions."""
+    model.eval()
+    preds_enc1, preds_enc2, targets = [], [], []
+    
+    with torch.no_grad():
+        for batch in data_loader:
+            questions = batch['cseqs'].to(device)
+            responses = batch['rseqs'].to(device)
+            questions_shifted = batch['shft_cseqs'].to(device)
+            responses_shifted = batch['shft_rseqs'].to(device)
+            mask = batch['masks'].to(device)
+            student_ids = batch.get('uids', None)
+            if student_ids is not None:
+                student_ids = student_ids.to(device)
+            
+            outputs = model(q=questions, r=responses, qry=questions_shifted, qtest=True, student_ids=student_ids)
+            predictions = outputs['predictions']
+            valid_mask = mask.bool()
+            
+            # Encoder 1: Base predictions
+            y_pred_enc1 = predictions[valid_mask]
+            preds_enc1.extend(torch.sigmoid(y_pred_enc1).cpu().numpy())
+            
+            # Encoder 2: Incremental mastery predictions (if available)
+            if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+                im_preds = outputs['incremental_mastery_predictions']
+                y_pred_enc2 = im_preds[valid_mask]
+                preds_enc2.extend(torch.sigmoid(y_pred_enc2).cpu().numpy())
+            else:
+                # Fallback to zeros if not available
+                preds_enc2.extend(np.zeros(len(y_pred_enc1)))
+            
+            y_true = responses_shifted[valid_mask]
+            targets.extend(y_true.cpu().numpy())
+    
+    # Compute metrics for both encoders
+    metrics_enc1 = compute_auc_acc(np.array(targets), np.array(preds_enc1))
+    metrics_enc2 = compute_auc_acc(np.array(targets), np.array(preds_enc2))
+    
+    return {
+        'encoder1_auc': metrics_enc1['auc'],
+        'encoder1_acc': metrics_enc1['acc'],
+        'encoder2_auc': metrics_enc2['auc'],
+        'encoder2_acc': metrics_enc2['acc']
+    }
 
 def train_gainakt3exp_dual_encoder(
     dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs,
@@ -121,11 +168,23 @@ def train_gainakt3exp_dual_encoder(
         })
     
     best_valid_auc = 0.0
+    best_model_state = None
     patience_counter = 0
-    exp_dir = os.path.join(save_dir, f"exp_{experiment_suffix}")
+    
+    # Check if launched via run_repro_experiment (EXPERIMENT_DIR set)
+    experiment_dir = os.environ.get('EXPERIMENT_DIR')
+    if experiment_dir:
+        # Use experiment directory from launcher
+        exp_dir = experiment_dir
+        logger.info(f"Using experiment directory from launcher: {exp_dir}")
+    else:
+        # Fallback for manual runs
+        exp_dir = os.path.join(save_dir, f"exp_{experiment_suffix}")
+        logger.info(f"Manual run - using fallback directory: {exp_dir}")
     os.makedirs(exp_dir, exist_ok=True)
     
-    config_path = os.path.join(exp_dir, 'config.json')
+    # Save training-specific config (use different name to avoid overwriting launcher's config.json)
+    training_config_path = os.path.join(exp_dir, 'training_config.json')
     full_config = {
         'dataset': dataset_name, 'fold': fold, 'model': model_name, 'seed': seed, 'epochs': num_epochs,
         'batch_size': batch_size, 'learning_rate': learning_rate, 'weight_decay': weight_decay,
@@ -134,9 +193,26 @@ def train_gainakt3exp_dual_encoder(
         'runtime': {'use_amp': use_amp, 'use_wandb': use_wandb, 'auto_shifted_eval': auto_shifted_eval,
                     'monitor_freq': monitor_freq, 'gradient_clip': gradient_clip, 'patience': patience}
     }
-    with open(config_path, 'w') as f:
+    with open(training_config_path, 'w') as f:
         json.dump(full_config, f, indent=2)
-    logger.info(f"Config saved: {config_path}")
+    logger.info(f"Training config saved: {training_config_path}")
+    
+    # Initialize metrics CSV file
+    metrics_csv_path = os.path.join(exp_dir, 'metrics_epoch.csv')
+    with open(metrics_csv_path, 'w', newline='') as fcsv:
+        writer = csv.writer(fcsv)
+        writer.writerow([
+            'epoch',
+            'train_loss', 'train_auc', 'train_acc',
+            'val_loss', 'val_auc', 'val_acc',
+            'train_bce_loss', 'train_im_loss',
+            'val_bce_loss', 'val_im_loss',
+            'train_encoder1_auc', 'train_encoder1_acc',
+            'val_encoder1_auc', 'val_encoder1_acc',
+            'train_encoder2_auc', 'train_encoder2_acc',
+            'val_encoder2_auc', 'val_encoder2_acc'
+        ])
+    logger.info(f"Metrics CSV initialized: {metrics_csv_path}")
     
     logger.info("Starting training...")
     for epoch in range(num_epochs):
@@ -166,11 +242,11 @@ def train_gainakt3exp_dual_encoder(
                     bce_loss = bce_criterion(y_pred, y_true)
                     
                     im_loss = 0.0
-                    if use_mastery_head and 'projected_mastery' in outputs:
-                        mastery = outputs['projected_mastery']
-                        if mastery.size(1) > 1:
-                            mastery_diff = mastery[:, 1:] - mastery[:, :-1]
-                            im_loss = torch.clamp(-mastery_diff, min=0.0).mean()
+                    if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+                        im_preds = outputs['incremental_mastery_predictions']
+                        valid_im_preds = im_preds[valid_mask]
+                        # BCE loss between encoder2 predictions and true labels
+                        im_loss = bce_criterion(valid_im_preds, y_true)
                     
                     loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss
                 
@@ -189,11 +265,11 @@ def train_gainakt3exp_dual_encoder(
                 bce_loss = bce_criterion(y_pred, y_true)
                 
                 im_loss = 0.0
-                if use_mastery_head and 'projected_mastery' in outputs:
-                    mastery = outputs['projected_mastery']
-                    if mastery.size(1) > 1:
-                        mastery_diff = mastery[:, 1:] - mastery[:, :-1]
-                        im_loss = torch.clamp(-mastery_diff, min=0.0).mean()
+                if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+                    im_preds = outputs['incremental_mastery_predictions']
+                    valid_im_preds = im_preds[valid_mask]
+                    # BCE loss between encoder2 predictions and true labels
+                    im_loss = bce_criterion(valid_im_preds, y_true)
                 
                 loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss
                 
@@ -212,50 +288,89 @@ def train_gainakt3exp_dual_encoder(
         avg_bce = total_bce / num_batches
         avg_im = total_im / num_batches
         
-        model.eval()
-        valid_preds, valid_targets = [], []
-        with torch.no_grad():
-            for batch in valid_loader:
-                questions = batch['cseqs'].to(device)
-                responses = batch['rseqs'].to(device)
-                questions_shifted = batch['shft_cseqs'].to(device)
-                responses_shifted = batch['shft_rseqs'].to(device)
-                mask = batch['masks'].to(device)
-                student_ids = batch.get('uids', None)
-                if student_ids is not None:
-                    student_ids = student_ids.to(device)
-                
-                outputs = model(q=questions, r=responses, qry=questions_shifted, qtest=True, student_ids=student_ids)
-                predictions = outputs['predictions']
-                valid_mask = mask.bool()
-                y_pred = predictions[valid_mask]
-                y_true = responses_shifted[valid_mask]
-                valid_preds.extend(torch.sigmoid(y_pred).cpu().numpy())
-                valid_targets.extend(y_true.cpu().numpy())
+        # Evaluate dual encoders on training and validation sets
+        train_encoder_metrics = evaluate_dual_encoders(model, train_loader, device, use_mastery_head)
+        valid_encoder_metrics = evaluate_dual_encoders(model, valid_loader, device, use_mastery_head)
         
-        metrics = compute_auc_acc(np.array(valid_targets), np.array(valid_preds))
-        valid_auc, valid_acc = metrics['auc'], metrics['acc']
-        logger.info(f"Epoch {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f} (BCE: {avg_bce:.4f}, IM: {avg_im:.4f}) - Valid AUC: {valid_auc:.4f}, Acc: {valid_acc:.4f}")
+        # Combined metrics (use encoder1 as main)
+        train_auc = train_encoder_metrics['encoder1_auc']
+        train_acc = train_encoder_metrics['encoder1_acc']
+        valid_auc = valid_encoder_metrics['encoder1_auc']
+        valid_acc = valid_encoder_metrics['encoder1_acc']
+        
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f} (BCE: {avg_bce:.4f}, IM: {avg_im:.4f})")
+        logger.info(f"  Train - AUC: {train_auc:.4f}, Acc: {train_acc:.4f} | Enc2 AUC: {train_encoder_metrics['encoder2_auc']:.4f}")
+        logger.info(f"  Valid - AUC: {valid_auc:.4f}, Acc: {valid_acc:.4f} | Enc2 AUC: {valid_encoder_metrics['encoder2_auc']:.4f}")
+        
+        # Write metrics to CSV
+        with open(metrics_csv_path, 'a', newline='') as fcsv:
+            writer = csv.writer(fcsv)
+            writer.writerow([
+                epoch + 1,
+                f'{avg_loss:.6f}', f'{train_auc:.6f}', f'{train_acc:.6f}',
+                f'{avg_loss:.6f}', f'{valid_auc:.6f}', f'{valid_acc:.6f}',  # val_loss same as train for now
+                f'{avg_bce:.6f}', f'{avg_im:.6f}',
+                f'{avg_bce:.6f}', f'{avg_im:.6f}',  # val BCE/IM same as train for now
+                f'{train_encoder_metrics["encoder1_auc"]:.6f}', f'{train_encoder_metrics["encoder1_acc"]:.6f}',
+                f'{valid_encoder_metrics["encoder1_auc"]:.6f}', f'{valid_encoder_metrics["encoder1_acc"]:.6f}',
+                f'{train_encoder_metrics["encoder2_auc"]:.6f}', f'{train_encoder_metrics["encoder2_acc"]:.6f}',
+                f'{valid_encoder_metrics["encoder2_auc"]:.6f}', f'{valid_encoder_metrics["encoder2_acc"]:.6f}'
+            ])
         
         if use_wandb:
-            wandb.log({'epoch': epoch+1, 'train_loss': avg_loss, 'train_bce': avg_bce, 'train_im': avg_im, 'valid_auc': valid_auc, 'valid_acc': valid_acc})
+            wandb.log({
+                'epoch': epoch+1, 'train_loss': avg_loss, 'train_bce': avg_bce, 'train_im': avg_im,
+                'train_auc': train_auc, 'train_acc': train_acc, 'valid_auc': valid_auc, 'valid_acc': valid_acc,
+                'train_encoder2_auc': train_encoder_metrics['encoder2_auc'],
+                'valid_encoder2_auc': valid_encoder_metrics['encoder2_auc']
+            })
         
         if valid_auc > best_valid_auc:
             best_valid_auc = valid_auc
             patience_counter = 0
-            model_path = os.path.join(exp_dir, 'best_model.pt')
-            torch.save({'epoch': epoch+1, 'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict(),
-                       'valid_auc': valid_auc, 'valid_acc': valid_acc, 'config': full_config}, model_path)
+            best_model_state = model.state_dict().copy()
+            checkpoint = {
+                'epoch': epoch+1,
+                'model_state_dict': best_model_state,
+                'optimizer_state_dict': optimizer.state_dict(),
+                'best_val_auc': valid_auc,
+                'model_config': full_config.get('model_config', {}),
+            }
+            model_path = os.path.join(exp_dir, 'model_best.pth')
+            torch.save(checkpoint, model_path)
             logger.info(f"✓ New best model saved (AUC: {valid_auc:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= patience:
                 logger.info(f"Early stopping after {epoch+1} epochs")
                 break
+        
+        # Save last checkpoint after each epoch
+        last_checkpoint = {
+            'epoch': epoch+1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'best_val_auc': best_valid_auc
+        }
+        last_model_path = os.path.join(exp_dir, 'model_last.pth')
+        torch.save(last_checkpoint, last_model_path)
     
     logger.info("="*80)
     logger.info(f"Training completed. Best valid AUC: {best_valid_auc:.4f}")
     logger.info("="*80)
+    
+    # Save results.json (legacy format for compatibility)
+    results = {
+        'best_val_auc': best_valid_auc,
+        'final_epoch': epoch+1,
+        'dataset': dataset_name,
+        'fold': fold,
+        'model': model_name
+    }
+    results_path = os.path.join(exp_dir, 'results.json')
+    with open(results_path, 'w') as f:
+        json.dump(results, f, indent=2)
+    logger.info(f"Results saved to {results_path}")
     
     if use_wandb:
         wandb.finish()
