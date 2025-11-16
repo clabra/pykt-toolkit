@@ -139,7 +139,12 @@ def main():
     parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
-    parser.add_argument('--incremental_mastery_loss_weight', type=float, required=True)
+    parser.add_argument('--bce_loss_weight', type=float, required=True, 
+                        help='Weight for BCE loss (lambda1). Incremental mastery loss weight = 1 - lambda1')
+    parser.add_argument('--mastery_threshold_init', type=float, required=True,
+                        help='Initial mastery threshold (θ_global)')
+    parser.add_argument('--threshold_temperature', type=float, required=True,
+                        help='Temperature for sigmoid threshold functions')
     parser.add_argument('--max_correlation_students', type=int, required=True)
     parser.add_argument('--monitor_freq', type=int, required=True,
                         help='How often to compute interpretability metrics during training')
@@ -225,7 +230,10 @@ def main():
         'gain_performance_loss_weight': args.gain_performance_loss_weight,
         'sparsity_loss_weight': args.sparsity_loss_weight,
         'consistency_loss_weight': args.consistency_loss_weight,
-        'incremental_mastery_loss_weight': args.incremental_mastery_loss_weight,
+        'bce_loss_weight': args.bce_loss_weight,
+        'incremental_mastery_loss_weight': 1.0 - args.bce_loss_weight,  # Lambda2 = 1 - Lambda1
+        'mastery_threshold_init': args.mastery_threshold_init,
+        'threshold_temperature': args.threshold_temperature,
         'monitor_frequency': args.monitor_freq  # Map monitor_freq -> monitor_frequency for model
     }
     

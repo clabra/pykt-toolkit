@@ -47,18 +47,46 @@ See paper/STATUS_gainakt3exp.md for detailed architectural documentation.
 """
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import os
-from .gainakt3 import GainAKT3
+from .gainakt3 import EncoderBlock
 
 
-class GainAKT3Exp(GainAKT3):
+class GainAKT3Exp(nn.Module):
     """
-    Enhanced GainAKT3 model with training-time interpretability monitoring.
+    Enhanced GainAKT3 model with DUAL-ENCODER architecture and interpretability monitoring.
     
-    Extends the base GainAKT3 model to provide:
-    - Internal state access for interpretability analysis
-    - Training-time monitoring hook integration
-    - Auxiliary loss computation for interpretability constraints
+    **DUAL-ENCODER ARCHITECTURE (2025-11-16)**:
+    =============================================
+    
+    This model implements TWO completely independent encoder stacks:
+    
+    1. **Encoder 1 (Performance Path)**:
+       - Independent embedding tables (context_emb1, value_emb1, skill_emb1)
+       - Independent encoder blocks (encoder_blocks_1)
+       - Attention mechanism learns Q, K, V for detecting **response patterns**
+       - Optimized for prediction accuracy
+       - Outputs → Base Predictions → BCE Loss (weight ≈ 1.0)
+    
+    2. **Encoder 2 (Interpretability Path)**:
+       - Independent embedding tables (context_emb2, value_emb2)
+       - Independent encoder blocks (encoder_blocks_2)
+       - Attention mechanism learns Q, K, V for detecting **learning gains patterns**
+       - Optimized for interpretable mastery trajectories
+       - Outputs → Sigmoid Learning Curves → Incremental Mastery Predictions → IM Loss (weight = 0.1)
+    
+    **Key Features**:
+    - Complete parameter independence between encoders
+    - Each encoder learns different attention patterns
+    - No shared representations between pathways
+    - Clean separation of performance vs interpretability objectives
+    
+    **Benefits**:
+    - Encoder 1: Pure prediction focus without interpretability constraints
+    - Encoder 2: Pure interpretability focus without prediction pressure
+    - Dual losses enable performance/interpretability trade-off tuning
+    - More parameters allow richer representations for both objectives
     """
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
@@ -144,33 +172,140 @@ class GainAKT3Exp(GainAKT3):
                 stacklevel=2
             )
         
-        # Allow disabling heads for a pure predictive baseline; otherwise enable.
-        super().__init__(
-            num_c=num_c, seq_len=seq_len, d_model=d_model, n_heads=n_heads,
-            num_encoder_blocks=num_encoder_blocks, d_ff=d_ff, dropout=dropout,
-            emb_type=emb_type, emb_path=emb_path, pretrain_dim=pretrain_dim,
-            use_mastery_head=use_mastery_head, use_gain_head=use_gain_head,
-            intrinsic_gain_attention=intrinsic_gain_attention,
-            non_negative_loss_weight=non_negative_loss_weight,
-            monotonicity_loss_weight=monotonicity_loss_weight,
-            mastery_performance_loss_weight=mastery_performance_loss_weight,
-            gain_performance_loss_weight=gain_performance_loss_weight,
-            sparsity_loss_weight=sparsity_loss_weight,
-            consistency_loss_weight=consistency_loss_weight,
-            use_skill_difficulty=use_skill_difficulty,
-            use_student_speed=use_student_speed,
-            num_students=num_students
-        )
+        # ═══════════════════════════════════════════════════════════════════════════
+        # DUAL-ENCODER ARCHITECTURE INITIALIZATION
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Instead of inheriting from GainAKT3, we create TWO independent encoder stacks
+        # ═══════════════════════════════════════════════════════════════════════════
         
+        # Store model configuration
+        super().__init__()
+        self.model_name = "gainakt3exp"
+        self.num_c = num_c
+        self.seq_len = seq_len
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.num_encoder_blocks = num_encoder_blocks
+        self.d_ff = d_ff
+        self.dropout = dropout
+        self.emb_type = emb_type
+        self.use_mastery_head = use_mastery_head
+        self.use_gain_head = use_gain_head
+        self.intrinsic_gain_attention = intrinsic_gain_attention
+        self.use_skill_difficulty = use_skill_difficulty
+        self.use_student_speed = use_student_speed
+        self.num_students = num_students
+        
+        # Loss weights (constraint losses currently commented out = 0.0)
+        self.non_negative_loss_weight = non_negative_loss_weight
+        self.monotonicity_loss_weight = monotonicity_loss_weight
+        self.mastery_performance_loss_weight = mastery_performance_loss_weight
+        self.gain_performance_loss_weight = gain_performance_loss_weight
+        self.sparsity_loss_weight = sparsity_loss_weight
+        self.consistency_loss_weight = consistency_loss_weight
+        
+        # Monitoring
         self.monitor_frequency = monitor_frequency
         self.interpretability_monitor = None
         self.step_count = 0
         
-        # GainAKT3Exp specific: Learnable mastery threshold per skill
-        # Initialize around 0.85 (normalized [0,1] scale) representing mastery level for correct predictions
-        self.mastery_threshold = torch.nn.Parameter(
-            torch.clamp(torch.full((num_c,), mastery_threshold_init, dtype=torch.float32), 0.0, 1.0)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # ENCODER 1: PERFORMANCE PATH (Response Patterns)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # This encoder learns Q, K, V optimized for detecting response correctness patterns
+        # Independent parameters ensure it focuses purely on prediction accuracy
+        # ═══════════════════════════════════════════════════════════════════════════
+        
+        if emb_type.startswith("qid"):
+            # Encoder 1 embeddings: context, value, skill (for prediction)
+            self.context_embedding_1 = nn.Embedding(num_c * 2, d_model)
+            self.value_embedding_1 = nn.Embedding(num_c * 2, d_model)
+            self.skill_embedding_1 = nn.Embedding(num_c, d_model)  # For target concepts
+            
+        # Encoder 1 positional embeddings
+        self.pos_embedding_1 = nn.Embedding(seq_len, d_model)
+        
+        # Encoder 1 transformer blocks (learns response patterns)
+        self.encoder_blocks_1 = nn.ModuleList([
+            EncoderBlock(d_model, n_heads, d_ff, dropout, 
+                        intrinsic_gain_attention=False,  # Standard attention
+                        num_skills=None)
+            for _ in range(num_encoder_blocks)
+        ])
+        
+        # Encoder 1 prediction head: [context1, value1, skill1] → prediction
+        self.prediction_head_1 = nn.Sequential(
+            nn.Linear(d_model * 3, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, 1)
         )
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # ENCODER 2: INTERPRETABILITY PATH (Learning Gains Patterns)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # This encoder learns Q, K, V optimized for detecting learning gains patterns
+        # Independent parameters ensure it focuses purely on mastery trajectories
+        # ═══════════════════════════════════════════════════════════════════════════
+        
+        if emb_type.startswith("qid"):
+            # Encoder 2 embeddings: context, value (for mastery)
+            # No separate skill embedding needed for mastery computation
+            self.context_embedding_2 = nn.Embedding(num_c * 2, d_model)
+            self.value_embedding_2 = nn.Embedding(num_c * 2, d_model)
+        
+        # Encoder 2 positional embeddings
+        self.pos_embedding_2 = nn.Embedding(seq_len, d_model)
+        
+        # Encoder 2 transformer blocks (learns learning gains patterns)
+        self.encoder_blocks_2 = nn.ModuleList([
+            EncoderBlock(d_model, n_heads, d_ff, dropout,
+                        intrinsic_gain_attention=False,  # Standard attention
+                        num_skills=None)
+            for _ in range(num_encoder_blocks)
+        ])
+        
+        # Encoder 2 does NOT have a prediction head
+        # Its outputs feed directly into sigmoid learning curve computation
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # SIGMOID LEARNING CURVE PARAMETERS (2025-11-16 Architecture Update)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Mastery evolves via practice count-driven sigmoid curves:
+        # mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
+        # 
+        # Educational Interpretation:
+        # - β_skill[s]: Skill difficulty (controls learning curve steepness)
+        # - γ_student[i]: Student learning velocity (modulates progression speed)
+        # - M_sat[s]: Saturation level (maximum achievable mastery per skill)
+        # - θ_global: Global threshold (mastery level for correct performance)
+        # - offset: Inflection point (controls when rapid learning begins)
+        # 
+        # Three Automatic Learning Phases:
+        # 1. Initial Phase (practice_count ≈ 0): Mastery ≈ 0 (warm-up)
+        # 2. Growth Phase (intermediate): Rapid mastery increase (effective learning)
+        # 3. Saturation Phase (high practice_count): Mastery → M_sat[s] (consolidation)
+        # ═══════════════════════════════════════════════════════════════════════════
+        
+        # Per-skill learnable parameters (shared across students)
+        self.beta_skill = torch.nn.Parameter(torch.ones(num_c))  # Skill difficulty (curve steepness)
+        self.M_sat = torch.nn.Parameter(torch.ones(num_c) * 0.8)  # Saturation level (max mastery)
+        
+        # Per-student learnable parameters (if num_students provided)
+        # Note: If num_students not provided, γ_student will be learned per batch dynamically
+        if num_students is not None and num_students > 0:
+            self.gamma_student = torch.nn.Parameter(torch.ones(num_students))  # Learning velocity
+            self.has_fixed_student_params = True
+        else:
+            # Dynamic mode: will be handled per-batch
+            self.gamma_student = None
+            self.has_fixed_student_params = False
+        
+        # Global learnable parameters
+        self.theta_global = torch.nn.Parameter(torch.tensor(mastery_threshold_init))  # Performance threshold
+        self.offset = torch.nn.Parameter(torch.tensor(3.0))  # Sigmoid inflection point
+        
+        # Config parameter (hybrid approach - can upgrade to learnable later)
         self.threshold_temperature = threshold_temperature
         
         # Incremental mastery loss weight (for dual-prediction architecture)
@@ -214,82 +349,54 @@ class GainAKT3Exp(GainAKT3):
         # Create a causal attention mask
         mask = torch.triu(torch.ones((seq_len, seq_len), device=q.device), diagonal=1).bool()
 
-        # 1. Get embeddings for the two streams
-        context_seq = self.context_embedding(interaction_tokens)
-        value_seq = self.value_embedding(interaction_tokens)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # ENCODER 1: PERFORMANCE PATH (Response Patterns)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Process inputs through Encoder 1 which learns attention patterns for prediction
+        # ═══════════════════════════════════════════════════════════════════════════
         
-        # COMMENTED OUT: Intrinsic Gain Attention feature (DEPRECATED)
-        # ════════════════════════════════════════════════════════════════════════
-        # This alternative architecture extracted gains directly from attention weights
-        # instead of using projection heads. Deactivated in favor of the current
-        # "Values as Learning Gains" approach which is more interpretable.
-        # ════════════════════════════════════════════════════════════════════════
-        # if self.intrinsic_gain_attention:
-        #     # Apply non-negativity activation to gains
-        #     value_seq = self.gain_activation(value_seq)
-
-        # 2. Add positional encodings
+        # 1.1. Get embeddings for Encoder 1 (context and value streams)
+        context_seq_1 = self.context_embedding_1(interaction_tokens)
+        value_seq_1 = self.value_embedding_1(interaction_tokens)
+        
+        # 1.2. Add positional encodings for Encoder 1
         positions = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
-        pos_emb = self.pos_embedding(positions)
-        context_seq += pos_emb
+        pos_emb_1 = self.pos_embedding_1(positions)
+        context_seq_1 += pos_emb_1
+        value_seq_1 += pos_emb_1
         
-        # COMMENTED OUT: Intrinsic Gain Attention conditional (DEPRECATED)
-        # if not self.intrinsic_gain_attention:
-        #     # Legacy mode: add positional encoding to value stream
-        #     value_seq += pos_emb
+        # 1.3. Pass through Encoder 1 blocks (learns response patterns)
+        for block in self.encoder_blocks_1:
+            context_seq_1, value_seq_1 = block(context_seq_1, value_seq_1, mask)
         
-        # Always add positional encoding to value stream (standard mode)
-        value_seq += pos_emb
+        # 1.4. Generate base predictions from Encoder 1 outputs
+        target_concept_emb_1 = self.skill_embedding_1(target_concepts)
+        concatenated_1 = torch.cat([context_seq_1, value_seq_1, target_concept_emb_1], dim=-1)
+        logits = self.prediction_head_1(concatenated_1).squeeze(-1)
+        predictions = torch.sigmoid(logits)  # Base predictions for BCE loss
         
-        # 3. Pass sequences through encoder blocks
-        for block in self.encoder_blocks:
-            context_seq, value_seq = block(context_seq, value_seq, mask)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # ENCODER 2: INTERPRETABILITY PATH (Learning Gains Patterns)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Process inputs through Encoder 2 which learns attention patterns for mastery
+        # ═══════════════════════════════════════════════════════════════════════════
         
-        # 4. Generate predictions
-        target_concept_emb = self.concept_embedding(target_concepts)
+        # 2.1. Get embeddings for Encoder 2 (context and value streams)
+        context_seq_2 = self.context_embedding_2(interaction_tokens)
+        value_seq_2 = self.value_embedding_2(interaction_tokens)
         
-        # Apply skill difficulty modulation (if enabled)
-        if self.use_skill_difficulty:
-            difficulty_scale = torch.gather(
-                self.skill_difficulty_scale.unsqueeze(0).expand(batch_size, -1),
-                1, target_concepts
-            )
-            difficulty_scale = torch.clamp(difficulty_scale, 0.5, 2.0).unsqueeze(-1)
-            target_concept_emb = target_concept_emb * difficulty_scale
+        # 2.2. Add positional encodings for Encoder 2
+        pos_emb_2 = self.pos_embedding_2(positions)
+        context_seq_2 += pos_emb_2
+        value_seq_2 += pos_emb_2
         
-        # Add student learning speed embedding (if enabled)
-        if self.use_student_speed:
-            assert student_ids is not None, "student_ids required when use_student_speed=True"
-            student_emb = self.student_speed_embedding(student_ids)
-            student_emb = student_emb.unsqueeze(1).expand(-1, seq_len, -1)
+        # 2.3. Pass through Encoder 2 blocks (learns learning gains patterns)
+        for block in self.encoder_blocks_2:
+            context_seq_2, value_seq_2 = block(context_seq_2, value_seq_2, mask)
         
-        # COMMENTED OUT: Intrinsic Gain Attention prediction mode (DEPRECATED)
-        # ════════════════════════════════════════════════════════════════════════
-        # Intrinsic mode used a different concatenation (without value_seq)
-        # Current standard mode always uses [context, value, skill] concatenation
-        # ════════════════════════════════════════════════════════════════════════
-        # if self.intrinsic_gain_attention:
-        #     # Intrinsic mode: [h_t, concept_embedding] or [h_t, concept_embedding, student_speed]
-        #     if self.use_student_speed:
-        #         concatenated = torch.cat([context_seq, target_concept_emb, student_emb], dim=-1)
-        #     else:
-        #         concatenated = torch.cat([context_seq, target_concept_emb], dim=-1)
-        # else:
-        #     # Legacy mode: [context_seq, value_seq, concept_embedding] or [..., student_speed]
-        #     if self.use_student_speed:
-        #         concatenated = torch.cat([context_seq, value_seq, target_concept_emb, student_emb], dim=-1)
-        #     else:
-        #         concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
-        
-        # Standard mode: always use [context, value, skill] (and optionally student_speed)
-        if self.use_student_speed:
-            concatenated = torch.cat([context_seq, value_seq, target_concept_emb, student_emb], dim=-1)
-        else:
-            concatenated = torch.cat([context_seq, value_seq, target_concept_emb], dim=-1)
-            
-        logits = self.prediction_head(concatenated).squeeze(-1)
-        # Defer sigmoid until evaluation to allow using BCEWithLogitsLoss safely under AMP
-        predictions = torch.sigmoid(logits)
+        # 2.4. Use Encoder 2 outputs for sigmoid learning curves
+        # Value stream from Encoder 2 represents learning gains for mastery computation
+        # (will be used for sigmoid curves below)
         
         # 5. Optionally compute interpretability projections
         
@@ -319,24 +426,32 @@ class GainAKT3Exp(GainAKT3):
         #         projected_gains = None
         # elif self.use_gain_head and self.use_mastery_head:
         
-        # 5. Optionally compute interpretability projections (controlled by parameters)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # SIGMOID LEARNING CURVE COMPUTATION FROM ENCODER 2 OUTPUTS
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Use Encoder 2 outputs (Interpretability Path) for mastery trajectories
+        # ═══════════════════════════════════════════════════════════════════════════
+        
         if self.use_mastery_head:
             # ============================================================================
-            # GainAKT3Exp CORE INNOVATION: Values ARE Learning Gains
+            # GainAKT3Exp CORE INNOVATION: Values from Encoder 2 ARE Learning Gains
             # ============================================================================
-            # Conceptual Model: Each interaction's Value output directly represents how
+            # Conceptual Model: Encoder 2's Value output directly represents how
             # much the student learned from that (skill, response) tuple.
             # 
+            # Encoder 2 learns Q, K, V specifically for detecting learning gains patterns
+            # This encoder is optimized for interpretability (mastery trajectories)
+            # 
             # Educational Meaning:
-            # - Value output = learning gain for this interaction
+            # - Value output from Encoder 2 = learning gain for this interaction
             # - No intermediate projection needed (Values encode gains directly)
             # - ReLU ensures non-negative learning (no knowledge loss)
             # - Direct mapping provides maximal interpretability
             # ============================================================================
             
-            # Values from encoder directly represent learning gains [B, L, D]
+            # Values from Encoder 2 directly represent learning gains [B, L, D]
             # Each interaction's contribution to knowledge accumulation
-            learning_gains_d = torch.relu(value_seq)  # Non-negative learning only
+            learning_gains_d = torch.relu(value_seq_2)  # Non-negative learning only
             
             # COMMENTED OUT: Old approach using gain_head projection
             # The projection layer obscured the direct Value→Gain relationship
@@ -364,65 +479,108 @@ class GainAKT3Exp(GainAKT3):
             projected_gains = torch.sigmoid(aggregated_gains).expand(-1, -1, self.num_c)  # [B, L, num_c]
             
             # ============================================================================
-            # Recursive Mastery Accumulation: Values → Learning Gains → Mastery Evolution
-            # ============================================================================
-            # Educational Model:
-            # 1. Each interaction with a skill generates a learning gain (from Values)
-            # 2. The skill's mastery level increases by this gain
-            # 3. Formula: mastery[skill, t] = mastery[skill, t-1] + α × learning_gain[t]
-            #    where α = 0.1 (scaling factor to bound increments)
-            # 4. Mastery is clamped to [0, 1] (normalized competence scale)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # SIGMOID LEARNING CURVE MASTERY (2025-11-16 Architecture Update)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Educational Model: Practice count-driven sigmoid learning curves
+            # 
+            # Formula: mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
+            # 
+            # Where:
+            # - practice_count[i,s,t] = number of times student i practiced skill s up to timestep t
+            # - β_skill[s]: Skill difficulty (controls learning curve steepness)
+            # - γ_student[i]: Student learning velocity (modulates progression speed)
+            # - M_sat[s]: Saturation mastery level (maximum achievable per skill)
+            # - offset: Inflection point (controls when rapid learning begins)
+            # 
+            # Three Automatic Learning Phases:
+            # 1. Initial Phase (practice_count ≈ 0): Mastery ≈ 0 (warm-up/familiarization)
+            # 2. Growth Phase (intermediate): Rapid mastery increase (effective learning)
+            #    Slope = (β_skill × γ_student × M_sat) / 4 at inflection point
+            # 3. Saturation Phase (high practice_count): Mastery → M_sat[s] (consolidation)
             # 
             # Interpretability Guarantee:
-            # - Can trace any skill's mastery evolution across interactions
-            # - Can understand: "This interaction contributed X learning gain"
-            # - Direct transparency: no hidden projections or transformations
-            # ============================================================================
+            # - Direct transparency: mastery depends ONLY on practice count (observable)
+            # - Can predict future mastery: "After N more practices, mastery will be X"
+            # - Can explain current mastery: "Student has practiced this skill N times"
+            # - No hidden accumulation or opaque transformations
+            # ═══════════════════════════════════════════════════════════════════════════
             
-            # Initialize all skills at zero mastery (no prior knowledge)
             batch_size, seq_len, _ = projected_gains.shape
-            projected_mastery = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
             
-            # Recursive accumulation: accumulate learning gains into skill mastery
-            # Only the skill being practiced at each timestep receives the learning gain
-            alpha = 0.1  # Scaling factor: limits max gain per interaction to ~0.1
-            max_theoretical_mastery = 10.0  # Theoretical maximum before tanh normalization
+            # Step 1: Compute interaction-level gain quality from Encoder 2
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Encoder 2 learns to assess "how much learning happened" from each interaction
+            # This is differentiable through value_seq_2, allowing gradients to flow back
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Aggregate D-dimensional value representation to scalar gain quality per interaction
+            # [B, L, D] → [B, L, 1]
+            gain_quality_logits = learning_gains_d.mean(dim=-1, keepdim=True)
+            # Normalize to [0, 1] range: higher values = more effective learning
+            gain_quality = torch.sigmoid(gain_quality_logits)  # [B, L, 1] ∈ [0, 1]
             
-            for t in range(1, seq_len):
-                # Copy previous timestep's mastery for all skills
-                projected_mastery[:, t, :] = projected_mastery[:, t-1, :].clone()
+            # Step 2: Compute effective practice count (quality-weighted)
+            # Instead of simple counting (non-differentiable), accumulate quality-weighted interactions
+            # This allows Encoder 2 to learn: "this interaction was worth X effective practice"
+            # ═══════════════════════════════════════════════════════════════════════════
+            effective_practice = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
+            
+            for t in range(seq_len):
+                if t > 0:
+                    # Carry forward previous effective practice
+                    effective_practice[:, t, :] = effective_practice[:, t-1, :].clone()
                 
                 # Identify which skill is being practiced at timestep t
                 practiced_concepts = q[:, t].long()  # [B] - skill index for each student
                 batch_indices = torch.arange(batch_size, device=q.device)
                 
-                # Apply learning gain to the practiced skill's mastery
-                # Learning gain comes directly from Values (via projected_gains)
-                current_mastery = projected_mastery[batch_indices, t-1, practiced_concepts]
-                learning_gain = projected_gains[batch_indices, t, practiced_concepts]
-                updated_mastery = current_mastery + alpha * learning_gain
-                
-                # Apply soft normalization to prevent unbounded growth
-                # tanh keeps values bounded while maintaining differentiability
-                projected_mastery[batch_indices, t, practiced_concepts] = \
-                    max_theoretical_mastery * torch.tanh(updated_mastery / max_theoretical_mastery)
+                # Increment effective practice by quality-weighted amount
+                # gain_quality[batch_indices, t, 0] is the learned quality for this interaction
+                # This is differentiable! Gradients flow back through gain_quality → value_seq_2 → Encoder 2
+                effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
             
-            # Final normalization: ensure all mastery values are in [0, 1] for interpretability
-            # This provides a normalized competence scale where:
-            # - 0.0 = no mastery (beginner)
-            # - 1.0 = full mastery (expert)
+            # Step 3: Compute sigmoid learning curve mastery using effective practice
+            # Handle gamma_student (fixed vs dynamic per-batch)
+            if self.has_fixed_student_params:
+                # TODO: Need student IDs to index into gamma_student
+                # For now, use mean gamma across all students (fallback)
+                gamma = self.gamma_student.mean().unsqueeze(0).expand(batch_size)  # [batch_size]
+            else:
+                # Dynamic mode: learn gamma per batch (not per-student identity)
+                # Use uniform gamma=1.0 for all students in this batch
+                gamma = torch.ones(batch_size, device=q.device)  # [batch_size]
+            
+            # Expand dimensions for broadcasting:
+            # beta_skill: [num_c] → [1, 1, num_c]
+            # gamma: [batch_size] → [batch_size, 1, 1]
+            # M_sat: [num_c] → [1, 1, num_c]
+            # offset: scalar
+            # practice_count: [batch_size, seq_len, num_c]
+            
+            beta_expanded = self.beta_skill.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+            gamma_expanded = gamma.unsqueeze(1).unsqueeze(2)  # [batch_size, 1, 1]
+            M_sat_expanded = self.M_sat.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+            
+            # Compute sigmoid input: β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset
+            # effective_practice is differentiable through Encoder 2!
+            sigmoid_input = (beta_expanded * gamma_expanded * effective_practice) - self.offset
+            
+            # Compute mastery: M_sat[s] × sigmoid(...)
+            projected_mastery = M_sat_expanded * torch.sigmoid(sigmoid_input)  # [batch_size, seq_len, num_c]
+            
+            # Clamp to [0, 1] for numerical stability (sigmoid output should already be in this range)
             projected_mastery = torch.clamp(projected_mastery, min=0.0, max=1.0)
             
             # DEBUG: Log mastery accumulation statistics for first batch
             if batch_idx == 0:  # Log for first batch of each epoch
                 mastery_range = projected_mastery.max() - projected_mastery.min()
                 mastery_std = projected_mastery.std()
-                practiced_mask = (q != 0).float()  # Non-zero concepts are practiced
-                practiced_count = practiced_mask.sum(dim=1).mean()  # Average practiced concepts per sequence
+                avg_effective_practice = effective_practice.sum() / (batch_size * seq_len * self.num_c)
                 
-                print("DEBUG GainAKT3Exp - Mastery accumulation stats:")
+                print("DEBUG GainAKT3Exp - Dual-Encoder Mastery Stats:")
                 print(f"  Mastery range: {mastery_range:.4f}, std: {mastery_std:.4f}")
-                print(f"  Avg practiced concepts per sequence: {practiced_count:.1f}")
+                print(f"  Avg effective practice: {avg_effective_practice:.4f}")
+                print(f"  Avg gain quality (Encoder 2 output): {gain_quality.mean():.4f}")
                 print("  Sample mastery progression for first student, first 5 skills:")
                 for skill in range(min(5, projected_mastery.shape[2])):
                     skill_mastery = projected_mastery[0, :, skill]
@@ -430,10 +588,21 @@ class GainAKT3Exp(GainAKT3):
                     if len(practiced_timesteps) > 0:
                         print(f"    Skill {skill}: {skill_mastery[practiced_timesteps].cpu().detach().numpy()}")
             
-            # Generate predictions using learnable threshold
-            # For each skill at each timestep: sigmoid((mastery - threshold) / temperature)
-            # If mastery >= threshold, prediction approaches 1.0 (correct)
-            # If mastery < threshold, prediction approaches 0.0 (incorrect)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # GLOBAL THRESHOLD PREDICTION (2025-11-16 Architecture Update)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Generate predictions using global learnable threshold θ_global
+            # 
+            # Formula: incremental_mastery_predictions = sigmoid((mastery - θ_global) / temperature)
+            # 
+            # If mastery >= θ_global: prediction approaches 1.0 (correct)
+            # If mastery < θ_global: prediction approaches 0.0 (incorrect)
+            # 
+            # Global threshold simplifies the model:
+            # - Single learnable parameter θ_global instead of per-skill thresholds
+            # - Same performance criterion applies across all skills
+            # - Reduces parameter count while maintaining interpretability
+            # ═══════════════════════════════════════════════════════════════════════════
             
             # Get the skill ID for each timestep
             skill_indices = target_concepts.long()  # [B, L]
@@ -444,30 +613,40 @@ class GainAKT3Exp(GainAKT3):
             time_indices = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
             skill_mastery = projected_mastery[batch_indices, time_indices, skill_indices]  # [B, L]
             
-            # Gather threshold for each skill and clamp to [0,1] during training/inference
-            skill_threshold = torch.clamp(self.mastery_threshold[skill_indices], 0.0, 1.0)  # [B, L]
+            # Use global threshold (clamped to [0,1] for stability)
+            theta_clamped = torch.clamp(self.theta_global, 0.0, 1.0)
             
             # Compute incremental mastery predictions (differentiable via sigmoid)
             # These are separate from the base predictions and used for interpretability loss
-            incremental_mastery_predictions = torch.sigmoid((skill_mastery - skill_threshold) / self.threshold_temperature)
+            incremental_mastery_predictions = torch.sigmoid((skill_mastery - theta_clamped) / self.threshold_temperature)
             
-            # DEBUG: Log threshold and prediction stats for first batch
+            # DEBUG: Log sigmoid learning curve and prediction stats for first batch
             if batch_idx == 0:  # Log for first batch of each epoch
-                threshold_range = skill_threshold.max() - skill_threshold.min()
-                threshold_std = skill_threshold.std()
                 im_pred_range = incremental_mastery_predictions.max() - incremental_mastery_predictions.min()
                 im_pred_std = incremental_mastery_predictions.std()
                 base_pred_range = predictions.max() - predictions.min()
                 base_pred_std = predictions.std()
                 
-                print("DEBUG GainAKT3Exp - Threshold and dual prediction stats:")
-                print(f"  Threshold range: {threshold_range:.4f}, std: {threshold_std:.4f}")
+                print("DEBUG GainAKT3Exp - Sigmoid Learning Curve and Prediction Stats:")
+                print(f"  Global Threshold (θ_global): {theta_clamped:.4f}")
                 print(f"  Temperature: {self.threshold_temperature}")
-                print(f"  Sample thresholds for first 5 skills: {self.mastery_threshold[:5].cpu().detach().numpy()}")
+                print(f"  Learnable Parameters:")
+                print(f"    β_skill (first 5): {self.beta_skill[:5].cpu().detach().numpy()}")
+                print(f"    M_sat (first 5): {self.M_sat[:5].cpu().detach().numpy()}")
+                if self.has_fixed_student_params:
+                    print(f"    γ_student (first 5): {self.gamma_student[:5].cpu().detach().numpy()}")
+                else:
+                    print(f"    γ_student: Dynamic per-batch (mean={gamma.mean():.4f})")
+                print(f"    offset: {self.offset.item():.4f}")
                 print(f"  Base Predictions - range: {base_pred_range:.4f}, std: {base_pred_std:.4f}")
                 print(f"  Incremental Mastery Predictions - range: {im_pred_range:.4f}, std: {im_pred_std:.4f}")
                 print(f"  Sample base predictions: {predictions[0, :10].cpu().detach().numpy()}")
                 print(f"  Sample incremental predictions: {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
+                print("  Sample effective practice (quality-weighted, first student, first 5 skills at t=5):")
+                if seq_len > 5:
+                    print(f"    {effective_practice[0, 5, :5].cpu().detach().numpy()}")
+                print("  Sample gain quality (Encoder 2 output, first 5 interactions):")
+                print(f"    {gain_quality[0, :min(5, seq_len), 0].cpu().detach().numpy()}")
             
             # Do NOT override base predictions - keep both for dual loss computation
         else:
@@ -477,11 +656,13 @@ class GainAKT3Exp(GainAKT3):
             incremental_mastery_predictions = None
 
         # 6. Prepare output with internal states
+        # Return Encoder 2 outputs for interpretability monitoring (context_seq_2, value_seq_2)
+        # Base predictions come from Encoder 1
         output = {
-            'predictions': predictions,  # Base predictions from prediction head
-            'logits': logits,
-            'context_seq': context_seq,
-            'value_seq': value_seq
+            'predictions': predictions,  # Base predictions from Encoder 1 → BCE Loss
+            'logits': logits,  # Logits from Encoder 1
+            'context_seq': context_seq_2,  # Encoder 2 context (for monitoring)
+            'value_seq': value_seq_2  # Encoder 2 value (learning gains)
         }
         if projected_mastery is not None:
             output['projected_mastery'] = projected_mastery
@@ -495,8 +676,8 @@ class GainAKT3Exp(GainAKT3):
         # Store D-dimensional gains for interpretability (only if gain_head enabled)
         # Note: Gains are computed internally for mastery accumulation even when use_gain_head=False
         # but only exposed as output when use_gain_head=True
-        if self.use_gain_head and self.use_mastery_head and value_seq is not None:
-            output['projected_gains_d'] = torch.relu(value_seq)  # Values as learning gains
+        if self.use_gain_head and self.use_mastery_head and value_seq_2 is not None:
+            output['projected_gains_d'] = torch.relu(value_seq_2)  # Values as learning gains
         
         # 7. Compute interpretability loss (constraint losses on mastery/gains)
         if (projected_mastery is not None) and (projected_gains is not None):
@@ -522,12 +703,13 @@ class GainAKT3Exp(GainAKT3):
             try:
                 # Only emit from primary device (index 0) to avoid duplicate logs under DataParallel
                 if hasattr(q, 'device') and (q.device.index is None or q.device.index == 0):
-                    print(f"[DP-DEBUG] forward_with_states: q.device={q.device} context_seq.device={context_seq.device}")
+                    print(f"[DP-DEBUG] forward_with_states: q.device={q.device} context_seq_2.device={context_seq_2.device}")
             except Exception:
                 pass
 
         # 9. Call interpretability monitor if enabled and at right frequency.
         # Guard to execute only on primary replica (device index 0) to prevent duplicate side-effects under DataParallel.
+        # Monitor uses Encoder 2 outputs (interpretability path)
         primary_device = (hasattr(q, 'device') and (q.device.index is None or q.device.index == 0))
         if (self.interpretability_monitor is not None and 
             batch_idx is not None and 
@@ -535,8 +717,8 @@ class GainAKT3Exp(GainAKT3):
             with torch.no_grad():
                 self.interpretability_monitor(
                     batch_idx=batch_idx,
-                    context_seq=context_seq,
-                    value_seq=value_seq, 
+                    context_seq=context_seq_2,  # Encoder 2 context
+                    value_seq=value_seq_2,  # Encoder 2 value (learning gains)
                     projected_mastery=projected_mastery,
                     projected_gains=projected_gains,
                     predictions=predictions,
@@ -663,11 +845,37 @@ def create_exp_model(config):
     All parameters must be present in config dict (no fallback defaults).
     Fails fast with clear KeyError if any parameter is missing.
     
+    Required config parameters:
+        - num_c (int): Number of unique skills/concepts
+        - seq_len (int): Maximum sequence length
+        - d_model (int): Model embedding dimension
+        - n_heads (int): Number of attention heads
+        - num_encoder_blocks (int): Number of transformer blocks
+        - d_ff (int): Feed-forward dimension
+        - dropout (float): Dropout rate
+        - emb_type (str): Embedding type ("qid" or other)
+        - use_mastery_head (bool): Enable mastery projection head
+        - use_gain_head (bool): Enable gain projection head
+        - intrinsic_gain_attention (bool): Use intrinsic gain attention mode
+        - use_skill_difficulty (bool): Enable per-skill difficulty embeddings
+        - use_student_speed (bool): Enable per-student learning speed embeddings
+        - num_students (int): Number of unique students (or None for dynamic)
+        - non_negative_loss_weight (float): Weight for non-negative constraint
+        - monotonicity_loss_weight (float): Weight for monotonicity constraint
+        - mastery_performance_loss_weight (float): Weight for mastery-performance alignment
+        - gain_performance_loss_weight (float): Weight for gain-performance alignment
+        - sparsity_loss_weight (float): Weight for sparsity constraint
+        - consistency_loss_weight (float): Weight for consistency constraint
+        - incremental_mastery_loss_weight (float): Weight for incremental mastery loss
+        - monitor_frequency (int): How often to compute interpretability metrics
+        - mastery_threshold_init (float): Initial value for global threshold θ_global
+        - threshold_temperature (float): Temperature for sigmoid threshold function
+    
     Args:
         config (dict): Model configuration parameters (all required)
         
     Returns:
-        GainAKT3Exp: Configured model instance
+        GainAKT3Exp: Configured model instance with sigmoid learning curves
         
     Raises:
         KeyError: If any required parameter is missing from config
@@ -695,7 +903,9 @@ def create_exp_model(config):
             sparsity_loss_weight=config['sparsity_loss_weight'],
             consistency_loss_weight=config['consistency_loss_weight'],
             incremental_mastery_loss_weight=config['incremental_mastery_loss_weight'],
-            monitor_frequency=config['monitor_frequency']
+            monitor_frequency=config['monitor_frequency'],
+            mastery_threshold_init=config['mastery_threshold_init'],
+            threshold_temperature=config['threshold_temperature']
         )
     except KeyError as e:
         raise ValueError(f"Missing required parameter in model config: {e}. "

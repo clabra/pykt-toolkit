@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251116_014615_gainakt3exp_dual-encoder-test_342549",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.750573002362585,
+  "train_acc": 0.7613268380593022,
+  "train_mastery_correlation": 0.0,
+  "train_gain_correlation": 0.0,
+  "train_correlation_students": 0,
+  "valid_auc": 0.7237766513524426,
+  "valid_acc": 0.7542165860494993,
+  "test_auc": 0.7182827387859076,
+  "test_acc": 0.7481425344745601,
+  "test_mastery_correlation": 0.0,
+  "test_gain_correlation": 0.0,
+  "test_correlation_students": 0,
+  "timestamp": "2025-11-16T02:18:18.410678Z"
+}

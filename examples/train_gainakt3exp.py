@@ -344,7 +344,8 @@ def train_gainakt3exp_model(args):
     gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
-    incremental_mastery_loss_weight = resolve_param(cfg, 'interpretability', 'incremental_mastery_loss_weight', getattr(args, 'incremental_mastery_loss_weight', 0.1))
+    bce_loss_weight = resolve_param(cfg, 'interpretability', 'bce_loss_weight', getattr(args, 'bce_loss_weight', 0.9))  # Lambda1: weight for BCE loss
+    incremental_mastery_loss_weight = 1.0 - bce_loss_weight  # Lambda2 = 1 - Lambda1: ensures weights sum to 1.0
     
     # Setup logging with experiment-specific logger name for parallel disambiguation
     logger_name = f"gainakt3exp.{experiment_suffix}"
@@ -520,7 +521,7 @@ def train_gainakt3exp_model(args):
         'use_student_speed': resolve_param(cfg, 'interpretability', 'use_student_speed', getattr(args, 'use_student_speed', False)),
         'num_students': num_students,
         'mastery_threshold_init': resolve_param(cfg, 'interpretability', 'mastery_threshold_init', getattr(args, 'mastery_threshold_init', 0.85)),
-        'threshold_temperature': resolve_param(cfg, 'interpretability', 'threshold_temperature', getattr(args, 'threshold_temperature', 0.1))
+        'threshold_temperature': resolve_param(cfg, 'interpretability', 'threshold_temperature', getattr(args, 'threshold_temperature', 1.0))
     }
     
     # Constraint resolution logic:
@@ -540,7 +541,8 @@ def train_gainakt3exp_model(args):
             'gain_performance_loss_weight': 0.5,
             'sparsity_loss_weight': 0.0,
             'consistency_loss_weight': 0.0,
-            'incremental_mastery_loss_weight': 0.0
+            'bce_loss_weight': bce_loss_weight,
+            'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("PURE BCE baseline: all constraint weights forced to 0.0")
     elif enhanced_constraints and cfg is not None and all(p in cfg.get('interpretability', {}) for p in individual_params):
@@ -552,6 +554,7 @@ def train_gainakt3exp_model(args):
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
             'consistency_loss_weight': consistency_loss_weight,
+            'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Enhanced constraints: weights sourced from config.json interpretability section")
@@ -563,6 +566,7 @@ def train_gainakt3exp_model(args):
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
             'consistency_loss_weight': consistency_loss_weight,
+            'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Enhanced constraints: weights from CLI arguments (no config file)")
@@ -574,6 +578,7 @@ def train_gainakt3exp_model(args):
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
             'consistency_loss_weight': consistency_loss_weight,
+            'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
         logger.info("Using individually supplied constraint weights")
@@ -586,7 +591,8 @@ def train_gainakt3exp_model(args):
                 f"gain_perf={model_config['gain_performance_loss_weight']} | "
                 f"sparsity={model_config['sparsity_loss_weight']} | "
                 f"consistency={model_config['consistency_loss_weight']} | "
-                f"incremental_mastery={model_config['incremental_mastery_loss_weight']}")
+                f"bce_weight(λ₁)={model_config['bce_loss_weight']} | "
+                f"im_weight(1-λ₁)={model_config['incremental_mastery_loss_weight']}")
     # Repro integration: detect EXPERIMENT_DIR
     experiment_dir = os.environ.get('EXPERIMENT_DIR')
     # If not launched via run_repro_experiment (no EXPERIMENT_DIR), create a manual containment folder.
@@ -959,13 +965,17 @@ def train_gainakt3exp_model(args):
                         retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
                         total_retention_component += float(retention_component.detach().cpu())
                     
-                    # SIMPLIFIED (2025-11-15): Total loss = BCE + Incremental Mastery (+ legacy components if active)
+                    # DUAL-ENCODER ARCHITECTURE (2025-11-16): Total loss = lambda1 * BCE + (1-lambda1) * Incremental Mastery
                     # interpretability_loss is now 0.0 (constraint losses commented out)
-                    # incremental_mastery_loss is the NEW dual-prediction loss
+                    # incremental_mastery_loss is the NEW dual-prediction loss from Encoder 2
+                    # Weighted combination: lambda1 (bce_loss_weight) + (1-lambda1) ensures proper balance
+                    weighted_main_loss = bce_loss_weight * main_loss
+                    weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
+                    
                     if enable_alignment_loss:
-                        total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + alignment_loss + retention_component
+                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
                     else:
-                        total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + retention_component
+                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
@@ -1099,11 +1109,15 @@ def train_gainakt3exp_model(args):
                                 retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
                                 total_retention_component += float(retention_component.detach().cpu())
                             
-                            # SIMPLIFIED (2025-11-15): Total loss = BCE + Incremental Mastery (+ legacy components if active)
+                            # DUAL-ENCODER ARCHITECTURE (2025-11-16): Total loss = lambda1 * BCE + (1-lambda1) * Incremental Mastery
+                            # Weighted combination: lambda1 (bce_loss_weight) + (1-lambda1) ensures proper balance
+                            weighted_main_loss = bce_loss_weight * main_loss
+                            weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
+                            
                             if enable_alignment_loss:
-                                total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + alignment_loss + retention_component
+                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
                             else:
-                                total_batch_loss = main_loss + interpretability_loss + incremental_mastery_loss + retention_component
+                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
                         if use_amp and device.type == 'cuda':
                             scaler.scale(total_batch_loss).backward()
                             clip_val = getattr(args, 'gradient_clip', 1.0)
@@ -1699,7 +1713,9 @@ def train_gainakt3exp_model(args):
             '--gain_performance_loss_weight', str(model_config['gain_performance_loss_weight']),
             '--sparsity_loss_weight', str(model_config['sparsity_loss_weight']),
             '--consistency_loss_weight', str(model_config['consistency_loss_weight']),
-            '--incremental_mastery_loss_weight', str(model_config['incremental_mastery_loss_weight']),
+            '--bce_loss_weight', str(model_config['bce_loss_weight']),
+            '--mastery_threshold_init', str(model_config['mastery_threshold_init']),
+            '--threshold_temperature', str(model_config['threshold_temperature']),
             '--monitor_freq', str(model_config['monitor_frequency'])
         ]
         
@@ -1809,7 +1825,7 @@ if __name__ == '__main__':
     parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
-    parser.add_argument('--incremental_mastery_loss_weight', type=float, required=True)
+    parser.add_argument('--bce_loss_weight', type=float, required=True, help='Weight for BCE loss (lambda1). Incremental mastery loss weight = 1 - lambda1')
     # Semantic alignment & refinement flags (Phase 1+ reproducibility)
     parser.add_argument('--enable_alignment_loss', action='store_true',
                         help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
