@@ -117,21 +117,22 @@ class ParameterAuditor:
             with open(param_file, 'r') as f:
                 defaults = json.load(f)['defaults']
             
-            # Load training script
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            # Load training script (GainAKT3Exp dual-encoder)
+            train_file = self.root_dir / "examples" / "train_gainakt3exp.py"
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
             # Check critical parameters that were previously mismatched
+            # DEPRECATED (2025-11-16): Removed semantic/constraint parameters for dual-encoder
             critical_params = {
-                'alignment_weight': '0.15',  # Updated from 0.25 based on alignment sweep experiments
+                # 'alignment_weight': '0.15',  # DEPRECATED - removed in dual-encoder
                 'batch_size': '64',
-                'enable_alignment_loss': 'True',
-                'enable_global_alignment_pass': 'True',
-                'enable_lag_gain_loss': 'True',
-                'enable_retention_loss': 'True',
+                # 'enable_alignment_loss': 'True',  # DEPRECATED - removed in dual-encoder
+                # 'enable_global_alignment_pass': 'True',  # DEPRECATED - removed in dual-encoder
+                # 'enable_lag_gain_loss': 'True',  # DEPRECATED - removed in dual-encoder
+                # 'enable_retention_loss': 'True',  # DEPRECATED - removed in dual-encoder
                 'epochs': '12',
-                'use_residual_alignment': 'True'
+                # 'use_residual_alignment': 'True'  # DEPRECATED - removed in dual-encoder
             }
             
             mismatches = 0
@@ -207,13 +208,14 @@ class ParameterAuditor:
         self.print_check_header(4, "Eval Script Documentation (Priority 3)")
         
         try:
-            eval_file = self.root_dir / "examples" / "eval_gainakt2exp.py"
+            eval_file = self.root_dir / "examples" / "eval_gainakt3exp.py"
             with open(eval_file, 'r') as f:
                 eval_content = f.read()
             
             has_docs = "CRITICAL ARCHITECTURAL FLAGS" in eval_content
+            # DEPRECATED (2025-11-16): intrinsic_gain_attention removed from dual-encoder
             doc_quality = all(flag in eval_content for flag in 
-                            ['use_mastery_head', 'use_gain_head', 'intrinsic_gain_attention'])
+                            ['use_mastery_head', 'use_gain_head'])  # 'intrinsic_gain_attention' DEPRECATED
             
             print(f"  Documentation header:        {'✅ Present' if has_docs else '❌ Missing'}")
             print(f"  All architectural flags doc: {'✅ Present' if doc_quality else '❌ Missing'}")
@@ -241,11 +243,13 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Critical parameters that must be present
+            # DEPRECATED (2025-11-16): Removed constraint/semantic parameters for dual-encoder
             required_params = [
                 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout',
-                'mastery_performance_loss_weight', 'gain_performance_loss_weight',
-                'alignment_weight', 'batch_size', 'epochs', 'learning_rate',
-                'use_mastery_head', 'use_gain_head', 'intrinsic_gain_attention',
+                # 'mastery_performance_loss_weight', 'gain_performance_loss_weight',  # DEPRECATED
+                # 'alignment_weight',  # DEPRECATED
+                'batch_size', 'epochs', 'learning_rate',
+                'use_mastery_head', 'use_gain_head',  # 'intrinsic_gain_attention' DEPRECATED
                 'seed', 'optimizer', 'weight_decay', 'patience'
             ]
             
@@ -274,14 +278,15 @@ class ParameterAuditor:
         self.print_check_header(6, "No Suspicious Hardcoded Values")
         
         try:
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            train_file = self.root_dir / "examples" / "train_gainakt3exp.py"
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
             # Check for old wrong fallbacks that should have been fixed
+            # DEPRECATED (2025-11-16): alignment_weight removed in dual-encoder
             wrong_fallbacks = [
-                (r'getattr\(args, \'alignment_weight\', 0\.1\)', 
-                 'alignment_weight fallback 0.1 (should be 0.25)'),
+                # (r'getattr\(args, \'alignment_weight\', 0\.1\)',  # DEPRECATED
+                #  'alignment_weight fallback 0.1 (should be 0.25)'),  # DEPRECATED
                 (r'getattr\(args, \'batch_size\', 96\)', 
                  'batch_size fallback 96 (should be 64)'),
                 (r'getattr\(args, \'epochs\', 20\)', 

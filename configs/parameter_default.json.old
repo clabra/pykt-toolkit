@@ -1,0 +1,190 @@
+{
+  "defaults": {
+    "model": "gainakt3exp",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "train_script": "examples/train_gainakt3exp.py",
+    "eval_script": "examples/eval_gainakt3exp.py",
+    "epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "intrinsic_gain_attention": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "num_students": 3055,
+    "mastery_threshold_init": 0.85,
+    "threshold_temperature": 1.0,
+    "enhanced_constraints": false,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.0,
+    "gain_performance_loss_weight": 0.0,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0,
+    "bce_loss_weight": 0.9,
+    "enable_alignment_loss": false,
+    "alignment_weight": 0.0,
+    "alignment_warmup_epochs": 8,
+    "adaptive_alignment": false,
+    "alignment_min_correlation": 0.05,
+    "alignment_share_cap": 0.08,
+    "alignment_share_decay_factor": 0.7,
+    "enable_global_alignment_pass": false,
+    "alignment_global_students": 600,
+    "use_residual_alignment": false,
+    "alignment_residual_window": 5,
+    "enable_retention_loss": false,
+    "retention_delta": 0.005,
+    "retention_weight": 0.0,
+    "enable_lag_gain_loss": false,
+    "lag_gain_weight": 0.0,
+    "lag_max_lag": 3,
+    "lag_l1_weight": 0.5,
+    "lag_l2_weight": 0.3,
+    "lag_l3_weight": 0.2,
+    "consistency_rebalance_epoch": 8,
+    "consistency_rebalance_threshold": 0.1,
+    "consistency_rebalance_new_weight": 0.2,
+    "variance_floor": 0.0001,
+    "variance_floor_patience": 3,
+    "variance_floor_reduce_factor": 0.5,
+    "warmup_constraint_epochs": 8,
+    "max_semantic_students": 50,
+    "max_correlation_students": 3800,
+    "enable_cosine_perf_schedule": false
+  },
+  "types": {
+    "launcher": [
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "interpretability": [
+      "use_mastery_head",
+      "use_gain_head",
+      "intrinsic_gain_attention",
+      "use_skill_difficulty",
+      "mastery_threshold_init",
+      "threshold_temperature",
+      "bce_loss_weight",
+      "enhanced_constraints",
+      "non_negative_loss_weight",
+      "monotonicity_loss_weight",
+      "mastery_performance_loss_weight",
+      "gain_performance_loss_weight",
+      "sparsity_loss_weight",
+      "consistency_loss_weight",
+      "warmup_constraint_epochs",
+      "max_semantic_students",
+      "enable_cosine_perf_schedule"
+    ],
+    "alignment": [
+      "enable_alignment_loss",
+      "alignment_weight",
+      "alignment_warmup_epochs",
+      "adaptive_alignment",
+      "alignment_min_correlation",
+      "alignment_share_cap",
+      "alignment_share_decay_factor",
+      "use_residual_alignment",
+      "alignment_residual_window"
+    ],
+    "global_alignment": [
+      "enable_global_alignment_pass",
+      "alignment_global_students"
+    ],
+    "refinement": [
+      "enable_retention_loss",
+      "retention_delta",
+      "retention_weight",
+      "enable_lag_gain_loss",
+      "lag_gain_weight",
+      "lag_max_lag",
+      "lag_l1_weight",
+      "lag_l2_weight",
+      "lag_l3_weight",
+      "consistency_rebalance_epoch",
+      "consistency_rebalance_threshold",
+      "consistency_rebalance_new_weight",
+      "variance_floor",
+      "variance_floor_patience",
+      "variance_floor_reduce_factor"
+    ]
+  },
+  "fixed": {
+    "non_negative_loss_weight": {
+      "value": 0.0,
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): Non-negativity enforced architecturally via ReLU on gains; loss redundant but kept for architectural variants. ALL CONSTRAINT LOSSES COMMENTED OUT - focusing on BCE + Incremental Mastery only.",
+      "validated_by_experiments": []
+    },
+    "constraint_losses_all": {
+      "value": 0.0,
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All constraint losses (monotonicity, mastery-perf, gain-perf, sparsity, consistency) set to 0.0. Code preserved in gainakt3_exp.py (commented out) for potential future restoration. Simplified architecture focuses on dual-prediction mechanism (BCE + Incremental Mastery) for improved clarity and debugging.",
+      "validated_by_experiments": []
+    },
+    "semantic_losses_all": {
+      "value": "disabled",
+      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All semantic module losses (alignment, global alignment, retention, lag gains) disabled. enable_alignment_loss=false, enable_global_alignment_pass=false, enable_retention_loss=false, enable_lag_gain_loss=false. Code preserved for potential future restoration.",
+      "validated_by_experiments": []
+    },
+    "intrinsic_gain_attention": {
+      "value": false,
+      "rationale": "DEPRECATED: Attention-Derived Gains feature. This alternative architecture extracted gains directly from attention weights instead of using Values stream. Deactivated in favor of 'Values as Learning Gains' approach which provides superior interpretability. Feature code commented out in gainakt3_exp.py.",
+      "validated_by_experiments": []
+    },
+    "alignment_weight": {
+      "value": 0.0,
+      "rationale": "COMMENTED OUT (2025-11-15): Was 0.15 (optimal balance from sweep experiments). Now set to 0.0 as part of architecture simplification. Previous experiments: 977548, 470340, 724276 showed 0.15 provided best trade-off. Code preserved for future use.",
+      "validated_by_experiments": [
+        "977548",
+        "470340",
+        "724276"
+      ]
+    }
+  },
+  "md5": "92ab1f9df195f45b15f4e9859ae5c402"
+}

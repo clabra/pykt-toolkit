@@ -1,11 +1,7 @@
 {
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-16 after deprecation",
   "defaults": {
-    "model": "gainakt3exp",
-    "dataset": "assist2015",
-    "fold": 0,
     "seed": 42,
-    "train_script": "examples/train_gainakt3exp.py",
-    "eval_script": "examples/eval_gainakt3exp.py",
     "epochs": 12,
     "batch_size": 64,
     "learning_rate": 0.000174,
@@ -17,6 +13,7 @@
     "use_amp": false,
     "use_wandb": false,
     "auto_shifted_eval": true,
+    "max_correlation_students": 3800,
     "seq_len": 200,
     "d_model": 256,
     "n_heads": 4,
@@ -26,50 +23,180 @@
     "emb_type": "qid",
     "use_mastery_head": true,
     "use_gain_head": false,
-    "intrinsic_gain_attention": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "num_students": 3055,
+    "bce_loss_weight": 0.9,
     "mastery_threshold_init": 0.85,
     "threshold_temperature": 1.0,
-    "enhanced_constraints": false,
-    "non_negative_loss_weight": 0.0,
-    "monotonicity_loss_weight": 0.0,
-    "mastery_performance_loss_weight": 0.0,
-    "gain_performance_loss_weight": 0.0,
-    "sparsity_loss_weight": 0.0,
-    "consistency_loss_weight": 0.0,
-    "bce_loss_weight": 0.9,
-    "enable_alignment_loss": false,
-    "alignment_weight": 0.0,
-    "alignment_warmup_epochs": 8,
-    "adaptive_alignment": false,
-    "alignment_min_correlation": 0.05,
-    "alignment_share_cap": 0.08,
-    "alignment_share_decay_factor": 0.7,
-    "enable_global_alignment_pass": false,
-    "alignment_global_students": 600,
-    "use_residual_alignment": false,
-    "alignment_residual_window": 5,
-    "enable_retention_loss": false,
-    "retention_delta": 0.005,
-    "retention_weight": 0.0,
-    "enable_lag_gain_loss": false,
-    "lag_gain_weight": 0.0,
-    "lag_max_lag": 3,
-    "lag_l1_weight": 0.5,
-    "lag_l2_weight": 0.3,
-    "lag_l3_weight": 0.2,
-    "consistency_rebalance_epoch": 8,
-    "consistency_rebalance_threshold": 0.1,
-    "consistency_rebalance_new_weight": 0.2,
-    "variance_floor": 0.0001,
-    "variance_floor_patience": 3,
-    "variance_floor_reduce_factor": 0.5,
-    "warmup_constraint_epochs": 8,
-    "max_semantic_students": 50,
-    "max_correlation_students": 3800,
-    "enable_cosine_perf_schedule": false
+    "num_students": 3055,
+    "dataset": "assist2015",
+    "fold": 0,
+    "train_script": "examples/train_gainakt3exp.py",
+    "eval_script": "examples/eval_gainakt3exp.py",
+    "model": "gainakt3exp"
+  },
+  "deprecated": {
+    "_comment": "Parameters deprecated as of 2025-11-16. Commented out in argparse. DO NOT use in new experiments.",
+    "_total_count": 27,
+    "_date": "2025-11-16",
+    "_reason": "Architecture simplification to dual-encoder with BCE + Incremental Mastery Loss only",
+    "constraint_losses": {
+      "non_negative_loss_weight": {
+        "value": 0.0,
+        "reason": "All constraint losses commented out"
+      },
+      "monotonicity_loss_weight": {
+        "value": 0.0,
+        "reason": "All constraint losses commented out"
+      },
+      "mastery_performance_loss_weight": {
+        "value": 0.0,
+        "reason": "Replaced by Incremental Mastery Loss"
+      },
+      "gain_performance_loss_weight": {
+        "value": 0.0,
+        "reason": "Gains not exposed (use_gain_head=false)"
+      },
+      "sparsity_loss_weight": {
+        "value": 0.0,
+        "reason": "Sparsity constraint removed"
+      },
+      "consistency_loss_weight": {
+        "value": 0.0,
+        "reason": "Consistency constraint removed"
+      }
+    },
+    "semantic_alignment": {
+      "enable_alignment_loss": {
+        "value": false,
+        "reason": "Semantic alignment module disabled"
+      },
+      "alignment_weight": {
+        "value": 0.0,
+        "reason": "Feature disabled (was optimal: 0.15)",
+        "previous_optimal": 0.15
+      },
+      "alignment_warmup_epochs": {
+        "value": 8,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "adaptive_alignment": {
+        "value": false,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "alignment_min_correlation": {
+        "value": 0.05,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "alignment_share_cap": {
+        "value": 0.08,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "alignment_share_decay_factor": {
+        "value": 0.7,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "use_residual_alignment": {
+        "value": false,
+        "reason": "Only used when enable_alignment_loss=true"
+      },
+      "alignment_residual_window": {
+        "value": 5,
+        "reason": "Only used with use_residual_alignment=true"
+      }
+    },
+    "global_alignment": {
+      "enable_global_alignment_pass": {
+        "value": false,
+        "reason": "Global alignment module disabled"
+      },
+      "alignment_global_students": {
+        "value": 600,
+        "reason": "Only used when enable_global_alignment_pass=true"
+      }
+    },
+    "semantic_refinement": {
+      "enable_retention_loss": {
+        "value": false,
+        "reason": "Retention loss module disabled"
+      },
+      "retention_delta": {
+        "value": 0.005,
+        "reason": "Only used when enable_retention_loss=true"
+      },
+      "retention_weight": {
+        "value": 0.0,
+        "reason": "Only used when enable_retention_loss=true"
+      },
+      "enable_lag_gain_loss": {
+        "value": false,
+        "reason": "Lag gain loss module disabled"
+      },
+      "lag_gain_weight": {
+        "value": 0.0,
+        "reason": "Only used when enable_lag_gain_loss=true"
+      },
+      "lag_max_lag": {
+        "value": 3,
+        "reason": "Only used when enable_lag_gain_loss=true"
+      },
+      "lag_l1_weight": {
+        "value": 0.5,
+        "reason": "Only used when enable_lag_gain_loss=true"
+      },
+      "lag_l2_weight": {
+        "value": 0.3,
+        "reason": "Only used when enable_lag_gain_loss=true"
+      },
+      "lag_l3_weight": {
+        "value": 0.2,
+        "reason": "Only used when enable_lag_gain_loss=true"
+      },
+      "consistency_rebalance_epoch": {
+        "value": 8,
+        "reason": "Consistency rebalancing removed"
+      },
+      "consistency_rebalance_threshold": {
+        "value": 0.1,
+        "reason": "Consistency rebalancing removed"
+      },
+      "consistency_rebalance_new_weight": {
+        "value": 0.2,
+        "reason": "Consistency rebalancing removed"
+      },
+      "variance_floor": {
+        "value": 0.0001,
+        "reason": "Variance floor dynamics removed"
+      },
+      "variance_floor_patience": {
+        "value": 3,
+        "reason": "Variance floor dynamics removed"
+      },
+      "variance_floor_reduce_factor": {
+        "value": 0.5,
+        "reason": "Variance floor dynamics removed"
+      }
+    },
+    "warmup_scheduling": {
+      "warmup_constraint_epochs": {
+        "value": 8,
+        "reason": "Not used (constraint losses disabled)"
+      },
+      "max_semantic_students": {
+        "value": 50,
+        "reason": "Not used (semantic modules disabled)"
+      },
+      "enable_cosine_perf_schedule": {
+        "value": false,
+        "reason": "Not used (performance alignment disabled)"
+      }
+    },
+    "deprecated_architecture": {
+      "intrinsic_gain_attention": {
+        "value": false,
+        "reason": "Deprecated mode, argparse commented out"
+      }
+    }
   },
   "types": {
     "launcher": [
@@ -92,7 +219,8 @@
       "monitor_freq",
       "use_amp",
       "use_wandb",
-      "auto_shifted_eval"
+      "auto_shifted_eval",
+      "max_correlation_students"
     ],
     "model_config": [
       "seq_len",
@@ -106,84 +234,23 @@
     "interpretability": [
       "use_mastery_head",
       "use_gain_head",
-      "intrinsic_gain_attention",
       "use_skill_difficulty",
+      "use_student_speed",
+      "bce_loss_weight",
       "mastery_threshold_init",
       "threshold_temperature",
-      "enhanced_constraints",
-      "non_negative_loss_weight",
-      "monotonicity_loss_weight",
-      "mastery_performance_loss_weight",
-      "gain_performance_loss_weight",
-      "sparsity_loss_weight",
-      "consistency_loss_weight",
-      "warmup_constraint_epochs",
-      "max_semantic_students",
-      "enable_cosine_perf_schedule"
+      "num_students"
     ],
-    "alignment": [
-      "enable_alignment_loss",
-      "alignment_weight",
-      "alignment_warmup_epochs",
-      "adaptive_alignment",
-      "alignment_min_correlation",
-      "alignment_share_cap",
-      "alignment_share_decay_factor",
-      "use_residual_alignment",
-      "alignment_residual_window"
-    ],
-    "global_alignment": [
-      "enable_global_alignment_pass",
-      "alignment_global_students"
-    ],
-    "refinement": [
-      "enable_retention_loss",
-      "retention_delta",
-      "retention_weight",
-      "enable_lag_gain_loss",
-      "lag_gain_weight",
-      "lag_max_lag",
-      "lag_l1_weight",
-      "lag_l2_weight",
-      "lag_l3_weight",
-      "consistency_rebalance_epoch",
-      "consistency_rebalance_threshold",
-      "consistency_rebalance_new_weight",
-      "variance_floor",
-      "variance_floor_patience",
-      "variance_floor_reduce_factor"
+    "legacy": [
+      "model",
+      "enhanced_constraints"
     ]
   },
   "fixed": {
-    "non_negative_loss_weight": {
-      "value": 0.0,
-      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): Non-negativity enforced architecturally via ReLU on gains; loss redundant but kept for architectural variants. ALL CONSTRAINT LOSSES COMMENTED OUT - focusing on BCE + Incremental Mastery only.",
-      "validated_by_experiments": []
-    },
-    "constraint_losses_all": {
-      "value": 0.0,
-      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All constraint losses (monotonicity, mastery-perf, gain-perf, sparsity, consistency) set to 0.0. Code preserved in gainakt3_exp.py (commented out) for potential future restoration. Simplified architecture focuses on dual-prediction mechanism (BCE + Incremental Mastery) for improved clarity and debugging.",
-      "validated_by_experiments": []
-    },
-    "semantic_losses_all": {
-      "value": "disabled",
-      "rationale": "ARCHITECTURE SIMPLIFICATION (2025-11-15): All semantic module losses (alignment, global alignment, retention, lag gains) disabled. enable_alignment_loss=false, enable_global_alignment_pass=false, enable_retention_loss=false, enable_lag_gain_loss=false. Code preserved for potential future restoration.",
-      "validated_by_experiments": []
-    },
-    "intrinsic_gain_attention": {
-      "value": false,
-      "rationale": "DEPRECATED: Attention-Derived Gains feature. This alternative architecture extracted gains directly from attention weights instead of using Values stream. Deactivated in favor of 'Values as Learning Gains' approach which provides superior interpretability. Feature code commented out in gainakt3_exp.py.",
-      "validated_by_experiments": []
-    },
-    "alignment_weight": {
-      "value": 0.0,
-      "rationale": "COMMENTED OUT (2025-11-15): Was 0.15 (optimal balance from sweep experiments). Now set to 0.0 as part of architecture simplification. Previous experiments: 977548, 470340, 724276 showed 0.15 provided best trade-off. Code preserved for future use.",
-      "validated_by_experiments": [
-        "977548",
-        "470340",
-        "724276"
-      ]
-    }
+    "model": "gainakt3exp",
+    "train_script": "examples/train_gainakt3exp.py",
+    "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "92ab1f9df195f45b15f4e9859ae5c402"
+  "md5": "9b25e22be5887cc6f218b7d37fcb57d5",
+  "_md5_computed": "2025-11-16"
 }

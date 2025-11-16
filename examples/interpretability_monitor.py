@@ -27,19 +27,36 @@ class InterpretabilityMonitor:
         self.step_count = 0
         self.logger = logging.getLogger(__name__)
         
-    def __call__(self, batch_idx, context_seq, value_seq, projected_mastery, 
-                 projected_gains, predictions, questions, responses):
+    def __call__(self, batch_idx, 
+                 # Encoder 1 outputs (Performance Path)
+                 context_seq_1, value_seq_1, base_predictions,
+                 # Encoder 2 outputs (Interpretability Path)
+                 context_seq_2, value_seq_2, projected_mastery, projected_gains,
+                 incremental_mastery_predictions,
+                 # Common inputs
+                 questions, responses):
         """
-        Called during training to compute interpretability metrics.
+        Called during training to compute interpretability metrics from dual-encoder architecture.
+        
+        DUAL-ENCODER ARCHITECTURE (2025-11-16):
+        - Encoder 1 (Performance Path): Optimized for response prediction accuracy
+        - Encoder 2 (Interpretability Path): Learns learning gains patterns for mastery curves
         
         Args:
-            context_seq: [batch_size, seq_len, d_model] - knowledge states
-            value_seq: [batch_size, seq_len, d_model] - learning gains  
-            projected_mastery: [batch_size, seq_len, num_skills] - skill mastery
-            projected_gains: [batch_size, seq_len, num_skills] - skill gains
-            predictions: [batch_size, seq_len] - model predictions
-            questions: [batch_size, seq_len] - question/skill IDs
-            responses: [batch_size, seq_len] - correct/incorrect responses
+            batch_idx: Current batch index
+            # Encoder 1 (Performance Path)
+            context_seq_1: [batch_size, seq_len, d_model] - Encoder 1 context states
+            value_seq_1: [batch_size, seq_len, d_model] - Encoder 1 value states
+            base_predictions: [batch_size, seq_len] - Base predictions from Encoder 1 → BCE Loss
+            # Encoder 2 (Interpretability Path)
+            context_seq_2: [batch_size, seq_len, d_model] - Encoder 2 context states
+            value_seq_2: [batch_size, seq_len, d_model] - Encoder 2 learning gains representation
+            projected_mastery: [batch_size, seq_len, num_skills] - Skill mastery from sigmoid curves
+            projected_gains: [batch_size, seq_len, num_skills] - Skill gains (if use_gain_head=True)
+            incremental_mastery_predictions: [batch_size, seq_len] - IM predictions from Encoder 2 → IM Loss
+            # Common
+            questions: [batch_size, seq_len] - Question/skill IDs
+            responses: [batch_size, seq_len] - Correct/incorrect responses
         """
         self.step_count += 1
         
@@ -48,20 +65,38 @@ class InterpretabilityMonitor:
             
         metrics = {}
         
-        # 1. Mastery-Performance Correlation
-        metrics['mastery_perf_corr'] = self._compute_mastery_performance_correlation(
-            projected_mastery, predictions, questions)
+        # DUAL-ENCODER METRICS (2025-11-16): Track metrics from both encoders
         
-        # 2. Gain-Correctness Correlation
-        metrics['gain_correctness_corr'] = self._compute_gain_correctness_correlation(
-            projected_gains, responses)
+        # Encoder 1 (Performance Path) predictions correlation with mastery
+        metrics['encoder1_mastery_corr'] = self._compute_mastery_performance_correlation(
+            projected_mastery, base_predictions, questions)
         
-        # 3. Non-Negative Gains Violation Rate
-        metrics['negative_gains_pct'] = self._compute_negative_gains_rate(projected_gains)
+        # Encoder 2 (Interpretability Path) predictions correlation with mastery
+        if incremental_mastery_predictions is not None:
+            metrics['encoder2_mastery_corr'] = self._compute_mastery_performance_correlation(
+                projected_mastery, incremental_mastery_predictions, questions)
+        else:
+            metrics['encoder2_mastery_corr'] = 0.0
         
-        # 4. Mastery Monotonicity Violation Rate  
-        metrics['monotonicity_violations_pct'] = self._compute_monotonicity_violations(
-            projected_mastery, responses, questions)
+        # 2. Gain-Correctness Correlation (from Encoder 2)
+        if projected_gains is not None:
+            metrics['gain_correctness_corr'] = self._compute_gain_correctness_correlation(
+                projected_gains, responses)
+        else:
+            metrics['gain_correctness_corr'] = 0.0
+        
+        # 3. Non-Negative Gains Violation Rate (from Encoder 2)
+        if projected_gains is not None:
+            metrics['negative_gains_pct'] = self._compute_negative_gains_rate(projected_gains)
+        else:
+            metrics['negative_gains_pct'] = 0.0
+        
+        # 4. Mastery Monotonicity Violation Rate (from Encoder 2)
+        if projected_mastery is not None:
+            metrics['monotonicity_violations_pct'] = self._compute_monotonicity_violations(
+                projected_mastery, responses, questions)
+        else:
+            metrics['monotonicity_violations_pct'] = 0.0
         
         # Log all metrics
         self._log_metrics(batch_idx, metrics)

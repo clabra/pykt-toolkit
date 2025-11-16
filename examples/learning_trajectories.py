@@ -138,14 +138,43 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
     student_q = q[student_idx_in_batch]  # [seq_len]
     student_responses = responses[student_idx_in_batch]  # [seq_len]
     student_mask = mask[student_idx_in_batch]  # [seq_len]
-    student_predictions = outputs['predictions'][student_idx_in_batch]  # [seq_len]
     
-    # Get mastery and gains
-    if 'projected_mastery' in outputs and 'projected_gains' in outputs:
-        student_mastery = outputs['projected_mastery'][student_idx_in_batch]  # [seq_len, num_skills]
-        student_gains = outputs['projected_gains'][student_idx_in_batch]  # [seq_len, num_skills]
+    # DUAL-ENCODER PREDICTIONS (2025-11-16): Get predictions from both encoders
+    # Encoder 1: Base predictions (Performance Path) - used for BCE Loss
+    student_predictions_encoder1 = outputs['predictions'][student_idx_in_batch]  # [seq_len]
+    
+    # Encoder 2: Incremental Mastery predictions (Interpretability Path) - used for IM Loss
+    if 'incremental_mastery_predictions' in outputs:
+        student_predictions_encoder2 = outputs['incremental_mastery_predictions'][student_idx_in_batch]  # [seq_len]
     else:
+        student_predictions_encoder2 = None
+    
+    # Get mastery (required) and gains (optional)
+    if 'projected_mastery' not in outputs:
         return None
+    
+    student_mastery = outputs['projected_mastery'][student_idx_in_batch]  # [seq_len, num_skills]
+    
+    # Gains might not be available if use_gain_head=False
+    # Priority: projected_gains > projected_gains_d > compute from value_seq_2 > zeros
+    if 'projected_gains' in outputs:
+        student_gains = outputs['projected_gains'][student_idx_in_batch]  # [seq_len, num_skills]
+    elif 'projected_gains_d' in outputs:
+        # Fall back to D-dimensional gains if available
+        student_gains = outputs['projected_gains_d'][student_idx_in_batch]  # [seq_len, num_skills]
+    elif 'value_seq' in outputs:
+        # Compute gains from value sequence (Encoder 2 outputs)
+        # Value sequence represents learning gains in the interpretability path
+        value_seq_student = outputs['value_seq'][student_idx_in_batch]  # [seq_len, d_model]
+        # Apply ReLU to get non-negative gains and project to skill space
+        # For simplicity, take mean across d_model dimension as skill-level gain
+        student_gains = torch.relu(value_seq_student).mean(dim=-1, keepdim=True)  # [seq_len, 1]
+        # Broadcast to num_skills if needed
+        num_skills = student_mastery.shape[-1]
+        student_gains = student_gains.expand(-1, num_skills)  # [seq_len, num_skills]
+    else:
+        # If no gains available, use zero gains (mastery-only mode)
+        student_gains = torch.zeros_like(student_mastery)
     
     # Build trajectory
     trajectory = {'steps': []}
@@ -153,21 +182,48 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
     num_steps = int(valid_steps.sum().item())
     
     for t in range(num_steps):
-        skill_id = int(student_q[t].item())
-        performance = int(student_responses[t].item())
-        prediction = float(student_predictions[t].item())
+        # MULTI-SKILL SUPPORT: Handle questions that may involve multiple skills
+        # For assist2015, typically 1 skill per question, but this supports the general case
+        skill_ids = []
         
-        # Get mastery and gain for this skill at this timestep
-        mastery_val = float(student_mastery[t, skill_id].item())
-        gain_val = float(student_gains[t, skill_id].item())
+        # Extract skill ID(s) from questions - support both single skill and multi-skill cases
+        skill_id_raw = student_q[t].item()
+        if isinstance(skill_id_raw, (list, tuple)):
+            skill_ids = [int(sid) for sid in skill_id_raw if sid >= 0]
+        else:
+            skill_id = int(skill_id_raw)
+            if skill_id >= 0:  # Filter out padding (-1)
+                skill_ids = [skill_id]
+        
+        if not skill_ids:  # Skip if no valid skills
+            continue
+        
+        # True performance (0/1)
+        performance = int(student_responses[t].item())
+        
+        # DUAL-ENCODER PREDICTIONS: Collect from both encoders
+        prediction_encoder1 = float(student_predictions_encoder1[t].item())
+        prediction_encoder2 = float(student_predictions_encoder2[t].item()) if student_predictions_encoder2 is not None else None
+        
+        # Collect gains and mastery for all skills involved in this interaction
+        gains_dict = {}
+        mastery_dict = {}
+        
+        for skill_id in skill_ids:
+            if skill_id < student_mastery.shape[-1]:  # Check bounds
+                mastery_val = float(student_mastery[t, skill_id].item())
+                gain_val = float(student_gains[t, skill_id].item())
+                gains_dict[skill_id] = gain_val
+                mastery_dict[skill_id] = mastery_val
         
         step_data = {
             'timestep': t + 1,
-            'skills_practiced': [skill_id],  # In this dataset, typically 1 skill per interaction
-            'gains': {skill_id: gain_val},
-            'mastery': {skill_id: mastery_val},
-            'performance': performance,
-            'prediction': prediction
+            'skills_practiced': skill_ids,  # List of skills (generic multi-skill support)
+            'gains': gains_dict,  # Dict mapping skill_id -> gain value
+            'mastery': mastery_dict,  # Dict mapping skill_id -> mastery value
+            'true_response': performance,  # True response (0 or 1)
+            'prediction_encoder1': prediction_encoder1,  # Encoder 1: Base prediction
+            'prediction_encoder2': prediction_encoder2  # Encoder 2: IM prediction (or None)
         }
         
         trajectory['steps'].append(step_data)
@@ -176,47 +232,94 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
 
 
 def print_trajectory(student_idx, trajectory, global_idx):
-    """Print trajectory in compact tabular format with student header."""
+    """
+    Print trajectory in tabular format with dual-encoder predictions and multi-skill support.
+    
+    DUAL-ENCODER DISPLAY (2025-11-16):
+    - Shows predictions from both Encoder 1 (Base) and Encoder 2 (IM)
+    - Displays learning gains and mastery per skill
+    - Supports multi-skill questions (shows all skills practiced in each step)
+    """
     if trajectory is None or not trajectory['steps']:
-        print(f"\n{'='*120}")
+        print(f"\n{'='*150}")
         print(f"STUDENT #{student_idx}")
-        print(f"{'='*120}")
+        print(f"{'='*150}")
         print(f"Global Index: {global_idx}")
-        print(f"Status: NO VALID TRAJECTORY DATA")
-        print(f"{'='*120}\n")
+        print("Status: NO VALID TRAJECTORY DATA")
+        print(f"{'='*150}\n")
         return
     
     num_steps = len(trajectory['steps'])
     
     # Calculate statistics
-    correct_count = sum(1 for step in trajectory['steps'] if step['performance'] == 1)
+    correct_count = sum(1 for step in trajectory['steps'] if step['true_response'] == 1)
     accuracy = correct_count / num_steps if num_steps > 0 else 0.0
-    unique_skills = len(set(step['skills_practiced'][0] for step in trajectory['steps']))
+    all_skills = set()
+    for step in trajectory['steps']:
+        all_skills.update(step['skills_practiced'])
+    unique_skills = len(all_skills)
     
     # Student header with features
-    print(f"\n{'='*120}")
+    print(f"\n{'='*150}")
     print(f"STUDENT #{student_idx}")
-    print(f"{'='*120}")
+    print(f"{'='*150}")
     print(f"Global Index: {global_idx:>6} │ Total Interactions: {num_steps:>4} │ Unique Skills: {unique_skills:>3} │ Accuracy: {accuracy:>5.1%}")
-    print(f"{'='*120}")
+    print(f"{'='*150}")
     
-    # Column headers for this student's table
-    print(f"{'Step':>4} │ {'Skill':>5} │ {'True':>4} │ {'Pred':>5} │ {'Match':>5} │ {'Gain':>6} │ {'Mastery':>7}")
-    print(f"{'─'*4}─┼─{'─'*5}─┼─{'─'*4}─┼─{'─'*5}─┼─{'─'*5}─┼─{'─'*6}─┼─{'─'*7}")
+    # Check if Encoder 2 predictions are available
+    has_encoder2 = trajectory['steps'][0]['prediction_encoder2'] is not None
+    
+    # Column headers - adapt based on encoder availability
+    if has_encoder2:
+        print(f"{'Step':>4} │ {'Skill(s)':>8} │ {'True':>4} │ {'Enc1':>5} │ {'Enc2':>5} │ {'M1':>3} │ {'M2':>3} │ {'Gain':>7} │ {'Mastery':>7}")
+        print(f"{'─'*4}─┼─{'─'*8}─┼─{'─'*4}─┼─{'─'*5}─┼─{'─'*5}─┼─{'─'*3}─┼─{'─'*3}─┼─{'─'*7}─┼─{'─'*7}")
+    else:
+        print(f"{'Step':>4} │ {'Skill(s)':>8} │ {'True':>4} │ {'Pred':>5} │ {'Match':>5} │ {'Gain':>7} │ {'Mastery':>7}")
+        print(f"{'─'*4}─┼─{'─'*8}─┼─{'─'*4}─┼─{'─'*5}─┼─{'─'*5}─┼─{'─'*7}─┼─{'─'*7}")
     
     for step in trajectory['steps']:
         t = step['timestep']
-        skill_id = step['skills_practiced'][0]
-        true_ans = step['performance']
-        pred = step['prediction']
-        pred_ans = 1 if pred >= 0.5 else 0
-        match = '✓' if true_ans == pred_ans else '✗'
-        gain_val = step['gains'][skill_id]
-        mastery_val = step['mastery'][skill_id]
+        skills = step['skills_practiced']
+        true_ans = step['true_response']
         
-        print(f"{t:4d} │ {skill_id:5d} │ {true_ans:4d} │ {pred:5.3f} │ {match:>5} │ {gain_val:6.4f} │ {mastery_val:7.4f}")
+        # For multi-skill: show primary skill ID (first one) in compact view
+        # Full skill list shown in skills column
+        primary_skill = skills[0] if skills else -1
+        skills_str = ','.join(str(s) for s in skills) if len(skills) <= 3 else f"{skills[0]},+{len(skills)-1}"
+        
+        if has_encoder2:
+            # DUAL-ENCODER MODE: Show predictions from both encoders
+            pred_enc1 = step['prediction_encoder1']
+            pred_enc2 = step['prediction_encoder2']
+            
+            # Binary predictions and matches
+            pred_ans_enc1 = 1 if pred_enc1 >= 0.5 else 0
+            pred_ans_enc2 = 1 if pred_enc2 >= 0.5 else 0
+            match_enc1 = '✓' if true_ans == pred_ans_enc1 else '✗'
+            match_enc2 = '✓' if true_ans == pred_ans_enc2 else '✗'
+            
+            # Get gain and mastery for primary skill
+            gain_val = step['gains'].get(primary_skill, 0.0)
+            mastery_val = step['mastery'].get(primary_skill, 0.0)
+            
+            print(f"{t:4d} │ {skills_str:>8} │ {true_ans:4d} │ {pred_enc1:5.3f} │ {pred_enc2:5.3f} │ {match_enc1:>3} │ {match_enc2:>3} │ {gain_val:7.4f} │ {mastery_val:7.4f}")
+        else:
+            # SINGLE PREDICTION MODE (legacy): Show Encoder 1 prediction only
+            pred = step['prediction_encoder1']
+            pred_ans = 1 if pred >= 0.5 else 0
+            match = '✓' if true_ans == pred_ans else '✗'
+            
+            # Get gain and mastery for primary skill
+            gain_val = step['gains'].get(primary_skill, 0.0)
+            mastery_val = step['mastery'].get(primary_skill, 0.0)
+            
+            print(f"{t:4d} │ {skills_str:>8} │ {true_ans:4d} │ {pred:5.3f} │ {match:>5} │ {gain_val:7.4f} │ {mastery_val:7.4f}")
     
-    print(f"{'='*120}\n")
+    print(f"{'='*150}\n")
+    
+    # Print legend if dual-encoder mode
+    if has_encoder2:
+        print("Legend: Enc1=Encoder1 (Base Predictions), Enc2=Encoder2 (IM Predictions), M1=Match1, M2=Match2")
 
 
 def main():
@@ -292,19 +395,28 @@ def main():
     print("Creating model architecture...")
     num_skills = test_cfg['num_c']
     
+    # Load checkpoint first to get the correct model config
+    print(f"Loading model weights from: {model_path}")
+    checkpoint = torch.load(model_path, map_location=device)
+    
     # Build complete config dict (copy all defaults and add num_c from dataset)
     defaults = config['defaults']
     complete_config = dict(defaults)  # Copy all defaults
     complete_config['num_c'] = num_skills  # Override with actual dataset skill count
+    
+    # If checkpoint has model_config, use num_students from it (critical for gamma_student size)
+    if 'model_config' in checkpoint and 'num_students' in checkpoint['model_config']:
+        complete_config['num_students'] = checkpoint['model_config']['num_students']
+        print(f"Using num_students={checkpoint['model_config']['num_students']} from checkpoint")
+    
     # Map monitor_freq to monitor_frequency if needed
     if 'monitor_freq' in complete_config and 'monitor_frequency' not in complete_config:
         complete_config['monitor_frequency'] = complete_config['monitor_freq']
+    # Compute incremental_mastery_loss_weight from bce_loss_weight if needed
+    if 'bce_loss_weight' in complete_config and 'incremental_mastery_loss_weight' not in complete_config:
+        complete_config['incremental_mastery_loss_weight'] = 1.0 - complete_config['bce_loss_weight']
     
     model = create_exp_model(complete_config)
-    
-    # Load trained weights
-    print(f"Loading model weights from: {model_path}")
-    checkpoint = torch.load(model_path, map_location=device)
     
     # Handle different checkpoint formats
     if 'model_state_dict' in checkpoint:
@@ -328,8 +440,8 @@ def main():
     )
     
     if not selected_students:
-        print("ERROR: No students found meeting criteria")
-        sys.exit(1)
+        print("No students found meeting the criteria (min_steps >= {})".format(args.min_steps))
+        return
     
     print(f"Selected {len(selected_students)} students:")
     for i, (global_idx, seq_len) in enumerate(selected_students, 1):

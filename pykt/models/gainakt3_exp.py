@@ -709,7 +709,7 @@ class GainAKT3Exp(nn.Module):
 
         # 9. Call interpretability monitor if enabled and at right frequency.
         # Guard to execute only on primary replica (device index 0) to prevent duplicate side-effects under DataParallel.
-        # Monitor uses Encoder 2 outputs (interpretability path)
+        # DUAL-ENCODER MONITORING (2025-11-16): Monitor receives outputs from both encoders
         primary_device = (hasattr(q, 'device') and (q.device.index is None or q.device.index == 0))
         if (self.interpretability_monitor is not None and 
             batch_idx is not None and 
@@ -717,11 +717,17 @@ class GainAKT3Exp(nn.Module):
             with torch.no_grad():
                 self.interpretability_monitor(
                     batch_idx=batch_idx,
-                    context_seq=context_seq_2,  # Encoder 2 context
-                    value_seq=value_seq_2,  # Encoder 2 value (learning gains)
+                    # Encoder 1 (Performance Path) outputs
+                    context_seq_1=context_seq_1,
+                    value_seq_1=value_seq_1,
+                    base_predictions=predictions,  # From Encoder 1
+                    # Encoder 2 (Interpretability Path) outputs
+                    context_seq_2=context_seq_2,
+                    value_seq_2=value_seq_2,  # Learning gains representation
                     projected_mastery=projected_mastery,
                     projected_gains=projected_gains,
-                    predictions=predictions,
+                    incremental_mastery_predictions=incremental_mastery_predictions,  # From Encoder 2
+                    # Common inputs
                     questions=q,
                     responses=r
                 )
@@ -748,6 +754,10 @@ class GainAKT3Exp(nn.Module):
         # Gains come directly from Values (no gain_head projection)
         if self.use_gain_head and 'projected_gains' in output:
             result['projected_gains'] = output['projected_gains']
+        
+        # Include incremental mastery predictions (Encoder 2) for dual-encoder evaluation
+        if 'incremental_mastery_predictions' in output:
+            result['incremental_mastery_predictions'] = output['incremental_mastery_predictions']
             
         return result
     

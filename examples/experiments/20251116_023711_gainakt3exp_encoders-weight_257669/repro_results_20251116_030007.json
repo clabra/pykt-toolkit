@@ -1,0 +1,291 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7237995942896394,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.0,
+    "gain_correlation": 0.0
+  },
+  "train_history": {
+    "train_loss": [
+      0.6094559035770634,
+      0.5913114980094791,
+      0.5763660613736958,
+      0.563185036491236,
+      0.5510136216415642,
+      0.5420883069384284,
+      0.5339515737301327,
+      0.5258994786541696,
+      0.5175061411190527
+    ],
+    "train_auc": [
+      0.6782824161664198,
+      0.7144494807452585,
+      0.7262880059269105,
+      0.7341707320324826,
+      0.7410953697918767,
+      0.7477783074062003,
+      0.7547062995641424,
+      0.7618091627693336,
+      0.7701177587812273
+    ],
+    "val_auc": [
+      0.7079964942717091,
+      0.718029982403428,
+      0.7221755944812834,
+      0.7237649706489073,
+      0.7237995942896394,
+      0.7222769375892848,
+      0.7193452842023987,
+      0.7158106100620325,
+      0.7107527073042736
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.8789448063898926,
+          "incremental_mastery": 1.1210551903163328
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.879589602213171,
+          "incremental_mastery": 1.1204103988313965
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 3,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.8896395416581662,
+          "incremental_mastery": 1.1103604516439995
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 4,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9014051204762739,
+          "incremental_mastery": 1.098594877330256
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 5,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9129072380526797,
+          "incremental_mastery": 1.0870927706347673
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 6,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9195200006435428,
+          "incremental_mastery": 1.0804799985018942
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 7,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9241715742212187,
+          "incremental_mastery": 1.0758284367681954
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 8,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9281434842398979,
+          "incremental_mastery": 1.0718565151728563
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 9,
+        "mastery_correlation": 0.0,
+        "gain_correlation": 0.0,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9309933015766969,
+          "incremental_mastery": 1.0690067028990813
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      }
+    ],
+    "determinism_fallback_batches": [
+      {
+        "epoch": 1,
+        "batch": 0
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "intrinsic_gain_attention": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "num_students": 12220,
+    "mastery_threshold_init": 0.85,
+    "threshold_temperature": 1.0,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.5,
+    "gain_performance_loss_weight": 0.5,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0,
+    "bce_loss_weight": 0.5,
+    "incremental_mastery_loss_weight": 0.5
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 12,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": false,
+    "fold": 0
+  },
+  "timestamp": "2025-11-16T03:00:07.240987",
+  "determinism_fallback": {
+    "count": 1,
+    "batches": [
+      {
+        "epoch": 1,
+        "batch": 0
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 9,
+    "local_mastery_corr": 0.0,
+    "local_gain_corr": 0.0,
+    "global_mastery_corr": null,
+    "global_gain_corr": null,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

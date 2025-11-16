@@ -49,6 +49,299 @@ See "Architecture Summary" section below for detailed flow.
 
 ---
 
+## Dual-Encoder Metrics and Monitoring (2025-11-16)
+
+**Recent Enhancement**: Comprehensive metrics tracking and monitoring infrastructure updated to fully support dual-encoder architecture with separate performance tracking for both encoder pathways.
+
+### 1. Enhanced CSV Metrics Output
+
+**Files Updated**:
+- `examples/train_gainakt3exp.py` - Training metrics collection
+- `examples/eval_gainakt3exp.py` - Evaluation metrics collection
+- `configs/parameter_default.json` - Added `bce_loss_weight` to interpretability type group
+
+**Metrics Tracked** (saved to `metrics_epoch.csv` during training):
+
+**Overall Performance Metrics** (Combined):
+- `train_loss`, `train_auc`, `train_acc` - Overall training performance
+- `val_loss`, `val_auc`, `val_acc` - Overall validation performance
+
+**Loss Components** (Unweighted raw losses):
+- `train_bce_loss`, `val_bce_loss` - BCE loss from Encoder 1 base predictions
+- `train_im_loss`, `val_im_loss` - Incremental mastery loss from Encoder 2
+
+**Weighted Losses** (As used in optimization):
+- `train_weighted_bce`, `val_weighted_bce` - BCE loss × λ₁ (lambda weight)
+- `train_weighted_im`, `val_weighted_im` - IM loss × λ₂ (1 - lambda weight)
+- `train_total_weighted`, `val_total_weighted` - Sum of weighted losses
+
+**Loss Contribution Analysis**:
+- `train_bce_share`, `val_bce_share` - Percentage of total loss from BCE
+- `train_im_share`, `val_im_share` - Percentage of total loss from IM
+
+**Encoder 1 (Performance Path) Metrics**:
+- `train_encoder1_auc`, `val_encoder1_auc` - AUC using only Encoder 1 base predictions
+- `train_encoder1_acc`, `val_encoder1_acc` - Accuracy using only Encoder 1 base predictions
+
+**Encoder 2 (Interpretability Path) Metrics**:
+- `train_encoder2_auc`, `val_encoder2_auc` - AUC using only Encoder 2 incremental mastery predictions
+- `train_encoder2_acc`, `val_encoder2_acc` - Accuracy using only Encoder 2 incremental mastery predictions
+
+**Interpretability Quality Metrics**:
+- `monotonicity_violation_rate` - Rate of mastery decreases (should be 0.0)
+- `negative_gain_rate` - Rate of negative learning gains (should be 0.0)
+- `bounds_violation_rate` - Rate of mastery outside [0,1] bounds (should be 0.0)
+- `mastery_correlation` - Correlation between mastery levels and student performance
+- `gain_correlation` - Correlation between learning gains and student performance
+
+**Usage**: After training, analyze CSV to compare encoder performance:
+```bash
+# View metrics for specific experiment
+cat examples/experiments/{experiment_dir}/metrics_epoch.csv | column -t -s,
+
+# Quick comparison of encoder AUCs
+awk -F',' 'NR>1 {print $1, $18, $20, $22, $24}' metrics_epoch.csv | column -t
+# Output: epoch train_enc1_auc val_enc1_auc train_enc2_auc val_enc2_auc
+```
+
+### 2. Updated Monitoring Hook
+
+**Files Updated**:
+- `pykt/models/gainakt3_exp.py` - Monitor call updated to pass both encoder outputs
+- `examples/interpretability_monitor.py` - Monitor class updated to handle dual-encoder states
+
+**Monitoring Enhancements**:
+- **Encoder 1 States**: `context_seq_1`, `value_seq_1` (performance path representations)
+- **Encoder 2 States**: `context_seq_2`, `value_seq_2` (interpretability path representations)
+- **Dual-Encoder Comparison**: Monitor can now track and compare attention patterns from both encoders
+- **Frequency Control**: `monitor_freq` parameter (default: 50 batches) controls monitoring frequency
+
+**Monitor Call** (in `gainakt3_exp.py`):
+```python
+self.interpretability_monitor(
+    batch_idx=batch_idx,
+    # Encoder 1 outputs (performance path)
+    context_seq_1=context_seq_1,
+    value_seq_1=value_seq_1,
+    # Encoder 2 outputs (interpretability path)
+    context_seq_2=context_seq_2,
+    value_seq_2=value_seq_2,
+    # Interpretability projections
+    projected_mastery=projected_mastery,
+    projected_gains=projected_gains,
+    predictions=predictions,
+    questions=q,
+    responses=r
+)
+```
+
+**Usage**: Monitor logs provide real-time insights during training:
+- Statistics computed every N batches (configurable via `monitor_freq`)
+- Separate tracking for performance vs interpretability encoder states
+- Enables debugging of encoder-specific learning dynamics
+
+### 3. Enhanced Learning Trajectories
+
+**File Updated**: `examples/learning_trajectories.py`
+
+**New Features**:
+
+**Multi-Skill Support**:
+- Generic handling of questions with multiple skills (not just single-skill ASSIST2015)
+- Per-skill gains and mastery tracking
+- Skill aggregation for questions targeting multiple concepts
+
+**Dual-Encoder Predictions**:
+- **True Response**: Ground truth (0/1)
+- **Encoder 1 Prediction**: Base prediction from performance path
+- **Encoder 2 Prediction**: Incremental mastery prediction from interpretability path
+- **Comparison**: Side-by-side view of how both encoders perform
+
+**Per-Skill Learning Gains**:
+- Shows learning gains for relevant skills only (those targeted by the question)
+- Distinguishes between gains for practiced vs non-practiced skills
+- Tracks effective practice accumulation (quality-weighted)
+
+**Enhanced Output Format**:
+```
+STUDENT #1
+Global Index: 6 | Total Interactions: 10 | Unique Skills: 3 | Accuracy: 80.0%
+================================================================================
+Step | Skills      | True | Enc1_Pred | Enc2_Pred | Gains           | Mastery
+-----|-------------|------|-----------|-----------|-----------------|----------------
+  1  | 24          |  1   |   0.841   |   0.523   | {24: 0.0234}    | {24: 0.0864}
+  2  | 24          |  1   |   0.901   |   0.678   | {24: 0.0312}    | {24: 0.1409}
+  3  | 24,27       |  0   |   0.541   |   0.445   | {24: 0.0156,    | {24: 0.2208,
+     |             |      |           |           |  27: 0.0189}    |  27: 0.0858}
+```
+
+**Key Enhancements**:
+- Per-skill gains and mastery (handles multi-skill questions)
+- Three prediction columns: true, Encoder 1, Encoder 2
+- Clear visibility into dual-encoder behavior differences
+- Gain quality tracking from Encoder 2's effective practice mechanism
+
+**Usage**:
+```bash
+# Basic trajectory analysis
+python examples/learning_trajectories.py \
+  --run_dir examples/experiments/{experiment_dir} \
+  --num_students 10 \
+  --min_steps 10
+
+# Focus on longer sequences for detailed progression
+python examples/learning_trajectories.py \
+  --run_dir examples/experiments/{experiment_dir} \
+  --num_students 5 \
+  --min_steps 50
+```
+
+### How to Leverage Dual-Encoder Metrics
+
+**1. Encoder Comparison Analysis**:
+```python
+import pandas as pd
+
+# Load metrics
+df = pd.read_csv('experiments/{exp_dir}/metrics_epoch.csv')
+
+# Compare encoder performance over epochs
+print("Encoder 1 (Performance) vs Encoder 2 (Interpretability):")
+print(df[['epoch', 'val_encoder1_auc', 'val_encoder2_auc', 
+          'val_encoder1_acc', 'val_encoder2_acc']])
+
+# Check if interpretability encoder maintains reasonable performance
+print(f"\nEncoder 2 final AUC: {df['val_encoder2_auc'].iloc[-1]:.4f}")
+print(f"Performance gap: {df['val_encoder1_auc'].iloc[-1] - df['val_encoder2_auc'].iloc[-1]:.4f}")
+```
+
+**2. Loss Balance Analysis**:
+```python
+# Verify loss weighting is working as intended
+print("Loss contribution over time:")
+print(df[['epoch', 'train_bce_share', 'train_im_share']])
+
+# Expected: BCE share ≈ 0.90, IM share ≈ 0.10 (with default λ₁=0.9)
+```
+
+**3. Interpretability Quality Validation**:
+```python
+# Check interpretability constraints
+print("\nInterpretability Quality Metrics:")
+print(df[['epoch', 'monotonicity_violation_rate', 'negative_gain_rate',
+          'mastery_correlation', 'gain_correlation']].tail())
+
+# Ideal: violation rates near 0.0, correlations > 0.3
+```
+
+**4. Encoder-Specific Training Dynamics**:
+- Monitor CSV during training to detect:
+  - **Encoder 1**: Should quickly optimize for prediction accuracy (high AUC)
+  - **Encoder 2**: May start lower but should maintain reasonable AUC while learning interpretable patterns
+  - **Loss balance**: Verify BCE dominates (90%) while IM provides interpretability constraint (10%)
+
+**5. Post-Training Analysis**:
+```bash
+# Compare final performance
+tail -1 metrics_epoch.csv | awk -F',' '{
+  printf "Final Results:\n"
+  printf "  Overall Val AUC: %.4f\n", $6
+  printf "  Encoder 1 Val AUC: %.4f\n", $20
+  printf "  Encoder 2 Val AUC: %.4f\n", $22
+  printf "  Mastery Correlation: %.4f\n", $29
+}'
+```
+
+### Parameter Configuration
+
+**Key Parameter** (in `configs/parameter_default.json`):
+```json
+{
+  "defaults": {
+    "bce_loss_weight": 0.9,  // λ₁ - BCE loss weight
+    // incremental_mastery_loss_weight computed as 1 - λ₁
+    "monitor_freq": 50       // Monitor every 50 batches
+  },
+  "types": {
+    "interpretability": [
+      "bce_loss_weight",     // Added to interpretability type group
+      "use_mastery_head",
+      // ... other interpretability params
+    ]
+  }
+}
+```
+
+**Lambda Weight Interpretation**:
+- `bce_loss_weight = 0.9` → BCE contributes 90% to total loss (performance optimization)
+- `incremental_mastery_loss_weight = 0.1` → IM contributes 10% to total loss (interpretability constraint)
+- Total Loss: `λ₁ × BCE + (1-λ₁) × IM` where λ₁ + (1-λ₁) = 1.0
+
+**Monitoring Frequency**:
+- `monitor_freq = 50` → Statistics logged every 50 batches
+- Lower values → More frequent logging (slower training)
+- Higher values → Less frequent logging (faster training, less granular tracking)
+
+### Validation and Debugging
+
+**Check Metric Collection**:
+```bash
+# Verify CSV has all expected columns (30 total)
+head -1 metrics_epoch.csv | tr ',' '\n' | nl
+
+# Expected columns:
+#  1. epoch
+#  2-4. train_loss, train_auc, train_acc
+#  5-7. val_loss, val_auc, val_acc
+#  8-11. train_bce_loss, train_im_loss, val_bce_loss, val_im_loss
+#  12-17. weighted losses and totals
+#  18-21. loss shares
+#  22-25. encoder1 metrics
+#  26-29. encoder2 metrics
+#  30-34. interpretability quality metrics
+```
+
+**Monitor Log Inspection**:
+```bash
+# Check monitoring is active (should see periodic statistics)
+grep "Monitor" examples/experiments/{exp_dir}/training.log | head -20
+
+# Expected output every monitor_freq batches:
+# [Monitor] Batch 50: context_seq_1 mean=0.123, value_seq_1 mean=0.456
+# [Monitor] Batch 50: context_seq_2 mean=0.234, value_seq_2 mean=0.567
+# [Monitor] Batch 50: mastery mean=0.345, gains mean=0.089
+```
+
+**Trajectory Validation**:
+```bash
+# Run on small sample to verify dual predictions working
+python examples/learning_trajectories.py \
+  --run_dir examples/experiments/{exp_dir} \
+  --num_students 2 \
+  --min_steps 5 | head -50
+
+# Expected: Should see both Enc1_Pred and Enc2_Pred columns with different values
+```
+
+### Summary
+
+The dual-encoder metrics infrastructure provides comprehensive visibility into both encoder pathways:
+
+1. **Separate Performance Tracking**: AUC and accuracy for each encoder independently
+2. **Loss Component Analysis**: Unweighted, weighted, and percentage contributions
+3. **Real-Time Monitoring**: Periodic state snapshots during training
+4. **Enhanced Trajectories**: Per-skill gains, mastery, and dual predictions
+5. **Interpretability Validation**: Quality metrics for mastery/gains
+
+This enables researchers to:
+- Verify both encoders are learning effectively
+- Validate loss weighting is balanced correctly
+- Debug encoder-specific issues
+- Analyze trade-offs between performance and interpretability
+- Generate detailed per-student learning progression reports
+
+---
+
 ## Model Overview
 
 **Implementation Files**:
@@ -1909,35 +2202,76 @@ incremental_mastery_predictions = torch.sigmoid((mastery - self.theta_global) / 
 
 ## Overall Architecture Compliance
 
+**⚠️ ARCHITECTURE SIMPLIFICATION (2025-11-16)**: 27 parameters deprecated and removed from CLI. See `tmp/DEPRECATED_PARAMETERS_2025-11-16.md` for details.
+
 | **Feature**                | **Diagram Specification**                                      | **Implementation Details**                                                                 | **Status**          |
 |----------------------------|---------------------------------------------------------------|-------------------------------------------------------------------------------------------|---------------------|
 | **Skill Embedding Table**  | Separate embedding for target skills in prediction            | `concept_embedding` used in `[h, v, s]` concatenation                                     | ✅ Activated         |
 | **Dynamic Value Stream**   | Dual context/value sequences, separate norms, Q/K from context, V from value | Dual embeddings + separate `norm1_ctx/val`, `norm2_ctx` + correct attention               | ✅ Activated         |
-| **Ground Truth Integration** | Used in loss calculation + monitoring hooks                  | Integrated in all losses + `set_monitor()` + periodic execution                           | ✅ Activated         |
-| **Projection Heads**       | Mastery via sigmoid learning curves, Gains from attention Values | Sigmoid learning curve with learnable parameters (β_skill, γ_student, M_sat, θ_global, offset) | ✅ Activated + enhanced |
-| **Auxiliary Losses**       | 5 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity) | All 5 + Consistency (bonus) with configurable weights                                     | ✅ Activated         |
+| **Ground Truth Integration** | Used in loss calculation + monitoring hooks                  | Integrated in BCE loss + `set_monitor()` + periodic execution                           | ✅ Activated         |
+| **Projection Heads**       | Mastery via sigmoid learning curves, Gains from attention Values | Sigmoid learning curve with learnable parameters (β_skill, γ_student, M_sat, θ_global, offset) | ✅ Mastery head active, Gain head inactive |
+| **Dual-Loss Architecture**  | BCE + Incremental Mastery Loss                              | BCE (base predictions, weight=0.9) + IM Loss (threshold predictions, weight=0.1)          | ✅ Activated         |
+| **Constraint Losses**      | 6 losses (NonNeg, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity, Consistency) | All weights=0.0, code commented out in train/eval scripts                                | ❌ Deactivated       |
+| **Semantic Alignment**     | Local alignment correlation loss                             | All alignment code commented out, enable_alignment_loss=false                             | ❌ Deactivated       |
+| **Global Alignment**       | Population-level mastery coherence                           | Code commented out, enable_global_alignment_pass=false                                    | ❌ Deactivated       |
+| **Semantic Refinement**    | Retention + Lag gain losses                                  | All refinement code commented out, enable flags=false, weights=0.0                        | ❌ Deactivated       |
 | **Monitoring**             | Real-time interpretability analysis, configurable frequency   | `interpretability_monitor` hook + `monitor_frequency` + DataParallel safety              | ✅ Activated         |
-| **Intrinsic Gain Attention** | Alternative parameter-efficient mode                        | `--intrinsic_gain_attention` flag, architectural constraint enforcement, attention-derived gains | ❌ Deactivated       |
-| **Recursive Mastery Accumulation** | Deterministic temporal constraint: mastery_{t+1} = mastery_t + α·ReLU(gain_t) | Recursive loop with scaling (α=0.1) and clamping [0,1], enforces consistency between mastery and gains | ✅ Activated         |
+| **Intrinsic Gain Attention** | Alternative parameter-efficient mode                        | `--intrinsic_gain_attention` flag deprecated, argparse commented out                      | ❌ Deprecated        |
+| **Sigmoid Learning Curves** | Practice count-driven mastery evolution                      | Fully implemented with β_skill, γ_student, M_sat learnable parameters                    | ✅ Activated         |
 
 
 
 ## Parameters
 
-The complete list of parameters including category and description is in `paper/parameters.csv`.
+**⚠️ PARAMETER DEPRECATION (2025-11-16)**: 27 parameters deprecated and removed from CLI arguments. Active parameters reduced from 70 to 37. See `tmp/DEPRECATED_PARAMETERS_2025-11-16.md` for complete deprecation details and rationale.
+
+The complete list of **active parameters** is in `configs/parameter_default.json` (defaults section). Deprecated parameters are documented in the separate "deprecated" section for reference only.
 
 ### Model Instantiation
 
-Models are created via `create_exp_model(config)` (`gainakt3_exp.py` line 435), which requires all parameters explicitly in the config dictionary:
+Models are created via `create_exp_model(config)` (`gainakt3_exp.py` line 435), which requires all parameters explicitly in the config dictionary.
 
-**Required Parameters** (22 total):
-- **Architecture**: `num_c`, `seq_len`, `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`
-- **Interpretability Features**: `use_mastery_head`, `use_gain_head`, `intrinsic_gain_attention`, `use_skill_difficulty`, `use_student_speed`
-- **Training Context**: `num_students` (for student_speed embedding when enabled)
-- **Loss Weights** (6): `non_negative_loss_weight`, `monotonicity_loss_weight`, `mastery_performance_loss_weight`, `gain_performance_loss_weight`, `sparsity_loss_weight`, `consistency_loss_weight`
-- **Monitoring**: `monitor_frequency` (batches between monitoring calls)
+### Active Parameters (37 total)
 
-**Zero Defaults Policy**: The factory function raises errors if required parameters are missing, ensuring no hidden defaults. All defaults are defined in `configs/parameter_default.json`, which is loaded by `run_repro_experiment.py` and can be overridden via CLI. 
+**Runtime Configuration (13 parameters)**:
+- `seed`, `epochs`, `batch_size`, `learning_rate`, `weight_decay`
+- `optimizer`, `gradient_clip`, `patience`, `monitor_freq`
+- `use_amp`, `use_wandb`, `auto_shifted_eval`, `max_correlation_students`
+
+**Model Architecture (7 parameters)**:
+- `seq_len`, `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`
+
+**Interpretability Features (8 parameters)**:
+- `use_mastery_head`, `use_gain_head`, `use_skill_difficulty`, `use_student_speed`
+- `bce_loss_weight`, `mastery_threshold_init`, `threshold_temperature`, `num_students`
+
+**Data Configuration (2 parameters)**:
+- `dataset`, `fold`
+
+**Launcher Parameters (2 parameters)**:
+- `train_script`, `eval_script`
+
+**Legacy Flags (5 parameters)** - Kept for backward compatibility:
+- `enhanced_constraints` (always false)
+- Deprecated loss weights (all 0.0): `non_negative_loss_weight`, `monotonicity_loss_weight`, `mastery_performance_loss_weight`, `gain_performance_loss_weight`, `sparsity_loss_weight`, `consistency_loss_weight`
+- Deprecated alignment flags (all false): `enable_alignment_loss`, `enable_global_alignment_pass`, `enable_retention_loss`, `enable_lag_gain_loss`
+
+### Deprecated Parameters (27 total, commented out in argparse)
+
+**Constraint Losses (6)**: All weights=0.0, code commented out  
+**Semantic Alignment (9)**: enable_alignment_loss=false, all related parameters inactive  
+**Global Alignment (2)**: enable_global_alignment_pass=false  
+**Semantic Refinement (16)**: All enable flags=false, weights=0.0  
+**Warmup/Scheduling (3)**: Not used (constraints/alignment disabled)  
+**Deprecated Architecture (1)**: `intrinsic_gain_attention`
+
+See `tmp/DEPRECATED_PARAMETERS_2025-11-16.md` for complete list with deprecation rationale and dates.
+
+### Zero Defaults Policy
+
+The factory function raises errors if required parameters are missing, ensuring no hidden defaults. All defaults are defined in `configs/parameter_default.json`, which is loaded by `run_repro_experiment.py` and can be overridden via CLI.
+
+**Command Simplification**: Training commands now require ~15 essential parameters instead of 64, making the interface much cleaner and aligned with the dual-encoder architecture. 
 
 ## Evolving the Model
 

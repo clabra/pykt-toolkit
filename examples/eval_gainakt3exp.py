@@ -69,9 +69,15 @@ def compute_correlations(model, data_loader, device, max_students=300):
 
 
 def evaluate_predictions(model, data_loader, device):
+    """
+    Evaluate model predictions from both encoders.
+    Returns dict with metrics for combined, encoder1, and encoder2 predictions.
+    """
     model.eval()
     preds = []
     trues = []
+    preds_encoder1 = []  # Encoder 1: Base predictions
+    preds_encoder2 = []  # Encoder 2: Incremental mastery predictions
     with torch.no_grad():
         core = model.module if isinstance(model, torch.nn.DataParallel) else model
         for batch in data_loader:
@@ -90,16 +96,51 @@ def evaluate_predictions(model, data_loader, device):
                 m = mask[i]
                 if m.sum() == 0:
                     continue
-                pr = torch.sigmoid(logits[i][m]).detach().cpu().numpy()
+                # Encoder 1: Base predictions from logits
+                pr_enc1 = torch.sigmoid(logits[i][m]).detach().cpu().numpy()
                 gt = r_shft[i][m].float().cpu().numpy()
-                preds.append(pr)
+                
+                # Encoder 2: Incremental mastery predictions (if available)
+                if 'incremental_mastery_predictions' in out:
+                    im_preds = out['incremental_mastery_predictions']
+                    pr_enc2 = im_preds[i][m].detach().cpu().numpy()
+                    preds_encoder2.append(pr_enc2)
+                else:
+                    preds_encoder2.append(np.zeros_like(pr_enc1))
+                
+                preds.append(pr_enc1)  # Legacy: use encoder1 as combined
+                preds_encoder1.append(pr_enc1)
                 trues.append(gt)
+    
     if not preds:
-        return 0.0, 0.0
+        return {'auc': 0.0, 'accuracy': 0.0, 'encoder1_auc': 0.0, 'encoder1_acc': 0.0, 
+                'encoder2_auc': 0.0, 'encoder2_acc': 0.0}
+    
     flat_preds = np.concatenate(preds)
     flat_trues = np.concatenate(trues)
+    flat_preds_enc1 = np.concatenate(preds_encoder1)
+    flat_preds_enc2 = np.concatenate(preds_encoder2)
+    
+    # Combined stats (legacy, using encoder1)
     stats = compute_auc_acc(flat_trues, flat_preds)
-    return stats['auc'], stats['acc']
+    
+    # Encoder 1 stats
+    stats_enc1 = compute_auc_acc(flat_trues, flat_preds_enc1)
+    
+    # Encoder 2 stats (if available)
+    if np.any(flat_preds_enc2):
+        stats_enc2 = compute_auc_acc(flat_trues, flat_preds_enc2)
+    else:
+        stats_enc2 = {'auc': 0.0, 'acc': 0.0}
+    
+    return {
+        'auc': stats['auc'],
+        'accuracy': stats['acc'],
+        'encoder1_auc': stats_enc1['auc'],
+        'encoder1_acc': stats_enc1['acc'],
+        'encoder2_auc': stats_enc2['auc'],
+        'encoder2_acc': stats_enc2['acc']
+    }
 
 
 def main():
@@ -125,20 +166,32 @@ def main():
                         help='Enable mastery projection head (REQUIRED for correct model loading)')
     parser.add_argument('--use_gain_head', action='store_true',
                         help='Enable gain projection head (REQUIRED for correct model loading)')
-    parser.add_argument('--intrinsic_gain_attention', action='store_true',
-                        help='Use intrinsic gain attention mode (changes architecture)')
+    # DEPRECATED (2025-11-16): Intrinsic gain attention mode removed in GainAKT3Exp
+    # parser.add_argument('--intrinsic_gain_attention', action='store_true',
+    #                     help='Use intrinsic gain attention mode (changes architecture)')
     parser.add_argument('--use_skill_difficulty', action='store_true',
                         help='Enable learnable per-skill difficulty parameters (Phase 1)')
     parser.add_argument('--use_student_speed', action='store_true',
                         help='Enable learnable per-student learning speed embeddings (Phase 2)')
     parser.add_argument('--num_students', type=int, required=True,
                         help='Number of unique students in dataset (required for student_speed)')
-    parser.add_argument('--non_negative_loss_weight', type=float, required=True)
-    parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
-    parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
-    parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
-    parser.add_argument('--sparsity_loss_weight', type=float, required=True)
-    parser.add_argument('--consistency_loss_weight', type=float, required=True)
+    
+    # =====================================================================
+    # DEPRECATED PARAMETERS (2025-11-16)
+    # These constraint loss parameters are no longer used in GainAKT3Exp.
+    # Kept here for reference only - DO NOT use in new experiments.
+    # =====================================================================
+    # parser.add_argument('--non_negative_loss_weight', type=float, required=True)
+    # parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
+    # parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
+    # parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
+    # parser.add_argument('--sparsity_loss_weight', type=float, required=True)
+    # parser.add_argument('--consistency_loss_weight', type=float, required=True)
+    # =====================================================================
+    # END DEPRECATED PARAMETERS
+    # =====================================================================
+    
+    # Active loss parameters (GainAKT3Exp dual-encoder architecture)
     parser.add_argument('--bce_loss_weight', type=float, required=True, 
                         help='Weight for BCE loss (lambda1). Incremental mastery loss weight = 1 - lambda1')
     parser.add_argument('--mastery_threshold_init', type=float, required=True,
@@ -259,11 +312,11 @@ def main():
     test_dataset = KTDataset(os.path.join(test_cfg['dpath'], test_cfg['test_file']), test_cfg['input_type'], {-1})
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=int(os.getenv('PYKT_NUM_WORKERS','32')), pin_memory=True)
     
-    # Evaluate
-    train_auc, train_acc = evaluate_predictions(model, train_loader, device)
+    # Evaluate (dual-encoder metrics)
+    train_metrics = evaluate_predictions(model, train_loader, device)
     train_mastery_corr, train_gain_corr, train_n = compute_correlations(model, train_loader, device, args.max_correlation_students)
-    valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
-    test_auc, test_acc = evaluate_predictions(model, test_loader, device)
+    valid_metrics = evaluate_predictions(model, valid_loader, device)
+    test_metrics = evaluate_predictions(model, test_loader, device)
     test_mastery_corr, test_gain_corr, test_n = compute_correlations(model, test_loader, device, args.max_correlation_students)
     
     experiment_id = args.experiment_id or os.path.basename(args.run_dir)
@@ -272,15 +325,31 @@ def main():
         'experiment_id': experiment_id,
         'dataset': args.dataset,
         'fold': args.fold,
-        'train_auc': float(train_auc),
-        'train_acc': float(train_acc),
+        # Combined metrics (legacy, using encoder1)
+        'train_auc': float(train_metrics['auc']),
+        'train_acc': float(train_metrics['accuracy']),
+        'valid_auc': float(valid_metrics['auc']),
+        'valid_acc': float(valid_metrics['accuracy']),
+        'test_auc': float(test_metrics['auc']),
+        'test_acc': float(test_metrics['accuracy']),
+        # Encoder 1 (Performance Path) metrics
+        'train_encoder1_auc': float(train_metrics['encoder1_auc']),
+        'train_encoder1_acc': float(train_metrics['encoder1_acc']),
+        'valid_encoder1_auc': float(valid_metrics['encoder1_auc']),
+        'valid_encoder1_acc': float(valid_metrics['encoder1_acc']),
+        'test_encoder1_auc': float(test_metrics['encoder1_auc']),
+        'test_encoder1_acc': float(test_metrics['encoder1_acc']),
+        # Encoder 2 (Interpretability Path) metrics
+        'train_encoder2_auc': float(train_metrics['encoder2_auc']),
+        'train_encoder2_acc': float(train_metrics['encoder2_acc']),
+        'valid_encoder2_auc': float(valid_metrics['encoder2_auc']),
+        'valid_encoder2_acc': float(valid_metrics['encoder2_acc']),
+        'test_encoder2_auc': float(test_metrics['encoder2_auc']),
+        'test_encoder2_acc': float(test_metrics['encoder2_acc']),
+        # Interpretability correlations
         'train_mastery_correlation': float(train_mastery_corr),
         'train_gain_correlation': float(train_gain_corr),
         'train_correlation_students': int(train_n),
-        'valid_auc': float(valid_auc),
-        'valid_acc': float(valid_acc),
-        'test_auc': float(test_auc),
-        'test_acc': float(test_acc),
         'test_mastery_correlation': float(test_mastery_corr),
         'test_gain_correlation': float(test_gain_corr),
         'test_correlation_students': int(test_n),
@@ -301,14 +370,57 @@ def main():
     with open(os.path.join(args.run_dir, 'config_eval.json'), 'w') as f:
         json.dump(config_eval, f, indent=2)
     
-    # Save CSV
+    # Save CSV with dual-encoder metrics
     with open(os.path.join(args.run_dir, 'metrics_epoch_eval.csv'), 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=['split', 'auc', 'accuracy', 'mastery_correlation', 'gain_correlation', 'correlation_students', 'timestamp'])
+        # REMOVED (2025-11-16): mastery_correlation, gain_correlation, correlation_students
+        # Reason: Loss components and encoder AUCs provide better correlation measures
+        fieldnames = ['split', 'auc', 'accuracy', 'encoder1_auc', 'encoder1_acc', 'encoder2_auc', 'encoder2_acc',
+                      'timestamp']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         ts = datetime.utcnow().isoformat()
-        writer.writerow({'split': 'training', 'auc': train_auc, 'accuracy': train_acc, 'mastery_correlation': train_mastery_corr, 'gain_correlation': train_gain_corr, 'correlation_students': train_n, 'timestamp': ts})
-        writer.writerow({'split': 'validation', 'auc': valid_auc, 'accuracy': valid_acc, 'mastery_correlation': 'N/A', 'gain_correlation': 'N/A', 'correlation_students': 'N/A', 'timestamp': ts})
-        writer.writerow({'split': 'test', 'auc': test_auc, 'accuracy': test_acc, 'mastery_correlation': test_mastery_corr, 'gain_correlation': test_gain_corr, 'correlation_students': test_n, 'timestamp': ts})
+        writer.writerow({
+            'split': 'training',
+            'auc': train_metrics['auc'],
+            'accuracy': train_metrics['accuracy'],
+            'encoder1_auc': train_metrics['encoder1_auc'],
+            'encoder1_acc': train_metrics['encoder1_acc'],
+            'encoder2_auc': train_metrics['encoder2_auc'],
+            'encoder2_acc': train_metrics['encoder2_acc'],
+            # REMOVED (2025-11-16): Correlation metrics
+            # 'mastery_correlation': train_mastery_corr,
+            # 'gain_correlation': train_gain_corr,
+            # 'correlation_students': train_n,
+            'timestamp': ts
+        })
+        writer.writerow({
+            'split': 'validation',
+            'auc': valid_metrics['auc'],
+            'accuracy': valid_metrics['accuracy'],
+            'encoder1_auc': valid_metrics['encoder1_auc'],
+            'encoder1_acc': valid_metrics['encoder1_acc'],
+            'encoder2_auc': valid_metrics['encoder2_auc'],
+            'encoder2_acc': valid_metrics['encoder2_acc'],
+            # REMOVED (2025-11-16): Correlation metrics
+            # 'mastery_correlation': 'N/A',
+            # 'gain_correlation': 'N/A',
+            # 'correlation_students': 'N/A',
+            'timestamp': ts
+        })
+        writer.writerow({
+            'split': 'test',
+            'auc': test_metrics['auc'],
+            'accuracy': test_metrics['accuracy'],
+            'encoder1_auc': test_metrics['encoder1_auc'],
+            'encoder1_acc': test_metrics['encoder1_acc'],
+            'encoder2_auc': test_metrics['encoder2_auc'],
+            'encoder2_acc': test_metrics['encoder2_acc'],
+            # REMOVED (2025-11-16): Correlation metrics
+            # 'mastery_correlation': test_mastery_corr,
+            # 'gain_correlation': test_gain_corr,
+            # 'correlation_students': test_n,
+            'timestamp': ts
+        })
     
     print(json.dumps(results, indent=2))
 

@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251116_023711_gainakt3exp_encoders-weight_257669",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7551030724376884,
+  "train_acc": 0.7632862144379053,
+  "train_mastery_correlation": 0.0,
+  "train_gain_correlation": 0.0,
+  "train_correlation_students": 0,
+  "valid_auc": 0.7237995942896394,
+  "valid_acc": 0.7542457834139505,
+  "test_auc": 0.717954781876309,
+  "test_acc": 0.7481573941987637,
+  "test_mastery_correlation": 0.0,
+  "test_gain_correlation": 0.0,
+  "test_correlation_students": 0,
+  "timestamp": "2025-11-16T03:00:29.016059Z"
+}
