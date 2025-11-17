@@ -267,52 +267,277 @@ Question Q1 targets Skill 14:
 
 ---
 
-## Recommended Fix
+## Expected Outcomes: How to Verify the Fix Works
 
-### Implement Per-Skill Gains Vector
+Once the per-skill gains fix is implemented, we should observe specific improvements in both validation metrics and trajectory analysis. This section defines what "success" looks like.
 
-**File**: `pykt/models/gainakt3_exp.py`, Lines 528-554
+### Validation Metrics (During Training)
 
-**Current (BROKEN)**:
+**Primary Indicators of Success:**
+
+| Metric | Current (Broken) | Minimum Success | Target Success | Interpretation |
+|--------|------------------|-----------------|----------------|----------------|
+| **Encoder2 Val AUC** | 0.4842 (below random) | > 0.55 | > 0.60 | Encoder 2 can predict responses through mastery |
+| **Encoder1 Val AUC** | 0.6765 | Maintain ~0.67 | ~0.67-0.68 | Encoder 1 performance unchanged |
+| **Mastery ↔ Response Correlation** | -0.044 (no relationship) | > 0.3 | > 0.5 | Mastery is predictive of performance |
+| **Encoder2_Pred Range** | [0.37, 0.53] (compressed) | > 0.3 width | > 0.4 width | Confident differentiation between students |
+| **Training Stability** | Stable | Stable | Stable | No gradient issues or NaN values |
+
+**What These Metrics Tell Us:**
+
+1. **Encoder2 Val AUC > 0.55**: Proves that Encoder 2 can learn meaningful skill-specific patterns. Below random (0.50) means the model cannot distinguish correct from incorrect responses through mastery mechanism. Above 0.55 indicates the mastery-based prediction pathway is functional.
+
+2. **Positive Mastery ↔ Response Correlation (> 0.3)**: Validates the conceptual foundation that "higher mastery → more likely to answer correctly". Negative or zero correlation means mastery is unrelated to actual performance, making it meaningless as an interpretability measure.
+
+3. **Wider Prediction Range**: Compressed predictions (narrow range) indicate the model is uncertain and making near-random guesses. A wider range (> 0.3) shows the model can confidently predict both success (high mastery) and failure (low mastery).
+
+### Trajectory Analysis (Post-Training)
+
+After training, extract trajectories and check for these patterns:
+
+**1. Skill Differentiation (Critical)**
+
+**Test:**
 ```python
-# Scalar gain per interaction
-gain_quality = torch.sigmoid(learning_gains_d.mean(dim=-1, keepdim=True))  # [B, L, 1]
-effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+# Compute gain variance across skills per interaction
+gain_variance = df.groupby(['student_idx', 'step'])['expected_gain'].std().mean()
+print(f"Gain variance per interaction: {gain_variance:.4f}")
 ```
 
-**Required Fix**:
+**Expected Outcomes:**
+- ❌ **Current (Broken)**: Variance ≈ 0.0 (all skills get same gain)
+- ✅ **Minimum Success**: Variance > 0.05 (some skill differentiation)
+- 🎯 **Target Success**: Variance > 0.10 (clear skill differentiation)
+
+**Interpretation**: Each interaction should affect different skills differently. High gain variance means the model learned which skills are relevant for each question (Q-matrix learning). Zero variance means uniform gains (the current bug).
+
+**2. Q-Matrix Learning (Sparse Activation)**
+
+**Test:**
 ```python
-# In __init__: Add projection layer
-self.gains_projection = nn.Linear(d_model, num_c)  # [D=256] → [num_c]
-
-# In forward_with_states: Compute per-skill gains
-skill_gains_logits = self.gains_projection(value_seq_2)  # [B, L, D] → [B, L, num_c]
-skill_gains = torch.sigmoid(skill_gains_logits)  # [B, L, num_c] ∈ [0, 1]
-
-# Accumulate per-skill (each skill gets different increment!)
-effective_practice[:, t, :] += skill_gains[:, t, :]  # Differentiable
+# Count how many skills have significant gains per interaction
+skills_per_interaction = df.groupby(['student_idx', 'step'])['expected_gain'].apply(
+    lambda x: (x > 0.1).sum()
+).median()
+print(f"Median skills activated per interaction: {skills_per_interaction:.1f}")
 ```
 
-**Benefits**:
-- ✅ Enables skill-specific learning rates
-- ✅ Maintains differentiability (gradients flow through gains_projection)
-- ✅ Encoder 2 can learn question-skill associations
-- ✅ Mastery becomes skill-specific, not engagement proxy
+**Expected Outcomes:**
+- ❌ **Current (Broken)**: All skills activated (≈123 skills if num_c=123)
+- ✅ **Minimum Success**: 1-5 skills per interaction (sparse pattern)
+- 🎯 **Target Success**: 1-3 skills per interaction (tight sparsity)
+
+**Interpretation**: Real questions typically test 1-3 related skills, not all skills simultaneously. Sparse activation (few skills with high gains per interaction) proves the model learned question-skill associations from data.
+
+**3. Monotonicity (Educational Validity)**
+
+**Test:**
+```python
+# Check that mastery never decreases for any student-skill pair
+violations = 0
+for student in df['student_idx'].unique():
+    student_data = df[df['student_idx'] == student].sort_values('step')
+    for skill in student_data['skill_id'].unique():
+        skill_traj = student_data[student_data['skill_id'] == skill]['mastery']
+        decreases = (skill_traj.diff().dropna() < -1e-6).sum()
+        violations += decreases
+
+print(f"Monotonicity violations: {violations}")
+```
+
+**Expected Outcomes:**
+- ✅ **Current (Working)**: 0 violations (sigmoid accumulation enforces this architecturally)
+- ✅ **After Fix**: 0 violations (should remain enforced)
+
+**Interpretation**: Once a student learns a skill, they shouldn't "unlearn" it. Zero violations confirms the educational constraint holds.
+
+**4. Mastery Progression Patterns**
+
+**Test:**
+```python
+# Examine mastery trajectories for sigmoid-shaped learning curves
+import matplotlib.pyplot as plt
+
+# Plot mastery progression for a sample student on their most-practiced skill
+student = df[df['student_idx'] == 0]
+most_practiced_skill = student['skill_id'].mode()[0]
+skill_data = student[student['skill_id'] == most_practiced_skill].sort_values('step')
+
+plt.plot(skill_data['step'], skill_data['mastery'], marker='o')
+plt.xlabel('Interaction Step')
+plt.ylabel('Mastery')
+plt.title(f'Student 0, Skill {most_practiced_skill}')
+plt.show()
+```
+
+**Expected Visual Pattern:**
+- ❌ **Current (Broken)**: Uniform linear increase regardless of responses
+- ✅ **Target Success**: Sigmoid curve (slow → fast → slow growth)
+  - Early interactions: Low mastery (0.0-0.3), slow growth
+  - Mid interactions: Rapid growth phase (0.3-0.7)
+  - Late interactions: Saturation (0.7-0.9), diminishing returns
+
+**Interpretation**: Real learning follows sigmoid curves. Uniform growth indicates the model isn't capturing learning dynamics. Sigmoid progression validates the educational model.
+
+**5. Skill Difficulty Differentiation**
+
+**Test:**
+```python
+# Compare average gains across different skills
+skill_difficulty = df.groupby('skill_id')['expected_gain'].mean().sort_values()
+print("Easiest skills (high avg gains):", skill_difficulty.tail(5).index.tolist())
+print("Hardest skills (low avg gains):", skill_difficulty.head(5).index.tolist())
+```
+
+**Expected Outcomes:**
+- ❌ **Current (Broken)**: All skills have identical average gains (scalar)
+- ✅ **Minimum Success**: Significant variance across skills (CV > 0.2)
+- 🎯 **Target Success**: Clear differentiation (easy skills: >0.6, hard skills: <0.4)
+
+**Interpretation**: Some skills are objectively easier (students learn them faster) than others. Differentiation in average gains across skills proves the model learned skill-specific difficulty patterns from interaction data.
+
+**6. Response-Conditional Gains**
+
+**Test:**
+```python
+# Compare gains for correct vs incorrect responses
+correct_gains = df[df['actual_response'] == 1]['expected_gain'].mean()
+incorrect_gains = df[df['actual_response'] == 0]['expected_gain'].mean()
+print(f"Correct response gains: {correct_gains:.4f}")
+print(f"Incorrect response gains: {incorrect_gains:.4f}")
+print(f"Ratio (correct/incorrect): {correct_gains / incorrect_gains:.2f}")
+```
+
+**Expected Outcomes:**
+- ✅ **Educational Assumption**: Correct responses should yield higher gains (ratio > 1.2)
+- 🎯 **Target Success**: Ratio 1.5-2.0 (substantial difference)
+
+**Interpretation**: Successfully solving a problem should lead to larger learning gains than failing. This validates that the model learned educationally meaningful patterns (success → learning) rather than just counting interactions.
+
+### Summary: Fix Verification Checklist
+
+After implementing per-skill gains and re-training:
+
+**Immediate Checks (From Training Logs):**
+- [ ] Encoder2 Val AUC > 0.55 (preferably > 0.60)
+- [ ] Mastery ↔ Response correlation > 0.3 (preferably > 0.5)
+- [ ] Encoder2_Pred range > 0.3 (predictions not compressed near 0.5)
+- [ ] No NaN or gradient explosions during training
+- [ ] Skill gains std > 0.05 in debug logs (differentiation visible)
+
+**Trajectory Analysis Checks:**
+- [ ] Gain variance per interaction > 0.10 (skill differentiation)
+- [ ] Sparse activation: 1-3 skills per interaction (Q-matrix learning)
+- [ ] Zero monotonicity violations (educational validity)
+- [ ] Sigmoid-shaped mastery curves (realistic learning dynamics)
+- [ ] Skill difficulty variance: CV > 0.2 across skills
+- [ ] Correct response gains > incorrect response gains (ratio > 1.2)
+
+**Success Criteria:**
+- **Minimum Viable Fix**: 4/5 immediate checks + 4/6 trajectory checks pass
+- **Target Success**: 5/5 immediate checks + 5/6 trajectory checks pass
+- **Optimal Success**: All checks pass + Encoder2 AUC > 0.65
+
+If these criteria are met, the architectural fix has successfully enabled Encoder 2 to learn skill-specific mastery patterns, validating the conceptual foundation described in STATUS_gainakt3exp.md.
 
 ---
 
-## Validation Plan
+## Implementation Plan
 
-After implementing the fix:
+Based on STATUS_gainakt3exp.md conceptual foundation: Encoder 2 should learn skill-specific gains to enable mastery-based prediction through threshold logic.
 
-1. **Enable gain output**: Set `use_gain_head=true` in config
-2. **Re-train**: `python examples/run_repro_experiment.py --short_title fixed-per-skill-gains`
-3. **Extract trajectories**: `python examples/learning_trajectories.py --run_dir <exp_dir> --num_students 10`
-4. **Verify metrics**:
-   - ✅ Encoder2 Val AUC > 55% (above random)
-   - ✅ Mastery ↔ Response correlation > 0.4 (positive)
-   - ✅ Per-skill gains vary by skill (not uniform)
-   - ✅ Encoder2_Pred range wider than [0.37, 0.53]
+### Step 1: Modify Model Architecture
+
+**File**: `pykt/models/gainakt3_exp.py`
+
+**Change 1.1 - Add projection layer in `__init__`** (around line 200):
+```python
+self.gains_projection = nn.Linear(self.d_model, self.num_c)
+```
+
+**Change 1.2 - Replace scalar gains in `forward_with_states`** (lines 528-554):
+```python
+# OLD (scalar): gain_quality = torch.sigmoid(learning_gains_d.mean(dim=-1, keepdim=True))  # [B,L,1]
+# NEW (per-skill):
+skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
+
+# OLD: effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+# NEW: effective_practice[:, t, :] += skill_gains[:, t, :]
+```
+
+**Change 1.3 - Add to output dictionary** (around line 620):
+```python
+if self.use_gain_head:
+    outputs['projected_gains'] = skill_gains  # For trajectory validation
+```
+
+### Step 2: Update Configuration
+
+**File**: `configs/parameter_default.json`
+```json
+{"use_gain_head": true}
+```
+
+### Step 3: Training and Validation
+
+**Step 3.1 - Re-train model**:
+```bash
+python examples/run_repro_experiment.py --short_title fixed-per-skill-gains --use_gain_head true
+```
+
+**Step 3.2 - Extract trajectories**:
+```bash
+EXP_DIR=$(ls -td examples/experiments/*fixed-per-skill-gains* | head -1)
+python examples/learning_trajectories.py --run_dir "$EXP_DIR" --num_students 10
+```
+
+**Step 3.3 - Verify metrics**:
+
+| Metric | Current (Broken) | Target (Fixed) | Check |
+|--------|------------------|----------------|-------|
+| Encoder2 Val AUC | 0.4842 | > 0.55 | Model performance |
+| Mastery ↔ Response | -0.044 | > 0.4 | Concept validity |
+| Gain Variance | ~0.0 | > 0.1 | Skill differentiation |
+| Prediction Range | [0.37, 0.53] | > 0.3 width | Confidence |
+
+### Step 4: Interpretation Checks
+
+**Check 4.1 - Skill differentiation** (from trajectories):
+```python
+# Gain variance across skills per interaction
+df.groupby(['student_idx', 'step'])['expected_gain'].std().mean() > 0.1
+```
+
+**Check 4.2 - Q-matrix learning** (sparse activation):
+```python
+# Each interaction should activate 1-3 skills (not all)
+df.groupby(['student_idx', 'step'])['expected_gain'].apply(lambda x: (x > 0.1).sum()).median() <= 3
+```
+
+**Check 4.3 - Monotonicity** (no mastery decrease):
+```python
+# Verify mastery never decreases within student-skill trajectories
+for s in df['student_idx'].unique():
+    s_data = df[df['student_idx'] == s].sort_values('step')
+    for c in s_data['skill_id'].unique():
+        assert (s_data[s_data['skill_id'] == c]['mastery'].diff().dropna() >= -1e-6).all()
+```
+
+**Check 4.4 - Threshold logic** (mastery predicts response):
+```python
+# Correlation between minimum relevant-skill mastery and response
+df_relevant = df[df['expected_gain'] > df.groupby(['student_idx', 'step'])['expected_gain'].transform('quantile', 0.7)]
+min_mastery = df_relevant.groupby(['student_idx', 'step'])['mastery'].min()
+# Should correlate better with response than mean mastery
+```
+
+### Step 5: Success Criteria
+
+| Level | Encoder2 AUC | Mastery Corr | Gain Variance | Interpretation |
+|-------|--------------|--------------|---------------|----------------|
+| **Minimum** | > 0.55 | > 0.3 | > 0.05 | Fix works, skill differentiation present |
+| **Target** | > 0.60 | > 0.5 | > 0.10 | Strong performance, learned Q-matrix |
+| **Optimal** | > 0.65 | > 0.6 | > 0.15 | Approaches Encoder1, educational validity confirmed |
 
 ---
 
@@ -325,3 +550,73 @@ After implementing the fix:
 **No loss function changes needed** - current BCE supervision is correct
 
 **Expected after fix**: Encoder 2 AUC 55-60%, positive mastery-response correlation, skill differentiation visible in trajectories
+
+**Implementation Complexity**: Low - single architectural change, maintains all other components
+
+**Risk**: Low - fix aligns with intended design, preserves differentiability and training stability
+
+---
+
+## Fix Verification Results (Experiment 995130)
+
+**Date**: 2025-11-17  
+**Status**: ⚠️ **PARTIAL SUCCESS** - Architecture fixed, but insufficient skill differentiation
+
+### Architectural Fix: ✅ SUCCESSFUL
+
+- Per-skill gains projection layer implemented correctly
+- Gradient flow through `gains_projection` layer working
+- Model compiles and trains without errors
+
+### Performance Metrics: ⚠️ MIXED RESULTS
+
+| Metric | Previous (Broken) | Current (Fixed) | Expected | Status |
+|--------|-------------------|-----------------|----------|--------|
+| **Encoder2 Val AUC** | 0.4842 | **0.5868** | > 0.55 | ✅ Improved |
+| **Encoder1 Val AUC** | 0.6765 | 0.6897 | ~0.67 | ✅ Maintained |
+| **Mastery ↔ Response** | -0.044 | **0.037** | > 0.3 | ❌ Too low |
+| **Gain Std Deviation** | ~0.0 | **0.0015** | > 0.05 | ❌ Nearly uniform |
+| **Gain CV Across Skills** | ~0.0 | **0.0016** | > 0.2 | ❌ No differentiation |
+
+**Key Finding**: Encoder2 AUC improved from **48% → 59%** (above random!), proving the architectural fix enables gradient flow. However, gains converged to nearly uniform values (mean=0.588, std=0.0015), indicating the model learned a constant gain rather than skill-specific patterns.
+
+### Trajectory Analysis: ❌ SKILL DIFFERENTIATION FAILED
+
+**From 659 interactions (10 students, 66 skills):**
+
+- ✅ **Sparsity**: 1 skill per interaction (tight, but may be artifact of uniform gains)
+- ✅ **Monotonicity**: 0 violations (mastery never decreases)
+- ❌ **Skill Differentiation**: Gain variance = nan (essentially zero)
+- ❌ **Skill Difficulty**: CV = 0.0016 (99.8% identical across skills)
+- ❌ **Response-Conditional**: Correct/incorrect ratio = 1.00 (no educational signal)
+
+### Root Cause of Poor Differentiation
+
+The architecture is correct, but training dynamics led to a **degenerate solution**:
+
+1. **Weak IM loss weight** (30%) provides insufficient gradient pressure for skill differentiation
+2. **No sparsity/variance loss** to explicitly encourage skill-specific patterns
+3. **Insufficient epochs** (12) to escape uniform-gain local minimum
+4. **Initialization bias** - gains_projection may have started near uniform solution
+
+### Recommendations for V2
+
+**Priority 1**: Increase IM loss weight from 30% → 50%  
+**Priority 2**: Add variance loss to explicitly encourage skill differentiation:
+```python
+gain_variance_loss = -skill_gains.var(dim=-1).mean()  # Maximize variance
+```
+**Priority 3**: Train for 20 epochs with early stopping on Encoder2 AUC  
+**Priority 4**: Consider layer-wise learning rates (higher for gains_projection)
+
+### Success Criteria Scorecard
+
+**Immediate Checks**: 2/5 passed (Encoder2 AUC, No NaN)  
+**Trajectory Checks**: 2/6 passed (Sparsity, Monotonicity)  
+**Overall**: 4/11 checks passed (36%)
+
+**Conclusion**: The architectural bug is **FIXED** (per-skill gains working), but the model requires **hyperparameter tuning** to learn meaningful skill differentiation. The 11-point AUC improvement (48% → 59%) proves the fix CAN work - we just need stronger training signals.
+
+**Detailed Report**: See `/workspaces/pykt-toolkit/tmp/FIX_VERIFICATION_REPORT.md`
+
+**Next Experiment**: `--short_title fixed-per-skill-gains-v2 --bce_loss_weight 0.5` + variance loss

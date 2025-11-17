@@ -270,6 +270,15 @@ class GainAKT3Exp(nn.Module):
             for _ in range(num_encoder_blocks)
         ])
         
+        # ═══════════════════════════════════════════════════════════════════════════
+        # PER-SKILL GAINS PROJECTION (FIX: 2025-11-17)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Project Encoder 2 value representations to per-skill gain estimates
+        # This enables skill-specific learning: different skills can have different gains
+        # per interaction, allowing the model to learn question-skill associations
+        # ═══════════════════════════════════════════════════════════════════════════
+        self.gains_projection = nn.Linear(d_model, num_c)
+        
         # Encoder 2 does NOT have a prediction head
         # Its outputs feed directly into sigmoid learning curve computation
         
@@ -522,36 +531,34 @@ class GainAKT3Exp(nn.Module):
             
             batch_size, seq_len, _ = projected_gains.shape
             
-            # Step 1: Compute interaction-level gain quality from Encoder 2
+            # Step 1: Compute per-skill gains from Encoder 2 (FIX: 2025-11-17)
             # ═══════════════════════════════════════════════════════════════════════════
-            # Encoder 2 learns to assess "how much learning happened" from each interaction
-            # This is differentiable through value_seq_2, allowing gradients to flow back
+            # OLD (BROKEN): Scalar gain_quality [B, L, 1] - same increment for ALL skills
+            # NEW (FIXED): Per-skill gains [B, L, num_c] - different increment per skill
+            # 
+            # This enables Encoder 2 to learn:
+            # - Which skills are relevant for each question (Q-matrix learning)
+            # - How much each interaction improves each specific skill
+            # - Skill-specific learning rates (some skills harder than others)
             # ═══════════════════════════════════════════════════════════════════════════
-            # Aggregate D-dimensional value representation to scalar gain quality per interaction
-            # [B, L, D] → [B, L, 1]
-            gain_quality_logits = learning_gains_d.mean(dim=-1, keepdim=True)
-            # Normalize to [0, 1] range: higher values = more effective learning
-            gain_quality = torch.sigmoid(gain_quality_logits)  # [B, L, 1] ∈ [0, 1]
+            # Project value_seq_2 to skill-space and normalize to [0, 1]
+            skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
             
-            # Step 2: Compute effective practice count (quality-weighted)
-            # Instead of simple counting (non-differentiable), accumulate quality-weighted interactions
-            # This allows Encoder 2 to learn: "this interaction was worth X effective practice"
+            # Step 2: Accumulate per-skill effective practice (quality-weighted)
+            # Each skill accumulates its own gain at each timestep
+            # This replaces the scalar gain_quality that applied uniformly to all skills
             # ═══════════════════════════════════════════════════════════════════════════
             effective_practice = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
             
             for t in range(seq_len):
                 if t > 0:
-                    # Carry forward previous effective practice
+                    # Carry forward previous effective practice for all skills
                     effective_practice[:, t, :] = effective_practice[:, t-1, :].clone()
                 
-                # Identify which skill is being practiced at timestep t
-                practiced_concepts = q[:, t].long()  # [B] - skill index for each student
-                batch_indices = torch.arange(batch_size, device=q.device)
-                
-                # Increment effective practice by quality-weighted amount
-                # gain_quality[batch_indices, t, 0] is the learned quality for this interaction
-                # This is differentiable! Gradients flow back through gain_quality → value_seq_2 → Encoder 2
-                effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+                # Add per-skill gains - each skill gets its own increment
+                # This is fully differentiable: gradients flow back through
+                # skill_gains → gains_projection → value_seq_2 → Encoder 2
+                effective_practice[:, t, :] += skill_gains[:, t, :]
             
             # Step 3: Compute sigmoid learning curve mastery using effective practice
             # Handle gamma_student (fixed vs dynamic per-batch)
@@ -594,7 +601,8 @@ class GainAKT3Exp(nn.Module):
                 print("DEBUG GainAKT3Exp - Dual-Encoder Mastery Stats:")
                 print(f"  Mastery range: {mastery_range:.4f}, std: {mastery_std:.4f}")
                 print(f"  Avg effective practice: {avg_effective_practice:.4f}")
-                print(f"  Avg gain quality (Encoder 2 output): {gain_quality.mean():.4f}")
+                print(f"  Avg per-skill gains (Encoder 2 output): {skill_gains.mean():.4f}")
+                print(f"  Skill gains std (differentiation): {skill_gains.std():.4f}")
                 print("  Sample mastery progression for first student, first 5 skills:")
                 for skill in range(min(5, projected_mastery.shape[2])):
                     skill_mastery = projected_mastery[0, :, skill]
@@ -739,6 +747,7 @@ class GainAKT3Exp(nn.Module):
             projected_mastery = None
             projected_gains = None
             incremental_mastery_predictions = None
+            skill_gains = None  # FIX (2025-11-17): Initialize for output dict
 
         # 6. Prepare output with internal states
         # Return Encoder 2 outputs for interpretability monitoring (context_seq_2, value_seq_2)
@@ -757,6 +766,11 @@ class GainAKT3Exp(nn.Module):
         # Include incremental mastery predictions if mastery head is enabled
         if incremental_mastery_predictions is not None:
             output['incremental_mastery_predictions'] = incremental_mastery_predictions
+        
+        # FIX (2025-11-17): Add per-skill gains to output for trajectory validation
+        # skill_gains [B, L, num_c] provides per-skill gain estimates for interpretability
+        if self.use_gain_head and skill_gains is not None:
+            output['skill_gains'] = skill_gains  # [B, L, num_c] per-skill gains
         
         # Store D-dimensional gains for interpretability (only if gain_head enabled)
         # Note: Gains are computed internally for mastery accumulation even when use_gain_head=False

@@ -24,7 +24,7 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "use_mastery_head": true,
-    "use_gain_head": false,
+    "use_gain_head": true,
     "use_skill_difficulty": false,
     "use_student_speed": false,
     "bce_loss_weight": 0.7,
@@ -263,6 +263,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "9a0b07e1bbcc6864412c34fdc7f2d590",
+  "md5": "14406ba46b14d9b1d83ccae8eccd08d7",
   "_md5_computed": "2025-11-16"
 }
