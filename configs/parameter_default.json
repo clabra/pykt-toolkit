@@ -1,10 +1,10 @@
 {
-  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-17: Adjusted for post-bug-fix gradient dynamics",
-  "_bug_fix_adjustment": "After fixing encoder2_pred bug, learning curve parameters need stronger gradient signal. Increased IM loss weight from 10% to 30% (bce_loss_weight 0.9\u21920.7).",
-  "_change_log": "2025-11-17: Set bce=0.7 to compensate for weaker gradients after bug fix. Learning curve params (beta=2.0, m_sat=0.8, gamma=1.0, offset=2.0) from Exp 714616.",
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-17: V2 tuning for skill differentiation",
+  "_bug_fix_adjustment": "After fixing scalar gains bug (per-skill gains implemented), need stronger IM loss and variance loss to encourage skill differentiation.",
+  "_change_log": "2025-11-17 V2: Increased IM loss 30%\u219250% (bce=0.5), added variance_loss_weight=0.1, epochs=20, gains_projection lr boost via layer-wise optimizer.",
   "defaults": {
     "seed": 42,
-    "epochs": 12,
+    "epochs": 20,
     "batch_size": 64,
     "learning_rate": 0.000174,
     "weight_decay": 1.7571e-05,
@@ -27,7 +27,7 @@
     "use_gain_head": true,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "bce_loss_weight": 0.7,
+    "bce_loss_weight": 0.5,
     "beta_skill_init": 2.0,
     "m_sat_init": 0.8,
     "gamma_student_init": 1.0,
@@ -39,7 +39,8 @@
     "fold": 0,
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py",
-    "model": "gainakt3exp"
+    "model": "gainakt3exp",
+    "variance_loss_weight": 0.1
   },
   "deprecated": {
     "_comment": "Parameters deprecated as of 2025-11-16. Commented out in argparse. DO NOT use in new experiments.",
@@ -263,6 +264,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "14406ba46b14d9b1d83ccae8eccd08d7",
+  "md5": "34a64bd6f2e63d7b65ca203554cdb5ae",
   "_md5_computed": "2025-11-16"
 }

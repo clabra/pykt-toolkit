@@ -96,6 +96,7 @@ class GainAKT3Exp(nn.Module):
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
                  consistency_loss_weight=0.1, incremental_mastery_loss_weight=0.1,
+                 variance_loss_weight=0.1,
                  monitor_frequency=50, use_skill_difficulty=False,
                  use_student_speed=False, num_students=None, mastery_threshold_init=0.6,
                  threshold_temperature=1.5, beta_skill_init=2.0, m_sat_init=0.8, 
@@ -334,6 +335,9 @@ class GainAKT3Exp(nn.Module):
         # Incremental mastery loss weight (for dual-prediction architecture)
         self.incremental_mastery_loss_weight = incremental_mastery_loss_weight
         
+        # Variance loss weight (V2: encourage skill differentiation in gains)
+        self.variance_loss_weight = variance_loss_weight
+        
     def set_monitor(self, monitor):
         """Set the interpretability monitor hook."""
         self.interpretability_monitor = monitor
@@ -544,6 +548,12 @@ class GainAKT3Exp(nn.Module):
             # Project value_seq_2 to skill-space and normalize to [0, 1]
             skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
             
+            # V2 (2025-11-17): Compute variance loss to encourage skill differentiation
+            # Maximize variance across skills per interaction to prevent uniform gains
+            # variance_loss is negative (we want to minimize -variance = maximize variance)
+            gain_variance_per_interaction = skill_gains.var(dim=-1, keepdim=False)  # [B, L]
+            variance_loss = -gain_variance_per_interaction.mean()  # Scalar loss (negative = encourage high variance)
+            
             # Step 2: Accumulate per-skill effective practice (quality-weighted)
             # Each skill accumulates its own gain at each timestep
             # This replaces the scalar gain_quality that applied uniformly to all skills
@@ -748,6 +758,7 @@ class GainAKT3Exp(nn.Module):
             projected_gains = None
             incremental_mastery_predictions = None
             skill_gains = None  # FIX (2025-11-17): Initialize for output dict
+            variance_loss = None  # V2 (2025-11-17): Initialize for output dict
 
         # 6. Prepare output with internal states
         # Return Encoder 2 outputs for interpretability monitoring (context_seq_2, value_seq_2)
@@ -771,6 +782,10 @@ class GainAKT3Exp(nn.Module):
         # skill_gains [B, L, num_c] provides per-skill gain estimates for interpretability
         if self.use_gain_head and skill_gains is not None:
             output['skill_gains'] = skill_gains  # [B, L, num_c] per-skill gains
+        
+        # V2 (2025-11-17): Add variance loss to output for training script to combine with other losses
+        if variance_loss is not None:
+            output['variance_loss'] = variance_loss  # Scalar loss encouraging skill differentiation
         
         # Store D-dimensional gains for interpretability (only if gain_head enabled)
         # Note: Gains are computed internally for mastery accumulation even when use_gain_head=False

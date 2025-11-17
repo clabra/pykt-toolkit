@@ -74,7 +74,7 @@ def train_gainakt3exp_dual_encoder(
     dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs,
     optimizer_name, seed, d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len,
     use_mastery_head, use_gain_head, use_skill_difficulty, use_student_speed, num_students,
-    bce_loss_weight, mastery_threshold_init, threshold_temperature, beta_skill_init, m_sat_init,
+    bce_loss_weight, variance_loss_weight, mastery_threshold_init, threshold_temperature, beta_skill_init, m_sat_init,
     gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, monitor_freq, 
     gradient_clip, patience, weight_decay, max_correlation_students,
     cfg=None, experiment_suffix="", log_level=logging.INFO
@@ -148,6 +148,7 @@ def train_gainakt3exp_dual_encoder(
         'sparsity_loss_weight': 0.0,
         'consistency_loss_weight': 0.0,
         'incremental_mastery_loss_weight': incremental_mastery_loss_weight,
+        'variance_loss_weight': variance_loss_weight,
         'monitor_frequency': monitor_freq
     }
     
@@ -156,8 +157,29 @@ def train_gainakt3exp_dual_encoder(
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Parameters: {total_params:,} total, {trainable_params:,} trainable")
     
+    # V2 (2025-11-17): Layer-wise learning rates - higher LR for gains_projection
     if optimizer_name.lower() == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        # Separate gains_projection parameters for higher learning rate
+        gains_projection_params = []
+        other_params = []
+        
+        for name, param in model.named_parameters():
+            if 'gains_projection' in name:
+                gains_projection_params.append(param)
+            else:
+                other_params.append(param)
+        
+        # Create parameter groups with different learning rates
+        gains_projection_lr = learning_rate * 3.0  # 3x boost for gains_projection
+        param_groups = [
+            {'params': other_params, 'lr': learning_rate, 'weight_decay': weight_decay},
+            {'params': gains_projection_params, 'lr': gains_projection_lr, 'weight_decay': weight_decay}
+        ]
+        
+        optimizer = torch.optim.Adam(param_groups)
+        
+        logger.info(f"Layer-wise LR: base={learning_rate:.6f}, gains_projection={gains_projection_lr:.6f} (3x boost)")
+        logger.info(f"Gains projection params: {sum(p.numel() for p in gains_projection_params):,}")
     else:
         raise ValueError(f"Unsupported optimizer: {optimizer_name}")
     
@@ -265,7 +287,12 @@ def train_gainakt3exp_dual_encoder(
                         # BCE loss between encoder2 predictions and true labels
                         im_loss = bce_criterion(valid_im_preds, y_true)
                     
-                    loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss
+                    # V2 (2025-11-17): Add variance loss to encourage skill differentiation
+                    var_loss = 0.0
+                    if 'variance_loss' in outputs and variance_loss_weight > 0:
+                        var_loss = outputs['variance_loss']
+                    
+                    loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss + variance_loss_weight * var_loss
                 
                 scaler.scale(loss).backward()
                 if gradient_clip > 0:
@@ -288,7 +315,12 @@ def train_gainakt3exp_dual_encoder(
                     # BCE loss between encoder2 predictions and true labels
                     im_loss = bce_criterion(valid_im_preds, y_true)
                 
-                loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss
+                # V2 (2025-11-17): Add variance loss to encourage skill differentiation
+                var_loss = 0.0
+                if 'variance_loss' in outputs and variance_loss_weight > 0:
+                    var_loss = outputs['variance_loss']
+                
+                loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss + variance_loss_weight * var_loss
                 
                 loss.backward()
                 if gradient_clip > 0:
@@ -532,6 +564,7 @@ if __name__ == '__main__':
     parser.add_argument('--mastery_threshold_init', type=float, required=True)
     parser.add_argument('--threshold_temperature', type=float, required=True)
     parser.add_argument('--bce_loss_weight', type=float, required=True)
+    parser.add_argument('--variance_loss_weight', type=float, required=True)
     parser.add_argument('--beta_skill_init', type=float, required=True)
     parser.add_argument('--m_sat_init', type=float, required=True)
     parser.add_argument('--gamma_student_init', type=float, required=True)
@@ -562,7 +595,7 @@ if __name__ == '__main__':
         n_heads=args.n_heads, dropout=args.dropout, num_encoder_blocks=args.num_encoder_blocks, d_ff=args.d_ff,
         seq_len=args.seq_len, use_mastery_head=args.use_mastery_head, use_gain_head=args.use_gain_head,
         use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
-        num_students=args.num_students, bce_loss_weight=args.bce_loss_weight,
+        num_students=args.num_students, bce_loss_weight=args.bce_loss_weight, variance_loss_weight=args.variance_loss_weight,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
         gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,
