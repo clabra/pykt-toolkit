@@ -1,7 +1,7 @@
 {
-  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-16: Phase 1+2 sweep optimal parameters",
-  "_phase1_sweep": "Learning curve parameters updated based on 81-experiment sweep (Beta=2.5, M_sat=0.7, Gamma=1.1, Offset=1.5 achieved E2 AUC=0.5443, +6.7% improvement)",
-  "_phase2_sweep": "Loss weight updated based on 6-experiment sweep (bce_loss_weight=0.3 achieved best combined score: E1 AUC=0.6853, E2 AUC=0.5438)",
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-17: Adjusted for post-bug-fix gradient dynamics",
+  "_bug_fix_adjustment": "After fixing encoder2_pred bug, learning curve parameters need stronger gradient signal. Increased IM loss weight from 10% to 30% (bce_loss_weight 0.9\u21920.7).",
+  "_change_log": "2025-11-17: Set bce=0.7 to compensate for weaker gradients after bug fix. Learning curve params (beta=2.0, m_sat=0.8, gamma=1.0, offset=2.0) from Exp 714616.",
   "defaults": {
     "seed": 42,
     "epochs": 12,
@@ -27,13 +27,13 @@
     "use_gain_head": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "bce_loss_weight": 0.3,
-    "beta_skill_init": 2.5,
-    "m_sat_init": 0.7,
-    "gamma_student_init": 1.1,
-    "sigmoid_offset": 1.5,
-    "mastery_threshold_init": 0.6,
-    "threshold_temperature": 1.5,
+    "bce_loss_weight": 0.7,
+    "beta_skill_init": 2.0,
+    "m_sat_init": 0.8,
+    "gamma_student_init": 1.0,
+    "sigmoid_offset": 2.0,
+    "mastery_threshold_init": 0.85,
+    "threshold_temperature": 1.0,
     "num_students": 3055,
     "dataset": "assist2015",
     "fold": 0,
@@ -263,6 +263,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "a1e2fd59c3b2f7b3dcde97e3515619e1",
+  "md5": "d3ed8268d0e83eedda8f52543169ce29",
   "_md5_computed": "2025-11-16"
 }

@@ -1,8 +1,58 @@
 # GainAKT3Exp Model Status
 
-**Document Version**: Updated 2025-11-16 (Dual-Encoder Architecture)  
+**Document Version**: Updated 2025-11-17 (Critical Bug Fix - encoder2_pred skill indexing)  
 **Model Version**: GainAKT3Exp - Dual-encoder transformer with Sigmoid Learning Curve Mastery  
 **Status**: Active implementation with full training/evaluation pipeline
+
+## 🔴 CRITICAL BUG FIX (2025-11-17)
+
+**Issue**: encoder2_pred Skill Index Mismatch  
+**Severity**: CRITICAL - Affects training supervision and interpretability claims  
+**Status**: ✅ FIXED in code, ⏳ RE-TRAINING REQUIRED
+
+### Summary
+
+Investigation revealed that `incremental_mastery_predictions` (encoder2_pred) was using mastery for the **NEXT** skill (`qry[t] = q[t+1]`) instead of the **CURRENT** skill (`q[t]`), causing:
+- **22.2% prediction mismatches** (214 out of 966 predictions)
+- **98.2% of mismatches at skill changes** (213 out of 217 skill transitions)
+- Misaligned training supervision (predicting skill B with skill A labels)
+- Invalid interpretability claims (encoder2_pred didn't represent current skill)
+
+### Fix Applied
+
+**File**: `pykt/models/gainakt3_exp.py`, Line 622
+
+**Before** (WRONG):
+```python
+skill_indices = target_concepts.long()  # Uses qry[t] = q[t+1]
+```
+
+**After** (CORRECT):
+```python
+skill_indices = q.long()  # Uses q[t] (current skill)
+```
+
+### Validation Results
+
+- **Before fix**: 77.8% match rate, 22.2% mismatches
+- **After fix**: 100.0% match rate, 0.0% mismatches ✅
+- **Investigation files**: `tmp/INVESTIGATION_INDEX.md`, `tmp/encoder2_pred_root_cause_confirmed.md`
+
+### Impact
+
+1. **Old experiments** (trained before 2025-11-17): encoder2_pred values are for NEXT skill, interpretability claims INVALID
+2. **New experiments** (trained after fix): encoder2_pred values are correct, interpretability claims VALID
+3. **Performance**: Fix may improve AUC (incremental_mastery_loss now uses correct supervision)
+4. **Reproducibility**: All old checkpoints affected consistently, relative comparisons still valid
+
+### Next Steps
+
+- [ ] Re-train model with fixed code
+- [ ] Compare performance before/after fix
+- [ ] Update paper with corrected interpretability results
+- [ ] Add disclaimer about old experiments
+
+---
 
 **⚠️ CURRENT CONFIGURATION (2025-11-16 - DUAL-ENCODER ARCHITECTURE)**: 
 - **Dual-Encoder Architecture**: ✅ TWO COMPLETELY INDEPENDENT ENCODER STACKS
@@ -2837,3 +2887,56 @@ The GainAKT3Exp model with dual-encoder architecture is fully implemented and te
 | Test       | 0.7095    | 0.7452    | 0.0221              | 0.0216           | 3177                 | 2025-11-14T18:20:58.091915 |
 
 *Note: These results are from the linear accumulation version. New results with sigmoid learning curves pending.*
+
+
+## Sweeps
+
+# Performance mode (bce=0.9)
+{
+  "beta_skill_init": 2.0,
+  "m_sat_init": 0.8,
+  "gamma_student_init": 1.0,
+  "sigmoid_offset": 2.0,
+  "bce_loss_weight": 0.9
+}
+
+# Interpretability mode (bce=0.3) 
+{
+  "beta_skill_init": 2.5,
+  "m_sat_init": 0.7,
+  "gamma_student_init": 1.1,
+  "sigmoid_offset": 1.5,
+  "bce_loss_weight": 0.3
+}
+
+```
+Option A: Sweep Confirms 714616's Params
+If experiment #41 achieves ~0.7183:
+# Update defaults to 714616's configuration
+# Document as "performance mode" defaults
+# Keep Phase 1+2 as "interpretability mode"
+
+
+Option B: Sweep Finds Better Params
+If another configuration exceeds 0.7183:
+
+# Update to the best-found configuration
+# Document improvement over 714616
+# Update paper with new findings
+
+Option C: Results Are Inconclusive
+If we can't match 714616:
+
+# Investigate other factors
+# Run targeted follow-up experiments
+# Document the mystery for future work
+
+What I'll Do After Sweep Completes:
+Extract experiment #41's Test AUC
+Compare with 714616's 0.7183
+Identify best overall configuration
+Propose default updates with data justification
+Run parameters_fix.py to update MD5
+Create commit with sweep results
+
+```

@@ -619,7 +619,10 @@ class GainAKT3Exp(nn.Module):
             # ═══════════════════════════════════════════════════════════════════════════
             
             # Get the skill ID for each timestep
-            skill_indices = target_concepts.long()  # [B, L]
+            # FIX (2025-11-17): Use CURRENT skill (q) not NEXT skill (target_concepts)
+            # Investigation showed 98.2% of prediction mismatches occurred at skill changes
+            # because model was using mastery for q[t+1] instead of q[t]
+            skill_indices = q.long()  # [B, L] - use current question's skill
             
             # Gather mastery for the actual skills being tested
             # projected_mastery: [B, L, num_c], we need [B, L] by selecting skill at each step

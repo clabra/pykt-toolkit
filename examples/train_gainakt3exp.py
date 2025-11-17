@@ -217,6 +217,20 @@ def train_gainakt3exp_dual_encoder(
         ])
     logger.info(f"Metrics CSV initialized: {metrics_csv_path}")
     
+    # Initialize learned parameters CSV file
+    params_csv_path = os.path.join(exp_dir, 'learned_parameters_epoch.csv')
+    with open(params_csv_path, 'w', newline='') as fcsv:
+        writer = csv.writer(fcsv)
+        writer.writerow([
+            'epoch',
+            'theta_global',
+            'beta_skill_mean', 'beta_skill_std', 'beta_skill_min', 'beta_skill_max',
+            'M_sat_mean', 'M_sat_std', 'M_sat_min', 'M_sat_max',
+            'gamma_student_mean', 'gamma_student_std', 'gamma_student_min', 'gamma_student_max',
+            'offset'
+        ])
+    logger.info(f"Learned parameters CSV initialized: {params_csv_path}")
+    
     logger.info("Starting training...")
     for epoch in range(num_epochs):
         model.train()
@@ -319,6 +333,32 @@ def train_gainakt3exp_dual_encoder(
                 f'{train_encoder_metrics["encoder2_auc"]:.6f}', f'{train_encoder_metrics["encoder2_acc"]:.6f}',
                 f'{valid_encoder_metrics["encoder2_auc"]:.6f}', f'{valid_encoder_metrics["encoder2_acc"]:.6f}'
             ])
+        
+        # Extract and save learned parameters
+        with torch.no_grad():
+            # Access the underlying model (handle DataParallel wrapper)
+            base_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+            
+            theta_global = base_model.theta_global.item()
+            beta_skill = base_model.beta_skill
+            M_sat = base_model.M_sat
+            gamma_student = base_model.gamma_student
+            offset = base_model.offset.item()
+            
+            # Write learned parameters to CSV
+            with open(params_csv_path, 'a', newline='') as fcsv:
+                writer = csv.writer(fcsv)
+                writer.writerow([
+                    epoch + 1,
+                    f'{theta_global:.6f}',
+                    f'{beta_skill.mean().item():.6f}', f'{beta_skill.std().item():.6f}',
+                    f'{beta_skill.min().item():.6f}', f'{beta_skill.max().item():.6f}',
+                    f'{M_sat.mean().item():.6f}', f'{M_sat.std().item():.6f}',
+                    f'{M_sat.min().item():.6f}', f'{M_sat.max().item():.6f}',
+                    f'{gamma_student.mean().item():.6f}', f'{gamma_student.std().item():.6f}',
+                    f'{gamma_student.min().item():.6f}', f'{gamma_student.max().item():.6f}',
+                    f'{offset:.6f}'
+                ])
         
         if use_wandb:
             wandb.log({

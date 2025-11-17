@@ -1,26 +1,38 @@
 #!/usr/bin/env python3
 """
-Learning Trajectories Analyzer for GainAKT3Exp
+Learning Trajectories Analyzer for GainAKT3Exp - CSV Export Version
 
-Extracts and displays detailed learning trajectories for individual students,
-showing timestep-by-timestep evolution of mastery and gains for practiced skills.
+Extracts detailed learning trajectories for individual students and exports to CSV format
+for easier analysis, filtering, and visualization.
 
 Usage:
-    python examples/learning_trajectories.py \
-        --run_dir examples/experiments/20251115_164618_gainakt3exp_baseline_defaults_114045 \
+    python examples/learning_trajectories_csv.py \
+        --run_dir examples/experiments/20251116_210414_gainakt3exp_baseline-before-warm_223545 \
         --num_students 10 \
-        --min_steps 10
+        --min_steps 10 \
+        --output trajectories.csv
 
 Output:
-    Prints detailed trajectories to console showing:
-    - Student ID
-    - Number of interactions
-    - Per-step: skills practiced, gains, mastery states, actual performance
+    CSV file with columns:
+    - student_idx: Student index in batch
+    - global_idx: Global student ID in dataset
+    - step: Step number (1-indexed)
+    - skill_id: Skill/concept ID
+    - actual_response: True response (0/1)
+    - encoder1_pred: Encoder 1 prediction probability
+    - encoder2_pred: Encoder 2 prediction probability
+    - encoder1_match: Whether Encoder 1 prediction matches actual (0/1)
+    - encoder2_match: Whether Encoder 2 prediction matches actual (0/1)
+    - mastery: Mastery level for the skill [0-1]
+    - expected_gain: Expected learning gain
+    - mastery_threshold: Threshold used for binary classification (from config)
 """
 
 import os
 import sys
 import json
+import csv
+import math
 import argparse
 import numpy as np
 import torch
@@ -42,6 +54,8 @@ def load_model_and_config(run_dir):
     
     # Extract model configuration from defaults
     defaults = config['defaults']
+    
+    # Build complete model config including all architectural and interpretability parameters
     model_config = {
         'seq_len': defaults['seq_len'],
         'd_model': defaults['d_model'],
@@ -50,21 +64,16 @@ def load_model_and_config(run_dir):
         'd_ff': defaults['d_ff'],
         'dropout': defaults['dropout'],
         'emb_type': defaults['emb_type'],
-        'num_students': defaults['num_students'],
-        # DEPRECATED (2025-11-16): Constraint loss weights removed in dual-encoder architecture
-        'non_negative_loss_weight': defaults.get('non_negative_loss_weight', 0.0),
-        'monotonicity_loss_weight': defaults.get('monotonicity_loss_weight', 0.0),
-        'mastery_performance_loss_weight': defaults.get('mastery_performance_loss_weight', 0.0),
-        'gain_performance_loss_weight': defaults.get('gain_performance_loss_weight', 0.0),
-        'sparsity_loss_weight': defaults.get('sparsity_loss_weight', 0.0),
-        'consistency_loss_weight': defaults.get('consistency_loss_weight', 0.0),
-        'use_mastery_head': defaults['use_mastery_head'],
-        'use_gain_head': defaults['use_gain_head'],
-        'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),  # DEPRECATED (2025-11-16)
+        'use_mastery_head': defaults.get('use_mastery_head', True),
+        'use_gain_head': defaults.get('use_gain_head', False),
         'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
         'use_student_speed': defaults.get('use_student_speed', False),
-        'mastery_threshold_init': defaults['mastery_threshold_init'],
-        'threshold_temperature': defaults['threshold_temperature']
+        'mastery_threshold_init': defaults.get('mastery_threshold_init', 0.6),
+        'threshold_temperature': defaults.get('threshold_temperature', 1.5),
+        'beta_skill_init': defaults.get('beta_skill_init', 2.5),
+        'm_sat_init': defaults.get('m_sat_init', 0.7),
+        'gamma_student_init': defaults.get('gamma_student_init', 1.1),
+        'sigmoid_offset': defaults.get('sigmoid_offset', 1.5),
     }
     
     dataset_name = defaults['dataset']
@@ -73,111 +82,44 @@ def load_model_and_config(run_dir):
     return model_config, dataset_name, fold, config
 
 
-def select_diverse_students(data_loader, num_students=10, min_steps=10, max_students_to_check=500):
+def extract_student_trajectory(batch, batch_idx, student_idx_in_batch, outputs, device):
     """
-    Select students with diverse trajectory lengths (trying to get both short and long).
-    
-    Returns list of (student_index, sequence_length) tuples.
-    """
-    candidates = []
-    checked = 0
-    
-    for batch in data_loader:
-        masks = batch['masks']
-        B = masks.size(0)
-        
-        for i in range(B):
-            if checked >= max_students_to_check:
-                break
-            
-            seq_len = int(masks[i].sum().item())
-            if seq_len >= min_steps:
-                candidates.append((checked, seq_len))
-            
-            checked += 1
-            
-        if checked >= max_students_to_check:
-            break
-    
-    if len(candidates) < num_students:
-        print(f"Warning: Only found {len(candidates)} students with >= {min_steps} steps")
-        return candidates
-    
-    # Sort by sequence length
-    candidates.sort(key=lambda x: x[1])
-    
-    # Select diverse range: take students distributed across the length range
-    indices = np.linspace(0, len(candidates) - 1, num_students).astype(int)
-    selected = [candidates[i] for i in indices]
-    
-    return selected
-
-
-def extract_trajectory(model, batch, student_idx_in_batch, device):
-    """
-    Extract detailed trajectory for a single student.
+    Extract trajectory for a single student from batch outputs.
     
     Returns dict with:
-        - steps: list of dicts, each containing:
-            - timestep: int
-            - skills_practiced: list of skill IDs
-            - gains: dict {skill_id: gain_value}
-            - mastery: dict {skill_id: mastery_value}
-            - performance: 0 or 1 (actual response)
-            - prediction: float (model's predicted probability)
+    - steps: List of dicts, each containing timestep data
     """
+    # Get student data from batch
     q = batch['cseqs'].to(device)
     r = batch['rseqs'].to(device)
-    qry = batch.get('shft_cseqs', q).to(device)
     responses = batch.get('shft_rseqs', r).to(device)
     mask = batch['masks'].to(device)
     
-    # Get model outputs
-    with torch.no_grad():
-        model.eval()
-        core = model.module if isinstance(model, torch.nn.DataParallel) else model
-        outputs = core.forward_with_states(q=q, r=r, qry=qry)
-    
-    # Extract for specific student
     student_q = q[student_idx_in_batch]  # [seq_len]
     student_responses = responses[student_idx_in_batch]  # [seq_len]
     student_mask = mask[student_idx_in_batch]  # [seq_len]
     
-    # DUAL-ENCODER PREDICTIONS (2025-11-16): Get predictions from both encoders
-    # Encoder 1: Base predictions (Performance Path) - used for BCE Loss
+    # Encoder 1: Base performance predictions
     student_predictions_encoder1 = outputs['predictions'][student_idx_in_batch]  # [seq_len]
     
-    # Encoder 2: Incremental Mastery predictions (Interpretability Path) - used for IM Loss
+    # Encoder 2: Incremental Mastery predictions
     if 'incremental_mastery_predictions' in outputs:
-        student_predictions_encoder2 = outputs['incremental_mastery_predictions'][student_idx_in_batch]  # [seq_len]
+        student_predictions_encoder2 = outputs['incremental_mastery_predictions'][student_idx_in_batch]
     else:
         student_predictions_encoder2 = None
     
-    # Get mastery (required) and gains (optional)
+    # Get mastery
     if 'projected_mastery' not in outputs:
         return None
     
     student_mastery = outputs['projected_mastery'][student_idx_in_batch]  # [seq_len, num_skills]
     
-    # Gains might not be available if use_gain_head=False
-    # Priority: projected_gains > projected_gains_d > compute from value_seq_2 > zeros
+    # Get gains
     if 'projected_gains' in outputs:
-        student_gains = outputs['projected_gains'][student_idx_in_batch]  # [seq_len, num_skills]
+        student_gains = outputs['projected_gains'][student_idx_in_batch]
     elif 'projected_gains_d' in outputs:
-        # Fall back to D-dimensional gains if available
-        student_gains = outputs['projected_gains_d'][student_idx_in_batch]  # [seq_len, num_skills]
-    elif 'value_seq' in outputs:
-        # Compute gains from value sequence (Encoder 2 outputs)
-        # Value sequence represents learning gains in the interpretability path
-        value_seq_student = outputs['value_seq'][student_idx_in_batch]  # [seq_len, d_model]
-        # Apply ReLU to get non-negative gains and project to skill space
-        # For simplicity, take mean across d_model dimension as skill-level gain
-        student_gains = torch.relu(value_seq_student).mean(dim=-1, keepdim=True)  # [seq_len, 1]
-        # Broadcast to num_skills if needed
-        num_skills = student_mastery.shape[-1]
-        student_gains = student_gains.expand(-1, num_skills)  # [seq_len, num_skills]
+        student_gains = outputs['projected_gains_d'][student_idx_in_batch]
     else:
-        # If no gains available, use zero gains (mastery-only mode)
         student_gains = torch.zeros_like(student_mastery)
     
     # Build trajectory
@@ -186,35 +128,32 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
     num_steps = int(valid_steps.sum().item())
     
     for t in range(num_steps):
-        # MULTI-SKILL SUPPORT: Handle questions that may involve multiple skills
-        # For assist2015, typically 1 skill per question, but this supports the general case
+        # Extract skill IDs
         skill_ids = []
-        
-        # Extract skill ID(s) from questions - support both single skill and multi-skill cases
         skill_id_raw = student_q[t].item()
         if isinstance(skill_id_raw, (list, tuple)):
             skill_ids = [int(sid) for sid in skill_id_raw if sid >= 0]
         else:
             skill_id = int(skill_id_raw)
-            if skill_id >= 0:  # Filter out padding (-1)
+            if skill_id >= 0:
                 skill_ids = [skill_id]
         
-        if not skill_ids:  # Skip if no valid skills
+        if not skill_ids:
             continue
         
-        # True performance (0/1)
+        # True performance
         performance = int(student_responses[t].item())
         
-        # DUAL-ENCODER PREDICTIONS: Collect from both encoders
+        # Predictions
         prediction_encoder1 = float(student_predictions_encoder1[t].item())
         prediction_encoder2 = float(student_predictions_encoder2[t].item()) if student_predictions_encoder2 is not None else None
         
-        # Collect gains and mastery for all skills involved in this interaction
+        # Collect gains and mastery for all skills
         gains_dict = {}
         mastery_dict = {}
         
         for skill_id in skill_ids:
-            if skill_id < student_mastery.shape[-1]:  # Check bounds
+            if skill_id < student_mastery.shape[-1]:
                 mastery_val = float(student_mastery[t, skill_id].item())
                 gain_val = float(student_gains[t, skill_id].item())
                 gains_dict[skill_id] = gain_val
@@ -222,12 +161,12 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
         
         step_data = {
             'timestep': t + 1,
-            'skills_practiced': skill_ids,  # List of skills (generic multi-skill support)
-            'gains': gains_dict,  # Dict mapping skill_id -> gain value
-            'mastery': mastery_dict,  # Dict mapping skill_id -> mastery value
-            'true_response': performance,  # True response (0 or 1)
-            'prediction_encoder1': prediction_encoder1,  # Encoder 1: Base prediction
-            'prediction_encoder2': prediction_encoder2  # Encoder 2: IM prediction (or None)
+            'skills_practiced': skill_ids,
+            'gains': gains_dict,
+            'mastery': mastery_dict,
+            'true_response': performance,
+            'prediction_encoder1': prediction_encoder1,
+            'prediction_encoder2': prediction_encoder2
         }
         
         trajectory['steps'].append(step_data)
@@ -235,117 +174,33 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
     return trajectory
 
 
-def print_trajectory(student_idx, trajectory, global_idx):
-    """
-    Print trajectory in tabular format with dual-encoder predictions and multi-skill support.
-    
-    DUAL-ENCODER DISPLAY (2025-11-16):
-    - Shows predictions from both Encoder 1 (Base) and Encoder 2 (IM)
-    - Displays learning gains and mastery per skill
-    - Supports multi-skill questions (shows all skills practiced in each step)
-    """
-    if trajectory is None or not trajectory['steps']:
-        print(f"\n{'='*150}")
-        print(f"STUDENT #{student_idx}")
-        print(f"{'='*150}")
-        print(f"Global Index: {global_idx}")
-        print("Status: NO VALID TRAJECTORY DATA")
-        print(f"{'='*150}\n")
-        return
-    
-    num_steps = len(trajectory['steps'])
-    
-    # Calculate statistics
-    correct_count = sum(1 for step in trajectory['steps'] if step['true_response'] == 1)
-    accuracy = correct_count / num_steps if num_steps > 0 else 0.0
-    all_skills = set()
-    for step in trajectory['steps']:
-        all_skills.update(step['skills_practiced'])
-    unique_skills = len(all_skills)
-    
-    # Student header with features
-    print(f"\n{'='*150}")
-    print(f"STUDENT #{student_idx}")
-    print(f"{'='*150}")
-    print(f"Global Index: {global_idx:>6} │ Total Interactions: {num_steps:>4} │ Unique Skills: {unique_skills:>3} │ Accuracy: {accuracy:>5.1%}")
-    print(f"{'='*150}")
-    
-    # Check if Encoder 2 predictions are available
-    has_encoder2 = trajectory['steps'][0]['prediction_encoder2'] is not None
-    
-    # Column headers - adapt based on encoder availability
-    if has_encoder2:
-        print(f"{'Step':>4} │ {'Skill(s)':>8} │ {'True':>4} │ {'Enc1':>5} │ {'Enc2':>5} │ {'M1':>3} │ {'M2':>3} │ {'Gain':>7} │ {'Mastery':>7}")
-        print(f"{'─'*4}─┼─{'─'*8}─┼─{'─'*4}─┼─{'─'*5}─┼─{'─'*5}─┼─{'─'*3}─┼─{'─'*3}─┼─{'─'*7}─┼─{'─'*7}")
-    else:
-        print(f"{'Step':>4} │ {'Skill(s)':>8} │ {'True':>4} │ {'Pred':>5} │ {'Match':>5} │ {'Gain':>7} │ {'Mastery':>7}")
-        print(f"{'─'*4}─┼─{'─'*8}─┼─{'─'*4}─┼─{'─'*5}─┼─{'─'*5}─┼─{'─'*7}─┼─{'─'*7}")
-    
-    for step in trajectory['steps']:
-        t = step['timestep']
-        skills = step['skills_practiced']
-        true_ans = step['true_response']
-        
-        # For multi-skill: show primary skill ID (first one) in compact view
-        # Full skill list shown in skills column
-        primary_skill = skills[0] if skills else -1
-        skills_str = ','.join(str(s) for s in skills) if len(skills) <= 3 else f"{skills[0]},+{len(skills)-1}"
-        
-        if has_encoder2:
-            # DUAL-ENCODER MODE: Show predictions from both encoders
-            pred_enc1 = step['prediction_encoder1']
-            pred_enc2 = step['prediction_encoder2']
-            
-            # Binary predictions and matches
-            pred_ans_enc1 = 1 if pred_enc1 >= 0.5 else 0
-            pred_ans_enc2 = 1 if pred_enc2 >= 0.5 else 0
-            match_enc1 = '✓' if true_ans == pred_ans_enc1 else '✗'
-            match_enc2 = '✓' if true_ans == pred_ans_enc2 else '✗'
-            
-            # Get gain and mastery for primary skill
-            gain_val = step['gains'].get(primary_skill, 0.0)
-            mastery_val = step['mastery'].get(primary_skill, 0.0)
-            
-            print(f"{t:4d} │ {skills_str:>8} │ {true_ans:4d} │ {pred_enc1:5.3f} │ {pred_enc2:5.3f} │ {match_enc1:>3} │ {match_enc2:>3} │ {gain_val:7.4f} │ {mastery_val:7.4f}")
-        else:
-            # SINGLE PREDICTION MODE (legacy): Show Encoder 1 prediction only
-            pred = step['prediction_encoder1']
-            pred_ans = 1 if pred >= 0.5 else 0
-            match = '✓' if true_ans == pred_ans else '✗'
-            
-            # Get gain and mastery for primary skill
-            gain_val = step['gains'].get(primary_skill, 0.0)
-            mastery_val = step['mastery'].get(primary_skill, 0.0)
-            
-            print(f"{t:4d} │ {skills_str:>8} │ {true_ans:4d} │ {pred:5.3f} │ {match:>5} │ {gain_val:7.4f} │ {mastery_val:7.4f}")
-    
-    print(f"{'='*150}\n")
-    
-    # Print legend if dual-encoder mode
-    if has_encoder2:
-        print("Legend: Enc1=Encoder1 (Base Predictions), Enc2=Encoder2 (IM Predictions), M1=Match1, M2=Match2")
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description='Extract and display learning trajectories for individual students'
+        description='Extract learning trajectories to CSV format'
     )
     parser.add_argument('--run_dir', type=str, required=True,
-                        help='Path to experiment directory containing model_best.pth and config.json')
+                        help='Path to experiment directory')
     parser.add_argument('--num_students', type=int, default=10,
                         help='Number of students to analyze (default: 10)')
     parser.add_argument('--min_steps', type=int, default=10,
-                        help='Minimum number of interaction steps required (default: 10)')
+                        help='Minimum interaction steps required (default: 10)')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output CSV file path (default: <run_dir>/learning_trajectories.csv)')
     parser.add_argument('--batch_size', type=int, default=1,
-                        help='Batch size for data loading (default: 1 for per-student processing)')
+                        help='Batch size for data loading (default: 1)')
     
     args = parser.parse_args()
     
+    # Set output path - save in the experiment directory by default
+    if args.output is None:
+        args.output = os.path.join(args.run_dir, 'learning_trajectories.csv')
+    
     print(f"\n{'='*120}")
-    print(f"LEARNING TRAJECTORIES ANALYZER - GainAKT3Exp")
+    print(f"LEARNING TRAJECTORIES ANALYZER - CSV EXPORT")
     print(f"{'='*120}")
     print(f"Experiment Directory: {args.run_dir}")
     print(f"Target Students: {args.num_students} (with >= {args.min_steps} steps)")
+    print(f"Output CSV: {args.output}")
     print(f"{'='*120}\n")
     
     # Check if directory exists
@@ -362,10 +217,12 @@ def main():
     print("Loading configuration and model...")
     model_config, dataset_name, fold, config = load_model_and_config(args.run_dir)
     
+    # Get mastery threshold from config (initial value for reference)
+    mastery_threshold_init = model_config.get('mastery_threshold_init', 0.6)
+    
     # Load dataset
     print(f"Loading dataset: {dataset_name} (fold {fold})...")
     
-    # Data config (hardcoded for assist2015, can be extended)
     data_config = {
         dataset_name: {
             'dpath': f'/workspaces/pykt-toolkit/data/{dataset_name}',
@@ -398,111 +255,242 @@ def main():
     # Create model
     print("Creating model architecture...")
     num_skills = test_cfg['num_c']
+    num_students_from_dataset = len(test_dataset)
     
-    # Load checkpoint first to get the correct model config
-    print(f"Loading model weights from: {model_path}")
+    # Get num_students from checkpoint
     checkpoint = torch.load(model_path, map_location=device)
+    # gamma_student contains per-student learning rates
+    num_students_from_checkpoint = checkpoint['model_state_dict']['gamma_student'].shape[0]
+    print(f"Using num_students={num_students_from_checkpoint} from checkpoint")
     
-    # Build complete config dict (copy all defaults and add num_c from dataset)
-    defaults = config['defaults']
-    complete_config = dict(defaults)  # Copy all defaults
-    complete_config['num_c'] = num_skills  # Override with actual dataset skill count
+    # Extract actual learned parameters from checkpoint
+    # Note: These are the final learned values after training, not the initialization values
+    # Training script saves these to learned_parameters_epoch.csv during training
+    theta_global_actual = checkpoint['model_state_dict']['theta_global'].item()
     
-    # If checkpoint has model_config, use num_students from it (critical for gamma_student size)
-    if 'model_config' in checkpoint and 'num_students' in checkpoint['model_config']:
-        complete_config['num_students'] = checkpoint['model_config']['num_students']
-        print(f"Using num_students={checkpoint['model_config']['num_students']} from checkpoint")
+    # Check if learned parameters were tracked during training
+    params_csv_path = os.path.join(args.run_dir, 'learned_parameters_epoch.csv')
+    if os.path.exists(params_csv_path):
+        print(f"Found learned parameters tracking file: {params_csv_path}")
+        import pandas as pd
+        params_df = pd.read_csv(params_csv_path)
+        final_epoch = params_df.iloc[-1]
+        print(f"  Final epoch: {int(final_epoch['epoch'])}")
+        print(f"  theta_global: {final_epoch['theta_global']:.6f} (init: {mastery_threshold_init:.6f})")
+        print(f"  beta_skill: mean={final_epoch['beta_skill_mean']:.6f}, std={final_epoch['beta_skill_std']:.6f}")
+        print(f"  M_sat: mean={final_epoch['M_sat_mean']:.6f}, std={final_epoch['M_sat_std']:.6f}")
+        print(f"  gamma_student: mean={final_epoch['gamma_student_mean']:.6f}, std={final_epoch['gamma_student_std']:.6f}")
+    else:
+        print(f"Learned theta_global (mastery threshold): {theta_global_actual:.6f} (init was {mastery_threshold_init:.6f})")
+        print(f"  Note: No learned_parameters_epoch.csv found. Using values from checkpoint.")
     
-    # Map monitor_freq to monitor_frequency if needed
-    if 'monitor_freq' in complete_config and 'monitor_frequency' not in complete_config:
-        complete_config['monitor_frequency'] = complete_config['monitor_freq']
-    # Compute incremental_mastery_loss_weight from bce_loss_weight if needed
-    if 'bce_loss_weight' in complete_config and 'incremental_mastery_loss_weight' not in complete_config:
-        complete_config['incremental_mastery_loss_weight'] = 1.0 - complete_config['bce_loss_weight']
+    # Get threshold temperature from config (this is a hyperparameter, not learned)
+    threshold_temperature = model_config.get('threshold_temperature', 1.5)
     
-    # Add deprecated parameters if missing (2025-11-16)
-    if 'intrinsic_gain_attention' not in complete_config:
-        complete_config['intrinsic_gain_attention'] = False
-    if 'use_skill_difficulty' not in complete_config:
-        complete_config['use_skill_difficulty'] = False
-    if 'use_student_speed' not in complete_config:
-        complete_config['use_student_speed'] = False
-    for loss_param in ['non_negative_loss_weight', 'monotonicity_loss_weight', 
-                       'mastery_performance_loss_weight', 'gain_performance_loss_weight',
-                       'sparsity_loss_weight', 'consistency_loss_weight']:
-        if loss_param not in complete_config:
-            complete_config[loss_param] = 0.0
+    # Save learned parameters summary to experiment directory for reference
+    learned_params = {
+        'theta_global': float(theta_global_actual),
+        'theta_global_init': float(mastery_threshold_init),
+        'threshold_temperature': float(threshold_temperature),
+        'beta_skill_mean': float(checkpoint['model_state_dict']['beta_skill'].mean().item()),
+        'beta_skill_std': float(checkpoint['model_state_dict']['beta_skill'].std().item()),
+        'M_sat_mean': float(checkpoint['model_state_dict']['M_sat'].mean().item()),
+        'M_sat_std': float(checkpoint['model_state_dict']['M_sat'].std().item()),
+        'gamma_student_mean': float(checkpoint['model_state_dict']['gamma_student'].mean().item()),
+        'gamma_student_std': float(checkpoint['model_state_dict']['gamma_student'].std().item()),
+    }
+    
+    learned_params_path = os.path.join(args.run_dir, 'learned_parameters.json')
+    with open(learned_params_path, 'w') as f:
+        json.dump(learned_params, f, indent=2)
+    print(f"Saved learned parameters summary to: {learned_params_path}")
+    
+    # Check if model_config is in checkpoint (new format)
+    if 'model_config' in checkpoint:
+        print("Using model_config from checkpoint")
+        complete_config = checkpoint['model_config']
+    else:
+        # Build from loaded config + dataset info
+        defaults = config['defaults']
+        complete_config = {
+            'num_c': num_skills,
+            'seq_len': defaults['seq_len'],
+            'd_model': defaults['d_model'],
+            'n_heads': defaults['n_heads'],
+            'num_encoder_blocks': defaults['num_encoder_blocks'],
+            'd_ff': defaults['d_ff'],
+            'dropout': defaults['dropout'],
+            'emb_type': defaults['emb_type'],
+            'use_mastery_head': defaults.get('use_mastery_head', True),
+            'use_gain_head': defaults.get('use_gain_head', False),
+            'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),
+            'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
+            'use_student_speed': defaults.get('use_student_speed', False),
+            'num_students': num_students_from_checkpoint,
+            'non_negative_loss_weight': defaults.get('non_negative_loss_weight', 0.0),
+            'monotonicity_loss_weight': defaults.get('monotonicity_loss_weight', 0.0),
+            'mastery_performance_loss_weight': defaults.get('mastery_performance_loss_weight', 0.0),
+            'gain_performance_loss_weight': defaults.get('gain_performance_loss_weight', 0.0),
+            'sparsity_loss_weight': defaults.get('sparsity_loss_weight', 0.0),
+            'consistency_loss_weight': defaults.get('consistency_loss_weight', 0.0),
+            'incremental_mastery_loss_weight': defaults.get('incremental_mastery_loss_weight', 1.0),
+            'monitor_frequency': defaults.get('monitor_frequency', 10),
+            'mastery_threshold_init': defaults.get('mastery_threshold_init', 0.6),
+            'threshold_temperature': defaults.get('threshold_temperature', 1.5),
+            'beta_skill_init': defaults.get('beta_skill_init', 2.5),
+            'm_sat_init': defaults.get('m_sat_init', 0.7),
+            'gamma_student_init': defaults.get('gamma_student_init', 1.1),
+            'sigmoid_offset': defaults.get('sigmoid_offset', 1.5),
+        }
     
     model = create_exp_model(complete_config)
+    model = model.to(device)
     
-    # Handle different checkpoint formats
-    if 'model_state_dict' in checkpoint:
-        state_dict = checkpoint['model_state_dict']
-    else:
-        state_dict = checkpoint
-    
-    # Remove 'module.' prefix if present (from DataParallel training)
-    if any(k.startswith('module.') for k in state_dict.keys()):
-        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-    
-    model.load_state_dict(state_dict)
-    model.to(device)
+    # Load weights
+    print(f"Loading model weights from: {model_path}")
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
-    print("\nSelecting diverse student sample...")
-    selected_students = select_diverse_students(
-        test_loader, 
-        num_students=args.num_students,
-        min_steps=args.min_steps
-    )
+    # Open CSV file
+    print(f"\nWriting trajectories to: {args.output}")
+    csv_file = open(args.output, 'w', newline='')
+    csv_writer = csv.writer(csv_file)
     
-    if not selected_students:
-        print("No students found meeting the criteria (min_steps >= {})".format(args.min_steps))
-        return
+    # Write header
+    csv_writer.writerow([
+        'student_idx',
+        'global_idx',
+        'step',
+        'skill_id',
+        'actual_response',
+        'encoder1_pred',
+        'encoder2_pred',
+        'encoder1_binary',
+        'encoder2_binary',
+        'encoder1_match',
+        'encoder2_match',
+        'mastery',
+        'expected_gain',
+        'theta_global',  # Actual learned threshold
+        'threshold_temp',  # Temperature parameter
+        'encoder2_pred_expected',  # Computed from formula for verification
+        'total_steps',
+        'unique_skills',
+        'accuracy'
+    ])
     
-    print(f"Selected {len(selected_students)} students:")
-    for i, (global_idx, seq_len) in enumerate(selected_students, 1):
-        print(f"  Student {i}: Global Index={global_idx}, Sequence Length={seq_len}")
+    # Process batches
+    students_collected = 0
+    batch_idx = 0
     
-    print("\n" + "="*120)
-    print("EXTRACTING TRAJECTORIES...")
-    print("="*120)
-    
-    # Extract and print trajectories
-    trajectories_data = []
-    current_global_idx = 0
-    
-    for student_num, (target_global_idx, expected_len) in enumerate(selected_students, 1):
-        # Skip batches until we reach target student
+    with torch.no_grad():
         for batch in test_loader:
-            B = batch['cseqs'].size(0)
-            
-            if current_global_idx <= target_global_idx < current_global_idx + B:
-                # Found the batch containing this student
-                student_idx_in_batch = target_global_idx - current_global_idx
-                
-                trajectory = extract_trajectory(model, batch, student_idx_in_batch, device)
-                trajectories_data.append({
-                    'student_num': student_num,
-                    'global_idx': target_global_idx,
-                    'trajectory': trajectory
-                })
-                
-                print_trajectory(student_num, trajectory, target_global_idx)
+            if students_collected >= args.num_students:
                 break
             
-            current_global_idx += B
-        
-        # Reset for next student
-        current_global_idx = 0
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+            # Move batch to device and extract sequences
+            q = batch['cseqs'].to(device)
+            r = batch['rseqs'].to(device)
+            qry = batch.get('shft_cseqs', q).to(device)
+            
+            # Forward pass with states
+            outputs = model.forward_with_states(q=q, r=r, qry=qry)
+            
+            # Process each student in batch
+            batch_size = batch['cseqs'].shape[0]
+            for student_idx_in_batch in range(batch_size):
+                if students_collected >= args.num_students:
+                    break
+                
+                # Extract trajectory
+                trajectory = extract_student_trajectory(batch, batch_idx, student_idx_in_batch, outputs, device)
+                
+                if trajectory is None or len(trajectory['steps']) < args.min_steps:
+                    continue
+                
+                # Calculate statistics
+                total_steps = len(trajectory['steps'])
+                all_skills = set()
+                correct_count = 0
+                
+                for step in trajectory['steps']:
+                    all_skills.update(step['skills_practiced'])
+                    if step['true_response'] == 1:
+                        correct_count += 1
+                
+                unique_skills = len(all_skills)
+                accuracy = correct_count / total_steps if total_steps > 0 else 0.0
+                
+                # Global index (approximate based on batch processing)
+                global_idx = batch_idx * args.batch_size + student_idx_in_batch
+                
+                # Write rows for each step
+                for step in trajectory['steps']:
+                    timestep = step['timestep']
+                    actual = step['true_response']
+                    enc1_pred = step['prediction_encoder1']
+                    enc2_pred = step['prediction_encoder2']
+                    
+                    # Binary predictions
+                    enc1_binary = 1 if enc1_pred >= 0.5 else 0
+                    enc2_binary = 1 if enc2_pred >= 0.5 else 0 if enc2_pred is not None else None
+                    
+                    # Matches
+                    enc1_match = 1 if enc1_binary == actual else 0
+                    enc2_match = 1 if enc2_binary == actual else 0 if enc2_binary is not None else None
+                    
+                    # For each skill in this step
+                    for skill_id in step['skills_practiced']:
+                        mastery = step['mastery'].get(skill_id, 0.0)
+                        gain = step['gains'].get(skill_id, 0.0)
+                        
+                        # Compute expected encoder2_pred from formula for verification
+                        if mastery is not None and theta_global_actual is not None:
+                            logit = (mastery - theta_global_actual) / threshold_temperature
+                            enc2_pred_expected = 1 / (1 + math.exp(-logit))
+                        else:
+                            enc2_pred_expected = None
+                        
+                        csv_writer.writerow([
+                            students_collected + 1,
+                            global_idx,
+                            timestep,
+                            skill_id,
+                            actual,
+                            f"{enc1_pred:.6f}",
+                            f"{enc2_pred:.6f}" if enc2_pred is not None else '',
+                            enc1_binary,
+                            enc2_binary if enc2_binary is not None else '',
+                            enc1_match,
+                            enc2_match if enc2_match is not None else '',
+                            f"{mastery:.6f}",
+                            f"{gain:.6f}",
+                            f"{theta_global_actual:.6f}",  # Actual learned threshold
+                            f"{threshold_temperature:.2f}",  # Temperature parameter
+                            f"{enc2_pred_expected:.6f}" if enc2_pred_expected is not None else '',  # Expected value
+                            total_steps,
+                            unique_skills,
+                            f"{accuracy:.4f}"
+                        ])
+                
+                students_collected += 1
+                print(f"Collected student {students_collected}/{args.num_students} (Global ID: {global_idx}, Steps: {total_steps}, Skills: {unique_skills})")
+            
+            batch_idx += 1
     
-    print("\n" + "="*120)
-    print("TRAJECTORY EXTRACTION COMPLETE")
-    print("="*120)
-    print(f"Analyzed {len(trajectories_data)} students from test set")
-    print(f"Results show: Step | Skill | True answer (0/1) | Predicted probability | Match | Gain | Mastery")
-    print("="*120 + "\n")
+    csv_file.close()
+    
+    print(f"\n{'='*120}")
+    print(f"TRAJECTORY EXTRACTION COMPLETE")
+    print(f"{'='*120}")
+    print(f"Total students analyzed: {students_collected}")
+    print(f"Output saved to: {args.output}")
+    print(f"\nYou can now analyze the trajectories using:")
+    print(f"  - pandas: df = pd.read_csv('{args.output}')")
+    print(f"  - Filter by student: df[df['student_idx'] == 10]")
+    print(f"  - Filter by skill: df[df['skill_id'] == 64]")
+    print(f"  - Check specific case: df[(df['student_idx'] == 10) & (df['skill_id'] == 64)]")
+    print(f"{'='*120}\n")
 
 
 if __name__ == '__main__':

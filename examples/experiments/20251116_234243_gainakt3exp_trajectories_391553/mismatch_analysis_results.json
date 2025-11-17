@@ -1,0 +1,11 @@
+{
+  "csv_path": "examples/experiments/20251116_234243_gainakt3exp_trajectories_391553/learning_trajectories.csv",
+  "total_rows": 966,
+  "num_matches": 966,
+  "num_mismatches": 0,
+  "match_rate": 100.0,
+  "mean_diff": 1.759834368523161e-08,
+  "max_diff": 1.0000000000287557e-06,
+  "theta_global": 0.439385,
+  "threshold_temp": 1.5
+}
