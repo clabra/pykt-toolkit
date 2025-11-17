@@ -10,7 +10,7 @@
     "weight_decay": 1.7571e-05,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
-    "patience": 4,
+    "patience": 10,
     "monitor_freq": 50,
     "use_amp": false,
     "use_wandb": false,
@@ -263,6 +263,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "d3ed8268d0e83eedda8f52543169ce29",
+  "md5": "9a0b07e1bbcc6864412c34fdc7f2d590",
   "_md5_computed": "2025-11-16"
 }
