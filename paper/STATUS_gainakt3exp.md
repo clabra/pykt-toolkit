@@ -2,12 +2,164 @@
 
 **Document Version**: Updated 2025-11-17 (Critical Bug Fix - encoder2_pred skill indexing)  
 **Model Version**: GainAKT3Exp - Dual-encoder transformer with Sigmoid Learning Curve Mastery  
-**Status**: ✅ **PRODUCTION READY** - Full training/evaluation pipeline with bug fixes applied (2025-11-17)
+**Status**: ⚠️ **CRITICAL BUGS IDENTIFIED** - Two architectural flaws prevent Encoder 2 from learning skill-specific patterns (2025-11-17)
 
+---
 
-The GainAKT3Exp architecture design is based in a dual-encoder with two attention heads. Encoder 1 is designed to optimize performance metrics such as AUC and accuracy. Encoder 2 is designed for interpretability. 
+## Conceptual Foundation: Skill-Specific Mastery Through Learning Gains
 
-Following we explain our proposal for this novel dual-encoder model. 
+### Core Hypothesis
+
+Our dual-encoder architecture is based on the hypothesis that **student mastery evolves through skill-specific learning gains** that can be modeled via sigmoid-shaped learning curves. The key principles are:
+
+#### 1. Questions Target Specific Skills (Q-Matrix)
+
+- Each question/item is designed to develop one or more skills
+- Q-matrix defines relationships: Q[question_id] → {skill_1, skill_2, ..., skill_k}
+- We call these "relevant skills" for a given question
+- Example: In ASSIST2015 (single-skill dataset), each question targets exactly one skill
+
+#### 2. Encoder 2 Learns to Predict Skill-Specific Learning Gains
+
+**Critical Understanding**: Encoder 2 does NOT learn to predict responses directly. Instead:
+
+**Encoder 2's Primary Objective**: Learn patterns from interaction data that quantify **how much each interaction contributes to increase the mastery level** of each skill relevant to the question (according to Q-matrix).
+
+**What Encoder 2 Learns**:
+- For each interaction with question Q at step t
+- Estimate learning gains Δm[skill, t] for each relevant skill
+- Quantify: "To what extent does this interaction improve mastery of Skill A, Skill B, etc.?"
+
+**Training Signal for Encoder 2**:
+- Encoder 2 weights are trained to predict gains such that:
+  - Predicted gains → effective_practice accumulation → mastery trajectories
+  - Mastery trajectories → threshold-based predictions → response predictions
+  - Loss = BCE(mastery_based_predictions, actual_responses)
+- Backpropagation path: `BCE_loss → ∂L/∂prediction → ∂L/∂mastery → ∂L/∂gains → ∂L/∂Encoder2_weights`
+- Encoder 2 learns gain patterns that make mastery predictive of student performance
+
+**Patterns Encoder 2 Should Learn**:
+- Interaction quality (engagement, time spent, effort)
+- Response correctness (correct responses → higher learning gains)
+- Skill difficulty (harder skills require more practice for same gain)
+- Prior mastery (diminishing returns as mastery approaches saturation)
+- Temporal effects (spacing, recency, forgetting patterns)
+
+#### 3. Practice Generates Skill-Specific Learning Gains
+
+- When a student interacts with a question at step t, they practice the **relevant skills** (per Q-matrix)
+- Each relevant skill experiences a **learning gain** Δm[skill, t]
+- Gains are skill-specific: Δm[skill_A, t] ≠ Δm[skill_B, t] (NOT uniform!)
+- Gains depend on:
+  - Interaction quality ← **Learned by Encoder 2**
+  - Skill difficulty (β_skill parameter)
+  - Prior mastery level (sigmoid saturation effect)
+  - Response correctness
+
+#### 4. Mastery Accumulates Through Sigmoid Learning Curves (Monotonically)
+
+- Skill mastery m[skill, t] increases **monotonically** with practice
+- Growth follows sigmoid shape: slow initial growth → rapid learning → saturation
+- Formula: m[skill, t] = M_sat × sigmoid(β × γ × effective_practice[skill, t] - offset)
+- effective_practice[skill, t] = Σ(learning gains for that skill up to time t)
+- **Monotonicity Guarantee**: Mastery never decreases (once learned, skills stay learned)
+
+#### 5. Mastery Predicts Response Probability (Threshold Logic)
+
+**Key Principle**: Response correctness depends on whether **ALL relevant skills are mastered**.
+
+**Mastery Threshold (θ)**:
+- A skill is considered "mastered" if `mastery[skill] ≥ θ`
+- Typical threshold: θ = 0.80-0.85 (80-85% mastery required for competence)
+- **Monotonicity**: Once mastered, always mastered (mastery only increases)
+
+**Multi-Skill Logic** (For questions requiring multiple skills):
+- Question Q requires skills {skill_A, skill_B, skill_C} (from Q-matrix)
+- **Student succeeds** IF: ALL relevant skills are mastered
+  - `mastery[skill_A] ≥ θ AND mastery[skill_B] ≥ θ AND mastery[skill_C] ≥ θ`
+- **Student fails** IF: ANY relevant skill is not mastered
+  - ∃ skill_i ∈ Q[question] such that `mastery[skill_i] < θ`
+
+**Prediction Formulas**:
+- Single-skill: `P(correct) = sigmoid((mastery[skill] - θ) / temp)`
+- Multi-skill (conjunctive): `P(correct) = sigmoid((min(mastery[relevant_skills]) - θ) / temp)`
+  - Takes minimum mastery (weakest skill determines success)
+  - Implements AND logic: all skills must be mastered
+- Alternative (compensatory): `P(correct) = sigmoid((mean(mastery[relevant_skills]) - θ) / temp)`
+  - Allows partial compensation across skills
+
+**Educational Interpretation**:
+- ✅ "Student answered correctly because ALL relevant skills above threshold"
+- ✅ "Student failed because Skill B not mastered (mastery=0.65 < θ=0.85)"
+- ✅ "After 3 interactions practicing Skill B, mastery reached 0.87 → now succeeds"
+- ✅ "Skill A mastered early (0.90), but Skill B weak (0.55) → fails multi-skill questions"
+
+### Dual-Encoder Design Rationale
+
+**Encoder 1 (Performance Path)**:
+- Learns **direct response prediction** through unconstrained attention
+- Optimizes for maximum AUC/accuracy
+- No interpretability constraints
+- Loss: BCE(base_predictions, responses)
+- Black-box: Can learn any patterns that predict responses
+
+**Encoder 2 (Interpretability Path)**:
+- Learns **learning gains** that predict mastery, which in turn predicts responses
+- Primary task: Estimate Δm[skill, t] for each relevant skill per interaction
+- Secondary task: Mastery-based response prediction (through threshold logic)
+- Loss: BCE(mastery_based_predictions, responses)
+- Constraint: Predictions must come from mastery values derived from learned gains
+- Interpretable: Every step from gains → mastery → prediction is transparent
+
+**What Encoder 2 Weights Learn**:
+- NOT: Direct response patterns (that's Encoder 1's job)
+- YES: Gain patterns that make mastery trajectories predictive of responses
+- Example: "Correct response + high engagement → large gain (0.8) for relevant skills"
+- Example: "Incorrect response + low engagement → small gain (0.1)"
+- Example: "Easy skills (low β) → larger gains per practice, hard skills (high β) → smaller gains"
+
+### Why This Approach Enables Interpretability
+
+The key innovation is that **Encoder 2 predicts responses THROUGH an interpretable mastery mechanism**, not directly:
+
+```
+Encoder 1 Path (Performance):
+Input (Q, R) → Attention → Direct Prediction → BCE(prediction, response)
+               ↓
+          Black-box patterns
+
+Encoder 2 Path (Interpretability):
+Input (Q, R) → Attention → Learning Gains [per-skill] → Effective Practice → 
+               ↓           ↓
+          Learns gains   Skill-specific accumulation
+          
+→ Sigmoid Mastery → Threshold Check (≥θ?) → Prediction → BCE(prediction, response)
+  ↓                 ↓                        ↓
+  Monotonic        All skills mastered?     Same supervision
+  trajectories     (AND logic)              as Encoder 1
+```
+
+This means:
+- ✅ **Learning Gains**: "This interaction improved Skill A by 0.3, Skill B by 0.1"
+- ✅ **Mastery Trajectories**: "Skill A: 0.45 → 0.68 → 0.85 (now mastered!)"
+- ✅ **Threshold Logic**: "Skill A mastered (0.85 ≥ θ), Skill B not yet (0.65 < θ)"
+- ✅ **Explainable Predictions**: "Failed because Skill B not mastered (0.65 < 0.85)"
+- ✅ **Skill Differentiation**: Can see which skills student masters faster/slower
+- ✅ **Monotonicity**: Once mastered (t=15), skill stays mastered for all t > 15
+
+### Educational Validity
+
+This approach aligns with educational theory:
+- **Item Response Theory (IRT)**: Response probability increases with ability (mastery)
+- **Learning Curves**: Skill acquisition follows sigmoid growth patterns
+- **Mastery Learning**: Skills have threshold - below threshold → failure, above → success
+- **Spaced Repetition**: Practice accumulation leads to mastery
+- **Knowledge Tracing**: Track latent skill mastery through observed responses
+- **Monotonic Learning**: Skills once learned are not unlearned (positive manifold)
+
+---
+
+Following we explain the current implementation status of this novel dual-encoder model. 
 
 ---
 
@@ -323,84 +475,444 @@ Epoch  Val_AUC  Enc1_Val_AUC  Enc2_Val_AUC  Notes
 
 ### Diagnosis: Why Encoder 2 AUC < 50%
 
-**Possible Root Causes**:
+**Learning Trajectories Analysis** (Completed: 2025-11-17 13:33):
 
-1. **Mastery Trajectory Not Predictive**:
-   - Learning curve parameters may not capture actual learning patterns
-   - Sigmoid assumptions (monotonic growth) may not match real student behavior
-   - Effective practice accumulation may not reflect meaningful skill acquisition
+Analyzed `learning_trajectories.csv` with 10 students from experiment. Key findings:
 
-2. **Insufficient IM Loss Signal** (Despite 30% Weight):
-   - 30% may still be too weak compared to 70% BCE loss
-   - Encoder 2 gradients dominated by noise rather than learning signal
-   - May require 40-50% IM loss weight for meaningful learning
+1. **✅ Mastery Values ARE Updating**: Show clear sigmoid progression
+   - Example Student 1, Skill 14: 0.261 → 0.479 → 0.678 (3 interactions)
+   - Example Student 1, Skill 92: 0.251 → 0.459 → 0.652 → 0.767 → 0.819 (5 interactions)
+   - Demonstrates sigmoid learning curve mechanism is working
 
-3. **Mastery Initialization Issues**:
-   - Initial mastery values may start too high/low
-   - Sigmoid offset (2.0) may place inflection point poorly
-   - M_sat (0.8) may not allow sufficient mastery range
+2. **❌ Expected Gains Are ALL ZERO**: Critical discovery!
+   - Column `expected_gain` shows 0.000000 for all 1000+ trajectory rows
+   - Root cause: `use_gain_head=false` in config
+   - Model computes gains internally but doesn't output them for trajectory analysis
+   - Gains are implicit in effective_practice accumulation, not explicit
 
-4. **Threshold Mechanism Problems**:
-   - Mastery threshold (0.85) may be miscalibrated
-   - Temperature (1.0) may not provide appropriate prediction sharpness
-   - Sigmoid activation may lose gradient information
-
-5. **Effective Practice Not Accumulating Properly**:
-   - Gain quality estimates may be flat (not differentiating interactions)
-   - Differentiable accumulation may have numerical instability
-   - Practice counts may not reflect actual learning opportunities
-
-### Recommended Next Steps
-
-**Immediate Actions**:
-
-1. **✅ Extract Learning Trajectories** (Priority: CRITICAL)
-   ```bash
-   python examples/learning_trajectories.py \
-     --run_dir examples/experiments/20251117_131554_gainakt3exp_baseline-bce0.7_999787 \
-     --num_students 10 \
-     --min_steps 10
+3. **Encoder 2 Architecture Uses Implicit Gains**:
    ```
-   - Verify mastery values show sigmoid progression
-   - Check if mastery correlates with responses
-   - Examine effective practice accumulation patterns
-   - Validate gain_quality values are meaningful (not flat)
+   value_seq_2 (Encoder 2 output, D-dim) 
+     → gain_quality = sigmoid(mean(value_seq_2))  [scalar per timestep]
+     → effective_practice[t] = effective_practice[t-1] + gain_quality[t]
+     → mastery[t] = M_sat × sigmoid(β × γ × effective_practice[t] - offset)
+     → encoder2_pred = sigmoid((mastery - θ) / temp)
+   ```
+   
+4. **Mastery Updates Through Effective Practice**:
+   - NOT through explicit per-skill gains like gain_quality × skill_one_hot
+   - INSTEAD: quality-weighted practice count accumulates
+   - gain_quality is a **scalar engagement measure** (0-1), not per-skill gain vector
+   - All practiced skills at timestep t get same gain_quality increment
 
-2. **Gradient Flow Analysis**:
-   - Add logging to check Encoder 2 parameter gradients
-   - Verify gain_quality gradients are non-zero
-   - Confirm effective_practice gradients flow properly
-   - Check if sigmoid parameters (beta, m_sat, gamma) are updating
+**Root Cause Identified** - TWO CRITICAL ARCHITECTURAL BUGS:
 
-3. **Parameter Sweep Experiments**:
-   - **IM Loss Weight**: Test 0.4, 0.5, 0.6 (currently 0.3)
-   - **Sigmoid Offset**: Test 0.5, 1.0, 1.5 (currently 2.0)
-   - **M_sat**: Test 0.6, 0.7, 0.9 (currently 0.8)
-   - **Beta Skill**: Test 1.0, 1.5, 3.0 (currently 2.0)
+### 🔴 BUG #1: Scalar Gain Quality (Not Per-Skill Gains)
 
-4. **Architecture Modifications** (If Above Fails):
-   - Add batch normalization to Encoder 2 value outputs
-   - Initialize gain_quality embeddings differently
-   - Consider alternative mastery update mechanisms
-   - Investigate whether sigmoid curves are appropriate model
+**File**: `pykt/models/gainakt3_exp.py`, Lines 528-554
+
+```python
+# WRONG: Aggregates to scalar per interaction
+gain_quality = torch.sigmoid(learning_gains_d.mean(dim=-1, keepdim=True))  # [B, L, 1]
+
+# WRONG: Same scalar applied to ALL practiced skills
+effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+```
+
+**The Problem**:
+- ✅ Model can learn: "This interaction had high/low engagement quality"
+- ❌ Model cannot learn: "Skill A improved by 0.8, Skill B by 0.2"
+- Result: All practiced skills increment by SAME scalar value
+- Impact: No skill differentiation, uniform mastery growth
+- Reality: Real learning is skill-specific with different rates
+
+### 🔴 BUG #2: Insufficient Differentiation in Skill-Specific Gain Learning
+
+**File**: `examples/train_gainakt3exp.py`, Lines 285-291
+
+```python
+# Encoder 1: Direct response prediction (CORRECT)
+bce_loss = bce_criterion(y_pred, y_true)
+
+# Encoder 2: Response prediction through mastery (CORRECT IN PRINCIPLE)
+im_loss = bce_criterion(valid_im_preds, y_true)  # Same y_true labels
+
+# Both encoders trained on SAME objective
+loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss
+```
+
+**The Problem - Clarified**:
+
+The supervision signal (BCE on responses) is **CORRECT** - Encoder 2 SHOULD predict responses through mastery. The issue is that **Bug #1 (scalar gains) prevents Encoder 2 from learning skill-specific patterns**, so even with correct supervision, it cannot differentiate between skills.
+
+**Why Both Encoders Learning Response Prediction is Actually Correct**:
+- ✅ Encoder 1: Direct response prediction (unconstrained, performance-optimized)
+- ✅ Encoder 2: Response prediction **through skill-specific mastery** (constrained, interpretable)
+- ✅ Both predict responses, but through DIFFERENT mechanisms:
+  - Encoder 1: Attention patterns → Direct prediction
+  - Encoder 2: Attention patterns → Skill gains → Mastery → Prediction
+
+**The Real Issue (Consequence of Bug #1)**:
+- Current: Scalar gain_quality means all skills get same increment
+- Result: Encoder 2 cannot learn "Skill A improved 0.8, Skill B improved 0.2"
+- Impact: Without skill differentiation, mastery values are meaningless
+- Outcome: Encoder 2 becomes a poor response predictor (AUC 48.42%)
+
+**Why This Causes AUC < 50%**:
+- Encoder 1: Unconstrained predictor → Good AUC (67.65%)
+- Encoder 2: Tries to predict through mastery BUT:
+  - Scalar gains → uniform mastery growth → no skill differentiation
+  - Monotonic mastery + threshold mechanism → predictions compressed near 0.5
+  - Cannot learn: "High mastery in relevant skills → correct response"
+  - Can only learn: "High engagement → correct response" (wrong correlation)
+- Result: Engagement anti-correlates with correctness → AUC < 50%
+
+**Refined Understanding**:
+
+Bug #2 is not really about the loss function - **BCE(encoder2_pred, y_true) is CORRECT**. The bug is that **without per-skill gains (Bug #1), Encoder 2 cannot learn the skill-specific mastery mechanism needed to predict responses accurately**.
+
+Once Bug #1 is fixed:
+- Encoder 2 can learn: "This interaction improved Skill A by 0.8, Skill B by 0.2"
+- Mastery differentiates: mastery[A] = 0.9, mastery[B] = 0.5
+- Response prediction becomes accurate: P(correct) = f(mastery[relevant_skills])
+- AUC should improve to 55-60% (lower than Encoder 1 due to constraints, but above random)
+
+**Why AUC < 50% Makes Sense Now** (Trajectory Analysis Results):
+
+**Key Statistics from 659 interactions**:
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| Encoder2_Pred Mean | 0.4773 | Predictions centered below 0.5 |
+| Encoder2_Pred Range | [0.37, 0.53] | **Very narrow range (0.16)** |
+| Mastery Mean | 0.6604 | High average mastery |
+| Mastery Range | [0.22, 0.89] | Good variance (0.67) |
+| Mastery ↔ Encoder2_Pred | **1.0000** | Perfect linear relationship (by design) |
+| Mastery ↔ Response | **-0.0443** | ❌ **Mastery NOT predictive of performance** |
+| Encoder2_Pred ↔ Response | **-0.0447** | ❌ **Predictions NOT correlated with truth** |
+| Encoder2 Match Rate | 48.25% | **Below random baseline** |
+| Threshold θ | 0.7529 | High threshold |
+| Mastery > θ | 51.7% | Just over half exceed threshold |
+| Dataset: Correct (r=1) | 69.8% | **Class imbalance** |
+| Dataset: Incorrect (r=0) | 30.2% | Fewer failures |
+
+**Root Cause Confirmed**:
+
+1. **Mastery Has NO Correlation with Actual Performance** (-0.044):
+   - The sigmoid learning curve produces mastery values that are **orthogonal to student performance**
+   - Encoder 2 learns mastery patterns unrelated to correctness
+   - Effective practice accumulation doesn't capture skill acquisition
+
+2. **Encoder2_Pred Range Too Narrow** (0.37-0.53, std=0.054):
+   - All predictions compressed near 0.5 (indecisive)
+   - Cannot discriminate between high/low performance students
+   - Temperature mechanism not providing sufficient spread
+
+3. **Negative Correlation Trend** (-0.044):
+   - Slight negative correlation means higher mastery → slightly LOWER performance
+   - This is the opposite of educational logic!
+   - Suggests Encoder 2 learning inverse of true skill progression
+
+4. **Class Imbalance + Narrow Predictions**:
+   - 69.8% correct responses (dataset bias)
+   - Encoder2 predicts ~48% (below 50%) on average
+   - With narrow range, cannot adjust to class distribution
+   - Result: Misses majority class → low accuracy → AUC < 50%
+
+5. **Threshold Miscalibration**:
+   - θ = 0.7529 is high (only 51.7% exceed it)
+   - But mastery mean = 0.66 (below threshold for many)
+   - With (mastery - θ) / temp formula, predictions compressed near 0.5
+   - Need lower θ (0.5-0.6) or higher temperature (2-3) for better spread
+
+**Fundamental Issue**: The current architecture learns mastery trajectories that are **independent of actual student performance**. No amount of parameter tuning will fix this - the model needs skill-specific gains to capture meaningful learning patterns.
+
+**How The Bugs Interact**:
+
+The core issue is **Bug #1 (scalar gains)** prevents the intended architecture from working, even though the supervision signal is correct:
+
+1. **Bug #1 (Scalar gains)**: Encoder 2 can only learn uniform engagement, not skill-specific learning
+2. **Consequence**: Without skill differentiation, mastery values become meaningless
+3. **Result**: Even with correct supervision (BCE on responses), Encoder 2 cannot learn proper mastery-response relationship
+4. **Failure Mode**: Encoder 2 learns "engagement ≈ mastery" instead of "skill-specific practice → skill-specific mastery"
+
+**Example Failure Mode**:
+- Question targeting Skill 14: Student engages deeply (gain_quality = 0.8)
+- Current (WRONG): Both Skill 14 AND Skill 92 increase by 0.8 (uniform increment)
+- Intended (CORRECT): Only Skill 14 increases by 0.8, Skill 92 unchanged
+- Impact: Cannot learn which skills are relevant for which questions
+- Result: Mastery becomes correlated with overall engagement, not skill-specific practice
+
+**Why Parameter Tuning Cannot Fix This**:
+
+❌ **Won't work**:
+- Increase IM loss weight to 50%+ → Doesn't add skill differentiation capability
+- Adjust sigmoid parameters → Still scalar gains (no per-skill learning)
+- Lower threshold → Doesn't fix uniform mastery growth
+- Add more encoder capacity → More capacity for wrong mechanism
+
+✅ **Required fix**:
+- Implement per-skill gain vectors [B, L, num_c] (Bug #1)
+- This enables: Question → Relevant Skills → Skill-Specific Gains → Skill-Specific Mastery → Response
+- No change needed to loss function (BCE is correct for mastery-based response prediction)
+
+### Recommended Fixes
+
+**Primary Bug Identified**: 
+1. **Scalar gains** prevent skill-specific learning (Bug #1) - **CRITICAL**
+2. **Insufficient differentiation** (Bug #2) is a consequence of Bug #1, not separate issue
+
+**Refined Understanding**:
+- The current loss function (BCE on mastery-based predictions) is **CORRECT**
+- The issue is that scalar gains prevent Encoder 2 from learning skill-specific patterns
+- Once Bug #1 is fixed, the existing supervision should work properly
+
+See detailed analysis in: `tmp/ARCHITECTURAL_BUGS_ANALYSIS.md`
+
+**Required Fix**:
+
+**FIX #1: Implement Per-Skill Gains Vector** (Priority: CRITICAL)
+
+**Current** (Lines 528-554 in `pykt/models/gainakt3_exp.py`):
+```python
+# WRONG: Scalar per interaction
+gain_quality = torch.sigmoid(learning_gains_d.mean(dim=-1, keepdim=True))  # [B, L, 1]
+effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+```
+
+**Required Fix**:
+```python
+# Add skill-specific projection in __init__
+self.gains_projection = nn.Linear(d_model, num_c)  # [D=256] → [num_c]
+
+# In forward_with_states, compute per-skill gains
+skill_gains_logits = self.gains_projection(value_seq_2)  # [B, L, D] → [B, L, num_c]
+skill_gains = torch.sigmoid(skill_gains_logits)  # [B, L, num_c] ∈ [0, 1]
+
+# Accumulate skill-specific gains (each skill gets different increment!)
+effective_practice[:, t, :] += skill_gains[:, t, :]  # Per-skill, differentiable
+```
+
+**Benefits**:
+- ✅ Encoder 2 learns different learning rates per skill
+- ✅ Maintains differentiability (gradients flow through gains_projection)
+- ✅ Enables skill difficulty learning (β_skill parameters)
+- ✅ Realistic skill-specific mastery trajectories
+- ✅ Enables proper question → relevant skills → skill-specific gains flow
+- ✅ Mastery-based response predictions become accurate
+
+**Why This Fix Alone is Sufficient**:
+
+Once per-skill gains are implemented, the existing loss function `BCE(encoder2_pred, y_true)` will naturally train Encoder 2 to:
+1. Learn which skills are relevant for each question (from attention patterns)
+2. Estimate appropriate learning gains for those specific skills
+3. Build mastery values that correlate with response probability
+4. Predict responses through mastery mechanism
+
+No additional loss changes needed - the supervision signal is already correct.
+
+**OPTIONAL ENHANCEMENT: Auxiliary Loss for Skill Differentiation** (If Needed)
+
+If after implementing Fix #1 (per-skill gains), Encoder 2 still struggles to learn skill differentiation, consider adding an auxiliary loss to encourage variance in gains:
+
+**Current Loss** (Lines 285-291 in `examples/train_gainakt3exp.py`):
+```python
+# Main loss: Mastery-based response prediction (CORRECT)
+im_loss = bce_criterion(valid_im_preds, y_true)
+```
+
+**Optional Enhancement - Skill Differentiation Regularization**:
+```python
+# IM loss supervises MASTERY GROWTH based on response correctness
+if use_mastery_head and 'projected_mastery' in outputs:
+    mastery = outputs['projected_mastery']  # [B, L, num_c]
+    
+    # Compute mastery change per timestep
+    mastery_delta = torch.zeros_like(mastery)
+    mastery_delta[:, 1:, :] = mastery[:, 1:, :] - mastery[:, :-1, :]
+    
+    # Extract gains for practiced skills
+    practiced_skills = questions.long()
+    batch_indices = torch.arange(batch_size).unsqueeze(1).expand(-1, seq_len)
+    practiced_gains = mastery_delta[batch_indices, torch.arange(seq_len), practiced_skills]
+    
+    # Differential loss: correct responses should have HIGHER gains than incorrect
+    correct_mask = (responses_shifted == 1) & valid_mask
+    incorrect_mask = (responses_shifted == 0) & valid_mask
+    
+    if correct_mask.any() and incorrect_mask.any():
+        gain_correct = practiced_gains[correct_mask].mean()
+        gain_incorrect = practiced_gains[incorrect_mask].mean()
+        
+        # Margin-based ranking loss
+        margin = 0.1
+        im_loss = torch.relu(margin + gain_incorrect - gain_correct)
+    else:
+        im_loss = torch.tensor(0.0, device=questions.device)
+```
+
+**Required Fix - Option B (Correlation-Based Loss)**:
+```python
+# Simpler: Maximize correlation between mastery and performance
+if use_mastery_head and 'projected_mastery' in outputs:
+    mastery = outputs['projected_mastery']
+    
+    # Extract mastery for practiced skills
+    practiced_skills = questions.long()
+    batch_indices = torch.arange(batch_size).unsqueeze(1).expand(-1, seq_len)
+    practiced_mastery = mastery[batch_indices, torch.arange(seq_len), practiced_skills]
+    
+    # Pearson correlation
+    valid_mastery = practiced_mastery[valid_mask]
+    valid_responses = responses_shifted[valid_mask].float()
+    
+    mastery_centered = valid_mastery - valid_mastery.mean()
+    responses_centered = valid_responses - valid_responses.mean()
+    
+    correlation = (mastery_centered * responses_centered).sum() / \
+                  (torch.sqrt((mastery_centered**2).sum()) * 
+                   torch.sqrt((responses_centered**2).sum()) + 1e-8)
+    
+    im_loss = 1.0 - correlation  # Minimize to maximize correlation
+```
+
+**Benefits**:
+- ✅ Encoder 2 learns mastery patterns, NOT response prediction
+- ✅ Restores encoder independence (different objectives)
+- ✅ Mastery becomes meaningful learning trajectory
+- ✅ Enables true interpretability
 
 **Success Criteria for Next Iteration**:
-- Encoder2 Val AUC > 55% (above random baseline)
-- Mastery trajectories show clear sigmoid progression
-- encoder2_match rate > 60% in trajectory analysis
-- Gain-response correlation > 0.3
+- ✅ Encoder2 Val AUC > 55% (above random baseline)
+- ✅ Gain values show variance (not flat or zero)
+- ✅ Skill-specific gains differentiate learning rates
+- ✅ encoder2_match rate > 60% in trajectory analysis
+- ✅ Mastery correlates with responses (correlation > 0.4)
 
 ### Updated Task List
 
 - [x] ✅ Re-train model with fixed code (Completed: 2025-11-17)
 - [x] ✅ Analyze experiment results and metrics (Completed: 2025-11-17)
 - [x] ✅ Document critical Encoder 2 performance issue (Completed: 2025-11-17)
-- [ ] Extract and analyze learning trajectories to diagnose mastery issues
-- [ ] Verify gradient flow to Encoder 2 during training
-- [ ] Run parameter sweep to find optimal IM loss weight (>30%)
-- [ ] Test alternative sigmoid parameter initializations
-- [ ] Consider architectural modifications if parameter tuning insufficient
+- [x] ✅ Extract and analyze learning trajectories (Completed: 2025-11-17 13:33)
+- [x] ✅ Diagnose mastery correlation issues (Completed: 2025-11-17)
+  - **Finding**: Mastery ↔ Response correlation = -0.044 (NOT predictive)
+  - **Root Cause**: Scalar gain_quality learns engagement, not skill-specific learning
+  - **Conclusion**: Architecture needs skill-specific gains mechanism
+- [ ] **[PRIORITY] Implement Skill-Specific Gains Architecture**:
+  - Modify Encoder 2 to output per-skill gains [B, L, num_c] instead of scalar
+  - Update effective_practice accumulation to use skill-specific gains
+  - Maintain differentiability through Encoder 2
+- [ ] Re-train with skill-specific gains and analyze mastery correlation
+- [ ] If correlation improves, run parameter sweep for optimal IM loss weight
 - [ ] Update paper with corrected interpretability results (once Encoder 2 fixed)
+
+---
+
+## 🔴 CRITICAL FINDINGS SUMMARY (2025-11-17)
+
+**Experiment**: `20251117_131554_gainakt3exp_baseline-bce0.7_999787`  
+**Status**: ❌ **ENCODER 2 NOT LEARNING MEANINGFUL PATTERNS**
+
+### The Problem
+
+**Encoder 2 AUC = 48.42%** (below 50% random baseline) throughout 12 epochs of training.
+
+### Root Cause Analysis
+
+After comprehensive trajectory analysis (659 interactions, 10 students), we identified the fundamental architectural issue:
+
+1. **Mastery Uncorrelated with Performance**: 
+   - Correlation = -0.044 (essentially zero, slightly negative)
+   - Mastery values don't predict student responses
+   
+2. **Scalar Gain Quality (Not Skill-Specific)**:
+   - Encoder 2 outputs `gain_quality` ∈ [0, 1] (scalar per interaction)
+   - All practiced skills get same quality increment
+   - Cannot learn skill-specific learning rates
+   
+3. **Narrow Prediction Range**:
+   - Encoder2_pred ∈ [0.37, 0.53] (std=0.054)
+   - Cannot discriminate between students
+   - Predictions compressed near 0.5 (indecisive)
+
+4. **High Threshold Compression**:
+   - θ = 0.7529, mastery mean = 0.66
+   - Formula: `pred = sigmoid((mastery - θ) / temp)`
+   - Results in predictions near 0.5 for most interactions
+
+### Why Mastery Updates But Doesn't Predict
+
+**Mastery IS updating** (e.g., 0.26 → 0.48 → 0.68 for skill 14), showing sigmoid progression works mechanically. However:
+
+- ✅ Sigmoid curve computation: **WORKING**
+- ✅ Effective practice accumulation: **WORKING**
+- ❌ Skill-specific learning capture: **NOT WORKING**
+- ❌ Correlation with performance: **NOT WORKING**
+
+The model learns: *"Student engaged with content for X time"*  
+Not: *"Student improved at skill A by amount X"*
+
+### Required Architecture Change
+
+**Current** (Broken):
+```python
+gain_quality = sigmoid(mean(value_seq_2))  # [B, L, 1] scalar
+effective_practice[t, all_skills] += gain_quality[t]  # uniform increment
+```
+
+**Needed** (Fixed):
+```python
+skill_gains = sigmoid(linear(value_seq_2))  # [B, L, num_c] per-skill
+effective_practice[t, skill] += skill_gains[t, skill]  # skill-specific increment
+```
+
+### Example Trajectories Showing the Issue
+
+**Student 1, Skill 14** (3 interactions):
+- Mastery: 0.26 → 0.48 → 0.68 (good sigmoid growth)
+- Responses: 1 (correct) → 1 (correct) → 0 (incorrect)
+- **Problem**: Mastery increases despite incorrect response!
+
+**Student 2, Skill 7** (7 interactions):
+- Mastery: 0.28 → 0.52 → 0.72 → 0.83 → 0.87 → 0.88 → 0.89
+- Responses: 1 → 0 → 0 → 1 → 1 → 1 → 1
+- Encoder2_pred: 0.38 → 0.44 → 0.49 → 0.52 → 0.53 → 0.53 → 0.53
+- **Problem**: Predictions plateau at 0.53 (indecisive) despite high mastery
+
+### Conclusion
+
+**Parameter tuning will NOT fix this issue**. The architecture fundamentally cannot learn skill-specific patterns with scalar gain_quality. We need to implement per-skill gains to enable meaningful mastery learning.
+
+**Next Steps**: 
+
+1. **Implement Both Fixes** (See detailed code in `tmp/ARCHITECTURAL_BUGS_ANALYSIS.md`):
+   - Fix #1: Replace scalar gain_quality with per-skill gains vector [B, L, num_c]
+   - Fix #2: Replace response-prediction im_loss with mastery-growth-based loss
+   
+2. **Re-train and Validate**:
+   ```bash
+   # After fixes, re-run experiment
+   python examples/run_repro_experiment.py --short_title fixed-architecture
+   
+   # Extract trajectories with gains
+   python examples/learning_trajectories.py --run_dir <exp_dir> --num_students 10
+   
+   # Verify fixes worked:
+   # - expected_gain column should have varying non-zero values
+   # - Different skills should show different learning rates
+   # - Mastery ↔ Response correlation should be positive (> 0.4)
+   # - Encoder2 AUC should be above random (> 55%)
+   ```
+
+3. **Success Criteria**:
+   - ✅ Per-skill gains vary by skill (not uniform)
+   - ✅ Mastery ↔ Response correlation > 0.4 (was -0.044)
+   - ✅ Encoder2 AUC > 55% (was 48.42%)
+   - ✅ Skill differentiation visible in trajectories
+   - ✅ Encoders learn independently (different objectives)
+
+**Critical Understanding**: The current architecture **cannot be fixed by parameter tuning alone**. Both bugs are fundamental design flaws requiring code changes to the model architecture and training loop.
 
 ---
 
