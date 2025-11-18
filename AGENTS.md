@@ -8,7 +8,10 @@ The key contributions of the paper will be a new Transformer attention-based mod
 
 Reference Documents:
 
-- `newmodel.md` details our aproach including the architecture of the model 
+- `gainakt_architecture_approach.md ` details our aproach including the foundations based on a Transformed Encoder-only architecture. 
+- `gainakt2_architecture_approach.md` describes the model gainakt2exp that adapts and extends the standard Transformer architecture. 
+- `gainakt3_architecture_approach.md` describes the model gainakt3exp, other variant that adapts and extends the standard Transformer architecture. 
+- `model.md` is a link to the version of the model we are working on currently. 
 - `papers-pykt` folder contains papers for most of the models included in `pykt/models`
 - `taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
 - `quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
@@ -53,11 +56,11 @@ when you change any parameter default value (the reference values are in paper/p
 - Most scripts are in `examples` folder
 - New files and scripts that don't adhere to the standard guidelines described in `contribute.pdf` and `quickstart.pdf` should be created in the `tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `tmp` folder. This way it will be easier to do contributions to the upstream repo from which we forked.  
 
-### Operational standards
+### Project standards
 - Training and evaluation should be launched using the commands desribed in ´examples/reproducibility.md´
 - Avoid launching commands terminating scripts tha are running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions). 
 - Launch scripts in such a way that we leverage available GPUs (less than 75% if not set otherwise) and CPUs (less than 75% of CPU power). 
-- All files related to a sweep experiments should be saved in a folder under examples/experiments following this naming pattern: ´examples/experiments/[YYMMDD]_[HHMMSS]_[model]_sweep_[unique_id]´, e.g. ´examples/experiments/20251116_174547_gainakt3exp_sweep_861908´. This includes all he scripts necessary to launch the sweep amd also a detailed report.md in the folder explaining the sweep rationale and experimental approach. One the sweep experiments finish the report will be updated with results, interpretation and recommendations abut the optimal default parameter values. Centralize all the information about the sweep in this unique doc.
+- All files related to a sweep experiments should be saved in a folder under examples/experiments following this naming pattern: ´examples/experiments/[YYMMDD]_[HHMMSS]_[model]_sweep_[unique_id]´, e.g. ´examples/experiments/20251116_174547_gainakt3exp_sweep_861908´. This includes all he scripts necessary to launch the sweep amd also a detailed report.md in the folder explaining the sweep rationale and experimental approach. One the sweep experiments finish the report will be updated with results, interpretation and recommendations abut the optimal default parameter values. Centralize all the information about the sweep in this unique doc. 
 
 ### Code and Style Guidelines
 - Code documentation should include usage examples
