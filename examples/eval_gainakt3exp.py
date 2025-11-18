@@ -158,14 +158,6 @@ def main():
     parser.add_argument('--d_ff', type=int, required=True)
     parser.add_argument('--dropout', type=float, required=True)
     parser.add_argument('--emb_type', type=str, required=True)
-    # CRITICAL ARCHITECTURAL FLAGS: These determine model structure and MUST match training
-    # Note: action='store_true' means flag absent=False, present=True
-    # Launcher (run_repro_experiment.py) explicitly passes these based on config
-    # If evaluating manually, MUST specify these flags correctly to match training architecture
-    parser.add_argument('--use_mastery_head', action='store_true',
-                        help='Enable mastery projection head (REQUIRED for correct model loading)')
-    parser.add_argument('--use_gain_head', action='store_true',
-                        help='Enable gain projection head (REQUIRED for correct model loading)')
     # DEPRECATED (2025-11-16): Intrinsic gain attention mode removed in GainAKT3Exp
     # parser.add_argument('--intrinsic_gain_attention', action='store_true',
     #                     help='Use intrinsic gain attention mode (changes architecture)')
@@ -216,31 +208,7 @@ def main():
     
     args = parser.parse_args()
     
-    # DEPRECATED (2025-11-16): Intrinsic gain attention validation removed
-    # ARCHITECTURAL CONSTRAINT: Intrinsic gain attention and projection heads are mutually exclusive
-    # Intrinsic mode uses attention-derived gains; projection heads would be unused (wasting ~2M parameters)
-    if False:  # args.intrinsic_gain_attention DEPRECATED
-        if args.use_mastery_head or args.use_gain_head:
-            print("=" * 100)
-            print("⚠️  WARNING: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
-            print("=" * 100)
-            print("intrinsic_gain_attention=True is INCOMPATIBLE with projection heads")
-            print("")
-            print("  Intrinsic mode uses attention-derived gains directly from the model.")
-            print("  Projection heads (use_mastery_head, use_gain_head) are NOT used in this mode.")
-            print("  Enabling them wastes ~2M parameters without any benefit.")
-            print("")
-            print("AUTOMATIC CORRECTION APPLIED:")
-            if args.use_mastery_head:
-                print("  • use_mastery_head: True → False")
-            if args.use_gain_head:
-                print("  • use_gain_head: True → False")
-            print("")
-            print("Model will be loaded in pure intrinsic mode (attention-derived gains only).")
-            print("Expected parameters: ~12.7M (vs ~14.7M with unused projection heads)")
-            print("=" * 100)
-            args.use_mastery_head = False
-            args.use_gain_head = False
+    # Removed deprecated intrinsic gain attention validation (2025-11-18)
     
     # Find checkpoint
     primary_ckpt = os.path.join(args.run_dir, 'model_best.pth')
@@ -280,8 +248,6 @@ def main():
         'd_ff': args.d_ff,
         'dropout': args.dropout,
         'emb_type': args.emb_type,
-        'use_mastery_head': args.use_mastery_head,
-        'use_gain_head': args.use_gain_head,
         'intrinsic_gain_attention': False,  # DEPRECATED (2025-11-16)
         'use_skill_difficulty': args.use_skill_difficulty,
         'use_student_speed': args.use_student_speed,

@@ -71,13 +71,12 @@ def evaluate_dual_encoders(model, data_loader, device, use_mastery_head):
     }
 
 def train_gainakt3exp_dual_encoder(
-    dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs,
-    optimizer_name, seed, d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len,
-    use_mastery_head, use_gain_head, use_skill_difficulty, use_student_speed, num_students,
-    bce_loss_weight, variance_loss_weight, mastery_threshold_init, threshold_temperature, beta_skill_init, m_sat_init,
-    gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, monitor_freq, 
-    gradient_clip, patience, weight_decay, max_correlation_students,
-    cfg=None, experiment_suffix="", log_level=logging.INFO
+    dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs, optimizer_name, seed,
+    d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len, weight_decay, patience, gradient_clip, monitor_freq,
+    use_skill_difficulty, use_student_speed, num_students,
+    bce_loss_weight, variance_loss_weight, mastery_threshold_init, threshold_temperature,
+    beta_skill_init, m_sat_init,
+    gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,    cfg=None, experiment_suffix="", log_level=logging.INFO
 ):
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight
     
@@ -127,13 +126,26 @@ def train_gainakt3exp_dual_encoder(
     num_skills = data_config[dataset_name]['num_c']
     num_questions = data_config[dataset_name]['num_q']
     
+    # Extract num_students from the training dataset (instead of using hardcoded parameter)
+    # This makes the code generalizable to any dataset
+    num_students_from_data = train_loader.dataset.dori['num_students']
+    if num_students != num_students_from_data:
+        logger.warning(f"Parameter num_students={num_students} differs from actual training data ({num_students_from_data} students)")
+        logger.warning(f"Using actual value from dataset: {num_students_from_data}")
+        num_students = num_students_from_data
+    else:
+        logger.info(f"Confirmed: num_students parameter matches dataset ({num_students} students)")
+    
     logger.info(f"Skills: {num_skills}, Questions: {num_questions}")
     logger.info(f"Train batches: {len(train_loader)}, Valid batches: {len(valid_loader)}")
     
+    # Get num_c from dataset (use num_skills extracted earlier)
+    num_c = num_skills
+    
+    # Model configuration
     model_config = {
-        'num_c': num_skills, 'seq_len': seq_len, 'd_model': d_model, 'n_heads': n_heads,
-        'dropout': dropout, 'num_encoder_blocks': num_encoder_blocks, 'd_ff': d_ff, 'use_mastery_head': use_mastery_head,
-        'use_gain_head': use_gain_head, 'use_skill_difficulty': use_skill_difficulty,
+        'num_c': num_c, 'emb_type': emb_type, 'seq_len': seq_len, 'd_model': d_model, 'n_heads': n_heads,
+        'dropout': dropout, 'num_encoder_blocks': num_encoder_blocks, 'd_ff': d_ff, 'use_skill_difficulty': use_skill_difficulty,
         'use_student_speed': use_student_speed, 'num_students': num_students,
         'mastery_threshold_init': mastery_threshold_init, 'threshold_temperature': threshold_temperature,
         'beta_skill_init': beta_skill_init, 'm_sat_init': m_sat_init,
@@ -153,6 +165,14 @@ def train_gainakt3exp_dual_encoder(
     }
     
     model = create_exp_model(model_config).to(device)
+    
+    # Enable multi-GPU training with DataParallel if multiple GPUs available
+    if torch.cuda.device_count() > 1:
+        logger.info(f"Using {torch.cuda.device_count()} GPUs with DataParallel")
+        model = torch.nn.DataParallel(model)
+    else:
+        logger.info(f"Using single GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}")
+    
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Parameters: {total_params:,} total, {trainable_params:,} trainable")
@@ -281,7 +301,7 @@ def train_gainakt3exp_dual_encoder(
                     bce_loss = bce_criterion(y_pred, y_true)
                     
                     im_loss = 0.0
-                    if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+                    if 'incremental_mastery_predictions' in outputs:
                         im_preds = outputs['incremental_mastery_predictions']
                         valid_im_preds = im_preds[valid_mask]
                         # BCE loss between encoder2 predictions and true labels
@@ -309,7 +329,7 @@ def train_gainakt3exp_dual_encoder(
                 bce_loss = bce_criterion(y_pred, y_true)
                 
                 im_loss = 0.0
-                if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+                if 'incremental_mastery_predictions' in outputs:
                     im_preds = outputs['incremental_mastery_predictions']
                     valid_im_preds = im_preds[valid_mask]
                     # BCE loss between encoder2 predictions and true labels
@@ -337,9 +357,9 @@ def train_gainakt3exp_dual_encoder(
         avg_bce = total_bce / num_batches
         avg_im = total_im / num_batches
         
-        # Evaluate dual encoders on training and validation sets
-        train_encoder_metrics = evaluate_dual_encoders(model, train_loader, device, use_mastery_head)
-        valid_encoder_metrics = evaluate_dual_encoders(model, valid_loader, device, use_mastery_head)
+        # Evaluate both encoders on train and validation sets
+        train_encoder_metrics = evaluate_dual_encoders(model, train_loader, device)
+        valid_encoder_metrics = evaluate_dual_encoders(model, valid_loader, device)
         
         # Combined metrics (use encoder1 as main)
         train_auc = train_encoder_metrics['encoder1_auc']
@@ -554,10 +574,6 @@ if __name__ == '__main__':
     parser.add_argument('--d_ff', type=int, required=True)
     parser.add_argument('--dropout', type=float, required=True)
     parser.add_argument('--emb_type', type=str, required=True, choices=['qid','concept','hybrid'])
-    parser.add_argument('--use_mastery_head', action='store_true')
-    parser.add_argument('--disable_mastery_head', action='store_true')
-    parser.add_argument('--use_gain_head', action='store_true')
-    parser.add_argument('--disable_gain_head', action='store_true')
     parser.add_argument('--use_skill_difficulty', action='store_true')
     parser.add_argument('--use_student_speed', action='store_true')
     parser.add_argument('--num_students', type=int, required=True)
@@ -580,11 +596,6 @@ if __name__ == '__main__':
             cfg = json.load(f)
         os.environ['PYKT_CONFIG_PATH'] = os.path.abspath(args.config)
     
-    if getattr(args, 'disable_mastery_head', False):
-        args.use_mastery_head = False
-    if getattr(args, 'disable_gain_head', False):
-        args.use_gain_head = False
-    
     args.num_epochs = args.epochs
     args.dataset_name = args.dataset
     
@@ -593,8 +604,7 @@ if __name__ == '__main__':
         save_dir='saved_model', learning_rate=args.learning_rate, batch_size=args.batch_size,
         num_epochs=args.num_epochs, optimizer_name=args.optimizer, seed=args.seed, d_model=args.d_model,
         n_heads=args.n_heads, dropout=args.dropout, num_encoder_blocks=args.num_encoder_blocks, d_ff=args.d_ff,
-        seq_len=args.seq_len, use_mastery_head=args.use_mastery_head, use_gain_head=args.use_gain_head,
-        use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
+        seq_len=args.seq_len, use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
         num_students=args.num_students, bce_loss_weight=args.bce_loss_weight, variance_loss_weight=args.variance_loss_weight,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,

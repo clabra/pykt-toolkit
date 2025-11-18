@@ -91,7 +91,7 @@ class GainAKT3Exp(nn.Module):
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
                  d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
-                 use_mastery_head=True, use_gain_head=True, intrinsic_gain_attention=False,
+                 intrinsic_gain_attention=False,
                  non_negative_loss_weight=0.1,
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
@@ -133,8 +133,6 @@ class GainAKT3Exp(nn.Module):
             emb_type (str): Embedding type "qid" or other (default: "qid", DO NOT RELY ON THIS)
             emb_path (str): Path to pretrained embeddings (default: "", DO NOT RELY ON THIS)
             pretrain_dim (int): Pretrained embedding dimension (default: 768, DO NOT RELY ON THIS)
-            use_mastery_head (bool): Enable mastery projection head (default: True, DO NOT RELY ON THIS)
-            use_gain_head (bool): Enable gain projection head (default: True, DO NOT RELY ON THIS)
             intrinsic_gain_attention (bool): Use intrinsic gain attention mode (default: False, DO NOT RELY ON THIS)
             non_negative_loss_weight (float): Weight for non-negative constraint (default: 0.1, DO NOT RELY ON THIS)
             monotonicity_loss_weight (float): Weight for monotonicity constraint (default: 0.1, DO NOT RELY ON THIS)
@@ -195,8 +193,6 @@ class GainAKT3Exp(nn.Module):
         self.d_ff = d_ff
         self.dropout = dropout
         self.emb_type = emb_type
-        self.use_mastery_head = use_mastery_head
-        self.use_gain_head = use_gain_head
         self.intrinsic_gain_attention = intrinsic_gain_attention
         self.use_skill_difficulty = use_skill_difficulty
         self.use_student_speed = use_student_speed
@@ -310,7 +306,9 @@ class GainAKT3Exp(nn.Module):
         self.M_sat = torch.nn.Parameter(torch.ones(num_c) * m_sat_init)  # Saturation level (max mastery)
         
         # Per-student learnable parameters (if num_students provided)
-        # Note: If num_students not provided, γ_student will be learned per batch dynamically
+        # Note: These parameters affect INTERPRETABILITY (mastery trajectories), NOT predictions
+        # γ_student controls learning velocity: how fast each student's mastery grows with practice
+        # Used in sigmoid learning curve: mastery = M_sat × sigmoid(β × γ × practice - offset)
         if num_students is not None and num_students > 0:
             self.gamma_student = torch.nn.Parameter(torch.ones(num_students) * gamma_student_init)  # Learning velocity
             self.has_fixed_student_params = True
@@ -458,10 +456,9 @@ class GainAKT3Exp(nn.Module):
         # ═══════════════════════════════════════════════════════════════════════════
         # Use Encoder 2 outputs (Interpretability Path) for mastery trajectories
         # ═══════════════════════════════════════════════════════════════════════════
-        
-        if self.use_mastery_head:
-            # ============================================================================
-            # GainAKT3Exp CORE INNOVATION: Values from Encoder 2 ARE Learning Gains
+        # GainAKT3Exp always computes sigmoid mastery trajectories (core feature)
+        # ============================================================================
+        # GainAKT3Exp CORE INNOVATION: Values from Encoder 2 ARE Learning Gains
             # ============================================================================
             # Conceptual Model: Encoder 2's Value output directly represents how
             # much the student learned from that (skill, response) tuple.
@@ -573,9 +570,12 @@ class GainAKT3Exp(nn.Module):
             # Step 3: Compute sigmoid learning curve mastery using effective practice
             # Handle gamma_student (fixed vs dynamic per-batch)
             if self.has_fixed_student_params:
-                # TODO: Need student IDs to index into gamma_student
-                # For now, use mean gamma across all students (fallback)
-                gamma = self.gamma_student.mean().unsqueeze(0).expand(batch_size)  # [batch_size]
+                if student_ids is not None:
+                    # Use per-student gamma values indexed by student IDs
+                    gamma = self.gamma_student[student_ids]  # [batch_size]
+                else:
+                    # Fallback: use mean gamma if student IDs not provided (backward compatibility)
+                    gamma = self.gamma_student.mean().unsqueeze(0).expand(batch_size)  # [batch_size]
             else:
                 # Dynamic mode: learn gamma per batch (not per-student identity)
                 # Use uniform gamma=1.0 for all students in this batch
@@ -772,25 +772,24 @@ class GainAKT3Exp(nn.Module):
         if projected_mastery is not None:
             output['projected_mastery'] = projected_mastery
         # Only output gains if gain_head is explicitly enabled
-        if projected_gains is not None and self.use_gain_head:
+        if projected_gains is not None:
             output['projected_gains'] = projected_gains
-        # Include incremental mastery predictions if mastery head is enabled
+        # Include incremental mastery predictions (Encoder 2)
         if incremental_mastery_predictions is not None:
             output['incremental_mastery_predictions'] = incremental_mastery_predictions
         
         # FIX (2025-11-17): Add per-skill gains to output for trajectory validation
         # skill_gains [B, L, num_c] provides per-skill gain estimates for interpretability
-        if self.use_gain_head and skill_gains is not None:
+        if skill_gains is not None:
             output['skill_gains'] = skill_gains  # [B, L, num_c] per-skill gains
         
         # V2 (2025-11-17): Add variance loss to output for training script to combine with other losses
         if variance_loss is not None:
             output['variance_loss'] = variance_loss  # Scalar loss encouraging skill differentiation
         
-        # Store D-dimensional gains for interpretability (only if gain_head enabled)
-        # Note: Gains are computed internally for mastery accumulation even when use_gain_head=False
-        # but only exposed as output when use_gain_head=True
-        if self.use_gain_head and self.use_mastery_head and value_seq_2 is not None:
+        # Store D-dimensional gains for interpretability
+        # Gains are always computed (core feature of GainAKT3Exp)
+        if value_seq_2 is not None:
             output['projected_gains_d'] = torch.relu(value_seq_2)  # Values as learning gains
         
         # 7. Compute interpretability loss (constraint losses on mastery/gains)
@@ -861,12 +860,10 @@ class GainAKT3Exp(nn.Module):
         if qtest:
             result['encoded_seq'] = output['context_seq']
         
-        # Include mastery and gain outputs if heads are enabled
-        if self.use_mastery_head and 'projected_mastery' in output:
+        # Include mastery and gain outputs (always computed in GainAKT3Exp)
+        if 'projected_mastery' in output:
             result['projected_mastery'] = output['projected_mastery']
-        # Note: use_gain_head flag kept for backward compatibility
-        # Gains come directly from Values (no gain_head projection)
-        if self.use_gain_head and 'projected_gains' in output:
+        if 'projected_gains' in output:
             result['projected_gains'] = output['projected_gains']
         
         # Include incremental mastery predictions (Encoder 2) for dual-encoder evaluation

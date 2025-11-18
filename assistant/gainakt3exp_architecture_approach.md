@@ -422,10 +422,10 @@ Provides interpretability-driven supervision by comparing ground truth responses
 - ✅ **Temperature Parameter**: Config-based (threshold_temperature=1.0) - controls prediction sharpness
   - Hybrid approach: Start with config parameter, can upgrade to learnable later if needed
 - ✅ **Independent Gradient Flow**: Both encoders receive gradients and update independently (verified via test ✓)
+- ✅ **Per-Skill Gains Output**: ACTIVE - Always computed via `gains_projection` layer and included in model outputs
+- ✅ **Mastery Trajectories**: ACTIVE - Always computed (core feature, not optional)
 - ❌ **Constraint Losses**: **COMMENTED OUT** (all weights=0.0, code preserved) - Non-negative, Monotonicity, Mastery-Perf, Gain-Perf, Sparsity, Consistency
 - ❌ **Semantic Module Losses**: **COMMENTED OUT** (all disabled, code preserved) - Alignment, Global Alignment, Retention, Lag Gains
-- ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`) - Gains not exposed in model output
-- ❌ **Gains D-dimensional Output**: DEACTIVATED - `projected_gains_d` not included in output
 
 **Result**: Complete separation of performance optimization (Encoder 1) and interpretability learning (Encoder 2) with independent parameters. Differentiable effective practice mechanism enables gradients to flow through Encoder 2. Sigmoid curves automatically capture three learning phases (warm-up, growth, saturation). All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
 
@@ -883,9 +883,10 @@ python examples/learning_trajectories.py \
 - ✅ **Dual Predictions**: Base (from Encoder 1) + Incremental Mastery (from Encoder 2)
 - ✅ **Differentiable Effective Practice**: Quality-weighted accumulation enables Encoder 2 gradient flow
 - ✅ **Sigmoid Learning Curves**: Three automatic phases (warm-up → growth → saturation)
+- ✅ **Per-Skill Gains**: Always computed and included in outputs (core feature)
+- ✅ **Mastery Trajectories**: Always computed (core feature)
 - ❌ **Constraint Losses**: COMMENTED OUT (weights=0.0, code preserved)
 - ❌ **Semantic Module Losses**: COMMENTED OUT (all disabled, code preserved)
-- ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`)
 
 **Implementation Status**: ✅ **FULLY IMPLEMENTED AND TESTED** (2025-11-16)
 - Test script: `tmp/test_dual_encoders.py` - ALL 7 TESTS PASSED ✓

@@ -23,8 +23,6 @@
     "d_ff": 512,
     "dropout": 0.2,
     "emb_type": "qid",
-    "use_mastery_head": true,
-    "use_gain_head": true,
     "use_skill_difficulty": false,
     "use_student_speed": false,
     "bce_loss_weight": 0.5,
