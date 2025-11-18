@@ -1,24 +1,88 @@
 # GainAKT3Exp Architecture 
 
-## Reference Documents
+## Reference Documents:
 
-- `gainakt_architecture_approach.md` - Transformer Encoder-only architecture foundations
-- `gainakt3_architecture_approach.md` - GainAKT3Exp model variant (this document)
-- `model.md` - Link to current working model version
-- `gainakt3exp_architecture_diagrams.md` - Architecture diagrams and sequences
-- `paper/STATUS_gainakt3exp.md` - Detailed status, experiments, and bugs
+- `gainakt_architecture_approach.md ` details our aproach including the foundations based on a Transformed Encoder-only architecture. 
+- `gainakt2_architecture_approach.md` describes the model gainakt2exp that adapts and extends the standard Transformer architecture. 
+- `gainakt3_architecture_approach.md` describes the model gainakt3exp, other variant that adapts and extends the standard Transformer architecture. 
+- `model.md` is a link to the version of the model we are working on currently. 
 
-Other documents: 
-- `gainakt2_architecture_approach.md` - GainAKT2Exp model variant. It is deprecated in favour of GainAKT3Exp but the doc is referenced here in case it's neccesary to have an overview of the historic evolution of proposed models.   
----
 
-## Overview
 
-GainAKT3Exp is a **dual-encoder Transformer architecture** for interpretable knowledge tracing. It separates performance optimization (Encoder 1) from interpretability learning (Encoder 2) using completely independent encoder stacks with 167,575 total parameters.
+## The GainAKT3Exp Architecture
 
-**Key Innovation**: Encoder 2 learns "gain quality" per interaction through differentiable effective practice, enabling gradient flow for interpretability learning while Encoder 1 optimizes prediction accuracy.
+The new gainakt3exp model we propose is a dual-encoder variant of a Transformer Attention-based architecture.  
 
----
+## Conceptual Foundation
+
+### Core Hypothesis
+
+Our dual-encoder architecture is based on the hypothesis that **student mastery evolves through skill-specific learning gains** following sigmoid-shaped learning curves. The key principles are:
+
+#### 1. Questions Target Specific Skills (Q-Matrix)
+
+Each question is designed to develop one or more skills. The Q-matrix defines these relationships:
+- Q[question_id] → {skill_1, skill_2, ..., skill_k}
+- Example: In ASSIST2015 (single-skill dataset), each question targets exactly one skill
+
+#### 2. Encoder 2 Learns Skill-Specific Learning Gains
+
+**Critical Understanding**: Encoder 2 does NOT learn to predict responses directly. Instead:
+
+**Encoder 2's Primary Objective**: Learn patterns from interaction data that quantify **how much each interaction contributes to increase the mastery level** of each skill relevant to the question.
+
+**What Encoder 2 Should Learn**:
+- For each interaction with question Q at step t
+- Estimate learning gains Δm[skill, t] for each relevant skill
+- Quantify: "To what extent does this interaction improve mastery of Skill A, Skill B, etc.?"
+
+**Intended Gradient Flow**:
+```
+BCE_loss → ∂L/∂prediction → ∂L/∂mastery → ∂L/∂gains → ∂L/∂Encoder2_weights
+```
+
+Encoder 2 should learn gain patterns that make mastery predictive of student performance.
+
+#### 3. Practice Generates Skill-Specific Learning Gains
+
+When a student interacts with a question at step t, they practice the **relevant skills** (per Q-matrix):
+- Each relevant skill experiences a **learning gain** Δm[skill, t]
+- **Gains are skill-specific**: Δm[skill_A, t] ≠ Δm[skill_B, t] (NOT uniform!)
+- Gains depend on:
+  - Interaction quality ← **Learned by Encoder 2**
+  - Skill difficulty (β_skill parameter)
+  - Prior mastery level (sigmoid saturation effect)
+  - Response correctness
+
+#### 4. Mastery Accumulates Through Sigmoid Learning Curves
+
+Skill mastery m[skill, t] increases **monotonically** with practice following sigmoid curves:
+
+**Formula**:
+```
+mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset)
+```
+
+**Three Automatic Learning Phases**:
+1. **Initial Phase** (practice_count ≈ 0): Mastery ≈ 0, slow learning (warm-up/familiarization)
+2. **Growth Phase** (intermediate): Rapid mastery increase, slope = β_skill × γ_student (effective learning)
+3. **Saturation Phase** (high practice_count): Mastery → M_sat[s], diminishing returns (consolidation)
+
+**Monotonicity Guarantee**: Sigmoid function ensures mastery never decreases (effective_practice monotonically increases).
+
+#### 5. Mastery Predicts Response Probability
+
+**Key Principle**: Response correctness depends on whether **ALL relevant skills are mastered**.
+
+**Threshold Logic**:
+- A skill is "mastered" if `mastery[skill] ≥ θ`
+- Typical threshold: θ = 0.80-0.85
+- **Monotonicity**: Once mastered, always mastered
+
+**Prediction Formula**:
+```
+P(correct) = sigmoid((mastery[skill] - θ_global) / temperature)
+```
 
 ## Conceptual Foundation: Skill-Specific Mastery Through Learning Gains
 
@@ -161,9 +225,38 @@ This means:
 - ✅ **Skill Differentiation**: Can see which skills student masters faster/slower
 - ✅ **Monotonicity**: Once mastered (t=15), skill stays mastered for all t > 15
 
+### Educational Validity
+
+This approach aligns with educational theory:
+- **Item Response Theory (IRT)**: Response probability increases with ability (mastery)
+- **Learning Curves**: Skill acquisition follows sigmoid growth patterns
+- **Mastery Learning**: Skills have threshold - below threshold → failure, above → success
+- **Spaced Repetition**: Practice accumulation leads to mastery
+- **Knowledge Tracing**: Track latent skill mastery through observed responses
+- **Monotonic Learning**: Skills once learned are not unlearned (positive manifold)
+
 ---
 
-## Implementation Overview
+### Summary
+
+The dual-encoder metrics infrastructure provides comprehensive visibility into both encoder pathways:
+
+1. **Separate Performance Tracking**: AUC and accuracy for each encoder independently
+2. **Loss Component Analysis**: Unweighted, weighted, and percentage contributions
+3. **Real-Time Monitoring**: Periodic state snapshots during training
+4. **Enhanced Trajectories**: Per-skill gains, mastery, and dual predictions
+5. **Interpretability Validation**: Quality metrics for mastery/gains
+
+This enables researchers to:
+- Verify both encoders are learning effectively
+- Validate loss weighting is balanced correctly
+- Debug encoder-specific issues
+- Analyze trade-offs between performance and interpretability
+- Generate detailed per-student learning progression reports
+
+---
+
+## Model Overview
 
 **Implementation Files**:
 - **Model**: `pykt/models/gainakt3_exp.py` (1014 lines) - standalone nn.Module with dual-encoder architecture
@@ -176,33 +269,34 @@ This means:
   - `tmp/test_sigmoid_curves.py` - validates sigmoid learning curve implementation
   - `tmp/test_dual_encoders.py` - validates dual-encoder architecture and gradient flow (ALL TESTS PASSED ✓)
 
----
 
-## Dual-Encoder Architecture
 
-**Current State**: The model uses **two completely independent encoder stacks** separating performance optimization from interpretability learning.
+### Core Architecture: Dual-Encoder Transformer with Sigmoid Learning Curve Mastery
 
-### Encoder 1 (Performance Path) - 96,513 parameters
-- Input → Context_Embedding_1, Value_Embedding_1, Skill_Embedding_1 → Positional_Embeddings_1
-- → Encoder_Blocks_1 (independent parameters) → [Context_1, Value_1, Skill_1] → Prediction_Head_1 
-- → **Base Predictions** → **BCE Loss** (primary, weight ≈ 1.0)
+**GainAKT3Exp Current State**: The model uses **two completely independent encoder stacks** to separate performance optimization from interpretability learning. Encoder 2 learns to estimate "gain quality" per interaction, which drives **differentiable effective practice** in sigmoid learning curves. This generates **TWO SEPARATE** prediction outputs with **TWO SEPARATE** loss functions. Mastery follows educationally-realistic sigmoid curves that automatically capture three learning phases: warm-up (minimal gains), growth (rapid improvement), and saturation (diminishing returns).
 
-### Encoder 2 (Interpretability Path) - 71,040 parameters
-- Input → Context_Embedding_2, Value_Embedding_2 → Positional_Embeddings_2
-- → Encoder_Blocks_2 (independent parameters) → Value_2
-- → Gain Quality Estimation: `gain_quality = sigmoid(value_seq_2.mean(dim=-1))`
-- → Differentiable Effective Practice: `effective_practice[t] = effective_practice[t-1] + gain_quality[t]`
-- → Sigmoid Learning Curve: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset)`
-- → Threshold Mechanism: `sigmoid((mastery - θ_global) / temperature)` 
-- → **Incremental Mastery Predictions** → **Incremental Mastery Loss** (interpretability, weight=0.1)
+**Dual-Encoder Architecture**:
+1. **Encoder 1 (Performance Path)**: 
+   - Input → Context_Embedding_1, Value_Embedding_1, Skill_Embedding_1 → Positional_Embeddings_1
+   - → Encoder_Blocks_1 (independent parameters) → [Context_1, Value_1, Skill_1] → Prediction_Head_1 
+   - → **Base Predictions** → **BCE Loss** (primary, weight ≈ 1.0)
+   - Parameters: 96,513
+   
+2. **Encoder 2 (Interpretability Path)**: 
+   - Input → Context_Embedding_2, Value_Embedding_2 → Positional_Embeddings_2
+   - → Encoder_Blocks_2 (independent parameters) → Value_2
+   - → Gain Quality Estimation: `gain_quality = sigmoid(value_seq_2.mean(dim=-1))`
+   - → Differentiable Effective Practice: `effective_practice[t] = effective_practice[t-1] + gain_quality[t]`
+   - → Sigmoid Learning Curve: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset)`
+   - → Threshold Mechanism: `sigmoid((mastery - θ_global) / temperature)` 
+   - → **Incremental Mastery Predictions** → **Incremental Mastery Loss** (interpretability, weight=0.1)
+   - Parameters: 71,040
 
-**Total Model Parameters**: 167,575
+**Total Model Parameters**: 167,575 (Encoder 1: 96,513 + Encoder 2: 71,040 + Sigmoid params: 22)
 
----
+### Incremental Mastery Loss Mechanism
 
-## Incremental Mastery Loss Mechanism
-
-Provides interpretability-driven supervision by comparing ground truth responses with predictions derived from learned mastery trajectories following sigmoid learning curves.
+The Incremental Mastery Loss provides interpretability-driven supervision by comparing ground truth responses (correct/incorrect) with predictions derived from learned mastery trajectories that follow sigmoid learning curves. This mechanism enforces educational constraints while maintaining differentiability for end-to-end training.
 
 **Calculation Pipeline**:
 
@@ -427,31 +521,253 @@ Provides interpretability-driven supervision by comparing ground truth responses
 - ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`) - Gains not exposed in model output
 - ❌ **Gains D-dimensional Output**: DEACTIVATED - `projected_gains_d` not included in output
 
-**Result**: Complete separation of performance optimization (Encoder 1) and interpretability learning (Encoder 2) with independent parameters. Differentiable effective practice mechanism enables gradients to flow through Encoder 2. Sigmoid curves automatically capture three learning phases (warm-up, growth, saturation). All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
+**Result**: The model uses two independent encoder stacks to produce two independent predictions: (1) Base predictions from Encoder 1's standard prediction head for primary BCE loss, and (2) Incremental mastery predictions from Encoder 2 via sigmoid learning curves and threshold mechanism for interpretability-driven mastery loss. The differentiable effective practice mechanism (quality-weighted accumulation) enables gradients to flow through Encoder 2, allowing it to learn which interactions provide high-quality learning opportunities. The sigmoid curves automatically capture three learning phases (warm-up, growth, saturation) with learnable skill-specific and student-specific parameters. **DUAL-ENCODER ARCHITECTURE**: Complete separation of performance optimization (Encoder 1) and interpretability learning (Encoder 2) with independent parameters. All constraint and semantic losses are commented out, leaving only BCE + Incremental Mastery losses active.
+
+### Architecture
+
+The architecture uses a **dual-encoder design** with two completely independent encoder stacks, each optimized for different objectives.
+
+The diagram below illustrates the **current dual-encoder architecture**:
+
+**Visual Legend:**
+- **Double-border boxes** (`[[...]]`): **Input/Output data** (tensors, embeddings, intermediate representations) - white background with dark borders
+- **Single-border boxes** (`[...]`): **Processing operations** (embeddings tables, transformations, neural network layers)
+- **Blue components**: Encoder 1 (Performance Path) - 96,513 parameters
+  - Learns attention patterns for response prediction
+  - Independent embeddings, encoder blocks, and prediction head
+  - Outputs: Base Predictions → BCE Loss (weight ≈ 1.0)
+- **Orange components**: Encoder 2 (Interpretability Path) - 71,040 parameters
+  - Learns attention patterns for learning gains detection
+  - Independent embeddings and encoder blocks
+  - Outputs: Gain Quality → Effective Practice → Sigmoid Learning Curves → Incremental Mastery Predictions → IM Loss (weight=0.1)
+- **Pink components**: Differentiable Effective Practice Mechanism - **CRITICAL FOR GRADIENT FLOW**
+  - Gain quality learned from Encoder 2: `gain_quality = sigmoid(value_seq_2.mean(dim=-1))`
+  - Quality-weighted accumulation: `effective_practice[t] = effective_practice[t-1] + gain_quality[t]`
+  - Enables gradients: IM_loss → mastery → effective_practice → gain_quality → value_seq_2 → Encoder 2
+- **Green components**: Sigmoid Learning Curve Mastery - 22 learnable parameters
+  - Formula: `mastery = M_sat × sigmoid(β_skill × γ_student × effective_practice - offset)`
+  - Learnable: β_skill (skill difficulty), γ_student (student velocity), M_sat (saturation), θ_global (threshold), offset
+  - Three automatic learning phases: Initial (warm-up) → Growth (rapid learning) → Saturation (consolidation)
+
+**Key Architectural Features**: 
+- **Dual-Encoder Independence**: ✅ FULLY IMPLEMENTED - Two encoder stacks with completely independent parameters (no shared layers)
+  - Encoder 1: 96,513 parameters (context_emb_1, value_emb_1, skill_emb_1, pos_emb_1, encoder_blocks_1, prediction_head_1)
+  - Encoder 2: 71,040 parameters (context_emb_2, value_emb_2, pos_emb_2, encoder_blocks_2)
+  - Total: 167,575 parameters including sigmoid curve params
+- **Differentiable Effective Practice**: ✅ CRITICAL INNOVATION - Enables Encoder 2 gradient flow
+  - Replaces non-differentiable practice counting with quality-weighted accumulation
+  - Test verified: Gradients flow through both encoders during backpropagation ✓
+- **Sigmoid Learning Curve Mastery**: ✅ ACTIVE - Mastery evolves via sigmoid curves driven by effective practice
+  - Uses quality-weighted practice instead of raw counting
+  - Automatic three-phase learning: warm-up → growth → saturation
+- **Dual Loss Framework**: ✅ ACTIVE - Two independent loss functions
+  - BCE Loss (Encoder 1): Optimizes base predictions for performance
+  - IM Loss (Encoder 2): Optimizes mastery trajectories for interpretability
+  - Total Loss: `BCE + 0.1 × IM_loss`
+- **Independent Learning**: ✅ VERIFIED - Both encoders update independently during training
+  - Encoder 1 learns: Which attention patterns predict response correctness
+  - Encoder 2 learns: Which interaction patterns indicate learning opportunities (high gain quality)
+
+See gainak3exp model architecture in *Architecture Diagram* section of ´ARCH_gainakt3exp.md´. 
+
+---
+## Sequences
+
+This section shows the temporal flow of operations during training and evaluation, illustrating how components interact across time.
+
+
+### Training Sequence
+
+The training workflow involves the experiment launcher loading defaults, creating the model, iterating through epochs with monitoring hooks, and saving artifacts.
+
+See details in *Training Sequence Diagram* of ´paper/ARCH_gainakt3exp.md´.
+
+**Key Training Flow Characteristics:**
+- **Zero Defaults**: All parameters explicitly loaded from config or CLI
+- **Monitoring Hooks**: Periodic state capture every N batches (default: 50)
+- **Dual Loss (SIMPLIFIED 2025-11-15)**: BCE (base prediction accuracy) + Incremental Mastery Loss (threshold predictions, weight=0.1)
+  - Constraint losses: ALL commented out (weights=0.0)
+  - Semantic losses: ALL commented out (disabled)
+- **Artifact Persistence**: Complete reproducibility via saved config + checkpoints
+- **Correlation Tracking**: Mastery/gain correlations computed per epoch
+
+### Evaluation Sequence
+
+The evaluation workflow loads a trained model checkpoint, runs inference on test data, computes metrics including correlations, and saves results.
+
+See details in "Evaluation Sequence" section of ´paper/ARCH_gainakt3exp.md´.
+
+**Key Evaluation Flow Characteristics:**
+- **Checkpoint Loading**: Restores exact trained model state from disk
+- **No Gradient Computation**: Model in eval mode, torch.no_grad() context
+- **Correlation Sampling**: Configurable student sample size (default: 3000)
+- **Trajectory Analysis**: Per-student mastery/gain sequences correlated with performance
+- **Result Persistence**: Timestamped evaluation results saved to run directory
+
+### Learning Trajectory Analysis Sequence
+
+Individual student learning progressions can be extracted post-hoc using the trajectory analysis script (command auto-saved in config.json).
+
+See details in *Learning Trajectory Analysis Sequence* of ´paper/ARCH_gainakt3exp.md´.
+
+**Key Trajectory Analysis Characteristics:**
+- **Compact Format**: Tabular display with student summary statistics
+- **Match Indicator**: Visual ✓/✗ showing prediction correctness
+- **Per-Timestep Detail**: Shows skill practiced, true/predicted response, gains, mastery
+- **Diverse Sampling**: Selects students with varying interaction counts
+- **Post-Hoc Analysis**: No training required, works with any saved checkpoint
+
+### Internal Model Flow
+
+This detailed sequence diagram shows the internal data flow within a single forward_with_states() forward pass, tracking how Context (h) and Value (v) streams flow through the model and feed into predictions, interpretability projections, and losses.
+
+See details in *Internal Model Flow* of ´paper/ARCH_gainakt3exp.md´.
+
+**Key Flow Insights:**
+
+### Context Stream (h) - 3 Destinations:
+1. **→ Prediction Head**: Concatenated with value and skill embeddings for response prediction
+2. **→ Mastery Computation**: Provides contextual information (not directly used in current sigmoid curve implementation)
+3. **→ Output/Monitor**: Returned for monitoring and analysis
+
+### Value Stream (v) - 3 Destinations (GainAKT3Exp Core Innovation):
+**Values encode raw learning potential** - each interaction's Value output represents potential learning gain for that (skill, response) tuple.
+
+1. **→ Prediction Head**: Concatenated with context and skill embeddings for response prediction
+2. **→ Sigmoid Learning Curve Mastery**: **Direct flow as learning gain estimates**
+   - Each Value output represents: "What is the learning potential from this interaction?"
+   - Practice count tracking: Number of times each student practiced each skill
+   - Sigmoid learning curve: `mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)`
+   - Learnable parameters modulate curve shape:
+     - β_skill[s]: Skill difficulty (curve steepness)
+     - γ_student[i]: Student learning velocity (progression speed)
+     - M_sat[s]: Maximum achievable mastery (saturation level)
+   - Automatic three-phase learning: Initial (warm-up) → Growth (rapid) → Saturation (consolidation)
+3. **→ Output/Monitor**: Returned for monitoring and analysis
+
+**Educational Semantics**: The transformer learns to output Values that encode learning potential. Combined with practice count tracking and learnable skill/student parameters, the sigmoid learning curve captures realistic learning dynamics: slow initial progress, rapid mid-stage improvement, and eventual saturation.
+
+### Loss Computation Sources:
+Interpretability losses receive inputs from multiple stages:
+- **predictions**: From Prediction Head (sigmoid outputs)
+- **projected_mastery**: From Sigmoid Learning Curves (mastery trajectories following practice-driven sigmoid curves)
+- **learning_gains**: Estimated from Value stream (raw learning potential per interaction)
+- **responses (r)**: Ground truth from input (for performance alignment)
+- **questions (q)**: Input questions (for Q-matrix skill masks and practice count tracking)
+
+**Sigmoid Learning Curve Mastery**: The key architectural principle where practice count drives sigmoid curve progression:
+```
+# Track practice count per student-skill pair
+practice_count[i, s, t] = Σ(k=1 to t) 𝟙[question[k] targets skill s]
+
+# Compute mastery via sigmoid learning curve
+sigmoid_input = β_skill[s] × γ_student[i] × practice_count[i, s, t] - offset
+mastery[i, s, t] = M_sat[s] × sigmoid(sigmoid_input)
+
+# Threshold-based prediction
+incremental_mastery_prediction[i, s, t] = sigmoid((mastery[i, s, t] - θ_global) / temperature)
+```
+
+This practice count-driven sigmoid curve enforces interpretability-by-design and provides educationally-realistic learning dynamics with automatic phase transitions.
 
 ---
 
-## Architecture Diagrams and Sequences
+## Implementation Summary
 
-For detailed visual representations, see `paper/ARCH_gainakt3exp.md`:
-- **Architecture Diagram**: Visual representation of dual-encoder design with color-coded components
-- **Training Sequence**: Workflow from launcher to saved artifacts
-- **Evaluation Sequence**: Test metrics and correlation computation
-- **Learning Trajectory Analysis**: Individual student progression extraction
-- **Internal Model Flow**: Data flow within forward_with_states()
+The GainAKT3Exp model (`pykt/models/gainakt3_exp.py`) is an enhanced version of the GainAKT3 base model that adds training-time interpretability monitoring and auxiliary loss computation. The implementation follows PyKT framework standards:
 
-**Key Flow Insights**:
-- **Context Stream (h)**: → Prediction Head, Mastery Computation, Output/Monitor
-- **Value Stream (v)**: → Prediction Head, Sigmoid Learning Curves (as gain estimates), Output/Monitor
-- **Educational Semantics**: Values encode learning potential; sigmoid curves capture realistic learning dynamics
+**Training Pipeline** (`examples/train_gainakt3exp.py`):
+- Zero hardcoded defaults—all 60+ parameters must be explicit
+- Launched via `run_repro_experiment.py` which loads defaults from `configs/parameter_default.json`
+- Saves complete experiment artifacts: checkpoints, config, trajectories, metrics
+- Supports semantic trajectory tracking (mastery/gain correlations per epoch)
 
----
+**Evaluation Pipeline** (`examples/eval_gainakt3exp.py`):
+- Loads trained model and computes test metrics (AUC, accuracy)
+- Computes mastery/gain correlations (configurable student sample size)
+- Saves evaluation results with timestamp
 
+**Learning Trajectory Analysis** (`examples/learning_trajectories.py`):
+- Standalone script to extract and display individual student learning trajectories
+- Shows timestep-by-timestep: skills practiced, gains, mastery, predictions vs truth
+- Compact tabular format with student summary statistics
+- Command automatically added to `config.json` for easy access
 
+**Model Creation**: Models are instantiated via `create_exp_model(config)` which requires all parameters in the config dict (no defaults), ensuring reproducibility.
 
-## Feature Implementation Status
+### Training and Evaluation Workflow
 
-Comprehensive analysis of each architectural component:
+Following PyKT framework standards (see `assistant/quickstart.pdf` and `assistant/contribute.pdf`):
+
+**1. Launch Training:**
+```bash
+python examples/run_repro_experiment.py \
+  --model gainakt3exp \
+  --dataset assist2015 \
+  --short_title baseline_test \
+  --epochs 12 \
+  [--param_override value ...]
+```
+
+This launcher:
+- Loads defaults from `configs/parameter_default.json`
+- Applies CLI overrides for specified parameters
+- Creates timestamped experiment directory: `saved_model/{timestamp}_{model}_{title}_{uid}/`
+- Saves complete config (including trajectory command) to `{run_dir}/config.json`
+- Saves checkpoints, metrics, and trajectory data
+
+**2. Evaluate Model:**
+```bash
+python examples/eval_gainakt3exp.py \
+  --run_dir saved_model/{experiment_dir} \
+  --ckpt_name {checkpoint}.pt
+```
+
+Outputs test AUC, accuracy, and mastery/gain correlations.
+
+**3. Analyze Learning Trajectories:**
+```bash
+python examples/learning_trajectories.py \
+  --run_dir saved_model/{experiment_dir} \
+  --num_students 10 \
+  --min_steps 10
+```
+
+Displays individual student learning progressions with mastery/gain states and prediction accuracy.
+
+**Note:** The trajectory command is automatically included in `config.json` during training, enabling easy post-hoc analysis without manual parameter reconstruction.
+
+### Reproducibility System
+
+Following the "zero defaults" pattern documented in `examples/reproducibility.md`:
+
+**Experiment Structure**: Each training run creates a timestamped directory:
+```
+saved_model/{timestamp}_{model}_{title}_{uid}/
+  ├── config.json           # Complete parameter set + trajectory command
+  ├── model_*.pt            # Checkpoints
+  ├── metrics.json          # Training metrics (AUC, accuracy, correlations)
+  ├── trajectory_*.json     # Semantic trajectory data (optional)
+  └── eval_results_*.json   # Evaluation results
+```
+
+**Config File Contents**:
+- `defaults`: All parameter default values (from `parameter_default.json`)
+- `train_explicit`: Full training command with all parameters
+- `eval_explicit`: Full evaluation command with all parameters  
+- `trajectory_command`: Trajectory analysis command (10 students, min 10 steps)
+- `metadata`: Timestamp, git hash, hostname, GPU info
+
+**Reproducibility Guarantees**:
+1. No hardcoded defaults in model or training code
+2. All parameters explicitly passed via CLI
+3. Complete config saved with every experiment
+4. Commands reconstructable from config alone
+5. Git hash and environment info captured
+
+See `examples/reproducibility.md` for complete parameter evolution protocol.
+
+Below is a comprehensive analysis of each architectural component's implementation status.
 
 ### Feature 1: Skill Embedding Table 
 
@@ -801,7 +1117,132 @@ incremental_mastery_predictions = torch.sigmoid(threshold_diff)
 - Multi-GPU safe implementation for production training environments
 - Zero-gradient overhead via `torch.no_grad()` wrapper
 
-**Verification:** Monitor hub receives inputs from mastery/gain/predictions hubs via `forward_with_states()` method capturing all relevant tensors.
+**Verification:** The architecture diagram shows "Monitor Hub" receiving inputs from Mastery Hub, Gain Hub, and Predictions Hub, then routing to "Interpretability Monitor"—implementation provides exactly this via the `forward_with_states()` method capturing all relevant tensors and passing them to the registered monitor hook.
+
+
+### Feature 7: Intrinsic Gain Attention Mode ❌ DEACTIVATED
+
+**Objective:** Provide an alternative architectural mode that achieves parameter efficiency by deriving gains directly from attention mechanisms, eliminating the need for post-hoc projection heads. This explores the trade-off between model compactness and interpretability while maintaining competitive predictive performance.
+
+**Expected (from architectural exploration):** A feature flag (`--intrinsic_gain_attention`) that conditionally disables projection heads and computes mastery/gains from cumulative attention weights, reducing parameter count while preserving the ability to track learning trajectories.
+
+**Current Status:**: Given the results detailed before we will **deactivate the Intrinsic Gain Attention Mode by default**. So, we set "intrinsic_gain_attention": false in configs/parameter_default.json
+
+**Implementation Status:**
+
+**7a. Architectural Constraint Enforcement:**
+- **Location:** `gainakt3_exp.py` lines 58-74
+- **Mechanism:** 
+  ```python
+  if self.intrinsic_gain_attention:
+      # Override projection head flags - intrinsic mode incompatible with heads
+      self.use_mastery_head = False
+      self.use_gain_head = False
+      
+      if use_mastery_head or use_gain_head:
+          print("WARNING: Intrinsic gain attention mode enabled. "
+                "Projection heads (use_mastery_head, use_gain_head) will be disabled.")
+  ```
+- **Rationale:** Prevents conflicting architectural configurations where both projection-based and attention-derived gains would coexist, ensuring clean experimental comparison.
+
+**7b. Attention-Derived Gain Computation:**
+- **Location:** `gainakt3_exp.py` lines 102-111
+- **Implementation:**
+  ```python
+  if self.intrinsic_gain_attention and not (self.use_mastery_head or self.use_gain_head):
+      # Derive gains from attention patterns
+      # Extract attention weights from last encoder layer
+      last_block = self.encoder_blocks[-1]
+      attn_module = last_block.attn
+      
+      # Aggregate attention weights across heads as proxy for learning gains
+      # Shape: [batch_size, seq_len, seq_len] -> [batch_size, seq_len, num_c]
+      attention_gains = self._compute_attention_derived_gains(
+          attn_module.attention_weights, questions, batch_size, seq_len
+      )
+  ```
+- **Gain Extraction:** Uses attention weights from final encoder layer as indicators of "information flow" between timesteps, treating high attention as proxy for learning influence.
+
+**7c. Cumulative Mastery from Attention:**
+- **Location:** `gainakt3_exp.py` lines 113-133
+- **Recursive Accumulation:**
+  ```python
+  # Initialize mastery from attention-derived gains
+  projected_gains = attention_gains  # [batch_size, seq_len, num_c]
+  
+  # Compute cumulative mastery via recursive addition
+  projected_mastery = torch.zeros_like(projected_gains)
+  projected_mastery[:, 0, :] = torch.sigmoid(projected_gains[:, 0, :])
+  
+  for t in range(1, seq_len):
+      # Accumulate previous mastery + scaled current gains
+      accumulated = projected_mastery[:, t-1, :] + projected_gains[:, t, :] * 0.1
+      projected_mastery[:, t, :] = torch.clamp(accumulated, min=0.0, max=1.0)
+  ```
+- **Educational Semantics:** Treats attention weights as learning increments, cumulative mastery as integrated knowledge over time.
+
+**7d. Parameter Reduction:**
+- **Baseline Mode:** 14,658,761 params
+- **Intrinsic Mode:** 12,738,265 params
+- **Reduction: 1,920,496 params (13.1%)**
+  
+  *Note: Reduction comes from disabled projection heads (mastery_head + gain_head) plus associated architectural optimizations.*
+
+**7e. CLI Integration:**
+- **Location:** `examples/run_repro_experiment.py` line 89
+- **Usage:** `python examples/run_repro_experiment.py --intrinsic_gain_attention --epochs 12`
+- **Default:** `False` (baseline mode with projection heads)
+- **Parameter File:** Added to `configs/parameter_default.json` as `"intrinsic_gain_attention": false`
+
+**Architecture Alignment:** Complete implementation with validated trade-offs
+
+**Verification:** The updated architecture diagram (red components) shows intrinsic mode as conditional bypass of projection heads, with attention-derived gains feeding directly to mastery/gain outputs.
+
+
+### Feature 8: Sigmoid Learning Curve Mastery
+
+Practice Count Drives Sigmoid Learning Curves
+```
+Practice Count Tracking → Sigmoid Curve Parameters → Mastery Evolution
+                       ↑                              ↓
+                  β_skill, γ_student, M_sat     Threshold Mechanism
+```
+
+The **blue subgraph** in the diagram above illustrates a critical architectural constraint that enforces interpretability-by-design. Unlike black-box models where knowledge states are opaque, our architecture implements a **deterministic sigmoid learning curve** mechanism:
+
+$$\text{mastery}^{(i,s,t)} = M_{\text{sat}}^{(s)} \times \sigma\left(\beta_{\text{skill}}^{(s)} \times \gamma_{\text{student}}^{(i)} \times \text{practice\_count}^{(i,s,t)} - \text{offset}\right)$$
+
+Where:
+- **practice_count[i,s,t]**: Number of times student i has practiced skill s up to timestep t (monotonically increasing)
+- **β_skill[s]**: Learnable skill difficulty parameter (controls curve steepness)
+- **γ_student[i]**: Learnable student learning velocity (modulates progression speed)
+- **M_sat[s]**: Learnable saturation level (maximum achievable mastery for skill s)
+- **offset**: Learnable inflection point (controls when rapid learning begins)
+- **σ**: Sigmoid function (ensures bounded, S-shaped learning curves)
+
+This is implemented in the model's forward pass (`gainakt3_exp.py`):
+
+```python
+# Track practice count per student-skill
+practice_count = torch.zeros(batch_size, num_c, device=q.device)
+for t in range(seq_len):
+    skill_idx = q[t]
+    practice_count[:, skill_idx] += 1
+
+# Compute sigmoid learning curve
+sigmoid_input = (self.beta_skill * self.gamma_student.unsqueeze(1) * 
+                practice_count - self.offset)
+mastery = self.M_sat * torch.sigmoid(sigmoid_input)
+
+# Threshold-based prediction
+incremental_mastery_predictions = torch.sigmoid((mastery - self.theta_global) / self.threshold_temperature)
+```
+
+**Three Automatic Learning Phases**:
+1. **Initial Phase**: practice_count ≈ 0 → mastery ≈ 0 (warm-up, minimal gains)
+2. **Growth Phase**: intermediate practice_count → rapid mastery increase (effective learning)
+3. **Saturation Phase**: high practice_count → mastery → M_sat[s] (consolidation, diminishing returns)
+
 
 ---
 
@@ -873,166 +1314,147 @@ python examples/learning_trajectories.py \
 4. Re-train and compare trajectories
 5. Repeat until mastery correlates with performance (encoder2_match > 70%)
 
-## Current Model Status Summary
+## DUAL-ENCODER FEATURES
 
-**Dual-Encoder Features**:
-- ✅ **TWO COMPLETELY INDEPENDENT ENCODER STACKS** (167,575 total parameters)
-  - Encoder 1 (Performance): 96,513 params → Base Predictions → BCE Loss
-  - Encoder 2 (Interpretability): 71,040 params → Mastery → IM Loss  
-  - Sigmoid parameters: 22 params
-- ✅ **Dual Predictions**: Base (from Encoder 1) + Incremental Mastery (from Encoder 2)
-- ✅ **Differentiable Effective Practice**: Quality-weighted accumulation enables Encoder 2 gradient flow
-- ✅ **Sigmoid Learning Curves**: Three automatic phases (warm-up → growth → saturation)
-- ❌ **Constraint Losses**: COMMENTED OUT (weights=0.0, code preserved)
-- ❌ **Semantic Module Losses**: COMMENTED OUT (all disabled, code preserved)
-- ❌ **Gains Head Output**: DEACTIVATED (`use_gain_head=false`)
+Following we describe the main features and current status of the gainakt3exp model. 
 
-**Implementation Status**: ✅ **FULLY IMPLEMENTED AND TESTED** (2025-11-16)
-- Test script: `tmp/test_dual_encoders.py` - ALL 7 TESTS PASSED ✓
-- Gradient flow verified through both encoders
-- Independent learning confirmed
-
-**Code Location**: `pykt/models/gainakt3_exp.py` (1014 lines)
-- Key sections: See `paper/STATUS_gainakt3exp.md` for detailed line references
-
-**Rationale**: Clean separation between performance optimization and interpretability learning. Differentiable effective practice ensures end-to-end training of both pathways.
-
----
-
-## Training and Evaluation Workflow
-
-Following PyKT framework standards (see `assistant/quickstart.pdf` and `assistant/contribute.pdf`).
-
-### Pipeline Overview
-
-**Training** (`examples/train_gainakt3exp.py`):
-- Zero hardcoded defaults—all parameters must be explicit
-- Launched via `run_repro_experiment.py` which loads defaults from `configs/parameter_default.json`
-- Saves complete experiment artifacts: checkpoints, config, trajectories, metrics
-- Supports semantic trajectory tracking (mastery/gain correlations per epoch)
-
-**Evaluation** (`examples/eval_gainakt3exp.py`):
-- Loads trained model and computes test metrics (AUC, accuracy)
-- Computes mastery/gain correlations (configurable student sample size)
-- Saves evaluation results with timestamp
-
-**Learning Trajectory Analysis** (`examples/learning_trajectories.py`):
-- Extracts and displays individual student learning progressions
-- Shows per-timestep: skills practiced, gains, mastery, predictions vs truth
-- Compact tabular format with student summary statistics
-- Command automatically added to `config.json` for easy access
-
-**Model Creation**: Models instantiated via `create_exp_model(config)` requiring all parameters in config dict (no defaults), ensuring reproducibility.
-
-### Usage Commands
-
-**1. Launch Training:**
-```bash
-python examples/run_repro_experiment.py \
-  --model gainakt3exp \
-  --dataset assist2015 \
-  --short_title baseline_test \
-  --epochs 12 \
-  [--param_override value ...]
-```
-
-This launcher:
-- Loads defaults from `configs/parameter_default.json`
-- Applies CLI overrides for specified parameters
-- Creates timestamped experiment directory: `saved_model/{timestamp}_{model}_{title}_{uid}/`
-- Saves complete config (including trajectory command) to `{run_dir}/config.json`
-- Saves checkpoints, metrics, and trajectory data
-
-**2. Evaluate Model:**
-```bash
-python examples/eval_gainakt3exp.py \
-  --run_dir saved_model/{experiment_dir} \
-  --ckpt_name {checkpoint}.pt
-```
-
-Outputs test AUC, accuracy, and mastery/gain correlations.
-
-**3. Analyze Learning Trajectories:**
-```bash
-python examples/learning_trajectories.py \
-  --run_dir saved_model/{experiment_dir} \
-  --num_students 10 \
-  --min_steps 10
-```
-
-Displays individual student learning progressions with mastery/gain states and prediction accuracy.
-
-**Note:** Trajectory command automatically included in `config.json` during training.
+- **Dual-Encoder Architecture**: ✅ TWO COMPLETELY INDEPENDENT ENCODER STACKS
+  - **Encoder 1 (Performance Path)**: Learns response prediction patterns → Base Predictions → BCE Loss (weight ≈ 1.0)
+  - **Encoder 2 (Interpretability Path)**: Learns learning gains patterns → Mastery → Incremental Mastery Predictions → IM Loss (weight=0.1)
+  - **Total Parameters**: 167,575 (Encoder 1: 96,513 + Encoder 2: 71,040 + Sigmoid params: 22)
+  - **Key Innovation**: Complete separation of performance and interpretability pathways with independent attention mechanisms
+- **Dual-Prediction Architecture**: ✅ TWO independent prediction branches with TWO loss functions
+  - **Base Predictions** (from Encoder 1) → BCE Loss (primary, weight ≈ 1.0)
+  - **Incremental Mastery Predictions** (from Encoder 2 via sigmoid curves) → Incremental Mastery Loss (weight=0.1)
+- **Differentiable Effective Practice**: ✅ ACTIVE - Quality-weighted practice accumulation enables Encoder 2 gradient flow
+  - Encoder 2 learns "gain quality" per interaction: `gain_quality = sigmoid(value_seq_2.mean(dim=-1))`
+  - Differentiable accumulation: `effective_practice[t] = effective_practice[t-1] + gain_quality[t]`
+  - Gradients flow: IM_loss → mastery → effective_practice → gain_quality → value_seq_2 → Encoder 2 parameters
+- **Sigmoid Learning Curve Mastery**: ✅ ACTIVE - Uses effective practice (quality-weighted) instead of raw practice count
+  - Formula: `mastery = M_sat × sigmoid(β_skill × γ_student × effective_practice - offset)`
+  - Learnable: β_skill[s] (skill difficulty), γ_student[i] (learning velocity), M_sat[s] (saturation), θ_global (threshold), offset (inflection)
+  - Config: threshold_temperature=1.0 (prediction sharpness control, hybrid approach)
+  - Three automatic learning phases: Initial (warm-up) → Growth (rapid learning) → Saturation (consolidation)
+- **Constraint Losses**: ❌ **COMMENTED OUT** (all weights set to 0.0, code preserved for potential future use)
+- **Semantic Module Losses**: ❌ **COMMENTED OUT** (all disabled, code preserved for potential future use)
+- **Gains Head Output**: ❌ DEACTIVATED (`use_gain_head=false`) - Gains computed internally but not exposed as output
+- **Architecture Flow**: 
+  - **Performance Path**: Input → Encoder 1 → [Context_1, Value_1, Skill_1] → Prediction Head → Base Predictions → BCE Loss
+  - **Interpretability Path**: Input → Encoder 2 → Value_2 → Gain Quality → Effective Practice → Sigmoid Learning Curve → Mastery → Threshold (with temp) → Incremental Mastery Predictions → IM Loss
+- **Code Location**: `gainakt3_exp.py` (1014 lines total)
+  - Lines 51-53: Import changes (EncoderBlock from gainakt3, no longer inherits full class)
+  - Line 56: Changed to `class GainAKT3Exp(nn.Module)` (standalone implementation)
+  - Lines 218-248: Encoder 1 (Performance Path) initialization
+  - Lines 250-274: Encoder 2 (Interpretability Path) initialization
+  - Lines 367-390: Encoder 1 forward pass
+  - Lines 393-413: Encoder 2 forward pass
+  - Lines 525-579: Differentiable effective practice computation (CRITICAL FIX for gradient flow)
+  - Lines 564-620: Sigmoid curve using effective_practice
+  - Line 624: Critical bug fix - uses q[t] (current skill) not qry[t] (next skill)
+- **Implementation Status**: ✅ **FULLY IMPLEMENTED AND TESTED** (2025-11-16)
+  - Dual-encoder architecture: Two independent encoder stacks with separate parameters
+  - Differentiable effective practice: Quality-weighted accumulation enables Encoder 2 learning
+  - Gradient flow verification: Both encoders receive gradients during backpropagation (test confirmed)
+  - Independent learning: Both encoders update independently during training
+  - Test script: `tmp/test_dual_encoders.py` (263 lines) - ALL 7 TESTS PASSED ✓
+- **Rationale**: Dual-encoder architecture provides clean separation between performance optimization (Encoder 1) and interpretability learning (Encoder 2). Each encoder learns different attention patterns: Encoder 1 focuses on response correctness prediction, while Encoder 2 learns to detect learning opportunities and estimate gain quality. The differentiable effective practice mechanism ensures gradients flow through Encoder 2, enabling end-to-end training of both pathways. This architecture balances predictive performance with interpretable mastery trajectories.
 
 ---
 
-## Reproducibility System
+## Encoder 2 for Interpretability
 
-Following "zero defaults" pattern documented in `examples/reproducibility.md`.
+### Understanding the Sequence of Events
 
-### Experiment Structure
+In our model, learning happens **DURING** the interaction with each problem, not after. The temporal sequence for timestep `t` is:
 
-Each training run creates timestamped directory:
-```
-saved_model/{timestamp}_{model}_{title}_{uid}/
-  ├── config.json           # Complete parameter set + trajectory command
-  ├── model_*.pt            # Checkpoints
-  ├── metrics.json          # Training metrics (AUC, accuracy, correlations)
-  ├── trajectory_*.json     # Semantic trajectory data (optional)
-  └── eval_results_*.json   # Evaluation results
-```
+1. **Student encounters problem** `q[t]` with initial mastery `mastery[t-1]`
+2. **Student works on the problem** (practice/engagement)
+3. **Learning occurs during problem-solving** → gain `gain[t]`
+4. **Student's mastery updates** to `mastery[t] = f(practice[t-1] + gain[t])`
+5. **Student submits response** `r[t]` reflecting the **updated** mastery
 
-### Config File Contents
-- `defaults`: All parameter default values (from `parameter_default.json`)
-- `train_explicit`: Full training command with all parameters
-- `eval_explicit`: Full evaluation command with all parameters  
-- `trajectory_command`: Trajectory analysis command (10 students, min 10 steps)
-- `metadata`: Timestamp, git hash, hostname, GPU info
-
-### Reproducibility Guarantees
-1. No hardcoded defaults in model or training code
-2. All parameters explicitly passed via CLI
-3. Complete config saved with every experiment
-4. Commands reconstructable from config alone
-5. Git hash and environment info captured
-
-See `examples/reproducibility.md` for complete parameter evolution protocol.
 
 ---
-## Parameter Evolution Protocol
 
-Follow rigorous protocol to maintain reproducibility. See `examples/reproducibility.md` for complete details.
+## Evolving the Model
 
-### When Adding/Modifying Parameters
+We follow a rigorous parameter evolution protocol to maintain reproducibility across model variants and hyperparameter sweeps. See `examples/reproducibility.md` for complete details.
 
-1. **Update `configs/parameter_default.json`** with new parameter and default value
-2. **Update `examples/run_repro_experiment.py`** to add CLI argument (with `required=True`, no default)
-3. **Update `paper/parameters.csv`** with documentation (category, description, default)
-4. **Verify no hardcoded defaults** exist in model/training code
-5. **Recompute MD5 hash** for parameter_default.json
+### Parameter Evolution Protocol
+
+All parameter defaults live in `configs/parameter_default.json`. When adding or modifying parameters:
+
+1. **Update `parameter_default.json`** with new parameter and default value
+2. **Update `examples/run_repro_experiment.py`** to add CLI argument for new parameter
+3. **Update `paper/parameters.csv`** with parameter documentation (category, description, default value)
+4. **Verify no hardcoded defaults** exist in model/training code that could diverge from `parameter_default.json`
 
 ### Consistency Verification
 
-After codebase modifications:
-- Check no hidden parameters with hardcoded defaults exist
-- Verify all model parameters passed explicitly via `create_exp_model(config)`
-- Ensure training scripts require all parameters via CLI
+After any codebase modification (model, training/evaluation scripts, etc.):
+- Check that no hidden parameters with hardcoded defaults exist
+- Verify all model parameters are passed explicitly via `create_exp_model(config)`
+- Ensure training scripts require all parameters via CLI (no fallback defaults)
 - Confirm `parameter_default.json` matches actual code behavior
 
-### Experimental Scenarios
+### Hyperparameter Optimization
 
-**Hyperparameter Optimization**:
+**Objective**: Systematically explore parameter combinations to find optimal configuration.
+
+**Process**:
 1. Use defaults from `configs/parameter_default.json` as starting point
-2. Run experiments with CLI overrides
-3. Document results in auto-generated config files
-4. Update defaults with optimal configuration
-5. Document change in `paper/parameters.csv` with rationale and date
+2. Run experiments with parameter variations via CLI overrides
+3. Document results in experiment-specific config files (auto-generated in run directories)
+4. When optimal configuration is found, update `configs/parameter_default.json` with new defaults
+5. Document change in `paper/parameters.csv` with rationale and date 
 
-**Ablation Studies**:
-- Deactivate parameters one by one to measure impact
-- Change boolean values, set weights to 0, etc.
+#### Scenario 2: Ablation Studies
 
-**Benchmarking**:
-- Compare metrics of different models/variants
-- Use defaults to launch training and evaluation
+Objective: in a ablation studio we deactivate parameters one by one to measure the impact
+Guidelines: Check current value of the parameter to ablate in configs/parameter_default.json and deactivate (changing a boolean value, setting a weight to 0, etc.). 
+
+#### Scenario 3: Benchmark
+
+Objective: compare metrics of different models or model variants. 
+Guidelines: use defaults to launch training and evaluation.
+
+---
+
+### Parameter Evolution Best Practices
+
+When adding/changing parameters:
+
+1. **Update `configs/parameter_default.json`**
+   ```bash
+   # Edit the file to add new parameter
+   # Then recompute MD5:
+   python -c "
+   import json, hashlib
+   data = json.load(open('configs/parameter_default.json'))
+   md5 = hashlib.md5(json.dumps(data['defaults'], sort_keys=True).encode()).hexdigest()
+   data['md5'] = md5
+   json.dump(data, open('configs/parameter_default.json', 'w'), indent=2)
+   print(f'Updated MD5: {md5}')
+   "
+   ```
+
+2. **Update training/evaluation scripts**
+   - Add argparse parameter with `required=True` (no default!)
+   - Ensure parameter name matches exactly
+
+3. **Test with dry run**
+   ```bash
+   python examples/run_repro_experiment.py \
+     --short_title test_new_param \
+     --epochs 1
+   ```
+
+4. **Verify in config.json**
+   - Check that parameter appears in `defaults` section
+   - Check that it appears in `train_explicit` or `eval_explicit` command
+
+5. **Update this documentation**
+   - Add to appropriate category table above
+   - Document purpose and default value
+
 

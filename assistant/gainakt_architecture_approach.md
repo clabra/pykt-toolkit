@@ -331,6 +331,15 @@ Finally, we decided to go with the fresh start direction since a first implement
 
 We have explored the options described in gainakt_architecture_options.md. Finally we decided to choose the one described in the "Option 4" section. The gainakt2.py model is based in this option. Curently it obtains best AUC than the gainakt.py model that is based in other options. 
 
+### Skill Embedding Table 
+
+A separate embedding table that maps question IDs to skill representations, used in the prediction head to provide skill-specific context for response prediction.
+
+Characteristics: 
+  - Separate embedding table for skills/concepts (distinct from interaction embeddings)
+  - Embedded size: `d_model` (consistent with context/value streams)
+  - Concatenated with context and value sequences as input to prediction head
+  - Supports both direct question IDs (`q`) and query questions (`qry`)
 
 
 ### Dynamic Value Stream
