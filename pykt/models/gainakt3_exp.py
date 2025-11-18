@@ -1015,8 +1015,6 @@ def create_exp_model(config):
             d_ff=config['d_ff'],
             dropout=config['dropout'],
             emb_type=config['emb_type'],
-            use_mastery_head=config['use_mastery_head'],
-            use_gain_head=config['use_gain_head'],
             intrinsic_gain_attention=config['intrinsic_gain_attention'],
             use_skill_difficulty=config['use_skill_difficulty'],
             use_student_speed=config['use_student_speed'],

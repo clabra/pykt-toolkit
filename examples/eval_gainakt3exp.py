@@ -4,6 +4,15 @@ Evaluation script for GainAKT3Exp - EXPLICIT PARAMETERS (matches train script de
 
 WARNING: DO NOT CALL DIRECTLY - Use run_repro_experiment_simple.py
 This script requires ALL parameters explicitly - zero hardcoded defaults.
+
+CRITICAL ARCHITECTURAL FLAGS:
+GainAKT3Exp (2025-11-18): No architectural flags - all features always enabled
+  - Mastery trajectories: Always computed (removed use_mastery_head parameter)
+  - Per-skill gains: Always computed (removed use_gain_head parameter)
+  - Intrinsic gain attention: Removed in favor of dual-encoder architecture
+  
+This is different from GainAKT2Exp which had optional mastery_head and gain_head.
+GainAKT3Exp treats mastery and gains as core features, not optional outputs.
 """
 import os
 import sys

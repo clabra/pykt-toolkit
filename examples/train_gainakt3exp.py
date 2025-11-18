@@ -23,7 +23,7 @@ def resolve_param(cfg, section, key, fallback):
         return cfg[section][key]
     return fallback
 
-def evaluate_dual_encoders(model, data_loader, device, use_mastery_head):
+def evaluate_dual_encoders(model, data_loader, device):
     """Evaluate both encoder1 (base) and encoder2 (incremental mastery) predictions."""
     model.eval()
     preds_enc1, preds_enc2, targets = [], [], []
@@ -48,7 +48,7 @@ def evaluate_dual_encoders(model, data_loader, device, use_mastery_head):
             preds_enc1.extend(torch.sigmoid(y_pred_enc1).cpu().numpy())
             
             # Encoder 2: Incremental mastery predictions (if available)
-            if use_mastery_head and 'incremental_mastery_predictions' in outputs:
+            if 'incremental_mastery_predictions' in outputs:
                 im_preds = outputs['incremental_mastery_predictions']
                 y_pred_enc2 = im_preds[valid_mask]
                 preds_enc2.extend(torch.sigmoid(y_pred_enc2).cpu().numpy())
@@ -506,10 +506,6 @@ def train_gainakt3exp_dual_encoder(
         ]
         
         # Add optional flags
-        if model_config['use_mastery_head']:
-            eval_cmd.append('--use_mastery_head')
-        if model_config['use_gain_head']:
-            eval_cmd.append('--use_gain_head')
         if model_config['use_skill_difficulty']:
             eval_cmd.append('--use_skill_difficulty')
         if model_config['use_student_speed']:

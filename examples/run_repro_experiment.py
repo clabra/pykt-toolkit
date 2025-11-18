@@ -261,11 +261,9 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     ]
     
     # Boolean flags - ARCHITECTURAL AND INTERPRETABILITY MODES
-    # IMPORTANT: These affect model architecture and MUST match between training and evaluation
-    # - use_mastery_head: Enables mastery projection head
-    # - use_gain_head: Enables gain projection head
-    # DEPRECATED (2025-11-16): intrinsic_gain_attention removed from dual-encoder
-    bool_flags = ['use_mastery_head', 'use_gain_head']  # 'intrinsic_gain_attention' DEPRECATED
+    # DEPRECATED (2025-11-18): use_mastery_head, use_gain_head removed from GainAKT3Exp
+    # GainAKT3Exp always computes mastery trajectories and gains (core features, not optional)
+    bool_flags = []  # All architectural boolean flags deprecated
     
     # Add max_correlation_students (default 300 if not in params)
     max_corr = params.get('max_correlation_students', 300)

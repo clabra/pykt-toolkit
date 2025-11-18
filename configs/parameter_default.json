@@ -263,6 +263,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "34a64bd6f2e63d7b65ca203554cdb5ae",
+  "md5": "ac63a5b4cd953c1c24d8556042f811d5",
   "_md5_computed": "2025-11-16"
 }
