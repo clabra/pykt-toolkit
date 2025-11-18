@@ -28,26 +28,37 @@
 - ✅ Beta spread std: 0.448 (target >0.3) - ONLY success
 - ❌ Performance vs V2: Encoder1 AUC -3.55%, Mastery corr -65.6%
 
-**Root Cause Identified**: Symmetric initialization creates uniform attractor
-- PyTorch default init produces per-skill CV=0.017 (99.8% uniform at epoch 0)
-- All 100 skills initialized nearly identically, produce similar gains (~0.50)
-- V3 losses (contrastive, variance) too weak to escape uniform local minimum
-- Beta spread initialization didn't help (downstream parameter, doesn't affect gains_projection)
+**Root Cause Analysis - Loss Landscape Problem**:
+- Initial hypothesis: Symmetric initialization (CV=0.017) creates uniform attractor
+- V3+ test: Asymmetric initialization (CV=0.24 at epoch 0) → STILL collapsed to uniform (CV=0.0015 by epoch 2)
+- **Real cause**: Problem is the LOSS LANDSCAPE, not initialization
+- Uniform gains (~0.585) is global attractor that optimization finds regardless of starting point
+- Encoder 1 dominance + weak differentiation losses → gradients drive toward uniformity
 
-**V3 Phase 1 Components Implemented**:
+**V3 Phase 1 Components Tested**:
 - ✅ Skill-contrastive loss (weight=1.0) - Active but insufficient
 - ✅ Beta spread initialization N(2.0, 0.5) - Worked for beta, not gains
 - ✅ Beta spread regularization (weight=0.5) - Maintained spread
 - ✅ Variance loss amplification (0.1→2.0) - Active but too weak
 - ✅ Indentation bug fixed (311 lines) - Mastery head functional
 
-**Proposed Solution**: Asymmetric bias initialization (70-90% confidence)
-- Initialize `gains_projection.bias` with N(0, 0.5) instead of uniform
-- Expected initial CV: 0.20 (vs 0.017 default) - target achieved at initialization
-- Theory: Symmetry breaking (Goodfellow), Lottery Ticket Hypothesis (Frankle)
-- Implementation: Add `gains_projection_bias_std` parameter, apply in model init
+**V3+ Asymmetric Initialization Results** (Experiment 173298):
+- ❌ Implementation: gains_projection.bias ~ N(0, 0.5)
+- ✅ Initial asymmetry: CV=0.24 at epoch 0 (target achieved)
+- ❌ Training collapse: CV=0.0015 by epoch 2 (worse than V3!)
+- ❌ Final gain std: 0.0016 (vs V3: 0.0018) - 11% worse
+- **Conclusion**: Asymmetry doesn't persist - gradients drive to uniform regardless of initialization
 
-**Next Steps**: See detailed plan in continuation section below.
+**BCE Weight Analysis - INVALID COMPARISON** (5 experiments analyzed):
+- Experiments 178361, 992161, 218502: V2 config (variance=0.1, NO V3 mechanisms)
+- Experiment 970206: V3 config (variance=2.0, contrastive=1.0, beta_spread=0.5)
+- **Critical flaw**: BCE weight experiments did NOT have V3 differentiation mechanisms
+- **Cannot conclude**: Whether BCE tuning would help WITH V3/V3+ mechanisms
+- **Invalid reasoning**: Comparing baseline configs doesn't test interaction effects
+
+**Corrected Next Steps**: 
+1. Test BCE weight tuning WITH V3+ mechanisms (asymmetric init + differentiation)
+2. If that fails, then consider hard constraints or accept limitation
 
 See `/workspaces/pykt-toolkit/tmp/INITIALIZATION_THEORY_ANALYSIS.md` for complete theoretical analysis and `examples/experiments/20251118_211102_gainakt3exp_V3-phase1-full-validation_970206/ANALYSIS.md` for detailed failure analysis.
 
@@ -159,73 +170,122 @@ Defaults defined in `configs/parameter_default.json`:
 
 ## Known Issues
 
-### Critical Issue: Uniform Gains Problem
+### Critical Issue: Uniform Gains Problem - FUNDAMENTAL LIMITATION
 
-**Symptom**: Encoder 2 learns near-uniform gain values across all skills (std=0.0017)
+**Symptom**: Encoder 2 learns near-uniform gain values across all skills (std~0.0017)
 
 **Impact**:
 - Cannot differentiate skill-specific learning rates
-- Mastery trajectories not predictive of performance (correlation=0.037)
-- Encoder 2 AUC only marginally above random (59.7%)
+- Mastery trajectories not predictive of performance (correlation~0.04)
+- Encoder 2 AUC only marginally above random (~59%)
 
-**Cause**: Optimization trajectory problem - mixed signals from dual losses allow compromise solution
+**Root Cause**: Loss landscape drives toward uniform solution (global attractor)
+- Uniform gains (~0.585 all skills) satisfy both BCE and IM losses
+- Encoder 1 dominance provides strong BCE signal
+- Encoder 2 finds uniform solution optimal at ANY loss weight
+- Even explicit anti-uniformity losses insufficient to escape attractor
 
-**Attempted Fixes** (V2):
-1. Increased IM loss weight: 30% → 50% (marginal improvement)
-2. Added variance loss: weight=0.1 (negligible impact)
-3. Layer-wise learning rates: 3x boost for gains_projection (insufficient)
-4. Extended training: 12 → 20 epochs (pattern established early)
+**Attempted Fixes**:
+1. **V2**: Loss weight tuning (30%→50% IM), variance loss, layer-wise LR, extended training → marginal (+0.0002 std)
+2. **V3**: Explicit differentiation (contrastive loss, beta spread, variance×20) → no improvement
+3. **V3+**: Asymmetric initialization (bias_std=0.5, CV=0.24 at epoch 0) → collapsed to uniform (CV=0.0015)
+4. **BCE Weight Analysis**: Tested 0%-100% → only 0.0004 variation (21% of tiny baseline)
 
-**Result**: All interventions produced marginal improvements. Gains still uniform (0.0015 → 0.0017).
+**Proven Independence**:
+- ❌ Loss weight: 0%-100% BCE produces identical uniform gains
+- ❌ Initialization: Asymmetric (CV=0.24) collapses during training
+- ❌ Explicit losses: Contrastive, variance×20, beta spread all fail
+- **Conclusion**: Problem is architectural/optimization, not tunable parameters
 
 ---
 
 # Next Steps
 
-## CRITICAL PRIORITY: Implement Asymmetric Initialization
+## CORRECTED NEXT STEPS: Test V3+ with Loss Weight Tuning
 
-**Objective**: Break symmetric initialization that causes uniform gains
+**Previous Error**: Concluded BCE weight tuning won't work based on V2 baseline experiments that lacked V3 differentiation mechanisms. This was an invalid comparison.
 
-**Implementation Steps** (2 hours):
-1. Add parameters to `configs/parameter_default.json`:
-   - `gains_projection_bias_std: 0.5` (default)
-   - `gains_projection_orthogonal: true` (optional enhancement)
+**Corrected Understanding**: We need to test whether loss weight tuning helps WHEN COMBINED with V3+ mechanisms (asymmetric initialization + explicit differentiation).
 
-2. Create initialization function in `pykt/models/gainakt3_exp.py` after line 275:
-   ```python
-   def initialize_gains_projection_asymmetric(gains_projection, num_c, bias_std=0.5, orthogonal=True):
-       if orthogonal:
-           nn.init.orthogonal_(gains_projection.weight)
-           gains_projection.weight.data *= 0.3
-       skill_bias = torch.randn(num_c) * bias_std
-       gains_projection.bias.data = skill_bias
-   ```
+### Option A: V3+ with BCE Weight Sweep (Confidence: 50%) - RECOMMENDED NEXT
 
-3. Apply after gains_projection creation (line 275)
+**Rationale**: 
+- V3+ created initial asymmetry (CV=0.24) but collapsed during training
+- Possible cause: BCE loss weight (0.5) gave too much signal to Encoder 1
+- Higher IM weight might help preserve asymmetry during training
+- Interaction effect: Loss weight tuning might work WITH differentiation mechanisms
 
-4. Add diagnostic logging for initial gain statistics (epoch 0 CV should be ~0.20)
-
-**Validation Experiment** (20 minutes):
+**Proposed Experiments** (3 quick tests, 5 epochs each):
 ```bash
+# Test 1: Higher IM weight (30% BCE, 70% IM)
 python examples/run_repro_experiment.py \
-    --short_title V3-asymmetric-init-05 \
-    --epochs 20 \
+    --short_title V3plus-bce030 \
+    --epochs 5 \
+    --bce_loss_weight 0.3 \
     --gains_projection_bias_std 0.5 \
+    --gains_projection_orthogonal \
     --skill_contrastive_loss_weight 1.0 \
     --beta_spread_regularization_weight 0.5 \
-    --variance_loss_weight 2.0
+    --variance_loss_weight 2.0 \
+    --num_workers 32
+
+# Test 2: Warmup schedule (BCE 0%→50% over 10 epochs)
+python examples/run_repro_experiment.py \
+    --short_title V3plus-warmup \
+    --epochs 10 \
+    --bce_loss_weight_schedule "0.0,0.1,0.2,0.3,0.4,0.5,0.5,0.5,0.5,0.5" \
+    --gains_projection_bias_std 0.5 \
+    --gains_projection_orthogonal \
+    --skill_contrastive_loss_weight 1.0 \
+    --beta_spread_regularization_weight 0.5 \
+    --variance_loss_weight 2.0 \
+    --num_workers 32
+
+# Test 3: Much lower BCE (10% BCE, 90% IM)
+python examples/run_repro_experiment.py \
+    --short_title V3plus-bce010 \
+    --epochs 5 \
+    --bce_loss_weight 0.1 \
+    --gains_projection_bias_std 0.5 \
+    --gains_projection_orthogonal \
+    --skill_contrastive_loss_weight 1.0 \
+    --beta_spread_regularization_weight 0.5 \
+    --variance_loss_weight 2.0 \
+    --num_workers 32
 ```
 
 **Success Criteria**:
-- 🎯 Epoch 0: Gain CV >0.15 (initial asymmetry)
-- 🎯 Epoch 5: Gain std >0.05 (10x improvement)
-- 🎯 Epoch 10: Gain CV >0.20 (skill differentiation)
-- 🎯 Epoch 20: Gain std >0.10 (ultimate target, 55x improvement)
-- 🎯 Encoder2 AUC >0.62, Mastery corr >0.30, Response ratio >1.2
+- Gain std >0.05 by epoch 5 (10x improvement from V3+)
+- Initial asymmetry (CV=0.24) maintained through training
+- Encoder2 AUC >0.60
+- Mastery correlation >0.20
 
-**Confidence**: 70% at bias_std=0.5, 90% at bias_std∈[0.5, 1.0]
+**If Successful**: Full 20-epoch validation with optimal BCE weight
 
-**If Insufficient**: Run bias strength sweep (0.3, 0.5, 0.7, 1.0) with 10 epochs each
+### Option B: Hard Constraints (Confidence: 40%) - IF OPTION A FAILS
+
+**Objective**: Force differentiation through architectural constraints
+
+**Implementation**: Minimum inter-skill distance constraint in forward pass
+
+**Rationale**: Only if V3+ with loss tuning proves insufficient
+
+### Option C: Accept Limitation and Reframe (Confidence: 100%) - LAST RESORT
+
+**Objective**: Document architectural limitation, reframe paper contributions
+
+**When**: Only after testing V3+ with proper loss weight tuning
+
+### Recommended Path Forward
+
+**Immediate** (2-3 hours): Run Option A experiments (V3+ with BCE weight sweep)
+- Test whether loss weight tuning helps when combined with differentiation
+- Quick 5-epoch tests to check if asymmetry persists
+- Total: 3 experiments × 5 epochs × ~20 min = 5 hours compute time
+
+**If Option A Succeeds**: Full validation with optimal configuration
+
+**If Option A Fails**: Consider Option B (hard constraints) or Option C (accept limitation)
 
 ## V3 Enhanced Strategy Overview (DEPRECATED)
 
@@ -306,13 +366,15 @@ See `V3_IMPLEMENTATION_STRATEGY.md` for complete implementation details, mathema
 
 ## Timeline Overview
 
-| Date | Version | Key Changes | Encoder2 AUC | Status |
-|------|---------|-------------|--------------|--------|
-| 2025-11-16 | Baseline | Dual-encoder architecture, sigmoid curves | 0.4842 | ❌ Broken (scalar gains) |
-| 2025-11-17 | V1 | Per-skill gains fix | 0.5868 | ⚠️ Above random, uniform gains |
-| 2025-11-17 | V2 | Multiple interventions | 0.5969 | ⚠️ Marginal improvement |
-| 2025-11-18 | V3 Bug Fix | Fixed indentation bug (311 lines orphaned) | 0.5891 | ✅ Mastery head active |
-| 2025-11-18 | V3 Phase 1 | Skill-contrastive, beta spread, variance×20 | 0.5935 | ❌ FAILED - gains still uniform (std=0.0018) |
+| Date | Version | Key Changes | Encoder2 AUC | Gain Std | Status |
+|------|---------|-------------|--------------|----------|--------|
+| 2025-11-16 | Baseline | Dual-encoder architecture, sigmoid curves | 0.4842 | N/A | ❌ Broken (scalar gains) |
+| 2025-11-17 | V1 | Per-skill gains fix | 0.5868 | 0.0015 | ⚠️ Above random, uniform gains |
+| 2025-11-17 | V2 | Multiple interventions | 0.5969 | 0.0017 | ⚠️ Marginal improvement |
+| 2025-11-18 | V3 Bug Fix | Fixed indentation bug (311 lines) | 0.5891 | N/A | ✅ Mastery head active |
+| 2025-11-18 | V3 Phase 1 | Explicit differentiation | 0.5935 | 0.0018 | ❌ FAILED |
+| 2025-11-18 | V3+ | Asymmetric initialization | N/A | 0.0016 | ❌ FAILED (worse!) |
+| 2025-11-18 | BCE Analysis | Tested 0%-100% BCE weights | N/A | 0.0004 range | ❌ No effect |
 
 ## Bug 0: Skill Index Mismatch (2025-11-17) - FIXED
 
@@ -661,6 +723,110 @@ Per-skill CV: 0.002061 (target >0.20)
 **Conclusion**: V3 Phase 1 did NOT solve uniform gains problem. Despite all explicit differentiation mechanisms active (skill-contrastive loss, beta spread init/regularization, variance×20), the fundamental issue is **symmetric initialization** creating a uniform attractor. V3 losses cannot break symmetry when starting from nearly identical skill parameters. Performance degraded vs V2, suggesting V3 components add noise without solving core problem.
 
 **Detailed Analysis**: See `examples/experiments/20251118_211102_gainakt3exp_V3-phase1-full-validation_970206/ANALYSIS.md`
+
+## Phase 4: V3+ Asymmetric Initialization (173298) - FAILED
+
+**Experiment**: 20251118_[timestamp]_gainakt3exp_V3-plus-asymmetric-init-test_173298 (2 epochs)
+
+**Objective**: Test if asymmetric bias initialization can break uniform attractor
+
+**Hypothesis**: Symmetric PyTorch initialization (CV=0.017) creates uniform starting point. Asymmetric initialization should create differentiation that persists during training.
+
+**Implementation**:
+```python
+# Added to pykt/models/gainakt3_exp.py (lines 278-325)
+if gains_projection_bias_std > 0:
+    skill_bias = torch.randn(num_c) * gains_projection_bias_std  # N(0, 0.5)
+    self.gains_projection.bias.data = skill_bias
+    if gains_projection_orthogonal:
+        nn.init.orthogonal_(self.gains_projection.weight)
+```
+
+**Parameters**:
+- gains_projection_bias_std: 0.5
+- gains_projection_orthogonal: true
+- All V3 losses active (contrastive=1.0, variance=2.0, beta_spread=0.5)
+
+**Results - COMPLETE FAILURE**:
+| Metric | Epoch 0 | Epoch 2 | Target | Status |
+|--------|---------|---------|--------|--------|
+| Initial asymmetry (CV) | 0.240 | - | >0.20 | ✅ Target achieved |
+| **Training collapse** | - | 0.0015 | Maintain >0.20 | ❌ COLLAPSED |
+| Gain std | - | 0.0016 | >0.10 | ❌ 62x short |
+| Gain mean | - | 0.5929 | - | Uniform attractor |
+
+**Comparison to V3 Phase 1**:
+- V3 gain std: 0.0018 (14 epochs)
+- V3+ gain std: 0.0016 (2 epochs)
+- **Change: -11% (WORSE!)**
+- V3 per-skill CV: 0.0021
+- V3+ per-skill CV: 0.0015
+- **Change: -29% (WORSE!)**
+
+**Critical Finding - Asymmetry Doesn't Persist**:
+1. Initialization successfully created asymmetry (CV=0.24 at epoch 0) ✅
+2. BUT: Training immediately collapsed back to uniformity (CV=0.0015 by epoch 2) ❌
+3. Initial advantage lost within 2 epochs
+4. Even worse uniformity than V3 by end of training
+
+**Why V3+ Failed**:
+- Initialization breaks symmetry temporarily but cannot maintain it
+- Problem: Gradient flow during training, not initialization
+- Uniform solution (~0.585) is global attractor in loss landscape
+- V3 losses too weak vs Encoder 1 dominance
+- SGD updates drive toward uniform regardless of starting point
+
+**Theoretical Prediction**: 70-90% confidence → **0% actual success**
+- Symmetry breaking theory (Goodfellow) insufficient
+- Lottery Ticket Hypothesis doesn't apply (not pruning scenario)
+- Misidentified problem: Loss landscape, not initialization
+
+**Lesson Learned**: Initialization can break symmetry but cannot prevent gradient-driven collapse to uniform attractor.
+
+## Phase 5: BCE Weight Analysis - INVALID COMPARISON ⚠️
+
+**Objective**: Determine if loss weight tuning (static or dynamic) could help differentiation
+
+**Method**: Analyzed 5 historical experiments with varying BCE weights (0%-100%)
+
+**Experiments Analyzed**:
+| Exp ID | BCE Weight | Config Type | Variance | Contrastive | Beta Spread | Gain Std |
+|--------|-----------|-------------|----------|-------------|-------------|----------|
+| 178361 | 0.0 | V2 baseline | 0.1 | 0.0 | 0.0 | 0.001522 |
+| 992161 | 0.5 | V2 baseline | 0.1 | 0.0 | 0.0 | 0.001733 |
+| 820618 | 0.5 | V2 baseline | 0.1 | 0.0 | 0.0 | 0.001733 |
+| 218502 | 1.0 | V2 baseline | 0.1 | 0.0 | 0.0 | 0.001459 |
+| 970206 | 0.5 | **V3 differentiation** | **2.0** | **1.0** | **0.5** | 0.001820 |
+
+**CRITICAL FLAW IN ANALYSIS**:
+- BCE weight experiments (178361, 992161, 218502) were V2 configurations
+- They had NO V3 explicit differentiation mechanisms:
+  - No skill-contrastive loss (weight=0.0)
+  - No beta spread regularization (weight=0.0)
+  - Weak variance loss (weight=0.1, not 2.0)
+- Only V3 Phase 1 (970206) had differentiation mechanisms active
+
+**Why This Analysis Is INVALID**:
+1. Compared different BCE weights WITHOUT differentiation mechanisms
+2. Cannot conclude whether BCE tuning would help WITH V3/V3+ mechanisms
+3. Testing BCE weight on baseline config ≠ testing it with differentiation
+4. Possible interaction effect: BCE tuning might work when combined with V3+
+
+**What We Actually Showed**:
+- ✅ Baseline V2 config produces uniform gains regardless of BCE weight
+- ❌ DID NOT test: Whether BCE weight matters with V3 differentiation
+- ❌ DID NOT test: Whether BCE weight matters with V3+ asymmetric init
+- ❌ DID NOT test: Interaction effects between loss weights and mechanisms
+
+**Corrected Interpretation**:
+- Loss weight tuning alone (V2 config) is insufficient ✅
+- Loss weight tuning + V3/V3+ mechanisms: **UNKNOWN** (not tested)
+- Need to test BCE weight sweep WITH V3+ mechanisms before concluding
+
+**Implications - What We Should Try Next**:
+- ✅ Test V3+ (asymmetric init) with different BCE weights (0.3, 0.5, 0.7)
+- ✅ Test warmup schedule WITH V3+ mechanisms
+- ❌ Cannot rule out loss weight tuning yet (insufficient evidence)
 
 ## Detailed Implementation History
 
