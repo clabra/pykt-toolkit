@@ -1,0 +1,46 @@
+import argparse
+from wandb_train import main
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_name", type=str, default="assist2015")
+    parser.add_argument("--model_name", type=str, default="gainakt3exp")
+    parser.add_argument("--emb_type", type=str, default="qid")
+    parser.add_argument("--save_dir", type=str, default="saved_model")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--fold", type=int, default=0)
+    parser.add_argument("--dropout", type=float, default=0.2)
+    
+    parser.add_argument("--d_model", type=int, default=256)
+    parser.add_argument("--d_ff", type=int, default=512)
+    parser.add_argument("--num_attn_heads", type=int, default=4)
+    parser.add_argument("--n_blocks", type=int, default=4)
+    parser.add_argument("--learning_rate", type=float, default=0.000174)
+    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--weight_decay", type=float, default=1.7571e-05)
+    parser.add_argument("--optimizer", type=str, default="Adam")
+    parser.add_argument("--gradient_clip", type=float, default=1.0)
+    parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument("--monitor_freq", type=int, default=50)
+    parser.add_argument("--max_correlation_students", type=int, default=3800)
+    parser.add_argument("--seq_len", type=int, default=200)
+    parser.add_argument("--num_encoder_blocks", type=int, default=4)
+    parser.add_argument("--num_students", type=int, default=3055)
+    parser.add_argument("--mastery_threshold_init", type=float, default=0.85)
+    parser.add_argument("--threshold_temperature", type=float, default=1.0)
+    parser.add_argument("--bce_loss_weight", type=float, default=0.5)
+    parser.add_argument("--variance_loss_weight", type=float, default=0.1)
+    parser.add_argument("--beta_skill_init", type=float, default=2.0)
+    parser.add_argument("--m_sat_init", type=float, default=0.8)
+    parser.add_argument("--gamma_student_init", type=float, default=1.0)
+    parser.add_argument("--sigmoid_offset", type=float, default=2.0)
+    parser.add_argument("--use_inverse_warmup", action="store_true")
+
+    parser.add_argument("--use_wandb", type=int, default=0)
+    parser.add_argument("--add_uuid", type=int, default=0)
+   
+    args = parser.parse_args()
+
+    params = vars(args)
+    main(params)

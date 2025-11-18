@@ -464,309 +464,317 @@ class GainAKT3Exp(nn.Module):
         # GainAKT3Exp always computes sigmoid mastery trajectories (core feature)
         # ============================================================================
         # GainAKT3Exp CORE INNOVATION: Values from Encoder 2 ARE Learning Gains
-        # ============================================================================
-        # Conceptual Model: Encoder 2's Value output directly represents how
-        # much the student learned from that (skill, response) tuple.
-        # 
-        # Encoder 2 learns Q, K, V specifically for detecting learning gains patterns
-        # This encoder is optimized for interpretability (mastery trajectories)
-        # 
-        # Educational Meaning:
-        # - Value output from Encoder 2 = learning gain for this interaction
-        # - No intermediate projection needed (Values encode gains directly)
-        # - ReLU ensures non-negative learning (no knowledge loss)
-        # - Direct mapping provides maximal interpretability
-        # ============================================================================
-        
-        # Values from Encoder 2 directly represent learning gains [B, L, D]
-        # Each interaction's contribution to knowledge accumulation
-        learning_gains_d = torch.relu(value_seq_2)  # Non-negative learning only
-        
-        # COMMENTED OUT: Old approach using gain_head projection
-        # The projection layer obscured the direct Value→Gain relationship
-        # # Project D-dimensional gains to per-skill gains [B, L, num_c]
-        # # Use gain_head to extract skill-specific learning gains from D-dimensional representation
-        # if hasattr(self, 'gain_head') and self.gain_head is not None:
-        #     projected_gains_raw = torch.relu(self.gain_head(learning_gains_d))  # [B, L, num_c]
-        # else:
-        #     # Fallback: aggregate D-dimensional gains across dimensions
-        #     # Then broadcast to num_c (each skill gets same aggregated gain)
-        #     aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
-        #     projected_gains_raw = aggregated_gains.expand(-1, -1, self.num_c)  # [B, L, num_c]
-        # 
-        # # Normalize gains to [0, 1] range using sigmoid
-        # # This ensures gains are bounded and interpretable
-        # projected_gains = torch.sigmoid(projected_gains_raw)  # [B, L, num_c] in [0, 1]
-        
-        # NEW APPROACH: Direct Value→Gain mapping
-        # For each timestep, the learning gain applies to the skill being practiced
-        # We aggregate the D-dimensional gain representation to a scalar per interaction
-        aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
-        
-        # Normalize to [0, 1] range for bounded learning increments
-        # Using sigmoid ensures smooth, bounded gains that don't explode during accumulation
-        projected_gains = torch.sigmoid(aggregated_gains).expand(-1, -1, self.num_c)  # [B, L, num_c]
-        
-        # ============================================================================
-        # ═══════════════════════════════════════════════════════════════════════════
-        # SIGMOID LEARNING CURVE MASTERY (2025-11-16 Architecture Update)
-        # ═══════════════════════════════════════════════════════════════════════════
-        # Educational Model: Practice count-driven sigmoid learning curves
-        # 
-        # Formula: mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
-        # 
-        # Where:
-        # - practice_count[i,s,t] = number of times student i practiced skill s up to timestep t
-        # - β_skill[s]: Skill difficulty (controls learning curve steepness)
-        # - γ_student[i]: Student learning velocity (modulates progression speed)
-        # - M_sat[s]: Saturation mastery level (maximum achievable per skill)
-        # - offset: Inflection point (controls when rapid learning begins)
-        # 
-        # Three Automatic Learning Phases:
-        # 1. Initial Phase (practice_count ≈ 0): Mastery ≈ 0 (warm-up/familiarization)
-        # 2. Growth Phase (intermediate): Rapid mastery increase (effective learning)
-        #    Slope = (β_skill × γ_student × M_sat) / 4 at inflection point
-        # 3. Saturation Phase (high practice_count): Mastery → M_sat[s] (consolidation)
-        # 
-        # Interpretability Guarantee:
-        # - Direct transparency: mastery depends ONLY on practice count (observable)
-        # - Can predict future mastery: "After N more practices, mastery will be X"
-        # - Can explain current mastery: "Student has practiced this skill N times"
-        # - No hidden accumulation or opaque transformations
-        # ═══════════════════════════════════════════════════════════════════════════
-        
-        batch_size, seq_len, _ = projected_gains.shape
-        
-        # Step 1: Compute per-skill gains from Encoder 2 (FIX: 2025-11-17)
-        # ═══════════════════════════════════════════════════════════════════════════
-        # OLD (BROKEN): Scalar gain_quality [B, L, 1] - same increment for ALL skills
-        # NEW (FIXED): Per-skill gains [B, L, num_c] - different increment per skill
-        # 
-        # This enables Encoder 2 to learn:
-        # - Which skills are relevant for each question (Q-matrix learning)
-        # - How much each interaction improves each specific skill
-        # - Skill-specific learning rates (some skills harder than others)
-        # ═══════════════════════════════════════════════════════════════════════════
-        # Project value_seq_2 to skill-space and normalize to [0, 1]
-        skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
-        
-        # V2 (2025-11-17): Compute variance loss to encourage skill differentiation
-        # Maximize variance across skills per interaction to prevent uniform gains
-        # variance_loss is negative (we want to minimize -variance = maximize variance)
-        gain_variance_per_interaction = skill_gains.var(dim=-1, keepdim=False)  # [B, L]
-        variance_loss = -gain_variance_per_interaction.mean()  # Scalar loss (negative = encourage high variance)
-        
-        # V3 (2025-11-18): Add skill-contrastive loss to prevent uniform gains
-        # Cross-skill comparison mechanism - encourages different skills to have different gain patterns
-        # This addresses "lazy solution" problem observed in experiments 992161, 178361, 218502, etc.
-        skill_contrastive_loss = self.compute_skill_contrastive_loss(skill_gains)  # Scalar loss
-        
-        # V3 (2025-11-18): Add beta spread regularization to prevent parameter collapse
-        # Maintains beta_skill variance during training (target: std > 0.3)
-        # Prevents beta parameters from collapsing to uniform values
-        beta_spread_regularization = self.compute_beta_spread_regularization()  # Scalar loss
-        
-        # Step 2: Accumulate per-skill effective practice (quality-weighted)
-        # Each skill accumulates its own gain at each timestep
-        # This replaces the scalar gain_quality that applied uniformly to all skills
-        # ═══════════════════════════════════════════════════════════════════════════
-        effective_practice = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
-        
-        for t in range(seq_len):
-            if t > 0:
-                # Carry forward previous effective practice for all skills
-                effective_practice[:, t, :] = effective_practice[:, t-1, :].clone()
+            # ============================================================================
+            # Conceptual Model: Encoder 2's Value output directly represents how
+            # much the student learned from that (skill, response) tuple.
+            # 
+            # Encoder 2 learns Q, K, V specifically for detecting learning gains patterns
+            # This encoder is optimized for interpretability (mastery trajectories)
+            # 
+            # Educational Meaning:
+            # - Value output from Encoder 2 = learning gain for this interaction
+            # - No intermediate projection needed (Values encode gains directly)
+            # - ReLU ensures non-negative learning (no knowledge loss)
+            # - Direct mapping provides maximal interpretability
+            # ============================================================================
             
-            # Add per-skill gains - each skill gets its own increment
-            # This is fully differentiable: gradients flow back through
-            # skill_gains → gains_projection → value_seq_2 → Encoder 2
-            effective_practice[:, t, :] += skill_gains[:, t, :]
-        
-        # Step 3: Compute sigmoid learning curve mastery using effective practice
-        # Handle gamma_student (fixed vs dynamic per-batch)
-        if self.has_fixed_student_params:
-            if student_ids is not None:
-                # Use per-student gamma values indexed by student IDs
-                gamma = self.gamma_student[student_ids]  # [batch_size]
-            else:
-                # Fallback: use mean gamma if student IDs not provided (backward compatibility)
-                gamma = self.gamma_student.mean().unsqueeze(0).expand(batch_size)  # [batch_size]
-        else:
-            # Dynamic mode: learn gamma per batch (not per-student identity)
-            # Use uniform gamma=1.0 for all students in this batch
-            gamma = torch.ones(batch_size, device=q.device)  # [batch_size]
-        
-        # Expand dimensions for broadcasting:
-        # beta_skill: [num_c] → [1, 1, num_c]
-        # gamma: [batch_size] → [batch_size, 1, 1]
-        # M_sat: [num_c] → [1, 1, num_c]
-        # offset: scalar
-        # practice_count: [batch_size, seq_len, num_c]
-        
-        beta_expanded = self.beta_skill.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
-        gamma_expanded = gamma.unsqueeze(1).unsqueeze(2)  # [batch_size, 1, 1]
-        M_sat_expanded = self.M_sat.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
-        
-        # Compute sigmoid input: β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset
-        # effective_practice is differentiable through Encoder 2!
-        sigmoid_input = (beta_expanded * gamma_expanded * effective_practice) - self.offset
-        
-        # Compute mastery: M_sat[s] × sigmoid(...)
-        projected_mastery = M_sat_expanded * torch.sigmoid(sigmoid_input)  # [batch_size, seq_len, num_c]
-        
-        # Clamp to [0, 1] for numerical stability (sigmoid output should already be in this range)
-        projected_mastery = torch.clamp(projected_mastery, min=0.0, max=1.0)
-        
-        # DEBUG: Log mastery accumulation statistics for first batch
-        if batch_idx == 0:  # Log for first batch of each epoch
-            mastery_range = projected_mastery.max() - projected_mastery.min()
-            mastery_std = projected_mastery.std()
-            avg_effective_practice = effective_practice.sum() / (batch_size * seq_len * self.num_c)
+            # Values from Encoder 2 directly represent learning gains [B, L, D]
+            # Each interaction's contribution to knowledge accumulation
+            learning_gains_d = torch.relu(value_seq_2)  # Non-negative learning only
             
-            print("DEBUG GainAKT3Exp - Dual-Encoder Mastery Stats:")
-            print(f"  Mastery range: {mastery_range:.4f}, std: {mastery_std:.4f}")
-            print(f"  Avg effective practice: {avg_effective_practice:.4f}")
-            print(f"  Avg per-skill gains (Encoder 2 output): {skill_gains.mean():.4f}")
-            print(f"  Skill gains std (differentiation): {skill_gains.std():.4f}")
-            print("  Sample mastery progression for first student, first 5 skills:")
-            for skill in range(min(5, projected_mastery.shape[2])):
-                skill_mastery = projected_mastery[0, :, skill]
-                practiced_timesteps = (q[0] == skill).nonzero(as_tuple=True)[0]
-                if len(practiced_timesteps) > 0:
-                    print(f"    Skill {skill}: {skill_mastery[practiced_timesteps].cpu().detach().numpy()}")
-        
-        # ═══════════════════════════════════════════════════════════════════════════
-        # GLOBAL THRESHOLD PREDICTION (2025-11-16 Architecture Update)
-        # ═══════════════════════════════════════════════════════════════════════════
-        # Generate predictions using global learnable threshold θ_global
-        # 
-        # Formula: incremental_mastery_predictions = sigmoid((mastery - θ_global) / temperature)
-        # 
-        # If mastery >= θ_global: prediction approaches 1.0 (correct)
-        # If mastery < θ_global: prediction approaches 0.0 (incorrect)
-        # 
-        # Global threshold simplifies the model:
-        # - Single learnable parameter θ_global instead of per-skill thresholds
-        # - Same performance criterion applies across all skills
-        # - Reduces parameter count while maintaining interpretability
-        # ═══════════════════════════════════════════════════════════════════════════
-        
-        # Get the skill ID for each timestep
-        # FIX (2025-11-17): Use CURRENT skill (q) not NEXT skill (target_concepts)
-        # Investigation showed 98.2% of prediction mismatches occurred at skill changes
-        # because model was using mastery for q[t+1] instead of q[t]
-        skill_indices = q.long()  # [B, L] - use current question's skill
-        
-        # Gather mastery for the actual skills being tested
-        # projected_mastery: [B, L, num_c], we need [B, L] by selecting skill at each step
-        batch_indices = torch.arange(batch_size, device=q.device).unsqueeze(1).expand(-1, seq_len)
-        time_indices = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
-        skill_mastery = projected_mastery[batch_indices, time_indices, skill_indices]  # [B, L]
-        
-        # Use global threshold (clamped to [0,1] for stability)
-        theta_clamped = torch.clamp(self.theta_global, 0.0, 1.0)
-        
-        # Compute incremental mastery predictions (differentiable via sigmoid)
-        # These are separate from the base predictions and used for interpretability loss
-        incremental_mastery_predictions = torch.sigmoid((skill_mastery - theta_clamped) / self.threshold_temperature)
-        
-        # DEBUG: Comprehensive diagnostics for first batch of each epoch
-        if batch_idx == 0:  # Log for first batch of each epoch
-            import numpy as np
+            # COMMENTED OUT: Old approach using gain_head projection
+            # The projection layer obscured the direct Value→Gain relationship
+            # # Project D-dimensional gains to per-skill gains [B, L, num_c]
+            # # Use gain_head to extract skill-specific learning gains from D-dimensional representation
+            # if hasattr(self, 'gain_head') and self.gain_head is not None:
+            #     projected_gains_raw = torch.relu(self.gain_head(learning_gains_d))  # [B, L, num_c]
+            # else:
+            #     # Fallback: aggregate D-dimensional gains across dimensions
+            #     # Then broadcast to num_c (each skill gets same aggregated gain)
+            #     aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
+            #     projected_gains_raw = aggregated_gains.expand(-1, -1, self.num_c)  # [B, L, num_c]
+            # 
+            # # Normalize gains to [0, 1] range using sigmoid
+            # # This ensures gains are bounded and interpretable
+            # projected_gains = torch.sigmoid(projected_gains_raw)  # [B, L, num_c] in [0, 1]
             
-            # Basic statistics
-            im_pred_range = incremental_mastery_predictions.max() - incremental_mastery_predictions.min()
-            im_pred_std = incremental_mastery_predictions.std()
-            base_pred_range = predictions.max() - predictions.min()
-            base_pred_std = predictions.std()
+            # NEW APPROACH: Direct Value→Gain mapping
+            # For each timestep, the learning gain applies to the skill being practiced
+            # We aggregate the D-dimensional gain representation to a scalar per interaction
+            aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
             
-            # Mastery value statistics (CRITICAL DIAGNOSTIC)
-            mastery_min = skill_mastery.min().item()
-            mastery_max = skill_mastery.max().item()
-            mastery_mean = skill_mastery.mean().item()
-            mastery_std = skill_mastery.std().item()
+            # Normalize to [0, 1] range for bounded learning increments
+            # Using sigmoid ensures smooth, bounded gains that don't explode during accumulation
+            projected_gains = torch.sigmoid(aggregated_gains).expand(-1, -1, self.num_c)  # [B, L, num_c]
             
-            # Mastery-performance correlation (CRITICAL DIAGNOSTIC)
-            # Flatten and filter valid positions (use r which is the response tensor)
-            valid_mask = (r >= 0) & (r <= 1)
-            valid_mastery = skill_mastery[valid_mask].cpu().detach().numpy()
-            valid_responses = r[valid_mask].cpu().detach().numpy()
+            # ============================================================================
+            # ═══════════════════════════════════════════════════════════════════════════
+            # SIGMOID LEARNING CURVE MASTERY (2025-11-16 Architecture Update)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Educational Model: Practice count-driven sigmoid learning curves
+            # 
+            # Formula: mastery[i,s,t] = M_sat[s] × sigmoid(β_skill[s] × γ_student[i] × practice_count[i,s,t] - offset)
+            # 
+            # Where:
+            # - practice_count[i,s,t] = number of times student i practiced skill s up to timestep t
+            # - β_skill[s]: Skill difficulty (controls learning curve steepness)
+            # - γ_student[i]: Student learning velocity (modulates progression speed)
+            # - M_sat[s]: Saturation mastery level (maximum achievable per skill)
+            # - offset: Inflection point (controls when rapid learning begins)
+            # 
+            # Three Automatic Learning Phases:
+            # 1. Initial Phase (practice_count ≈ 0): Mastery ≈ 0 (warm-up/familiarization)
+            # 2. Growth Phase (intermediate): Rapid mastery increase (effective learning)
+            #    Slope = (β_skill × γ_student × M_sat) / 4 at inflection point
+            # 3. Saturation Phase (high practice_count): Mastery → M_sat[s] (consolidation)
+            # 
+            # Interpretability Guarantee:
+            # - Direct transparency: mastery depends ONLY on practice count (observable)
+            # - Can predict future mastery: "After N more practices, mastery will be X"
+            # - Can explain current mastery: "Student has practiced this skill N times"
+            # - No hidden accumulation or opaque transformations
+            # ═══════════════════════════════════════════════════════════════════════════
             
-            if len(valid_mastery) > 1:
-                mastery_perf_corr = np.corrcoef(valid_mastery, valid_responses)[0, 1]
-                # Also check correlation between IM predictions and responses
-                valid_im_preds = incremental_mastery_predictions[valid_mask].cpu().detach().numpy()
-                im_pred_perf_corr = np.corrcoef(valid_im_preds, valid_responses)[0, 1]
-            else:
-                mastery_perf_corr = 0.0
-                im_pred_perf_corr = 0.0
+            batch_size, seq_len, _ = projected_gains.shape
             
-            # Theta gradient check (is it learning?)
-            theta_grad = self.theta_global.grad
-            theta_has_grad = theta_grad is not None
-            theta_grad_norm = theta_grad.abs().item() if theta_has_grad else 0.0
+            # Step 1: Compute per-skill gains from Encoder 2 (FIX: 2025-11-17)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # OLD (BROKEN): Scalar gain_quality [B, L, 1] - same increment for ALL skills
+            # NEW (FIXED): Per-skill gains [B, L, num_c] - different increment per skill
+            # 
+            # This enables Encoder 2 to learn:
+            # - Which skills are relevant for each question (Q-matrix learning)
+            # - How much each interaction improves each specific skill
+            # - Skill-specific learning rates (some skills harder than others)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Project value_seq_2 to skill-space and normalize to [0, 1]
+            skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
             
-            print("\n" + "="*80)
-            print("DEBUG GainAKT3Exp - COMPREHENSIVE DIAGNOSTICS (batch_idx=0)")
-            print("="*80)
+            # V2 (2025-11-17): Compute variance loss to encourage skill differentiation
+            # Maximize variance across skills per interaction to prevent uniform gains
+            # variance_loss is negative (we want to minimize -variance = maximize variance)
+            gain_variance_per_interaction = skill_gains.var(dim=-1, keepdim=False)  # [B, L]
+            variance_loss = -gain_variance_per_interaction.mean()  # Scalar loss (negative = encourage high variance)
             
-            print("\n[1] MASTERY VALUE DISTRIBUTION (CRITICAL):")
-            print(f"  Min:  {mastery_min:.4f}")
-            print(f"  Max:  {mastery_max:.4f}")
-            print(f"  Mean: {mastery_mean:.4f}")
-            print(f"  Std:  {mastery_std:.4f}")
-            print(f"  ⚠️  Expected: min≈0, max≈1, std>0.2 for good variance")
-            if mastery_std < 0.1:
-                print(f"  ❌ LOW VARIANCE! Mastery values too compressed (std={mastery_std:.4f})")
-            if mastery_mean < 0.1 or mastery_mean > 0.9:
-                print(f"  ❌ EXTREME MEAN! Mastery values biased (mean={mastery_mean:.4f})")
+            # V3 (2025-11-18): Add skill-contrastive loss to prevent uniform gains
+            # Cross-skill comparison mechanism - encourages different skills to have different gain patterns
+            # This addresses "lazy solution" problem observed in experiments 992161, 178361, 218502, etc.
+            skill_contrastive_loss = self.compute_skill_contrastive_loss(skill_gains)  # Scalar loss
             
-            print("\n[2] MASTERY-PERFORMANCE CORRELATION (CRITICAL):")
-            print(f"  Mastery ↔ Response:     {mastery_perf_corr:.4f}")
-            print(f"  IM_Prediction ↔ Response: {im_pred_perf_corr:.4f}")
-            print(f"  ⚠️  Expected: >0.4 for predictive mastery, >0.5 ideal")
-            if abs(mastery_perf_corr) < 0.2:
-                print(f"  ❌ MASTERY NOT PREDICTIVE! Correlation too low ({mastery_perf_corr:.4f})")
+            # V3 (2025-11-18): Add beta spread regularization to prevent parameter collapse
+            # Maintains beta_skill variance during training (target: std > 0.3)
+            # Prevents beta parameters from collapsing to uniform values
+            beta_spread_regularization = self.compute_beta_spread_regularization()  # Scalar loss
             
-            print("\n[3] THETA GRADIENT FLOW:")
-            print(f"  θ_global value:    {theta_clamped:.4f}")
-            print(f"  Has gradient:      {theta_has_grad}")
-            print(f"  Gradient magnitude: {theta_grad_norm:.6f}")
-            if not theta_has_grad:
-                print(f"  ❌ NO GRADIENT! Theta not learning")
-            elif theta_grad_norm < 1e-6:
-                print(f"  ⚠️  VANISHING GRADIENT! ({theta_grad_norm:.6f})")
+            # Step 2: Accumulate per-skill effective practice (quality-weighted)
+            # Each skill accumulates its own gain at each timestep
+            # This replaces the scalar gain_quality that applied uniformly to all skills
+            # ═══════════════════════════════════════════════════════════════════════════
+            effective_practice = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
             
-            print("\n[4] PREDICTION DISTRIBUTIONS:")
-            print(f"  Base (Encoder1):   range={base_pred_range:.4f}, std={base_pred_std:.4f}")
-            print(f"  IM (Encoder2):     range={im_pred_range:.4f}, std={im_pred_std:.4f}")
-            print(f"  ⚠️  IM range should be >0.3 for useful predictions")
-            if im_pred_range < 0.2:
-                print(f"  ❌ COMPRESSED PREDICTIONS! IM range too narrow ({im_pred_range:.4f})")
+            for t in range(seq_len):
+                if t > 0:
+                    # Carry forward previous effective practice for all skills
+                    effective_practice[:, t, :] = effective_practice[:, t-1, :].clone()
+                
+                # Add per-skill gains - each skill gets its own increment
+                # This is fully differentiable: gradients flow back through
+                # skill_gains → gains_projection → value_seq_2 → Encoder 2
+                effective_practice[:, t, :] += skill_gains[:, t, :]
             
-            print("\n[5] TEMPERATURE & THRESHOLD:")
-            print(f"  Temperature:  {self.threshold_temperature}")
-            print(f"  θ_global:     {theta_clamped:.4f}")
-            print(f"  Formula: sigmoid((mastery - {theta_clamped:.4f}) / {self.threshold_temperature})")
-            
-            print("\n[6] SAMPLE VALUES (first student, first 10 steps):")
-            print(f"  Mastery:      {skill_mastery[0, :10].cpu().detach().numpy()}")
-            print(f"  Base preds:   {predictions[0, :10].cpu().detach().numpy()}")
-            print(f"  IM preds:     {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
-            print(f"  True labels:  {r[0, :10].cpu().detach().numpy()}")
-            
-            print("\n[7] LEARNABLE PARAMETERS (first 5):")
-            print(f"  β_skill:   {self.beta_skill[:5].cpu().detach().numpy()}")
-            print(f"  M_sat:     {self.M_sat[:5].cpu().detach().numpy()}")
+            # Step 3: Compute sigmoid learning curve mastery using effective practice
+            # Handle gamma_student (fixed vs dynamic per-batch)
             if self.has_fixed_student_params:
-                print(f"  γ_student: {self.gamma_student[:5].cpu().detach().numpy()}")
+                if student_ids is not None:
+                    # Use per-student gamma values indexed by student IDs
+                    gamma = self.gamma_student[student_ids]  # [batch_size]
+                else:
+                    # Fallback: use mean gamma if student IDs not provided (backward compatibility)
+                    gamma = self.gamma_student.mean().unsqueeze(0).expand(batch_size)  # [batch_size]
             else:
-                print(f"  γ_student: Dynamic (batch mean={gamma.mean():.4f})")
-            print(f"  offset:    {self.offset.item():.4f}")
+                # Dynamic mode: learn gamma per batch (not per-student identity)
+                # Use uniform gamma=1.0 for all students in this batch
+                gamma = torch.ones(batch_size, device=q.device)  # [batch_size]
             
-            print("="*80 + "\n")
-        
-        # Do NOT override base predictions - keep both for dual loss computation
+            # Expand dimensions for broadcasting:
+            # beta_skill: [num_c] → [1, 1, num_c]
+            # gamma: [batch_size] → [batch_size, 1, 1]
+            # M_sat: [num_c] → [1, 1, num_c]
+            # offset: scalar
+            # practice_count: [batch_size, seq_len, num_c]
+            
+            beta_expanded = self.beta_skill.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+            gamma_expanded = gamma.unsqueeze(1).unsqueeze(2)  # [batch_size, 1, 1]
+            M_sat_expanded = self.M_sat.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+            
+            # Compute sigmoid input: β_skill[s] × γ_student[i] × effective_practice[i,s,t] - offset
+            # effective_practice is differentiable through Encoder 2!
+            sigmoid_input = (beta_expanded * gamma_expanded * effective_practice) - self.offset
+            
+            # Compute mastery: M_sat[s] × sigmoid(...)
+            projected_mastery = M_sat_expanded * torch.sigmoid(sigmoid_input)  # [batch_size, seq_len, num_c]
+            
+            # Clamp to [0, 1] for numerical stability (sigmoid output should already be in this range)
+            projected_mastery = torch.clamp(projected_mastery, min=0.0, max=1.0)
+            
+            # DEBUG: Log mastery accumulation statistics for first batch
+            if batch_idx == 0:  # Log for first batch of each epoch
+                mastery_range = projected_mastery.max() - projected_mastery.min()
+                mastery_std = projected_mastery.std()
+                avg_effective_practice = effective_practice.sum() / (batch_size * seq_len * self.num_c)
+                
+                print("DEBUG GainAKT3Exp - Dual-Encoder Mastery Stats:")
+                print(f"  Mastery range: {mastery_range:.4f}, std: {mastery_std:.4f}")
+                print(f"  Avg effective practice: {avg_effective_practice:.4f}")
+                print(f"  Avg per-skill gains (Encoder 2 output): {skill_gains.mean():.4f}")
+                print(f"  Skill gains std (differentiation): {skill_gains.std():.4f}")
+                print("  Sample mastery progression for first student, first 5 skills:")
+                for skill in range(min(5, projected_mastery.shape[2])):
+                    skill_mastery = projected_mastery[0, :, skill]
+                    practiced_timesteps = (q[0] == skill).nonzero(as_tuple=True)[0]
+                    if len(practiced_timesteps) > 0:
+                        print(f"    Skill {skill}: {skill_mastery[practiced_timesteps].cpu().detach().numpy()}")
+            
+            # ═══════════════════════════════════════════════════════════════════════════
+            # GLOBAL THRESHOLD PREDICTION (2025-11-16 Architecture Update)
+            # ═══════════════════════════════════════════════════════════════════════════
+            # Generate predictions using global learnable threshold θ_global
+            # 
+            # Formula: incremental_mastery_predictions = sigmoid((mastery - θ_global) / temperature)
+            # 
+            # If mastery >= θ_global: prediction approaches 1.0 (correct)
+            # If mastery < θ_global: prediction approaches 0.0 (incorrect)
+            # 
+            # Global threshold simplifies the model:
+            # - Single learnable parameter θ_global instead of per-skill thresholds
+            # - Same performance criterion applies across all skills
+            # - Reduces parameter count while maintaining interpretability
+            # ═══════════════════════════════════════════════════════════════════════════
+            
+            # Get the skill ID for each timestep
+            # FIX (2025-11-17): Use CURRENT skill (q) not NEXT skill (target_concepts)
+            # Investigation showed 98.2% of prediction mismatches occurred at skill changes
+            # because model was using mastery for q[t+1] instead of q[t]
+            skill_indices = q.long()  # [B, L] - use current question's skill
+            
+            # Gather mastery for the actual skills being tested
+            # projected_mastery: [B, L, num_c], we need [B, L] by selecting skill at each step
+            batch_indices = torch.arange(batch_size, device=q.device).unsqueeze(1).expand(-1, seq_len)
+            time_indices = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
+            skill_mastery = projected_mastery[batch_indices, time_indices, skill_indices]  # [B, L]
+            
+            # Use global threshold (clamped to [0,1] for stability)
+            theta_clamped = torch.clamp(self.theta_global, 0.0, 1.0)
+            
+            # Compute incremental mastery predictions (differentiable via sigmoid)
+            # These are separate from the base predictions and used for interpretability loss
+            incremental_mastery_predictions = torch.sigmoid((skill_mastery - theta_clamped) / self.threshold_temperature)
+            
+            # DEBUG: Comprehensive diagnostics for first batch of each epoch
+            if batch_idx == 0:  # Log for first batch of each epoch
+                import numpy as np
+                
+                # Basic statistics
+                im_pred_range = incremental_mastery_predictions.max() - incremental_mastery_predictions.min()
+                im_pred_std = incremental_mastery_predictions.std()
+                base_pred_range = predictions.max() - predictions.min()
+                base_pred_std = predictions.std()
+                
+                # Mastery value statistics (CRITICAL DIAGNOSTIC)
+                mastery_min = skill_mastery.min().item()
+                mastery_max = skill_mastery.max().item()
+                mastery_mean = skill_mastery.mean().item()
+                mastery_std = skill_mastery.std().item()
+                
+                # Mastery-performance correlation (CRITICAL DIAGNOSTIC)
+                # Flatten and filter valid positions (use r which is the response tensor)
+                valid_mask = (r >= 0) & (r <= 1)
+                valid_mastery = skill_mastery[valid_mask].cpu().detach().numpy()
+                valid_responses = r[valid_mask].cpu().detach().numpy()
+                
+                if len(valid_mastery) > 1:
+                    mastery_perf_corr = np.corrcoef(valid_mastery, valid_responses)[0, 1]
+                    # Also check correlation between IM predictions and responses
+                    valid_im_preds = incremental_mastery_predictions[valid_mask].cpu().detach().numpy()
+                    im_pred_perf_corr = np.corrcoef(valid_im_preds, valid_responses)[0, 1]
+                else:
+                    mastery_perf_corr = 0.0
+                    im_pred_perf_corr = 0.0
+                
+                # Theta gradient check (is it learning?)
+                theta_grad = self.theta_global.grad
+                theta_has_grad = theta_grad is not None
+                theta_grad_norm = theta_grad.abs().item() if theta_has_grad else 0.0
+                
+                print("\n" + "="*80)
+                print("DEBUG GainAKT3Exp - COMPREHENSIVE DIAGNOSTICS (batch_idx=0)")
+                print("="*80)
+                
+                print("\n[1] MASTERY VALUE DISTRIBUTION (CRITICAL):")
+                print(f"  Min:  {mastery_min:.4f}")
+                print(f"  Max:  {mastery_max:.4f}")
+                print(f"  Mean: {mastery_mean:.4f}")
+                print(f"  Std:  {mastery_std:.4f}")
+                print(f"  ⚠️  Expected: min≈0, max≈1, std>0.2 for good variance")
+                if mastery_std < 0.1:
+                    print(f"  ❌ LOW VARIANCE! Mastery values too compressed (std={mastery_std:.4f})")
+                if mastery_mean < 0.1 or mastery_mean > 0.9:
+                    print(f"  ❌ EXTREME MEAN! Mastery values biased (mean={mastery_mean:.4f})")
+                
+                print("\n[2] MASTERY-PERFORMANCE CORRELATION (CRITICAL):")
+                print(f"  Mastery ↔ Response:     {mastery_perf_corr:.4f}")
+                print(f"  IM_Prediction ↔ Response: {im_pred_perf_corr:.4f}")
+                print(f"  ⚠️  Expected: >0.4 for predictive mastery, >0.5 ideal")
+                if abs(mastery_perf_corr) < 0.2:
+                    print(f"  ❌ MASTERY NOT PREDICTIVE! Correlation too low ({mastery_perf_corr:.4f})")
+                
+                print("\n[3] THETA GRADIENT FLOW:")
+                print(f"  θ_global value:    {theta_clamped:.4f}")
+                print(f"  Has gradient:      {theta_has_grad}")
+                print(f"  Gradient magnitude: {theta_grad_norm:.6f}")
+                if not theta_has_grad:
+                    print(f"  ❌ NO GRADIENT! Theta not learning")
+                elif theta_grad_norm < 1e-6:
+                    print(f"  ⚠️  VANISHING GRADIENT! ({theta_grad_norm:.6f})")
+                
+                print("\n[4] PREDICTION DISTRIBUTIONS:")
+                print(f"  Base (Encoder1):   range={base_pred_range:.4f}, std={base_pred_std:.4f}")
+                print(f"  IM (Encoder2):     range={im_pred_range:.4f}, std={im_pred_std:.4f}")
+                print(f"  ⚠️  IM range should be >0.3 for useful predictions")
+                if im_pred_range < 0.2:
+                    print(f"  ❌ COMPRESSED PREDICTIONS! IM range too narrow ({im_pred_range:.4f})")
+                
+                print("\n[5] TEMPERATURE & THRESHOLD:")
+                print(f"  Temperature:  {self.threshold_temperature}")
+                print(f"  θ_global:     {theta_clamped:.4f}")
+                print(f"  Formula: sigmoid((mastery - {theta_clamped:.4f}) / {self.threshold_temperature})")
+                
+                print("\n[6] SAMPLE VALUES (first student, first 10 steps):")
+                print(f"  Mastery:      {skill_mastery[0, :10].cpu().detach().numpy()}")
+                print(f"  Base preds:   {predictions[0, :10].cpu().detach().numpy()}")
+                print(f"  IM preds:     {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
+                print(f"  True labels:  {r[0, :10].cpu().detach().numpy()}")
+                
+                print("\n[7] LEARNABLE PARAMETERS (first 5):")
+                print(f"  β_skill:   {self.beta_skill[:5].cpu().detach().numpy()}")
+                print(f"  M_sat:     {self.M_sat[:5].cpu().detach().numpy()}")
+                if self.has_fixed_student_params:
+                    print(f"  γ_student: {self.gamma_student[:5].cpu().detach().numpy()}")
+                else:
+                    print(f"  γ_student: Dynamic (batch mean={gamma.mean():.4f})")
+                print(f"  offset:    {self.offset.item():.4f}")
+                
+                print("="*80 + "\n")
+            
+            # Do NOT override base predictions - keep both for dual loss computation
+        else:
+            # Heads disabled - use base prediction mechanism only
+            projected_mastery = None
+            projected_gains = None
+            incremental_mastery_predictions = None
+            skill_gains = None  # FIX (2025-11-17): Initialize for output dict
+            variance_loss = None  # V2 (2025-11-17): Initialize for output dict
+            skill_contrastive_loss = None  # V3 (2025-11-18): Initialize for output dict
             beta_spread_regularization = None  # V3 (2025-11-18): Initialize for output dict
 
         # 6. Prepare output with internal states

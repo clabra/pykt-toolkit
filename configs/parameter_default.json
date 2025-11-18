@@ -1,7 +1,7 @@
 {
-  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-17: V2 tuning for skill differentiation",
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-18: V3 Enhanced Strategy Phase 1",
   "_bug_fix_adjustment": "After fixing scalar gains bug (per-skill gains implemented), need stronger IM loss and variance loss to encourage skill differentiation.",
-  "_change_log": "2025-11-17 V2: Increased IM loss 30%\u219250% (bce=0.5), added variance_loss_weight=0.1, epochs=20, gains_projection lr boost via layer-wise optimizer.",
+  "_change_log": "2025-11-18 V3 Phase 1: Added skill_contrastive_loss (1.0), beta_spread_regularization (0.5), increased variance_loss_weight (0.1\u21922.0), beta spread initialization (N(2.0, 0.5)). Addresses lazy solution problem (uniform gains).",
   "defaults": {
     "seed": 42,
     "epochs": 20,
@@ -38,7 +38,9 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py",
     "model": "gainakt3exp",
-    "variance_loss_weight": 0.1
+    "variance_loss_weight": 2.0,
+    "skill_contrastive_loss_weight": 1.0,
+    "beta_spread_regularization_weight": 0.5
   },
   "deprecated": {
     "_comment": "Parameters deprecated as of 2025-11-16. Commented out in argparse. DO NOT use in new experiments.",
@@ -263,6 +265,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "ac63a5b4cd953c1c24d8556042f811d5",
-  "_md5_computed": "2025-11-16"
+  "md5": "cfeade6d4df4e45ae2bc891037514fa0",
+  "_md5_computed": "2025-11-18"
 }

@@ -44,7 +44,8 @@ def compute_correlations(model, data_loader, device, max_students=300):
             q = batch['cseqs'].to(device)
             r = batch['rseqs'].to(device)
             qry = batch.get('shft_cseqs', q).to(device)
-            out = core.forward_with_states(q=q, r=r, qry=qry)
+            # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
+            out = core.forward_with_states(q=q, r=r, qry=None)
             if 'projected_mastery' not in out or 'projected_gains' not in out:
                 break
             pm = out['projected_mastery']
@@ -95,7 +96,8 @@ def evaluate_predictions(model, data_loader, device):
             q_shft = batch['shft_cseqs'].to(device)
             r_shft = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device).bool()
-            out = core.forward_with_states(q=q, r=r, qry=q_shft)
+            # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
+            out = core.forward_with_states(q=q, r=r, qry=None)
             logits = out.get('logits')
             if logits is None:
                 preds_raw = out['predictions']

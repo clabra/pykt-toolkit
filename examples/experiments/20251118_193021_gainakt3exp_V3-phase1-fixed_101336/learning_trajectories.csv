@@ -1,0 +1,1 @@
+student_idx,global_idx,step,skill_id,actual_response,encoder1_pred,encoder2_pred,encoder1_binary,encoder2_binary,encoder1_match,encoder2_match,mastery,expected_gain,theta_global,threshold_temp,encoder2_pred_expected,total_steps,unique_skills,accuracy

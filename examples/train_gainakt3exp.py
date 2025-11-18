@@ -39,7 +39,8 @@ def evaluate_dual_encoders(model, data_loader, device):
             if student_ids is not None:
                 student_ids = student_ids.to(device)
             
-            outputs = model(q=questions, r=responses, qry=questions_shifted, qtest=True, student_ids=student_ids)
+            # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
+            outputs = model(q=questions, r=responses, qry=None, qtest=True, student_ids=student_ids)
             predictions = outputs['predictions']
             valid_mask = mask.bool()
             
@@ -74,7 +75,8 @@ def train_gainakt3exp_dual_encoder(
     dataset_name, model_name, fold, emb_type, save_dir, learning_rate, batch_size, num_epochs, optimizer_name, seed,
     d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len, weight_decay, patience, gradient_clip, monitor_freq,
     use_skill_difficulty, use_student_speed, num_students,
-    bce_loss_weight, variance_loss_weight, mastery_threshold_init, threshold_temperature,
+    bce_loss_weight, variance_loss_weight, skill_contrastive_loss_weight, beta_spread_regularization_weight,
+    mastery_threshold_init, threshold_temperature,
     beta_skill_init, m_sat_init,
     gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,    cfg=None, experiment_suffix="", log_level=logging.INFO
 ):
@@ -161,6 +163,8 @@ def train_gainakt3exp_dual_encoder(
         'consistency_loss_weight': 0.0,
         'incremental_mastery_loss_weight': incremental_mastery_loss_weight,
         'variance_loss_weight': variance_loss_weight,
+        'skill_contrastive_loss_weight': skill_contrastive_loss_weight,  # V3 (2025-11-18)
+        'beta_spread_regularization_weight': beta_spread_regularization_weight,  # V3 (2025-11-18)
         'monitor_frequency': monitor_freq
     }
     
@@ -293,7 +297,10 @@ def train_gainakt3exp_dual_encoder(
             
             if use_amp:
                 with torch.cuda.amp.autocast():
-                    outputs = model(q=questions, r=responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                    # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
+                    # Bug: Mastery computation is inside 'if qry is None' block in model forward()
+                    # When qry=questions_shifted (old behavior), mastery head is disabled
+                    outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids)
                     predictions = outputs['predictions']
                     valid_mask = mask.bool()
                     y_pred = predictions[valid_mask]
@@ -312,7 +319,20 @@ def train_gainakt3exp_dual_encoder(
                     if 'variance_loss' in outputs and variance_loss_weight > 0:
                         var_loss = outputs['variance_loss']
                     
-                    loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss + variance_loss_weight * var_loss
+                    # V3 (2025-11-18): Add skill-contrastive loss and beta spread regularization
+                    contrastive_loss = 0.0
+                    if 'skill_contrastive_loss' in outputs and skill_contrastive_loss_weight > 0:
+                        contrastive_loss = outputs['skill_contrastive_loss']
+                    
+                    beta_reg_loss = 0.0
+                    if 'beta_spread_regularization' in outputs and beta_spread_regularization_weight > 0:
+                        beta_reg_loss = outputs['beta_spread_regularization']
+                    
+                    loss = (bce_loss_weight * bce_loss + 
+                           incremental_mastery_loss_weight * im_loss + 
+                           variance_loss_weight * var_loss + 
+                           skill_contrastive_loss_weight * contrastive_loss + 
+                           beta_spread_regularization_weight * beta_reg_loss)
                 
                 scaler.scale(loss).backward()
                 if gradient_clip > 0:
@@ -321,7 +341,10 @@ def train_gainakt3exp_dual_encoder(
                 scaler.step(optimizer)
                 scaler.update()
             else:
-                outputs = model(q=questions, r=responses, qry=questions_shifted, qtest=False, student_ids=student_ids)
+                # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
+                # Bug: Mastery computation is inside 'if qry is None' block in model forward()
+                # When qry=questions_shifted (old behavior), mastery head is disabled
+                outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids)
                 predictions = outputs['predictions']
                 valid_mask = mask.bool()
                 y_pred = predictions[valid_mask]
@@ -340,7 +363,20 @@ def train_gainakt3exp_dual_encoder(
                 if 'variance_loss' in outputs and variance_loss_weight > 0:
                     var_loss = outputs['variance_loss']
                 
-                loss = bce_loss_weight * bce_loss + incremental_mastery_loss_weight * im_loss + variance_loss_weight * var_loss
+                # V3 (2025-11-18): Add skill-contrastive loss and beta spread regularization
+                contrastive_loss = 0.0
+                if 'skill_contrastive_loss' in outputs and skill_contrastive_loss_weight > 0:
+                    contrastive_loss = outputs['skill_contrastive_loss']
+                
+                beta_reg_loss = 0.0
+                if 'beta_spread_regularization' in outputs and beta_spread_regularization_weight > 0:
+                    beta_reg_loss = outputs['beta_spread_regularization']
+                
+                loss = (bce_loss_weight * bce_loss + 
+                       incremental_mastery_loss_weight * im_loss + 
+                       variance_loss_weight * var_loss + 
+                       skill_contrastive_loss_weight * contrastive_loss + 
+                       beta_spread_regularization_weight * beta_reg_loss)
                 
                 loss.backward()
                 if gradient_clip > 0:
@@ -577,6 +613,8 @@ if __name__ == '__main__':
     parser.add_argument('--threshold_temperature', type=float, required=True)
     parser.add_argument('--bce_loss_weight', type=float, required=True)
     parser.add_argument('--variance_loss_weight', type=float, required=True)
+    parser.add_argument('--skill_contrastive_loss_weight', type=float, required=True)  # V3 (2025-11-18)
+    parser.add_argument('--beta_spread_regularization_weight', type=float, required=True)  # V3 (2025-11-18)
     parser.add_argument('--beta_skill_init', type=float, required=True)
     parser.add_argument('--m_sat_init', type=float, required=True)
     parser.add_argument('--gamma_student_init', type=float, required=True)
@@ -602,6 +640,7 @@ if __name__ == '__main__':
         n_heads=args.n_heads, dropout=args.dropout, num_encoder_blocks=args.num_encoder_blocks, d_ff=args.d_ff,
         seq_len=args.seq_len, use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
         num_students=args.num_students, bce_loss_weight=args.bce_loss_weight, variance_loss_weight=args.variance_loss_weight,
+        skill_contrastive_loss_weight=args.skill_contrastive_loss_weight, beta_spread_regularization_weight=args.beta_spread_regularization_weight,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
         gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,

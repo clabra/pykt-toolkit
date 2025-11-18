@@ -1,8 +1,9 @@
 # GainAKT3Exp Architecture
 
-**Document Version**: Updated 2025-11-17 (Critical Bug Fix - encoder2_pred skill indexing)  
-**Model Version**: GainAKT3Exp - Dual-encoder transformer with Sigmoid Learning Curve Mastery  
-**Status**: Active implementation with full training/evaluation pipeline
+**Document Version**: Updated 2025-11-18 (Post-Indentation Bug Fix + V3 Phase 1)  
+**Model Version**: GainAKT3Exp - Dual-encoder transformer with Sigmoid Learning Curves & Per-Skill Gains  
+**Status**: Active implementation with V3 explicit differentiation strategy (Phase 1 complete)  
+**Critical Fix**: Indentation bug fixed (311 lines orphaned) - mastery head now functional ✅
 
 
 ## Architecture Diagram
@@ -84,39 +85,42 @@ graph TD
             Encoder2_Out_Val[["Output Value 2 (v₂)<br/>[B, L, D]"]]
         end
         
-        subgraph "Recursive Mastery Accumulation"
-            Learning_Gains[["Learning Gains<br/>ReLU(v₂)"]]
-            Projected_Gains[["Projected Gains<br/>[B, L, num_c]"]]
+        subgraph "Per-Skill Gains Projection"
+            Gains_Projection["Gains Projection Layer<br/>Linear(D → num_c)"]
+            Skill_Gains[["Per-Skill Gains<br/>sigmoid(projection)<br/>[B, L, num_c]"]]
+        end
+        
+        subgraph "Differentiable Effective Practice"
+            Effective_Practice[["Effective Practice<br/>Σ skill_gains[t]<br/>[B, L, num_c]<br/>✅ Quality-weighted accumulation"]]
+        end
+        
+        subgraph "Sigmoid Learning Curves (V1+ Architecture)"
+            Learnable_Params["Learnable Parameters:<br/>β_skill[num_c] (skill difficulty)<br/>γ_student[num_students] (learning velocity)<br/>M_sat[num_c] (saturation level)<br/>θ_global (mastery threshold)<br/>offset (inflection point)"]
             
-            Gain_Input[["Gain Input<br/>gain_t"]]
-            Mastery_Prev[["Mastery_{t-1}"]]
+            Sigmoid_Curve["Sigmoid Learning Curve<br/>mastery = M_sat × sigmoid(<br/>  β_skill × γ_student × effective_practice - offset<br/>)"]
             
-            Scale_Op["× α (α=0.1)"]
-            Sum_Op["mastery_t = mastery_{t-1} + α·gain_t"]
-            Clamp_Op["Clamp[0,1]"]
-            
-            Mastery_Current[["Mastery_t"]]
-            Projected_Mastery[["Incremental Mastery Levels<br/>[B, L, num_c]<br/>✅ Interpretability Output"]]
-            
-            Mastery_Current -.->|"temporal<br/>persistence"| Mastery_Prev
+            Mastery_Trajectories[["Mastery Trajectories<br/>[B, L, num_c]<br/>✅ Sigmoid curves per skill<br/>✅ Interpretability Output"]]
         end
         
         subgraph "Threshold Mechanism"
-            Learnable_Threshold[["Learnable Threshold<br/>per skill [num_c]<br/>(trainable)"]]
-            Threshold_Compute["sigmoid((mastery - threshold) / temp)"]
+            Global_Threshold[["Global Threshold<br/>θ_global (trainable)<br/>temperature (config)"]]
+            Threshold_Compute["sigmoid((mastery - θ_global) / temperature)"]
             
             IM_Predictions[["Incremental Mastery Predictions<br/>[B, L]<br/>✅ Interpretability Predictions"]]
         end
     end
 
     %% ========== LOSS COMPUTATION ========== %%
-    subgraph "Loss Framework (Dual-Encoder Architecture)"
+    subgraph "Loss Framework (V3 Phase 1 - Explicit Differentiation)"
         direction LR
         
-        BCE_Loss["BCE Loss<br/>(Performance)<br/>weight = λ₁"]
-        IM_Loss["Incremental Mastery Loss<br/>(Interpretability)<br/>weight = λ₂"]
+        BCE_Loss["BCE Loss<br/>(Performance)<br/>weight = 0.5"]
+        IM_Loss["Incremental Mastery Loss<br/>(Interpretability)<br/>weight = 0.5"]
+        Skill_Contrastive["Skill-Contrastive Loss<br/>(V3: Force differentiation)<br/>weight = 1.0"]
+        Variance_Loss["Variance Loss<br/>(V3: Anti-uniformity)<br/>weight = 2.0"]
+        Beta_Spread_Reg["Beta Spread Regularization<br/>(V3: Prevent collapse)<br/>weight = 0.5"]
         
-        Total_Loss["Total Loss<br/>λ₁ × BCE + λ₂ × IM<br/>(Weighted Combination)"]
+        Total_Loss["Total Loss<br/>0.5×BCE + 0.5×IM +<br/>1.0×Contrastive + 2.0×Variance +<br/>0.5×Beta_Spread"]
     end
 
     %% ========== CONNECTIONS ========== %%
@@ -161,15 +165,16 @@ graph TD
     Context_Seq_Pos2 --> Encoder2_In_Ctx --> Encoder2_Block
     Value_Seq_Pos2 --> Encoder2_In_Val --> Encoder2_Block
     
-    Encoder2_Block --> Encoder2_Out_Val --> Learning_Gains
-    Learning_Gains --> Projected_Gains --> Gain_Input
+    Encoder2_Block --> Encoder2_Out_Val --> Gains_Projection
+    Gains_Projection --> Skill_Gains
+    Skill_Gains --> Effective_Practice
     
-    Gain_Input --> Scale_Op --> Sum_Op
-    Mastery_Prev --> Sum_Op --> Clamp_Op --> Mastery_Current
-    Mastery_Current --> Projected_Mastery
+    Effective_Practice --> Sigmoid_Curve
+    Learnable_Params --> Sigmoid_Curve
+    Sigmoid_Curve --> Mastery_Trajectories
     
-    Projected_Mastery --> Threshold_Compute
-    Learnable_Threshold --> Threshold_Compute
+    Mastery_Trajectories --> Threshold_Compute
+    Global_Threshold --> Threshold_Compute
     Threshold_Compute --> IM_Predictions
     
     %% Loss Connections
@@ -179,28 +184,34 @@ graph TD
     IM_Predictions --> IM_Loss
     Ground_Truth --> IM_Loss
     
+    Skill_Gains --> Skill_Contrastive
+    Skill_Gains --> Variance_Loss
+    Learnable_Params --> Beta_Spread_Reg
+    
     BCE_Loss --> Total_Loss
     IM_Loss --> Total_Loss
+    Skill_Contrastive --> Total_Loss
+    Variance_Loss --> Total_Loss
+    Beta_Spread_Reg --> Total_Loss
 
     %% Styling
     classDef encoder1_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
     classDef encoder2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
     classDef loss_style fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
+    classDef v3_loss_style fill:#fff9c4,stroke:#f57f17,stroke-width:3px
     classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
     classDef output_style fill:#e8f5e9,stroke:#43a047,stroke-width:3px
     classDef mastery_style fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef sigmoid_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
     
     class Tokens1,Context_Emb1,Value_Emb1,Skill_Emb1,Context_Seq1,Value_Seq1,Encoder1_Block,Encoder1_Out_Ctx,Encoder1_Out_Val,Concat1,MLP1,Sigmoid1 encoder1_style
-    class Tokens2,Context_Emb2,Value_Emb2,Context_Seq2,Value_Seq2,Encoder2_Block,Encoder2_Out_Val,Learning_Gains encoder2_style
-    class Scale_Op,Sum_Op,Clamp_Op,Mastery_Current,Projected_Mastery,Threshold_Compute mastery_style
+    class Tokens2,Context_Emb2,Value_Emb2,Context_Seq2,Value_Seq2,Encoder2_Block,Encoder2_Out_Val,Gains_Projection encoder2_style
+    class Skill_Gains,Effective_Practice,Sigmoid_Curve,Mastery_Trajectories,Learnable_Params sigmoid_style
+    class Threshold_Compute,Global_Threshold mastery_style
     class BCE_Loss,IM_Loss,Total_Loss loss_style
+    class Skill_Contrastive,Variance_Loss,Beta_Spread_Reg v3_loss_style
     class Input_q,Input_r,Ground_Truth input_style
-    class Base_Predictions,IM_Predictions,Projected_Mastery output_style
-    class Input_q,Input_r,Tokens,Context_Seq,Value_Seq,Pos_Emb,Context_Seq_Pos,Value_Seq_Pos io_data
-    class Encoder_Input_Context,Encoder_Input_Value,Attn_Input_Context,Attn_Input_Value io_data
-    class Weights,Attn_Output_Heads,Attn_Output,Encoder_Output_Ctx,Encoder_Output_Val io_data
-    class Pred_Input_h,Pred_Input_v,Pred_Input_s,Predictions io_data
-    class Projected_Mastery_Output,Projected_Gain_Output io_data
+    class Base_Predictions,IM_Predictions output_style
 
     %% Link Styling - SIMPLIFIED: Most styling removed due to commented-out connections
     %% NOTE: After commenting out constraint and semantic losses, link indices changed.
@@ -270,8 +281,35 @@ graph TD
     %% linkStyle 73 stroke:#ffa500,stroke-width:3px
     %% 
     %% %% Monitor_Hub output (purple)
-    %% linkStyle 81 stroke:#800080,stroke-width:3px
+    %% linkStyle 86 stroke:#008800,stroke-width:3px
 ```
+
+### Key Architectural Changes (2025-11-18)
+
+**V1 Architecture (Per-Skill Gains Fix)**:
+- ❌ **Removed**: Scalar gain quality (single value per interaction)
+- ✅ **Added**: Per-skill gains projection layer `Linear(D → num_c)` 
+- ✅ **Added**: Sigmoid activation on projected gains → `skill_gains[B, L, num_c]`
+- **Impact**: Encoder 2 can now learn skill-specific learning rates
+
+**V1+ Architecture (Sigmoid Learning Curves)**:
+- ❌ **Removed**: Linear mastery accumulation `mastery_t = mastery_{t-1} + α·gain_t`
+- ✅ **Added**: Differentiable effective practice accumulation `Σ skill_gains[t]`
+- ✅ **Added**: 5 learnable sigmoid parameters (β_skill, γ_student, M_sat, θ_global, offset)
+- ✅ **Added**: Sigmoid learning curves `mastery = M_sat × sigmoid(β × γ × practice - offset)`
+- **Impact**: Automatic learning phases (warm-up → growth → saturation), educationally realistic dynamics
+
+**V3 Phase 1 (Explicit Differentiation - 2025-11-18)**:
+- ✅ **Added**: Skill-contrastive loss (weight=1.0) - forces cross-skill variance
+- ✅ **Added**: Beta spread initialization N(2.0, 0.5) - prevents uniform starting point
+- ✅ **Added**: Beta spread regularization (weight=0.5) - prevents parameter collapse
+- ✅ **Added**: Variance loss amplification (0.1 → 2.0) - 20x stronger anti-uniformity signal
+- **Impact**: Explicit mechanisms to prevent uniform gains problem
+
+**Critical Bug Fix (2025-11-18)**:
+- 🐛 **Bug**: Line 458 had commented `elif` with 311-line orphaned body (lines 459-769 at 12-space indent)
+- 🔧 **Fix**: Un-indented 311 lines, removed orphaned else block (lines 770-777)
+- ✅ **Result**: Mastery head now functional (IM loss: 0.0 → 0.608, Enc2 AUC: 0.50 → 0.589)
 
 ---
 
@@ -323,14 +361,17 @@ sequenceDiagram
             TrainScript->>Data: Get batch (q, r, qry)
             Data-->>TrainScript: Batch tensors
             
-            TrainScript->>Model: forward_with_states(q, r, qry,<br/>batch_idx=current_batch)
+            TrainScript->>Model: forward_with_states(q, r, qry=None,<br/>batch_idx=current_batch)
             activate Model
             
-            Model->>Model: Tokenize inputs<br/>Embed context & value streams
-            Model->>Model: Pass through encoder blocks<br/>(dual-stream attention)
-            Model->>Model: Generate predictions<br/>(MLP head)
-            Model->>Model: Compute mastery/gains<br/>(projection heads + recursion)
-            Model->>Model: Compute interpretability_loss<br/>(constraint losses)
+            Model->>Model: Tokenize inputs<br/>Embed context & value streams (Enc1 & Enc2)
+            Model->>Model: Pass through dual encoder blocks<br/>(independent parameters)
+            Model->>Model: Encoder 1 → Base predictions<br/>(MLP head)
+            Model->>Model: Encoder 2 → Per-skill gains<br/>(gains_projection layer)
+            Model->>Model: Effective practice accumulation<br/>(Σ skill_gains[t])
+            Model->>Model: Sigmoid learning curves<br/>(β, γ, M_sat, θ, offset)
+            Model->>Model: Mastery trajectories → IM predictions<br/>(threshold mechanism)
+            Model->>Model: Compute incremental_mastery_loss<br/>(BCE on IM predictions)
             
             alt batch_idx % monitor_frequency == 0
                 Model->>Monitor: Call monitor hook<br/>(context, value, mastery, gains, predictions)
@@ -340,11 +381,12 @@ sequenceDiagram
                 deactivate Monitor
             end
             
-            Model-->>TrainScript: {predictions, logits,<br/>context_seq, value_seq,<br/>mastery, gains,<br/>incremental_mastery_loss}
+            Model-->>TrainScript: {predictions, logits,<br/>context_seq, value_seq,<br/>mastery_trajectories, skill_gains,<br/>incremental_mastery_loss}
             deactivate Model
             
             TrainScript->>TrainScript: Compute BCE loss<br/>(from base logits)
-            TrainScript->>TrainScript: total_loss = BCE + incremental_mastery_loss<br/>(SIMPLIFIED: constraint losses = 0.0)
+            TrainScript->>TrainScript: Compute V3 losses:<br/>• Skill-contrastive (skill_gains)<br/>• Variance loss (skill_gains)<br/>• Beta spread regularization (β_skill)
+            TrainScript->>TrainScript: total_loss = 0.5×BCE + 0.5×IM +<br/>1.0×Contrastive + 2.0×Variance +<br/>0.5×Beta_Spread
             
             TrainScript->>Optimizer: Backward pass
             Optimizer->>Model: Update parameters
@@ -411,13 +453,13 @@ sequenceDiagram
         EvalScript->>Data: Get batch (q, r, qry)
         Data-->>EvalScript: Batch tensors
         
-        EvalScript->>Model: forward_with_states(q, r, qry)
+        EvalScript->>Model: forward_with_states(q, r, qry=None)
         activate Model
-        Model->>Model: Tokenize & embed
-        Model->>Model: Encoder blocks (no gradients)
-        Model->>Model: Generate predictions
-        Model->>Model: Compute mastery/gains<br/>(for correlation)
-        Model-->>EvalScript: {predictions, mastery, gains}
+        Model->>Model: Tokenize & embed (Enc1 & Enc2)
+        Model->>Model: Dual encoder blocks (no gradients)
+        Model->>Model: Encoder 1 → Base predictions
+        Model->>Model: Encoder 2 → Per-skill gains<br/>→ Effective practice<br/>→ Sigmoid mastery curves
+        Model-->>EvalScript: {predictions, mastery_trajectories,<br/>skill_gains, incremental_mastery_pred}
         deactivate Model
         
         EvalScript->>EvalScript: Accumulate predictions & labels
@@ -505,17 +547,19 @@ sequenceDiagram
 sequenceDiagram
     participant Input as Input Tensors<br/>(q, r, qry)
     participant Tokenize as Tokenization
-    participant CtxEmb as Context Embedding
-    participant ValEmb as Value Embedding
+    participant CtxEmb1 as Context Embedding 1
+    participant ValEmb1 as Value Embedding 1
+    participant CtxEmb2 as Context Embedding 2
+    participant ValEmb2 as Value Embedding 2
     participant PosEmb as Positional Embedding
-    participant Encoder as Encoder Blocks<br/>(N layers)
-    participant CtxStream as Context Stream (h)<br/>[B, L, D]
-    participant ValStream as Value Stream (v)<br/>[B, L, D]
+    participant Encoder1 as Encoder Blocks 1<br/>(N layers)
+    participant Encoder2 as Encoder Blocks 2<br/>(N layers)
+    participant CtxStream as Context Streams<br/>[B, L, D]
+    participant ValStream as Value Streams<br/>[B, L, D]
     participant SkillEmb as Skill Embedding
-    participant PredHead as Prediction Head<br/>(MLP)
-    participant MasteryHead as Mastery Head<br/>Linear(D, num_c)
-    participant GainHead as Gain Head<br/>Linear(D, num_c)
-    participant Recursion as Recursive<br/>Accumulation
+    participant PredHead as Prediction Head<br/>(MLP - Encoder 1)
+    participant GainsProj as Gains Projection<br/>Linear(D, num_c)<br/>(Encoder 2)
+    participant SigmoidCurves as Sigmoid Learning<br/>Curves
     participant Losses as Loss Computation
     participant Monitor as Monitor Hook
     participant Output as Output Dict
@@ -523,29 +567,38 @@ sequenceDiagram
     Input->>Tokenize: q, r (questions, responses)
     Tokenize->>Tokenize: interaction_tokens = q + num_c * r
     
-    Note over CtxEmb,ValEmb: Dual Embedding Tables
-    Tokenize->>CtxEmb: interaction_tokens
-    Tokenize->>ValEmb: interaction_tokens
-    CtxEmb->>CtxStream: context_seq [B, L, D]
-    ValEmb->>ValStream: value_seq [B, L, D]
+    Note over CtxEmb1,ValEmb2: Dual-Encoder Architecture: 4 Independent Embedding Tables
     
-    PosEmb->>CtxStream: Add positional encodings
-    PosEmb->>ValStream: Add positional encodings
-    
-    Note over CtxStream,ValStream: Pass through N encoder blocks<br/>with dual-stream attention
-    
-    loop Each Encoder Block
-        CtxStream->>Encoder: context_seq
-        ValStream->>Encoder: value_seq
+    par Encoder 1 Path (Performance)
+        Tokenize->>CtxEmb1: interaction_tokens
+        Tokenize->>ValEmb1: interaction_tokens
+        CtxEmb1->>CtxStream: context_seq_1 [B, L, D]
+        ValEmb1->>ValStream: value_seq_1 [B, L, D]
         
-        Note over Encoder: Q, K = Linear(context_seq)<br/>V = Linear(value_seq)<br/>Attention = softmax(QK^T/√d)V
+        PosEmb->>CtxStream: Add positional encodings (Enc1)
+        PosEmb->>ValStream: Add positional encodings (Enc1)
         
-        Encoder->>Encoder: attn_output = Attention(Q, K, V)
-        Encoder->>Encoder: context_seq = LayerNorm(context + attn + FFN(attn))
-        Encoder->>Encoder: value_seq = LayerNorm(value + attn)
+        loop Each Encoder Block 1
+            CtxStream->>Encoder1: context_seq_1, value_seq_1
+            Note over Encoder1: Q, K = Linear(context)<br/>V = Linear(value)<br/>Dual-stream attention
+            Encoder1->>CtxStream: Updated context_seq_1
+            Encoder1->>ValStream: Updated value_seq_1
+        end
+    and Encoder 2 Path (Interpretability)
+        Tokenize->>CtxEmb2: interaction_tokens
+        Tokenize->>ValEmb2: interaction_tokens
+        CtxEmb2->>CtxStream: context_seq_2 [B, L, D]
+        ValEmb2->>ValStream: value_seq_2 [B, L, D]
         
-        Encoder->>CtxStream: Updated context_seq
-        Encoder->>ValStream: Updated value_seq
+        PosEmb->>CtxStream: Add positional encodings (Enc2)
+        PosEmb->>ValStream: Add positional encodings (Enc2)
+        
+        loop Each Encoder Block 2
+            CtxStream->>Encoder2: context_seq_2, value_seq_2
+            Note over Encoder2: Q, K = Linear(context)<br/>V = Linear(value)<br/>Dual-stream attention<br/>(Independent parameters)
+            Encoder2->>CtxStream: Updated context_seq_2
+            Encoder2->>ValStream: Updated value_seq_2
+        end
     end
     
     rect rgb(200, 230, 255)
@@ -556,26 +609,23 @@ sequenceDiagram
         Note over ValStream: Value Output (v)<br/>Encoder_Output_Val [B, L, D]<br/>FLOWS TO 3 DESTINATIONS ↓
     end
     
-    par Context Stream (h) flows to 3 destinations
-        Note over CtxStream,PredHead: FLOW 1: Context → Prediction Head
-        CtxStream->>PredHead: context_seq (h) [B, L, D]
+    par Context Stream (h) flows to 2 destinations
+        Note over CtxStream,PredHead: FLOW 1: Context → Prediction Head (Encoder 1)
+        CtxStream->>PredHead: context_seq_1 (h₁) [B, L, D]
     and
-        Note over CtxStream,MasteryHead: FLOW 2: Context → Mastery Projection
-        CtxStream->>MasteryHead: context_seq (h) [B, L, D]
-    and
-        Note over CtxStream,Monitor: FLOW 3: Context → Monitor/Output
-        CtxStream->>Output: context_seq (for monitoring)
+        Note over CtxStream,Monitor: FLOW 2: Context → Monitor/Output
+        CtxStream->>Output: context_seq_1, context_seq_2<br/>(for monitoring)
     end
     
     par Value Stream (v) flows to 3 destinations
-        Note over ValStream,PredHead: FLOW 1: Value → Prediction Head
-        ValStream->>PredHead: value_seq (v) [B, L, D]
+        Note over ValStream,PredHead: FLOW 1: Value → Prediction Head (Encoder 1)
+        ValStream->>PredHead: value_seq_1 (v₁) [B, L, D]
     and
-        Note over ValStream,Recursion: FLOW 2: Value → Recursive Mastery Accumulation<br/>(GainAKT3Exp Innovation: Values ARE learning gains)
-        ValStream->>Recursion: value_seq = learning gains<br/>[B, L, D]<br/>(each interaction's contribution)
+        Note over ValStream,GainsProj: FLOW 2: Value → Per-Skill Gains Projection (Encoder 2)<br/>(V1+ Innovation: Per-skill learning rates)
+        ValStream->>GainsProj: value_seq_2 (v₂) [B, L, D]<br/>→ gains_projection layer<br/>→ skill_gains [B, L, num_c]
     and
         Note over ValStream,Monitor: FLOW 3: Value → Monitor/Output
-        ValStream->>Output: value_seq (for monitoring)
+        ValStream->>Output: value_seq_1, value_seq_2<br/>(for monitoring)
     end
     
     Note over PredHead: Concatenate [h, v, s]
@@ -587,25 +637,28 @@ sequenceDiagram
     PredHead->>Output: predictions [B, L]
     PredHead->>Output: logits [B, L]
     
-    Note over MasteryHead,Recursion: Mastery Projection Path
-    MasteryHead->>MasteryHead: mastery_raw = Linear(context)<br/>[B, L, num_c]
-    Note over MasteryHead: (Initial estimate - refined by recursion)
-    
     rect rgb(180, 230, 255)
-        Note over Recursion: Recursive Mastery Accumulation<br/>Values (learning gains) increment skill mastery<br/>For each interaction's skill:<br/>mastery[skill, t] = mastery[skill, t-1] + α × ReLU(value[t])
+        Note over GainsProj,SigmoidCurves: Sigmoid Learning Curves (V1+ Architecture)<br/>Encoder 2 Path: value_seq_2 → Per-skill gains → Effective practice → Sigmoid mastery<br/>1. skill_gains = sigmoid(gains_projection(v₂)) [B, L, num_c]<br/>2. effective_practice = Σ skill_gains[t] [B, L, num_c]<br/>3. mastery = M_sat × sigmoid(β×γ×practice - offset)
     end
     
-    Input->>Recursion: questions (q) [B, L]<br/>(to identify relevant skill)
+    Input->>GainsProj: questions (q) [B, L]<br/>(to identify relevant skill)
+    
+    ValStream->>GainsProj: value_seq_2 [B, L, D]
+    GainsProj->>GainsProj: Project Encoder 2 values<br/>to per-skill gains<br/>skill_gains = sigmoid(Linear(v₂, num_c))
+    GainsProj->>Output: skill_gains [B, L, num_c]
+    
+    GainsProj->>SigmoidCurves: skill_gains [B, L, num_c]
     
     loop Each timestep t (1 to L)
-        Recursion->>Recursion: skill = question[t]
-        Recursion->>Recursion: gain = ReLU(value[t]) × α (α=0.1)
-        Recursion->>Recursion: mastery[skill, t] = mastery[skill, t-1] + gain
-        Recursion->>Recursion: mastery[skill, t] = clamp(mastery[skill, t], 0, 1)
+        SigmoidCurves->>SigmoidCurves: effective_practice[:, t, :] = <br/>effective_practice[:, t-1, :] + skill_gains[:, t, :]
     end
     
-    Recursion->>Output: projected_mastery [B, L, num_c]<br/>(accumulated across timesteps)
-    Recursion->>Output: learning_gains [B, L, D]<br/>(directly from Values)
+    SigmoidCurves->>SigmoidCurves: Apply sigmoid learning curves:<br/>mastery = M_sat[s] × sigmoid(<br/>  β_skill[s] × γ_student[i] × effective_practice - offset<br/>)<br/>(5 learnable parameters)
+    
+    SigmoidCurves->>SigmoidCurves: Threshold mechanism:<br/>IM_pred = sigmoid((mastery - θ_global) / temp)
+    
+    SigmoidCurves->>Output: mastery_trajectories [B, L, num_c]<br/>(sigmoid curves per skill)
+    SigmoidCurves->>Output: incremental_mastery_pred [B, L]<br/>(threshold-based predictions)
     
     Note over Losses: Loss Computation Sources
     
@@ -613,31 +666,32 @@ sequenceDiagram
         Note over Losses: LOSS INPUTS:<br/>1. predictions (from Pred Head)<br/>2. projected_mastery (from Recursion)<br/>3. projected_gains (from Recursion)<br/>4. responses (ground truth)<br/>5. questions (for skill masks)
     end
     
-    Output->>Losses: predictions [B, L]
-    Output->>Losses: projected_mastery [B, L, num_c]
-    Output->>Losses: projected_gains [B, L, num_c]
+    Output->>Losses: predictions [B, L] (Encoder 1)
+    Output->>Losses: mastery_trajectories [B, L, num_c]
+    Output->>Losses: skill_gains [B, L, num_c]
+    Output->>Losses: incremental_mastery_pred [B, L] (Encoder 2)
     Input->>Losses: responses (r) [B, L]
     Input->>Losses: questions (q) [B, L]
     
-    Losses->>Losses: Compute skill masks<br/>(Q-matrix structure)
+    Note over Losses: V3 Phase 1 Loss Computation
     
-    par Constraint Losses (6 losses computed in parallel)
-        Note over Losses: ❌ ALL CONSTRAINT LOSSES COMMENTED OUT (weights=0.0)
-        Losses->>Losses: L1: Non-Negative Gains (INACTIVE)<br/>clamp(-gains, min=0).mean()
+    par Active Losses (V3 Architecture)
+        Note over Losses: ✅ INCREMENTAL MASTERY LOSS (computed in model)
+        Losses->>Losses: IM_loss = BCE(incremental_mastery_pred, responses)<br/>weight = 0.5
     and
-        Losses->>Losses: L2: Monotonicity (INACTIVE)<br/>clamp(mastery[t] - mastery[t+1], min=0).mean()
+        Note over Losses: ✅ SKILL-CONTRASTIVE LOSS (V3)
+        Losses->>Losses: gain_variance = skill_gains.var(dim=2)<br/>contrastive_loss = -gain_variance.mean()<br/>weight = 1.0
     and
-        Losses->>Losses: L3: Mastery-Performance (INACTIVE)<br/>low_mastery_correct + high_mastery_incorrect
+        Note over Losses: ✅ VARIANCE LOSS (V3 - Amplified 20x)
+        Losses->>Losses: gain_std = skill_gains.std()<br/>variance_loss = -gain_std<br/>weight = 2.0
     and
-        Losses->>Losses: L4: Gain-Performance (INACTIVE)<br/>clamp(incorrect_gains - correct_gains + 0.1, min=0)
-    and
-        Losses->>Losses: L5: Sparsity (INACTIVE)<br/>abs(non_relevant_gains).mean()
-    and
-        Losses->>Losses: L6: Consistency (INACTIVE)<br/>abs(mastery_delta - scaled_gains).mean()
+        Note over Losses: ✅ BETA SPREAD REGULARIZATION (V3)
+        Losses->>Losses: beta_std = β_skill.std()<br/>spread_loss = max(0, 0.3 - beta_std)²<br/>weight = 0.5
     end
     
-    Losses->>Losses: Total interpretability_loss = 0.0<br/>(all weights w1-w6 = 0.0 in simplified architecture)
-    Losses->>Output: interpretability_loss = 0.0 (scalar)
+    Note over Losses: ❌ ALL CONSTRAINT LOSSES COMMENTED OUT (weights=0.0)<br/>Non-negative, Monotonicity, Mastery-Perf,<br/>Gain-Perf, Sparsity, Consistency
+    
+    Losses->>Output: incremental_mastery_loss (scalar)<br/>(returned from model)
     
     alt Monitoring enabled AND batch_idx % monitor_frequency == 0
         Output->>Monitor: Pass all states:<br/>context_seq, value_seq,<br/>mastery, gains, predictions,<br/>questions, responses
@@ -645,5 +699,5 @@ sequenceDiagram
         Monitor-->>Output: Monitoring complete
     end
     
-    Output->>Output: Assemble final dict:<br/>{predictions, logits,<br/>context_seq, value_seq,<br/>projected_mastery, incremental_mastery_predictions,<br/>interpretability_loss (=0.0),<br/>incremental_mastery_loss}
+    Output->>Output: Assemble final dict:<br/>{predictions, logits,<br/>context_seq_1, value_seq_1,<br/>context_seq_2, value_seq_2,<br/>mastery_trajectories, skill_gains,<br/>incremental_mastery_predictions,<br/>incremental_mastery_loss}<br/><br/>Note: interpretability_loss removed (was always 0.0)
 ```
