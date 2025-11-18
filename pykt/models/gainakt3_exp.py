@@ -100,7 +100,8 @@ class GainAKT3Exp(nn.Module):
                  monitor_frequency=50, use_skill_difficulty=False,
                  use_student_speed=False, num_students=None, mastery_threshold_init=0.6,
                  threshold_temperature=1.5, beta_skill_init=2.0, m_sat_init=0.8, 
-                 gamma_student_init=1.0, sigmoid_offset=2.0):
+                 gamma_student_init=1.0, sigmoid_offset=2.0,
+                 gains_projection_bias_std=0.0, gains_projection_orthogonal=False):
         """
         Initialize the monitored GainAKT3Exp model.
         
@@ -268,13 +269,60 @@ class GainAKT3Exp(nn.Module):
         ])
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # PER-SKILL GAINS PROJECTION (FIX: 2025-11-17)
+        # PER-SKILL GAINS PROJECTION (FIX: 2025-11-17, V3+ 2025-11-18)
         # ═══════════════════════════════════════════════════════════════════════════
         # Project Encoder 2 value representations to per-skill gain estimates
         # This enables skill-specific learning: different skills can have different gains
         # per interaction, allowing the model to learn question-skill associations
+        # 
+        # V3+ ASYMMETRIC INITIALIZATION (2025-11-18):
+        # PyTorch default (Kaiming uniform) produces CV=0.017 (99.8% uniform at epoch 0)
+        # → All skills start nearly identical → uniform gains ~0.50 → V3 losses can't escape
+        # Solution: Asymmetric bias initialization breaks symmetry at initialization
         # ═══════════════════════════════════════════════════════════════════════════
         self.gains_projection = nn.Linear(d_model, num_c)
+        
+        # Store asymmetric initialization parameters
+        self.gains_projection_bias_std = gains_projection_bias_std
+        self.gains_projection_orthogonal = gains_projection_orthogonal
+        
+        # Asymmetric initialization (if enabled)
+        if gains_projection_bias_std > 0:
+            # Asymmetric bias initialization: N(0, bias_std)
+            # Expected effect: Initial gain CV ≈ 0.20 (vs 0.017 default)
+            # Theory: Symmetry breaking (Goodfellow), Lottery Ticket Hypothesis (Frankle)
+            skill_bias = torch.randn(num_c) * gains_projection_bias_std
+            self.gains_projection.bias.data = skill_bias
+            
+            if gains_projection_orthogonal:
+                # Optional: Orthogonal weight initialization for additional diversity
+                # Maximizes output diversity by ensuring weight vectors are orthogonal
+                nn.init.orthogonal_(self.gains_projection.weight)
+                self.gains_projection.weight.data *= 0.3  # Scale down to prevent saturation
+            
+            # Diagnostic: Log initialization statistics
+            print(f"\n{'='*80}")
+            print(f"V3+ ASYMMETRIC INITIALIZATION DIAGNOSTICS")
+            print(f"{'='*80}")
+            print(f"Bias std parameter: {gains_projection_bias_std}")
+            print(f"Orthogonal weights: {gains_projection_orthogonal}")
+            print(f"\nActual initialization statistics:")
+            print(f"  Bias - Mean: {self.gains_projection.bias.data.mean():.6f}, Std: {self.gains_projection.bias.data.std():.6f}")
+            print(f"  Bias - Min: {self.gains_projection.bias.data.min():.6f}, Max: {self.gains_projection.bias.data.max():.6f}")
+            
+            # Simulate initial gain statistics with dummy input
+            with torch.no_grad():
+                dummy_input = torch.randn(32, 200, d_model)  # [batch, seq, d_model]
+                dummy_output = self.gains_projection(dummy_input)
+                dummy_gains = torch.sigmoid(dummy_output)
+                per_skill_means = dummy_gains.reshape(-1, num_c).mean(dim=0)
+                print(f"\nExpected initial gain statistics (with random input):")
+                print(f"  Per-skill mean gains: {per_skill_means.mean():.6f}")
+                print(f"  Std of per-skill means: {per_skill_means.std():.6f}")
+                print(f"  CV (coefficient of variation): {per_skill_means.std() / per_skill_means.mean():.6f}")
+                print(f"\nTarget: CV >0.15 at epoch 0 (vs 0.017 with default init)")
+                print(f"Success: {'✅ PASS' if per_skill_means.std() / per_skill_means.mean() > 0.15 else '❌ FAIL'}")
+            print(f"{'='*80}\n")
         
         # Encoder 2 does NOT have a prediction head
         # Its outputs feed directly into sigmoid learning curve computation

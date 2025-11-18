@@ -246,6 +246,7 @@ class ParameterAuditor:
             # DEPRECATED (2025-11-16): Removed constraint/semantic parameters for dual-encoder
             # DEPRECATED (2025-11-18): use_mastery_head, use_gain_head (removed from GainAKT3Exp code)
             # V3 (2025-11-18): Added skill_contrastive_loss_weight, beta_spread_regularization_weight
+            # V3+ (2025-11-18): Added gains_projection_bias_std, gains_projection_orthogonal (asymmetric init)
             required_params = [
                 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout',
                 # 'mastery_performance_loss_weight', 'gain_performance_loss_weight',  # DEPRECATED
@@ -253,7 +254,8 @@ class ParameterAuditor:
                 'batch_size', 'epochs', 'learning_rate',
                 # 'use_mastery_head', 'use_gain_head',  # DEPRECATED - removed from code
                 'seed', 'optimizer', 'weight_decay', 'patience',
-                'variance_loss_weight', 'skill_contrastive_loss_weight', 'beta_spread_regularization_weight'  # V3
+                'variance_loss_weight', 'skill_contrastive_loss_weight', 'beta_spread_regularization_weight',  # V3
+                'gains_projection_bias_std', 'gains_projection_orthogonal'  # V3+ asymmetric init
             ]
             
             missing = [p for p in required_params if p not in defaults]

@@ -76,6 +76,7 @@ def train_gainakt3exp_dual_encoder(
     d_model, n_heads, dropout, num_encoder_blocks, d_ff, seq_len, weight_decay, patience, gradient_clip, monitor_freq,
     use_skill_difficulty, use_student_speed, num_students,
     bce_loss_weight, variance_loss_weight, skill_contrastive_loss_weight, beta_spread_regularization_weight,
+    gains_projection_bias_std, gains_projection_orthogonal,
     mastery_threshold_init, threshold_temperature,
     beta_skill_init, m_sat_init,
     gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,    cfg=None, experiment_suffix="", log_level=logging.INFO
@@ -165,6 +166,8 @@ def train_gainakt3exp_dual_encoder(
         'variance_loss_weight': variance_loss_weight,
         'skill_contrastive_loss_weight': skill_contrastive_loss_weight,  # V3 (2025-11-18)
         'beta_spread_regularization_weight': beta_spread_regularization_weight,  # V3 (2025-11-18)
+        'gains_projection_bias_std': gains_projection_bias_std,  # V3+ (2025-11-18)
+        'gains_projection_orthogonal': gains_projection_orthogonal,  # V3+ (2025-11-18)
         'monitor_frequency': monitor_freq
     }
     
@@ -615,6 +618,8 @@ if __name__ == '__main__':
     parser.add_argument('--variance_loss_weight', type=float, required=True)
     parser.add_argument('--skill_contrastive_loss_weight', type=float, required=True)  # V3 (2025-11-18)
     parser.add_argument('--beta_spread_regularization_weight', type=float, required=True)  # V3 (2025-11-18)
+    parser.add_argument('--gains_projection_bias_std', type=float, required=True)  # V3+ (2025-11-18)
+    parser.add_argument('--gains_projection_orthogonal', action='store_true')  # V3+ (2025-11-18)
     parser.add_argument('--beta_skill_init', type=float, required=True)
     parser.add_argument('--m_sat_init', type=float, required=True)
     parser.add_argument('--gamma_student_init', type=float, required=True)
@@ -641,6 +646,7 @@ if __name__ == '__main__':
         seq_len=args.seq_len, use_skill_difficulty=args.use_skill_difficulty, use_student_speed=args.use_student_speed,
         num_students=args.num_students, bce_loss_weight=args.bce_loss_weight, variance_loss_weight=args.variance_loss_weight,
         skill_contrastive_loss_weight=args.skill_contrastive_loss_weight, beta_spread_regularization_weight=args.beta_spread_regularization_weight,
+        gains_projection_bias_std=args.gains_projection_bias_std, gains_projection_orthogonal=args.gains_projection_orthogonal,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
         gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,
