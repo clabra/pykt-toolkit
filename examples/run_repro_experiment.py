@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 """
 Simplified reproducible experiment launcher with integrated reproduction mode.
 
@@ -24,6 +24,68 @@ import hashlib
 import random
 from pathlib import Path
 from datetime import datetime
+import multiprocessing
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+def detect_available_resources():
+    """
+    Detect available GPUs and CPUs and return ~80% allocation.
+    
+    If CUDA_VISIBLE_DEVICES is already set, respects that setting instead
+    of automatically allocating 80% of GPUs.
+    
+    Returns:
+        dict: {'num_gpus': int, 'num_cpus': int, 'gpu_ids': str, 'cuda_env_set': bool}
+    """
+    # Check if CUDA_VISIBLE_DEVICES is already set
+    cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', None)
+    cuda_env_set = cuda_visible_devices is not None
+    
+    # Detect GPUs
+    num_gpus = 0
+    gpu_ids = ""
+    total_gpus_system = 0
+    
+    if TORCH_AVAILABLE and torch.cuda.is_available():
+        if cuda_env_set:
+            # Use existing CUDA_VISIBLE_DEVICES setting
+            gpu_ids = cuda_visible_devices
+            # Count GPUs from the env var
+            if gpu_ids:
+                num_gpus = len([x.strip() for x in gpu_ids.split(',') if x.strip()])
+            else:
+                num_gpus = 0  # Empty string means no GPUs
+            total_gpus_system = torch.cuda.device_count()  # GPUs visible with current setting
+        else:
+            # Auto-detect and allocate 80% of available GPUs
+            # First, check total system GPUs (need to temporarily clear CUDA_VISIBLE_DEVICES)
+            import subprocess
+            try:
+                result = subprocess.run(['nvidia-smi', '-L'], capture_output=True, text=True)
+                total_gpus_system = len([line for line in result.stdout.split('\n') if line.strip().startswith('GPU')])
+            except:
+                total_gpus_system = torch.cuda.device_count()
+            
+            num_gpus = max(1, int(total_gpus_system * 0.8))  # Use 80% of GPUs, minimum 1
+            gpu_ids = ",".join(str(i) for i in range(num_gpus))
+    
+    # Detect CPUs
+    total_cpus = multiprocessing.cpu_count()
+    num_cpus = max(1, int(total_cpus * 0.8))  # Use 80% of CPUs
+    
+    return {
+        'num_gpus': num_gpus,
+        'num_cpus': num_cpus,
+        'gpu_ids': gpu_ids,
+        'total_gpus': total_gpus_system,
+        'total_cpus': total_cpus,
+        'cuda_env_set': cuda_env_set
+    }
 
 def get_required_param(config, section, param_name):
     """
@@ -489,15 +551,54 @@ def main():
             print(f"  {train_command}")
             return
         
+        # Detect and configure resources
+        resources = detect_available_resources()
+        print("\n" + "=" * 80)
+        print("RESOURCE ALLOCATION")
+        print("=" * 80)
+        if resources['cuda_env_set']:
+            print(f"GPUs: Using pre-set env var CUDA_VISIBLE_DEVICES={resources['gpu_ids']} ({resources['num_gpus']} GPUs)")
+        else:
+            print(f"GPUs: Using {resources['num_gpus']}/{resources['total_gpus']} available ({resources['num_gpus']/max(1, resources['total_gpus'])*100:.0f}%)")
+        print(f"CPUs: Using {resources['num_cpus']}/{resources['total_cpus']} threads ({resources['num_cpus']/resources['total_cpus']*100:.0f}%)")
+        
+        # Configure environment for resource usage
+        env = os.environ.copy()
+        env['OMP_NUM_THREADS'] = str(resources['num_cpus'])
+        env['MKL_NUM_THREADS'] = str(resources['num_cpus'])
+        if resources['num_gpus'] > 0 and not resources['cuda_env_set']:
+            # Only set CUDA_VISIBLE_DEVICES if it wasn't already set
+            env['CUDA_VISIBLE_DEVICES'] = resources['gpu_ids']
+        
         # Launch training
         print("\n" + "=" * 80)
         print("LAUNCHING REPRODUCTION TRAINING")
         print("=" * 80 + "\n")
-        result = subprocess.run(train_command, shell=True)
+        result = subprocess.run(train_command, shell=True, env=env)
         
         if result.returncode == 0:
             print("\n" + "=" * 80)
             print("✓ REPRODUCTION TRAINING COMPLETED SUCCESSFULLY")
+            print("=" * 80)
+            
+            # Launch trajectory calculation
+            if 'learning_trajectories' in config['commands']:
+                print("\n" + "=" * 80)
+                print("LAUNCHING TRAJECTORY CALCULATION")
+                print("=" * 80)
+                trajectory_cmd = config['commands']['learning_trajectories']
+                # Update run_dir to point to reproduction folder
+                trajectory_cmd = trajectory_cmd.replace(str(original_folder), str(repro_folder.absolute()))
+                print(f"\nCommand: {trajectory_cmd}\n")
+                traj_result = subprocess.run(trajectory_cmd, shell=True)
+                
+                if traj_result.returncode == 0:
+                    print("\n" + "=" * 80)
+                    print("✓ TRAJECTORY CALCULATION COMPLETED")
+                else:
+                    print("\n" + "=" * 80)
+                    print("⚠️  TRAJECTORY CALCULATION FAILED (non-critical)")
+                    print("=" * 80)
             print("=" * 80)
             print(f"\nResults saved to: {repro_folder}")
             print("\nNote: Evaluation is automatically launched by the training script")
@@ -744,11 +845,30 @@ def main():
             print(f"  {train_command}")
             return
         
+        # Detect and configure resources
+        resources = detect_available_resources()
+        print("\n" + "=" * 80)
+        print("RESOURCE ALLOCATION")
+        print("=" * 80)
+        if resources['cuda_env_set']:
+            print(f"GPUs: Using pre-set env var CUDA_VISIBLE_DEVICES={resources['gpu_ids']} ({resources['num_gpus']} GPUs)")
+        else:
+            print(f"GPUs: Using {resources['num_gpus']}/{resources['total_gpus']} available ({resources['num_gpus']/max(1, resources['total_gpus'])*100:.0f}%)")
+        print(f"CPUs: Using {resources['num_cpus']}/{resources['total_cpus']} threads ({resources['num_cpus']/resources['total_cpus']*100:.0f}%)")
+        
+        # Configure environment for resource usage
+        env = os.environ.copy()
+        env['OMP_NUM_THREADS'] = str(resources['num_cpus'])
+        env['MKL_NUM_THREADS'] = str(resources['num_cpus'])
+        if resources['num_gpus'] > 0 and not resources['cuda_env_set']:
+            # Only set CUDA_VISIBLE_DEVICES if it wasn't already set
+            env['CUDA_VISIBLE_DEVICES'] = resources['gpu_ids']
+        
         # Launch training
         print("\n" + "=" * 80)
         print("LAUNCHING TRAINING")
         print("=" * 80 + "\n")
-        result = subprocess.run(train_command, shell=True)
+        result = subprocess.run(train_command, shell=True, env=env)
         
         if result.returncode == 0:
             print("\n" + "=" * 80)
@@ -756,6 +876,25 @@ def main():
             print("=" * 80)
             print(f"\nResults saved to: {experiment_folder}")
             print("\nNote: Evaluation is automatically launched by the training script")
+            
+            # Launch trajectory calculation
+            if 'learning_trajectories' in config['commands']:
+                print("\n" + "=" * 80)
+                print("LAUNCHING TRAJECTORY CALCULATION")
+                print("=" * 80)
+                trajectory_cmd = config['commands']['learning_trajectories']
+                print(f"\nCommand: {trajectory_cmd}\n")
+                traj_result = subprocess.run(trajectory_cmd, shell=True)
+                
+                if traj_result.returncode == 0:
+                    print("\n" + "=" * 80)
+                    print("✓ TRAJECTORY CALCULATION COMPLETED")
+                    print("=" * 80)
+                else:
+                    print("\n" + "=" * 80)
+                    print("⚠️  TRAJECTORY CALCULATION FAILED (non-critical)")
+                    print("=" * 80)
+            
             print("\nTo reproduce this experiment:")
             print("  python examples/run_repro_experiment.py \\")
             print(f"    --repro_experiment_id {experiment_id}")

@@ -47,6 +47,7 @@
     "_total_count": 27,
     "_date": "2025-11-16",
     "_reason": "Architecture simplification to dual-encoder with BCE + Incremental Mastery Loss only",
+    "_num_students_comment": "DEPRECATED: This parameter is automatically overridden by training script to match the actual training set size. Training script extracts num_students from dataset, making code generalizable to any dataset. The value here (3055) was historically for assist2015 fold 0 validation split, but actual training uses all other folds (12220 students).",
     "constraint_losses": {
       "non_negative_loss_weight": {
         "value": 0.0,

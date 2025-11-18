@@ -259,14 +259,35 @@ def main():
     
     # Get num_students from checkpoint
     checkpoint = torch.load(model_path, map_location=device)
+    
     # gamma_student contains per-student learning rates
-    num_students_from_checkpoint = checkpoint['model_state_dict']['gamma_student'].shape[0]
-    print(f"Using num_students={num_students_from_checkpoint} from checkpoint")
+    # Handle both regular and DataParallel (module.) prefixed keys
+    state_dict = checkpoint['model_state_dict']
+    if 'gamma_student' in state_dict:
+        num_students_from_checkpoint = state_dict['gamma_student'].shape[0]
+    elif 'module.gamma_student' in state_dict:
+        num_students_from_checkpoint = state_dict['module.gamma_student'].shape[0]
+    else:
+        # Model was trained in dynamic mode (no fixed student params)
+        num_students_from_checkpoint = None
+    
+    if num_students_from_checkpoint is not None:
+        print(f"Using num_students={num_students_from_checkpoint} from checkpoint (fixed student params mode)")
+    else:
+        print("Model trained in dynamic student params mode (no fixed gamma_student)")
+    
+    # Helper function to get parameters handling DataParallel prefix
+    def get_param(name):
+        if name in state_dict:
+            return state_dict[name]
+        elif f'module.{name}' in state_dict:
+            return state_dict[f'module.{name}']
+        return None
     
     # Extract actual learned parameters from checkpoint
     # Note: These are the final learned values after training, not the initialization values
     # Training script saves these to learned_parameters_epoch.csv during training
-    theta_global_actual = checkpoint['model_state_dict']['theta_global'].item()
+    theta_global_actual = get_param('theta_global').item()
     
     # Check if learned parameters were tracked during training
     params_csv_path = os.path.join(args.run_dir, 'learned_parameters_epoch.csv')
@@ -279,7 +300,8 @@ def main():
         print(f"  theta_global: {final_epoch['theta_global']:.6f} (init: {mastery_threshold_init:.6f})")
         print(f"  beta_skill: mean={final_epoch['beta_skill_mean']:.6f}, std={final_epoch['beta_skill_std']:.6f}")
         print(f"  M_sat: mean={final_epoch['M_sat_mean']:.6f}, std={final_epoch['M_sat_std']:.6f}")
-        print(f"  gamma_student: mean={final_epoch['gamma_student_mean']:.6f}, std={final_epoch['gamma_student_std']:.6f}")
+        if 'gamma_student_mean' in final_epoch:
+            print(f"  gamma_student: mean={final_epoch['gamma_student_mean']:.6f}, std={final_epoch['gamma_student_std']:.6f}")
     else:
         print(f"Learned theta_global (mastery threshold): {theta_global_actual:.6f} (init was {mastery_threshold_init:.6f})")
         print(f"  Note: No learned_parameters_epoch.csv found. Using values from checkpoint.")
@@ -292,13 +314,17 @@ def main():
         'theta_global': float(theta_global_actual),
         'theta_global_init': float(mastery_threshold_init),
         'threshold_temperature': float(threshold_temperature),
-        'beta_skill_mean': float(checkpoint['model_state_dict']['beta_skill'].mean().item()),
-        'beta_skill_std': float(checkpoint['model_state_dict']['beta_skill'].std().item()),
-        'M_sat_mean': float(checkpoint['model_state_dict']['M_sat'].mean().item()),
-        'M_sat_std': float(checkpoint['model_state_dict']['M_sat'].std().item()),
-        'gamma_student_mean': float(checkpoint['model_state_dict']['gamma_student'].mean().item()),
-        'gamma_student_std': float(checkpoint['model_state_dict']['gamma_student'].std().item()),
+        'beta_skill_mean': float(get_param('beta_skill').mean().item()),
+        'beta_skill_std': float(get_param('beta_skill').std().item()),
+        'M_sat_mean': float(get_param('M_sat').mean().item()),
+        'M_sat_std': float(get_param('M_sat').std().item()),
     }
+    
+    # Add gamma_student stats only if they exist
+    gamma_student_param = get_param('gamma_student')
+    if gamma_student_param is not None:
+        learned_params['gamma_student_mean'] = float(gamma_student_param.mean().item())
+        learned_params['gamma_student_std'] = float(gamma_student_param.std().item())
     
     learned_params_path = os.path.join(args.run_dir, 'learned_parameters.json')
     with open(learned_params_path, 'w') as f:
@@ -346,9 +372,17 @@ def main():
     model = create_exp_model(complete_config)
     model = model.to(device)
     
-    # Load weights
+    # Load weights - handle DataParallel prefix if present
     print(f"Loading model weights from: {model_path}")
-    model.load_state_dict(checkpoint['model_state_dict'])
+    state_dict_to_load = checkpoint['model_state_dict']
+    
+    # Check if state_dict has 'module.' prefix (from DataParallel)
+    if any(key.startswith('module.') for key in state_dict_to_load.keys()):
+        print("Checkpoint saved with DataParallel, stripping 'module.' prefix...")
+        # Strip 'module.' prefix from all keys
+        state_dict_to_load = {k.replace('module.', ''): v for k, v in state_dict_to_load.items()}
+    
+    model.load_state_dict(state_dict_to_load)
     model.eval()
     
     # Open CSV file
