@@ -1,0 +1,3 @@
+epoch,theta_global,beta_skill_mean,beta_skill_std,beta_skill_min,beta_skill_max,M_sat_mean,M_sat_std,M_sat_min,M_sat_max,gamma_student_mean,gamma_student_std,gamma_student_min,gamma_student_max,offset
+1,0.817287,2.459912,0.500939,1.055426,3.644488,0.714315,0.016135,0.668067,0.732071,1.066677,0.000097,1.066215,1.069154,1.482909
+2,0.784644,2.426943,0.500626,1.023233,3.611231,0.729576,0.031402,0.636777,0.763906,1.033845,0.000180,1.033626,1.038555,1.461612

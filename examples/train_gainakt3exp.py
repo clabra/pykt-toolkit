@@ -44,15 +44,15 @@ def evaluate_dual_encoders(model, data_loader, device):
             predictions = outputs['predictions']
             valid_mask = mask.bool()
             
-            # Encoder 1: Base predictions
+            # Encoder 1: Base predictions (already sigmoid)
             y_pred_enc1 = predictions[valid_mask]
-            preds_enc1.extend(torch.sigmoid(y_pred_enc1).cpu().numpy())
+            preds_enc1.extend(y_pred_enc1.cpu().numpy())  # FIXED (2025-11-19): No extra sigmoid
             
-            # Encoder 2: Incremental mastery predictions (if available)
+            # Encoder 2: Incremental mastery predictions (already sigmoid, if available)
             if 'incremental_mastery_predictions' in outputs:
                 im_preds = outputs['incremental_mastery_predictions']
                 y_pred_enc2 = im_preds[valid_mask]
-                preds_enc2.extend(torch.sigmoid(y_pred_enc2).cpu().numpy())
+                preds_enc2.extend(y_pred_enc2.cpu().numpy())  # FIXED (2025-11-19): No extra sigmoid
             else:
                 # Fallback to zeros if not available
                 preds_enc2.extend(np.zeros(len(y_pred_enc1)))
@@ -80,7 +80,7 @@ def train_gainakt3exp_dual_encoder(
     mastery_threshold_init, threshold_temperature,
     beta_skill_init, m_sat_init,
     gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,
-    skill_difficulty_path=None, use_student_velocity=False,
+    skill_difficulty_path=None, use_student_velocity=False, mastery_prediction_mode=None,
     cfg=None, experiment_suffix="", log_level=logging.INFO
 ):
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight
@@ -131,17 +131,31 @@ def train_gainakt3exp_dual_encoder(
     num_skills = data_config[dataset_name]['num_c']
     num_questions = data_config[dataset_name]['num_q']
     
-    # Extract num_students from the training dataset (instead of using hardcoded parameter)
-    # This makes the code generalizable to any dataset
-    num_students_from_data = train_loader.dataset.dori['num_students']
-    if num_students != num_students_from_data:
-        logger.warning(f"Parameter num_students={num_students} differs from actual training data ({num_students_from_data} students)")
-        logger.warning(f"Using actual value from dataset: {num_students_from_data}")
-        num_students = num_students_from_data
-    else:
-        logger.info(f"Confirmed: num_students parameter matches dataset ({num_students} students)")
+    # CRITICAL: num_students must match the max student ID in the dataset to avoid index errors
+    # The gamma_student tensor is indexed by student_ids: gamma_student[student_ids]
+    # If use_student_speed=True and student IDs exist, we MUST have num_students >= max(student_ids) + 1
+    if 'num_students' not in train_loader.dataset.dori:
+        raise ValueError(f"Dataset {dataset_name} does not contain 'num_students' metadata. "
+                        f"Cannot proceed without this required information. "
+                        f"Dataset metadata keys: {list(train_loader.dataset.dori.keys())}")
     
-    logger.info(f"Skills: {num_skills}, Questions: {num_questions}")
+    num_students_from_data = train_loader.dataset.dori['num_students']
+    logger.info(f"Dataset contains {num_students_from_data} students (max student_id + 1)")
+    
+    # Compare with parameter value
+    if num_students != num_students_from_data:
+        logger.warning(f"⚠️  Parameter num_students={num_students} differs from dataset ({num_students_from_data})")
+        if use_student_speed:
+            logger.error(f"❌ CRITICAL: use_student_speed=True requires num_students={num_students_from_data}")
+            logger.error(f"❌ Using num_students={num_students} will cause index errors when accessing gamma_student[student_id]")
+            raise ValueError(f"num_students={num_students} is insufficient for dataset with {num_students_from_data} students")
+        else:
+            logger.warning(f"⚠️  Using parameter value: {num_students} (SAFE: use_student_speed=False, gamma_student not indexed)")
+            logger.warning(f"⚠️  If enabling use_student_speed in future, must use num_students={num_students_from_data}")
+    else:
+        logger.info(f"✓ Parameter num_students={num_students} matches dataset")
+    
+    logger.info(f"Skills: {num_skills}, Questions: {num_questions}, Students (parameter): {num_students}")
     logger.info(f"Train batches: {len(train_loader)}, Valid batches: {len(valid_loader)}")
     
     # Get num_c from dataset (use num_skills extracted earlier)
@@ -172,6 +186,7 @@ def train_gainakt3exp_dual_encoder(
         'gains_projection_orthogonal': gains_projection_orthogonal,  # V3+ (2025-11-18)
         'skill_difficulty_path': skill_difficulty_path,  # V4 (2025-11-18)
         'use_student_velocity': use_student_velocity,  # V4 (2025-11-18)
+        'mastery_prediction_mode': mastery_prediction_mode,  # V5 (2025-11-19)
         'monitor_frequency': monitor_freq
     }
     
@@ -337,9 +352,9 @@ def train_gainakt3exp_dual_encoder(
                     # Bug: Mastery computation is inside 'if qry is None' block in model forward()
                     # When qry=questions_shifted (old behavior), mastery head is disabled
                     outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids, student_velocities=student_velocities)
-                    predictions = outputs['predictions']
+                    logits = outputs['logits']  # FIXED (2025-11-19): Use logits, not predictions (avoid double sigmoid)
                     valid_mask = mask.bool()
-                    y_pred = predictions[valid_mask]
+                    y_pred = logits[valid_mask]
                     y_true = responses_shifted[valid_mask].float()
                     bce_loss = bce_criterion(y_pred, y_true)
                     
@@ -388,9 +403,9 @@ def train_gainakt3exp_dual_encoder(
                 # Bug: Mastery computation is inside 'if qry is None' block in model forward()
                 # When qry=questions_shifted (old behavior), mastery head is disabled
                 outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids, student_velocities=student_velocities)
-                predictions = outputs['predictions']
+                logits = outputs['logits']  # FIXED (2025-11-19): Use logits, not predictions (avoid double sigmoid)
                 valid_mask = mask.bool()
-                y_pred = predictions[valid_mask]
+                y_pred = logits[valid_mask]
                 y_true = responses_shifted[valid_mask].float()
                 bce_loss = bce_criterion(y_pred, y_true)
                 
@@ -683,6 +698,10 @@ if __name__ == '__main__':
     parser.add_argument('--gains_projection_orthogonal', action='store_true')  # V3+ (2025-11-18)
     parser.add_argument('--skill_difficulty_path', type=str, required=True)  # V4 (2025-11-18)
     parser.add_argument('--use_student_velocity', action='store_true')  # V4 (2025-11-18)
+    parser.add_argument('--mastery_prediction_mode', type=str, required=True,
+                        choices=['pre_practice', 'post_practice'],
+                        help='Mastery prediction mode: pre_practice (use mastery[t-1] to predict r[t]) or '
+                             'post_practice (use mastery[t] to predict r[t]).')  # V5 (2025-11-19)
     parser.add_argument('--beta_skill_init', type=float, required=True)
     parser.add_argument('--m_sat_init', type=float, required=True)
     parser.add_argument('--gamma_student_init', type=float, required=True)
@@ -711,6 +730,7 @@ if __name__ == '__main__':
         skill_contrastive_loss_weight=args.skill_contrastive_loss_weight, beta_spread_regularization_weight=args.beta_spread_regularization_weight,
         gains_projection_bias_std=args.gains_projection_bias_std, gains_projection_orthogonal=args.gains_projection_orthogonal,
         skill_difficulty_path=args.skill_difficulty_path, use_student_velocity=args.use_student_velocity,
+        mastery_prediction_mode=args.mastery_prediction_mode,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
         gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,

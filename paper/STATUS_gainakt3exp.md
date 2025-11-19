@@ -1,7 +1,34 @@
 # GainAKT3Exp Model Status
 
-**Document Version**: 2025-11-18 (Reorganized for clarity)  
-**Model Status**: ⚠️ V3 Enhanced Strategy - **Explicit Differentiation**
+**Document Version**: 2025-11-19 (Decision to Revert)  
+**Model Status**: 🔴 CRITICAL - REVERTING TO LAST KNOWN GOOD COMMIT
+
+---
+
+## 🚨 CRITICAL DECISION: Code Revert Required
+
+**Decision Date**: November 19, 2025  
+**Action**: Revert to commit 2acdc355 (Nov 16, 02:28 UTC)  
+**Reason**: Unresolved Encoder 1 AUC drop from 0.7232 → 0.6645
+
+### Quick Summary
+
+After 3 days of investigation testing 7+ hypotheses with multiple restoration attempts, the root cause of the AUC drop introduced in commit b59d7e41 remains unidentified. All code comparisons show identical logic, all parameters match, yet performance is degraded by ~6 AUC points. The decision to revert ensures we maintain a stable baseline for continued development.
+
+**See**: `tmp/DIAGNOSTIC_REPORT_AUC_DROP.md` for complete investigation details
+
+### Commits Involved
+- **Good**: 2acdc355 - Last working state (Val AUC=0.7232) ✅
+- **Bad**: b59d7e41 - Parameter cleanup that broke performance ❌
+- **Current**: Multiple failed restoration attempts (Val AUC=0.665-0.690)
+
+### Next Steps
+1. ✅ Document investigation (this file + diagnostic report)
+2. ✅ Commit documentation
+3. ⏳ Create backup branch of current HEAD
+4. ⏳ Hard reset to 2acdc355
+5. ⏳ Validate baseline (reproduce experiment 714616)
+6. ⏳ Resume development with incremental changes
 
 ---
 
@@ -13,42 +40,123 @@
 
 ---
 
+## Design Foundation: Core Hypotheses
+
+The GainAKT3Exp dual-encoder architecture is built on four foundational hypotheses that define how the model learns and predicts:
+
+### Hypothesis 1: Learning Gains from Interactions
+**Premise**: The model can learn the skill-specific learning gains associated with each student-question interaction.
+
+**Implementation**: Encoder 2 processes interaction sequences and projects representations to per-skill gain vectors via `gains_projection: [D] → [num_c]`, where each skill gets an independent gain value for each timestep.
+
+### Hypothesis 2: Mastery from Gain Aggregation
+**Premise**: The mastery level of each student, for each skill, at each sequence step, can be calculated from the aggregation of learning gains obtained from interactions involving that skill.
+
+**Implementation**: 
+```python
+# Accumulate gains over time for each skill
+effective_practice[t, skill] = sum(skill_gains[0:t, skill])
+
+# Model mastery with sigmoid learning curves
+mastery[t, skill] = M_sat[skill] × sigmoid(β[skill] × γ[student] × effective_practice[t, skill] - offset)
+```
+
+The q-matrix relates questions to skills, ensuring gains accumulate correctly per skill.
+
+### Hypothesis 3: Response Prediction from Mastery States
+**Premise**: We can predict whether a response is correct from the mastery states of all skills related to the question.
+
+**Educational Rule Applied**: Answering a question correctly requires mastery of ALL related skills. If all relevant skills have mastery above a threshold θ, the response is predicted as correct. If one or more skills are below threshold, the response is predicted as incorrect.
+
+**Implementation**:
+```python
+# Mastery-based prediction (hard rule)
+encoder2_pred = sigmoid((mastery[t, relevant_skills].min() - θ) / temperature)
+
+# Alternative (soft rule): Average mastery across skills
+# encoder2_pred = sigmoid((mastery[t, relevant_skills].mean() - θ) / temperature)
+```
+
+### Hypothesis 4: IM Loss for Mastery-Based Learning
+**Premise**: The Incremental Mastery (IM) loss function compares predictions calculated from mastery states (Hypothesis 3) with true responses, providing supervision signal for the entire interpretability path.
+
+**Implementation**:
+```python
+# IM loss trains: gains → effective_practice → mastery → response_prediction
+im_loss = BCE(encoder2_pred, true_responses)
+
+# Gradients flow back through:
+# im_loss → encoder2_pred → mastery → effective_practice → skill_gains → gains_projection → Encoder2
+```
+
+**Key Insight**: This creates a differentiable interpretability path where Encoder 2 learns to:
+1. Extract meaningful gain representations from interactions
+2. Model skill-specific mastery progression
+3. Predict responses based on cognitive mastery states
+
+**Expected Behavior**: 
+- **Encoder 2 SHOULD predict responses** (via mastery-based rule) and achieve reasonable AUC (~0.60-0.65)
+- **Encoder 2 AUC improving** indicates the interpretability path is learning correctly
+- **Encoder 2 AUC staying random (~0.50)** indicates the mastery → response prediction path is broken
+
+---
+
+## Version Summary
+
+| Version | Description | Key Innovation | Conclusion |
+|---------|-------------|----------------|------------|
+| **Phase 0** | Baseline dual-encoder | Sigmoid learning curves + dual loss (BCE+IM) | ❌ Scalar gains - cannot learn skill-specific patterns (Enc2 AUC=0.484) |
+| **V1** | Per-skill gains | `gains_projection: [D]→[num_c]` enables skill-specific gradients | ⚠️ Fixed architecture but gains uniform (std=0.0015, all ~0.585) |
+| **V2** | Gain interpretation | Per-skill, per-timestep gain logging from logits | ⚠️ Marginal improvement (std=0.0017), still 99.8% uniform |
+| **V3** | Explicit differentiation | Variance loss + skill-contrastive loss + beta spread regularization | ❌ FAILED - gains collapsed to uniform (std=0.0018, no improvement) |
+| **V3+** | Asymmetric initialization | Bias ~ N(0, 0.5) + orthogonal weights + V3 losses | ❌ FAILED - worse than V3 (std=0.0016), initial asymmetry lost by epoch 2 |
+| **V3++** | BCE weight tuning | Tested 0.1, 0.3, 0.5 with full V3+ mechanisms | ❌ FAILED - all converged to std~0.0017, <0.01% difference across weights |
+| **V4** | Semantic grounding | External difficulty scaling (post-projection) | ❌ FAILED - compensatory learning, network canceled semantic scaling (CV 94% loss) |
+| **V5** | Architectural constraint | Difficulty as INPUT feature (pre-projection) | ❌ FAILED - identical to V4 (CV=0.0122), network learned to ignore input |
+| **Clean Baseline** | Diagnostic configuration | V3+ features disabled, bce_weight=0.9 | ✅ Val AUC=0.723 (Nov 16) - best performance, establishes target |
+| **IM Fix** | AUC drop investigation | Reverted IM loss to current responses | 🔴 CRITICAL FAILURE - AUC=0.665 (Nov 19), worse than ever, Enc2 learning |
+
+**Key Finding**: Uniform gains (~0.585) is optimization inevitability - BCE+IM loss landscape creates global attractor regardless of initialization, loss weights, explicit penalties, or external supervision. All 10 differentiation experiments failed.
+
+**Current Priority**: Restore AUC baseline (0.665→0.723) before resuming differentiation work. Root cause unknown - requires deep architectural comparison.
+
+---
+
 ## Current Status
 
-**Implementation Phase**: Semantic Grounding (V4-V5) - ❌ FAILED  
-**Validation Status**: 10 experiments complete - All failed to achieve differentiated gains  
-**Critical Finding**: Uniform gains is optimization inevitability, cannot be solved by external supervision
+**Critical Issue**: AUC Drop from 0.724 to 0.665 (Nov 16-19, 2025)  
+**Investigation Status**: Root cause NOT yet identified - IM loss target reversion failed  
+**Clean Baseline Status**: Dual-encoder architecture with V3+ features disabled (required for fair comparison)
 
-**V5 Results** (Experiment 510011 - Latest):
-- ❌ Gain std: 0.0061 (target >0.10) - identical to V4
-- ❌ Gain CV: 0.0122 (target >0.20) - identical to V4
-- ❌ Correlation with 1/difficulty: 0.57 - identical to V4
-- ❌ Semantic preservation: 6.2% (expected 100%)
-- **Conclusion**: Architectural constraint (difficulty as input) FAILED to prevent compensation
+**AUC Drop Investigation** (Nov 19, 2025):
 
-**V4 Results** (Experiment 884821):
-- ❌ Gain std: 0.0061 (target >0.10) - 16x short of expected
-- ❌ Gain CV: 0.0122 (expected 0.195 from difficulty variance) - 94% loss
-- ❌ Correlation with 1/difficulty: 0.57 (expected ~1.0) - 43% loss
-- **Root Cause**: Compensatory learning - network learned to cancel semantic scaling
+**Good Experiment** (714616, Nov 16, commit 2acdc35):
+- Val AUC: **0.7232** ✅
+- BCE Loss: 0.511
+- IM Loss: 0.631
+- Encoder2 AUC: 0.490 (random baseline)
+- Configuration: Clean dual-encoder, bce_loss_weight=0.9
 
-**Root Cause Analysis - Optimization Inevitability**:
-- V4: Applied difficulty scaling AFTER projection → network compensated by learning inverse pattern
-- V5: Made difficulty an INPUT FEATURE → network still compensated (learned to ignore input)
-- **Fundamental problem**: BCE+IM loss landscape creates global attractor at uniform gains (~0.5)
-- Network finds uniform solution optimal for dual objectives regardless of:
-  - External semantic anchors (V4-V5) ✗
-  - Architectural constraints (V5) ✗
-  - Initialization asymmetry (V3+) ✗
-  - Explicit differentiation losses (V3) ✗
-  - Loss weight tuning (V0-V3++) ✗
+**Failed Restoration Attempt** (869310, Nov 19):
+- Val AUC: **0.6645** ❌ (WORSE than recent experiments!)
+- BCE Loss: 0.553
+- IM Loss: 0.605
+- Encoder2 AUC: 0.592 (learning)
+- Configuration: Attempted IM loss target reversion (responses instead of responses_shifted)
 
-**V3 Phase 1 Components Tested**:
-- ✅ Skill-contrastive loss (weight=1.0) - Active but insufficient
-- ✅ Beta spread initialization N(2.0, 0.5) - Worked for beta, not gains
-- ✅ Beta spread regularization (weight=0.5) - Maintained spread
-- ✅ Variance loss amplification (0.1→2.0) - Active but too weak
-- ✅ Indentation bug fixed (311 lines) - Mastery head functional
+**Key Differences from Good Experiment**:
+- ❌ IM loss target reversion did NOT restore AUC
+- ❌ Encoder2 still learning (not random like good experiment)
+- ❌ Overall performance degraded vs recent baselines (~0.69)
+- ⚠️ Something else fundamentally different in architecture or forward pass
+
+**V3+ Features Currently Disabled** (for clean baseline comparison):
+- variance_loss_weight: 2.0 → 0.0
+- skill_contrastive_loss_weight: 1.0 → 0.0
+- beta_spread_regularization_weight: 0.5 → 0.0
+- gains_projection_bias_std: 0.5 → 0.0
+- gains_projection_orthogonal: true → false
+- **Rationale**: Isolate architectural differences from optimization enhancements
 
 **V3+ Asymmetric Initialization Results** (Experiment 173298):
 - ❌ Implementation: gains_projection.bias ~ N(0, 0.5)
@@ -85,18 +193,96 @@
 - **Conclusion**: Network learned to IGNORE difficulty input and produce uniform outputs
 - **Fundamental problem**: BCE+IM loss landscape so strongly prefers uniform that even architectural constraints cannot overcome it
 
-**Critical Finding - Optimization Inevitability**:
-- Uniform solution (~0.585) is GLOBAL OPTIMUM in loss landscape
-- Satisfies both BCE and IM losses optimally
-- Network will find this solution through ANY architectural path
-- Proven across 10 experiments with every approach:
+**Critical Finding - Optimization Inevitability vs Code Bug**:
+
+⚠️ **IMPORTANT CAVEAT**: The optimization inevitability conclusion (below) was reached while performance was degraded (AUC ~0.665). The current AUC drop investigation suggests we may have introduced a bug that:
+1. Broke the architecture's ability to learn effectively (Val AUC: 0.723 → 0.665)
+2. Caused Encoder2 to learn when it should stay random (Enc2 AUC: 0.490 → 0.592)
+3. Potentially invalidated all V3-V5 differentiation experiments
+
+**Until AUC baseline is restored to ~0.72**, all conclusions about optimization inevitability remain **tentative**. The bug may have:
+- Prevented proper gradient flow in differentiation mechanisms
+- Created spurious loss landscape attractors
+- Masked the true effectiveness of V3+ features
+
+**Original Optimization Inevitability Hypothesis** (requires validation after bug fix):
+- Uniform solution (~0.585) may be GLOBAL OPTIMUM in loss landscape
+- May satisfy both BCE and IM losses optimally
+- Network may find this solution through ANY architectural path
+- Observed across 10 experiments with every approach:
   - Initial asymmetry (V3+) ✗
   - Loss balance tuning (V0-V3++) ✗
   - Explicit differentiation (V3) ✗
   - External semantic anchors (V4) ✗
   - Architectural constraints (V5) ✗
+- **Status**: Requires re-evaluation once clean baseline architecture is confirmed working
 
-**Next Steps**: All approaches exhausted (10 experiments). Options:
+**Critical Priority - AUC Drop Investigation** (Nov 19, 2025):
+
+🔴 **INVESTIGATION COMPLETE - ROOT CAUSE NOT FOUND - REVERTING**
+
+### Investigation Summary (3 Days, 7+ Hypotheses)
+
+**Baseline Performance** (Experiment 714616, Commit 2acdc355):
+- Validation AUC: 0.7232 ✅
+- Encoder 2 AUC: 0.490 (random, as expected)
+- Date: Nov 16, 02:28 UTC
+
+**Breaking Change** (Commit b59d7e41):
+- Date: Nov 16, 15:06 UTC
+- Changes: Deprecated 27 parameters, major training script cleanup
+- Impact: 43 files, +9258/-2123 lines
+
+**Failed State** (All Experiments After b59d7e41):
+- Validation AUC: 0.665-0.690 ❌
+- Encoder 2 AUC: 0.59 (learning, unexpected)
+- Performance Drop: ~6 AUC points
+
+### Failed Restoration Attempts
+
+| # | Hypothesis | Action Taken | Result | Conclusion |
+|---|-----------|--------------|--------|------------|
+| 1 | IM loss target | Reverted to `responses` | AUC=0.665 ❌ | Not the cause |
+| 2 | Double sigmoid | Code review | No issue ✅ | Not the cause |
+| 3 | num_students param | Validation logic | Correct ✅ | Not the cause |
+| 4 | assist2009 config | Config check | Correct ✅ | Not the cause |
+| 5 | use_gain_head | Signature check | Deprecated ✅ | Not the cause |
+| 6 | V3+ features | Disabled all | No improvement ❌ | Not primary |
+| 7 | Code comparison | Line-by-line | Identical logic ✅ | Unknown |
+
+**All investigated parameters match baseline exactly**. Code logic appears identical. Yet performance remains degraded.
+
+### Decision: Revert to Commit 2acdc355
+
+**Rationale**:
+1. Exhaustive investigation (7 hypotheses, 3+ days) found no root cause
+2. Multiple restoration experiments all failed
+3. Continuing on degraded baseline increases technical debt
+4. Clean slate from known-good state is lower risk
+
+**Revert Plan**:
+1. ✅ Document investigation (DIAGNOSTIC_REPORT_AUC_DROP.md)
+2. ✅ Update STATUS (this file)
+3. ⏳ Commit documentation
+4. ⏳ Create backup branch (`broken-cleanup-nov19`)
+5. ⏳ Hard reset to 2acdc355
+6. ⏳ Validate baseline (reproduce 714616)
+7. ⏳ Resume with incremental changes
+
+**Lessons Learned**:
+- Never deprecate 27 parameters simultaneously
+- Always validate after each significant change
+- Incremental changes with continuous testing required
+- Documentation at commit time, not retrospectively
+
+**See**: `tmp/DIAGNOSTIC_REPORT_AUC_DROP.md` for complete 4000-word investigation report
+
+**Note on V3-V5 Work**: Differentiation experiments (uniform gains problem) remain on hold until baseline restored. May need to be re-evaluated after revert to determine if optimization inevitability conclusions were affected by the performance bug.
+
+---
+
+**Previous Work - Differentiation Strategy** (V3-V5, Nov 18-19):
+All approaches exhausted (10 experiments). Options:
 1. Hard constraints (clamp gains to fixed ranges) - 20% confidence, compromises learning
 2. Accept limitation and document thoroughly - 100% confidence, valid research contribution
 
@@ -590,18 +776,20 @@ See `V3_IMPLEMENTATION_STRATEGY.md` for complete implementation details, mathema
 
 ## Timeline Overview
 
-| Date | Version | Key Changes | Encoder2 AUC | Gain Std | Status |
-|------|---------|-------------|--------------|----------|--------|
-| 2025-11-16 | Baseline | Dual-encoder architecture, sigmoid curves | 0.4842 | N/A | ❌ Broken (scalar gains) |
-| 2025-11-17 | V1 | Per-skill gains fix | 0.5868 | 0.0015 | ⚠️ Above random, uniform gains |
-| 2025-11-17 | V2 | Multiple interventions | 0.5969 | 0.0017 | ⚠️ Marginal improvement |
-| 2025-11-18 | V3 Bug Fix | Fixed indentation bug (311 lines) | 0.5891 | N/A | ✅ Mastery head active |
-| 2025-11-18 | V3 Phase 1 | Explicit differentiation | 0.5935 | 0.0018 | ❌ FAILED |
-| 2025-11-18 | V3+ | Asymmetric initialization BCE=0.5 | N/A | 0.0016 | ❌ FAILED (worse!) |
-| 2025-11-18 | V3++ BCE=0.1 | V3+ with 90% IM weight | N/A | 0.0017 | ❌ FAILED |
-| 2025-11-18 | V3++ BCE=0.3 | V3+ with 70% IM weight | N/A | 0.0017 | ❌ FAILED |
-| 2025-11-19 | V4 | Semantic grounding (post-processing) | N/A | 0.0061 | ❌ FAILED (compensatory learning) |
-| 2025-11-19 | V5 | Difficulty as input (architectural) | N/A | 0.0061 | ❌ FAILED (identical to V4) |
+| Date | Version | Key Changes | Val AUC | Encoder2 AUC | Gain Std | Status |
+|------|---------|-------------|---------|--------------|----------|--------|
+| 2025-11-16 | Baseline | Dual-encoder architecture, sigmoid curves | N/A | 0.4842 | N/A | ❌ Broken (scalar gains) |
+| 2025-11-16 | Clean | Dual-encoder, bce=0.9, V3+ disabled | **0.7232** | 0.490 | N/A | ✅ GOOD (commit 2acdc35) |
+| 2025-11-17 | V1 | Per-skill gains fix | N/A | 0.5868 | 0.0015 | ⚠️ Above random, uniform gains |
+| 2025-11-17 | V2 | Multiple interventions | N/A | 0.5969 | 0.0017 | ⚠️ Marginal improvement |
+| 2025-11-18 | V3 Bug Fix | Fixed indentation bug (311 lines) | N/A | 0.5891 | N/A | ✅ Mastery head active |
+| 2025-11-18 | V3 Phase 1 | Explicit differentiation | N/A | 0.5935 | 0.0018 | ❌ FAILED |
+| 2025-11-18 | V3+ | Asymmetric initialization BCE=0.5 | N/A | N/A | 0.0016 | ❌ FAILED (worse!) |
+| 2025-11-18 | V3++ BCE=0.1 | V3+ with 90% IM weight | N/A | N/A | 0.0017 | ❌ FAILED |
+| 2025-11-18 | V3++ BCE=0.3 | V3+ with 70% IM weight | N/A | N/A | 0.0017 | ❌ FAILED |
+| 2025-11-19 | V4 | Semantic grounding (post-processing) | N/A | N/A | 0.0061 | ❌ FAILED (compensatory learning) |
+| 2025-11-19 | V5 | Difficulty as input (architectural) | N/A | N/A | 0.0061 | ❌ FAILED (identical to V4) |
+| 2025-11-19 | IM Fix | Revert IM loss to current responses | **0.6645** | 0.592 | N/A | 🔴 CRITICAL (worse than ever!) |
 
 ## Bug 0: Skill Index Mismatch (2025-11-17) - FIXED
 
@@ -1259,5 +1447,101 @@ All parameter changes documented in `examples/reproducibility.md` following prot
 
 ---
 
-**Document Version**: 2025-11-18  
-**Last Updated**: After STATUS document reorganization
+**Document Version**: 2025-11-19  
+**Last Updated**: After AUC drop investigation and num_students parameter analysis
+
+---
+
+## Appendix A: num_students Parameter Investigation (Nov 19, 2025)
+
+### Issue Summary
+
+During AUC drop investigation (baseline 0.724 → current 0.665), discovered potential issue with `num_students` parameter management and its relationship to dataset statistics.
+
+### Background
+
+**Parameter Usage**:
+- `num_students` allocates `gamma_student` tensor for per-student learning velocity: `torch.nn.Parameter(torch.ones(num_students) * gamma_student_init)`
+- When `use_student_speed=True` and `student_ids` provided: `gamma = self.gamma_student[student_ids]` (indexing operation)
+- When `use_student_speed=False`: Uses `gamma.mean()` fallback, no student_id indexing
+
+**Dataset Metadata (assist2015 fold 0)**:
+- Training data: 12220 unique students (student_ids: 0-12219)
+- Validation data: 3055 unique students (student_ids: 0-3054)
+- Dataset metadata: Reports 12220 (all folds combined)
+- Parameter default: 3055
+
+### Investigation Findings
+
+**1. Baseline Configuration (Experiment 714616, commit 2acdc35)**:
+- num_students: 3055
+- use_student_speed: False
+- Val AUC: 0.7232 ✅
+- Encoder2 AUC: 0.490 (random)
+- **Why it worked**: use_student_speed=False means no indexing, uses gamma.mean() fallback
+
+**2. Index Safety Analysis**:
+```python
+# IF use_student_speed=True AND student_ids provided:
+gamma = self.gamma_student[student_ids]  # Requires num_students >= max(student_ids) + 1
+
+# IF use_student_speed=False:
+gamma = self.gamma_student.mean()  # Safe with any num_students value
+```
+
+**3. Validation Logic Added** (lines 130-158 in train_gainakt3exp.py):
+```python
+# Extract num_students from dataset dynamically
+num_students_from_data = train_loader.dataset.dori['num_students']
+logger.info(f"Dataset contains {num_students_from_data} students (max student_id + 1)")
+
+# Validate compatibility
+if num_students != num_students_from_data:
+    if use_student_speed:
+        # CRITICAL ERROR: Would cause index out of bounds
+        raise ValueError(f"num_students={num_students} insufficient for {num_students_from_data} students")
+    else:
+        # SAFE: gamma_student not indexed by student_id
+        logger.warning(f"Using parameter value: {num_students} (SAFE: use_student_speed=False)")
+```
+
+### Resolution
+
+**Current Implementation**:
+- ✅ Dynamic extraction of num_students from dataset metadata
+- ✅ Clear logging of parameter vs dataset mismatch
+- ✅ Safety validation: Throws error if use_student_speed=True with insufficient num_students
+- ✅ Warning when safe mismatch (use_student_speed=False)
+- ✅ Adheres to zero-defaults policy (no fallback values, fails if metadata missing)
+
+**Why num_students=3055 Works for Baseline**:
+1. Baseline has use_student_speed=False (parameter not used for indexing)
+2. Code uses gamma.mean() fallback when student_ids not provided
+3. No individual gamma_student elements accessed, so 3055-element tensor sufficient
+4. Even though dataset has 12220 students, the tensor is never indexed by student_id
+
+**Parameter Value Decision**:
+- Keep num_students=3055 matching baseline for reproducibility
+- Safe because current experiments also use use_student_speed=False
+- If enabling use_student_speed in future, must set num_students=12220
+
+### Status
+
+- ✅ Validation logic implemented and tested
+- ✅ Comprehensive logging for debugging
+- ✅ Safety checks prevent index errors
+- ⏸️ **NOT the root cause of AUC drop** - Failed restoration attempt (869310) with proper num_students still produced AUC=0.665
+- ⏸️ Issue documented for future reference if enabling use_student_speed
+
+### Related Code
+
+- Model: `pykt/models/gainakt3_exp.py` lines 438-450 (gamma_student allocation), lines 760-780 (usage)
+- Training: `examples/train_gainakt3exp.py` lines 130-158 (validation logic)
+- Parameter defaults: `configs/parameter_default.json`
+
+### Recommendations
+
+1. **For current work**: No changes needed, validation logic prevents future issues
+2. **If enabling use_student_speed**: Set num_students to dataset's actual value (12220 for assist2015)
+3. **For other datasets**: Validation logic will automatically detect and warn/error appropriately
+4. **Documentation**: This appendix serves as reference for parameter management decisions

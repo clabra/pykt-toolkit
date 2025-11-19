@@ -44,7 +44,8 @@
     "gains_projection_bias_std": 0.0,
     "gains_projection_orthogonal": false,
     "skill_difficulty_path": null,
-    "use_student_velocity": false
+    "use_student_velocity": false,
+    "mastery_prediction_mode": "post_practice"
   },
   "deprecated": {
     "_comment": "Parameters deprecated as of 2025-11-16. Commented out in argparse. DO NOT use in new experiments.",
@@ -271,5 +272,5 @@
   },
   "_md5": "5014c4535a6f17b84d0f17aa120dcea3",
   "_md5_computed": "2025-11-18",
-  "md5": "61ec97c8347fa795a2fb2a3ec9fcfd8c"
+  "md5": "af9da73a57d8492d9eb8219f3026f264"
 }

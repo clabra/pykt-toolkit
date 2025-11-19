@@ -1,0 +1,11 @@
+{
+  "theta_global": 0.7846441864967346,
+  "theta_global_init": 0.85,
+  "threshold_temperature": 1.0,
+  "beta_skill_mean": 2.426943302154541,
+  "beta_skill_std": 0.500626266002655,
+  "M_sat_mean": 0.7295756936073303,
+  "M_sat_std": 0.03140202537178993,
+  "gamma_student_mean": 1.0338449478149414,
+  "gamma_student_std": 0.0001803654304239899
+}

@@ -102,7 +102,8 @@ class GainAKT3Exp(nn.Module):
                  threshold_temperature=1.5, beta_skill_init=2.0, m_sat_init=0.8, 
                  gamma_student_init=1.0, sigmoid_offset=2.0,
                  gains_projection_bias_std=0.0, gains_projection_orthogonal=False,
-                 skill_difficulty_path=None, use_student_velocity=False):
+                 skill_difficulty_path=None, use_student_velocity=False,
+                 mastery_prediction_mode="post_practice"):
         """
         Initialize the monitored GainAKT3Exp model.
         
@@ -201,6 +202,23 @@ class GainAKT3Exp(nn.Module):
         self.num_students = num_students
         self.use_student_velocity = use_student_velocity
         
+        # Mastery prediction mode configuration
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Controls educational model for converting mastery to predictions
+        # 
+        # "post_practice": Use mastery[t] to predict r[t] (includes gain from current practice)
+        #                  → Scaffolded learning: practice with feedback, then demonstrate mastery
+        #                  → Direct feedback loop: good practice → mastery increase → correct answer
+        # 
+        # "pre_practice":  Use mastery[t-1] to predict r[t] (before current practice)
+        #                  → Standard assessment: predict based on prior mastery, then learn
+        #                  → Avoids circular dependency between gain and prediction
+        # ═══════════════════════════════════════════════════════════════════════════
+        if mastery_prediction_mode not in ["pre_practice", "post_practice"]:
+            raise ValueError(f"mastery_prediction_mode must be 'pre_practice' or 'post_practice', got: {mastery_prediction_mode}")
+        self.mastery_prediction_mode = mastery_prediction_mode
+        print(f"Mastery prediction mode: {mastery_prediction_mode}")
+        
         # Load pre-computed skill difficulty for semantic grounding
         if skill_difficulty_path is not None:
             import json
@@ -228,6 +246,35 @@ class GainAKT3Exp(nn.Module):
         self.monitor_frequency = monitor_frequency
         self.interpretability_monitor = None
         self.step_count = 0
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # MULTI-SKILL DATASET WARNING
+        # ═══════════════════════════════════════════════════════════════════════════
+        # IMPORTANT: Current implementation assumes single-skill questions (q → one skill)
+        # This works for datasets like assistments2015 where each question practices one skill.
+        # 
+        # For multi-skill datasets (where one question practices multiple skills):
+        # - The effective_practice accumulation logic (line ~690) would need modification
+        # - Would require Q-matrix input to identify all relevant skills per question
+        # - Would accumulate gains for ALL relevant skills, not just q[b,t]
+        # 
+        # If using multi-skill data, review and modify the effective_practice loop.
+        # ═══════════════════════════════════════════════════════════════════════════
+        import warnings
+        if num_c > 200:  # Heuristic: large skill count might indicate multi-skill setup
+            warnings.warn(
+                f"\n{'='*80}\n"
+                f"⚠️  MULTI-SKILL DATASET CHECK\n"
+                f"{'='*80}\n"
+                f"Detected large skill count (num_c={num_c}).\n"
+                f"Current implementation assumes each question practices ONE skill.\n\n"
+                f"If your dataset has multi-skill questions (Q-matrix with multiple 1s):\n"
+                f"  1. Review effective_practice accumulation logic (~line 690)\n"
+                f"  2. Modify to accumulate gains for ALL relevant skills per question\n"
+                f"  3. See code comments for multi-skill extension guidance\n"
+                f"{'='*80}\n",
+                stacklevel=2
+            )
         
         # ═══════════════════════════════════════════════════════════════════════════
         # ENCODER 1: PERFORMANCE PATH (Response Patterns)
@@ -673,8 +720,18 @@ class GainAKT3Exp(nn.Module):
         beta_spread_regularization = self.compute_beta_spread_regularization()  # Scalar loss
         
         # Step 2: Accumulate per-skill effective practice (quality-weighted)
-        # Each skill accumulates its own gain at each timestep
-        # This replaces the scalar gain_quality that applied uniformly to all skills
+        # ═══════════════════════════════════════════════════════════════════════════
+        # CRITICAL FIX (2025-11-19): Only increment the PRACTICED skill, not all skills
+        # 
+        # BUG IDENTIFIED: Previous implementation incremented ALL skills at every timestep:
+        #   effective_practice[:, t, :] += skill_gains[:, t, :]  # WRONG!
+        # 
+        # This violated the educational model where practicing skill X shouldn't 
+        # automatically increase mastery in unrelated skill Y.
+        # 
+        # CORRECT BEHAVIOR: Only the skill(s) being practiced should accumulate gains.
+        # skill_gains[b, t, :] represents how much each skill contributes to answering
+        # question q[b, t]. We use these gains ONLY for the practiced skill(s).
         # ═══════════════════════════════════════════════════════════════════════════
         effective_practice = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
         
@@ -683,10 +740,25 @@ class GainAKT3Exp(nn.Module):
                 # Carry forward previous effective practice for all skills
                 effective_practice[:, t, :] = effective_practice[:, t-1, :].clone()
             
-            # Add per-skill gains - each skill gets its own increment
-            # This is fully differentiable: gradients flow back through
-            # skill_gains → gains_projection → value_seq_2 → Encoder 2
-            effective_practice[:, t, :] += skill_gains[:, t, :]
+            # Identify which skill(s) are being practiced at timestep t
+            practiced_skills = q[:, t].long()  # [B] - skill index for each student
+            batch_indices = torch.arange(batch_size, device=q.device)
+            
+            # Increment effective practice ONLY for the practiced skill
+            # Use the skill_gains value for the practiced skill
+            # This maintains differentiability: gradients flow through skill_gains → Encoder 2
+            practiced_skill_gains = skill_gains[batch_indices, t, practiced_skills]  # [B]
+            effective_practice[batch_indices, t, practiced_skills] += practiced_skill_gains
+            
+            # MULTI-SKILL SCENARIO NOTE:
+            # In datasets where one question practices multiple skills (Q-matrix with multiple 1s),
+            # the current implementation assumes q[b,t] is a single skill index.
+            # For multi-skill support, this would need modification to:
+            # 1. Accept Q-matrix input indicating all relevant skills per question
+            # 2. Accumulate gains for ALL relevant skills (weighted by skill_gains)
+            # Example for future multi-skill extension:
+            #   for each relevant_skill in Q_matrix[q[b,t]]:
+            #       effective_practice[b, t, relevant_skill] += skill_gains[b, t, relevant_skill]
         
         # Step 3: Compute sigmoid learning curve mastery using effective practice
         # Handle gamma_student (fixed vs dynamic per-batch)
@@ -757,17 +829,44 @@ class GainAKT3Exp(nn.Module):
         # - Reduces parameter count while maintaining interpretability
         # ═══════════════════════════════════════════════════════════════════════════
         
+        # ═══════════════════════════════════════════════════════════════════════════
+        # PREDICTION FROM MASTERY (Configurable Educational Model)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Educational model controlled by self.mastery_prediction_mode:
+        # 
+        # "post_practice": Use mastery[t, q[t]] to predict r[t]
+        #    → Mastery INCLUDES gain from practicing question q[t]
+        #    → Scaffolded learning: practice with feedback, then demonstrate mastery
+        #    → Creates direct feedback loop: good practice → mastery increase → correct answer
+        #    → Default mode (aligns with user's educational intuition)
+        # 
+        # "pre_practice": Use mastery[t-1, q[t]] to predict r[t]
+        #    → Mastery BEFORE practicing question q[t]
+        #    → Standard assessment: predict based on prior mastery, then learn
+        #    → Avoids circular dependency between current gain and current prediction
+        #    → More realistic for pure assessment scenarios
+        # ═══════════════════════════════════════════════════════════════════════════
+        
         # Get the skill ID for each timestep
-        # FIX (2025-11-17): Use CURRENT skill (q) not NEXT skill (target_concepts)
-        # Investigation showed 98.2% of prediction mismatches occurred at skill changes
-        # because model was using mastery for q[t+1] instead of q[t]
         skill_indices = q.long()  # [B, L] - use current question's skill
         
         # Gather mastery for the actual skills being tested
         # projected_mastery: [B, L, num_c], we need [B, L] by selecting skill at each step
         batch_indices = torch.arange(batch_size, device=q.device).unsqueeze(1).expand(-1, seq_len)
         time_indices = torch.arange(seq_len, device=q.device).unsqueeze(0).expand(batch_size, -1)
-        skill_mastery = projected_mastery[batch_indices, time_indices, skill_indices]  # [B, L]
+        
+        if self.mastery_prediction_mode == "post_practice":
+            # POST-PRACTICE: Use mastery at time t (includes gain from current practice)
+            skill_mastery = projected_mastery[batch_indices, time_indices, skill_indices]  # [B, L]
+        
+        elif self.mastery_prediction_mode == "pre_practice":
+            # PRE-PRACTICE: Use mastery from previous timestep to predict current response
+            # This avoids circular dependency: practice at t updates mastery for predictions at t+1
+            # Shift mastery back by 1: use mastery[t-1] to predict r[t]
+            mastery_shifted = torch.zeros_like(projected_mastery)
+            mastery_shifted[:, 1:, :] = projected_mastery[:, :-1, :].clone()  # Shift by 1
+            mastery_shifted[:, 0, :] = 0.0  # Initial mastery = 0 (no prior practice)
+            skill_mastery = mastery_shifted[batch_indices, time_indices, skill_indices]  # [B, L]
         
         # Use global threshold (clamped to [0,1] for stability)
         theta_clamped = torch.clamp(self.theta_global, 0.0, 1.0)
@@ -978,7 +1077,10 @@ class GainAKT3Exp(nn.Module):
         output = self.forward_with_states(q, r, qry, student_ids=student_ids, student_velocities=student_velocities)
         
         # Return only the standard outputs for PyKT compatibility
-        result = {'predictions': output['predictions']}
+        result = {
+            'predictions': output['predictions'],
+            'logits': output['logits']  # FIXED (2025-11-19): Include logits for BCE loss
+        }
         
         if qtest:
             result['encoded_seq'] = output['context_seq']
@@ -992,6 +1094,16 @@ class GainAKT3Exp(nn.Module):
         # Include incremental mastery predictions (Encoder 2) for dual-encoder evaluation
         if 'incremental_mastery_predictions' in output:
             result['incremental_mastery_predictions'] = output['incremental_mastery_predictions']
+        
+        # Include losses for training (V2-V3 features)
+        if 'variance_loss' in output:
+            result['variance_loss'] = output['variance_loss']
+        if 'skill_contrastive_loss' in output:
+            result['skill_contrastive_loss'] = output['skill_contrastive_loss']
+        if 'beta_spread_regularization' in output:
+            result['beta_spread_regularization'] = output['beta_spread_regularization']
+        if 'skill_gains' in output:
+            result['skill_gains'] = output['skill_gains']
             
         return result
     
@@ -1196,6 +1308,7 @@ def create_exp_model(config):
         - m_sat_init (float): Initial M_sat for mastery saturation level
         - gamma_student_init (float): Initial γ_student for learning velocity
         - sigmoid_offset (float): Sigmoid inflection point offset
+        - mastery_prediction_mode (str): "pre_practice" or "post_practice" (optional, default: "post_practice")
     
     Args:
         config (dict): Model configuration parameters (all required)
@@ -1233,7 +1346,8 @@ def create_exp_model(config):
             beta_skill_init=config['beta_skill_init'],
             m_sat_init=config['m_sat_init'],
             gamma_student_init=config['gamma_student_init'],
-            sigmoid_offset=config['sigmoid_offset']
+            sigmoid_offset=config['sigmoid_offset'],
+            mastery_prediction_mode=config.get('mastery_prediction_mode', 'post_practice')  # V5 (2025-11-19)
         )
     except KeyError as e:
         raise ValueError(f"Missing required parameter in model config: {e}. "
