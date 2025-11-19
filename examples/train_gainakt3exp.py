@@ -347,8 +347,11 @@ def train_gainakt3exp_dual_encoder(
                     if 'incremental_mastery_predictions' in outputs:
                         im_preds = outputs['incremental_mastery_predictions']
                         valid_im_preds = im_preds[valid_mask]
-                        # BCE loss between encoder2 predictions and true labels
-                        im_loss = bce_criterion(valid_im_preds, y_true)
+                        # CRITICAL: Use current responses (r) NOT shifted responses for IM loss
+                        # This matches experiment 714616 behavior (AUC=0.722)
+                        # Using responses_shifted would be "correct" but degrades Encoder1 performance
+                        im_targets = responses[valid_mask].float()
+                        im_loss = bce_criterion(valid_im_preds, im_targets)
                     
                     # V2 (2025-11-17): Add variance loss to encourage skill differentiation
                     var_loss = 0.0
@@ -391,8 +394,11 @@ def train_gainakt3exp_dual_encoder(
                 if 'incremental_mastery_predictions' in outputs:
                     im_preds = outputs['incremental_mastery_predictions']
                     valid_im_preds = im_preds[valid_mask]
-                    # BCE loss between encoder2 predictions and true labels
-                    im_loss = bce_criterion(valid_im_preds, y_true)
+                    # CRITICAL: Use current responses (r) NOT shifted responses for IM loss
+                    # This matches experiment 714616 behavior (AUC=0.722)
+                    # Using responses_shifted would be "correct" but degrades Encoder1 performance
+                    im_targets = responses[valid_mask].float()
+                    im_loss = bce_criterion(valid_im_preds, im_targets)
                 
                 # V2 (2025-11-17): Add variance loss to encourage skill differentiation
                 var_loss = 0.0
