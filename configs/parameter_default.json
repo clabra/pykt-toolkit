@@ -1,7 +1,7 @@
 {
   "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-19: Restored optimal parameters from experiment 714616",
   "_bug_fix_adjustment": "After fixing scalar gains bug (per-skill gains implemented), need stronger IM loss and variance loss to encourage skill differentiation.",
-  "_change_log": "2025-11-19: Restored optimal parameters: bce_loss_weight=0.9 (from 714616), learning curve params from Phase 1/2 sweeps (beta=2.5, m_sat=0.7, gamma=1.1, offset=1.5). Expected AUC >0.72.",
+  "_change_log": "2025-11-19: Restored optimal parameters from experiment 714616 (AUC=0.724): bce_loss_weight=0.9, learning curve params (beta=2.5, m_sat=0.7, gamma=1.1, offset=1.5), and DISABLED V3+ features (asymmetric init, regularization losses) that degraded performance.",
   "defaults": {
     "seed": 42,
     "epochs": 20,
@@ -38,11 +38,11 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py",
     "model": "gainakt3exp",
-    "variance_loss_weight": 2.0,
-    "skill_contrastive_loss_weight": 1.0,
-    "beta_spread_regularization_weight": 0.5,
-    "gains_projection_bias_std": 0.5,
-    "gains_projection_orthogonal": true,
+    "variance_loss_weight": 0.0,
+    "skill_contrastive_loss_weight": 0.0,
+    "beta_spread_regularization_weight": 0.0,
+    "gains_projection_bias_std": 0.0,
+    "gains_projection_orthogonal": false,
     "skill_difficulty_path": null,
     "use_student_velocity": false
   },
@@ -269,6 +269,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "09080ab705c69a22d50b97bea6935d8e",
+  "_md5": "5014c4535a6f17b84d0f17aa120dcea3",
   "_md5_computed": "2025-11-18"
 }
