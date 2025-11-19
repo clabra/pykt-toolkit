@@ -49,6 +49,19 @@ See "Architecture Summary" section below for detailed flow.
 
 ---
 
+## Recent Recovery (2025-11-19)
+
+**Codebase Revert**: On November 19, 2025, the codebase was reverted to commit `2acdc355` (Nov 16, 02:28 UTC) after Encoder 1 validation AUC dropped from 0.7238 to ~0.665 following commit `b59d7e41` (Nov 16, 15:06 UTC) which deprecated 27 parameters. Despite exhaustive investigation (3 days, 7 hypotheses tested, 24 commits analyzing the issue), the root cause remained unidentified. Following a time-boxed investigation protocol, we made a pragmatic decision to revert to the last known good state rather than continue debugging indefinitely.
+
+**Reproducibility Verification**: We validated the recovery by comparing two experiments:
+- **Baseline Experiment 714616** (run at commit 2acdc355, Nov 16): Val AUC = 0.7237943305
+- **Recovery Experiment 134038** (run after revert, Nov 19): Val AUC = 0.7237943305
+- **Result**: ✅ Perfect reproducibility confirmed - all training/validation metrics match exactly to 10 decimal places across all 8 epochs
+
+**Investigation Archive**: All investigation work (24 commits, experiments, analysis) was preserved in backup branch `v0.0.21.1-gainakt3exp-AUCdrop-deprecated`. A detailed chronological work log is available in `examples/COMMITS_POSTBREAKING.md`, documenting what changes were attempted, which approaches failed, technical insights gained, and lessons learned about incremental development and change management. The current codebase is clean and stable at the validated baseline (Val AUC = 0.7238), ready for incremental development with careful validation after each change.
+
+---
+
 ## Model Overview
 
 **Implementation Files**:
