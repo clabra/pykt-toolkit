@@ -42,7 +42,9 @@
     "skill_contrastive_loss_weight": 1.0,
     "beta_spread_regularization_weight": 0.5,
     "gains_projection_bias_std": 0.5,
-    "gains_projection_orthogonal": true
+    "gains_projection_orthogonal": true,
+    "skill_difficulty_path": null,
+    "use_student_velocity": false
   },
   "deprecated": {
     "_comment": "Parameters deprecated as of 2025-11-16. Commented out in argparse. DO NOT use in new experiments.",
@@ -267,6 +269,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "20ac5436678325b72be20e451330bb05",
+  "md5": "c5bc89ca04e39e42b0c8ebbfa1b66c21",
   "_md5_computed": "2025-11-18"
 }

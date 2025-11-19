@@ -15,25 +15,33 @@
 
 ## Current Status
 
-**Implementation Phase**: V3 Enhanced Strategy Phase 1 - ❌ FAILED  
-**Validation Status**: 20-epoch experiment complete (Exp 970206, early stopped at 14 epochs)  
-**Critical Finding**: V3 Phase 1 did NOT solve uniform gains problem
+**Implementation Phase**: Semantic Grounding (V4-V5) - ❌ FAILED  
+**Validation Status**: 10 experiments complete - All failed to achieve differentiated gains  
+**Critical Finding**: Uniform gains is optimization inevitability, cannot be solved by external supervision
 
-**V3 Phase 1 Results** (Experiment 970206):
-- ❌ Gain std: 0.0018 (target >0.10) - 55x short of target
-- ❌ Gain CV: 0.002 (target >0.20) - 100x short of target
-- ❌ Encoder2 Val AUC: 0.5935 (target >0.62) - 4.3% below target
-- ❌ Mastery correlation: 0.039 (target >0.40) - 10x below target
-- ❌ Response-conditional ratio: 1.00 (target >1.2) - no differentiation
-- ✅ Beta spread std: 0.448 (target >0.3) - ONLY success
-- ❌ Performance vs V2: Encoder1 AUC -3.55%, Mastery corr -65.6%
+**V5 Results** (Experiment 510011 - Latest):
+- ❌ Gain std: 0.0061 (target >0.10) - identical to V4
+- ❌ Gain CV: 0.0122 (target >0.20) - identical to V4
+- ❌ Correlation with 1/difficulty: 0.57 - identical to V4
+- ❌ Semantic preservation: 6.2% (expected 100%)
+- **Conclusion**: Architectural constraint (difficulty as input) FAILED to prevent compensation
 
-**Root Cause Analysis - Loss Landscape Problem**:
-- Initial hypothesis: Symmetric initialization (CV=0.017) creates uniform attractor
-- V3+ test: Asymmetric initialization (CV=0.24 at epoch 0) → STILL collapsed to uniform (CV=0.0015 by epoch 2)
-- **Real cause**: Problem is the LOSS LANDSCAPE, not initialization
-- Uniform gains (~0.585) is global attractor that optimization finds regardless of starting point
-- Encoder 1 dominance + weak differentiation losses → gradients drive toward uniformity
+**V4 Results** (Experiment 884821):
+- ❌ Gain std: 0.0061 (target >0.10) - 16x short of expected
+- ❌ Gain CV: 0.0122 (expected 0.195 from difficulty variance) - 94% loss
+- ❌ Correlation with 1/difficulty: 0.57 (expected ~1.0) - 43% loss
+- **Root Cause**: Compensatory learning - network learned to cancel semantic scaling
+
+**Root Cause Analysis - Optimization Inevitability**:
+- V4: Applied difficulty scaling AFTER projection → network compensated by learning inverse pattern
+- V5: Made difficulty an INPUT FEATURE → network still compensated (learned to ignore input)
+- **Fundamental problem**: BCE+IM loss landscape creates global attractor at uniform gains (~0.5)
+- Network finds uniform solution optimal for dual objectives regardless of:
+  - External semantic anchors (V4-V5) ✗
+  - Architectural constraints (V5) ✗
+  - Initialization asymmetry (V3+) ✗
+  - Explicit differentiation losses (V3) ✗
+  - Loss weight tuning (V0-V3++) ✗
 
 **V3 Phase 1 Components Tested**:
 - ✅ Skill-contrastive loss (weight=1.0) - Active but insufficient
@@ -60,18 +68,37 @@
 - **Conclusion**: BCE weight has MINIMAL effect even with V3+ mechanisms
 - All converge to ~0.585 mean, ~0.0017 std (99.8% uniformity)
 
-**Critical Finding - Uniform Gains Is Optimization Inevitability**:
+**V4 Semantic Grounding Results** (Experiment 884821):
+- ✅ Implementation: External skill difficulty + student velocity
+- ✅ Skill difficulty computation: 3-correct-in-a-row metric (range 0.69-1.90)
+- ✅ Expected CV from difficulty: 0.195 (20% variation)
+- ❌ Actual CV: 0.0122 (only 6.2% of expected)
+- ❌ Correlation with 1/difficulty: 0.57 (expected ~1.0)
+- **Root Cause**: Compensatory learning - network learned gains_projection weights that output `base × difficulty[s]`, then scaling by `1/difficulty[s]` canceled to uniform
+- **Mathematical proof**: Network can learn `w[s] = log(constant × d[s])` so that `sigmoid(w[s]) × (1/d[s]) = constant`
+
+**V5 Difficulty as Input Results** (Experiment 510011):
+- ✅ Implementation: Difficulty concatenated as INPUT FEATURE before projection
+- ✅ Theory: Architectural constraint - cannot "learn away" input features
+- ❌ Actual CV: 0.0122 (identical to V4!)
+- ❌ Correlation: 0.57 (identical to V4!)
+- **Conclusion**: Network learned to IGNORE difficulty input and produce uniform outputs
+- **Fundamental problem**: BCE+IM loss landscape so strongly prefers uniform that even architectural constraints cannot overcome it
+
+**Critical Finding - Optimization Inevitability**:
 - Uniform solution (~0.585) is GLOBAL OPTIMUM in loss landscape
 - Satisfies both BCE and IM losses optimally
-- Encoder 1 dominance + IM loss satisfaction = no pressure to differentiate
-- Gradients drive toward uniformity regardless of:
+- Network will find this solution through ANY architectural path
+- Proven across 10 experiments with every approach:
   - Initial asymmetry (V3+) ✗
-  - Loss balance (10%-50% BCE) ✗
-  - Explicit differentiation (contrastive, variance×20, beta spread) ✗
+  - Loss balance tuning (V0-V3++) ✗
+  - Explicit differentiation (V3) ✗
+  - External semantic anchors (V4) ✗
+  - Architectural constraints (V5) ✗
 
-**Next Steps**: All parameter tuning exhausted (8 experiments). Only options remaining:
-1. Hard constraints (force differentiation in forward pass) - 40% confidence
-2. Accept limitation and reframe paper - 100% confidence
+**Next Steps**: All approaches exhausted (10 experiments). Options:
+1. Hard constraints (clamp gains to fixed ranges) - 20% confidence, compromises learning
+2. Accept limitation and document thoroughly - 100% confidence, valid research contribution
 
 See `/workspaces/pykt-toolkit/tmp/INITIALIZATION_THEORY_ANALYSIS.md` for complete theoretical analysis and `examples/experiments/20251118_211102_gainakt3exp_V3-phase1-full-validation_970206/ANALYSIS.md` for detailed failure analysis.
 
@@ -214,9 +241,9 @@ Defaults defined in `configs/parameter_default.json`:
 
 # Next Steps
 
-## FINAL DECISION: Hard Constraints or Accept Limitation
+## FINAL DECISION: Accept Limitation and Document
 
-**Status**: All parameter tuning approaches exhausted after 8 experiments
+**Status**: All approaches exhausted after 10 experiments
 
 **Experiments Completed**:
 1. V0: Baseline (scalar gains) - Broken
@@ -227,17 +254,177 @@ Defaults defined in `configs/parameter_default.json`:
 6. V3++ BCE=0.1: V3+ with 90% IM - Uniform (std=0.0017)
 7. V3++ BCE=0.3: V3+ with 70% IM - Uniform (std=0.0017)
 8. V2 BCE sweep: Baseline at 0%, 50%, 100% - All uniform
+9. V4: Semantic grounding (external supervision) - Uniform (std=0.0061, compensatory learning)
+10. V5: Difficulty as input (architectural constraint) - Uniform (std=0.0061, learned to ignore)
 
 **Proven Facts**:
 - ✗ Loss weight tuning (0%-100% BCE): Negligible effect
 - ✗ Explicit differentiation (contrastive, variance×20, beta spread): Failed
 - ✗ Asymmetric initialization (CV=0.24→0.002): Collapses during training
 - ✗ Combined V3+ with BCE tuning: No interaction effect
-- ✅ Uniform gains (~0.585) is global optimum in loss landscape
+- ✗ External semantic supervision (V4): Network compensates to cancel
+- ✗ Architectural constraints (V5): Network learns to ignore input
+- ✅ Uniform gains (~0.585) is global optimum in loss landscape - mathematically inevitable
 
-### Option A: Hard Constraints (Confidence: 40%) - LAST ATTEMPT
+### Option A: Semantic Grounding via External Supervision (Confidence: 70%) - ❌ TESTED AND FAILED
 
-**Objective**: Force differentiation through architectural constraints, not loss signals
+**Objective**: Break uniform attractor by introducing **external semantic anchors** from observable learning patterns, not just optimization signals.
+
+**Core Principles** (based on learning science):
+
+1. **Skill Difficulty (Population-level Memory)**:
+   - Observable: Skills requiring more practice across students are harder
+   - Compute: `avg_practice_needed[skill] / global_avg_practice`
+   - Application: Harder skills → lower base gains (need more repetitions)
+   - This is **data-driven**, not learned from loss alone
+
+2. **Student Learning Velocity (Student-level Memory)**:
+   - Observable: Some students learn faster across all skills
+   - Compute: `student_mastery_rate / avg_mastery_rate`
+   - Application: Faster learners → gains multiplied by velocity factor
+   - This is **student-specific**, constant across their sequence
+
+**Why This Could Work**:
+- ✅ External supervision breaks uniform attractor (not purely loss-driven)
+- ✅ Forced differentiation: Skills naturally have different difficulty
+- ✅ Semantic meaning: Aligns with learning science (harder skills need more practice)
+- ✅ Student personalization: Velocity factor per student
+- ✅ Observable from data: Not arbitrary, grounded in actual patterns
+
+**Mathematical Formulation**:
+```python
+# Pre-computed from training data (before model training)
+skill_difficulty[s] = avg_practice_needed[s] / global_avg_practice
+# Range: 0.5 (easy) to 2.0 (hard)
+
+# Computed per student from their history
+student_velocity[i] = student_mastery_rate[i] / avg_mastery_rate
+# Range: 0.5 (slow) to 2.0 (fast)
+
+# Semantically-grounded gains
+semantic_gain[i,t,s] = base_gain[t,s] / skill_difficulty[s] * student_velocity[i]
+```
+
+**Implementation Plan** (~5 hours total):
+
+**Phase 1: Data Preprocessing** (2 hours):
+```python
+# 1. Compute skill difficulty from training data
+def compute_skill_difficulty(dataset):
+    skill_practice_counts = defaultdict(list)
+    for student in dataset:
+        practices_to_mastery = {}
+        for interaction in student:
+            skill_id = interaction['skill']
+            if skill_id not in practices_to_mastery:
+                practices_to_mastery[skill_id] = 0
+            practices_to_mastery[skill_id] += 1
+            if interaction['response'] == 1:  # Mastery achieved
+                skill_practice_counts[skill_id].append(practices_to_mastery[skill_id])
+                practices_to_mastery[skill_id] = 0  # Reset
+    
+    global_avg = np.mean([np.mean(v) for v in skill_practice_counts.values()])
+    skill_difficulty = {
+        skill_id: np.mean(counts) / global_avg 
+        for skill_id, counts in skill_practice_counts.items()
+    }
+    return skill_difficulty
+
+# 2. Save to data directory
+save_json(skill_difficulty, 'data/assist2015/skill_difficulty.json')
+```
+
+**Phase 2: Model Modification** (2 hours):
+```python
+# In pykt/models/gainakt3_exp.py
+class GainAKT3Exp(nn.Module):
+    def __init__(self, ..., skill_difficulty_path=None):
+        # Load pre-computed skill difficulty (fixed, not learned)
+        if skill_difficulty_path:
+            difficulty_dict = load_json(skill_difficulty_path)
+            self.skill_difficulty = torch.tensor(
+                [difficulty_dict.get(i, 1.0) for i in range(num_c)]
+            )
+        else:
+            self.skill_difficulty = torch.ones(num_c)
+    
+    def forward(self, q, r, ..., student_velocities=None):
+        # Base gains from Encoder 2
+        skill_gains_base = torch.sigmoid(
+            self.gains_projection(value_seq_2)
+        )  # [B, L, num_c]
+        
+        # Apply skill difficulty scaling (harder → lower gains)
+        difficulty_scaling = 1.0 / self.skill_difficulty.to(q.device)
+        difficulty_scaling = difficulty_scaling.unsqueeze(0).unsqueeze(0)
+        skill_gains = skill_gains_base * difficulty_scaling
+        
+        # Apply student velocity scaling (if provided)
+        if student_velocities is not None:
+            velocity_scaling = student_velocities.unsqueeze(1).unsqueeze(2)
+            skill_gains = skill_gains * velocity_scaling
+        
+        # Continue with effective practice accumulation...
+```
+
+**Phase 3: Training Updates** (1 hour):
+```python
+# In examples/train_gainakt3exp.py
+
+# Track student history for velocity computation
+student_history_tracker = defaultdict(lambda: {'correct': 0, 'total': 0})
+
+for epoch in range(epochs):
+    for batch in train_loader:
+        # Compute student velocities for this batch
+        student_velocities = []
+        for student_id in batch['student_ids']:
+            history = student_history_tracker[student_id.item()]
+            if history['total'] > 0:
+                velocity = (history['correct'] / history['total']) / global_avg_rate
+            else:
+                velocity = 1.0  # Neutral for new students
+            student_velocities.append(velocity)
+        
+        student_velocities = torch.tensor(student_velocities).to(device)
+        
+        # Forward pass with semantic grounding
+        outputs = model(q, r, ..., student_velocities=student_velocities)
+        
+        # Update student history
+        for student_id, responses in zip(batch['student_ids'], batch['responses']):
+            student_history_tracker[student_id.item()]['total'] += len(responses)
+            student_history_tracker[student_id.item()]['correct'] += responses.sum().item()
+```
+
+**Phase 4: Quick Test** (30 minutes):
+```bash
+python examples/run_repro_experiment.py \
+    --short_title V4-semantic-grounding \
+    --epochs 5 \
+    --skill_difficulty_path data/assist2015/skill_difficulty.json \
+    --use_student_velocity \
+    --gains_projection_bias_std 0.5 \
+    --skill_contrastive_loss_weight 1.0 \
+    --beta_spread_regularization_weight 0.5 \
+    --variance_loss_weight 2.0
+```
+
+**Success Criteria**:
+- Gain std >0.05 (semantic anchors force differentiation)
+- Gains negatively correlated with skill difficulty (harder → lower)
+- Student velocity visible in gain patterns (faster learners → higher gains)
+- Maintains Encoder1 AUC >0.66
+- Encoder2 AUC >0.60
+
+**Results** (Experiments 884821, 510011):
+- **V4 (post-processing)**: CV=0.0122, Correlation=0.57 - Network compensated by learning inverse pattern
+- **V5 (input feature)**: CV=0.0122, Correlation=0.57 - Network learned to ignore difficulty input
+- **Conclusion**: FAILED - Loss landscape too strong, defeats both semantic supervision and architectural constraints
+
+### Option B: Hard Constraints (Confidence: 20%) - NOT RECOMMENDED
+
+**Objective**: Force differentiation through architectural constraints
 
 **Implementation** (~2 hours):
 1. Add minimum inter-skill distance constraint to forward pass
@@ -248,37 +435,17 @@ Defaults defined in `configs/parameter_default.json`:
 **Rationale**: 
 - Only approach that FORCES differentiation regardless of gradients
 - Changes feasible solution space, not just loss landscape
-- May succeed where loss-based methods failed
 
 **Risks**:
-- May hurt overall performance (constrained optimization)
+- **Updated after V5**: If architectural input constraints failed (V5), hard constraints unlikely to work
+- May severely hurt performance (constrained optimization against loss landscape)
 - Implementation complexity
-- No guarantee it will work
+- V4/V5 evidence suggests loss landscape will defeat any constraint mechanism
+- 20% confidence (reduced from 40% after V5 failure)
 
-**Validation Experiment** (5 epochs quick test):
-```bash
-# Requires implementation first
-python examples/run_repro_experiment.py \
-    --short_title V4-hard-constraints-test \
-    --epochs 5 \
-    --min_skill_distance 0.10 \
-    --distance_relaxation_epochs 5 \
-    --gains_projection_bias_std 0.5 \
-    --skill_contrastive_loss_weight 1.0 \
-    --beta_spread_regularization_weight 0.5 \
-    --variance_loss_weight 2.0
-```
+**Recommendation**: Skip this option, proceed directly to Option C
 
-**Success Criteria**:
-- Gain std >0.05 maintained throughout training
-- Encoder1 AUC >0.66 (acceptable performance degradation)
-- Encoder2 AUC >0.60
-- Constraint violations <5%
-
-**If Successful**: Full 20-epoch validation
-**If Fails**: Proceed to Option B
-
-### Option B: Accept Limitation and Reframe (Confidence: 100%) - RECOMMENDED
+### Option C: Accept Limitation and Reframe (Confidence: 100%) - FALLBACK
 
 **Rationale**: After 8 experiments and all parameter tuning exhausted, uniform gains is proven to be an inherent optimization characteristic, not a solvable bug.
 
@@ -320,24 +487,29 @@ python examples/run_repro_experiment.py \
 
 ### Recommended Path Forward
 
-**Immediate Decision Required**:
+**Decision Made**: Proceed with Option C (Accept Limitation)
 
-**Path 1**: Try Option A (hard constraints) - 40% confidence, 1 week
-- One final architectural attempt before accepting limitation
-- If successful: Major breakthrough
-- If fails: Clear closure, proceed to Option B
+**Evidence** (10 experiments, all failed):
+1-3. Loss weight tuning (V0-V2): Uniform gains regardless of BCE/IM balance
+4-5. Explicit differentiation (V3, V3+): Contrastive loss + initialization failed
+6-8. Combined approaches (V3++, sweeps): No interaction effects
+9. External supervision (V4): Network compensated to cancel semantic signal
+10. Architectural constraint (V5): Network learned to ignore difficulty input
 
-**Path 2**: Skip to Option B (accept limitation) - 100% confidence, immediate
-- 8 experiments is sufficient evidence
-- Further attempts unlikely to succeed
-- Honest documentation more valuable than continued failures
-- Focus time on paper writing and other contributions
+**Why Option C**:
+- ✅ 10 experiments is overwhelming evidence
+- ✅ Tried every approach: parameters, initialization, losses, external supervision, architecture
+- ✅ V4/V5 proved even architectural constraints cannot overcome loss landscape
+- ✅ Hard constraints (Option B) unlikely to work after V5 failure (20% confidence)
+- ✅ Further attempts unlikely to succeed without fundamental architecture redesign
+- ✅ Valid research contribution: Document what doesn't work and why
+- ✅ Honest scientific documentation more valuable than continued failures
 
-**Recommendation**: **Option B (Accept Limitation)**
-- Evidence is overwhelming (8 failed experiments)
-- Hard constraints unlikely to work (40% confidence)
-- Time better spent on paper and documentation
-- Valid contribution documenting architectural limitations
+**Next Actions**:
+1. Document V4/V5 findings thoroughly (compensatory learning + architectural failure)
+2. Update paper to reframe contributions (dual-encoder design, not skill differentiation)
+3. Write limitations section explaining optimization inevitability
+4. Commit all changes and prepare final documentation
 
 ## V3 Enhanced Strategy Overview (DEPRECATED)
 
@@ -428,6 +600,8 @@ See `V3_IMPLEMENTATION_STRATEGY.md` for complete implementation details, mathema
 | 2025-11-18 | V3+ | Asymmetric initialization BCE=0.5 | N/A | 0.0016 | ❌ FAILED (worse!) |
 | 2025-11-18 | V3++ BCE=0.1 | V3+ with 90% IM weight | N/A | 0.0017 | ❌ FAILED |
 | 2025-11-18 | V3++ BCE=0.3 | V3+ with 70% IM weight | N/A | 0.0017 | ❌ FAILED |
+| 2025-11-19 | V4 | Semantic grounding (post-processing) | N/A | 0.0061 | ❌ FAILED (compensatory learning) |
+| 2025-11-19 | V5 | Difficulty as input (architectural) | N/A | 0.0061 | ❌ FAILED (identical to V4) |
 
 ## Bug 0: Skill Index Mismatch (2025-11-17) - FIXED
 

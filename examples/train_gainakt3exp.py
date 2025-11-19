@@ -79,7 +79,9 @@ def train_gainakt3exp_dual_encoder(
     gains_projection_bias_std, gains_projection_orthogonal,
     mastery_threshold_init, threshold_temperature,
     beta_skill_init, m_sat_init,
-    gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,    cfg=None, experiment_suffix="", log_level=logging.INFO
+    gamma_student_init, sigmoid_offset, use_wandb, use_amp, auto_shifted_eval, max_correlation_students,
+    skill_difficulty_path=None, use_student_velocity=False,
+    cfg=None, experiment_suffix="", log_level=logging.INFO
 ):
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight
     
@@ -168,6 +170,8 @@ def train_gainakt3exp_dual_encoder(
         'beta_spread_regularization_weight': beta_spread_regularization_weight,  # V3 (2025-11-18)
         'gains_projection_bias_std': gains_projection_bias_std,  # V3+ (2025-11-18)
         'gains_projection_orthogonal': gains_projection_orthogonal,  # V3+ (2025-11-18)
+        'skill_difficulty_path': skill_difficulty_path,  # V4 (2025-11-18)
+        'use_student_velocity': use_student_velocity,  # V4 (2025-11-18)
         'monitor_frequency': monitor_freq
     }
     
@@ -280,6 +284,11 @@ def train_gainakt3exp_dual_encoder(
         ])
     logger.info(f"Learned parameters CSV initialized: {params_csv_path}")
     
+    # V4 (2025-11-18): Track global statistics for velocity computation
+    # We don't need per-student IDs, just running average across all interactions
+    global_correct = 0
+    global_total = 0
+    
     logger.info("Starting training...")
     for epoch in range(num_epochs):
         model.train()
@@ -296,6 +305,30 @@ def train_gainakt3exp_dual_encoder(
             if student_ids is not None:
                 student_ids = student_ids.to(device)
             
+            # V4 (2025-11-18): Compute student velocities for semantic grounding
+            # Per-sequence velocity: success rate of this sequence vs global average
+            # No student IDs needed - each sequence gets its own velocity
+            student_velocities = None
+            if use_student_velocity:
+                batch_size = responses.shape[0]
+                student_velocities = torch.ones(batch_size, device=device)
+                
+                # Global success rate from all previous interactions
+                global_rate = global_correct / global_total if global_total > 0 else 0.5
+                
+                # Compute velocity for each sequence based on its own success rate
+                # Use responses_shifted which matches mask dimensions
+                mask_bool = mask.bool()
+                for b in range(batch_size):
+                    # Success rate for this sequence (responses_shifted already matches mask length)
+                    valid_responses = responses_shifted[b][mask_bool[b]]
+                    if len(valid_responses) > 0:
+                        sequence_rate = valid_responses.float().mean().item()
+                        velocity = sequence_rate / global_rate if global_rate > 0 else 1.0
+                        # Clamp to reasonable range [0.5, 2.0]
+                        student_velocities[b] = max(0.5, min(2.0, velocity))
+                    # else: keep default 1.0 (neutral)
+            
             optimizer.zero_grad()
             
             if use_amp:
@@ -303,7 +336,7 @@ def train_gainakt3exp_dual_encoder(
                     # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
                     # Bug: Mastery computation is inside 'if qry is None' block in model forward()
                     # When qry=questions_shifted (old behavior), mastery head is disabled
-                    outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids)
+                    outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids, student_velocities=student_velocities)
                     predictions = outputs['predictions']
                     valid_mask = mask.bool()
                     y_pred = predictions[valid_mask]
@@ -347,7 +380,7 @@ def train_gainakt3exp_dual_encoder(
                 # CRITICAL FIX (2025-11-18): Pass qry=None to enable mastery head computation
                 # Bug: Mastery computation is inside 'if qry is None' block in model forward()
                 # When qry=questions_shifted (old behavior), mastery head is disabled
-                outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids)
+                outputs = model(q=questions, r=responses, qry=None, qtest=False, student_ids=student_ids, student_velocities=student_velocities)
                 predictions = outputs['predictions']
                 valid_mask = mask.bool()
                 y_pred = predictions[valid_mask]
@@ -391,6 +424,21 @@ def train_gainakt3exp_dual_encoder(
             if isinstance(im_loss, torch.Tensor):
                 total_im += im_loss.item()
             num_batches += 1
+            
+            # V4 (2025-11-18): Update global statistics for velocity tracking
+            # Update AFTER forward pass to maintain running average
+            if use_student_velocity:
+                mask_cpu = mask.cpu().numpy()
+                responses_shifted_cpu = responses_shifted.cpu().numpy()
+                
+                # Update global statistics (respecting mask for valid interactions)
+                for resp_seq, mask_seq in zip(responses_shifted_cpu, mask_cpu):
+                    valid_mask = mask_seq.astype(bool)
+                    # responses_shifted already matches mask length
+                    valid_responses = resp_seq[valid_mask]
+                    if len(valid_responses) > 0:
+                        global_total += len(valid_responses)
+                        global_correct += int(valid_responses.sum())
         
         avg_loss = total_loss / num_batches
         avg_bce = total_bce / num_batches
@@ -620,6 +668,8 @@ if __name__ == '__main__':
     parser.add_argument('--beta_spread_regularization_weight', type=float, required=True)  # V3 (2025-11-18)
     parser.add_argument('--gains_projection_bias_std', type=float, required=True)  # V3+ (2025-11-18)
     parser.add_argument('--gains_projection_orthogonal', action='store_true')  # V3+ (2025-11-18)
+    parser.add_argument('--skill_difficulty_path', type=str, required=True)  # V4 (2025-11-18)
+    parser.add_argument('--use_student_velocity', action='store_true')  # V4 (2025-11-18)
     parser.add_argument('--beta_skill_init', type=float, required=True)
     parser.add_argument('--m_sat_init', type=float, required=True)
     parser.add_argument('--gamma_student_init', type=float, required=True)
@@ -647,6 +697,7 @@ if __name__ == '__main__':
         num_students=args.num_students, bce_loss_weight=args.bce_loss_weight, variance_loss_weight=args.variance_loss_weight,
         skill_contrastive_loss_weight=args.skill_contrastive_loss_weight, beta_spread_regularization_weight=args.beta_spread_regularization_weight,
         gains_projection_bias_std=args.gains_projection_bias_std, gains_projection_orthogonal=args.gains_projection_orthogonal,
+        skill_difficulty_path=args.skill_difficulty_path, use_student_velocity=args.use_student_velocity,
         mastery_threshold_init=args.mastery_threshold_init, threshold_temperature=args.threshold_temperature,
         beta_skill_init=args.beta_skill_init, m_sat_init=args.m_sat_init,
         gamma_student_init=args.gamma_student_init, sigmoid_offset=args.sigmoid_offset,

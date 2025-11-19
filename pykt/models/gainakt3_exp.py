@@ -101,7 +101,8 @@ class GainAKT3Exp(nn.Module):
                  use_student_speed=False, num_students=None, mastery_threshold_init=0.6,
                  threshold_temperature=1.5, beta_skill_init=2.0, m_sat_init=0.8, 
                  gamma_student_init=1.0, sigmoid_offset=2.0,
-                 gains_projection_bias_std=0.0, gains_projection_orthogonal=False):
+                 gains_projection_bias_std=0.0, gains_projection_orthogonal=False,
+                 skill_difficulty_path=None, use_student_velocity=False):
         """
         Initialize the monitored GainAKT3Exp model.
         
@@ -198,6 +199,22 @@ class GainAKT3Exp(nn.Module):
         self.use_skill_difficulty = use_skill_difficulty
         self.use_student_speed = use_student_speed
         self.num_students = num_students
+        self.use_student_velocity = use_student_velocity
+        
+        # Load pre-computed skill difficulty for semantic grounding
+        if skill_difficulty_path is not None:
+            import json
+            with open(skill_difficulty_path, 'r') as f:
+                difficulty_dict = json.load(f)
+            # Convert to tensor with proper skill indexing (skills are 1-indexed in data)
+            skill_difficulty_list = [difficulty_dict.get(str(i), 1.0) for i in range(1, num_c + 1)]
+            self.register_buffer('skill_difficulty', torch.tensor(skill_difficulty_list, dtype=torch.float32))
+            print(f"Loaded skill difficulty from {skill_difficulty_path}")
+            print(f"  Difficulty range: {self.skill_difficulty.min():.3f} - {self.skill_difficulty.max():.3f}")
+            print(f"  Difficulty mean: {self.skill_difficulty.mean():.3f}, std: {self.skill_difficulty.std():.3f}")
+        else:
+            # No semantic grounding - uniform difficulty
+            self.register_buffer('skill_difficulty', torch.ones(num_c, dtype=torch.float32))
         
         # Loss weights (constraint losses currently commented out = 0.0)
         self.non_negative_loss_weight = non_negative_loss_weight
@@ -280,7 +297,21 @@ class GainAKT3Exp(nn.Module):
         # → All skills start nearly identical → uniform gains ~0.50 → V3 losses can't escape
         # Solution: Asymmetric bias initialization breaks symmetry at initialization
         # ═══════════════════════════════════════════════════════════════════════════
-        self.gains_projection = nn.Linear(d_model, num_c)
+        # V5 (2025-11-19): DIFFICULTY AS INPUT FEATURE
+        # Problem: V4 failed because difficulty scaling applied AFTER learnable projection
+        #          → Network learned to compensate (correlation 0.57, CV reduced 16×)
+        # Solution: Concatenate difficulty with encoder output BEFORE projection
+        #          → Network learns: gains = f(encoder_state, difficulty)
+        #          → Cannot cancel because difficulty is architectural input, not multiplier
+        # Expected: CV ~0.15-0.20 (semantic variance preserved)
+        # ═══════════════════════════════════════════════════════════════════════════
+        if skill_difficulty_path is not None:
+            # Add difficulty features to input dimension
+            self.gains_projection = nn.Linear(d_model + num_c, num_c)
+            print(f"V5: gains_projection with difficulty features: {d_model + num_c} → {num_c}")
+        else:
+            # Standard projection (no semantic grounding)
+            self.gains_projection = nn.Linear(d_model, num_c)
         
         # Store asymmetric initialization parameters
         self.gains_projection_bias_std = gains_projection_bias_std
@@ -393,11 +424,12 @@ class GainAKT3Exp(nn.Module):
         """Set the interpretability monitor hook."""
         self.interpretability_monitor = monitor
         
-    def forward_with_states(self, q, r, qry=None, batch_idx=None, student_ids=None):
+    def forward_with_states(self, q, r, qry=None, batch_idx=None, student_ids=None, student_velocities=None):
         """
         Forward pass that returns internal states for interpretability monitoring.
         
         Args:
+            student_velocities: Optional [batch_size] tensor of per-student learning velocities for semantic grounding
             q, r, qry: Same as base forward method
             batch_idx: Current batch index for monitoring frequency
             student_ids: Student IDs [batch_size] (required if use_student_speed=True)
@@ -595,8 +627,34 @@ class GainAKT3Exp(nn.Module):
         # - How much each interaction improves each specific skill
         # - Skill-specific learning rates (some skills harder than others)
         # ═══════════════════════════════════════════════════════════════════════════
-        # Project value_seq_2 to skill-space and normalize to [0, 1]
-        skill_gains = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
+        # V5 (2025-11-19): DIFFICULTY AS INPUT FEATURE (prevents compensatory learning)
+        # V4 FAILURE: Difficulty applied AFTER projection → network compensated (corr=0.57, CV reduced 16×)
+        # V5 FIX: Difficulty concatenated BEFORE projection → architectural constraint
+        #         Network learns: gains = f(encoder_state, difficulty)
+        #         Cannot cancel because difficulty is input, not post-processing
+        # ═══════════════════════════════════════════════════════════════════════════
+        if hasattr(self, 'skill_difficulty') and self.skill_difficulty.max() > 1.01:
+            # Semantic grounding enabled (difficulty varies)
+            # Broadcast difficulty to match batch/sequence dimensions
+            difficulty_features = self.skill_difficulty.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+            difficulty_features = difficulty_features.expand(batch_size, seq_len, -1)  # [B, L, num_c]
+            
+            # Concatenate encoder output with difficulty features
+            encoder_with_difficulty = torch.cat([value_seq_2, difficulty_features], dim=-1)  # [B, L, d_model+num_c]
+            
+            # Project to gains (network learns conditioned on difficulty)
+            skill_gains_base = torch.sigmoid(self.gains_projection(encoder_with_difficulty))  # [B, L, num_c]
+        else:
+            # No semantic grounding (standard projection)
+            skill_gains_base = torch.sigmoid(self.gains_projection(value_seq_2))  # [B, L, num_c]
+        
+        # V5: Student velocity scaling (still multiplicative, but less critical than difficulty)
+        # Note: Could be improved by making velocity an input feature too, but difficulty is primary
+        if self.use_student_velocity and student_velocities is not None:
+            velocity_scaling = student_velocities.unsqueeze(1).unsqueeze(2)  # [B, 1, 1] for broadcasting
+            skill_gains = skill_gains_base * velocity_scaling  # [B, L, num_c]
+        else:
+            skill_gains = skill_gains_base
         
         # V2 (2025-11-17): Compute variance loss to encourage skill differentiation
         # Maximize variance across skills per interaction to prevent uniform gains
@@ -912,12 +970,12 @@ class GainAKT3Exp(nn.Module):
         
         return output
     
-    def forward(self, q, r, qry=None, qtest=False, student_ids=None):
+    def forward(self, q, r, qry=None, qtest=False, student_ids=None, student_velocities=None):
         """
         Standard forward method maintaining compatibility with PyKT framework.
         """
         # For standard forward, just return basic outputs
-        output = self.forward_with_states(q, r, qry, student_ids=student_ids)
+        output = self.forward_with_states(q, r, qry, student_ids=student_ids, student_velocities=student_velocities)
         
         # Return only the standard outputs for PyKT compatibility
         result = {'predictions': output['predictions']}
