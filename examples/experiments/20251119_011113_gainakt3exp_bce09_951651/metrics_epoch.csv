@@ -1,0 +1,3 @@
+epoch,train_loss,train_auc,train_acc,val_loss,val_auc,val_acc,train_bce_loss,train_im_loss,val_bce_loss,val_im_loss,train_encoder1_auc,train_encoder1_acc,val_encoder1_auc,val_encoder1_acc,train_encoder2_auc,train_encoder2_acc,val_encoder2_auc,val_encoder2_acc
+1,0.570136,0.658212,0.734370,0.570136,0.654468,0.740241,0.565915,0.608125,0.565915,0.608125,0.658212,0.734370,0.654468,0.740241,0.572853,0.734370,0.573597,0.740241
+2,0.563432,0.668369,0.734370,0.563432,0.663180,0.740241,0.558640,0.606555,0.558640,0.606555,0.668369,0.734370,0.663180,0.740241,0.576372,0.734370,0.576737,0.740241

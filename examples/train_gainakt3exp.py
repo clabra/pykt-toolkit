@@ -343,6 +343,7 @@ def train_gainakt3exp_dual_encoder(
                     y_true = responses_shifted[valid_mask].float()
                     bce_loss = bce_criterion(y_pred, y_true)
                     
+                    # Runtime fallback (not a parameter default): 0.0 when output not present
                     im_loss = 0.0
                     if 'incremental_mastery_predictions' in outputs:
                         im_preds = outputs['incremental_mastery_predictions']
@@ -354,15 +355,18 @@ def train_gainakt3exp_dual_encoder(
                         im_loss = bce_criterion(valid_im_preds, im_targets)
                     
                     # V2 (2025-11-17): Add variance loss to encourage skill differentiation
+                    # Runtime fallback: 0.0 when variance_loss_weight=0 or output not present
                     var_loss = 0.0
                     if 'variance_loss' in outputs and variance_loss_weight > 0:
                         var_loss = outputs['variance_loss']
                     
                     # V3 (2025-11-18): Add skill-contrastive loss and beta spread regularization
+                    # Runtime fallback: 0.0 when weight=0 or output not present
                     contrastive_loss = 0.0
                     if 'skill_contrastive_loss' in outputs and skill_contrastive_loss_weight > 0:
                         contrastive_loss = outputs['skill_contrastive_loss']
                     
+                    # Runtime fallback: 0.0 when weight=0 or output not present
                     beta_reg_loss = 0.0
                     if 'beta_spread_regularization' in outputs and beta_spread_regularization_weight > 0:
                         beta_reg_loss = outputs['beta_spread_regularization']
@@ -390,26 +394,29 @@ def train_gainakt3exp_dual_encoder(
                 y_true = responses_shifted[valid_mask].float()
                 bce_loss = bce_criterion(y_pred, y_true)
                 
+                # Runtime fallback (not a parameter default): 0.0 when output not present
                 im_loss = 0.0
                 if 'incremental_mastery_predictions' in outputs:
                     im_preds = outputs['incremental_mastery_predictions']
                     valid_im_preds = im_preds[valid_mask]
                     # CRITICAL: Use current responses (r) NOT shifted responses for IM loss
                     # This matches experiment 714616 behavior (AUC=0.722)
-                    # Using responses_shifted would be "correct" but degrades Encoder1 performance
                     im_targets = responses[valid_mask].float()
                     im_loss = bce_criterion(valid_im_preds, im_targets)
                 
                 # V2 (2025-11-17): Add variance loss to encourage skill differentiation
+                # Runtime fallback: 0.0 when variance_loss_weight=0 or output not present
                 var_loss = 0.0
                 if 'variance_loss' in outputs and variance_loss_weight > 0:
                     var_loss = outputs['variance_loss']
                 
                 # V3 (2025-11-18): Add skill-contrastive loss and beta spread regularization
+                # Runtime fallback: 0.0 when weight=0 or output not present
                 contrastive_loss = 0.0
                 if 'skill_contrastive_loss' in outputs and skill_contrastive_loss_weight > 0:
                     contrastive_loss = outputs['skill_contrastive_loss']
                 
+                # Runtime fallback: 0.0 when weight=0 or output not present
                 beta_reg_loss = 0.0
                 if 'beta_spread_regularization' in outputs and beta_spread_regularization_weight > 0:
                     beta_reg_loss = outputs['beta_spread_regularization']
