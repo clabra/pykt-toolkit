@@ -1,7 +1,7 @@
 {
-  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-18: V3 Enhanced Strategy Phase 1",
+  "_comment": "GainAKT3Exp parameter defaults - Updated 2025-11-19: Restored optimal parameters from experiment 714616",
   "_bug_fix_adjustment": "After fixing scalar gains bug (per-skill gains implemented), need stronger IM loss and variance loss to encourage skill differentiation.",
-  "_change_log": "2025-11-18 V3 Phase 1: Added skill_contrastive_loss (1.0), beta_spread_regularization (0.5), increased variance_loss_weight (0.1\u21922.0), beta spread initialization (N(2.0, 0.5)). Addresses lazy solution problem (uniform gains).",
+  "_change_log": "2025-11-19: Restored optimal parameters: bce_loss_weight=0.9 (from 714616), learning curve params from Phase 1/2 sweeps (beta=2.5, m_sat=0.7, gamma=1.1, offset=1.5). Expected AUC >0.72.",
   "defaults": {
     "seed": 42,
     "epochs": 20,
@@ -25,11 +25,11 @@
     "emb_type": "qid",
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "bce_loss_weight": 0.5,
-    "beta_skill_init": 2.0,
-    "m_sat_init": 0.8,
-    "gamma_student_init": 1.0,
-    "sigmoid_offset": 2.0,
+    "bce_loss_weight": 0.9,
+    "beta_skill_init": 2.5,
+    "m_sat_init": 0.7,
+    "gamma_student_init": 1.1,
+    "sigmoid_offset": 1.5,
     "mastery_threshold_init": 0.85,
     "threshold_temperature": 1.0,
     "num_students": 3055,
@@ -269,6 +269,6 @@
     "train_script": "examples/train_gainakt3exp.py",
     "eval_script": "examples/eval_gainakt3exp.py"
   },
-  "md5": "c5bc89ca04e39e42b0c8ebbfa1b66c21",
+  "md5": "09080ab705c69a22d50b97bea6935d8e",
   "_md5_computed": "2025-11-18"
 }
