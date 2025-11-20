@@ -1,0 +1,2 @@
+epoch,train_loss,train_auc,val_loss,val_auc,val_accuracy,monotonicity_violation_rate,negative_gain_rate,bounds_violation_rate,bce_auc,im_auc,global_auc
+1,0.5269247274942349,0.6787543167254689,0.5197245788817503,0.7084714132440941,0.7489902578127281,0.0,0.0,0.0,0.7084714132440941,0.5003476561014674,0.7095513480293943

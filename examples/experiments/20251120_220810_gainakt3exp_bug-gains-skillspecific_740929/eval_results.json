@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251120_220810_gainakt3exp_bug-gains-skillspecific_740929",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7316130696857464,
+  "train_acc": 0.753869475027924,
+  "train_mastery_correlation": 0.033601204066996154,
+  "train_gain_correlation": 0.01640161921513576,
+  "train_correlation_students": 3312,
+  "valid_auc": 0.7185694711049655,
+  "valid_acc": 0.751326046968827,
+  "test_auc": 0.7134355320089069,
+  "test_acc": 0.7476595934379457,
+  "test_mastery_correlation": 0.028277138069163963,
+  "test_gain_correlation": 0.020337843488973488,
+  "test_correlation_students": 3155,
+  "timestamp": "2025-11-20T22:14:08.936053Z"
+}

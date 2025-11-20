@@ -1,0 +1,130 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7186144904831748,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.038259989303734976,
+    "gain_correlation": -0.007395815644882378
+  },
+  "train_history": {
+    "train_loss": [
+      0.5467749637952123,
+      0.5162967448098672
+    ],
+    "train_auc": [
+      0.6787594762323792,
+      0.7150803103729413
+    ],
+    "val_auc": [
+      0.7084427824170791,
+      0.7186144904831748
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.09284243788531367,
+        "gain_correlation": 0.024425258860656433
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08708149008623035,
+        "gain_correlation": 0.071852694040073
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.09284243788531367,
+        "gain_correlation": 0.024425258860656433,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9793157474501585,
+          "incremental_mastery": 1.186158500290774
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.08708149008623035,
+        "gain_correlation": 0.071852694040073,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 1.0066549859447718,
+          "incremental_mastery": 0.9401053624744569
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      }
+    ],
+    "determinism_fallback_batches": [
+      {
+        "epoch": 1,
+        "batch": 0
+      }
+    ]
+  },
+  "model_config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "monitor_frequency": 50,
+    "use_mastery_head": true,
+    "use_gain_head": false,
+    "intrinsic_gain_attention": false,
+    "use_skill_difficulty": false,
+    "use_student_speed": false,
+    "num_students": 12220,
+    "mastery_threshold_init": 0.85,
+    "threshold_temperature": 1.0,
+    "non_negative_loss_weight": 0.0,
+    "monotonicity_loss_weight": 0.0,
+    "mastery_performance_loss_weight": 0.5,
+    "gain_performance_loss_weight": 0.5,
+    "sparsity_loss_weight": 0.0,
+    "consistency_loss_weight": 0.0,
+    "bce_loss_weight": 0.9,
+    "incremental_mastery_loss_weight": 0.09999999999999998
+  },
+  "training_args": {
+    "dataset_name": "assist2015",
+    "num_epochs": 2,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "enhanced_constraints": false,
+    "fold": 0
+  },
+  "timestamp": "2025-11-20T21:57:48.298128",
+  "determinism_fallback": {
+    "count": 1,
+    "batches": [
+      {
+        "epoch": 1,
+        "batch": 0
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 2,
+    "local_mastery_corr": 0.08708149008623035,
+    "local_gain_corr": 0.071852694040073,
+    "global_mastery_corr": null,
+    "global_gain_corr": null,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

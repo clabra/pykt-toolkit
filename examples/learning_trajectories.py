@@ -114,9 +114,17 @@ def select_diverse_students(data_loader, num_trajectories=10, min_steps=10, max_
     return selected
 
 
-def extract_trajectory(model, batch, student_idx_in_batch, device):
+def extract_trajectory(model, batch, student_idx_in_batch, device, bce_weight=0.9, im_weight=0.1):
     """
     Extract detailed trajectory for a single student.
+    
+    Args:
+        model: Trained model
+        batch: Data batch
+        student_idx_in_batch: Index of student in batch
+        device: torch device
+        bce_weight: Weight for BCE predictions (Encoder 1)
+        im_weight: Weight for incremental mastery predictions (Encoder 2)
     
     Returns dict with:
         - steps: list of dicts, each containing:
@@ -125,7 +133,7 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
             - gains: dict {skill_id: gain_value}
             - mastery: dict {skill_id: mastery_value}
             - performance: 0 or 1 (actual response)
-            - prediction: float (model's predicted probability)
+            - prediction: float (model's predicted probability - global combined)
     """
     q = batch['cseqs'].to(device)
     r = batch['rseqs'].to(device)
@@ -143,7 +151,19 @@ def extract_trajectory(model, batch, student_idx_in_batch, device):
     student_q = q[student_idx_in_batch]  # [seq_len]
     student_responses = responses[student_idx_in_batch]  # [seq_len]
     student_mask = mask[student_idx_in_batch]  # [seq_len]
-    student_predictions = outputs['predictions'][student_idx_in_batch]  # [seq_len]
+    
+    # DUAL-ENCODER PREDICTIONS: Use weighted combination of BCE (Encoder 1) and IM (Encoder 2)
+    # Base predictions from Encoder 1 (always high, not balanced)
+    bce_predictions = outputs['predictions'][student_idx_in_batch]  # [seq_len]
+    
+    # Incremental mastery predictions from Encoder 2 (if available)
+    if 'incremental_mastery_predictions' in outputs:
+        im_predictions = outputs['incremental_mastery_predictions'][student_idx_in_batch]  # [seq_len]
+        # Global predictions = weighted combination (uses weights passed from config)
+        student_predictions = bce_weight * bce_predictions + im_weight * im_predictions
+    else:
+        # Fallback: use base predictions if IM not available
+        student_predictions = bce_predictions
     
     # Get mastery and gains
     if 'projected_mastery' in outputs and 'projected_gains' in outputs:
@@ -423,6 +443,11 @@ def main():
     print("EXTRACTING TRAJECTORIES...")
     print("="*120)
     
+    # Extract loss weights from config for proper global prediction calculation
+    bce_weight = complete_config.get('bce_loss_weight', 0.9)
+    im_weight = complete_config.get('incremental_mastery_loss_weight', 0.1)
+    print(f"\nUsing loss weights for predictions: BCE={bce_weight}, IM={im_weight}")
+    
     # Extract and print trajectories
     trajectories_data = []
     current_global_idx = 0
@@ -436,7 +461,10 @@ def main():
                 # Found the batch containing this student
                 student_idx_in_batch = target_global_idx - current_global_idx
                 
-                trajectory = extract_trajectory(model, batch, student_idx_in_batch, device)
+                trajectory = extract_trajectory(
+                    model, batch, student_idx_in_batch, device,
+                    bce_weight=bce_weight, im_weight=im_weight
+                )
                 trajectories_data.append({
                     'student_num': student_num,
                     'global_idx': target_global_idx,

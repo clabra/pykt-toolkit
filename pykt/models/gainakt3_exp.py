@@ -463,14 +463,17 @@ class GainAKT3Exp(nn.Module):
             # # This ensures gains are bounded and interpretable
             # projected_gains = torch.sigmoid(projected_gains_raw)  # [B, L, num_c] in [0, 1]
             
-            # NEW APPROACH: Direct Value→Gain mapping
-            # For each timestep, the learning gain applies to the skill being practiced
-            # We aggregate the D-dimensional gain representation to a scalar per interaction
-            aggregated_gains = learning_gains_d.mean(dim=-1, keepdim=True)  # [B, L, 1]
+            # NEW APPROACH (2025-11-20): Build skill-specific projected_gains tensor
+            # Instead of averaging across all dimensions (which collapses variance),
+            # we extract the specific dimension for each skill and store it per-skill
+            # This preserves the rich information learned by Encoder 2
+            projected_gains = torch.zeros(batch_size, seq_len, self.num_c, device=q.device)
             
-            # Normalize to [0, 1] range for bounded learning increments
-            # Using sigmoid ensures smooth, bounded gains that don't explode during accumulation
-            projected_gains = torch.sigmoid(aggregated_gains).expand(-1, -1, self.num_c)  # [B, L, num_c]
+            for skill_id in range(self.num_c):
+                # Map skill to its corresponding dimension
+                dim_index = skill_id % self.d_model
+                # Extract the gain value for this skill's dimension across all timesteps
+                projected_gains[:, :, skill_id] = learning_gains_d[:, :, dim_index]
             
             # ============================================================================
             # ═══════════════════════════════════════════════════════════════════════════
@@ -504,16 +507,13 @@ class GainAKT3Exp(nn.Module):
             
             # Step 1: Compute interaction-level gain quality from Encoder 2
             # ═══════════════════════════════════════════════════════════════════════════
-            # Encoder 2 learns to assess "how much learning happened" from each interaction
-            # This is differentiable through value_seq_2, allowing gradients to flow back
+            # FIX (2025-11-20): Use skill-specific gain quality instead of averaging all dimensions
+            # Previous approach: averaged 128 dims → collapsed to ~0.58 ± 0.002 (no variance!)
+            # New approach: extract value for the specific skill being practiced
+            # This preserves the rich D-dimensional information learned by Encoder 2
             # ═══════════════════════════════════════════════════════════════════════════
-            # Aggregate D-dimensional value representation to scalar gain quality per interaction
-            # [B, L, D] → [B, L, 1]
-            gain_quality_logits = learning_gains_d.mean(dim=-1, keepdim=True)
-            # Normalize to [0, 1] range: higher values = more effective learning
-            gain_quality = torch.sigmoid(gain_quality_logits)  # [B, L, 1] ∈ [0, 1]
             
-            # Step 2: Compute effective practice count (quality-weighted)
+            # Step 2: Compute effective practice count with skill-specific gain quality
             # Instead of simple counting (non-differentiable), accumulate quality-weighted interactions
             # This allows Encoder 2 to learn: "this interaction was worth X effective practice"
             # ═══════════════════════════════════════════════════════════════════════════
@@ -528,10 +528,18 @@ class GainAKT3Exp(nn.Module):
                 practiced_concepts = q[:, t].long()  # [B] - skill index for each student
                 batch_indices = torch.arange(batch_size, device=q.device)
                 
-                # Increment effective practice by quality-weighted amount
-                # gain_quality[batch_indices, t, 0] is the learned quality for this interaction
-                # This is differentiable! Gradients flow back through gain_quality → value_seq_2 → Encoder 2
-                effective_practice[batch_indices, t, practiced_concepts] += gain_quality[batch_indices, t, 0]
+                # Extract skill-specific gain quality from D-dimensional representation
+                # Map skill ID to dimension index (modulo D to handle more skills than dimensions)
+                dim_index = practiced_concepts % self.d_model  # Map skill → dimension
+                
+                # Gather the specific dimension value for each student's practiced skill
+                # learning_gains_d shape: [B, L, D=128]
+                # We want learning_gains_d[b, t, dim_index[b]] for each b
+                skill_specific_gain = learning_gains_d[batch_indices, t, dim_index]  # [B]
+                
+                # Increment effective practice by skill-specific gain amount (no sigmoid squashing)
+                # This is differentiable! Gradients flow back through skill_specific_gain → value_seq_2 → Encoder 2
+                effective_practice[batch_indices, t, practiced_concepts] += skill_specific_gain
             
             # Step 3: Compute sigmoid learning curve mastery using effective practice
             # Handle gamma_student (fixed vs dynamic per-batch)
@@ -570,11 +578,13 @@ class GainAKT3Exp(nn.Module):
                 mastery_range = projected_mastery.max() - projected_mastery.min()
                 mastery_std = projected_mastery.std()
                 avg_effective_practice = effective_practice.sum() / (batch_size * seq_len * self.num_c)
+                avg_learning_gains = learning_gains_d.mean()
+                learning_gains_std = learning_gains_d.std()
                 
                 print("DEBUG GainAKT3Exp - Dual-Encoder Mastery Stats:")
                 print(f"  Mastery range: {mastery_range:.4f}, std: {mastery_std:.4f}")
                 print(f"  Avg effective practice: {avg_effective_practice:.4f}")
-                print(f"  Avg gain quality (Encoder 2 output): {gain_quality.mean():.4f}")
+                print(f"  Avg skill-specific gains (Encoder 2 output): {avg_learning_gains:.4f} ± {learning_gains_std:.4f}")
                 print("  Sample mastery progression for first student, first 5 skills:")
                 for skill in range(min(5, projected_mastery.shape[2])):
                     skill_mastery = projected_mastery[0, :, skill]
@@ -636,11 +646,16 @@ class GainAKT3Exp(nn.Module):
                 print(f"  Incremental Mastery Predictions - range: {im_pred_range:.4f}, std: {im_pred_std:.4f}")
                 print(f"  Sample base predictions: {predictions[0, :10].cpu().detach().numpy()}")
                 print(f"  Sample incremental predictions: {incremental_mastery_predictions[0, :10].cpu().detach().numpy()}")
-                print("  Sample effective practice (quality-weighted, first student, first 5 skills at t=5):")
+                print("  Sample effective practice (skill-specific, first student, first 5 skills at t=5):")
                 if seq_len > 5:
                     print(f"    {effective_practice[0, 5, :5].cpu().detach().numpy()}")
-                print("  Sample gain quality (Encoder 2 output, first 5 interactions):")
-                print(f"    {gain_quality[0, :min(5, seq_len), 0].cpu().detach().numpy()}")
+                print("  Sample skill-specific gains (Encoder 2 output, first student, first 5 timesteps):")
+                # Show the skill being practiced and its corresponding gain value
+                for t_sample in range(min(5, seq_len)):
+                    skill_id = q[0, t_sample].item()
+                    dim_idx = skill_id % self.d_model
+                    gain_val = learning_gains_d[0, t_sample, dim_idx].item()
+                    print(f"    t={t_sample}, skill={skill_id}, dim={dim_idx}, gain={gain_val:.4f}")
             
             # Do NOT override base predictions - keep both for dual loss computation
         else:

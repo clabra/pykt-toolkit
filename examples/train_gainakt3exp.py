@@ -617,10 +617,7 @@ def train_gainakt3exp_model(args):
                     writer.writerow([
                         'epoch','train_loss','train_auc','val_loss','val_auc','val_accuracy',
                         'monotonicity_violation_rate','negative_gain_rate','bounds_violation_rate',
-                        'mastery_correlation','gain_correlation',
-                        'bce_loss_share','incremental_mastery_loss_share'
-                        # SIMPLIFIED (2025-11-15): Commented out constraint and semantic loss shares
-                        # 'constraint_loss_share','alignment_loss_share','lag_loss_share','retention_loss_share'
+                        'bce_auc','im_auc','global_auc'
                     ])
             logger.info(f"[Repro] Writing artifacts into {experiment_dir}")
         except Exception as e:
@@ -1159,16 +1156,68 @@ def train_gainakt3exp_model(args):
                 probs = torch.sigmoid(valid_predictions)
                 total_predictions.extend(probs.cpu().numpy())
                 total_targets.extend(valid_targets.cpu().numpy())
+                
+                # Track separate predictions for dual-encoder AUC metrics
+                if not hasattr(train_gainakt3exp_model, '_bce_predictions'):
+                    train_gainakt3exp_model._bce_predictions = []
+                    train_gainakt3exp_model._im_predictions = []
+                    train_gainakt3exp_model._global_predictions = []
+                    train_gainakt3exp_model._prediction_targets = []
+                
+                # BCE predictions (Encoder 1) - already have these as 'probs'
+                train_gainakt3exp_model._bce_predictions.extend(probs.cpu().numpy())
+                
+                # IM predictions (Encoder 2) - extract from outputs if available
+                if 'incremental_mastery_predictions' in outputs:
+                    im_preds = outputs['incremental_mastery_predictions'][valid_mask]
+                    train_gainakt3exp_model._im_predictions.extend(im_preds.cpu().numpy())
+                else:
+                    # Fallback: use same as BCE if IM not available
+                    train_gainakt3exp_model._im_predictions.extend(probs.cpu().numpy())
+                
+                # Global predictions: weighted combination
+                # global = bce_weight * bce + im_weight * im
+                if 'incremental_mastery_predictions' in outputs:
+                    im_preds_tensor = outputs['incremental_mastery_predictions'][valid_mask]
+                    global_preds = bce_loss_weight * probs + incremental_mastery_loss_weight * im_preds_tensor
+                    train_gainakt3exp_model._global_predictions.extend(global_preds.cpu().numpy())
+                else:
+                    train_gainakt3exp_model._global_predictions.extend(probs.cpu().numpy())
+                
+                train_gainakt3exp_model._prediction_targets.extend(valid_targets.cpu().numpy())
 
         # Compute training metrics (post minibatch loop)
         train_loss = total_loss / len(train_loader)
         train_main_loss = total_main_loss / len(train_loader)
         train_constraint_loss = total_interpretability_loss / len(train_loader)  # Old constraint losses (now 0.0)
         train_incremental_mastery_loss = total_incremental_mastery_loss / len(train_loader)  # NEW: Incremental mastery loss
+        
+        # Compute separate AUC metrics for dual-encoder architecture
+        train_bce_auc = 0.0
+        train_im_auc = 0.0
+        train_global_auc = 0.0
+        if hasattr(train_gainakt3exp_model, '_bce_predictions'):
+            train_bce_stats = compute_auc_acc(train_gainakt3exp_model._prediction_targets, train_gainakt3exp_model._bce_predictions)
+            train_bce_auc = train_bce_stats['auc']
+            train_im_stats = compute_auc_acc(train_gainakt3exp_model._prediction_targets, train_gainakt3exp_model._im_predictions)
+            train_im_auc = train_im_stats['auc']
+            train_global_stats = compute_auc_acc(train_gainakt3exp_model._prediction_targets, train_gainakt3exp_model._global_predictions)
+            train_global_auc = train_global_stats['auc']
+            # Clear for next epoch
+            del train_gainakt3exp_model._bce_predictions
+            del train_gainakt3exp_model._im_predictions
+            del train_gainakt3exp_model._global_predictions
+            del train_gainakt3exp_model._prediction_targets
         # SIMPLIFIED (2025-11-15): Loss share instrumentation for BCE + Incremental Mastery only
+        # FIX (2025-11-20): Use WEIGHTED losses for correct share calculation
         if total_loss > 0:
-            bce_loss_share = train_main_loss / (total_loss / len(train_loader))
-            incremental_mastery_loss_share = train_incremental_mastery_loss / (total_loss / len(train_loader))
+            # Compute weighted losses (matching total_batch_loss composition)
+            weighted_train_main_loss = bce_loss_weight * train_main_loss
+            weighted_train_incremental_loss = incremental_mastery_loss_weight * train_incremental_mastery_loss
+            
+            # Shares: divide weighted component by total
+            bce_loss_share = weighted_train_main_loss / (total_loss / len(train_loader))
+            incremental_mastery_loss_share = weighted_train_incremental_loss / (total_loss / len(train_loader))
             
             # COMMENTED OUT: Constraint and semantic loss shares (architecture simplification)
             # main_loss_share = train_main_loss / (total_loss / len(train_loader))
@@ -1201,6 +1250,9 @@ def train_gainakt3exp_model(args):
         val_predictions = []
         val_targets = []
         val_loss = 0.0
+        val_bce_predictions = []
+        val_im_predictions = []
+        val_global_predictions = []
         
         with torch.no_grad():
             for batch in valid_loader:
@@ -1233,13 +1285,40 @@ def train_gainakt3exp_model(args):
                 loss = criterion(valid_predictions, valid_targets)
                 val_loss += loss.item()
                 
-                val_predictions.extend(torch.sigmoid(valid_predictions).cpu().numpy())
+                probs_val = torch.sigmoid(valid_predictions)
+                val_predictions.extend(probs_val.cpu().numpy())
                 val_targets.extend(valid_targets.cpu().numpy())
+                
+                # Track separate predictions for dual-encoder validation AUC
+                val_bce_predictions.extend(probs_val.cpu().numpy())
+                
+                # IM predictions
+                if 'incremental_mastery_predictions' in outputs:
+                    im_preds_val = outputs['incremental_mastery_predictions'][valid_mask]
+                    val_im_predictions.extend(im_preds_val.cpu().numpy())
+                else:
+                    val_im_predictions.extend(probs_val.cpu().numpy())
+                
+                # Global predictions
+                if 'incremental_mastery_predictions' in outputs:
+                    im_preds_tensor_val = outputs['incremental_mastery_predictions'][valid_mask]
+                    global_preds_val = bce_loss_weight * probs_val + incremental_mastery_loss_weight * im_preds_tensor_val
+                    val_global_predictions.extend(global_preds_val.cpu().numpy())
+                else:
+                    val_global_predictions.extend(probs_val.cpu().numpy())
         
         val_loss = val_loss / len(valid_loader)
         val_stats = compute_auc_acc(val_targets, val_predictions)
         val_auc = val_stats['auc']
         val_acc = val_stats['acc']
+        
+        # Compute separate validation AUC metrics
+        val_bce_stats = compute_auc_acc(val_targets, val_bce_predictions)
+        val_bce_auc = val_bce_stats['auc']
+        val_im_stats = compute_auc_acc(val_targets, val_im_predictions)
+        val_im_auc = val_im_stats['auc']
+        val_global_stats = compute_auc_acc(val_targets, val_global_predictions)
+        val_global_auc = val_global_stats['auc']
         
         # Consistency validation
         logger.info("  Running consistency validation...")
@@ -1575,16 +1654,7 @@ def train_gainakt3exp_model(args):
                         consistency_metrics.get('monotonicity_violation_rate'),
                         consistency_metrics.get('negative_gain_rate'),
                         consistency_metrics.get('bounds_violation_rate'),
-                        consistency_metrics.get('mastery_correlation'),
-                        consistency_metrics.get('gain_correlation'),
-                        train_history['semantic_trajectory'][-1]['loss_shares']['bce'],
-                        train_history['semantic_trajectory'][-1]['loss_shares']['incremental_mastery']
-                        # SIMPLIFIED (2025-11-15): Commented out constraint and semantic loss shares
-                        # train_history['semantic_trajectory'][-1]['loss_shares']['main'],
-                        # train_history['semantic_trajectory'][-1]['loss_shares']['constraint_total'],
-                        # train_history['semantic_trajectory'][-1]['loss_shares']['alignment'],
-                        # train_history['semantic_trajectory'][-1]['loss_shares']['lag'],
-                        # train_history['semantic_trajectory'][-1]['loss_shares']['retention']
+                        val_bce_auc, val_im_auc, val_global_auc
                     ])
             except Exception as e:
                 logger.warning(f"[Repro] Failed to append metrics row: {e}")
