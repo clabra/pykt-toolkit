@@ -184,10 +184,10 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     cmd_parts.append(f"--run_dir {experiment_folder}")
     
     # Evaluation-specific parameters (subset of training params)
+    # Note: num_students is auto-detected from checkpoint, not passed as parameter
     eval_params = [
         'dataset', 'fold', 'batch_size',  # data
         'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
-        'num_students',  # student embeddings
         'non_negative_loss_weight', 'monotonicity_loss_weight',  # constraints
         'mastery_performance_loss_weight', 'gain_performance_loss_weight',
         'sparsity_loss_weight', 'consistency_loss_weight',

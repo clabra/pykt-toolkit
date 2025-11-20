@@ -1,19 +1,19 @@
 {
   "input": {
-    "short_title": "recover-baseline-714616"
+    "short_title": "test"
   },
   "commands": {
-    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title recover-baseline-714616",
-    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --alignment_global_students 600 --alignment_min_correlation 0.05 --alignment_residual_window 5 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_warmup_epochs 8 --alignment_weight 0.0 --auto_shifted_eval --batch_size 64 --bce_loss_weight 0.9 --consistency_loss_weight 0.0 --consistency_rebalance_epoch 8 --consistency_rebalance_new_weight 0.2 --consistency_rebalance_threshold 0.1 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 12 --fold 0 --gain_performance_loss_weight 0.0 --gradient_clip 1.0 --lag_gain_weight 0.0 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --lag_max_lag 3 --learning_rate 0.000174 --mastery_performance_loss_weight 0.0 --mastery_threshold_init 0.85 --max_semantic_students 50 --monitor_freq 50 --monotonicity_loss_weight 0.0 --n_heads 4 --non_negative_loss_weight 0.0 --num_encoder_blocks 4 --num_students 3055 --optimizer Adam --patience 4 --retention_delta 0.005 --retention_weight 0.0 --seed 42 --seq_len 200 --sparsity_loss_weight 0.0 --threshold_temperature 1.0 --use_mastery_head --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --warmup_constraint_epochs 8 --weight_decay 1.7571e-05",
-    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251119_203954_gainakt3exp_recover-baseline-714616_134038 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --num_students 3055 --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.0 --mastery_performance_loss_weight 0.0 --gain_performance_loss_weight 0.0 --sparsity_loss_weight 0.0 --consistency_loss_weight 0.0 --monitor_freq 50 --use_mastery_head",
-    "learning_trajectories": "/home/vscode/.pykt-env/bin/python examples/learning_trajectories.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251119_203954_gainakt3exp_recover-baseline-714616_134038 --num_students 10 --min_steps 10",
-    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 134038"
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title test",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_gainakt3exp.py --alignment_global_students 600 --alignment_min_correlation 0.05 --alignment_residual_window 5 --alignment_share_cap 0.08 --alignment_share_decay_factor 0.7 --alignment_warmup_epochs 8 --alignment_weight 0.0 --auto_shifted_eval --batch_size 64 --bce_loss_weight 0.9 --consistency_loss_weight 0.0 --consistency_rebalance_epoch 8 --consistency_rebalance_new_weight 0.2 --consistency_rebalance_threshold 0.1 --d_ff 512 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 12 --fold 0 --gain_performance_loss_weight 0.0 --gradient_clip 1.0 --lag_gain_weight 0.0 --lag_l1_weight 0.5 --lag_l2_weight 0.3 --lag_l3_weight 0.2 --lag_max_lag 3 --learning_rate 0.000174 --mastery_performance_loss_weight 0.0 --mastery_threshold_init 0.85 --max_semantic_students 50 --min_trajectory_steps 10 --monitor_freq 50 --monotonicity_loss_weight 0.0 --n_heads 4 --non_negative_loss_weight 0.0 --num_encoder_blocks 4 --num_trajectories 10 --optimizer Adam --patience 4 --retention_delta 0.005 --retention_weight 0.0 --seed 42 --seq_len 200 --sparsity_loss_weight 0.0 --threshold_temperature 1.0 --use_mastery_head --variance_floor 0.0001 --variance_floor_patience 3 --variance_floor_reduce_factor 0.5 --warmup_constraint_epochs 8 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_gainakt3exp.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251119_231825_gainakt3exp_test_265578 --max_correlation_students 3800 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 4 --d_ff 512 --dropout 0.2 --emb_type qid --non_negative_loss_weight 0.0 --monotonicity_loss_weight 0.0 --mastery_performance_loss_weight 0.0 --gain_performance_loss_weight 0.0 --sparsity_loss_weight 0.0 --consistency_loss_weight 0.0 --monitor_freq 50 --use_mastery_head",
+    "learning_trajectories": "/home/vscode/.pykt-env/bin/python examples/learning_trajectories.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251119_231825_gainakt3exp_test_265578 --num_students 10 --min_steps 10",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 265578"
   },
   "experiment": {
-    "id": "20251119_203954_gainakt3exp_recover-baseline-714616_134038",
-    "short_title": "recover-baseline-714616",
-    "experiment_id": "134038",
-    "created": "20251119_203954"
+    "id": "20251119_231825_gainakt3exp_test_265578",
+    "short_title": "test",
+    "experiment_id": "265578",
+    "created": "20251119_231825"
   },
   "seeds": {
     "primary": 42,
@@ -51,7 +51,6 @@
     "intrinsic_gain_attention": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "num_students": 3055,
     "mastery_threshold_init": 0.85,
     "threshold_temperature": 1.0,
     "enhanced_constraints": false,
@@ -92,7 +91,8 @@
     "max_semantic_students": 50,
     "max_correlation_students": 3800,
     "enable_cosine_perf_schedule": false,
-    "num_trajectories": 10
+    "num_trajectories": 10,
+    "min_trajectory_steps": 10
   },
   "overrides": {},
   "types": {
@@ -116,7 +116,9 @@
       "monitor_freq",
       "use_amp",
       "use_wandb",
-      "auto_shifted_eval"
+      "auto_shifted_eval",
+      "num_trajectories",
+      "min_trajectory_steps"
     ],
     "model_config": [
       "seq_len",
@@ -178,7 +180,7 @@
       "variance_floor_reduce_factor"
     ]
   },
-  "md5": "92ab1f9df195f45b15f4e9859ae5c402",
+  "md5": "9fc0766bcb4f4bcc17135554a5dbad3f",
   "reference": {
     "parameter_default_json": "configs/parameter_default.json"
   }

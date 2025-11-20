@@ -1,0 +1,216 @@
+{
+  "experiment_name": "optimal_v1",
+  "best_val_auc": 0.7237943305346788,
+  "final_consistency_metrics": {
+    "monotonicity_violation_rate": 0.0,
+    "negative_gain_rate": 0.0,
+    "bounds_violation_rate": 0.0,
+    "mastery_correlation": 0.04048025611207812,
+    "gain_correlation": 0.008686018982538377
+  },
+  "train_history": {
+    "train_loss": [
+      0.5503110930400809,
+      0.534184767020181,
+      0.5251788663740603,
+      0.5181916156889861,
+      0.5114916601638102,
+      0.5052528279432978,
+      0.4984656402484123,
+      0.49085758943014196
+    ],
+    "train_auc": [
+      0.6787524556040601,
+      0.7150798267394366,
+      0.7271958221601907,
+      0.7355980213742778,
+      0.7434663939933619,
+      0.751425473348583,
+      0.7600886960446963,
+      0.7695174482808115
+    ],
+    "val_auc": [
+      0.7084035021598438,
+      0.7185311718751043,
+      0.7224734359190925,
+      0.7237943305346788,
+      0.7231650811535253,
+      0.7204514276647779,
+      0.7159072120713844,
+      0.7104639547168602
+    ],
+    "consistency_metrics": [
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08589939480961128,
+        "gain_correlation": 0.10254183947275693
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08712052914222898,
+        "gain_correlation": 0.09270536696468579
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08818366438081268,
+        "gain_correlation": 0.09035504063933196
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08908679066802547,
+        "gain_correlation": 0.08872150303293033
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.08984334566925442,
+        "gain_correlation": 0.08893078017328727
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.09048987935249468,
+        "gain_correlation": 0.08756152388849921
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.09102989488696941,
+        "gain_correlation": 0.08517105643858147
+      },
+      {
+        "monotonicity_violation_rate": 0.0,
+        "negative_gain_rate": 0.0,
+        "bounds_violation_rate": 0.0,
+        "mastery_correlation": 0.09146735639602295,
+        "gain_correlation": 0.08238190687044075
+      }
+    ],
+    "semantic_trajectory": [
+      {
+        "epoch": 1,
+        "mastery_correlation": 0.08589939480961128,
+        "gain_correlation": 0.10254183947275693,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9730286350567117,
+          "incremental_mastery": 1.2427425476904956
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 2,
+        "mastery_correlation": 0.08712052914222898,
+        "gain_correlation": 0.09270536696468579,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9729438600596544,
+          "incremental_mastery": 1.2435054915854002
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 3,
+        "mastery_correlation": 0.08818366438081268,
+        "gain_correlation": 0.09035504063933196,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9752158993958134,
+          "incremental_mastery": 1.2230570871456736
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 4,
+        "mastery_correlation": 0.08908679066802547,
+        "gain_correlation": 0.08872150303293033,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9778154968456576,
+          "incremental_mastery": 1.199660701819553
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 5,
+        "mastery_correlation": 0.08984334566925442,
+        "gain_correlation": 0.08893078017328727,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9802267050067931,
+          "incremental_mastery": 1.1779598707929533
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 6,
+        "mastery_correlation": 0.09048987935249468,
+        "gain_correlation": 0.08756152388849921,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9813868679159645,
+          "incremental_mastery": 1.1675184023858192
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 7,
+        "mastery_correlation": 0.09102989488696941,
+        "gain_correlation": 0.08517105643858147,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9819258800781347,
+          "incremental_mastery": 1.1626672704328949
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      },
+      {
+        "epoch": 8,
+        "mastery_correlation": 0.09146735639602295,
+        "gain_correlation": 0.08238190687044075,
+        "warmup_scale": 1.0,
+        "loss_shares": {
+          "bce": 0.9822173454665445,
+          "incremental_mastery": 1.1600441368061603
+        },
+        "mean_mastery_variance": null,
+        "min_mastery_variance": null,
+        "max_mastery_variance": null
+      }
+    ]
+  },
+  "correlation_sampling": {
+    "deterministic": true,
+    "epoch": 8,
+    "local_mastery_corr": 0.09146735639602295,
+    "local_gain_corr": 0.08238190687044075,
+    "global_mastery_corr": null,
+    "global_gain_corr": null,
+    "notes": "Deterministic stratified selection (sorted slice) applied; seeds fixed."
+  }
+}

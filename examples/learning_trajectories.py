@@ -8,7 +8,7 @@ showing timestep-by-timestep evolution of mastery and gains for practiced skills
 Usage:
     python examples/learning_trajectories.py \
         --run_dir examples/experiments/20251115_164618_gainakt3exp_baseline_defaults_114045 \
-        --num_students 10 \
+        --num_trajectories 10 \
         --min_steps 10
 
 Output:
@@ -21,6 +21,7 @@ Output:
 import os
 import sys
 import json
+import csv
 import argparse
 import numpy as np
 import torch
@@ -41,6 +42,7 @@ def load_model_and_config(run_dir):
         config = json.load(f)
     
     # Extract model configuration from defaults
+    # Note: num_students will be detected from checkpoint later (gamma_student tensor size)
     defaults = config['defaults']
     model_config = {
         'seq_len': defaults['seq_len'],
@@ -50,15 +52,18 @@ def load_model_and_config(run_dir):
         'd_ff': defaults['d_ff'],
         'dropout': defaults['dropout'],
         'emb_type': defaults['emb_type'],
-        'num_students': defaults['num_students'],
+        'use_mastery_head': defaults['use_mastery_head'],
+        'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),
+        'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
+        'use_student_speed': defaults.get('use_student_speed', False),
         'non_negative_loss_weight': defaults['non_negative_loss_weight'],
         'monotonicity_loss_weight': defaults['monotonicity_loss_weight'],
         'mastery_performance_loss_weight': defaults['mastery_performance_loss_weight'],
         'gain_performance_loss_weight': defaults['gain_performance_loss_weight'],
         'sparsity_loss_weight': defaults['sparsity_loss_weight'],
         'consistency_loss_weight': defaults['consistency_loss_weight'],
-        'use_mastery_head': defaults['use_mastery_head'],
-        'use_gain_head': defaults['use_gain_head'],
+        'bce_loss_weight': defaults.get('bce_loss_weight', 0.9),
+        'monitor_freq': defaults['monitor_freq'],
         'mastery_threshold_init': defaults['mastery_threshold_init'],
         'threshold_temperature': defaults['threshold_temperature']
     }
@@ -69,7 +74,7 @@ def load_model_and_config(run_dir):
     return model_config, dataset_name, fold, config
 
 
-def select_diverse_students(data_loader, num_students=10, min_steps=10, max_students_to_check=500):
+def select_diverse_students(data_loader, num_trajectories=10, min_steps=10, max_students_to_check=500):
     """
     Select students with diverse trajectory lengths (trying to get both short and long).
     
@@ -95,7 +100,7 @@ def select_diverse_students(data_loader, num_students=10, min_steps=10, max_stud
         if checked >= max_students_to_check:
             break
     
-    if len(candidates) < num_students:
+    if len(candidates) < num_trajectories:
         print(f"Warning: Only found {len(candidates)} students with >= {min_steps} steps")
         return candidates
     
@@ -103,7 +108,7 @@ def select_diverse_students(data_loader, num_students=10, min_steps=10, max_stud
     candidates.sort(key=lambda x: x[1])
     
     # Select diverse range: take students distributed across the length range
-    indices = np.linspace(0, len(candidates) - 1, num_students).astype(int)
+    indices = np.linspace(0, len(candidates) - 1, num_trajectories).astype(int)
     selected = [candidates[i] for i in indices]
     
     return selected
@@ -219,18 +224,75 @@ def print_trajectory(student_idx, trajectory, global_idx):
     print(f"{'='*120}\n")
 
 
+def save_trajectories_to_csv(trajectories_data, csv_path):
+    """
+    Save trajectory data to CSV file.
+    
+    Each row represents one step in a student's learning trajectory.
+    """
+    with open(csv_path, 'w', newline='') as csvfile:
+        fieldnames = [
+            'student_num', 'global_idx', 'step', 'skill_id', 
+            'true_answer', 'prediction', 'correct', 
+            'gain', 'mastery', 'total_steps', 'unique_skills'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for traj_data in trajectories_data:
+            student_num = traj_data['student_num']
+            global_idx = traj_data['global_idx']
+            trajectory = traj_data['trajectory']
+            
+            if trajectory is None:
+                continue
+            
+            steps = trajectory['steps']
+            total_steps = len(steps)
+            unique_skills = len(set(
+                skill_id 
+                for step in steps 
+                for skill_id in step['skills_practiced']
+            ))
+            
+            for step in steps:
+                timestep = step['timestep']
+                skill_id = step['skills_practiced'][0]  # Single skill per step
+                true_answer = step['performance']
+                prediction = step['prediction']
+                correct = 1 if (true_answer == 1 and prediction >= 0.5) or (true_answer == 0 and prediction < 0.5) else 0
+                gain = step['gains'][skill_id]
+                mastery = step['mastery'][skill_id]
+                
+                writer.writerow({
+                    'student_num': student_num,
+                    'global_idx': global_idx,
+                    'step': timestep,
+                    'skill_id': skill_id,
+                    'true_answer': true_answer,
+                    'prediction': f'{prediction:.6f}',
+                    'correct': correct,
+                    'gain': f'{gain:.6f}',
+                    'mastery': f'{mastery:.6f}',
+                    'total_steps': total_steps,
+                    'unique_skills': unique_skills
+                })
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Extract and display learning trajectories for individual students'
     )
     parser.add_argument('--run_dir', type=str, required=True,
                         help='Path to experiment directory containing model_best.pth and config.json')
-    parser.add_argument('--num_students', type=int, default=10,
+    parser.add_argument('--num_trajectories', type=int, default=10,
                         help='Number of students to analyze (default: 10)')
     parser.add_argument('--min_steps', type=int, default=10,
                         help='Minimum number of interaction steps required (default: 10)')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size for data loading (default: 1 for per-student processing)')
+    parser.add_argument('--output_csv', type=str, default=None,
+                        help='Output CSV file path (default: trajectories_<timestamp>.csv in run_dir)')
     
     args = parser.parse_args()
     
@@ -238,7 +300,7 @@ def main():
     print(f"LEARNING TRAJECTORIES ANALYZER - GainAKT3Exp")
     print(f"{'='*120}")
     print(f"Experiment Directory: {args.run_dir}")
-    print(f"Target Students: {args.num_students} (with >= {args.min_steps} steps)")
+    print(f"Target Students: {args.num_trajectories} (with >= {args.min_steps} steps)")
     print(f"{'='*120}\n")
     
     # Check if directory exists
@@ -296,14 +358,9 @@ def main():
     defaults = config['defaults']
     complete_config = dict(defaults)  # Copy all defaults
     complete_config['num_c'] = num_skills  # Override with actual dataset skill count
-    # Map monitor_freq to monitor_frequency if needed
-    if 'monitor_freq' in complete_config and 'monitor_frequency' not in complete_config:
-        complete_config['monitor_frequency'] = complete_config['monitor_freq']
     
-    model = create_exp_model(complete_config)
-    
-    # Load trained weights
-    print(f"Loading model weights from: {model_path}")
+    # Load checkpoint first to detect num_students from gamma_student tensor
+    print(f"Loading checkpoint to detect configuration: {model_path}")
     checkpoint = torch.load(model_path, map_location=device)
     
     # Handle different checkpoint formats
@@ -311,6 +368,33 @@ def main():
         state_dict = checkpoint['model_state_dict']
     else:
         state_dict = checkpoint
+    
+    # Detect actual num_students from checkpoint (gamma_student tensor size)
+    if 'gamma_student' in state_dict:
+        actual_num_students = state_dict['gamma_student'].shape[0]
+        complete_config['num_students'] = actual_num_students
+        print(f"Detected num_students from checkpoint: {actual_num_students}")
+    elif 'module.gamma_student' in state_dict:
+        actual_num_students = state_dict['module.gamma_student'].shape[0]
+        complete_config['num_students'] = actual_num_students
+        print(f"Detected num_students from checkpoint: {actual_num_students}")
+    
+    # Calculate incremental_mastery_loss_weight if not present
+    if 'incremental_mastery_loss_weight' not in complete_config:
+        bce_weight = complete_config.get('bce_loss_weight', 0.9)
+        complete_config['incremental_mastery_loss_weight'] = 1.0 - bce_weight
+        print(f"Calculated incremental_mastery_loss_weight: {complete_config['incremental_mastery_loss_weight']}")
+    
+    # Map monitor_freq to monitor_frequency if needed
+    if 'monitor_freq' in complete_config and 'monitor_frequency' not in complete_config:
+        complete_config['monitor_frequency'] = complete_config['monitor_freq']
+    
+    # Create model with complete configuration
+    print("Creating model architecture...")
+    model = create_exp_model(complete_config)
+    
+    # Load trained weights
+    print(f"Loading model weights into architecture...")
     
     # Remove 'module.' prefix if present (from DataParallel training)
     if any(k.startswith('module.') for k in state_dict.keys()):
@@ -323,7 +407,7 @@ def main():
     print("\nSelecting diverse student sample...")
     selected_students = select_diverse_students(
         test_loader, 
-        num_students=args.num_students,
+        num_trajectories=args.num_trajectories,
         min_steps=args.min_steps
     )
     
@@ -374,6 +458,18 @@ def main():
     print(f"Analyzed {len(trajectories_data)} students from test set")
     print(f"Results show: Step | Skill | True answer (0/1) | Predicted probability | Match | Gain | Mastery")
     print("="*120 + "\n")
+    
+    # Save to CSV
+    if args.output_csv is None:
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        csv_path = os.path.join(args.run_dir, f'trajectories_{timestamp}.csv')
+    else:
+        csv_path = args.output_csv
+    
+    print(f"Saving trajectories to CSV: {csv_path}")
+    save_trajectories_to_csv(trajectories_data, csv_path)
+    print(f"CSV file saved successfully\n")
 
 
 if __name__ == '__main__':

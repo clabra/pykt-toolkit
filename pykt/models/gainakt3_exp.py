@@ -38,10 +38,6 @@ Benefits:
 3. Transparency: Can trace any learning gain to its source Value
 4. Educational Validity: Aligns with learning science principles
 
-The gain_head projection layer has been DEPRECATED and commented out throughout
-the codebase. The use_gain_head parameter is kept for backward compatibility 
-but does not instantiate a projection layer.
-
 See paper/STATUS_gainakt3exp.md for detailed architectural documentation.
 ================================================================================
 """
@@ -91,7 +87,7 @@ class GainAKT3Exp(nn.Module):
     
     def __init__(self, num_c, seq_len=200, d_model=128, n_heads=8, num_encoder_blocks=2, 
                  d_ff=256, dropout=0.1, emb_type="qid", emb_path="", pretrain_dim=768,
-                 use_mastery_head=True, use_gain_head=True, intrinsic_gain_attention=False,
+                 use_mastery_head=True, intrinsic_gain_attention=False,
                  non_negative_loss_weight=0.1,
                  monotonicity_loss_weight=0.1, mastery_performance_loss_weight=0.1,
                  gain_performance_loss_weight=0.1, sparsity_loss_weight=0.1,
@@ -132,7 +128,6 @@ class GainAKT3Exp(nn.Module):
             emb_path (str): Path to pretrained embeddings (default: "", DO NOT RELY ON THIS)
             pretrain_dim (int): Pretrained embedding dimension (default: 768, DO NOT RELY ON THIS)
             use_mastery_head (bool): Enable mastery projection head (default: True, DO NOT RELY ON THIS)
-            use_gain_head (bool): Enable gain projection head (default: True, DO NOT RELY ON THIS)
             intrinsic_gain_attention (bool): Use intrinsic gain attention mode (default: False, DO NOT RELY ON THIS)
             non_negative_loss_weight (float): Weight for non-negative constraint (default: 0.1, DO NOT RELY ON THIS)
             monotonicity_loss_weight (float): Weight for monotonicity constraint (default: 0.1, DO NOT RELY ON THIS)
@@ -190,7 +185,6 @@ class GainAKT3Exp(nn.Module):
         self.dropout = dropout
         self.emb_type = emb_type
         self.use_mastery_head = use_mastery_head
-        self.use_gain_head = use_gain_head
         self.intrinsic_gain_attention = intrinsic_gain_attention
         self.use_skill_difficulty = use_skill_difficulty
         self.use_student_speed = use_student_speed
@@ -667,16 +661,15 @@ class GainAKT3Exp(nn.Module):
         if projected_mastery is not None:
             output['projected_mastery'] = projected_mastery
         # Only output gains if gain_head is explicitly enabled
-        if projected_gains is not None and self.use_gain_head:
+        if projected_gains is not None:
             output['projected_gains'] = projected_gains
         # Include incremental mastery predictions if mastery head is enabled
         if incremental_mastery_predictions is not None:
             output['incremental_mastery_predictions'] = incremental_mastery_predictions
         
-        # Store D-dimensional gains for interpretability (only if gain_head enabled)
-        # Note: Gains are computed internally for mastery accumulation even when use_gain_head=False
-        # but only exposed as output when use_gain_head=True
-        if self.use_gain_head and self.use_mastery_head and value_seq_2 is not None:
+        # Store D-dimensional gains for interpretability 
+        # Gains are computed internally for mastery accumulation 
+        if self.use_mastery_head and value_seq_2 is not None:
             output['projected_gains_d'] = torch.relu(value_seq_2)  # Values as learning gains
         
         # 7. Compute interpretability loss (constraint losses on mastery/gains)
@@ -741,12 +734,10 @@ class GainAKT3Exp(nn.Module):
         if qtest:
             result['encoded_seq'] = output['context_seq']
         
-        # Include mastery and gain outputs if heads are enabled
+        # Include mastery and gain outputs 
         if self.use_mastery_head and 'projected_mastery' in output:
             result['projected_mastery'] = output['projected_mastery']
-        # Note: use_gain_head flag kept for backward compatibility
-        # Gains come directly from Values (no gain_head projection)
-        if self.use_gain_head and 'projected_gains' in output:
+        if 'projected_gains' in output:
             result['projected_gains'] = output['projected_gains']
             
         return result
@@ -855,7 +846,6 @@ def create_exp_model(config):
         - dropout (float): Dropout rate
         - emb_type (str): Embedding type ("qid" or other)
         - use_mastery_head (bool): Enable mastery projection head
-        - use_gain_head (bool): Enable gain projection head
         - intrinsic_gain_attention (bool): Use intrinsic gain attention mode
         - use_skill_difficulty (bool): Enable per-skill difficulty embeddings
         - use_student_speed (bool): Enable per-student learning speed embeddings
@@ -891,7 +881,6 @@ def create_exp_model(config):
             dropout=config['dropout'],
             emb_type=config['emb_type'],
             use_mastery_head=config['use_mastery_head'],
-            use_gain_head=config['use_gain_head'],
             intrinsic_gain_attention=config['intrinsic_gain_attention'],
             use_skill_difficulty=config['use_skill_difficulty'],
             use_student_speed=config['use_student_speed'],

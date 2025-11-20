@@ -131,8 +131,7 @@ def main():
                         help='Enable learnable per-skill difficulty parameters (Phase 1)')
     parser.add_argument('--use_student_speed', action='store_true',
                         help='Enable learnable per-student learning speed embeddings (Phase 2)')
-    parser.add_argument('--num_students', type=int, required=True,
-                        help='Number of unique students in dataset (required for student_speed)')
+    # Note: num_students is auto-detected from checkpoint during model loading
     parser.add_argument('--non_negative_loss_weight', type=float, required=True)
     parser.add_argument('--monotonicity_loss_weight', type=float, required=True)
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
@@ -208,6 +207,29 @@ def main():
         }
     }
     
+    # Load checkpoint first to detect num_students from gamma_student tensor
+    device = torch.device(args.device)
+    state = torch.load(ckpt_path, map_location=device)
+    
+    # Detect num_students from checkpoint
+    if isinstance(state, dict):
+        candidate = state.get('model_state_dict') or state.get('state_dict') or state
+    else:
+        candidate = state
+    
+    # Check for gamma_student (with or without module. prefix)
+    num_students = None
+    if 'gamma_student' in candidate:
+        num_students = candidate['gamma_student'].shape[0]
+        print(f"Detected num_students from checkpoint: {num_students}")
+    elif 'module.gamma_student' in candidate:
+        num_students = candidate['module.gamma_student'].shape[0]
+        print(f"Detected num_students from checkpoint: {num_students}")
+    else:
+        # No gamma_student found - model was trained without use_student_speed
+        num_students = 0
+        print("No gamma_student found in checkpoint (use_student_speed=False)")
+    
     # Model config
     model_config = {
         'num_c': data_config[args.dataset]['num_c'],
@@ -223,7 +245,7 @@ def main():
         'intrinsic_gain_attention': args.intrinsic_gain_attention,
         'use_skill_difficulty': args.use_skill_difficulty,
         'use_student_speed': args.use_student_speed,
-        'num_students': args.num_students,
+        'num_students': num_students,
         'non_negative_loss_weight': args.non_negative_loss_weight,
         'monotonicity_loss_weight': args.monotonicity_loss_weight,
         'mastery_performance_loss_weight': args.mastery_performance_loss_weight,
@@ -238,17 +260,11 @@ def main():
     }
     
     # Create and load model
-    device = torch.device(args.device)
     model = create_exp_model(model_config).to(device)
-    state = torch.load(ckpt_path, map_location=device)
     
-    # Load checkpoint
-    if isinstance(state, dict):
-        candidate = state.get('model_state_dict') or state.get('state_dict') or state
-        stripped = {k[7:] if k.startswith('module.') else k: v for k, v in candidate.items()}
-        model.load_state_dict(stripped)
-    else:
-        model.load_state_dict(state)
+    # Load checkpoint (already loaded above for num_students detection)
+    stripped = {k[7:] if k.startswith('module.') else k: v for k, v in candidate.items()}
+    model.load_state_dict(stripped)
     
     if device.type == 'cuda' and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)

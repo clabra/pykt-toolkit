@@ -29,7 +29,6 @@
     "intrinsic_gain_attention": false,
     "use_skill_difficulty": false,
     "use_student_speed": false,
-    "num_students": 3055,
     "mastery_threshold_init": 0.85,
     "threshold_temperature": 1.0,
     "enhanced_constraints": false,
@@ -69,7 +68,9 @@
     "warmup_constraint_epochs": 8,
     "max_semantic_students": 50,
     "max_correlation_students": 3800,
-    "enable_cosine_perf_schedule": false
+    "enable_cosine_perf_schedule": false,
+    "num_trajectories": 10,
+    "min_trajectory_steps": 10
   },
   "types": {
     "launcher": [
@@ -92,7 +93,9 @@
       "monitor_freq",
       "use_amp",
       "use_wandb",
-      "auto_shifted_eval"
+      "auto_shifted_eval",
+      "num_trajectories",
+      "min_trajectory_steps"
     ],
     "model_config": [
       "seq_len",
@@ -185,5 +188,5 @@
       ]
     }
   },
-  "md5": "92ab1f9df195f45b15f4e9859ae5c402"
+  "md5": "9fc0766bcb4f4bcc17135554a5dbad3f"
 }

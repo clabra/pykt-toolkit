@@ -1706,7 +1706,7 @@ def train_gainakt3exp_model(args):
             '--d_ff', str(model_config['d_ff']),
             '--dropout', str(model_config['dropout']),
             '--emb_type', model_config['emb_type'],
-            '--num_students', str(model_config['num_students']),
+            # Note: num_students is auto-detected from checkpoint in eval script
             '--non_negative_loss_weight', str(model_config['non_negative_loss_weight']),
             '--monotonicity_loss_weight', str(model_config['monotonicity_loss_weight']),
             '--mastery_performance_loss_weight', str(model_config['mastery_performance_loss_weight']),
@@ -1746,26 +1746,38 @@ def train_gainakt3exp_model(args):
         except Exception as e:
             logger.error(f"❌ Evaluation failed with exception: {e}")
         
-        # Print learning trajectories command
+        # Auto-launch learning trajectories analysis
         logger.info("\n" + "="*80)
-        logger.info("INDIVIDUAL STUDENT LEARNING TRAJECTORIES")
+        logger.info("LAUNCHING LEARNING TRAJECTORIES ANALYSIS")
         logger.info("="*80)
-        logger.info("To analyze detailed learning trajectories for individual students, run:")
-        logger.info("")
+        
         trajectory_cmd = [
             sys.executable,
             'examples/learning_trajectories.py',
             '--run_dir', experiment_dir,
-            '--num_students', '10',
-            '--min_steps', '10'
+            '--num_trajectories', str(getattr(args, 'num_trajectories', 10)),
+            '--min_steps', str(getattr(args, 'min_trajectory_steps', 10))
         ]
-        logger.info(f"  {' '.join(trajectory_cmd)}")
-        logger.info("")
-        logger.info("This will display timestep-by-timestep progression showing:")
-        logger.info("  - Skills practiced at each interaction")
-        logger.info("  - Learning gains for each skill")
-        logger.info("  - Mastery levels after each interaction")
-        logger.info("  - Actual student performance (correct/incorrect)")
+        
+        logger.info(f"Trajectories command: {' '.join(trajectory_cmd)}")
+        
+        try:
+            result = subprocess.run(trajectory_cmd, check=True, capture_output=True, text=True, cwd='/workspaces/pykt-toolkit')
+            logger.info("✅ Learning trajectories analysis completed successfully")
+            # Log only summary lines to avoid cluttering the output
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if 'CSV file saved' in line or 'Saving trajectories to CSV' in line or 'TRAJECTORY EXTRACTION COMPLETE' in line:
+                    logger.info(line)
+            if result.stderr:
+                logger.warning(f"Trajectories stderr: {result.stderr}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ Learning trajectories analysis failed with exit code {e.returncode}")
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
+        except Exception as e:
+            logger.error(f"❌ Learning trajectories analysis failed with exception: {e}")
+        
         logger.info("="*80 + "\n")
     
     return final_results
@@ -1809,8 +1821,7 @@ if __name__ == '__main__':
                         help='Enable learnable per-skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)')
     parser.add_argument('--use_student_speed', action='store_true',
                         help='Enable learnable per-student learning speed embeddings (Phase 2: Architectural Improvements)')
-    parser.add_argument('--num_students', type=int, required=True,
-                        help='Number of unique students in dataset (used for student_speed embeddings)')
+    # Note: num_students is auto-detected from dataset at runtime (line ~502)
     parser.add_argument('--mastery_threshold_init', type=float, required=True,
                         help='Initial value for learnable per-skill mastery threshold (normalized [0,1])')
     parser.add_argument('--threshold_temperature', type=float, required=True,
@@ -1880,6 +1891,9 @@ if __name__ == '__main__':
     parser.add_argument('--d_ff', type=int, required=True, help='Feed-forward layer dimension')
     parser.add_argument('--dropout', type=float, required=True, help='Transformer dropout rate')
     parser.add_argument('--emb_type', type=str, choices=['qid','concept','hybrid'], required=True, help='Embedding type used for questions/concepts')
+    # Learning trajectories analysis configuration (used after training/evaluation)
+    parser.add_argument('--num_trajectories', type=int, required=True, help='Number of student trajectories to analyze')
+    parser.add_argument('--min_trajectory_steps', type=int, required=True, help='Minimum interaction steps required for trajectory analysis')
     # Placeholder for future extended args (constraints toggles, etc.)
     args = parser.parse_args()
     # If a config path is passed, set PYKT_CONFIG_PATH so internal loaders pick it up.
