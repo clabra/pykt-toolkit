@@ -347,6 +347,11 @@ def train_gainakt3exp_model(args):
     bce_loss_weight = resolve_param(cfg, 'interpretability', 'bce_loss_weight', getattr(args, 'bce_loss_weight', 0.9))  # Lambda1: weight for BCE loss
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight  # Lambda2 = 1 - Lambda1: ensures weights sum to 1.0
     
+    # Encoder Consistency Regularization (2025-11-20): IM encoder guides BCE encoder
+    # Forces both encoders to produce consistent predictions, allowing interpretable IM to guide BCE learning
+    enable_encoder_consistency = resolve_param(cfg, 'interpretability', 'enable_encoder_consistency', getattr(args, 'enable_encoder_consistency', False))
+    encoder_consistency_weight = resolve_param(cfg, 'interpretability', 'encoder_consistency_weight', getattr(args, 'encoder_consistency_weight', 0.1))
+    
     # Setup logging with experiment-specific logger name for parallel disambiguation
     logger_name = f"gainakt3exp.{experiment_suffix}"
     logger = logging.getLogger(logger_name)
@@ -373,6 +378,10 @@ def train_gainakt3exp_model(args):
     logger.info(f"  Gain performance loss: {gain_performance_loss_weight}")
     logger.info(f"  Sparsity loss: {sparsity_loss_weight}")
     logger.info(f"  Consistency loss: {consistency_loss_weight}")
+    if enable_encoder_consistency:
+        logger.info(f"Encoder Consistency Regularization ENABLED: IM encoder guides BCE encoder (weight={encoder_consistency_weight:.3f})")
+    else:
+        logger.info("Encoder Consistency Regularization DISABLED")
     if enable_alignment_loss:
         logger.info(f"Alignment loss enabled (weight={alignment_weight}, warmup_epochs={alignment_warmup_epochs}, adaptive={adaptive_alignment}, target_min_corr={alignment_min_correlation})")
         if enable_global_alignment_pass:
@@ -770,6 +779,7 @@ def train_gainakt3exp_model(args):
         total_main_loss = 0.0
         total_interpretability_loss = 0.0
         total_incremental_mastery_loss = 0.0  # SIMPLIFIED (2025-11-15): Track incremental mastery loss separately
+        total_encoder_consistency_loss = 0.0  # NEW (2025-11-20): Track encoder consistency loss
         total_alignment_loss = 0.0
         total_lag_loss = 0.0
         total_retention_component = 0.0
@@ -969,10 +979,25 @@ def train_gainakt3exp_model(args):
                     weighted_main_loss = bce_loss_weight * main_loss
                     weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
                     
+                    # Encoder Consistency Regularization (2025-11-20): IM guides BCE
+                    # Force BCE predictions to be consistent with interpretable IM predictions
+                    encoder_consistency_loss = torch.zeros(1, device=device)
+                    if enable_encoder_consistency and 'incremental_mastery_predictions' in outputs:
+                        # Get predictions from both encoders
+                        bce_predictions = torch.sigmoid(valid_predictions)  # BCE encoder output
+                        im_predictions = outputs['incremental_mastery_predictions'][valid_mask]  # IM encoder output
+                        
+                        # Consistency loss: encourage BCE to match IM (IM acts as guide)
+                        # Detach IM predictions so gradient only flows to BCE encoder
+                        encoder_consistency_loss = torch.nn.functional.mse_loss(
+                            bce_predictions, 
+                            im_predictions.detach()
+                        ) * encoder_consistency_weight
+                    
                     if enable_alignment_loss:
-                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
+                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component + encoder_consistency_loss
                     else:
-                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
+                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component + encoder_consistency_loss
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
@@ -1111,10 +1136,20 @@ def train_gainakt3exp_model(args):
                             weighted_main_loss = bce_loss_weight * main_loss
                             weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
                             
+                            # Encoder Consistency Regularization (deterministic fallback path)
+                            encoder_consistency_loss = torch.zeros(1, device=device)
+                            if enable_encoder_consistency and 'incremental_mastery_predictions' in outputs:
+                                bce_predictions = torch.sigmoid(valid_predictions)
+                                im_predictions = outputs['incremental_mastery_predictions'][valid_mask]
+                                encoder_consistency_loss = torch.nn.functional.mse_loss(
+                                    bce_predictions, 
+                                    im_predictions.detach()
+                                ) * encoder_consistency_weight
+                            
                             if enable_alignment_loss:
-                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
+                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component + encoder_consistency_loss
                             else:
-                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
+                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component + encoder_consistency_loss
                         if use_amp and device.type == 'cuda':
                             scaler.scale(total_batch_loss).backward()
                             clip_val = getattr(args, 'gradient_clip', 1.0)
@@ -1149,6 +1184,11 @@ def train_gainakt3exp_model(args):
                 total_incremental_mastery_loss += incremental_mastery_loss.item()
             else:
                 total_incremental_mastery_loss += float(incremental_mastery_loss)
+            # NEW (2025-11-20): Track encoder consistency loss
+            if isinstance(encoder_consistency_loss, torch.Tensor):
+                total_encoder_consistency_loss += encoder_consistency_loss.item()
+            else:
+                total_encoder_consistency_loss += float(encoder_consistency_loss)
             if enable_alignment_loss:
                 total_interpretability_loss += alignment_loss.item()
             # alignment_loss already decomposed; nothing extra needed here
@@ -1486,8 +1526,13 @@ def train_gainakt3exp_model(args):
         # Log epoch results with enhanced formatting
         logger.info("=" * 60)
         logger.info(f"📊 EPOCH {epoch + 1}/{num_epochs} RESULTS:")
-        logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (BCE: {train_main_loss:.4f}, "
-                   f"Incremental Mastery: {train_incremental_mastery_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
+        consistency_loss_avg = total_encoder_consistency_loss / len(train_loader) if enable_encoder_consistency else 0.0
+        if enable_encoder_consistency:
+            logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (BCE: {train_main_loss:.4f}, "
+                       f"IM: {train_incremental_mastery_loss:.4f}, Consistency: {consistency_loss_avg:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
+        else:
+            logger.info(f"  🚂 Train - Loss: {train_loss:.4f} (BCE: {train_main_loss:.4f}, "
+                       f"Incremental Mastery: {train_incremental_mastery_loss:.4f}), AUC: {train_auc:.4f}, Acc: {train_acc:.4f}")
         
         # SIMPLIFIED (2025-11-15): Log loss composition for BCE + Incremental Mastery only
         total_share = bce_loss_share + incremental_mastery_loss_share
@@ -1907,6 +1952,11 @@ if __name__ == '__main__':
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
     parser.add_argument('--consistency_loss_weight', type=float, required=True)
     parser.add_argument('--bce_loss_weight', type=float, required=True, help='Weight for BCE loss (lambda1). Incremental mastery loss weight = 1 - lambda1')
+    # Encoder Consistency Regularization (2025-11-20): IM guides BCE
+    parser.add_argument('--enable_encoder_consistency', action='store_true',
+                        help='Enable encoder consistency regularization: IM encoder guides BCE encoder via prediction alignment')
+    parser.add_argument('--encoder_consistency_weight', type=float, required=True,
+                        help='Weight for encoder consistency loss (encourages BCE to match IM predictions)')
     # Semantic alignment & refinement flags (Phase 1+ reproducibility)
     parser.add_argument('--enable_alignment_loss', action='store_true',
                         help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')

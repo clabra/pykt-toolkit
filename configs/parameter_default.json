@@ -39,6 +39,8 @@
     "sparsity_loss_weight": 0.0,
     "consistency_loss_weight": 0.0,
     "bce_loss_weight": 0.9,
+    "enable_encoder_consistency": false,
+    "encoder_consistency_weight": 0.1,
     "enable_alignment_loss": false,
     "alignment_weight": 0.0,
     "alignment_warmup_epochs": 8,
@@ -188,5 +190,5 @@
       ]
     }
   },
-  "md5": "9fc0766bcb4f4bcc17135554a5dbad3f"
+  "md5": "a73bb05964c8a6e26c19bb50f8969827"
 }

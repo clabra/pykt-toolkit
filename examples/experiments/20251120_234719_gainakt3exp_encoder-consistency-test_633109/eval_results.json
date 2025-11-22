@@ -1,0 +1,18 @@
+{
+  "experiment_id": "20251120_234719_gainakt3exp_encoder-consistency-test_633109",
+  "dataset": "assist2015",
+  "fold": 0,
+  "train_auc": 0.7419906626455622,
+  "train_acc": 0.757982992143722,
+  "train_mastery_correlation": 0.03166991112046332,
+  "train_gain_correlation": 0.03270437168298521,
+  "train_correlation_students": 3314,
+  "valid_auc": 0.7226637722245866,
+  "valid_acc": 0.7534477221189501,
+  "test_auc": 0.7170485619952955,
+  "test_acc": 0.7479493580599144,
+  "test_mastery_correlation": 0.026711633054211828,
+  "test_gain_correlation": 0.03319134734123332,
+  "test_correlation_students": 3153,
+  "timestamp": "2025-11-20T23:56:29.759474Z"
+}
