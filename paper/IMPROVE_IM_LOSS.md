@@ -1,22 +1,6 @@
 # Improving Incremental Mastery (IM) Predictions in GainAKT3Exp
 
-## Executive Summary
-
-**Problem**: The Incremental Mastery (IM) encoder produces predictions with AUC ≈ 0.50 (random performance), while the BCE encoder achieves AUC ≈ 0.71.
-
-**Root Cause**: IM predictions use a monotonic transformation of mastery states: `P = σ((mastery - θ) / T)`. Since mastery increases monotonically with practice but correctness varies per question (depending on difficulty, skill type, etc.), a monotonic signal cannot predict variable outcomes → AUC ≈ 0.5.
-
-**Solution**: Add a learned **prediction head** that combines mastery state with question features to produce question-aware predictions: `P = f(mastery, question_features)`.
-
-**Recommendation**: Start with **Option 1 (Linear Prediction Head)** for immediate improvement (IM AUC: 0.50 → 0.57+) with minimal complexity.
-
-**Alternative Approach Tested**: Encoder consistency regularization (IM guides BCE via prediction alignment) provides faster convergence (3 vs 4+ epochs) but does not improve final AUC. See `paper/ENCODER_CONSISTENCY.md` for details.
-
----
-
-## Problem Analysis
-
-### Current Problem
+## Current Problem
 
 The Incremental Mastery encoder (Encoder 2) produces predictions with AUC ≈ 0.50 (random performance), while the BCE encoder (Encoder 1) achieves AUC ≈ 0.71.
 
@@ -33,8 +17,6 @@ incremental_mastery_predictions = torch.sigmoid((skill_mastery - θ) / temperatu
 - Actual correctness varies per question (depends on difficulty, skill type, etc.)
 - A monotonic signal cannot predict variable outcomes → AUC ≈ 0.5
 
-**Example**: Student with skill mastery progression [0.3, 0.5, 0.7, 0.8] faces questions with varying difficulty. The monotonic mastery values cannot predict the varying correctness pattern [1, 0, 1, 0, 1].
-
 ### Current Architecture
 
 ```
@@ -46,16 +28,6 @@ Encoder 2 (IM):
                      ↓
               (monotonic)
 ```
-
-### Experimental Evidence
-
-**Experiment 20251120_224500_gainakt3exp_bugs_979277** (12 epochs, assist2015):
-- BCE AUC: 0.7239 (epoch 4)
-- IM AUC: 0.5134 (essentially random)
-- Global AUC: 0.7199 (dominated by BCE)
-- Loss shares: 91% BCE, 9% IM (as configured: weights 0.9/0.1)
-
-**Issue Fixed**: Loss share calculation previously used unweighted component losses divided by weighted total, causing shares to sum to 187%. Now correctly uses weighted losses: `(λ × component_loss) / total_loss`.
 
 ## Recommended Solution
 
@@ -386,146 +358,12 @@ Add detailed comments explaining the design choice:
 - DKVMN: Uses memory states + question features for predictions
 - DTransformer: Question-aware attention for knowledge tracing
 
-## Summary of Solutions Explored
+## Conclusion
 
-### Solution 1: Loss Weight Warmup (Implemented but Not Recommended)
-
-**Approach**: Transition loss weights from 100% IM → 90% BCE over N epochs to let IM establish interpretable structure first.
-
-**Status**: Implemented in `train_gainakt3exp.py` (lines 347-360, 757-777) with parameters:
-- `enable_loss_warmup`: boolean (default: false)
-- `loss_warmup_epochs`: int (default: 10)
-
-**Outcome**: Not recommended. User clarified the actual goal is for "the interpretability encoder to help improve the other encoder," not to prioritize IM training initially.
-
-### Solution 2: Encoder Consistency Regularization (Implemented and Tested)
-
-**Approach**: IM encoder guides BCE encoder through prediction alignment: `L_consistency = MSE(BCE_pred, IM_pred.detach()) × α`
-
-**Implementation**: Added in `train_gainakt3exp.py` (lines 350-355, 778, 973-989, 1135-1152, 1182-1191, 1529-1537) with parameters:
-- `enable_encoder_consistency`: boolean (default: false)
-- `encoder_consistency_weight`: float (default: 0.1)
-
-**Experimental Results**:
-- **Experiment 20251120_234719_gainakt3exp_encoder-consistency-test_633109** (3 epochs):
-  - Best val AUC: 0.7227 (epoch 3)
-  - IM AUC: 0.5130 (still at chance level)
-  - Loss shares: 89% BCE, 11% IM (more balanced than baseline)
-
-- **Comparison with Baseline 20251120_224500_gainakt3exp_bugs_979277** (12 epochs):
-  - Best val AUC: 0.7239 (epoch 4, then overfits)
-  - IM AUC: 0.5134
-  - Loss shares: 91% BCE, 9% IM
-
-**Outcome**: 
-- ✅ **Benefit**: Faster convergence (3 epochs vs 4+ epochs to reach peak)
-- ✅ **Benefit**: More balanced loss contribution
-- ❌ **Limitation**: Does not improve IM AUC (architectural limitation remains)
-- ❌ **Limitation**: Final AUC similar to baseline (~0.72)
-
-**Recommendation**: Keep encoder consistency regularization **disabled by default** unless faster convergence is critical. For IM AUC improvement, proceed with **Solution 3 (Prediction Head)**.
-
-**Documentation**: See `paper/ENCODER_CONSISTENCY.md` for complete details on implementation, configuration, and troubleshooting.
-
-### Solution 3: Prediction Head (Recommended)
-
-**Approach**: Replace monotonic transformation with learned neural network that combines mastery + question features: `P = f(mastery, question_features)`
-
-**Status**: Documented but not yet implemented (see sections below).
-
-**Expected Outcome**:
-- IM AUC improvement: 0.50 → 0.57-0.65 (depending on head complexity)
-- BCE AUC: maintained at ~0.71
-- Global AUC: improved to ~0.72-0.73
-- Interpretability: preserved (mastery states unchanged)
-
-**Why This Works**: Question features provide the missing context needed to map monotonic mastery to variable per-question predictions.
-
----
-
-## Recommendations
-
-### Immediate Action: Implement Linear Prediction Head
-
-**Start with Option 1 (Linear Prediction Head)** as the baseline solution. This provides:
+**Recommended Action**: Implement **Option 1 (Linear Prediction Head)** as the starting point. This provides:
 - ✅ Meaningful IM AUC improvement (0.50 → 0.57+)
 - ✅ Maintained interpretability (mastery states unchanged)
 - ✅ Minimal complexity (single linear layer)
 - ✅ Fast training and debugging
-- ✅ Low risk of overfitting
 
 If results are promising, proceed to Option 2 (MLP) or Option 3 (include gains) for further improvements.
-
-### Configuration Management
-
-**Keep in parameter_default.json**:
-```json
-{
-  "bce_loss_weight": 0.9,
-  "incremental_mastery_loss_weight": 0.1,
-  "enable_encoder_consistency": false,
-  "encoder_consistency_weight": 0.1,
-  "enable_loss_warmup": false,
-  "loss_warmup_epochs": 10
-}
-```
-
-**Add for prediction head**:
-```json
-{
-  "use_learned_im_predictions": true,
-  "im_prediction_type": "linear",
-  "im_prediction_hidden_dim": 128,
-  "im_include_gains": false,
-  "difficulty_scale": 0.5
-}
-```
-
-### Evaluation Metrics
-
-Continue tracking separate AUC metrics (already implemented in `metrics_epoch.csv`):
-- `bce_auc`: Encoder 1 performance (should remain ~0.71)
-- `im_auc`: Encoder 2 performance (target: 0.50 → 0.57+)
-- `global_auc`: Weighted combination (target: 0.71 → 0.72-0.73)
-
-### Reproducibility
-
-Follow experiment tracking standards in `examples/reproducibility.md`:
-1. All parameters must be recorded in experiment's `config.json`
-2. Use `run_repro_experiment.py` for launching experiments
-3. Document architectural changes in commit messages
-4. Compare results against baseline experiment 979277
-
-### Next Steps
-
-1. **Phase 1** (1-2 days): Implement linear prediction head (Option 1)
-   - Modify `pykt/models/gainakt3_exp.py` (add `im_prediction_head` in `__init__`)
-   - Update `forward_with_states` to use question features
-   - Add configuration parameters
-   - Train on assist2015 dataset
-   - Validate IM AUC > 0.52
-
-2. **Phase 2** (2-3 days): Enhanced features (if Phase 1 successful)
-   - Add gain signal to feature vector (Option 3)
-   - Experiment with MLP depth (Option 2)
-   - Tune hyperparameters
-   - Compare across datasets
-
-3. **Phase 3** (Optional, 3-5 days): Advanced options
-   - Attention-based predictor (Option 4)
-   - Learned question difficulty embeddings
-   - Ablation studies
-   - Update paper with results
-
----
-
-## Conclusion
-
-The dual-encoder architecture benefits from having both interpretable mastery states (IM encoder) and predictive power (BCE encoder). However, the current IM prediction mechanism is fundamentally limited by its monotonic transformation.
-
-**Key Insights**:
-1. **Loss share bug fixed**: Shares now correctly sum to 100%
-2. **Encoder consistency**: Provides faster convergence but doesn't fix IM AUC
-3. **Prediction head**: Required to leverage mastery interpretability while achieving meaningful prediction performance
-
-**Recommended Path Forward**: Implement the linear prediction head (Option 1) to address the architectural limitation directly, enabling the IM encoder to contribute meaningfully to predictions while maintaining its interpretable mastery representations.

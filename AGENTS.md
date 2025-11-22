@@ -66,7 +66,6 @@ when you change any parameter default value (the reference values are in paper/p
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 - Avoid creating documentation files unless specifically asked for them. Provide feedback directly in responses instead.
 - After chamges in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If do, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
-- Never launch commits commands unless it is explicitly asked for.  
 
 
 ## Copyright and License
