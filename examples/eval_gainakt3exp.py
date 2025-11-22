@@ -69,11 +69,26 @@ def compute_correlations(model, data_loader, device, max_students=300):
 
 
 def evaluate_predictions(model, data_loader, device):
+    """Evaluate model predictions and return separate AUC metrics.
+    
+    Returns:
+        tuple: (bce_auc, bce_acc, im_auc, global_auc)
+            - bce_auc: AUC for BCE encoder predictions
+            - bce_acc: Accuracy for BCE encoder predictions
+            - im_auc: AUC for Incremental Mastery encoder predictions
+            - global_auc: Weighted combination of BCE and IM predictions
+    """
     model.eval()
-    preds = []
+    bce_preds = []
+    im_preds = []
     trues = []
+    
+    # Get BCE loss weight for global AUC calculation
+    core = model.module if isinstance(model, torch.nn.DataParallel) else model
+    bce_weight = getattr(core, 'bce_loss_weight', 0.9)
+    im_weight = 1.0 - bce_weight
+    
     with torch.no_grad():
-        core = model.module if isinstance(model, torch.nn.DataParallel) else model
         for batch in data_loader:
             q = batch['cseqs'].to(device)
             r = batch['rseqs'].to(device)
@@ -81,25 +96,60 @@ def evaluate_predictions(model, data_loader, device):
             r_shft = batch['shft_rseqs'].to(device)
             mask = batch['masks'].to(device).bool()
             out = core.forward_with_states(q=q, r=r, qry=q_shft)
+            
+            # Get BCE predictions
             logits = out.get('logits')
             if logits is None:
                 preds_raw = out['predictions']
                 eps = 1e-6
                 logits = torch.log(preds_raw.clamp(eps, 1 - eps) / (1 - preds_raw.clamp(eps, 1 - eps)))
+            
+            # Get IM predictions
+            im_predictions = out.get('incremental_mastery_predictions')
+            
             for i in range(q.size(0)):
                 m = mask[i]
                 if m.sum() == 0:
                     continue
-                pr = torch.sigmoid(logits[i][m]).detach().cpu().numpy()
+                
+                # BCE predictions
+                bce_pr = torch.sigmoid(logits[i][m]).detach().cpu().numpy()
+                bce_preds.append(bce_pr)
+                
+                # IM predictions
+                if im_predictions is not None:
+                    im_pr = im_predictions[i][m].detach().cpu().numpy()
+                    im_preds.append(im_pr)
+                
+                # Ground truth
                 gt = r_shft[i][m].float().cpu().numpy()
-                preds.append(pr)
                 trues.append(gt)
-    if not preds:
-        return 0.0, 0.0
-    flat_preds = np.concatenate(preds)
+    
+    if not bce_preds:
+        return 0.0, 0.0, 0.0, 0.0
+    
+    # Compute BCE metrics
+    flat_bce_preds = np.concatenate(bce_preds)
     flat_trues = np.concatenate(trues)
-    stats = compute_auc_acc(flat_trues, flat_preds)
-    return stats['auc'], stats['acc']
+    bce_stats = compute_auc_acc(flat_trues, flat_bce_preds)
+    bce_auc = bce_stats['auc']
+    bce_acc = bce_stats['acc']
+    
+    # Compute IM metrics
+    if im_preds:
+        flat_im_preds = np.concatenate(im_preds)
+        im_stats = compute_auc_acc(flat_trues, flat_im_preds)
+        im_auc = im_stats['auc']
+        
+        # Compute global AUC (weighted combination)
+        global_preds = bce_weight * flat_bce_preds + im_weight * flat_im_preds
+        global_stats = compute_auc_acc(flat_trues, global_preds)
+        global_auc = global_stats['auc']
+    else:
+        im_auc = 0.0
+        global_auc = bce_auc
+    
+    return bce_auc, bce_acc, im_auc, global_auc
 
 
 def main():
@@ -276,10 +326,10 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=int(os.getenv('PYKT_NUM_WORKERS','32')), pin_memory=True)
     
     # Evaluate
-    train_auc, train_acc = evaluate_predictions(model, train_loader, device)
+    train_bce_auc, train_acc, train_im_auc, train_global_auc = evaluate_predictions(model, train_loader, device)
     train_mastery_corr, train_gain_corr, train_n = compute_correlations(model, train_loader, device, args.max_correlation_students)
-    valid_auc, valid_acc = evaluate_predictions(model, valid_loader, device)
-    test_auc, test_acc = evaluate_predictions(model, test_loader, device)
+    valid_bce_auc, valid_acc, valid_im_auc, valid_global_auc = evaluate_predictions(model, valid_loader, device)
+    test_bce_auc, test_acc, test_im_auc, test_global_auc = evaluate_predictions(model, test_loader, device)
     test_mastery_corr, test_gain_corr, test_n = compute_correlations(model, test_loader, device, args.max_correlation_students)
     
     experiment_id = args.experiment_id or os.path.basename(args.run_dir)
@@ -288,14 +338,14 @@ def main():
         'experiment_id': experiment_id,
         'dataset': args.dataset,
         'fold': args.fold,
-        'train_auc': float(train_auc),
+        'train_auc': float(train_global_auc),
         'train_acc': float(train_acc),
         'train_mastery_correlation': float(train_mastery_corr),
         'train_gain_correlation': float(train_gain_corr),
         'train_correlation_students': int(train_n),
-        'valid_auc': float(valid_auc),
+        'valid_auc': float(valid_global_auc),
         'valid_acc': float(valid_acc),
-        'test_auc': float(test_auc),
+        'test_auc': float(test_global_auc),
         'test_acc': float(test_acc),
         'test_mastery_correlation': float(test_mastery_corr),
         'test_gain_correlation': float(test_gain_corr),
@@ -317,14 +367,13 @@ def main():
     with open(os.path.join(args.run_dir, 'config_eval.json'), 'w') as f:
         json.dump(config_eval, f, indent=2)
     
-    # Save CSV
+    # Save CSV with separate AUC metrics
     with open(os.path.join(args.run_dir, 'metrics_epoch_eval.csv'), 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=['split', 'auc', 'accuracy', 'mastery_correlation', 'gain_correlation', 'correlation_students', 'timestamp'])
+        writer = csv.DictWriter(csvfile, fieldnames=['split', 'auc', 'accuracy', 'bce_auc', 'im_auc', 'global_auc'])
         writer.writeheader()
-        ts = datetime.utcnow().isoformat()
-        writer.writerow({'split': 'training', 'auc': train_auc, 'accuracy': train_acc, 'mastery_correlation': train_mastery_corr, 'gain_correlation': train_gain_corr, 'correlation_students': train_n, 'timestamp': ts})
-        writer.writerow({'split': 'validation', 'auc': valid_auc, 'accuracy': valid_acc, 'mastery_correlation': 'N/A', 'gain_correlation': 'N/A', 'correlation_students': 'N/A', 'timestamp': ts})
-        writer.writerow({'split': 'test', 'auc': test_auc, 'accuracy': test_acc, 'mastery_correlation': test_mastery_corr, 'gain_correlation': test_gain_corr, 'correlation_students': test_n, 'timestamp': ts})
+        writer.writerow({'split': 'training', 'auc': train_global_auc, 'accuracy': train_acc, 'bce_auc': train_bce_auc, 'im_auc': train_im_auc, 'global_auc': train_global_auc})
+        writer.writerow({'split': 'validation', 'auc': valid_global_auc, 'accuracy': valid_acc, 'bce_auc': valid_bce_auc, 'im_auc': valid_im_auc, 'global_auc': valid_global_auc})
+        writer.writerow({'split': 'test', 'auc': test_global_auc, 'accuracy': test_acc, 'bce_auc': test_bce_auc, 'im_auc': test_im_auc, 'global_auc': test_global_auc})
     
     print(json.dumps(results, indent=2))
 

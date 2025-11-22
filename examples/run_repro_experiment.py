@@ -191,7 +191,8 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         'non_negative_loss_weight', 'monotonicity_loss_weight',  # constraints
         'mastery_performance_loss_weight', 'gain_performance_loss_weight',
         'sparsity_loss_weight', 'consistency_loss_weight',
-        'incremental_mastery_loss_weight',
+        'bce_loss_weight',  # dual-encoder weights
+        'mastery_threshold_init', 'threshold_temperature',  # interpretability parameters
         'monitor_freq'  # monitoring frequency needed by model
     ]
     

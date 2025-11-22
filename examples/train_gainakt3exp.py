@@ -304,7 +304,7 @@ def train_gainakt3exp_model(args):
     use_wandb = resolve_param(cfg, 'runtime', 'use_wandb', getattr(args, 'use_wandb', False))
     use_amp = resolve_param(cfg, 'runtime', 'use_amp', getattr(args, 'use_amp', False))
     # Alignment / semantic emergence new arguments (SIMPLIFIED: all disabled 2025-11-15)
-    enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', False))  # SIMPLIFIED: disabled (2025-11-15)
+    # enable_alignment_loss = resolve_param(cfg, 'alignment', 'enable_alignment_loss', getattr(args, 'enable_alignment_loss', False))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_weight = float(resolve_param(cfg, 'alignment', 'alignment_weight', getattr(args, 'alignment_weight', 0.0)))  # SIMPLIFIED: disabled (2025-11-15)
     alignment_warmup_epochs = int(resolve_param(cfg, 'alignment', 'alignment_warmup_epochs', getattr(args, 'alignment_warmup_epochs', 8)))
     adaptive_alignment = resolve_param(cfg, 'alignment', 'adaptive_alignment', getattr(args, 'adaptive_alignment', False))  # SIMPLIFIED: disabled (2025-11-15)
@@ -343,7 +343,6 @@ def train_gainakt3exp_model(args):
     mastery_performance_loss_weight = resolve_param(cfg, 'interpretability', 'mastery_performance_loss_weight', getattr(args, 'mastery_performance_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     gain_performance_loss_weight = resolve_param(cfg, 'interpretability', 'gain_performance_loss_weight', getattr(args, 'gain_performance_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     sparsity_loss_weight = resolve_param(cfg, 'interpretability', 'sparsity_loss_weight', getattr(args, 'sparsity_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
-    consistency_loss_weight = resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0))  # SIMPLIFIED: disabled (2025-11-15)
     bce_loss_weight = resolve_param(cfg, 'interpretability', 'bce_loss_weight', getattr(args, 'bce_loss_weight', 0.9))  # Lambda1: weight for BCE loss
     incremental_mastery_loss_weight = 1.0 - bce_loss_weight  # Lambda2 = 1 - Lambda1: ensures weights sum to 1.0
     
@@ -372,15 +371,12 @@ def train_gainakt3exp_model(args):
     logger.info(f"  Mastery performance loss: {mastery_performance_loss_weight}")
     logger.info(f"  Gain performance loss: {gain_performance_loss_weight}")
     logger.info(f"  Sparsity loss: {sparsity_loss_weight}")
-    logger.info(f"  Consistency loss: {consistency_loss_weight}")
-    if enable_alignment_loss:
-        logger.info(f"Alignment loss enabled (weight={alignment_weight}, warmup_epochs={alignment_warmup_epochs}, adaptive={adaptive_alignment}, target_min_corr={alignment_min_correlation})")
-        if enable_global_alignment_pass:
-            logger.info(f"Global alignment pass ENABLED (students={alignment_global_students}, residual={use_residual_alignment})")
-        else:
-            logger.info("Global alignment pass disabled")
+    #if enable_alignment_loss:
+    #    logger.info(f"Alignment loss enabled (weight={alignment_weight}, warmup_epochs={alignment_warmup_epochs}, adaptive={adaptive_alignment}, target_min_corr={alignment_min_correlation})")
+    if enable_global_alignment_pass:
+        logger.info(f"Global alignment pass ENABLED (students={alignment_global_students}, residual={use_residual_alignment})")
     else:
-        logger.info("Alignment loss disabled")
+        logger.info("Global alignment pass disabled")
     if enable_retention_loss:
         logger.info(f"Retention loss ENABLED (delta={retention_delta}, weight={retention_weight})")
     if enable_lag_gain_loss:
@@ -514,14 +510,14 @@ def train_gainakt3exp_model(args):
         'dropout': resolved_dropout,
         'emb_type': resolved_emb_type,
         'monitor_frequency': resolve_param(cfg, 'runtime', 'monitor_freq', 50),
-        'use_mastery_head': resolve_param(cfg, 'interpretability', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
-        'use_gain_head': resolve_param(cfg, 'interpretability', 'use_gain_head', getattr(args, 'use_gain_head', False)),
-        'intrinsic_gain_attention': resolve_param(cfg, 'interpretability', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False)),
         'use_skill_difficulty': resolve_param(cfg, 'interpretability', 'use_skill_difficulty', getattr(args, 'use_skill_difficulty', False)),
         'use_student_speed': resolve_param(cfg, 'interpretability', 'use_student_speed', getattr(args, 'use_student_speed', False)),
         'num_students': num_students,
         'mastery_threshold_init': resolve_param(cfg, 'interpretability', 'mastery_threshold_init', getattr(args, 'mastery_threshold_init', 0.85)),
-        'threshold_temperature': resolve_param(cfg, 'interpretability', 'threshold_temperature', getattr(args, 'threshold_temperature', 1.0))
+        'threshold_temperature': resolve_param(cfg, 'interpretability', 'threshold_temperature', getattr(args, 'threshold_temperature', 1.0)),
+        'use_mastery_head': resolve_param(cfg, 'architecture', 'use_mastery_head', getattr(args, 'use_mastery_head', True)),
+        'use_gain_head': resolve_param(cfg, 'architecture', 'use_gain_head', getattr(args, 'use_gain_head', False)),
+        'intrinsic_gain_attention': resolve_param(cfg, 'architecture', 'intrinsic_gain_attention', getattr(args, 'intrinsic_gain_attention', False))
     }
     
     # Constraint resolution logic:
@@ -530,7 +526,7 @@ def train_gainakt3exp_model(args):
     # 3. Otherwise use individually supplied weights
     individual_params = [
         'non_negative_loss_weight', 'monotonicity_loss_weight', 'mastery_performance_loss_weight',
-        'gain_performance_loss_weight', 'sparsity_loss_weight', 'consistency_loss_weight',
+        'gain_performance_loss_weight', 'sparsity_loss_weight',
         'incremental_mastery_loss_weight'
     ]
     if not enhanced_constraints:
@@ -540,7 +536,7 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': 0.5,
             'gain_performance_loss_weight': 0.5,
             'sparsity_loss_weight': 0.0,
-            'consistency_loss_weight': 0.0,
+            'consistency_loss_weight': resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0)),
             'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
@@ -553,7 +549,7 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight,
+            'consistency_loss_weight': resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0)),
             'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
@@ -565,7 +561,7 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight,
+            'consistency_loss_weight': resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0)),
             'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
@@ -577,7 +573,7 @@ def train_gainakt3exp_model(args):
             'mastery_performance_loss_weight': mastery_performance_loss_weight,
             'gain_performance_loss_weight': gain_performance_loss_weight,
             'sparsity_loss_weight': sparsity_loss_weight,
-            'consistency_loss_weight': consistency_loss_weight,
+            'consistency_loss_weight': resolve_param(cfg, 'interpretability', 'consistency_loss_weight', getattr(args, 'consistency_loss_weight', 0.0)),
             'bce_loss_weight': bce_loss_weight,
             'incremental_mastery_loss_weight': incremental_mastery_loss_weight
         })
@@ -590,7 +586,6 @@ def train_gainakt3exp_model(args):
                 f"mastery_perf={model_config['mastery_performance_loss_weight']} | "
                 f"gain_perf={model_config['gain_performance_loss_weight']} | "
                 f"sparsity={model_config['sparsity_loss_weight']} | "
-                f"consistency={model_config['consistency_loss_weight']} | "
                 f"bce_weight(λ₁)={model_config['bce_loss_weight']} | "
                 f"im_weight(1-λ₁)={model_config['incremental_mastery_loss_weight']}")
     # Repro integration: detect EXPERIMENT_DIR
@@ -623,9 +618,6 @@ def train_gainakt3exp_model(args):
         except Exception as e:
             logger.warning(f"[Repro] Failed to initialize experiment directory '{experiment_dir}': {e}")
             experiment_dir = None
-    # ...existing code...
-    logger.info("Creating GainAKT3Exp (mastery_head=%s, gain_head=%s) with CUMULATIVE MASTERY..." % (
-        model_config['use_mastery_head'], model_config['use_gain_head']) )
     model = create_exp_model(model_config)
     monitor_freq = resolve_param(cfg, 'runtime', 'monitor_freq', getattr(args, 'monitor_freq', 50))
     monitor = InterpretabilityMonitor(model, log_frequency=monitor_freq)
@@ -820,6 +812,7 @@ def train_gainakt3exp_model(args):
                     alignment_loss = torch.zeros(1, device=device)
                     alignment_corr_mastery = torch.zeros(1, device=device)
                     alignment_corr_gain = torch.zeros(1, device=device)
+                    """
                     if (enable_alignment_loss and hasattr(model_core, 'mastery_head') and hasattr(model_core, 'gain_head') and
                         model_core.mastery_head is not None and model_core.gain_head is not None and 
                         'projected_mastery' in outputs and 'projected_gains' in outputs):
@@ -956,6 +949,7 @@ def train_gainakt3exp_model(args):
                             old_sparsity = getattr(model_core, 'sparsity_loss_weight', sparsity_loss_weight)
                             model_core.sparsity_loss_weight = old_sparsity * variance_floor_reduce_factor
                             logger.info(f"[VarianceFloor] Reduced sparsity_loss_weight from {old_sparsity:.3f} to {model_core.sparsity_loss_weight:.3f}")
+                    """
                     # Compose total batch loss
                     retention_component = torch.zeros(1, device=device)
                     if enable_retention_loss and pending_retention_penalty > 0:
@@ -969,10 +963,7 @@ def train_gainakt3exp_model(args):
                     weighted_main_loss = bce_loss_weight * main_loss
                     weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
                     
-                    if enable_alignment_loss:
-                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
-                    else:
-                        total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
+                    total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
                 # Backward & optimizer step
                 if use_amp and device.type == 'cuda':
                     scaler.scale(total_batch_loss).backward()
@@ -1014,6 +1005,7 @@ def train_gainakt3exp_model(args):
                             alignment_loss = torch.zeros(1, device=device)
                             alignment_corr_mastery = torch.zeros(1, device=device)
                             alignment_corr_gain = torch.zeros(1, device=device)
+                            """
                             if (enable_alignment_loss and hasattr(model_core, 'mastery_head') and hasattr(model_core, 'gain_head') and
                                 model_core.mastery_head is not None and model_core.gain_head is not None and 
                                 'projected_mastery' in outputs and 'projected_gains' in outputs):
@@ -1101,6 +1093,7 @@ def train_gainakt3exp_model(args):
                                     alignment_loss = - (alignment_corr_mastery + alignment_corr_gain) * effective_weight + lag_loss
                                 total_alignment_loss += float((- (alignment_corr_mastery + alignment_corr_gain) * effective_weight).detach().cpu())
                                 total_lag_loss += float(lag_loss.detach().cpu())
+                            """
                             retention_component = torch.zeros(1, device=device)
                             if enable_retention_loss and pending_retention_penalty > 0:
                                 retention_component = torch.tensor(pending_retention_penalty / max(1, num_batches), device=device)
@@ -1111,10 +1104,7 @@ def train_gainakt3exp_model(args):
                             weighted_main_loss = bce_loss_weight * main_loss
                             weighted_incremental_loss = incremental_mastery_loss_weight * incremental_mastery_loss
                             
-                            if enable_alignment_loss:
-                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + alignment_loss + retention_component
-                            else:
-                                total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
+                            total_batch_loss = weighted_main_loss + interpretability_loss + weighted_incremental_loss + retention_component
                         if use_amp and device.type == 'cuda':
                             scaler.scale(total_batch_loss).backward()
                             clip_val = getattr(args, 'gradient_clip', 1.0)
@@ -1149,8 +1139,6 @@ def train_gainakt3exp_model(args):
                 total_incremental_mastery_loss += incremental_mastery_loss.item()
             else:
                 total_incremental_mastery_loss += float(incremental_mastery_loss)
-            if enable_alignment_loss:
-                total_interpretability_loss += alignment_loss.item()
             # alignment_loss already decomposed; nothing extra needed here
             with torch.no_grad():
                 probs = torch.sigmoid(valid_predictions)
@@ -1464,6 +1452,7 @@ def train_gainakt3exp_model(args):
             global_gain_corr = None
 
         # Apply consistency rebalancing if criteria met
+        """
         if enable_alignment_loss and epoch + 1 >= consistency_rebalance_epoch:
             ref_corr = global_mastery_corr if global_mastery_corr is not None else consistency_metrics['mastery_correlation']
             if ref_corr < consistency_rebalance_threshold:
@@ -1471,6 +1460,7 @@ def train_gainakt3exp_model(args):
                 if old_consistency > consistency_rebalance_new_weight + 1e-8:
                     model_core.consistency_loss_weight = consistency_rebalance_new_weight
                     logger.info(f"[Rebalance] Reduced consistency_loss_weight from {old_consistency:.3f} to {model_core.consistency_loss_weight:.3f} due to low mastery_corr {ref_corr:.4f}")
+        """
 
         # Retention loss scheduling (epoch >= warm-up end)
         retention_loss_value = 0.0
@@ -1789,12 +1779,12 @@ def train_gainakt3exp_model(args):
             '--monitor_freq', str(model_config['monitor_frequency'])
         ]
         
-        # Add optional flags
-        if model_config['use_mastery_head']:
+        # Add architectural and optional flags
+        if model_config.get('use_mastery_head', False):
             eval_cmd.append('--use_mastery_head')
-        if model_config['use_gain_head']:
+        if model_config.get('use_gain_head', False):
             eval_cmd.append('--use_gain_head')
-        if model_config['intrinsic_gain_attention']:
+        if model_config.get('intrinsic_gain_attention', False):
             eval_cmd.append('--intrinsic_gain_attention')
         if model_config['use_skill_difficulty']:
             eval_cmd.append('--use_skill_difficulty')
@@ -1878,15 +1868,6 @@ if __name__ == '__main__':
     # Interpretability Defaults: ENABLED by default
     # We expose disable flags for explicit override while keeping backward-compatible enable flags.
     # ---------------------
-    parser.add_argument('--use_mastery_head', action='store_true',
-                        help='Enable mastery head (default: enabled). Use --disable_mastery_head to turn off.')
-    parser.add_argument('--disable_mastery_head', action='store_true', help='Disable mastery head (overrides --use_mastery_head)')
-    parser.add_argument('--use_gain_head', action='store_true',
-                        help='Enable gain head (default: enabled). Use --disable_gain_head to turn off.')
-    parser.add_argument('--disable_gain_head', action='store_true', help='Disable gain head (overrides --use_gain_head)')
-    parser.add_argument('--intrinsic_gain_attention', action='store_true',
-                        help='Enable intrinsic gain attention mode (Values are skill-space gains, h_t = Σ α g)')
-    parser.add_argument('--disable_intrinsic_gain_attention', action='store_true', help='Disable intrinsic gain attention')
     parser.add_argument('--use_skill_difficulty', action='store_true',
                         help='Enable learnable per-skill difficulty parameters (Phase 1: Architectural Improvements - DEPRECATED)')
     parser.add_argument('--use_student_speed', action='store_true',
@@ -1905,11 +1886,15 @@ if __name__ == '__main__':
     parser.add_argument('--mastery_performance_loss_weight', type=float, required=True)
     parser.add_argument('--gain_performance_loss_weight', type=float, required=True)
     parser.add_argument('--sparsity_loss_weight', type=float, required=True)
-    parser.add_argument('--consistency_loss_weight', type=float, required=True)
+    parser.add_argument('--consistency_loss_weight', type=float, required=True, help='Weight for consistency loss')
     parser.add_argument('--bce_loss_weight', type=float, required=True, help='Weight for BCE loss (lambda1). Incremental mastery loss weight = 1 - lambda1')
+    # Encoder Consistency Regularization (2025-11-20): IM guides BCE
+    parser.add_argument('--enable_encoder_consistency', action='store_true',
+                        help='Enable encoder consistency regularization: IM encoder guides BCE encoder via prediction alignment')
+    parser.add_argument('--encoder_consistency_weight', type=float, required=True,
+                        help='Weight for encoder consistency loss (encourages BCE to match IM predictions)')
     # Semantic alignment & refinement flags (Phase 1+ reproducibility)
-    parser.add_argument('--enable_alignment_loss', action='store_true',
-                        help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
+    #parser.add_argument('--enable_alignment_loss', action='store_true', help='Enable local alignment correlation loss (default: enabled). Use --disable_alignment_loss to turn off.')
     parser.add_argument('--disable_alignment_loss', action='store_true', help='Disable local alignment correlation loss')
     parser.add_argument('--alignment_weight', type=float, required=True, help='Base weight for alignment loss (before warm-up scaling)')
     parser.add_argument('--alignment_warmup_epochs', type=int, required=True, help='Epochs to linearly warm alignment weight')
@@ -1961,6 +1946,10 @@ if __name__ == '__main__':
     parser.add_argument('--d_ff', type=int, required=True, help='Feed-forward layer dimension')
     parser.add_argument('--dropout', type=float, required=True, help='Transformer dropout rate')
     parser.add_argument('--emb_type', type=str, choices=['qid','concept','hybrid'], required=True, help='Embedding type used for questions/concepts')
+    # Architecture flags for model heads
+    parser.add_argument('--use_mastery_head', action='store_true', help='Enable mastery head in model architecture')
+    parser.add_argument('--use_gain_head', action='store_true', help='Enable gain head in model architecture')
+    parser.add_argument('--intrinsic_gain_attention', action='store_true', help='Enable intrinsic gain attention mechanism')
     # Learning trajectories analysis configuration (used after training/evaluation)
     parser.add_argument('--num_trajectories', type=int, required=True, help='Number of student trajectories to analyze')
     parser.add_argument('--min_trajectory_steps', type=int, required=True, help='Minimum interaction steps required for trajectory analysis')
@@ -1976,44 +1965,11 @@ if __name__ == '__main__':
     # Map to expected attribute names inside training function
     args.num_epochs = args.epochs
     args.dataset_name = args.dataset
-    # Provide defaults for attributes referenced but not yet exposed
-    # Resolve disable overrides (heads & losses)
-    if getattr(args, 'disable_mastery_head', False):
-        args.use_mastery_head = False
-    if getattr(args, 'disable_gain_head', False):
-        args.use_gain_head = False
-    if getattr(args, 'disable_intrinsic_gain_attention', False):
-        args.intrinsic_gain_attention = False
-    
-    # ARCHITECTURAL CONSTRAINT: Intrinsic gain attention and projection heads are mutually exclusive
-    # Intrinsic mode uses attention-derived gains; projection heads would be unused (wasting ~2M parameters)
-    if args.intrinsic_gain_attention:
-        if args.use_mastery_head or args.use_gain_head:
-            print("=" * 100)
-            print("⚠️  WARNING: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
-            print("=" * 100)
-            print("intrinsic_gain_attention=True is INCOMPATIBLE with projection heads")
-            print("")
-            print("  Intrinsic mode uses attention-derived gains directly from the model.")
-            print("  Projection heads (use_mastery_head, use_gain_head) are NOT used in this mode.")
-            print("  Enabling them wastes ~2M parameters without any benefit.")
-            print("")
-            print("AUTOMATIC CORRECTION APPLIED:")
-            if args.use_mastery_head:
-                print("  • use_mastery_head: True → False")
-            if args.use_gain_head:
-                print("  • use_gain_head: True → False")
-            print("")
-            print("Model will be created in pure intrinsic mode (attention-derived gains only).")
-            print("Expected parameters: ~12.7M (vs ~14.7M with unused projection heads)")
-            print("=" * 100)
-            args.use_mastery_head = False
-            args.use_gain_head = False
-    
+        
     if getattr(args, 'pure_bce', False):
         args.enhanced_constraints = False
-    if getattr(args, 'disable_alignment_loss', False):
-        args.enable_alignment_loss = False
+    #if getattr(args, 'disable_alignment_loss', False):
+        #args.enable_alignment_loss = False
     if getattr(args, 'disable_adaptive_alignment', False):
         args.adaptive_alignment = False
     if getattr(args, 'disable_global_alignment_pass', False):
