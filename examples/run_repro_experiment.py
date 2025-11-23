@@ -189,28 +189,22 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     python_path = sys.executable
     cmd_parts = [python_path, eval_script]
     
-    # Add run_dir
+    # Add run_dir and checkpoint name
     cmd_parts.append(f"--run_dir {experiment_folder}")
+    cmd_parts.append(f"--ckpt_name model_best.pth")
     
     # Evaluation-specific parameters (subset of training params)
     # Note: num_students is auto-detected from checkpoint, not passed as parameter
     eval_params = [
         'dataset', 'fold', 'batch_size',  # data
         'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
-        'non_negative_loss_weight', 'monotonicity_loss_weight',  # constraints
-        'mastery_performance_loss_weight', 'gain_performance_loss_weight',
-        'sparsity_loss_weight', 'consistency_loss_weight',
-        'bce_loss_weight',  # dual-encoder weights
-        'mastery_threshold_init', 'threshold_temperature',  # interpretability parameters
         'monitor_freq'  # monitoring frequency needed by model
     ]
     
-    # Boolean flags - ARCHITECTURAL AND INTERPRETABILITY MODES
+    # Boolean flags - ARCHITECTURAL MODES
     # IMPORTANT: These affect model architecture and MUST match between training and evaluation
-    # - use_mastery_head: Enables mastery projection head
-    # - use_gain_head: Enables gain projection head
-    # - intrinsic_gain_attention: Uses attention-derived gains (changes architecture)
-    bool_flags = ['use_mastery_head', 'use_gain_head', 'intrinsic_gain_attention']
+    # GainAKT4: No architectural flags needed (dual-head architecture is fixed)
+    bool_flags = []
     
     # Add max_correlation_students (default 300 if not in params)
     max_corr = params.get('max_correlation_students', 300)
@@ -654,37 +648,6 @@ def main():
         for param_name, param_value in overrides.items():
             original_command_parts.extend([f"--{param_name}", str(param_value)])
         original_command = " ".join(original_command_parts)
-        
-        # ARCHITECTURAL CONSTRAINT: Enforce mutual exclusivity before building commands
-        # Intrinsic gain attention and projection heads are mutually exclusive
-        if training_params.get('intrinsic_gain_attention', False):
-            if training_params.get('use_mastery_head', False) or training_params.get('use_gain_head', False):
-                print("\n" + "=" * 100)
-                print("⚠️  LAUNCHER: ARCHITECTURAL PARAMETER CONFLICT DETECTED")
-                print("=" * 100)
-                print("intrinsic_gain_attention=True is INCOMPATIBLE with projection heads")
-                print("")
-                print("  Intrinsic mode uses attention-derived gains directly from the model.")
-                print("  Projection heads (use_mastery_head, use_gain_head) are NOT used in this mode.")
-                print("  Enabling them wastes ~2M parameters without any benefit.")
-                print("")
-                print("AUTOMATIC CORRECTION APPLIED IN CONFIG:")
-                if training_params.get('use_mastery_head', False):
-                    print("  • use_mastery_head: True → False")
-                    training_params['use_mastery_head'] = False
-                    # Update overrides if it was there
-                    if 'use_mastery_head' in overrides:
-                        overrides['use_mastery_head'] = False
-                if training_params.get('use_gain_head', False):
-                    print("  • use_gain_head: True → False")
-                    training_params['use_gain_head'] = False
-                    # Update overrides if it was there
-                    if 'use_gain_head' in overrides:
-                        overrides['use_gain_head'] = False
-                print("")
-                print("All generated commands will reflect corrected parameters (heads disabled).")
-                print("Expected model parameters: ~12.7M (vs ~14.7M with unused projection heads)")
-                print("=" * 100 + "\n")
         
         # Build commands
         experiment_dir_abs = str(experiment_folder.absolute())

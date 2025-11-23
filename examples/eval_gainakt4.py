@@ -30,6 +30,8 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
     all_mastery_preds = []
     all_total_preds = []
     
+    has_mastery = False  # Track if mastery predictions exist
+    
     with torch.no_grad():
         for batch in test_loader:
             questions = batch['cseqs'].to(device)
@@ -43,30 +45,41 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
             
             # Collect predictions
             preds = outputs['bce_predictions'].cpu().numpy()
-            mastery_preds = outputs['mastery_predictions'].cpu().numpy()
             labels_np = labels.cpu().numpy()
             mask_np = mask.cpu().numpy()
             
-            # Compute combined predictions
-            combined_preds = lambda_bce * preds + (1 - lambda_bce) * mastery_preds
+            # Compute combined predictions (handle None mastery_predictions when λ=1.0)
+            if outputs['mastery_predictions'] is not None:
+                has_mastery = True
+                mastery_preds = outputs['mastery_predictions'].cpu().numpy()
+                combined_preds = lambda_bce * preds + (1 - lambda_bce) * mastery_preds
+            else:
+                mastery_preds = None
+                combined_preds = preds  # Pure BCE mode when λ=1.0
             
             # Flatten and filter by mask
             for i in range(len(preds)):
                 valid_indices = mask_np[i] == 1
                 all_preds.extend(preds[i][valid_indices])
                 all_labels.extend(labels_np[i][valid_indices])
-                all_mastery_preds.extend(mastery_preds[i][valid_indices])
+                if mastery_preds is not None:
+                    all_mastery_preds.extend(mastery_preds[i][valid_indices])
                 all_total_preds.extend(combined_preds[i][valid_indices])
     
     # Compute metrics
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
-    all_mastery_preds = np.array(all_mastery_preds)
     all_total_preds = np.array(all_total_preds)
     
     bce_metrics = compute_auc_acc(all_labels, all_preds)
-    mastery_metrics = compute_auc_acc(all_labels, all_mastery_preds)
     total_metrics = compute_auc_acc(all_labels, all_total_preds)
+    
+    # Only compute mastery metrics if mastery predictions exist
+    if has_mastery:
+        all_mastery_preds = np.array(all_mastery_preds)
+        mastery_metrics = compute_auc_acc(all_labels, all_mastery_preds)
+    else:
+        mastery_metrics = {'auc': 'N/A', 'acc': 'N/A'}
     
     return {
         'total_auc': total_metrics['auc'],
@@ -200,7 +213,9 @@ def main():
     print("="*80)
     print(f"Combined (Total) - AUC: {test_metrics['total_auc']:.4f}, Acc: {test_metrics['total_acc']:.4f}")
     print(f"BCE Head - AUC: {test_metrics['bce_auc']:.4f}, Acc: {test_metrics['bce_acc']:.4f}")
-    print(f"Mastery Head - AUC: {test_metrics['mastery_auc']:.4f}, Acc: {test_metrics['mastery_acc']:.4f}")
+    mastery_auc_str = f"{test_metrics['mastery_auc']:.4f}" if isinstance(test_metrics['mastery_auc'], float) else test_metrics['mastery_auc']
+    mastery_acc_str = f"{test_metrics['mastery_acc']:.4f}" if isinstance(test_metrics['mastery_acc'], float) else test_metrics['mastery_acc']
+    print(f"Mastery Head - AUC: {mastery_auc_str}, Acc: {mastery_acc_str}")
     print("="*80)
     
     # Save results JSON

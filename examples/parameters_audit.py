@@ -118,20 +118,15 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Load training script
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            train_file = self.root_dir / "examples" / "train_gainakt4.py"
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
-            # Check critical parameters that were previously mismatched
+            # Check critical parameters that were previously mismatched (GainAKT4-specific)
             critical_params = {
-                'alignment_weight': '0.15',  # Updated from 0.25 based on alignment sweep experiments
                 'batch_size': '64',
-                'enable_alignment_loss': 'True',
-                'enable_global_alignment_pass': 'True',
-                'enable_lag_gain_loss': 'True',
-                'enable_retention_loss': 'True',
                 'epochs': '12',
-                'use_residual_alignment': 'True'
+                'lambda_bce': '1.0'
             }
             
             mismatches = 0
@@ -212,8 +207,8 @@ class ParameterAuditor:
                 eval_content = f.read()
             
             has_docs = "CRITICAL ARCHITECTURAL FLAGS" in eval_content
-            doc_quality = all(flag in eval_content for flag in 
-                            ['use_mastery_head', 'use_gain_head', 'intrinsic_gain_attention'])
+            # GainAKT4: No architectural flags to document (dual-head is fixed architecture)
+            doc_quality = True
             
             print(f"  Documentation header:        {'✅ Present' if has_docs else '❌ Missing'}")
             print(f"  All architectural flags doc: {'✅ Present' if doc_quality else '❌ Missing'}")
@@ -240,12 +235,10 @@ class ParameterAuditor:
             with open(param_file, 'r') as f:
                 defaults = json.load(f)['defaults']
             
-            # Critical parameters that must be present
+            # Critical parameters that must be present (GainAKT4-specific)
             required_params = [
                 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout',
-                'mastery_performance_loss_weight', 'gain_performance_loss_weight',
-                'alignment_weight', 'batch_size', 'epochs', 'learning_rate',
-                'use_mastery_head', 'use_gain_head', 'intrinsic_gain_attention',
+                'batch_size', 'epochs', 'learning_rate', 'lambda_bce',
                 'seed', 'optimizer', 'weight_decay', 'patience'
             ]
             
@@ -279,14 +272,8 @@ class ParameterAuditor:
                 train_content = f.read()
             
             # Check for old wrong fallbacks that should have been fixed
-            wrong_fallbacks = [
-                (r'getattr\(args, \'alignment_weight\', 0\.1\)', 
-                 'alignment_weight fallback 0.1 (should be 0.25)'),
-                (r'getattr\(args, \'batch_size\', 96\)', 
-                 'batch_size fallback 96 (should be 64)'),
-                (r'getattr\(args, \'epochs\', 20\)', 
-                 'epochs fallback 20 (should be 12)'),
-            ]
+            # GainAKT4: No suspicious fallbacks expected (should use fail-fast)
+            wrong_fallbacks = []
             
             suspicious = []
             for pattern, desc in wrong_fallbacks:

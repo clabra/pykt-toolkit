@@ -24,7 +24,7 @@
     "d_ff": 512,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_bce": 0.9,
+    "lambda_bce": 1.0,
     "num_trajectories": 10,
     "min_trajectory_steps": 10
   },
@@ -73,5 +73,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "80e4b8ec246f57f54a7247d03e8c878a"
+  "md5": "0a64ac95874aa7bbc2f5328cecfaacc6"
 }

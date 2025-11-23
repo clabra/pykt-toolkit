@@ -166,11 +166,15 @@ class GainAKT4(nn.Module):
         ])
         
         # Head 1: Performance Prediction (BCE)
+        # Deeper architecture matching AKT for better capacity
         self.prediction_head = nn.Sequential(
             nn.Linear(d_model * 3, d_ff),  # [h1, v1, skill_emb]
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_ff, 1)
+            nn.Linear(d_ff, 256),  # Additional layer (matches AKT)
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 1)
         )
         
         # Head 2: Mastery Estimation
@@ -201,8 +205,8 @@ class GainAKT4(nn.Module):
         Returns:
             dict with keys:
                 - 'bce_predictions': [B, L] from Head 1
-                - 'mastery_predictions': [B, L] from Head 2
-                - 'skill_vector': [B, L, num_c] - interpretable {KCi}
+                - 'mastery_predictions': [B, L] from Head 2 (None if λ_mastery=0)
+                - 'skill_vector': [B, L, num_c] - interpretable {KCi} (None if λ_mastery=0)
                 - 'logits': [B, L] - BCE logits for loss computation
         """
         batch_size, seq_len = q.size()
@@ -240,15 +244,23 @@ class GainAKT4(nn.Module):
         bce_predictions = torch.sigmoid(logits)
         
         # === HEAD 2: Mastery Estimation ===
-        # Step 1: MLP1 → Skill Vector {KCi} with positivity
-        kc_vector = self.mlp1(h1)  # [B, L, num_c], guaranteed positive by Softplus
-        
-        # Step 1.5: Enforce monotonicity (cumulative max across time)
-        kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]  # [B, L, num_c]
-        
-        # Step 2: MLP2 → Mastery prediction
-        mastery_logits = self.mlp2(kc_vector_mono).squeeze(-1)  # [B, L]
-        mastery_predictions = torch.sigmoid(mastery_logits)
+        # Conditional computation: skip if λ_mastery = 0 (no gradient flow)
+        if self.lambda_mastery > 0:
+            # Step 1: MLP1 → Skill Vector {KCi} with positivity
+            kc_vector = self.mlp1(h1)  # [B, L, num_c], guaranteed positive by Softplus
+            
+            # Step 1.5: Enforce monotonicity (cumulative max across time)
+            kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]  # [B, L, num_c]
+            
+            # Step 2: MLP2 → Mastery prediction
+            mastery_logits = self.mlp2(kc_vector_mono).squeeze(-1)  # [B, L]
+            mastery_predictions = torch.sigmoid(mastery_logits)
+        else:
+            # Skip mastery head computation when λ_mastery=0 (pure BCE mode)
+            kc_vector = None
+            kc_vector_mono = None
+            mastery_logits = None
+            mastery_predictions = None
         
         return {
             'bce_predictions': bce_predictions,
@@ -284,15 +296,20 @@ class GainAKT4(nn.Module):
             reduction='mean'
         )
         
-        # L2: Mastery Loss (Head 2)
-        mastery_loss = F.binary_cross_entropy_with_logits(
-            output['mastery_logits'],
-            targets.float(),
-            reduction='mean'
-        )
-        
-        # Total loss: L_total = λ₁ * L1 + λ₂ * L2
-        total_loss = lambda_bce * bce_loss + lambda_mastery * mastery_loss
+        # Multi-task loss: weighted combination
+        if output['mastery_logits'] is not None:
+            # L2: Mastery Loss (Head 2)
+            mastery_loss = F.binary_cross_entropy_with_logits(
+                output['mastery_logits'],
+                targets.float(),
+                reduction='mean'
+            )
+            # Total loss: L_total = λ₁ * L1 + λ₂ * L2
+            total_loss = lambda_bce * bce_loss + lambda_mastery * mastery_loss
+        else:
+            # Pure BCE mode (λ_mastery=0, Head 2 skipped)
+            mastery_loss = torch.tensor(0.0, device=bce_loss.device)
+            total_loss = bce_loss
         
         return {
             'total_loss': total_loss,

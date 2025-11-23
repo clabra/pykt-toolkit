@@ -157,6 +157,17 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
             # Forward pass to get skill vectors (mastery states)
             outputs = model(q=questions, r=responses, qry=questions_shifted)
             
+            # Check if mastery head is active (skill_vector will be None when λ=1.0)
+            if outputs['skill_vector'] is None:
+                print("\n" + "="*80)
+                print("⚠️  MASTERY STATES NOT AVAILABLE")
+                print("="*80)
+                print("The model was trained with λ_bce=1.0 (pure BCE mode).")
+                print("Mastery head (Head 2) was not computed, so skill vectors are unavailable.")
+                print("Mastery states analysis requires λ_bce < 1.0 to activate Head 2.")
+                print("="*80)
+                return []
+            
             # skill_vector contains mastery state for each concept at each time step
             # Shape: [B, L, num_concepts]
             skill_vector = outputs['skill_vector'].cpu().numpy()
@@ -349,6 +360,19 @@ def main():
     # Extract mastery states
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
     mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, max_students=args.num_students)
+    
+    # Check if mastery data is available
+    if not mastery_data:
+        print("\n" + "="*80)
+        print("MASTERY STATES EXTRACTION SKIPPED")
+        print("="*80)
+        print("No mastery data available. This occurs when:")
+        print("  - Model trained with λ_bce=1.0 (pure BCE mode, Head 2 disabled)")
+        print("  - No students in dataset (empty data loader)")
+        print("\nNo output files created.")
+        print("="*80)
+        return
+    
     print(f"✓ Extracted {len(mastery_data)} observations from up to {args.num_students} students")
     
     # Compute statistics
