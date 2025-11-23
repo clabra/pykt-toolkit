@@ -1,0 +1,1 @@
+{"model": "akt", "short_title": "akt-wandb-training", "experiment_id": 915894, "dataset": "assist2015", "fold": 0, "seed": 42, "dropout": 0.2, "d_model": 256, "d_ff": 512, "n_heads": 4, "num_encoder_blocks": 4, "learning_rate": 0.000174, "emb_type": "qid", "best_epoch": 13, "best_valid_auc": 0.732, "training_method": "wandb_train"}
