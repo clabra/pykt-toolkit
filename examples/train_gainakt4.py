@@ -1,0 +1,466 @@
+#!/usr/bin/env python3
+"""
+Training script for GainAKT4 model using PyKT framework patterns.
+
+
+                         ⚠️  REPRODUCIBILITY WARNING ⚠️                        ║
+#
+
+                                                                              ║
+  DO NOT CALL THIS SCRIPT DIRECTLY FOR REPRODUCIBLE EXPERIMENTS!             ║
+                                                                              ║
+  Use the experiment launcher:                                               ║
+      python examples/run_repro_experiment.py --short_title "name"           ║
+                                                                              ║
+  The launcher will:                                                         ║
+    ✓ Load defaults from configs/parameter_default.json                      ║
+    ✓ Apply your CLI overrides                                               ║
+    ✓ Generate explicit command with ALL parameters                          ║
+    ✓ Create experiment folder with full audit trail                         ║
+ Save config.json for perfect reproducibility                           ║    
+                                                                              ║
+"""
+
+import os
+import sys
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import argparse
+import json
+import csv
+import subprocess
+from datetime import datetime
+
+# Add project root to path
+sys.path.insert(0, '/workspaces/pykt-toolkit')
+
+from pykt.datasets import init_dataset4train
+from pykt.models.gainakt4 import GainAKT4
+from examples.experiment_utils import compute_auc_acc
+
+
+def train_epoch(model, train_loader, optimizer, device, gradient_clip):
+    """Train for one epoch."""
+    model.train()
+    total_loss = 0.0
+    total_bce_loss = 0.0
+    total_mastery_loss = 0.0
+    num_batches = 0
+    
+    for batch in train_loader:
+        questions = batch['cseqs'].to(device)
+        responses = batch['rseqs'].to(device)
+        questions_shifted = batch['shft_cseqs'].to(device)
+        mask = batch['masks'].to(device)
+        
+        optimizer.zero_grad()
+        
+        # Forward pass
+        outputs = model(q=questions, r=responses, qry=questions_shifted)
+        
+        # Get targets
+        targets = batch['shft_rseqs'].to(device)
+        
+        # Compute loss
+        loss_dict = model.compute_loss(outputs, targets)
+        loss = loss_dict['total_loss']
+        bce_loss = loss_dict['bce_loss']
+        mastery_loss = loss_dict['mastery_loss']
+        
+        # Backward pass
+        loss.backward()
+        if gradient_clip > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clip)
+        optimizer.step()
+        
+        total_loss += loss.item()
+        total_bce_loss += bce_loss.item()
+        total_mastery_loss += mastery_loss.item()
+        num_batches += 1
+    
+    return {
+        'loss': total_loss / num_batches,
+        'bce_loss': total_bce_loss / num_batches,
+        'mastery_loss': total_mastery_loss / num_batches
+    }
+
+
+def validate(model, val_loader, device, lambda_bce=0.9):
+    """Validate the model."""
+    model.eval()
+    all_preds = []
+    all_labels = []
+    all_mastery_preds = []
+    all_total_preds = []
+    
+    total_loss = 0.0
+    total_bce_loss = 0.0
+    total_mastery_loss = 0.0
+    num_batches = 0
+    
+    with torch.no_grad():
+        for batch in val_loader:
+            questions = batch['cseqs'].to(device)
+            responses = batch['rseqs'].to(device)
+            questions_shifted = batch['shft_cseqs'].to(device)
+            mask = batch['masks'].to(device)
+            labels = batch['shft_rseqs'].to(device)
+            
+            # Forward pass
+            outputs = model(q=questions, r=responses, qry=questions_shifted)
+            
+            # Compute loss
+            loss_dict = model.compute_loss(outputs, labels)
+            loss = loss_dict['total_loss']
+            total_loss += loss.item()
+            total_bce_loss += loss_dict['bce_loss'].item()
+            total_mastery_loss += loss_dict['mastery_loss'].item()
+            num_batches += 1
+            
+            # Collect predictions
+            preds = outputs['bce_predictions'].cpu().numpy()
+            mastery_preds = outputs['mastery_predictions'].cpu().numpy()
+            labels_np = labels.cpu().numpy()
+            mask_np = mask.cpu().numpy()
+            
+            # Compute combined predictions
+            combined_preds = lambda_bce * preds + (1 - lambda_bce) * mastery_preds
+            
+            # Flatten and filter by mask
+            for i in range(len(preds)):
+                valid_indices = mask_np[i] == 1
+                all_preds.extend(preds[i][valid_indices])
+                all_labels.extend(labels_np[i][valid_indices])
+                all_mastery_preds.extend(mastery_preds[i][valid_indices])
+                all_total_preds.extend(combined_preds[i][valid_indices])
+    
+    # Compute metrics
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+    all_mastery_preds = np.array(all_mastery_preds)
+    all_total_preds = np.array(all_total_preds)
+    
+    bce_metrics = compute_auc_acc(all_labels, all_preds)
+    mastery_metrics = compute_auc_acc(all_labels, all_mastery_preds)
+    total_metrics = compute_auc_acc(all_labels, all_total_preds)
+    
+    return {
+        'loss': total_loss / num_batches,
+        'bce_loss': total_bce_loss / num_batches,
+        'mastery_loss': total_mastery_loss / num_batches,
+        'bce_auc': bce_metrics['auc'],
+        'bce_acc': bce_metrics['acc'],
+        'mastery_auc': mastery_metrics['auc'],
+        'mastery_acc': mastery_metrics['acc'],
+        'total_auc': total_metrics['auc'],
+        'total_acc': total_metrics['acc']
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Train GainAKT4 model')
+    
+    # Dataset parameters
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--fold', type=int, required=True)
+    
+    # Training parameters
+    parser.add_argument('--epochs', type=int, required=True)
+    parser.add_argument('--batch_size', type=int, required=True)
+    parser.add_argument('--learning_rate', type=float, required=True)
+    parser.add_argument('--optimizer', type=str, required=True)
+    parser.add_argument('--weight_decay', type=float, required=True)
+    parser.add_argument('--gradient_clip', type=float, required=True)
+    parser.add_argument('--patience', type=int, required=True)
+    parser.add_argument('--seed', type=int, required=True)
+    
+    # Model architecture
+    parser.add_argument('--d_model', type=int, required=True)
+    parser.add_argument('--n_heads', type=int, required=True)
+    parser.add_argument('--num_encoder_blocks', type=int, required=True)
+    parser.add_argument('--d_ff', type=int, required=True)
+    parser.add_argument('--dropout', type=float, required=True)
+    parser.add_argument('--emb_type', type=str, required=True)
+    parser.add_argument('--seq_len', type=int, required=True)
+    
+    # Loss weights
+    parser.add_argument('--lambda_bce', type=float, required=True)
+    
+    # Monitoring & evaluation
+    parser.add_argument('--monitor_freq', type=int, required=True)
+    parser.add_argument('--auto_shifted_eval', action='store_true')
+    parser.add_argument('--use_amp', action='store_true')
+    parser.add_argument('--use_wandb', action='store_true')
+    
+    # Educational visualizations (not used in this script but required by launcher)
+    parser.add_argument('--min_trajectory_steps', type=int, required=True)
+    parser.add_argument('--num_trajectories', type=int, required=True)
+    
+    args = parser.parse_args()
+    
+    # Set random seed
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    
+    # Setup device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Get experiment directory from environment
+    experiment_dir = os.environ.get('EXPERIMENT_DIR')
+    if not experiment_dir:
+        print("⚠️  WARNING: EXPERIMENT_DIR not set. Using current directory.")
+        experiment_dir = '.'
+    
+    # Initialize metrics_epoch.csv for reproducibility
+    metrics_csv_path = os.path.join(experiment_dir, 'metrics_epoch.csv')
+    if not os.path.exists(metrics_csv_path):
+        with open(metrics_csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'epoch', 'lambda', 
+                'val_total_auc', 'val_bce_auc', 'val_mastery_auc',
+                'val_total_acc', 'val_bce_acc', 'val_mastery_acc',
+                'val_total_loss', 'val_bce_loss', 'val_mastery_loss'
+            ])
+    
+    print("="*80)
+    print("GainAKT4 Training")
+    print("="*80)
+    print(f"Dataset: {args.dataset}")
+    print(f"Fold: {args.fold}")
+    print(f"Epochs: {args.epochs}")
+    print(f"Batch size: {args.batch_size}")
+    print(f"Learning rate: {args.learning_rate}")
+    print(f"Lambda BCE: {args.lambda_bce}")
+    print(f"Lambda Mastery: {1.0 - args.lambda_bce} (automatically computed)")
+    print(f"Device: {device}")
+    print(f"Experiment dir: {experiment_dir}")
+    print("="*80)
+    
+    # Initialize dataset
+    print("\n📊 Loading dataset...")
+    
+    # Setup data config following PyKT standards
+    data_config = {
+        "assist2015": {
+            "dpath": "/workspaces/pykt-toolkit/data/assist2015",
+            "num_q": 0,
+            "num_c": 100,
+            "input_type": ["concepts"],
+            "max_concepts": 1,
+            "min_seq_len": 3,
+            "maxlen": 200,
+            "emb_path": "",
+            "train_valid_original_file": "train_valid.csv",
+            "train_valid_file": "train_valid_sequences.csv",
+            "folds": [0, 1, 2, 3, 4],
+            "test_original_file": "test.csv",
+            "test_file": "test_sequences.csv",
+            "test_window_file": "test_window_sequences.csv"
+        }
+    }
+    
+    model_name = "gainakt4"
+    train_loader, valid_loader = init_dataset4train(
+        args.dataset, model_name, data_config, args.fold, args.batch_size
+    )
+    
+    # Get number of concepts from data config
+    num_c = data_config[args.dataset]['num_c']
+    
+    print(f"✓ Dataset loaded: {num_c} concepts")
+    print(f"✓ Training batches: {len(train_loader)}")
+    print(f"✓ Validation batches: {len(valid_loader)}")
+    
+    # Initialize model
+    print("\n🏗️  Initializing model...")
+    model = GainAKT4(
+        num_c=num_c,
+        seq_len=args.seq_len,
+        d_model=args.d_model,
+        n_heads=args.n_heads,
+        num_encoder_blocks=args.num_encoder_blocks,
+        d_ff=args.d_ff,
+        dropout=args.dropout,
+        emb_type=args.emb_type,
+        lambda_bce=args.lambda_bce
+    ).to(device)
+    
+    num_params = sum(p.numel() for p in model.parameters())
+    print(f"✓ Model initialized: {num_params:,} parameters")
+    
+    # Initialize optimizer
+    if args.optimizer == 'Adam':
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    elif args.optimizer == 'AdamW':
+        optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    else:
+        raise ValueError(f"Unsupported optimizer: {args.optimizer}")
+    
+    # Training loop
+    print("\n🚀 Starting training...")
+    best_val_auc = 0.0
+    patience_counter = 0
+    history = []
+    
+    for epoch in range(args.epochs):
+        print(f"\n{'='*80}")
+        print(f"Epoch {epoch + 1}/{args.epochs}")
+        print(f"{'='*80}")
+        
+        # Train
+        train_metrics = train_epoch(model, train_loader, optimizer, device, args.gradient_clip)
+        print(f"Train - Loss: {train_metrics['loss']:.4f}, "
+              f"BCE: {train_metrics['bce_loss']:.4f}, "
+              f"Mastery: {train_metrics['mastery_loss']:.4f}")
+        
+        # Validate
+        val_metrics = validate(model, valid_loader, device, args.lambda_bce)
+        print(f"Valid - Loss: {val_metrics['loss']:.4f}, "
+              f"Total AUC: {val_metrics['total_auc']:.4f}, "
+              f"BCE AUC: {val_metrics['bce_auc']:.4f}, "
+              f"Mastery AUC: {val_metrics['mastery_auc']:.4f}")
+        
+        # Save history
+        epoch_results = {
+            'epoch': epoch + 1,
+            'train_loss': train_metrics['loss'],
+            'train_bce_loss': train_metrics['bce_loss'],
+            'train_mastery_loss': train_metrics['mastery_loss'],
+            'val_loss': val_metrics['loss'],
+            'val_bce_auc': val_metrics['bce_auc'],
+            'val_bce_acc': val_metrics['bce_acc'],
+            'val_mastery_auc': val_metrics['mastery_auc'],
+            'val_mastery_acc': val_metrics['mastery_acc']
+        }
+        history.append(epoch_results)
+        
+        # Append to metrics_epoch.csv for reproducibility
+        with open(metrics_csv_path, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch + 1,
+                args.lambda_bce,
+                val_metrics['total_auc'],
+                val_metrics['bce_auc'],
+                val_metrics['mastery_auc'],
+                val_metrics['total_acc'],
+                val_metrics['bce_acc'],
+                val_metrics['mastery_acc'],
+                val_metrics['loss'],
+                val_metrics['bce_loss'],
+                val_metrics['mastery_loss']
+            ])
+        
+        # Check for improvement (using total_auc as primary metric)
+        if val_metrics['total_auc'] > best_val_auc:
+            best_val_auc = val_metrics['total_auc']
+            patience_counter = 0
+            
+            # Save best model
+            checkpoint_path = os.path.join(experiment_dir, 'model_best.pth')
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'val_bce_auc': val_metrics['bce_auc'],
+                'val_mastery_auc': val_metrics['mastery_auc'],
+                'config': vars(args)
+            }, checkpoint_path)
+            print(f"✓ Saved best model (AUC: {best_val_auc:.4f})")
+        else:
+            patience_counter += 1
+            print(f"Patience: {patience_counter}/{args.patience}")
+            
+            if patience_counter >= args.patience:
+                print("\n⏹️  Early stopping triggered")
+                break
+    
+    # Save training history
+    history_path = os.path.join(experiment_dir, 'training_history.json')
+    with open(history_path, 'w') as f:
+        json.dump(history, f, indent=2)
+    
+    # Save final metrics
+    final_metrics = {
+        'best_val_bce_auc': best_val_auc,
+        'final_epoch': epoch + 1,
+        'total_params': num_params
+    }
+    metrics_path = os.path.join(experiment_dir, 'final_metrics.json')
+    with open(metrics_path, 'w') as f:
+        json.dump(final_metrics, f, indent=2)
+    
+    print("\n" + "="*80)
+    print("✅ Training completed successfully")
+    print(f"Best validation AUC: {best_val_auc:.4f}")
+    print(f"Results saved to: {experiment_dir}")
+    print("="*80)
+    
+    # Launch evaluation if requested
+    if args.auto_shifted_eval:
+        print("\n" + "="*80)
+        print("📊 LAUNCHING EVALUATION")
+        print("="*80)
+        
+        eval_cmd = [
+            sys.executable,
+            'examples/eval_gainakt4.py',
+            '--run_dir', experiment_dir,
+            '--ckpt_name', 'model_best.pth'
+        ]
+        
+        try:
+            result = subprocess.run(eval_cmd, check=True, capture_output=True, text=True, cwd='/workspaces/pykt-toolkit')
+            print("✅ Evaluation completed successfully")
+            # Print summary lines
+            for line in result.stdout.strip().split('\n'):
+                if 'Test Results' in line or 'AUC:' in line or '=' in line:
+                    print(line)
+            if result.stderr:
+                print(f"⚠️  Evaluation stderr: {result.stderr}")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Evaluation failed with exit code {e.returncode}")
+            print(f"Stdout: {e.stdout}")
+            print(f"Stderr: {e.stderr}")
+        except Exception as e:
+            print(f"❌ Evaluation failed with exception: {e}")
+        
+        # Auto-launch learning trajectories analysis
+        print("\n" + "="*80)
+        print("LAUNCHING LEARNING TRAJECTORIES ANALYSIS")
+        print("="*80)
+        
+        trajectory_cmd = [
+            sys.executable,
+            'examples/learning_trajectories.py',
+            '--run_dir', experiment_dir,
+            '--num_trajectories', str(args.num_trajectories),
+            '--min_steps', str(args.min_trajectory_steps)
+        ]
+        
+        print(f"Trajectories command: {' '.join(trajectory_cmd)}")
+        
+        try:
+            result = subprocess.run(trajectory_cmd, check=True, capture_output=True, text=True, cwd='/workspaces/pykt-toolkit')
+            print("✅ Learning trajectories analysis completed successfully")
+            # Log only summary lines
+            for line in result.stdout.strip().split('\n'):
+                if 'CSV file saved' in line or 'Saving trajectories to CSV' in line or 'TRAJECTORY EXTRACTION COMPLETE' in line:
+                    print(line)
+            if result.stderr:
+                print(f"⚠️  Trajectories stderr: {result.stderr}")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Learning trajectories analysis failed with exit code {e.returncode}")
+            print(f"Stdout: {e.stdout}")
+            print(f"Stderr: {e.stderr}")
+        except Exception as e:
+            print(f"❌ Learning trajectories analysis failed with exception: {e}")
+        
+        print("="*80 + "\n")
+
+
+if __name__ == '__main__':
+    main()

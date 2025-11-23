@@ -1,0 +1,77 @@
+{
+  "defaults": {
+    "model": "gainakt4",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "train_script": "examples/train_gainakt4.py",
+    "eval_script": "examples/eval_gainakt4.py",
+    "epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.000174,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "lambda_bce": 0.9,
+    "num_trajectories": 10,
+    "min_trajectory_steps": 10
+  },
+  "types": {
+    "launcher": [
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval",
+      "num_trajectories",
+      "min_trajectory_steps"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "loss_weights": [
+      "lambda_bce"
+    ]
+  },
+  "fixed": {
+    "lambda_constraint": {
+      "value": "lambda_mastery = 1.0 - lambda_bce",
+      "rationale": "GAINAKT4 ARCHITECTURE (2025-11-22): Multi-task loss weights must sum to 1.0. lambda_bce is the only configurable parameter; lambda_mastery is automatically computed as 1.0 - lambda_bce. This ensures proper gradient weighting: L_total = lambda_bce * L1 + (1 - lambda_bce) * L2.",
+      "validated_by_experiments": []
+    }
+  },
+  "md5": "80e4b8ec246f57f54a7247d03e8c878a"
+}

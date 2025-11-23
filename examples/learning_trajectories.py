@@ -29,6 +29,7 @@ from torch.utils.data import DataLoader
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
 from pykt.models.gainakt3_exp import create_exp_model
+from pykt.models.gainakt4 import GainAKT4
 from pykt.datasets.data_loader import KTDataset
 
 
@@ -44,7 +45,11 @@ def load_model_and_config(run_dir):
     # Extract model configuration from defaults
     # Note: num_students will be detected from checkpoint later (gamma_student tensor size)
     defaults = config['defaults']
+    model_name = defaults.get('model', 'gainakt3exp')
+    
+    # Base configuration (common to all models)
     model_config = {
+        'model': model_name,
         'seq_len': defaults['seq_len'],
         'd_model': defaults['d_model'],
         'n_heads': defaults['n_heads'],
@@ -52,21 +57,31 @@ def load_model_and_config(run_dir):
         'd_ff': defaults['d_ff'],
         'dropout': defaults['dropout'],
         'emb_type': defaults['emb_type'],
-        'use_mastery_head': defaults['use_mastery_head'],
-        'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),
-        'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
-        'use_student_speed': defaults.get('use_student_speed', False),
-        'non_negative_loss_weight': defaults['non_negative_loss_weight'],
-        'monotonicity_loss_weight': defaults['monotonicity_loss_weight'],
-        'mastery_performance_loss_weight': defaults['mastery_performance_loss_weight'],
-        'gain_performance_loss_weight': defaults['gain_performance_loss_weight'],
-        'sparsity_loss_weight': defaults['sparsity_loss_weight'],
-        'consistency_loss_weight': defaults['consistency_loss_weight'],
-        'bce_loss_weight': defaults.get('bce_loss_weight', 0.9),
-        'monitor_freq': defaults['monitor_freq'],
-        'mastery_threshold_init': defaults['mastery_threshold_init'],
-        'threshold_temperature': defaults['threshold_temperature']
     }
+    
+    # GainAKT3Exp specific parameters
+    if model_name == 'gainakt3exp':
+        model_config.update({
+            'use_mastery_head': defaults['use_mastery_head'],
+            'intrinsic_gain_attention': defaults.get('intrinsic_gain_attention', False),
+            'use_skill_difficulty': defaults.get('use_skill_difficulty', False),
+            'use_student_speed': defaults.get('use_student_speed', False),
+            'non_negative_loss_weight': defaults['non_negative_loss_weight'],
+            'monotonicity_loss_weight': defaults['monotonicity_loss_weight'],
+            'mastery_performance_loss_weight': defaults['mastery_performance_loss_weight'],
+            'gain_performance_loss_weight': defaults['gain_performance_loss_weight'],
+            'sparsity_loss_weight': defaults['sparsity_loss_weight'],
+            'consistency_loss_weight': defaults['consistency_loss_weight'],
+            'bce_loss_weight': defaults.get('bce_loss_weight', 0.9),
+            'monitor_freq': defaults['monitor_freq'],
+            'mastery_threshold_init': defaults['mastery_threshold_init'],
+            'threshold_temperature': defaults['threshold_temperature']
+        })
+    # GainAKT4 specific parameters
+    elif model_name == 'gainakt4':
+        model_config.update({
+            'lambda_bce': defaults.get('lambda_bce', 0.9),
+        })
     
     dataset_name = defaults['dataset']
     fold = defaults['fold']
@@ -145,28 +160,53 @@ def extract_trajectory(model, batch, student_idx_in_batch, device, bce_weight=0.
     with torch.no_grad():
         model.eval()
         core = model.module if isinstance(model, torch.nn.DataParallel) else model
-        outputs = core.forward_with_states(q=q, r=r, qry=qry)
+        
+        # Check model type and use appropriate forward method
+        if hasattr(core, 'forward_with_states'):
+            # GainAKT3Exp model
+            outputs = core.forward_with_states(q=q, r=r, qry=qry)
+        else:
+            # GainAKT4 model (uses standard forward)
+            outputs = core(q=q, r=r, qry=qry)
     
     # Extract for specific student
     student_q = q[student_idx_in_batch]  # [seq_len]
     student_responses = responses[student_idx_in_batch]  # [seq_len]
     student_mask = mask[student_idx_in_batch]  # [seq_len]
     
-    # DUAL-ENCODER PREDICTIONS: Use weighted combination of BCE (Encoder 1) and IM (Encoder 2)
-    # Base predictions from Encoder 1 (always high, not balanced)
-    bce_predictions = outputs['predictions'][student_idx_in_batch]  # [seq_len]
-    
-    # Incremental mastery predictions from Encoder 2 (if available)
-    if 'incremental_mastery_predictions' in outputs:
-        im_predictions = outputs['incremental_mastery_predictions'][student_idx_in_batch]  # [seq_len]
-        # Global predictions = weighted combination (uses weights passed from config)
-        student_predictions = bce_weight * bce_predictions + im_weight * im_predictions
+    # Handle predictions based on model type
+    if 'bce_predictions' in outputs:
+        # GainAKT4 model
+        bce_predictions = outputs['bce_predictions'][student_idx_in_batch]  # [seq_len]
+        
+        if 'mastery_predictions' in outputs:
+            mastery_predictions = outputs['mastery_predictions'][student_idx_in_batch]  # [seq_len]
+            # Combined predictions = weighted combination
+            student_predictions = bce_weight * bce_predictions + (1 - bce_weight) * mastery_predictions
+        else:
+            student_predictions = bce_predictions
+    elif 'predictions' in outputs:
+        # GainAKT3Exp model - DUAL-ENCODER PREDICTIONS
+        bce_predictions = outputs['predictions'][student_idx_in_batch]  # [seq_len]
+        
+        # Incremental mastery predictions from Encoder 2 (if available)
+        if 'incremental_mastery_predictions' in outputs:
+            im_predictions = outputs['incremental_mastery_predictions'][student_idx_in_batch]  # [seq_len]
+            # Global predictions = weighted combination (uses weights passed from config)
+            student_predictions = bce_weight * bce_predictions + im_weight * im_predictions
+        else:
+            student_predictions = bce_predictions
     else:
-        # Fallback: use base predictions if IM not available
-        student_predictions = bce_predictions
+        return None
     
-    # Get mastery and gains
-    if 'projected_mastery' in outputs and 'projected_gains' in outputs:
+    # Get mastery and gains based on model type
+    if 'skill_vector' in outputs:
+        # GainAKT4 model - skill_vector is the mastery state
+        student_mastery = outputs['skill_vector'][student_idx_in_batch]  # [seq_len, num_skills]
+        # GainAKT4 doesn't have explicit gains, set to None
+        student_gains = None
+    elif 'projected_mastery' in outputs and 'projected_gains' in outputs:
+        # GainAKT3Exp model
         student_mastery = outputs['projected_mastery'][student_idx_in_batch]  # [seq_len, num_skills]
         student_gains = outputs['projected_gains'][student_idx_in_batch]  # [seq_len, num_skills]
     else:
@@ -182,14 +222,20 @@ def extract_trajectory(model, batch, student_idx_in_batch, device, bce_weight=0.
         performance = int(student_responses[t].item())
         prediction = float(student_predictions[t].item())
         
-        # Get mastery and gain for this skill at this timestep
+        # Get mastery for this skill at this timestep
         mastery_val = float(student_mastery[t, skill_id].item())
-        gain_val = float(student_gains[t, skill_id].item())
+        
+        # Get gain if available (GainAKT3Exp), otherwise use None (GainAKT4)
+        if student_gains is not None:
+            gain_val = float(student_gains[t, skill_id].item())
+            gains_dict = {skill_id: gain_val}
+        else:
+            gains_dict = None
         
         step_data = {
             'timestep': t + 1,
             'skills_practiced': [skill_id],  # In this dataset, typically 1 skill per interaction
-            'gains': {skill_id: gain_val},
+            'gains': gains_dict,
             'mastery': {skill_id: mastery_val},
             'performance': performance,
             'prediction': prediction
@@ -236,7 +282,7 @@ def print_trajectory(student_idx, trajectory, global_idx):
         pred = step['prediction']
         pred_ans = 1 if pred >= 0.5 else 0
         match = '✓' if true_ans == pred_ans else '✗'
-        gain_val = step['gains'][skill_id]
+        gain_val = step['gains'][skill_id] if step['gains'] is not None else 0.0
         mastery_val = step['mastery'][skill_id]
         
         print(f"{t:4d} │ {skill_id:5d} │ {true_ans:4d} │ {pred:5.3f} │ {match:>5} │ {gain_val:6.4f} │ {mastery_val:7.4f}")
@@ -281,7 +327,7 @@ def save_trajectories_to_csv(trajectories_data, csv_path):
                 true_answer = step['performance']
                 prediction = step['prediction']
                 correct = 1 if (true_answer == 1 and prediction >= 0.5) or (true_answer == 0 and prediction < 0.5) else 0
-                gain = step['gains'][skill_id]
+                gain = step['gains'][skill_id] if step['gains'] is not None else 0.0
                 mastery = step['mastery'][skill_id]
                 
                 writer.writerow({
@@ -317,7 +363,7 @@ def main():
     args = parser.parse_args()
     
     print(f"\n{'='*120}")
-    print(f"LEARNING TRAJECTORIES ANALYZER - GainAKT3Exp")
+    print(f"LEARNING TRAJECTORIES ANALYZER")
     print(f"{'='*120}")
     print(f"Experiment Directory: {args.run_dir}")
     print(f"Target Students: {args.num_trajectories} (with >= {args.min_steps} steps)")
@@ -411,7 +457,24 @@ def main():
     
     # Create model with complete configuration
     print("Creating model architecture...")
-    model = create_exp_model(complete_config)
+    model_name = complete_config.get('model', 'gainakt3exp')
+    
+    if model_name == 'gainakt4':
+        # Create GainAKT4 model
+        model = GainAKT4(
+            num_c=complete_config['num_c'],
+            seq_len=complete_config['seq_len'],
+            d_model=complete_config['d_model'],
+            n_heads=complete_config['n_heads'],
+            num_encoder_blocks=complete_config['num_encoder_blocks'],
+            d_ff=complete_config['d_ff'],
+            dropout=complete_config['dropout'],
+            emb_type=complete_config['emb_type'],
+            lambda_bce=complete_config.get('lambda_bce', 0.9)
+        )
+    else:
+        # Create GainAKT3Exp model
+        model = create_exp_model(complete_config)
     
     # Load trained weights
     print(f"Loading model weights into architecture...")

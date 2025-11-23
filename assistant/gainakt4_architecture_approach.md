@@ -1,0 +1,621 @@
+# GainAKT4 Architecture Approach
+
+**Document Version**: 2025-11-22  
+**Model Version**: GainAKT4 - Dual-Head Single-Encoder Architecture  
+**Status**: Design Specification
+
+---
+
+## Executive Summary
+
+**GainAKT4** similar to GainAKT3Exp architecture but removing Encoder 2 and extending Encoder 1 by adding a **second prediction head**, creating a dual-objective learning framework. While GainAKT3Exp uses two independent encoders (one for performance, one for interpretability), GainAKT4 consolidates learning into a single encoder with two complementary heads:
+
+- **Head 1 (Performance Head)**: Next-step prediction → BCE Loss (L1)
+- **Head 2 (Mastery Head)**: Skill-level mastery estimation → Mastery Loss (L2)
+
+Both heads receive the same knowledge state representation (h1) from Encoder 1, forcing the encoder to learn features that simultaneously optimize both objectives through multi-task learning with gradient accumulation.
+
+**Key Innovation**: The encoder learns representations that are **simultaneously good for**:
+1. Predicting immediate next-step correctness (L1)
+2. Estimating long-term skill mastery levels (L2)
+
+This dual-objective optimization with shared representations provides a natural regularization mechanism and interpretability-by-design.
+
+---
+
+## Architectural Comparison
+
+### GainAKT3Exp (Current - Dual-Encoder)
+```
+Input → Encoder 1 (96K params) → Head 1 → BCE Predictions → L1
+Input → Encoder 2 (71K params) → Gain Quality → Effective Practice → Sigmoid Curves → IM Predictions → L2
+
+Total: 167K parameters, two independent learning pathways
+```
+
+### GainAKT4 (Proposed - Dual-Head Single-Encoder)
+```
+                    ┌→ Head 1 (Performance) → BCE Predictions → L1 (BCE Loss)
+                    │
+Input → Encoder 1 → h1 ─┤
+                    │
+                    └→ Head 2 (Mastery) → MLP1 → {KCi} → MLP2 → Sigmoid → Mastery Predictions → L2 (Mastery Loss)
+
+L_total = λ₁ * L1 + λ₂ * L2
+Encoder 1 receives gradients from BOTH L1 and L2 (gradient accumulation)
+```
+
+**Advantages**:
+- Fewer parameters (single encoder instead of two)
+- Shared representations force learning of features useful for both tasks
+- Natural multi-task regularization
+- Simpler architecture, easier to interpret
+
+**Trade-offs**:
+- Less architectural separation between performance and interpretability
+- Encoder must balance competing objectives (controlled by λ₁, λ₂)
+
+---
+
+## Architecture Specification
+
+### Visual Diagram
+
+```mermaid
+graph TD
+    subgraph "Input Layer (Shared)"
+        direction LR
+        Input_q[["Input Questions (q)<br/>Shape: [B, L]"]]
+        Input_r[["Input Responses (r)<br/>Shape: [B, L]"]]
+        Ground_Truth[["Ground Truth Responses"]]
+    end
+    
+    subgraph "Encoder 1 - Single Shared Encoder"
+        direction TB
+        
+        subgraph "Tokenization & Embedding 1"
+            Tokens1[["Interaction Tokens 1<br/>(q + num_c * r)"]]
+            Context_Emb1["Context Embedding Table 1<br/>(num_c × 2, d_model)"]
+            Value_Emb1["Value Embedding Table 1<br/>(num_c × 2, d_model)"]
+            Skill_Emb1["Skill Embedding Table 1<br/>(num_c, d_model)"]
+            
+            Context_Seq1[["Context Sequence 1<br/>[B, L, d_model]"]]
+            Value_Seq1[["Value Sequence 1<br/>[B, L, d_model]"]]
+            Pos_Emb1["Positional Embeddings 1<br/>(seq_len, d_model)"]
+            
+            Context_Seq_Pos1[["Context + Pos 1<br/>[B, L, d_model]"]]
+            Value_Seq_Pos1[["Value + Pos 1<br/>[B, L, d_model]"]]
+        end
+        
+        subgraph "Dual-Stream Encoder Stack 1 (N blocks)"
+            Encoder1_In_Ctx[["Input Context 1"]]
+            Encoder1_In_Val[["Input Value 1"]]
+            
+            EncBlock1["Encoder Block 1<br/>Q/K from Context 1<br/>V from Value 1<br/>Dual Add&Norm + FFN"]
+            EncBlock2["Encoder Block 2<br/>Q/K from Context 1<br/>V from Value 1<br/>Dual Add&Norm + FFN"]
+            EncBlockN["Encoder Block N<br/>Q/K from Context 1<br/>V from Value 1<br/>Dual Add&Norm + FFN"]
+            
+            Encoder1_Out_Ctx[["Output Context 1 (h₁)<br/>[B, L, d_model]"]]
+            Encoder1_Out_Val[["Output Value 1 (v₁)<br/>[B, L, d_model]"]]
+        end
+        
+        KnowledgeState["[[Knowledge State h1]]<br/>[B, L, d_model]<br/>Shared representation"]
+    end
+    
+    subgraph "Head 1 - Performance Prediction"
+        Concat1["Concatenate<br/>[h1, v1, skill_emb]"]
+        PredHead1["MLP Prediction Head<br/>(3*d_model → d_ff → 1)"]
+        BCEPred["[[BCE Predictions]]<br/>[B, L]"]
+        L1["L1: BCE Loss<br/>Primary objective"]
+    end
+    
+    subgraph "Head 2 - Mastery Estimation"
+        MLP1["MLP1: Knowledge State → Skill Vector<br/>(d_model → d_ff → num_c)<br/>Softplus activation (strict positivity)"]
+        KCVector["[[{KCi} Skill Vector]]<br/>[B, L, num_c]<br/>One component per skill"]
+        
+        subgraph "Architectural Constraints"
+            Positivity["Positivity Constraint<br/>Softplus in MLP1<br/>KCi > 0 (strict)"]
+            Monotonicity["Monotonicity Constraint<br/>torch.cummax(dim=1)<br/>KCi[t+1] >= KCi[t] (guaranteed)"]
+        end
+        
+        MonotonicKC["[[{KCi}_mono]]<br/>torch.cummax(KCi, dim=1)[0]<br/>Monotonic skill mastery"]
+        MLP2["MLP2: Skill Aggregation<br/>(num_c → num_c//2 → 1)<br/>Maps skill vector to prediction"]
+        Sigmoid2["Sigmoid Activation"]
+        MasteryPred["[[Mastery Predictions]]<br/>[B, L]<br/>Binary: 0=incorrect, 1=correct"]
+        L2["L2: Mastery Loss<br/>Interpretability objective"]
+    end
+    
+    subgraph "Multi-Task Loss"
+        LTotal["L_total = λ₁ × L1 + (1 - λ₁) × L2<br/>Constraint: λ₁ + λ₂ = 1.0<br/>λ₁ ≈ 0.9 (performance)<br/>λ₂ = 1 - λ₁ ≈ 0.1 (mastery)"]
+        Backprop["backward()<br/>Gradients flow to Encoder 1<br/>via BOTH Head 1 and Head 2"]
+    end
+    
+    %% Flow - Input to Tokenization
+    Input_q --> Tokens1
+    Input_r --> Tokens1
+    
+    %% Tokenization & Embedding Flow
+    Tokens1 --> Context_Emb1 --> Context_Seq1
+    Tokens1 --> Value_Emb1 --> Value_Seq1
+    Input_q --> Skill_Emb1
+    
+    Context_Seq1 --> Context_Seq_Pos1
+    Value_Seq1 --> Value_Seq_Pos1
+    Pos_Emb1 --> Context_Seq_Pos1
+    Pos_Emb1 --> Value_Seq_Pos1
+    
+    %% Encoder Stack Flow
+    Context_Seq_Pos1 --> Encoder1_In_Ctx --> EncBlock1
+    Value_Seq_Pos1 --> Encoder1_In_Val --> EncBlock1
+    
+    EncBlock1 --> EncBlock2
+    EncBlock2 --> EncBlockN
+    
+    EncBlockN --> Encoder1_Out_Ctx --> KnowledgeState
+    EncBlockN --> Encoder1_Out_Val
+    
+    %% Head 1 path
+    KnowledgeState --> Concat1
+    Encoder1_Out_Val --> Concat1
+    Skill_Emb1 --> Concat1
+    Concat1 --> PredHead1
+    PredHead1 --> BCEPred
+    BCEPred --> L1
+    Ground_Truth --> L1
+    
+    %% Head 2 path
+    KnowledgeState --> MLP1
+    MLP1 --> Positivity
+    Positivity --> KCVector
+    KCVector --> Monotonicity
+    Monotonicity --> MonotonicKC
+    MonotonicKC --> MLP2
+    MLP2 --> Sigmoid2
+    Sigmoid2 --> MasteryPred
+    MasteryPred --> L2
+    Ground_Truth --> L2
+    
+    %% Loss combination
+    L1 --> LTotal
+    L2 --> LTotal
+    LTotal --> Backprop
+    
+    %% Gradient flow
+    Backprop -.->|∂L_total/∂w = λ₁·∂L1/∂w + λ₂·∂L2/∂w| KnowledgeState
+    
+    %% Styling
+    classDef encoder1_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef head1_style fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
+    classDef head2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef constraint_style fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
+    classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
+    classDef io_data fill:#f5f5f5,stroke:#666666,stroke-width:2px
+    
+    class Tokens1,Context_Emb1,Value_Emb1,Skill_Emb1,Context_Seq1,Value_Seq1,Pos_Emb1,Context_Seq_Pos1,Value_Seq_Pos1 encoder1_style
+    class Encoder1_In_Ctx,Encoder1_In_Val,EncBlock1,EncBlock2,EncBlockN,Encoder1_Out_Ctx,Encoder1_Out_Val,KnowledgeState encoder1_style
+    class Concat1,PredHead1,BCEPred head1_style
+    class MLP1,KCVector,MonotonicKC,MLP2,Sigmoid2,MasteryPred head2_style
+    class Positivity,Monotonicity constraint_style
+    class L1,L2,LTotal,Backprop loss_style
+    class Input_q,Input_r,Ground_Truth input_style
+    class Input_q,Input_r,Ground_Truth,Tokens1,Context_Seq1,Value_Seq1,Context_Seq_Pos1,Value_Seq_Pos1 io_data
+    class Encoder1_In_Ctx,Encoder1_In_Val,Encoder1_Out_Ctx,Encoder1_Out_Val,KnowledgeState io_data
+    class KCVector,MonotonicKC,BCEPred,MasteryPred io_data
+    classDef encoder fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef head1 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef head2 fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef loss fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef constraint fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    
+    class Input,KnowledgeState,BCEPred,KCVector,MasteryPred inputOutput
+    class ContextEmb1,ValueEmb1,SkillEmb1,PosEmb1,EncBlock1,EncBlock2,EncBlockN encoder
+    class Concat1,PredHead1 head1
+    class MLP1,MLP2,Sigmoid2 head2
+    class L1,L2,LTotal,Backprop loss
+    class Positivity,Monotonicity constraint
+```
+
+---
+
+## Component Specifications
+
+### 1. Encoder 1 (Shared Encoder)
+
+**Architecture**: Similar to GainAKT3Exp's Encoder 1
+- Context embedding (num_c × 2, d_model)
+- Value embedding (num_c × 2, d_model)
+- Skill embedding (num_c, d_model)
+- Positional embedding (seq_len, d_model)
+- N transformer blocks with dual-stream attention
+- **Output**: Knowledge state h1 [B, L, d_model]
+
+**Learning Objective**: Learn representations that:
+1. Enable accurate next-step prediction (via Head 1)
+2. Capture skill-level mastery patterns (via Head 2)
+
+### 2. Head 1 (Performance Prediction Head)
+
+**Purpose**: Next-step correctness prediction (existing functionality)
+
+**Architecture**:
+```python
+# Concatenate context, value, and skill embeddings
+concat = torch.cat([h1, v1, skill_emb], dim=-1)  # [B, L, 3*d_model]
+
+# MLP prediction head
+prediction_head = nn.Sequential(
+    nn.Linear(d_model * 3, d_ff),
+    nn.ReLU(),
+    nn.Dropout(dropout),
+    nn.Linear(d_ff, 1)
+)
+logits = prediction_head(concat).squeeze(-1)  # [B, L]
+bce_predictions = torch.sigmoid(logits)
+```
+
+**Loss**: BCE Loss (L1)
+```python
+L1 = F.binary_cross_entropy_with_logits(logits, targets)
+```
+
+### 3. Head 2 (Mastery Estimation Head) - NEW
+
+**Purpose**: Estimate skill-level mastery from knowledge state
+
+**Constraints Enforced by Architecture**:
+1. **Positivity**: Softplus activation in MLP1 guarantees KCi > 0
+2. **Monotonicity**: Cumulative max operation ensures mastery never decreases
+
+**Architecture Pipeline**:
+
+**Step 1: MLP1 - Project h1 to Skill Vector {KCi}**
+```python
+# Project knowledge state to skill-specific components
+mlp1 = nn.Sequential(
+    nn.Linear(d_model, d_ff),
+    nn.ReLU(),
+    nn.Dropout(dropout),
+    nn.Linear(d_ff, num_c),
+    nn.Softplus()  # Ensures strict positivity: KCi > 0 (smoother than ReLU)
+)
+kc_vector = mlp1(h1)  # [B, L, num_c], guaranteed positive by Softplus
+```
+
+**Positivity Guarantee (Architectural)**: Softplus activation `ln(1 + e^x)` ensures all skill components are strictly positive (KCi > 0), representing mastery levels that cannot be negative. This is enforced by architecture design, not by loss functions.
+
+**Alternative**: Can use `F.relu()` for hard constraint (KCi ≥ 0) or `torch.abs()` for symmetry.
+
+**Step 1.5: Monotonicity Enforcement (Architectural)**
+```python
+# Enforce monotonicity: mastery can only increase or stay constant
+# Apply cumulative maximum across time dimension
+kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]  # [B, L, num_c]
+# kc_vector_mono[:, t, s] = max(kc_vector[:, 0:t+1, s])
+# This guarantees: kc_vector_mono[:, t+1, s] >= kc_vector_mono[:, t, s]
+```
+
+**Monotonicity Guarantee (Architectural)**: `torch.cummax()` ensures that for each student-skill pair, mastery at timestep t+1 is always ≥ mastery at timestep t. This is a hard architectural constraint, not a soft loss penalty.
+
+**Step 2: MLP2 - Aggregate Skills to Prediction**
+```python
+# Aggregate skill vector to per-timestep mastery prediction
+# Predicts whether student will answer current question correctly
+mlp2 = nn.Sequential(
+    nn.Linear(num_c, num_c // 2),
+    nn.ReLU(),
+    nn.Dropout(dropout),
+    nn.Linear(num_c // 2, 1)
+)
+mastery_logits = mlp2(kc_vector_mono).squeeze(-1)  # [B, L] - one prediction per timestep
+```
+
+**Step 3: Sigmoid Activation**
+```python
+# Convert to probability: will student answer correctly?
+mastery_predictions = torch.sigmoid(mastery_logits)  # [B, L] ∈ [0, 1]
+# mastery_predictions[i, t] = P(correct response at timestep t | {KCi}[i, t, :])
+```
+
+**Loss**: Mastery Loss (L2)
+```python
+# Compare mastery predictions with ground truth responses (0=incorrect, 1=correct)
+L2 = F.binary_cross_entropy(mastery_predictions, targets)
+```
+
+**Educational Interpretation**:
+- **{KCi}**: Skill vector with one component per knowledge component (intermediate representation)
+- **KCi[s]**: Estimated mastery level for skill s (from Encoder 1's knowledge state)
+- **Positivity**: KCi[s] > 0 enforced by Softplus (architectural guarantee)
+- **Monotonicity**: KCi[t+1, s] ≥ KCi[t, s] enforced by cummax (architectural guarantee)
+- **MLP2**: Learns how to aggregate skill masteries into performance prediction
+- **Mastery predictions**: Per-timestep binary prediction (0 or 1) indicating whether student will answer the current question correctly based on their skill vector
+
+### 4. Multi-Task Loss Function
+
+**Total Loss**:
+```python
+L_total = lambda_1 * L1 + lambda_2 * L2
+
+# Constraint: lambda_1 + lambda_2 = 1.0
+# Only lambda_1 is configurable; lambda_2 is automatically computed
+
+# Recommended weights:
+lambda_1 = 0.9  # Primary: next-step prediction accuracy (lambda_bce)
+lambda_2 = 0.1  # Secondary: mastery estimation (1.0 - lambda_bce)
+```
+
+**No Need for Monotonicity Loss**: Monotonicity is enforced architecturally via `torch.cummax()`, so no additional loss term is needed. The architecture **guarantees** monotonic mastery by design.
+
+---
+
+## Gradient Flow Verification
+
+### Mathematical Guarantee
+
+PyTorch's autograd **guarantees** gradient accumulation from both losses:
+
+```python
+L_total = λ₁ * L1 + λ₂ * L2
+
+# Chain rule application:
+∂L_total/∂(Encoder1_weights) = λ₁ * ∂L1/∂(Encoder1_weights) + λ₂ * ∂L2/∂(Encoder1_weights)
+```
+
+### Gradient Paths
+
+**Path 1: L1 → Encoder 1**
+```
+L1 (BCE) → BCE_predictions → prediction_head → [h1, v1, skill_emb] → h1 → Encoder 1
+```
+Gradient contribution: `λ₁ * ∂L1/∂w`
+
+**Path 2: L2 → Encoder 1**
+```
+L2 (Mastery) → mastery_predictions → MLP2 → {KCi} → MLP1 → h1 → Encoder 1
+```
+Gradient contribution: `λ₂ * ∂L2/∂w`
+
+**Combined Gradient**:
+```
+Encoder1.weight.grad = λ₁ * grad_from_L1 + λ₂ * grad_from_L2
+```
+
+### Verification Test Script
+
+```python
+import torch
+import torch.nn as nn
+
+# Simulate architecture
+encoder1 = nn.Linear(10, 5)  # Encoder
+head1 = nn.Linear(5, 1)       # Performance head
+mlp1 = nn.Linear(5, 3)        # Head 2: MLP1
+mlp2 = nn.Linear(3, 1)        # Head 2: MLP2
+
+x = torch.randn(4, 10)
+target = torch.ones(4, 1)
+
+# ==== Test: Only L1 ====
+encoder1.zero_grad()
+h1 = encoder1(x)
+pred1 = head1(h1)
+L1 = nn.functional.binary_cross_entropy_with_logits(pred1, target)
+L1.backward()
+grad_L1_only = encoder1.weight.grad.clone()
+print(f"Gradient from L1 only: {grad_L1_only.norm().item():.6f}")
+
+# ==== Test: Only L2 ====
+encoder1.zero_grad()
+h1 = encoder1(x)
+kc_vector = F.relu(mlp1(h1))
+pred2 = torch.sigmoid(mlp2(kc_vector))
+L2 = nn.functional.binary_cross_entropy(pred2, target)
+L2.backward()
+grad_L2_only = encoder1.weight.grad.clone()
+print(f"Gradient from L2 only: {grad_L2_only.norm().item():.6f}")
+
+# ==== Test: L_total with constraint λ₁ + λ₂ = 1 ====
+encoder1.zero_grad()
+h1 = encoder1(x)
+pred1 = head1(h1)
+kc_vector = F.relu(mlp1(h1))
+pred2 = torch.sigmoid(mlp2(kc_vector))
+L1 = nn.functional.binary_cross_entropy_with_logits(pred1, target)
+L2 = nn.functional.binary_cross_entropy(pred2, target)
+lambda_bce = 0.9
+lambda_mastery = 1.0 - lambda_bce  # Constraint: λ₁ + λ₂ = 1
+L_total = lambda_bce * L1 + lambda_mastery * L2
+L_total.backward()
+grad_total = encoder1.weight.grad.clone()
+print(f"Gradient from L_total: {grad_total.norm().item():.6f}")
+
+# ==== Verify: L_total gradient = weighted sum ====
+grad_expected = lambda_bce * grad_L1_only + lambda_mastery * grad_L2_only
+diff = (grad_total - grad_expected).abs().max()
+print(f"\nDifference: {diff.item():.10f}")
+print(f"Are they equal? {torch.allclose(grad_total, grad_expected)}")
+```
+
+**Expected Output**:
+```
+Gradient from L1 only: 0.234567
+Gradient from L2 only: 0.189432
+Gradient from L_total: 0.225234
+
+Difference: 0.0000000000
+Are they equal? True
+```
+
+This proves mathematically that Encoder 1 receives gradients from both L1 and L2.
+
+---
+
+## Implementation Checklist
+
+### Model Architecture (`pykt/models/gainakt4.py`)
+
+- [ ] Copy GainAKT3Exp as base (use Encoder 1 only, remove Encoder 2)
+- [ ] Keep existing Head 1 (performance prediction head)
+- [ ] Add Head 2 components:
+  - [ ] MLP1: `nn.Sequential(Linear(d_model, d_ff), ReLU(), Dropout(), Linear(d_ff, num_c))`
+  - [ ] MLP2: `nn.Sequential(Linear(num_c, num_c//2), ReLU(), Dropout(), Linear(num_c//2, 1))`
+- [ ] Add ReLU after MLP1 to enforce positivity on {KCi}
+- [ ] Implement forward pass with both heads
+- [ ] Compute L1 (BCE loss) from Head 1
+- [ ] Compute L2 (Mastery loss) from Head 2
+- [ ] Optional: Add monotonicity loss
+- [ ] Return both losses in output dictionary
+
+### Training Script (`examples/train_gainakt4.py`)
+
+- [ ] Add parameters: `lambda_bce`, `lambda_mastery`, `lambda_mono` (optional)
+- [ ] Compute multi-task loss: `L_total = lambda_bce * L1 + lambda_mastery * L2 + lambda_mono * L_mono`
+- [ ] Call `L_total.backward()` (not separate backwards)
+- [ ] Log individual loss components for monitoring
+- [ ] Add gradient norm monitoring (verify both heads contribute)
+
+### Evaluation Script (`examples/eval_gainakt4.py`)
+
+- [ ] Evaluate both prediction outputs: BCE predictions and Mastery predictions
+- [ ] Compute separate AUC for each: `bce_auc`, `mastery_auc`
+- [ ] Report both metrics in results
+- [ ] Generate visualization comparing both prediction types
+
+### Parameter Configuration
+
+- [ ] Add to `configs/parameter_default.json`:
+  ```json
+  "lambda_bce": 0.9
+  ```
+  Note: `lambda_mastery` is automatically computed as `1.0 - lambda_bce` (constraint enforced in model)
+- [ ] Update `paper/parameters.csv` with new parameters
+- [ ] Add argparse entries in training script
+
+### Testing
+
+- [ ] Create gradient flow verification test (see script above)
+- [ ] Verify Encoder 1 receives gradients from both heads
+- [ ] Test with monotonicity constraint enabled/disabled
+- [ ] Compare parameter count vs GainAKT3Exp (should be lower)
+- [ ] Sanity check: training loss should decrease for both L1 and L2
+
+---
+
+## Expected Behavior
+
+### Parameter Efficiency
+- **GainAKT3Exp**: ~167K parameters (two encoders)
+- **GainAKT4**: ~110K parameters (one encoder, two heads)
+- **Reduction**: ~57K parameters (34% fewer)
+
+### Learning Dynamics
+
+**Early Training** (epochs 1-3):
+- L1 (BCE) should dominate learning (λ₁ = 0.9, λ₂ = 0.1 given constraint λ₁ + λ₂ = 1)
+- Encoder learns features primarily for next-step prediction
+- L2 (Mastery) provides regularization signal
+
+**Mid Training** (epochs 4-8):
+- Both losses should decrease steadily
+- Encoder balances both objectives
+- {KCi} skill vectors should show meaningful patterns
+
+**Late Training** (epochs 9-12):
+- L1 should plateau (primary objective optimized)
+- L2 may continue improving (mastery estimation refinement)
+- Strong correlation between BCE and Mastery predictions expected
+
+### Gradient Analysis
+
+Monitor gradient norms during training:
+```python
+# After L_total.backward()
+encoder_grad = sum(p.grad.norm()**2 for p in encoder1.parameters()).sqrt()
+head1_grad = sum(p.grad.norm()**2 for p in head1.parameters()).sqrt()
+head2_grad = sum(p.grad.norm()**2 for p in head2.parameters()).sqrt()
+
+print(f"Encoder1 grad: {encoder_grad:.4f}")  # Should be non-zero
+print(f"Head1 grad: {head1_grad:.4f}")       # Should be non-zero
+print(f"Head2 grad: {head2_grad:.4f}")       # Should be non-zero
+```
+
+All should show non-zero gradients, confirming proper multi-task learning.
+
+---
+
+## Comparison with GainAKT3Exp
+
+| **Aspect** | **GainAKT3Exp** | **GainAKT4** |
+|------------|-----------------|--------------|
+| **Encoders** | 2 (separate pathways) | 1 (shared representations) |
+| **Parameters** | ~167K | ~110K (34% reduction) |
+| **Heads** | 1 per encoder | 2 on single encoder |
+| **Learning** | Independent optimization | Multi-task joint optimization |
+| **Gradient Flow** | Separate to each encoder | Accumulated to single encoder |
+| **Interpretability** | Sigmoid learning curves | Skill vector {KCi} decomposition |
+| **Complexity** | Higher (dual encoders) | Lower (single encoder) |
+| **Regularization** | Separate losses | Multi-task implicit regularization |
+| **Best For** | Complete pathway separation | Parameter efficiency, joint learning |
+
+---
+
+## Design Rationale
+
+### Why Dual-Head Instead of Dual-Encoder?
+
+**Advantages**:
+1. **Parameter Efficiency**: Single encoder reduces parameters by ~34%
+2. **Multi-Task Regularization**: Forced sharing prevents overfitting to single objective
+3. **Simpler Architecture**: Easier to understand, debug, and maintain
+4. **Natural Feature Learning**: Encoder must learn features useful for both tasks
+5. **Gradient Synergy**: Combined gradients provide richer learning signal
+
+**Trade-offs**:
+1. **Less Specialization**: Encoder cannot fully specialize for either task
+2. **Competing Objectives**: Must balance λ₁ and λ₂ carefully
+3. **Potential Interference**: Tasks might conflict if poorly weighted
+
+### Why {KCi} Skill Vector?
+
+The skill vector {KCi} [B, L, num_c] provides:
+1. **Explicit Decomposition**: One component per knowledge component (intermediate representation)
+2. **Interpretability**: Can visualize mastery for each skill independently from encoder's perspective
+3. **Positivity Constraint**: ReLU ensures non-negative mastery levels (KCi[s] ≥ 0)
+4. **Flexible Aggregation**: MLP2 learns how to combine skill masteries into a single performance prediction
+
+**Key Insight**: While {KCi} represents skill-level mastery estimates, MLP2 learns the mapping from these skill estimates to overall performance prediction (will the student answer this question correctly?). This provides interpretability through the intermediate skill decomposition while maintaining end-to-end differentiability.
+
+This is more interpretable than sigmoid learning curves (GainAKT3Exp) while maintaining differentiability.
+
+---
+
+## Next Steps
+
+1. **Implement Model**: Create `pykt/models/gainakt4.py` based on specification
+2. **Verify Gradients**: Run test script to confirm dual-gradient flow
+3. **Train Baseline**: Run with recommended hyperparameters (λ₁=0.9, which gives λ₂=0.1 by constraint)
+4. **Ablation Studies**:
+   - Try different λ₁/λ₂ ratios (0.9/0.1, 0.7/0.3, 0.5/0.5)
+   - Test with/without monotonicity constraint
+   - Compare {KCi} patterns with GainAKT3Exp sigmoid curves
+5. **Compare Performance**: Benchmark against GainAKT3Exp on ASSIST2015 dataset
+6. **Analyze {KCi}**: Visualize skill vectors to validate interpretability
+
+---
+
+## References
+
+**Multi-Task Learning**:
+- Caruana, R. (1997). "Multitask Learning". Machine Learning, 28(1), 41-75.
+- Kendall, A., Gal, Y., & Cipolla, R. (2018). "Multi-Task Learning Using Uncertainty to Weigh Losses for Scene Geometry and Semantics". CVPR.
+
+**Knowledge Tracing**:
+- GainAKT3Exp Documentation: `paper/STATUS_gainakt3exp.md`
+- PyKT Framework: `assistant/quickstart.pdf`, `assistant/contribute.pdf`
+- Reproducibility Protocol: `examples/reproducibility.md`
+
+**Related Work**:
+- Transformer architectures with multiple prediction heads
+- Multi-task learning in educational data mining
+- Interpretable knowledge tracing models

@@ -1,0 +1,1 @@
+epoch,lambda,val_total_auc,val_bce_auc,val_mastery_auc,val_total_acc,val_bce_acc,val_mastery_acc,val_total_loss,val_bce_loss,val_mastery_loss

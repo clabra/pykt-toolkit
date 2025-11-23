@@ -171,6 +171,15 @@ def build_trajectory_command(experiment_folder, num_students=10, min_steps=10):
     cmd = f"{python_path} {trajectory_script} --run_dir {experiment_folder} --num_students {num_students} --min_steps {min_steps}"
     return cmd
 
+def build_mastery_states_command(experiment_folder, num_students=20, split='test'):
+    """
+    Build command to extract mastery states.
+    """
+    python_path = sys.executable
+    mastery_script = "examples/mastery_states.py"
+    cmd = f"{python_path} {mastery_script} --run_dir {experiment_folder} --num_students {num_students} --split {split}"
+    return cmd
+
 
 def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
@@ -682,7 +691,7 @@ def main():
         
         train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
-        trajectory_command = build_trajectory_command(experiment_dir_abs, num_students=10, min_steps=10)
+        mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=20, split='test')
         repro_command = build_repro_command(sys.argv[0], experiment_id)
         
         # Build new config structure - NO redundant typed sections
@@ -693,7 +702,7 @@ def main():
                 "run_repro_original": original_command,
                 "train_explicit": train_command_explicit,
                 "eval_explicit": eval_command_explicit,
-                "learning_trajectories": trajectory_command,
+                "mastery_states": mastery_states_command,
                 "reproduce": repro_command
             },
             "experiment": {
