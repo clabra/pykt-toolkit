@@ -240,6 +240,9 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
     Build explicit evaluation command with ALL parameters.
     Similar to build_explicit_train_command but for evaluation.
+    
+    For GainAKT4: Only requires dataset, architecture, and lambda_bce parameters.
+    The eval script will auto-detect question-level files and run fusion evaluation.
     """
     python_path = sys.executable
     cmd_parts = [python_path, eval_script]
@@ -248,31 +251,20 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     cmd_parts.append(f"--run_dir {experiment_folder}")
     cmd_parts.append(f"--ckpt_name model_best.pth")
     
-    # Evaluation-specific parameters (subset of training params)
-    # Note: num_students is auto-detected from checkpoint, not passed as parameter
+    # GainAKT4 evaluation parameters (explicit, zero defaults)
     eval_params = [
         'dataset', 'fold', 'batch_size',  # data
         'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
-        'monitor_freq'  # monitoring frequency needed by model
+        'lambda_bce'  # loss configuration
     ]
-    
-    # Boolean flags - ARCHITECTURAL MODES
-    # IMPORTANT: These affect model architecture and MUST match between training and evaluation
-    # GainAKT4: No architectural flags needed (dual-head architecture is fixed)
-    bool_flags = []
-    
-    # Add max_correlation_students (default 300 if not in params)
-    max_corr = params.get('max_correlation_students', 300)
-    cmd_parts.append(f"--max_correlation_students {max_corr}")
     
     for key in eval_params:
         if key in params:
             value = params[key]
             cmd_parts.append(f"--{key} {value}")
-    
-    for key in bool_flags:
-        if params.get(key, False):
-            cmd_parts.append(f"--{key}")
+        else:
+            # Should never happen if parameter_default.json is complete
+            raise ValueError(f"Required evaluation parameter '{key}' not found in config")
     
     return " ".join(cmd_parts)
 

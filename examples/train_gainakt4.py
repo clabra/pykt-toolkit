@@ -264,25 +264,21 @@ def main():
     # Initialize dataset
     print("\n📊 Loading dataset...")
     
-    # Setup data config following PyKT standards
-    data_config = {
-        "assist2015": {
-            "dpath": "/workspaces/pykt-toolkit/data/assist2015",
-            "num_q": 0,
-            "num_c": 100,
-            "input_type": ["concepts"],
-            "max_concepts": 1,
-            "min_seq_len": 3,
-            "maxlen": 200,
-            "emb_path": "",
-            "train_valid_original_file": "train_valid.csv",
-            "train_valid_file": "train_valid_sequences.csv",
-            "folds": [0, 1, 2, 3, 4],
-            "test_original_file": "test.csv",
-            "test_file": "test_sequences.csv",
-            "test_window_file": "test_window_sequences.csv"
-        }
-    }
+    # Load data config from configs/data_config.json
+    import json
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(project_root, 'configs', 'data_config.json')
+    with open(config_path, 'r') as f:
+        data_config = json.load(f)
+    
+    # Verify dataset exists in config
+    if args.dataset not in data_config:
+        raise ValueError(f"Dataset '{args.dataset}' not found in data_config.json. Available: {list(data_config.keys())}")
+    
+    # Convert relative paths to absolute paths (relative to project root)
+    for dataset_name in data_config:
+        if 'dpath' in data_config[dataset_name] and data_config[dataset_name]['dpath'].startswith('../'):
+            data_config[dataset_name]['dpath'] = os.path.join(project_root, data_config[dataset_name]['dpath'][3:])
     
     model_name = "gainakt4"
     train_loader, valid_loader = init_dataset4train(
@@ -449,11 +445,23 @@ def main():
         print("📊 LAUNCHING EVALUATION")
         print("="*80)
         
+        # Build evaluation command with ALL required parameters (explicit, zero defaults)
         eval_cmd = [
             sys.executable,
             'examples/eval_gainakt4.py',
             '--run_dir', experiment_dir,
-            '--ckpt_name', 'model_best.pth'
+            '--ckpt_name', 'model_best.pth',
+            '--dataset', args.dataset,
+            '--fold', str(args.fold),
+            '--batch_size', str(args.batch_size),
+            '--seq_len', str(args.seq_len),
+            '--d_model', str(args.d_model),
+            '--n_heads', str(args.n_heads),
+            '--num_encoder_blocks', str(args.num_encoder_blocks),
+            '--d_ff', str(args.d_ff),
+            '--dropout', str(args.dropout),
+            '--emb_type', args.emb_type,
+            '--lambda_bce', str(args.lambda_bce)
         ]
         
         try:

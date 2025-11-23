@@ -71,3 +71,5 @@ examples/experiments/**/*.pth
 
 data/difficulty/
 data/peer_index/
+
+data/**
