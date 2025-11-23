@@ -1,0 +1,28 @@
+{
+  "train": {
+    "total_auc": 0.7523321539386407,
+    "total_acc": 0.7611086081153381,
+    "bce_auc": 0.7523321539386407,
+    "bce_acc": 0.7611086081153381,
+    "mastery_auc": "N/A",
+    "mastery_acc": "N/A"
+  },
+  "valid": {
+    "total_auc": 0.7232914447698756,
+    "total_acc": 0.7534477221189501,
+    "bce_auc": 0.7232914447698756,
+    "bce_acc": 0.7534477221189501,
+    "mastery_auc": "N/A",
+    "mastery_acc": "N/A"
+  },
+  "test": {
+    "total_auc": 0.717608161373203,
+    "total_acc": 0.7472658107465525,
+    "bce_auc": 0.717608161373203,
+    "bce_acc": 0.7472658107465525,
+    "mastery_auc": "N/A",
+    "mastery_acc": "N/A"
+  },
+  "checkpoint_epoch": 8,
+  "checkpoint_val_auc": 0.7232914447698756
+}

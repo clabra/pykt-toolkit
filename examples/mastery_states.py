@@ -112,10 +112,15 @@ def load_model_and_config(run_dir, ckpt_name):
         lambda_bce=config['lambda_bce']
     ).to(device)
     
+    # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
+    if device.type == 'cuda' and torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
+    
     # Load checkpoint
     checkpoint_path = os.path.join(run_dir, ckpt_name)
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model_to_load = model.module if isinstance(model, torch.nn.DataParallel) else model
+    model_to_load.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
     return model, config, data_config, device, num_c

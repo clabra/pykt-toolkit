@@ -301,6 +301,26 @@ def main():
         lambda_bce=args.lambda_bce
     ).to(device)
     
+    # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
+    if device.type == 'cuda':
+        gpu_count = torch.cuda.device_count()
+        visible_env = os.environ.get('CUDA_VISIBLE_DEVICES', '')
+        
+        if gpu_count > 1:
+            print(f"✓ Multi-GPU detected: {gpu_count} GPUs available")
+            print(f"  CUDA_VISIBLE_DEVICES: {visible_env if visible_env else 'not set (using all)'}")
+            try:
+                gpu_names = [torch.cuda.get_device_name(i) for i in range(gpu_count)]
+                print(f"  GPU devices: {', '.join(gpu_names)}")
+            except Exception:
+                pass
+            print(f"✓ Wrapping model with DataParallel for multi-GPU training")
+            model = torch.nn.DataParallel(model)
+        else:
+            print(f"✓ Single GPU mode")
+    else:
+        print(f"✓ CPU mode")
+    
     num_params = sum(p.numel() for p in model.parameters())
     print(f"✓ Model initialized: {num_params:,} parameters")
     
@@ -373,11 +393,12 @@ def main():
             best_val_auc = val_metrics['total_auc']
             patience_counter = 0
             
-            # Save best model
+            # Save best model (handle DataParallel wrapper)
             checkpoint_path = os.path.join(experiment_dir, 'model_best.pth')
+            model_to_save = model.module if isinstance(model, torch.nn.DataParallel) else model
             torch.save({
                 'epoch': epoch + 1,
-                'model_state_dict': model.state_dict(),
+                'model_state_dict': model_to_save.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_bce_auc': val_metrics['bce_auc'],
                 'val_mastery_auc': val_metrics['mastery_auc'],

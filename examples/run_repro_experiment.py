@@ -25,6 +25,61 @@ import random
 from pathlib import Path
 from datetime import datetime
 
+def select_gpus(num_gpus=None):
+    """
+    Select GPUs to use for training. Automatically uses ~80% of available GPUs
+    unless explicitly specified.
+    
+    Priority:
+    1. If CUDA_VISIBLE_DEVICES is set: use as-is (user has explicit control)
+    2. If num_gpus is specified: use first N GPUs
+    3. Default: use ~80% of available GPUs (e.g., 6 out of 8)
+    
+    Args:
+        num_gpus: Optional explicit number of GPUs to use
+        
+    Returns:
+        str: GPU selection for CUDA_VISIBLE_DEVICES (e.g., "0,1,2,3,4,5") or empty string
+    """
+    # Check if user already set CUDA_VISIBLE_DEVICES
+    if os.environ.get('CUDA_VISIBLE_DEVICES'):
+        return ''  # User has explicit control, don't override
+    
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return ''  # No CUDA available
+        
+        total_gpus = torch.cuda.device_count()
+        if total_gpus == 0:
+            return ''
+        
+        # Determine how many GPUs to use
+        if num_gpus is not None:
+            # User explicitly specified
+            gpus_to_use = min(num_gpus, total_gpus)
+        else:
+            # Default: use ~80% of available GPUs (rounded down)
+            # For 8 GPUs: 8 * 0.8 = 6.4 → 6 GPUs
+            # For 4 GPUs: 4 * 0.8 = 3.2 → 3 GPUs
+            gpus_to_use = max(1, int(total_gpus * 0.8))
+        
+        # Generate GPU ID list: "0,1,2,3,4,5"
+        gpu_ids = ','.join(str(i) for i in range(gpus_to_use))
+        
+        print(f"\n{'='*80}")
+        print("GPU SELECTION")
+        print(f"{'='*80}")
+        print(f"Total GPUs available: {total_gpus}")
+        print(f"GPUs selected for training: {gpus_to_use} ({gpus_to_use/total_gpus*100:.0f}%)")
+        print(f"CUDA_VISIBLE_DEVICES will be set to: {gpu_ids}")
+        print(f"{'='*80}\n")
+        
+        return gpu_ids
+    except ImportError:
+        # PyTorch not available
+        return ''
+
 def get_required_param(config, section, param_name):
     """
     Get a required parameter from config with strict validation.
@@ -341,6 +396,10 @@ def main():
     # Runtime
     parser.add_argument('--dry_run', action='store_true',
                        help='Create config but do not train')
+    parser.add_argument('--num_gpus', type=int, default=None,
+                       help='Number of GPUs to use (default: ~80%% of available, e.g., 6 out of 8)')
+    parser.add_argument('--num_gpus', type=int, default=None,
+                       help='Number of GPUs to use (default: ~80%% of available, e.g., 6 out of 8)')
     
     # Dynamically add arguments for ALL parameters in defaults
     for param_name, default_value in available_params.items():
@@ -475,9 +534,15 @@ def main():
         save_config(config, repro_folder)
         print("✓ Copied config.json (unchanged)")
         
+        # Select GPUs for reproduction
+        gpu_selection = select_gpus(args.num_gpus)
+        
         # Use train_explicit command for complete reproducibility (all params explicit)
         repro_dir_abs = str(repro_folder.absolute())
-        train_command = f"EXPERIMENT_DIR={repro_dir_abs} {config['commands']['train_explicit']}"
+        if gpu_selection:
+            train_command = f"CUDA_VISIBLE_DEVICES={gpu_selection} EXPERIMENT_DIR={repro_dir_abs} {config['commands']['train_explicit']}"
+        else:
+            train_command = f"EXPERIMENT_DIR={repro_dir_abs} {config['commands']['train_explicit']}"
         
         print(f"\n{'Original experiment:':<25} {original_folder.name}")
         print(f"{'Reproduction folder:':<25} {repro_folder.name}")
@@ -652,6 +717,9 @@ def main():
         # Build commands
         experiment_dir_abs = str(experiment_folder.absolute())
         
+        # Select GPUs (unless user already set CUDA_VISIBLE_DEVICES)
+        gpu_selection = select_gpus(args.num_gpus)
+        
         train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
         mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=20, split='test')
@@ -694,9 +762,15 @@ def main():
         # Verify config integrity immediately after saving
         verify_config_md5(config)
         
+        # Select GPUs (unless user already set CUDA_VISIBLE_DEVICES)
+        gpu_selection = select_gpus(args.num_gpus)
+        
         # Use train_explicit command for complete reproducibility (all params explicit)
         experiment_dir_abs = str(experiment_folder.absolute())
-        train_command = f"EXPERIMENT_DIR={experiment_dir_abs} {config['commands']['train_explicit']}"
+        if gpu_selection:
+            train_command = f"CUDA_VISIBLE_DEVICES={gpu_selection} EXPERIMENT_DIR={experiment_dir_abs} {config['commands']['train_explicit']}"
+        else:
+            train_command = f"EXPERIMENT_DIR={experiment_dir_abs} {config['commands']['train_explicit']}"
         
         print(f"\n{'Experiment ID:':<25} {experiment_id}")
         print(f"{'Dataset:':<25} {dataset}")

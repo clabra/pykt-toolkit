@@ -178,10 +178,17 @@ def main():
         lambda_bce=config['lambda_bce']
     ).to(device)
     
+    # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
+    if device.type == 'cuda' and torch.cuda.device_count() > 1:
+        print(f"✓ Multi-GPU detected: {torch.cuda.device_count()} GPUs available")
+        print(f"✓ Wrapping model with DataParallel for multi-GPU evaluation")
+        model = torch.nn.DataParallel(model)
+    
     # Load checkpoint
     checkpoint_path = os.path.join(args.run_dir, args.ckpt_name)
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model_to_load = model.module if isinstance(model, torch.nn.DataParallel) else model
+    model_to_load.load_state_dict(checkpoint['model_state_dict'])
     
     print(f"✓ Loaded checkpoint from epoch {checkpoint['epoch']}")
     print(f"✓ Validation AUC at checkpoint: {checkpoint['val_bce_auc']:.4f}")
