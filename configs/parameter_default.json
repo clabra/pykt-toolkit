@@ -8,7 +8,7 @@
     "eval_script": "examples/eval_gainakt4.py",
     "epochs": 30,
     "batch_size": 64,
-    "learning_rate": 0.000174,
+    "learning_rate": 0.0001,
     "weight_decay": 1.7571e-05,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
@@ -20,8 +20,8 @@
     "seq_len": 200,
     "d_model": 256,
     "n_heads": 4,
-    "num_encoder_blocks": 4,
-    "d_ff": 512,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
     "lambda_bce": 1.0,
@@ -73,5 +73,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "0a64ac95874aa7bbc2f5328cecfaacc6"
+  "md5": "c20a1432f7f3fe5bd4d8790e5d6b7c32"
 }

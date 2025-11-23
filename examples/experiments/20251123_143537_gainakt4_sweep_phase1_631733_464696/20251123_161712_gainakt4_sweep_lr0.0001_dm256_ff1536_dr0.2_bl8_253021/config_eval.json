@@ -1,0 +1,24 @@
+{
+  "runtime": {
+    "eval_command": "examples/eval_gainakt4.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251123_161712_gainakt4_sweep_lr0.0001_dm256_ff1536_dr0.2_bl8_253021 --ckpt_name model_best.pth",
+    "timestamp": "2025-11-23T17:08:44.524447Z",
+    "checkpoint_path": "/workspaces/pykt-toolkit/examples/experiments/20251123_161712_gainakt4_sweep_lr0.0001_dm256_ff1536_dr0.2_bl8_253021/model_best.pth"
+  },
+  "evaluation": {
+    "batch_size": 64
+  },
+  "data": {
+    "dataset": "assist2015",
+    "fold": 0
+  },
+  "model_config": {
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "lambda_bce": 1.0
+  }
+}

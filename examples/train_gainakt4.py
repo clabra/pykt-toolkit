@@ -41,6 +41,13 @@ from pykt.models.gainakt4 import GainAKT4
 from examples.experiment_utils import compute_auc_acc
 
 
+def get_model_attr(model, attr_name):
+    """Safely get model attribute whether wrapped in DataParallel or not."""
+    if isinstance(model, torch.nn.DataParallel):
+        return getattr(model.module, attr_name)
+    return getattr(model, attr_name)
+
+
 def train_epoch(model, train_loader, optimizer, device, gradient_clip):
     """Train for one epoch."""
     model.train()
@@ -63,8 +70,9 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip):
         # Get targets
         targets = batch['shft_rseqs'].to(device)
         
-        # Compute loss
-        loss_dict = model.compute_loss(outputs, targets)
+        # Compute loss (access through module if DataParallel)
+        compute_loss_fn = get_model_attr(model, 'compute_loss')
+        loss_dict = compute_loss_fn(outputs, targets)
         loss = loss_dict['total_loss']
         bce_loss = loss_dict['bce_loss']
         mastery_loss = loss_dict['mastery_loss']
@@ -113,8 +121,9 @@ def validate(model, val_loader, device, lambda_bce=0.9):
             # Forward pass
             outputs = model(q=questions, r=responses, qry=questions_shifted)
             
-            # Compute loss
-            loss_dict = model.compute_loss(outputs, labels)
+            # Compute loss (access through module if DataParallel)
+            compute_loss_fn = get_model_attr(model, 'compute_loss')
+            loss_dict = compute_loss_fn(outputs, labels)
             loss = loss_dict['total_loss']
             total_loss += loss.item()
             total_bce_loss += loss_dict['bce_loss'].item()

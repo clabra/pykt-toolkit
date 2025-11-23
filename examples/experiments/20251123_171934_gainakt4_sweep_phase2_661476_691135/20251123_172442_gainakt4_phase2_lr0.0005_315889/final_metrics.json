@@ -1,0 +1,5 @@
+{
+  "best_val_bce_auc": 0.7209855467007921,
+  "final_epoch": 10,
+  "total_params": 10731090
+}

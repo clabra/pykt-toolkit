@@ -110,8 +110,10 @@ def main():
     with open(config_path, 'r') as f:
         full_config = json.load(f)
     
-    # Extract parameters from defaults section
-    config = full_config['defaults']
+    # Extract parameters from defaults section and apply overrides
+    config = full_config['defaults'].copy()
+    if 'overrides' in full_config:
+        config.update(full_config['overrides'])
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

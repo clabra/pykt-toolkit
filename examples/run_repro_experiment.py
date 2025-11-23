@@ -398,8 +398,6 @@ def main():
                        help='Create config but do not train')
     parser.add_argument('--num_gpus', type=int, default=None,
                        help='Number of GPUs to use (default: ~80%% of available, e.g., 6 out of 8)')
-    parser.add_argument('--num_gpus', type=int, default=None,
-                       help='Number of GPUs to use (default: ~80%% of available, e.g., 6 out of 8)')
     
     # Dynamically add arguments for ALL parameters in defaults
     for param_name, default_value in available_params.items():
