@@ -6,6 +6,14 @@
 
 ---
 
+## References
+
+- GainAKT3Exp Documentation: `paper/STATUS_gainakt3exp.md`
+- PyKT Framework: `assistant/quickstart.pdf`, `assistant/contribute.pdf`
+- Reproducibility Protocol: `examples/reproducibility.md`
+
+---
+
 ## Recent Improvements (2025-11-23)
 
 **Architectural Enhancements**:
@@ -663,32 +671,370 @@ This is more interpretable than sigmoid learning curves (GainAKT3Exp) while main
 
 ---
 
-## Next Steps
+## Next Steps - L3 Curve Loss Implementation
 
-1. **Implement Model**: Create `pykt/models/gainakt4.py` based on specification
-2. **Verify Gradients**: Run test script to confirm dual-gradient flow
-3. **Train Baseline**: Run with recommended hyperparameters (λ₁=0.9, which gives λ₂=0.1 by constraint)
-4. **Ablation Studies**:
-   - Try different λ₁/λ₂ ratios (0.9/0.1, 0.7/0.3, 0.5/0.5)
-   - Test with/without monotonicity constraint
-   - Compare {KCi} patterns with GainAKT3Exp sigmoid curves
-5. **Compare Performance**: Benchmark against GainAKT3Exp on ASSIST2015 dataset
-6. **Analyze {KCi}**: Visualize skill vectors to validate interpretability
+**Objective**: Improving the semantic consistency of skill mastery levels in three aspects: 
+1) values
+2) evolution with practice
+3) correlation with observed responses
+
+**Semantic Constraints**
+Semantic consistency of mastery levels is measured trough adherence to these constraints: 
+1) Positivity
+They have positive values (zero or greater than zero). 
+2) Range
+Values are in the range [0.0, 1.0]. 
+3) Monotonicity
+Values never decrease. 
+4) Correlation with observed correctness of responses
+As the mastery level for a skill increases, also increases the probability that the responses involving that skill are correct. 
+5) Evolution with practice 
+There is a causal, direct relationship between practice with questions/items involving a given skill and a corresponding increment in the level of mastery associated to that skill. 
+6) Sparsity
+Practice with questions/items involving a given skill (or a set of skills) causes increments of the mastery levels associated to that skill/s but don't affect the mastery levels of non associated skills. 
+
+**Approach**: implement the *L3 Curve loss* in a clean, modular way, enabling activation/deactivation with a boolean parameter *curve_loss_activated*, ready for ablation analysis. 
+
+**Parameters**: Add curve_loss_activated and the parameters listed in "Hyperparameters" subsection to configs/parameter_default.josn. Include a new subsection "curveloss" in "types" section. 
+
+
+### Theoretical Foundation: Rasch Model
+
+Semantic consistency of skill mastery levels can be inproved by incorporating psychometric constraints from Item Response Theory (IRT) and, specifically, the **Rasch model** (1PL IRT) that models the probability of correct response as:
+
+$$P(\text{correct} \mid \beta_n, \delta_i) = \frac{1}{1 + e^{-(\beta_n - \delta_i)}}$$
+
+Where:
+- $\beta_n$: **Ability** of student $n$ (mastery level for a skill)
+- $\delta_i$: **Difficulty** of item/skill $i$ (skill-specific parameter)
+- Logistic function: Higher ability relative to difficulty → higher probability of success
+
+**Adaptation for Knowledge Tracing**:
+- $\beta_n(t, s)$: Student $n$'s mastery of skill $s$ at timestep $t$ (dynamic, learned from trajectory)
+- $\delta_s$: Difficulty of skill $s$ (skill-specific, learned across all students)
+- $n_a(n, s)$: **Attempts-to-mastery** for student $n$ on skill $s$ (number of practice attempts needed to reach mastery threshold)
 
 ---
 
-## References
+### Learning Curve Parametrization
 
-**Multi-Task Learning**:
-- Caruana, R. (1997). "Multitask Learning". Machine Learning, 28(1), 41-75.
-- Kendall, A., Gal, Y., & Cipolla, R. (2018). "Multi-Task Learning Using Uncertainty to Weigh Losses for Scene Geometry and Semantics". CVPR.
+**Skill Mastery Growth**: Model mastery as a function of practice attempts:
 
-**Knowledge Tracing**:
-- GainAKT3Exp Documentation: `paper/STATUS_gainakt3exp.md`
-- PyKT Framework: `assistant/quickstart.pdf`, `assistant/contribute.pdf`
-- Reproducibility Protocol: `examples/reproducibility.md`
+$$\beta_n(t, s) = f(a_t, n_a(n, s), \delta_s)$$
 
-**Related Work**:
-- Transformer architectures with multiple prediction heads
-- Multi-task learning in educational data mining
-- Interpretable knowledge tracing models
+Where:
+- $a_t$: Number of attempts on skill $s$ up to timestep $t$
+- $n_a(n, s)$: Student-skill specific learning rate (attempts required to master)
+- $f(\cdot)$: Logistic growth function
+
+**Logistic Growth Model**:
+$$\beta_n(a_t, s) = \frac{L}{1 + e^{-k(a_t - n_a(n,s))}}$$
+
+Where:
+- $L$: Asymptotic mastery level (typically 1.0 or 0.95)
+- $k$: Steepness of learning curve (growth rate)
+- $n_a(n, s)$: Inflection point (attempts needed to reach 50% mastery)
+
+**Characteristic Curve**: Combining mastery growth with difficulty:
+$$P(\text{correct} \mid a_t, n_a, \delta_s) = \sigma(\beta_n(a_t, s) - \delta_s)$$
+
+Where $\sigma(\cdot)$ is the sigmoid function.
+
+---
+
+### Student Clustering Strategy
+
+**Hypothesis**: Students exhibit similar learning rates, forming natural clusters based on characterisitcs such as: 
+1. **Prior knowledge**: Background preparation level
+2. **Learning ability**: Rate of skill acquisition
+3. **Engagement**: Practice consistency
+
+**Clustering Approach**:
+- Define $K$ student clusters (e.g., $K=5$): fast learners → slow learners
+- Each cluster $c \in \{0, 1, \ldots, K-1\}$ has characteristic $n_a^{(c)}$ values
+- Cluster 0: Fast learners (low $n_a$ → few attempts needed)
+- Cluster $K-1$: Slow learners (high $n_a$ → many attempts needed)
+
+**Per-Cluster Skill Curves**:
+$$n_a^{(c, s)} = \text{median}\{n_a(n, s) \mid \text{student } n \in \text{cluster } c\}$$
+
+**Generic Curve** (fallback):
+$$n_a^{\text{global}, s} = \text{median}\{n_a(n, s) \mid \forall \text{students } n\}$$
+
+---
+
+### Mastery Threshold Inference
+
+**Mastery Detection Heuristic**:
+- **Rule**: If student answers skill $s$ correctly $m$ consecutive times (e.g., $m=3$)
+- **Inference**: Mastery probability $P(\text{mastered}_s) \geq \tau$ (e.g., $\tau=0.9$)
+- **Consequence**: Can estimate $n_a(n, s) \approx a_{\text{mastery}}$ (number of attempts at mastery point)
+
+**Curve Shape Inference**:
+Given mastery point $(a_{\text{mastery}}, \tau)$, solve for $n_a$:
+$$\tau = \frac{L}{1 + e^{-k(a_{\text{mastery}} - n_a)}} \implies n_a = a_{\text{mastery}} + \frac{1}{k}\ln\left(\frac{L}{\tau} - 1\right)$$
+
+**Initialization Strategy**:
+- **A priori**: Assign most frequent cluster and generic curves
+- **A posteriori**: Update cluster assignment and $n_a$ values as more responses observed
+
+---
+
+### Curve Loss Computation Algorithm
+
+**Online Learning Process** (per student sequence):
+
+**Step 1: Initialization**
+```python
+# Before processing student sequence
+student_cluster = most_frequent_cluster  # Default: median cluster
+skill_difficulties = global_skill_difficulties.clone()  # δ_s for all skills
+attempts_to_mastery = generic_attempts_to_mastery.clone()  # n_a^(global)
+skill_attempt_counts = zeros(num_skills)  # a_t for each skill
+```
+
+**Step 2: Online Cluster Assignment**
+```python
+# After processing timesteps 1:t
+observed_performance = compute_performance_profile(responses[1:t])
+student_cluster = assign_cluster(observed_performance, cluster_prototypes)
+attempts_to_mastery = cluster_attempts_to_mastery[student_cluster].clone()
+```
+
+**Step 3: Online Difficulty Calibration**
+```python
+# Update skill difficulties based on observed student responses
+for skill_s in skills_practiced[1:t]:
+    # Bayesian update or moving average
+    skill_difficulties[skill_s] = update_difficulty(
+        current=skill_difficulties[skill_s],
+        observed_responses=responses_for_skill[skill_s],
+        student_abilities=student_cluster_ability
+    )
+```
+
+**Step 4: Curve Loss Computation (Per Timestep)**
+```python
+for t in range(seq_len):
+    skill_s = questions[t]  # Current skill being tested
+    
+    # Increment attempt counter
+    skill_attempt_counts[skill_s] += 1
+    a_t = skill_attempt_counts[skill_s]
+    
+    # Predict mastery from characteristic curve
+    n_a = attempts_to_mastery[skill_s]
+    delta_s = skill_difficulties[skill_s]
+    
+    # Logistic growth curve
+    beta_n = L / (1 + exp(-k * (a_t - n_a)))
+    
+    # Rasch model prediction
+    p_correct_curve = sigmoid(beta_n - delta_s)
+    
+    # Curve loss (penalize deviation from IRT model)
+    curve_loss_t = binary_cross_entropy(p_correct_curve, responses[t])
+    
+    # Accumulate
+    curve_loss += curve_loss_t
+```
+
+**Step 5: Joint Loss Function**
+```python
+# Total loss combines all objectives
+L_total = (
+    lambda_bce * L_bce +                # Performance prediction (Head 1)
+    lambda_mastery * L_mastery +        # Skill mastery estimation (Head 2)
+    lambda_curve * curve_loss           # IRT curve adherence (NEW)
+)
+
+# Constraint: lambda_bce + lambda_mastery + lambda_curve = 1.0
+# Recommended: lambda_bce=0.7, lambda_mastery=0.2, lambda_curve=0.1
+```
+
+---
+
+### Implementation Architecture
+
+**New Model Components**:
+
+1. **Skill Difficulty Module**
+```python
+class SkillDifficultyTracker(nn.Module):
+    def __init__(self, num_skills):
+        super().__init__()
+        # Learnable skill difficulties (initialized from data statistics)
+        self.skill_difficulties = nn.Parameter(torch.zeros(num_skills))
+        
+    def forward(self, skill_ids):
+        return self.skill_difficulties[skill_ids]
+```
+
+2. **Student Cluster Assignment**
+```python
+class StudentClusterEncoder(nn.Module):
+    def __init__(self, d_model, num_clusters):
+        super().__init__()
+        self.cluster_head = nn.Sequential(
+            nn.Linear(d_model, num_clusters),
+            nn.Softmax(dim=-1)
+        )
+        # Cluster prototypes: attempts-to-mastery per cluster per skill
+        self.cluster_prototypes = nn.Parameter(
+            torch.randn(num_clusters, num_skills)
+        )
+    
+    def forward(self, h1_sequence_avg):
+        # h1_sequence_avg: [B, d_model] - average over sequence
+        cluster_probs = self.cluster_head(h1_sequence_avg)  # [B, K]
+        return cluster_probs
+```
+
+3. **Curve Loss Module**
+```python
+class CurveLoss(nn.Module):
+    def __init__(self, L=0.95, k=0.5):
+        super().__init__()
+        self.L = L  # Asymptotic mastery
+        self.k = k  # Learning rate steepness
+        
+    def logistic_growth(self, attempts, n_a):
+        # β_n(a_t) = L / (1 + exp(-k(a_t - n_a)))
+        return self.L / (1 + torch.exp(-self.k * (attempts - n_a)))
+    
+    def forward(self, attempts, n_a, difficulties, targets):
+        # attempts: [B, L] - attempt counts per timestep
+        # n_a: [B, num_skills] - attempts-to-mastery per student-skill
+        # difficulties: [num_skills] - skill difficulties
+        # targets: [B, L] - ground truth responses
+        
+        beta_n = self.logistic_growth(attempts, n_a)  # Mastery level
+        p_correct = torch.sigmoid(beta_n - difficulties)  # Rasch prediction
+        loss = F.binary_cross_entropy(p_correct, targets)
+        return loss
+```
+
+**Modified Forward Pass**:
+```python
+def forward(self, q, r, qry):
+    # Existing: Encoder 1 → h1, v1
+    h1, v1 = self.encoder1(q, r)
+    
+    # Head 1: Performance prediction
+    bce_predictions = self.head1(h1, v1, qry)
+    
+    # Head 2: Mastery estimation
+    kc_vector = self.head2_mlp1(h1)
+    kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]
+    mastery_predictions = self.head2_mlp2(kc_vector_mono)
+    
+    # NEW: Curve loss computation
+    # Assign student cluster
+    h1_avg = h1.mean(dim=1)  # [B, d_model]
+    cluster_probs = self.cluster_encoder(h1_avg)  # [B, K]
+    cluster_ids = cluster_probs.argmax(dim=-1)  # [B]
+    
+    # Get cluster-specific attempts-to-mastery
+    n_a = self.cluster_encoder.cluster_prototypes[cluster_ids]  # [B, num_skills]
+    
+    # Get skill difficulties
+    difficulties = self.skill_difficulty_tracker(qry)  # [B, L]
+    
+    # Track attempts per skill (requires state management)
+    attempts = self.count_attempts(q, qry)  # [B, L]
+    
+    # Compute curve loss
+    curve_loss = self.curve_loss_fn(attempts, n_a, difficulties, r)
+    
+    return {
+        'bce_predictions': bce_predictions,
+        'mastery_predictions': mastery_predictions,
+        'curve_loss': curve_loss,
+        'cluster_assignments': cluster_ids
+    }
+```
+
+---
+
+### Training Procedure
+
+**Phase 1: Initialization** (Epoch 0)
+1. Compute global skill difficulties from training data statistics
+2. Initialize cluster prototypes using k-means on student performance profiles
+3. Estimate generic attempts-to-mastery curves from mastery detection heuristic
+
+**Phase 2: Joint Training** (Epochs 1-N)
+1. Forward pass computes all three losses (BCE, mastery, curve)
+2. Online cluster assignment per student sequence
+3. Online difficulty calibration with momentum
+4. Backward pass through combined loss
+
+**Phase 3: Fine-tuning** (Epochs N+1 to convergence)
+1. Freeze cluster prototypes and skill difficulties
+2. Continue training encoder and prediction heads
+3. Focus on Head 2 mastery prediction quality
+
+---
+
+### Expected Benefits
+
+**1. Improved Mastery Head AUC**
+- Curve loss provides semantic supervision from psychometric theory
+- Forces mastery predictions to follow realistic learning trajectories
+- Reduces deviation from theoretically grounded growth patterns
+
+**2. Enhanced Interpretability**
+- Student cluster assignment: interpretable learner profiles
+- Skill difficulties: item-level analysis
+- Learning curves: visualizable progress trajectories
+
+**3. Regularization Effect**
+- IRT constraints prevent unrealistic mastery progressions
+- Cluster assignments provide student-level structure
+- Difficulty calibration grounds predictions in observable statistics
+
+**4. Cross-Student Knowledge Transfer**
+- Shared cluster prototypes enable generalization
+- Global skill difficulties leverage population statistics
+- New students benefit from pre-learned curves
+
+---
+
+### Implementation Checklist
+
+- [ ] Add `SkillDifficultyTracker` module to model
+- [ ] Add `StudentClusterEncoder` module to model
+- [ ] Implement `CurveLoss` module with logistic growth
+- [ ] Add attempt counting mechanism (stateful across sequence)
+- [ ] Precompute cluster prototypes from training data
+- [ ] Initialize skill difficulties from data statistics
+- [ ] Add `lambda_curve` hyperparameter (recommend 0.1)
+- [ ] Modify training loop to include curve loss
+- [ ] Add cluster assignment visualization
+- [ ] Add skill difficulty analysis tools
+- [ ] Validate curve loss gradient flow
+- [ ] Compare AUC with/without curve loss
+
+---
+
+### Hyperparameters
+
+| Parameter | Description | Recommended | Range |
+|-----------|-------------|-------------|-------|
+| `K` | Number of student clusters | 5 | 3-10 |
+| `L` | Asymptotic mastery level | 0.95 | 0.90-1.00 |
+| `k` | Learning curve steepness | 0.5 | 0.1-1.0 |
+| `m` | Consecutive correct for mastery | 3 | 2-5 |
+| `tau` | Mastery threshold probability | 0.9 | 0.85-0.95 |
+| `lambda_curve` | Curve loss weight | 0.1 | 0.05-0.2 |
+
+**Loss Weight Allocation**:
+- Performance (BCE): 0.7
+- Mastery (Head 2): 0.2
+- Curve adherence: 0.1
+- Constraint: $\lambda_{\text{bce}} + \lambda_{\text{mastery}} + \lambda_{\text{curve}} = 1.0$ 
+
+
+
+
+
