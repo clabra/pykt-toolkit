@@ -74,27 +74,25 @@ def load_model_and_config(run_dir, ckpt_name):
     with open(config_path, 'r') as f:
         full_config = json.load(f)
     
-    config = full_config['defaults']
+    #config = full_config['defaults']
+    # Merge defaults with overrides (overrides take precedence)
+    config = full_config['defaults'].copy()
+    config.update(full_config.get('overrides', {}))
     
     # Setup data config
-    data_config = {
-        "assist2015": {
-            "dpath": "/workspaces/pykt-toolkit/data/assist2015",
-            "num_q": 0,
-            "num_c": 100,
-            "input_type": ["concepts"],
-            "max_concepts": 1,
-            "min_seq_len": 3,
-            "maxlen": 200,
-            "emb_path": "",
-            "train_valid_original_file": "train_valid.csv",
-            "train_valid_file": "train_valid_sequences.csv",
-            "folds": [0, 1, 2, 3, 4],
-            "test_original_file": "test.csv",
-            "test_file": "test_sequences.csv",
-            "test_window_file": "test_window_sequences.csv"
-        }
-    }
+    # Load data config from configs/data_config.json
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(project_root, 'configs', 'data_config.json')
+    with open(config_path, 'r') as f:
+        data_config = json.load(f)
+    
+    # Convert relative paths to absolute paths
+    for dataset_name in data_config:
+        if 'dpath' in data_config[dataset_name] and data_config[dataset_name]['dpath'].startswith('../'):
+            data_config[dataset_name]['dpath'] = os.path.join(project_root, data_config[dataset_name]['dpath'][3:])
+    
+    if config['dataset'] not in data_config:
+        raise ValueError(f"Dataset '{config['dataset']}' not found in data_config.json. Available: {list(data_config.keys())}")
     
     num_c = data_config[config['dataset']]['num_c']
     
