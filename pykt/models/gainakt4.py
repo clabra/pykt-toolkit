@@ -177,15 +177,19 @@ class GainAKT4(nn.Module):
             nn.Linear(256, 1)
         )
         
-        # Head 2: Mastery Estimation
-        # MLP1: h1 → {KCi} with Softplus for positivity
-        self.mlp1 = nn.Sequential(
+        # Head 2: Mastery Estimation (Phase 1: A4 - Log-Increment Architecture)
+        # MLP1: h1 → log-increments (architectural guarantee of growth)
+        self.mlp1_log_increment = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_ff, num_c),
-            nn.Softplus()  # Ensures KCi > 0
+            nn.Linear(d_ff, num_c)
+            # No final activation - predict log-increments in (-∞, +∞)
         )
+        
+        # Learnable scale parameter for increment magnitude
+        # Initialized to -2.0 → exp(-2.0) ≈ 0.135 typical increment
+        self.increment_scale = nn.Parameter(torch.tensor(-2.0))
         
         # MLP2: {KCi} → mastery prediction
         self.mlp2 = nn.Sequential(
@@ -243,17 +247,28 @@ class GainAKT4(nn.Module):
         logits = self.prediction_head(concat).squeeze(-1)  # [B, L]
         bce_predictions = torch.sigmoid(logits)
         
-        # === HEAD 2: Mastery Estimation ===
+        # === HEAD 2: Mastery Estimation (Phase 1: A4 - Log-Increment Architecture) ===
         # Conditional computation: skip if λ_mastery = 0 (no gradient flow)
         if self.lambda_mastery > 0:
-            # Step 1: MLP1 → Skill Vector {KCi} with positivity
-            kc_vector = self.mlp1(h1)  # [B, L, num_c], guaranteed positive by Softplus
+            # Step 1: Predict log-increments (guaranteed positive growth via exp)
+            log_increments = self.mlp1_log_increment(h1)  # [B, L, num_c], unbounded
             
-            # Step 1.5: Enforce monotonicity (cumulative max across time)
-            kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]  # [B, L, num_c]
+            # Step 2: Convert to positive increments via exp
+            # exp(log_increments + scale) guarantees increments > 0
+            increments = torch.exp(log_increments + self.increment_scale)  # [B, L, num_c], always > 0
+            # With scale=-2.0, typical increments ≈ 0.01-0.2 range
             
-            # Step 2: MLP2 → Mastery prediction
-            mastery_logits = self.mlp2(kc_vector_mono).squeeze(-1)  # [B, L]
+            # Step 3: Cumulative sum for monotonic growth (guaranteed by cumsum)
+            # Initial state: zeros (mastery starts at ≈0)
+            initial = torch.zeros(batch_size, 1, self.num_c, device=device)
+            kc_vector = torch.cat([initial, increments], dim=1)  # [B, L+1, num_c]
+            kc_vector = torch.cumsum(kc_vector, dim=1)[:, 1:, :]  # [B, L, num_c], monotonic by construction
+            
+            # Step 4: Clamp to [0, 1] (semantic boundedness constraint)
+            kc_vector = torch.clamp(kc_vector, 0.0, 1.0)  # [B, L, num_c]
+            
+            # Step 5: MLP2 → Mastery prediction
+            mastery_logits = self.mlp2(kc_vector).squeeze(-1)  # [B, L]
             mastery_predictions = torch.sigmoid(mastery_logits)
         else:
             # Skip mastery head computation when λ_mastery=0 (pure BCE mode)

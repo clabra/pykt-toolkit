@@ -1,2 +1,0 @@
-epoch,train_loss,train_auc,val_loss,val_auc,val_accuracy,monotonicity_violation_rate,negative_gain_rate,bounds_violation_rate,mastery_correlation,gain_correlation,bce_loss_share,incremental_mastery_loss_share
-1,0.5503110930400809,0.6787524556040601,0.5197528643267495,0.7084035021598438,0.7488345385356548,0.0,0.0,0.0,0.0,0.0,0.9730286350567117,1.2427425476904956

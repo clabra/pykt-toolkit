@@ -74,7 +74,9 @@ def load_model_and_config(run_dir, ckpt_name):
     with open(config_path, 'r') as f:
         full_config = json.load(f)
     
-    config = full_config['defaults']
+    # Merge defaults with overrides (overrides take precedence)
+    config = full_config['defaults'].copy()
+    config.update(full_config.get('overrides', {}))
     
     # Setup data config
     data_config = {
