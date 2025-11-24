@@ -210,6 +210,16 @@ def main():
     # Loss weights
     parser.add_argument('--lambda_bce', type=float, required=True)
     
+    # Semantic constraints (Phase 1 & 2)
+    parser.add_argument('--use_log_increment', action='store_true')
+    parser.add_argument('--increment_scale_init', type=float, required=True)
+    parser.add_argument('--kc_emb_init_mean', type=float, required=True)
+    parser.add_argument('--lambda_temporal_contrast', type=float, required=True)
+    parser.add_argument('--temporal_contrast_temperature', type=float, required=True)
+    parser.add_argument('--lambda_smoothness', type=float, required=True)
+    parser.add_argument('--lambda_skill_contrast', type=float, required=True)
+    parser.add_argument('--skill_contrast_margin', type=float, required=True)
+    
     # Monitoring & evaluation
     parser.add_argument('--monitor_freq', type=int, required=True)
     parser.add_argument('--auto_shifted_eval', action='store_true')
@@ -303,7 +313,15 @@ def main():
         d_ff=args.d_ff,
         dropout=args.dropout,
         emb_type=args.emb_type,
-        lambda_bce=args.lambda_bce
+        lambda_bce=args.lambda_bce,
+        lambda_temporal_contrast=args.lambda_temporal_contrast,
+        temporal_contrast_temperature=args.temporal_contrast_temperature,
+        lambda_smoothness=args.lambda_smoothness,
+        lambda_skill_contrast=args.lambda_skill_contrast,
+        skill_contrast_margin=args.skill_contrast_margin,
+        use_log_increment=args.use_log_increment,
+        increment_scale_init=args.increment_scale_init,
+        kc_emb_init_mean=args.kc_emb_init_mean
     ).to(device)
     
     # Multi-GPU support: wrap model with DataParallel if multiple GPUs available

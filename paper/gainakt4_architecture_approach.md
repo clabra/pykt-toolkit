@@ -154,7 +154,10 @@ graph TD
         end
         
         MonotonicKC["[[{KCi}_mono]]<br/>torch.cummax(KCi, dim=1)[0]<br/>Monotonic skill mastery<br/>(None if λ_mastery=0)"]
-        MLP2["MLP2: Skill Aggregation<br/>(num_c → num_c//2 → 1)<br/>Maps skill vector to prediction"]
+        
+        ContextExtraction["⚠️ MODIFIED: Extract Context<br/>[h1, v1, KC[skill]]<br/>(513D input)<br/>⚠️ UNDER REVIEW"]
+        MLP2["⚠️ MODIFIED: MLP2 Skill Aggregation<br/>(513 → 512 → 256 → 1)<br/>⚠️ Uses [h1, v1, KC] not just KC<br/>⚠️ NEEDS ATTRIBUTION ANALYSIS"]
+        
         Sigmoid2["Sigmoid Activation"]
         MasteryPred["[[Mastery Predictions]]<br/>[B, L]<br/>Binary: 0=incorrect, 1=correct<br/>(None if λ_mastery=0)"]
         L2["L2: Mastery Loss<br/>Interpretability objective<br/>(0.0 if λ_mastery=0)"]
@@ -206,7 +209,13 @@ graph TD
     Positivity --> KCVector
     KCVector --> Monotonicity
     Monotonicity --> MonotonicKC
-    MonotonicKC --> MLP2
+    
+    %% ⚠️ MODIFIED PATHS - UNDER REVIEW
+    KnowledgeState -.->|"⚠️ ADDED"| ContextExtraction
+    Encoder1_Out_Val -.->|"⚠️ ADDED"| ContextExtraction
+    MonotonicKC -.->|"⚠️ MODIFIED"| ContextExtraction
+    ContextExtraction -.->|"⚠️ h1,v1,KC"| MLP2
+    
     MLP2 --> Sigmoid2
     Sigmoid2 --> MasteryPred
     MasteryPred --> L2
@@ -228,17 +237,21 @@ graph TD
     classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
     classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
     classDef io_data fill:#f5f5f5,stroke:#666666,stroke-width:2px
+    classDef modified_review fill:#ffebee,stroke:#c62828,stroke-width:4px,stroke-dasharray: 5 5
     
     class Tokens1,Context_Emb1,Value_Emb1,Skill_Emb1,Context_Seq1,Value_Seq1,Pos_Emb1,Context_Seq_Pos1,Value_Seq_Pos1 encoder1_style
     class Encoder1_In_Ctx,Encoder1_In_Val,EncBlock1,EncBlock2,EncBlockN,Encoder1_Out_Ctx,Encoder1_Out_Val,KnowledgeState encoder1_style
     class Concat1,PredHead1,BCEPred head1_style
-    class MLP1,KCVector,MonotonicKC,MLP2,Sigmoid2,MasteryPred head2_style
+    class MLP1,KCVector,MonotonicKC,Sigmoid2,MasteryPred head2_style
     class Positivity,Monotonicity constraint_style
     class L1,L2,LTotal,Backprop loss_style
     class Input_q,Input_r,Ground_Truth input_style
     class Input_q,Input_r,Ground_Truth,Tokens1,Context_Seq1,Value_Seq1,Context_Seq_Pos1,Value_Seq_Pos1 io_data
     class Encoder1_In_Ctx,Encoder1_In_Val,Encoder1_Out_Ctx,Encoder1_Out_Val,KnowledgeState io_data
     class KCVector,MonotonicKC,BCEPred,MasteryPred io_data
+    
+    %% ⚠️ MODIFIED COMPONENTS - UNDER REVIEW (Red styling)
+    class ContextExtraction,MLP2 modified_review
     classDef encoder fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef head1 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef head2 fill:#fce4ec,stroke:#c2185b,stroke-width:2px
@@ -754,6 +767,220 @@ This validates the need for the **Mastery Growth Enhancement Plan** (see next se
 
 ---
 
+## ⚠️ ARCHITECTURAL DESIGN REVIEW - Head 2 Context Issue (2025-11-24)
+
+**Status**: ⚠️ **REQUIRES CAREFUL REVIEW** - Potential conflict with original hypothesis
+
+### Problem Discovered
+
+**Observation**: With experiment 419755 (λ_bce=0.1, λ_mastery=0.9), mastery states saturate at 1.0:
+- 97.63% of KC values clamped at 1.0
+- Mastery AUC stuck at ~0.50 (random performance)
+- Increments growing too large, causing cumsum overflow
+
+**Attempted Solution** (2025-11-24):
+Modified MLP2 architecture from:
+```python
+# Original hypothesis: predict from KC values only
+MLP2: KC[skill] → prediction (1D input)
+```
+
+To:
+```python
+# Modified: add full context
+MLP2: [h1, v1, KC[skill]] → prediction (513D input)
+```
+
+### Conflict with Original Hypothesis
+
+**Original Design Philosophy** (from document):
+> "**{KCi}**: Skill vector with one component per knowledge component (intermediate representation)"
+> "**MLP2**: Learns how to aggregate skill masteries into performance prediction"
+> "This provides interpretability through the intermediate skill decomposition"
+
+**Key Question**: Does adding h1 and v1 to MLP2 violate the principle that Head 2 should make predictions **primarily from {KCi}**?
+
+### Arguments FOR the Modification
+
+1. **Practical Need**: Pure KC[skill] input (1D) resulted in:
+   - Constant predictions (~0.46 for all inputs)
+   - No learning signal to MLP1 (gradients too weak)
+   - Mastery AUC stuck at 0.50
+
+2. **Head 1 Parallel**: Head 1 uses `[h1, v1, skill_emb]` successfully
+   - Both heads should have similar expressive power
+   - Context helps predict question difficulty, student state
+
+3. **Gradient Flow**: Adding context strengthens gradients to MLP1
+   - Helps regulate increment magnitudes
+   - May prevent saturation at 1.0
+
+### Arguments AGAINST the Modification
+
+1. **Interpretability Loss**: If MLP2 relies heavily on h1/v1:
+   - The {KCi} values become less central to predictions
+   - Violates "predictions from KC values" principle
+   - Reduces interpretability of skill mastery levels
+
+2. **Architectural Purity**: Original hypothesis states:
+   - Head 1: Uses encoder states + skill embeddings
+   - Head 2: Uses skill mastery decomposition {KCi}
+   - Adding h1/v1 to Head 2 blurs this distinction
+
+3. **Root Cause Masking**: The real problem might be:
+   - Increment scale too large (causing saturation)
+   - Missing semantic constraints (smoothness, temporal contrastive)
+   - Poor MLP1 initialization
+   - **Not** lack of context in MLP2
+
+### Alternative Solutions to Consider
+
+**Option A: Keep MLP2 Pure, Fix Increment Control**
+```python
+# Stronger increment scale control
+self.increment_scale = nn.Parameter(torch.tensor(-4.0))  # Smaller increments
+
+# Add gradient clipping specifically for MLP1
+# Prevent explosive growth
+```
+
+**Option B: Minimal Context Addition**
+```python
+# Only add skill embedding (not full h1, v1)
+MLP2: [KC[skill], skill_emb[skill]] → prediction (1 + d_model input)
+# Preserves KC centrality while adding skill-specific context
+```
+
+**Option C: Hierarchical Prediction**
+```python
+# Primary prediction from KC, secondary refinement from context
+kc_logit = mlp2a(KC[skill])  # Primary: KC-based
+context_residual = mlp2b([h1, v1])  # Secondary: context refinement
+mastery_logit = kc_logit + 0.1 * context_residual  # Weighted combination
+```
+
+**Option D: Keep Current Modification, Add Interpretability Analysis**
+```python
+# Keep [h1, v1, KC[skill]] input
+# But analyze which components MLP2 actually uses:
+# - Gradient attribution analysis
+# - Attention weights on input dimensions
+# - Ablation: mask KC[skill] vs mask h1/v1
+```
+
+### Recommended Review Process
+
+**Phase 1: Empirical Testing** (Current - in progress)
+- [x] Train with modified architecture `[h1, v1, KC[skill]]`
+- [ ] Check if mastery AUC improves (target: >0.60)
+- [ ] Verify KC values don't saturate at 1.0
+- [ ] Analyze mastery state distributions
+
+**Phase 2: Interpretability Analysis** (if Phase 1 succeeds)
+- [ ] Gradient attribution: Which input dimensions drive predictions?
+- [ ] Ablation study: 
+  - Mask KC[skill] → measure AUC drop
+  - Mask h1, v1 → measure AUC drop
+  - Compare importance: KC vs context
+- [ ] Correlation analysis: Do KC values correlate with predictions?
+
+**Phase 3: Architectural Decision** (based on Phase 2 results)
+
+**If KC[skill] is dominant** (high importance in attribution):
+- ✅ Accept modification: Context helps but KC drives predictions
+- Document as "context-augmented KC prediction"
+- Interpretability preserved
+
+**If h1/v1 dominate** (KC has low importance):
+- ❌ Reject modification: Violates hypothesis
+- Revert to pure KC input
+- Implement alternative solutions (Options A-C)
+
+**If both contribute equally**:
+- ⚠️ Partial acceptance: Hybrid architecture
+- Consider Option C (hierarchical prediction)
+- Document trade-off: performance vs interpretability
+
+### Decision Criteria
+
+**Accept Modification If**:
+1. Mastery AUC improves significantly (>0.60, ideally >0.65)
+2. Gradient attribution shows KC[skill] contributes ≥40% of prediction signal
+3. KC values show meaningful variation (not constant)
+4. Semantic constraints still provide useful regularization
+
+**Reject Modification If**:
+1. Mastery AUC remains poor (<0.55)
+2. KC[skill] contribution is minimal (<20% in attribution)
+3. KC values still saturate or remain flat
+4. Model essentially reduces to "Head 1 with extra parameters"
+
+### Current Status (2025-11-24)
+
+**Status**: ✅ **EMPIRICALLY VALIDATED - CONDITIONALLY ACCEPTED**
+
+**Experiment 712248** (λ_bce=0.1, assist2015, 17 epochs):
+
+#### Phase 1: Basic Functionality Test ✅
+
+**Training Metrics**:
+- Epoch 1: Mastery AUC **0.6522** (above random!)
+- Epoch 8: Mastery AUC **0.6840** (best, vs BCE AUC 0.6842)
+- Epoch 17: Mastery AUC 0.6758 (vs BCE AUC 0.6945)
+- **Conclusion**: ✅ Mastery head **is learning** (0.50 → 0.68)
+
+**Mastery State Distribution** (test set):
+- At 1.0: **85.68%** (improved from 97.63% in exp 419755)
+- 0.9-1.0: 87.65%
+- 0.5-0.9: 4.60% (35 values)
+- 0.1-0.5: 7.75% (59 values)
+- **Conclusion**: ✅ Saturation **reduced** but not eliminated (target <40%)
+
+**Sample Trajectories**:
+```
+Student 1263: [0.157, 0.315, 0.472, 0.628] - smooth progression
+Student 2734: [0.158, ..., 0.947, 1.0, 1.0] - saturates at mastery
+Student 3163: [0.157, ..., 0.945, 1.0, 1.0] - saturates at mastery
+```
+
+#### Phase 2: Attribution Analysis ⏳
+
+**Status**: PENDING - Need to verify KC contribution vs h1/v1 context
+
+**Required**:
+1. Gradient-based attribution: Which inputs drive predictions?
+2. Ablation study: Mask KC vs mask [h1, v1] → compare AUC drops
+3. Correlation analysis: KC values vs predictions
+4. **Decision threshold**: Accept if KC contributes ≥40%
+
+#### Phase 3: Decision
+
+**Current Decision**: ⚠️ **CONDITIONALLY ACCEPTED**
+
+**Rationale**:
+- ✅ Modification **enabled learning** (0.50 → 0.68 mastery AUC)
+- ✅ Saturation **reduced** (97.63% → 85.68%)
+- ⚠️ Need **attribution analysis** to verify interpretability
+- ⚠️ Need to **reduce increment scale** (-2.0 → -4.0) for remaining saturation
+
+**Next Steps**:
+1. Run attribution analysis to verify KC contribution ≥40%
+2. Test `increment_scale_init = -4.0` to reduce saturation to <40%
+3. Final decision based on attribution:
+   - KC dominant (≥40%): **ACCEPT** - interpretability preserved
+   - Context dominant (<20%): **REJECT** - try Option C (hierarchical)
+   - Balanced (20-40%): **ACCEPT with caution** - document limitation
+
+### Notes for Paper
+
+**If modification is accepted**:
+> "While the original design hypothesized that Head 2 should predict from skill mastery values {KCi} alone, empirical testing revealed that adding contextual information (h1, v1) was necessary to provide sufficient learning signal. Attribution analysis confirmed that KC values remain the primary driver of mastery predictions (≥40% contribution), with context serving as a complementary refinement signal. This modification preserves interpretability while improving learning dynamics."
+
+**If modification is rejected**:
+> "Initial experiments with adding full context [h1, v1, KC[skill]] to Head 2 violated the architectural principle that mastery predictions should derive primarily from skill decomposition {KCi}. We reverted to pure KC-based prediction and resolved learning issues through [alternative solution implemented], maintaining architectural purity and interpretability."
+
+---
+
 ## Mastery Growth Enhancement Plan
 
 **Document Version**: 2025-11-23  
@@ -1191,17 +1418,162 @@ class GainAKT4(nn.Module):
 
 ## Implementation Steps
 
-**Phase 1: Architectural guarantee** (must-have)
-- Implement log-increment MLP1 (A4)
-- This alone solves the flat mastery problem
+### Phase 1: Architectural Guarantee (Must-Have)
 
-**Phase 2: Add semantic regularizers** (recommended)
-- Add temporal contrastive loss (B1)
-- Add smoothness loss (A3)
-- Add skill contrastive loss (B2)
+**A4: Log-Increment Architecture** ✅ **IMPLEMENTED & VALIDATED** (2025-11-24)
+- **Status**: Code implemented, training scripts updated, parameters configured
+- **Initial Validation** (λ_bce=0.7, 2 epochs):
+  - ASSIST2015: mastery-phase1-A4 (exp 882339) - Test AUC: 0.6991
+  - ASSIST2009: mastery-phase1-A4 (exp 884749) - Completed
+- **Ablation Parameter**: `use_log_increment` (boolean, default: `false`)
+  - `true`: Use log-increment architecture (exp + cumsum)
+  - `false`: Use original cummax architecture (Softplus + cummax)
+- **Related Parameters**:
+  - `increment_scale_init`: Initial value for learnable scale parameter (float, default: `-2.0`)
+    - Controls initial increment magnitude: exp(log_increment + scale)
+    - scale=-2.0 → typical increments ≈ 0.01-0.2
+    - scale=-4.0 → smaller increments ≈ 0.001-0.02
+- **Changes**:
+  - Replaced `self.mlp1` (with Softplus) with `self.mlp1_log_increment` (no activation)
+  - Added `self.increment_scale` learnable parameter
+  - Forward method: `increments = exp(log_increments + scale)` → `cumsum()` → `clamp(0,1)`
+  - Guarantees: exp() ensures positivity, cumsum() ensures monotonicity
+- **Expected Impact**: Non-zero mastery growth, meaningful temporal dynamics
 
-**Phase 3: Tune weights** (experimental)
-- Start with small weights (0.01-0.05)
-- Monitor Head 1 performance - it should improve or stay stable
-- If Head 1 improves → your hypothesis is validated!
+---
+
+### Phase 2: Semantic Regularizers (Recommended)
+
+**B1: Temporal Contrastive Loss** ✅ **IMPLEMENTED & TESTING** (2025-11-24)
+- **Status**: All three semantic regularizers implemented, validation in progress
+- **Current Tests** (λ_bce=0.9, λ_temporal_contrast=0.05, 2 epochs):
+  - ASSIST2015: mastery-phase2-B1 (PID 900440) - Running
+  - ASSIST2009: mastery-phase2-B1 (PID 902309) - Running
+- **Purpose**: Enforce temporal progression structure (nearby states similar, distant states different)
+- **Ablation Parameter**: `lambda_temporal_contrast` (float, default: `0.0`)
+  - `0.0`: Disabled (no temporal contrastive loss)
+  - `0.01-0.1`: Enabled with varying regularization strength
+  - Recommended starting value: `0.05`
+- **Related Parameters**:
+  - `temporal_contrast_temperature`: Temperature for contrastive loss (float, default: `0.07`)
+    - Lower → sharper distinctions between positive/negative pairs
+    - Higher → softer distinctions
+- **Implementation**: `compute_temporal_contrastive_loss()` method using InfoNCE loss
+  - Normalizes skill vectors (L2 norm)
+  - Computes similarity matrix via dot products
+  - For each timestep t, positive pair = (t, t+1), negatives = all other timesteps
+  - Maximizes similarity to adjacent states, minimizes to distant states
+- **Expected Impact**: Prevent flat sequences, improve temporal representations
+
+**A3: Smoothness Loss** ✅ **IMPLEMENTED & TESTING** (2025-11-24)
+- **Status**: Code implemented, integrated in Phase 2 validation (same experiments as B1)
+- **Purpose**: Penalize abrupt changes in mastery (pedagogical regularity)
+- **Ablation Parameter**: `lambda_smoothness` (float, default: `0.0`)
+  - `0.0`: Disabled (no smoothness regularization)
+  - `0.001-0.05`: Enabled with varying regularization strength
+  - Recommended starting value: `0.01`
+- **Implementation**: `compute_smoothness_loss()` using second-order differences
+  - Computes: `kc_vector[:, 2:] - 2*kc_vector[:, 1:-1] + kc_vector[:, :-2]`
+  - Penalizes high curvature (sharp turns) in mastery trajectories
+  - Encourages gradual, smooth learning curves
+- **Expected Impact**: Gradual mastery growth, pedagogically realistic trajectories
+
+**B2: Skill-Specific Contrastive Loss** ✅ **IMPLEMENTED & TESTING** (2025-11-24)
+- **Status**: Code implemented, integrated in Phase 2 validation (same experiments as B1)
+- **Purpose**: Separate mastery states by response correctness (correct → higher mastery)
+- **Ablation Parameter**: `lambda_skill_contrast` (float, default: `0.0`)
+  - `0.0`: Disabled (no skill separation loss)
+  - `0.01-0.1`: Enabled with varying regularization strength
+  - Recommended starting value: `0.05`
+- **Related Parameters**:
+  - `skill_contrast_margin`: Minimum separation between correct/incorrect (float, default: `0.1`)
+    - Margin for margin loss: `relu(margin - (mean_correct - mean_incorrect))`
+- **Implementation**: `compute_skill_contrastive_loss()` method
+  - For each skill, computes mean mastery for correct vs incorrect responses
+  - Applies margin loss to enforce separation
+  - Semantic constraint: correct responses should show higher mastery
+- **Expected Impact**: Meaningful skill-response relationship, improved interpretability
+
+---
+
+### Phase 3: Weight Tuning (Experimental)
+
+**Hyperparameter Optimization** ⏳ **PENDING**
+- **Strategy**: Grid search or Bayesian optimization over regularization weights
+- **Parameters to tune**:
+  - `lambda_temporal_contrast` ∈ [0.0, 0.01, 0.03, 0.05, 0.1]
+  - `lambda_smoothness` ∈ [0.0, 0.001, 0.005, 0.01, 0.05]
+  - `lambda_skill_contrast` ∈ [0.0, 0.01, 0.03, 0.05, 0.1]
+- **Ablation Studies**: Test each component independently
+  - A4 only (log-increment)
+  - A4 + B1 (log-increment + temporal contrastive)
+  - A4 + A3 (log-increment + smoothness)
+  - A4 + B2 (log-increment + skill contrastive)
+  - A4 + B1 + A3 + B2 (full architecture)
+- **Success Criterion**: Head 1 test AUC improves or stays stable (≥ 0.7181 baseline)
+- **Expected Outcome**: Validate hypothesis that semantic constraints improve both interpretability AND performance
+
+---
+
+### Ablation Study Design
+
+**Experiment Matrix** (5 folds × 6 configurations = 30 experiments per dataset):
+
+| Config | `use_log_increment` | `lambda_temporal_contrast` | `lambda_smoothness` | `lambda_skill_contrast` | Purpose |
+|--------|---------------------|----------------------------|---------------------|-------------------------|---------|
+| **Baseline** | `false` | `0.0` | `0.0` | `0.0` | Original cummax architecture |
+| **A4** | `true` | `0.0` | `0.0` | `0.0` | Log-increment only |
+| **A4+B1** | `true` | `0.05` | `0.0` | `0.0` | + Temporal contrastive |
+| **A4+A3** | `true` | `0.0` | `0.01` | `0.0` | + Smoothness |
+| **A4+B2** | `true` | `0.0` | `0.0` | `0.05` | + Skill contrastive |
+| **Full** | `true` | `0.05` | `0.01` | `0.05` | All regularizers |
+
+**Analysis Plan**:
+1. Compare test AUC across configurations (validate performance hypothesis)
+2. Analyze mastery state trajectories (validate growth patterns)
+3. Compute skill vector statistics (mean increments, variance, monotonicity violations)
+4. Measure correlation between mastery AUC and BCE AUC (validate interpretability)
+5. Statistical significance testing (paired t-tests across folds)
+
+---
+
+### Parameter Summary for `configs/parameter_default.json`
+
+```json
+{
+  "use_log_increment": true,
+  "increment_scale_init": -2.0,
+  "lambda_temporal_contrast": 0.0,
+  "temporal_contrast_temperature": 0.07,
+  "lambda_smoothness": 0.0,
+  "lambda_skill_contrast": 0.0,
+  "skill_contrast_margin": 0.1
+}
+```
+
+**Configuration Status** ✅:
+- All semantic constraint parameters added to `configs/parameter_default.json`
+- Parameters grouped in "semantic" type category for ablation studies
+- Argparse entries added to `examples/train_gainakt4.py`
+- Model factory function (`create_model`) updated to accept all parameters
+- MD5 hash updated and validated (e83d675162d88ff09b1992d8077e62d5)
+
+**Default Values**:
+- `use_log_increment: true` - Log-increment architecture **enabled by default**
+- All loss weights (`lambda_*`) default to `0.0` - **disabled for backward compatibility**
+- Enable individually via CLI flags for ablation studies
+
+**Usage Example**:
+```bash
+# Phase 1-A4: Log-increment only
+python examples/run_repro_experiment.py --dataset assist2015 --lambda_bce 0.9 --epochs 30
+
+# Phase 2-B1: Add temporal contrastive
+python examples/run_repro_experiment.py --dataset assist2015 --lambda_bce 0.9 \
+  --lambda_temporal_contrast 0.05 --epochs 30
+
+# Full semantic constraints
+python examples/run_repro_experiment.py --dataset assist2015 --lambda_bce 0.9 \
+  --lambda_temporal_contrast 0.05 --lambda_smoothness 0.01 --lambda_skill_contrast 0.05 --epochs 30
+```
 

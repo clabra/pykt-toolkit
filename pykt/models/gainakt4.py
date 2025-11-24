@@ -143,7 +143,11 @@ class GainAKT4(nn.Module):
     """
     
     def __init__(self, num_c, seq_len, d_model=256, n_heads=4, num_encoder_blocks=4,
-                 d_ff=512, dropout=0.2, emb_type='qid', lambda_bce=0.9):
+                 d_ff=512, dropout=0.2, emb_type='qid', lambda_bce=0.9,
+                 lambda_temporal_contrast=0.0, temporal_contrast_temperature=0.07,
+                 lambda_smoothness=0.0, lambda_skill_contrast=0.0, 
+                 skill_contrast_margin=0.1, use_log_increment=True, 
+                 increment_scale_init=-2.0, kc_emb_init_mean=0.1):
         super().__init__()
         
         self.num_c = num_c
@@ -153,11 +157,24 @@ class GainAKT4(nn.Module):
         self.lambda_bce = lambda_bce
         self.lambda_mastery = 1.0 - lambda_bce  # Constraint: λ₁ + λ₂ = 1
         
+        # Phase 2: Semantic constraint parameters
+        self.lambda_temporal_contrast = lambda_temporal_contrast
+        self.temporal_contrast_temperature = temporal_contrast_temperature
+        self.lambda_smoothness = lambda_smoothness
+        self.lambda_skill_contrast = lambda_skill_contrast
+        self.skill_contrast_margin = skill_contrast_margin
+        self.use_log_increment = use_log_increment
+        self.kc_emb_init_mean = kc_emb_init_mean
+        
         # Embeddings
         self.context_embedding = nn.Embedding(num_c * 2, d_model)  # q + num_c * r
         self.value_embedding = nn.Embedding(num_c * 2, d_model)
         self.skill_embedding = nn.Embedding(num_c, d_model)  # For prediction head
         self.pos_embedding = nn.Embedding(seq_len, d_model)
+        
+        # Initialize KC embeddings with random values around kc_emb_init_mean
+        with torch.no_grad():
+            nn.init.normal_(self.skill_embedding.weight, mean=self.kc_emb_init_mean, std=0.02)
         
         # Encoder blocks
         self.encoder_blocks = nn.ModuleList([
@@ -188,15 +205,19 @@ class GainAKT4(nn.Module):
         )
         
         # Learnable scale parameter for increment magnitude
-        # Initialized to -2.0 → exp(-2.0) ≈ 0.135 typical increment
-        self.increment_scale = nn.Parameter(torch.tensor(-2.0))
+        # Initialized to increment_scale_init → exp(increment_scale_init) typical increment
+        self.increment_scale = nn.Parameter(torch.tensor(increment_scale_init))
         
-        # MLP2: {KCi} → mastery prediction
+        # MLP2: [h1, v1, skill_specific_KC] → mastery prediction
+        # Similar to Head 1 but includes skill-specific KC value for interpretability
         self.mlp2 = nn.Sequential(
-            nn.Linear(num_c, num_c // 2),
+            nn.Linear(d_model * 2 + 1, d_ff),  # [h1, v1, KC_skill] concatenated
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(num_c // 2, 1)
+            nn.Linear(d_ff, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 1)
         )
     
     def forward(self, q, r, qry=None):
@@ -267,8 +288,17 @@ class GainAKT4(nn.Module):
             # Step 4: Clamp to [0, 1] (semantic boundedness constraint)
             kc_vector = torch.clamp(kc_vector, 0.0, 1.0)  # [B, L, num_c]
             
-            # Step 5: MLP2 → Mastery prediction
-            mastery_logits = self.mlp2(kc_vector).squeeze(-1)  # [B, L]
+            # Step 5: Extract skill-specific KC values and combine with context
+            # For each position, use the KC value of the queried skill
+            # kc_vector: [B, L, num_c], qry: [B, L] → extract kc_vector[b, t, qry[b, t]]
+            batch_indices = torch.arange(batch_size, device=device).unsqueeze(1).expand(-1, seq_len)  # [B, L]
+            time_indices = torch.arange(seq_len, device=device).unsqueeze(0).expand(batch_size, -1)  # [B, L]
+            skill_specific_kc = kc_vector[batch_indices, time_indices, qry]  # [B, L]
+            
+            # MLP2: [h1, v1, skill_specific_KC] → mastery prediction
+            # Concatenate context (h1, v1) with skill-specific KC value
+            mastery_input = torch.cat([h1, v1, skill_specific_kc.unsqueeze(-1)], dim=-1)  # [B, L, 2*d_model + 1]
+            mastery_logits = self.mlp2(mastery_input).squeeze(-1)  # [B, L]
             mastery_predictions = torch.sigmoid(mastery_logits)
         else:
             # Skip mastery head computation when λ_mastery=0 (pure BCE mode)
@@ -280,7 +310,7 @@ class GainAKT4(nn.Module):
         return {
             'bce_predictions': bce_predictions,
             'mastery_predictions': mastery_predictions,
-            'skill_vector': kc_vector_mono,  # Interpretable {KCi}
+            'skill_vector': kc_vector,  # Interpretable {KCi} (monotonic via cumsum)
             'logits': logits,
             'mastery_logits': mastery_logits
         }
@@ -319,18 +349,161 @@ class GainAKT4(nn.Module):
                 targets.float(),
                 reduction='mean'
             )
-            # Total loss: L_total = λ₁ * L1 + λ₂ * L2
-            total_loss = lambda_bce * bce_loss + lambda_mastery * mastery_loss
+            
+            # Phase 2: Semantic constraint losses
+            temporal_contrast_loss = torch.tensor(0.0, device=bce_loss.device)
+            smoothness_loss = torch.tensor(0.0, device=bce_loss.device)
+            skill_contrast_loss = torch.tensor(0.0, device=bce_loss.device)
+            
+            if self.lambda_temporal_contrast > 0 and output['skill_vector'] is not None:
+                temporal_contrast_loss = self.compute_temporal_contrastive_loss(
+                    output['skill_vector']
+                )
+            
+            if self.lambda_smoothness > 0 and output['skill_vector'] is not None:
+                smoothness_loss = self.compute_smoothness_loss(
+                    output['skill_vector']
+                )
+            
+            if self.lambda_skill_contrast > 0 and output['skill_vector'] is not None:
+                skill_contrast_loss = self.compute_skill_contrastive_loss(
+                    output['skill_vector'],
+                    targets
+                )
+            
+            # Total loss: L_total = λ_bce * L1 + λ_mastery * L2 + semantic constraints
+            total_loss = (lambda_bce * bce_loss + 
+                         lambda_mastery * mastery_loss +
+                         self.lambda_temporal_contrast * temporal_contrast_loss +
+                         self.lambda_smoothness * smoothness_loss +
+                         self.lambda_skill_contrast * skill_contrast_loss)
         else:
             # Pure BCE mode (λ_mastery=0, Head 2 skipped)
             mastery_loss = torch.tensor(0.0, device=bce_loss.device)
+            temporal_contrast_loss = torch.tensor(0.0, device=bce_loss.device)
+            smoothness_loss = torch.tensor(0.0, device=bce_loss.device)
+            skill_contrast_loss = torch.tensor(0.0, device=bce_loss.device)
             total_loss = bce_loss
         
         return {
             'total_loss': total_loss,
             'bce_loss': bce_loss,
-            'mastery_loss': mastery_loss
+            'mastery_loss': mastery_loss,
+            'temporal_contrast_loss': temporal_contrast_loss,
+            'smoothness_loss': smoothness_loss,
+            'skill_contrast_loss': skill_contrast_loss
         }
+    
+    def compute_temporal_contrastive_loss(self, kc_vector):
+        """
+        Phase 2-B1: Temporal Contrastive Loss
+        
+        Enforce temporal progression: states closer in time should be more similar
+        than states far apart. This is a pure semantic constraint that encourages
+        gradual learning progression.
+        
+        Args:
+            kc_vector: [B, L, num_c] - skill mastery vectors
+        
+        Returns:
+            loss: scalar tensor
+        """
+        B, L, C = kc_vector.shape
+        
+        if L <= 1:
+            return torch.tensor(0.0, device=kc_vector.device)
+        
+        # Normalize skill vectors for cosine similarity
+        kc_norm = F.normalize(kc_vector, p=2, dim=-1)  # [B, L, C]
+        
+        loss = 0.0
+        count = 0
+        
+        for b in range(B):
+            # Similarity matrix for student b: [L, L]
+            sim_matrix = torch.matmul(kc_norm[b], kc_norm[b].t()) / self.temporal_contrast_temperature
+            
+            # For each timestep t, positive = t+1, negatives = all others
+            for t in range(L - 1):
+                # Positive: next timestep (should be similar)
+                positive = sim_matrix[t, t+1]
+                
+                # Negatives: all timesteps except t and t+1
+                negatives_mask = torch.ones(L, dtype=torch.bool, device=kc_vector.device)
+                negatives_mask[t] = False
+                negatives_mask[t+1] = False
+                negatives = sim_matrix[t, negatives_mask]
+                
+                if negatives.numel() > 0:
+                    # InfoNCE loss: maximize similarity to positive, minimize to negatives
+                    numerator = torch.exp(positive)
+                    denominator = numerator + torch.sum(torch.exp(negatives))
+                    loss += -torch.log(numerator / (denominator + 1e-8))
+                    count += 1
+        
+        return loss / count if count > 0 else torch.tensor(0.0, device=kc_vector.device)
+    
+    def compute_smoothness_loss(self, kc_vector):
+        """
+        Phase 2-A3: Smoothness Loss
+        
+        Penalize abrupt changes in mastery levels. Encourages gradual,
+        pedagogically realistic growth.
+        
+        Args:
+            kc_vector: [B, L, num_c] - skill mastery vectors
+        
+        Returns:
+            loss: scalar tensor
+        """
+        if kc_vector.size(1) <= 2:
+            return torch.tensor(0.0, device=kc_vector.device)
+        
+        # Second-order differences: discourage sharp turns
+        # d²KC/dt² ≈ KC[t+2] - 2*KC[t+1] + KC[t]
+        second_diff = kc_vector[:, 2:] - 2*kc_vector[:, 1:-1] + kc_vector[:, :-2]
+        smoothness_loss = second_diff.pow(2).mean()
+        
+        return smoothness_loss
+    
+    def compute_skill_contrastive_loss(self, kc_vector, responses):
+        """
+        Phase 2-B2: Skill-Specific Contrastive Loss
+        
+        Encourage separation: mastery after correct responses should be
+        higher than mastery after incorrect responses. This is a semantic
+        constraint that correct responses lead to higher mastery.
+        
+        Args:
+            kc_vector: [B, L, num_c] - skill mastery vectors
+            responses: [B, L] - ground truth responses (0 or 1)
+        
+        Returns:
+            loss: scalar tensor
+        """
+        B, L, C = kc_vector.shape
+        loss = 0.0
+        valid_skills = 0
+        
+        for skill_idx in range(C):
+            # Extract mastery trajectory for this skill: [B, L]
+            skill_mastery = kc_vector[:, :, skill_idx].reshape(-1)  # [B*L]
+            responses_flat = responses.reshape(-1)  # [B*L]
+            
+            # Separate indices: correct vs incorrect
+            correct_idx = (responses_flat == 1).nonzero(as_tuple=True)[0]
+            incorrect_idx = (responses_flat == 0).nonzero(as_tuple=True)[0]
+            
+            if len(correct_idx) > 0 and len(incorrect_idx) > 0:
+                mean_correct = skill_mastery[correct_idx].mean()
+                mean_incorrect = skill_mastery[incorrect_idx].mean()
+                
+                # Margin loss: correct should be at least margin higher
+                separation = F.relu(self.skill_contrast_margin - (mean_correct - mean_incorrect))
+                loss += separation
+                valid_skills += 1
+        
+        return loss / valid_skills if valid_skills > 0 else torch.tensor(0.0, device=kc_vector.device)
 
 
 def create_model(config):
@@ -359,5 +532,12 @@ def create_model(config):
         d_ff=config.get('d_ff', 512),
         dropout=config.get('dropout', 0.2),
         emb_type=config.get('emb_type', 'qid'),
-        lambda_bce=config.get('lambda_bce', 0.9)
+        lambda_bce=config.get('lambda_bce', 0.9),
+        lambda_temporal_contrast=config.get('lambda_temporal_contrast', 0.0),
+        temporal_contrast_temperature=config.get('temporal_contrast_temperature', 0.07),
+        lambda_smoothness=config.get('lambda_smoothness', 0.0),
+        lambda_skill_contrast=config.get('lambda_skill_contrast', 0.0),
+        skill_contrast_margin=config.get('skill_contrast_margin', 0.1),
+        use_log_increment=config.get('use_log_increment', True),
+        increment_scale_init=config.get('increment_scale_init', -2.0)
     )
