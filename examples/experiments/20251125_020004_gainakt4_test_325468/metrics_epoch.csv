@@ -1,0 +1,2 @@
+epoch,lambda_bce,lambda_mastery,lambda_curve,val_total_auc,val_bce_auc,val_mastery_auc,val_curve_r2,val_total_acc,val_bce_acc,val_mastery_acc,val_curve_acc,val_total_loss,val_bce_loss,val_mastery_loss,val_curve_loss,val_curve_mae,val_curve_rmse
+1,0.7,0.1,0.2,0.6528065840961321,0.6626225504050658,0.5430336044215167,0.9449679241199229,0.739072886354125,0.7398417502846742,0.7199778100030171,0.16778752104643355,4.339414450587059,0.09296017520281734,0.11260973677343251,21.315406176508688,4.4290757,6.422989

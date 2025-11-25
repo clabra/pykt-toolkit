@@ -24,7 +24,10 @@
     "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_bce": 1.0,
+    "lambda_bce": 0.7,
+    "lambda_mastery": 0.1,
+    "lambda_curve": 0.2,
+    "max_attempts": 10,
     "num_trajectories": 10,
     "min_trajectory_steps": 10
   },
@@ -68,10 +71,10 @@
   },
   "fixed": {
     "lambda_constraint": {
-      "value": "lambda_mastery = 1.0 - lambda_bce",
-      "rationale": "GAINAKT4 ARCHITECTURE (2025-11-22): Multi-task loss weights must sum to 1.0. lambda_bce is the only configurable parameter; lambda_mastery is automatically computed as 1.0 - lambda_bce. This ensures proper gradient weighting: L_total = lambda_bce * L1 + (1 - lambda_bce) * L2.",
+      "value": "lambda_mastery = 1.0 - lambda_bce - lambda_curve (when lambda_mastery is null)",
+      "rationale": "GAINAKT4 DUAL-ENCODER ARCHITECTURE (2025-11-25): Multi-task loss weights must sum to 1.0. Three losses: L1 (BCE), L2 (Mastery), L3 (Curve). When lambda_mastery is null, it is auto-computed as 1.0 - lambda_bce - lambda_curve for backward compatibility. This ensures proper gradient weighting: L_total = lambda_bce * L1 + lambda_mastery * L2 + lambda_curve * L3. Default lambda_curve=0.0 maintains Phase 1 (single-encoder) behavior.",
       "validated_by_experiments": []
     }
   },
-  "md5": "c20a1432f7f3fe5bd4d8790e5d6b7c32"
+  "md5": "b0892148f3e7922bdc1ef433e55aca2b"
 }

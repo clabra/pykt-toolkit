@@ -1,11 +1,16 @@
 """
-GainAKT4: Dual-Head Single-Encoder Knowledge Tracing Model
+GainAKT4: Dual-Encoder, Three-Head Knowledge Tracing Model
 
-A simplified architecture with one encoder and two prediction heads:
-- Head 1 (Performance): Next-step correctness prediction → BCE Loss
-- Head 2 (Mastery): Skill-level mastery estimation → Mastery Loss
+Architecture:
+- Encoder 1 (Performance & Mastery Pathway): Questions + Responses (binary)
+  → Head 1 (Performance): BCE Loss (L1)
+  → Head 2 (Mastery): Mastery Loss (L2)
+  
+- Encoder 2 (Curve Learning Pathway): Questions + Attempts (integer)
+  → Head 3 (Curve): MSE/MAE Loss (L3)
 
-Multi-task learning with gradient accumulation to a single shared encoder.
+Multi-task learning: L_total = λ_bce * L1 + λ_mastery * L2 + λ_curve * L3
+Constraint: λ_bce + λ_mastery + λ_curve = 1.0
 """
 
 import torch
@@ -132,35 +137,64 @@ class EncoderBlock(nn.Module):
 
 class GainAKT4(nn.Module):
     """
-    GainAKT4: Dual-Head Single-Encoder Architecture
+    GainAKT4: Dual-Encoder, Three-Head Architecture
     
     Architecture:
-        Input → Encoder 1 → h1 ──┬→ Head 1 (Performance) → BCE Predictions → L1
-                                 └→ Head 2 (Mastery) → {KCi} → Mastery Predictions → L2
+        Questions + Responses → Encoder 1 → h1 ──┬→ Head 1 (Performance) → BCE Predictions → L1
+                                                 └→ Head 2 (Mastery) → {KCi} → Mastery Predictions → L2
+        
+        Questions + Attempts → Encoder 2 → h2 ──→ Head 3 (Curve) → Curve Predictions → L3
     
-    Multi-task loss: L_total = λ₁ * L1 + λ₂ * L2
-    Constraint: λ₁ + λ₂ = 1.0 (only λ₁ is configurable, λ₂ = 1 - λ₁)
+    Multi-task loss: L_total = λ_bce * L1 + λ_mastery * L2 + λ_curve * L3
+    Constraint: λ_bce + λ_mastery + λ_curve = 1.0
     """
     
     def __init__(self, num_c, seq_len, d_model=256, n_heads=4, num_encoder_blocks=4,
-                 d_ff=512, dropout=0.2, emb_type='qid', lambda_bce=0.9):
+                 d_ff=512, dropout=0.2, emb_type='qid', lambda_bce=0.7, lambda_mastery=None, 
+                 lambda_curve=0.0, max_attempts=10):
         super().__init__()
         
         self.num_c = num_c
         self.seq_len = seq_len
         self.d_model = d_model
         self.emb_type = emb_type
-        self.lambda_bce = lambda_bce
-        self.lambda_mastery = 1.0 - lambda_bce  # Constraint: λ₁ + λ₂ = 1
+        self.max_attempts = max_attempts
         
-        # Embeddings
+        # Lambda weights with automatic computation for backward compatibility
+        # If lambda_mastery is None, compute it as 1.0 - lambda_bce - lambda_curve
+        if lambda_mastery is None:
+            lambda_mastery = 1.0 - lambda_bce - lambda_curve
+        
+        self.lambda_bce = lambda_bce
+        self.lambda_mastery = lambda_mastery
+        self.lambda_curve = lambda_curve
+        
+        # Validate constraint: sum must equal 1.0
+        lambda_sum = lambda_bce + lambda_mastery + lambda_curve
+        assert abs(lambda_sum - 1.0) < 1e-6, f"Lambda weights must sum to 1.0, got {lambda_sum} (λ_bce={lambda_bce}, λ_mastery={lambda_mastery}, λ_curve={lambda_curve})"
+        
+        # === ENCODER 1: Performance & Mastery Pathway ===
+        # Embeddings for binary responses (0/1)
         self.context_embedding = nn.Embedding(num_c * 2, d_model)  # q + num_c * r
         self.value_embedding = nn.Embedding(num_c * 2, d_model)
-        self.skill_embedding = nn.Embedding(num_c, d_model)  # For prediction head
+        self.skill_embedding = nn.Embedding(num_c, d_model)  # For Head 1
         self.pos_embedding = nn.Embedding(seq_len, d_model)
         
-        # Encoder blocks
+        # Encoder 1 blocks
         self.encoder_blocks = nn.ModuleList([
+            EncoderBlock(d_model, n_heads, d_ff, dropout)
+            for _ in range(num_encoder_blocks)
+        ])
+        
+        # === ENCODER 2: Curve Learning Pathway ===
+        # Embeddings for integer attempts (0 to max_attempts)
+        self.context_embedding2 = nn.Embedding(num_c * (max_attempts + 1), d_model)
+        self.value_embedding2 = nn.Embedding(num_c * (max_attempts + 1), d_model)
+        self.skill_embedding2 = nn.Embedding(num_c, d_model)  # Separate from Encoder 1
+        # Share positional embedding (optional: could create separate pos_embedding2)
+        
+        # Encoder 2 blocks (same structure as Encoder 1)
+        self.encoder_blocks2 = nn.ModuleList([
             EncoderBlock(d_model, n_heads, d_ff, dropout)
             for _ in range(num_encoder_blocks)
         ])
@@ -194,20 +228,35 @@ class GainAKT4(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(num_c // 2, 1)
         )
+        
+        # === HEAD 3: Curve Prediction (Integer Regression) ===
+        # Same structure as Head 1 (3-layer MLP)
+        self.curve_head = nn.Sequential(
+            nn.Linear(d_model * 3, d_ff),  # [h2, v2, skill_emb2]
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 1)  # Integer regression (no sigmoid)
+        )
     
-    def forward(self, q, r, qry=None):
+    def forward(self, q, r, qry=None, attempts=None):
         """
         Args:
-            q: [B, L] - question IDs
-            r: [B, L] - responses (0 or 1)
+            q: [B, L] - question IDs (shared by both encoders)
+            r: [B, L] - responses (0 or 1) for Encoder 1
             qry: [B, L] - query question IDs (optional, defaults to q)
+            attempts: [B, L] - integer attempts-to-mastery for Encoder 2 (optional)
         
         Returns:
             dict with keys:
                 - 'bce_predictions': [B, L] from Head 1
                 - 'mastery_predictions': [B, L] from Head 2 (None if λ_mastery=0)
                 - 'skill_vector': [B, L, num_c] - interpretable {KCi} (None if λ_mastery=0)
+                - 'curve_predictions': [B, L] from Head 3 (None if λ_curve=0)
                 - 'logits': [B, L] - BCE logits for loss computation
+                - 'mastery_logits': [B, L] - Mastery logits (None if λ_mastery=0)
         """
         batch_size, seq_len = q.size()
         device = q.device
@@ -262,59 +311,102 @@ class GainAKT4(nn.Module):
             mastery_logits = None
             mastery_predictions = None
         
+        # === ENCODER 2 + HEAD 3: Curve Prediction ===
+        # Conditional computation: skip if λ_curve = 0 or attempts not provided
+        if self.lambda_curve > 0 and attempts is not None:
+            # Clip attempts to valid range [0, max_attempts]
+            attempts_clipped = torch.clamp(attempts.long(), 0, self.max_attempts)
+            
+            # Create interaction tokens: q + num_c * attempts
+            interaction_tokens2 = q + self.num_c * attempts_clipped
+            
+            # === ENCODER 2: Tokenization & Embedding ===
+            context_seq2 = self.context_embedding2(interaction_tokens2) + self.pos_embedding(positions)
+            value_seq2 = self.value_embedding2(interaction_tokens2) + self.pos_embedding(positions)
+            # context_seq2, value_seq2: [B, L, d_model]
+            
+            # === ENCODER 2: Dual-Stream Encoder Stack ===
+            for encoder_block in self.encoder_blocks2:
+                context_seq2, value_seq2 = encoder_block(context_seq2, value_seq2, mask)
+            
+            h2 = context_seq2  # Curve representation [B, L, d_model]
+            v2 = value_seq2    # Value state [B, L, d_model]
+            
+            # === HEAD 3: Curve Prediction ===
+            skill_emb2 = self.skill_embedding2(qry)  # [B, L, d_model]
+            concat2 = torch.cat([h2, v2, skill_emb2], dim=-1)  # [B, L, 3*d_model]
+            curve_predictions = self.curve_head(concat2).squeeze(-1)  # [B, L]
+        else:
+            # Skip Encoder 2 + Head 3 when λ_curve=0 or no attempts data
+            curve_predictions = None
+        
         return {
             'bce_predictions': bce_predictions,
             'mastery_predictions': mastery_predictions,
             'skill_vector': kc_vector_mono,  # Interpretable {KCi}
+            'curve_predictions': curve_predictions,  # Integer regression predictions
             'logits': logits,
             'mastery_logits': mastery_logits
         }
     
-    def compute_loss(self, output, targets, lambda_bce=None):
+    def compute_loss(self, output, targets, attempts_targets=None):
         """
-        Compute multi-task loss with constraint λ₁ + λ₂ = 1.
+        Compute multi-task loss with three components.
         
         Args:
             output: dict from forward()
-            targets: [B, L] - ground truth (0 or 1)
-            lambda_bce: BCE loss weight (overrides self.lambda_bce if provided)
-                       lambda_mastery is automatically computed as 1.0 - lambda_bce
+            targets: [B, L] - ground truth responses (0 or 1) for L1 and L2
+            attempts_targets: [B, L] - ground truth attempts-to-mastery (integers) for L3
         
         Returns:
             dict with keys:
-                - 'total_loss': weighted sum
-                - 'bce_loss': L1
-                - 'mastery_loss': L2
+                - 'total_loss': weighted sum of all losses
+                - 'bce_loss': L1 (performance prediction)
+                - 'mastery_loss': L2 (mastery estimation)
+                - 'curve_loss': L3 (curve prediction)
         """
-        lambda_bce = lambda_bce if lambda_bce is not None else self.lambda_bce
-        lambda_mastery = 1.0 - lambda_bce  # Enforce constraint: λ₁ + λ₂ = 1
+        device = output['logits'].device
         
-        # L1: BCE Loss (Head 1)
+        # L1: BCE Loss (Head 1 - Performance Prediction)
         bce_loss = F.binary_cross_entropy_with_logits(
             output['logits'],
             targets.float(),
             reduction='mean'
         )
         
-        # Multi-task loss: weighted combination
+        # L2: Mastery Loss (Head 2 - Mastery Estimation)
         if output['mastery_logits'] is not None:
-            # L2: Mastery Loss (Head 2)
             mastery_loss = F.binary_cross_entropy_with_logits(
                 output['mastery_logits'],
                 targets.float(),
                 reduction='mean'
             )
-            # Total loss: L_total = λ₁ * L1 + λ₂ * L2
-            total_loss = lambda_bce * bce_loss + lambda_mastery * mastery_loss
         else:
-            # Pure BCE mode (λ_mastery=0, Head 2 skipped)
-            mastery_loss = torch.tensor(0.0, device=bce_loss.device)
-            total_loss = bce_loss
+            mastery_loss = torch.tensor(0.0, device=device)
+        
+        # L3: Curve Loss (Head 3 - Curve Prediction)
+        if output['curve_predictions'] is not None and attempts_targets is not None:
+            # MSE loss for integer regression
+            curve_loss = F.mse_loss(
+                output['curve_predictions'],
+                attempts_targets.float(),
+                reduction='mean'
+            )
+        else:
+            curve_loss = torch.tensor(0.0, device=device)
+        
+        # Total loss: L_total = λ_bce * L1 + λ_mastery * L2 + λ_curve * L3
+        total_loss = (
+            self.lambda_bce * bce_loss + 
+            self.lambda_mastery * mastery_loss + 
+            self.lambda_curve * curve_loss
+        )
         
         return {
             'total_loss': total_loss,
             'bce_loss': bce_loss,
-            'mastery_loss': mastery_loss
+            'mastery_loss': mastery_loss,
+            'curve_loss': curve_loss
         }
 
 
@@ -331,9 +423,12 @@ def create_model(config):
         - d_ff: feed-forward dimension (default: 512)
         - dropout: dropout rate (default: 0.2)
         - emb_type: embedding type (default: 'qid')
-        - lambda_bce: BCE loss weight (default: 0.9)
+        - lambda_bce: BCE loss weight (default: 0.7)
+        - lambda_mastery: Mastery loss weight (default: 0.2)
+        - lambda_curve: Curve loss weight (default: 0.1)
+        - max_attempts: Maximum attempts for curve learning (default: 10)
     
-    Note: lambda_mastery is automatically computed as 1.0 - lambda_bce
+    Note: lambda_bce + lambda_mastery + lambda_curve must equal 1.0
     """
     return GainAKT4(
         num_c=config['num_c'],
@@ -344,5 +439,8 @@ def create_model(config):
         d_ff=config.get('d_ff', 512),
         dropout=config.get('dropout', 0.2),
         emb_type=config.get('emb_type', 'qid'),
-        lambda_bce=config.get('lambda_bce', 0.9)
+        lambda_bce=config.get('lambda_bce', 0.7),
+        lambda_mastery=config.get('lambda_mastery', 0.2),
+        lambda_curve=config.get('lambda_curve', 0.1),
+        max_attempts=config.get('max_attempts', 10)
     )

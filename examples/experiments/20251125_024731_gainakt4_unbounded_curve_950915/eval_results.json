@@ -1,0 +1,40 @@
+{
+  "train": {
+    "total_auc": 0.6850969863361953,
+    "total_acc": 0.7393677432677236,
+    "bce_auc": 0.6927616418729564,
+    "bce_acc": 0.7422493171514657,
+    "mastery_auc": 0.5651835759986943,
+    "mastery_acc": 0.7171035958663025,
+    "curve_r2": "N/A",
+    "curve_acc": "N/A",
+    "curve_mae": "N/A",
+    "curve_rmse": "N/A"
+  },
+  "valid": {
+    "total_auc": 0.6830374960681935,
+    "total_acc": 0.7422164692600415,
+    "bce_auc": 0.6906934413297922,
+    "bce_acc": 0.7438028593952253,
+    "mastery_auc": 0.5642118593317976,
+    "mastery_acc": 0.720464432743871,
+    "curve_r2": "N/A",
+    "curve_acc": "N/A",
+    "curve_mae": "N/A",
+    "curve_rmse": "N/A"
+  },
+  "test": {
+    "total_auc": 0.6767068652174554,
+    "total_acc": 0.7360021398002853,
+    "bce_auc": 0.6844959558044299,
+    "bce_acc": 0.7377332976699953,
+    "mastery_auc": 0.5642714483596415,
+    "mastery_acc": 0.7128358297669996,
+    "curve_r2": "N/A",
+    "curve_acc": "N/A",
+    "curve_mae": "N/A",
+    "curve_rmse": "N/A"
+  },
+  "checkpoint_epoch": 3,
+  "checkpoint_val_auc": 0.6906934413297922
+}

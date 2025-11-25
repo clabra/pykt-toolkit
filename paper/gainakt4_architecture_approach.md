@@ -1367,7 +1367,90 @@ def forward(self, q, r, qry, n_a_batch_data, skill_difficulties_data):
 
 ---
 
-### Implementation Checklist - Phase 2: Add Encoder 2 + Head 3 (PENDING)
+### Known Issue: Learning Curve Target Selection (L3 Loss)
+
+**Problem**: Defining an appropriate target for Head 3 (curve prediction) that is both learnable and meaningful remains challenging.
+
+**Attempts and Results**:
+
+1. **Prospective Attempts-to-Mastery** (countdown to future mastery)
+   - **Target**: For each position, predict how many more attempts until mastery (e.g., 5, 4, 3, 2, 1, 0)
+   - **Implementation**: Calculate when skill reaches mastery threshold (3 consecutive correct), count down from that point
+   - **Result**: R² ≈ -0.84 (negative, worse than predicting mean)
+   - **Why it failed**: Prospective target requires looking into the future, which model cannot learn from past interactions alone. Fundamentally unpredictable from retrospective data.
+   - **Code**: `pykt/preprocess/attempts_to_mastery.py`
+
+2. **Global Cumulative Sum** (cumsum of all correct responses)
+   - **Target**: Cumulative count of correct responses up to position t
+   - **Input to Encoder 2**: `cumsum(responses[0:t])`
+   - **Target for Head 3**: `cumsum(responses[0:t+1])`
+   - **Result**: R² > 0.93 (too high, trivially learnable)
+   - **Why it failed**: Head 3 just needs to add +1 or +0 to input based on Head 1's next-response prediction. Nearly deterministic: `target = input + next_response`. Task is too easy and not meaningful.
+
+3. **Per-Skill Practice Counts** (attempted, incomplete)
+   - **Target**: For each position, how many times that specific skill has been practiced (1st, 2nd, 3rd time seeing skill X)
+   - **Rationale**: More meaningful than global cumsum, requires tracking individual skills
+   - **Status**: Implementation in `pykt/preprocess/skill_practice_counts.py` but not fully tested
+   - **Concern**: May still be too predictable if model can track per-skill counters
+
+**Root Cause Analysis**:
+
+The fundamental tension is between **learnability** and **meaningfulness**:
+
+- **Prospective metrics** (attempts until mastery, future performance) are meaningful but unpredictable from past data
+- **Retrospective metrics** (cumsum, practice counts) are learnable but often trivial or provide little educational insight
+- **Information leakage**: Using shifted versions of the input (e.g., `cumsum(t)` as input, `cumsum(t+1)` as target) creates nearly deterministic relationships
+
+The architecture doc specifies L3 should enforce "IRT-based learning trajectories" and "psychometric consistency," but implementing this requires:
+1. Ground truth learning curve parameters (skill difficulties, learner rates) - not available in standard datasets
+2. A way to make these learnable from interaction sequences without future information
+
+**Suggestions for Future Exploration**:
+
+1. **Skill-Specific Mastery Probability** (0-1 continuous)
+   - Target: For each skill, estimate P(mastery | interaction history)
+   - Requires defining "mastery" threshold (e.g., 3 consecutive correct)
+   - Model predicts current mastery level, not future attempts
+   - More interpretable than counts, bounded [0,1]
+
+2. **Learning Rate Estimation** (meta-learning approach)
+   - Target: Estimate per-student learning rate parameter (how quickly they master new skills)
+   - Requires student-level aggregation, not position-level prediction
+   - Could use historical mastery times across multiple skills
+   - Aligns with IRT "learner-specific rates" mentioned in architecture
+
+3. **Skill Difficulty Calibration** (IRT-based)
+   - Target: Predict skill difficulty from interaction patterns
+   - Use external difficulty estimates (e.g., from IRT calibration) as ground truth
+   - Model learns to estimate difficulty from collective student performance
+   - Requires preprocessing to compute difficulty labels
+
+4. **Time-to-Mastery Residuals** (orthogonal to performance)
+   - Target: Residual of actual vs expected time to mastery
+   - Expected time computed from performance predictions (Head 1)
+   - Model learns what Head 1 cannot explain about learning speed
+   - Requires careful feature engineering to avoid trivial solutions
+
+5. **Contrastive Learning Curves** (self-supervised)
+   - No explicit target; use contrastive loss
+   - Similar students should have similar curve representations
+   - Dissimilar learning patterns should be far apart in embedding space
+   - Evaluate via downstream tasks (e.g., predicting dropout, intervention effectiveness)
+
+6. **Remove L3 Entirely for Phase 1** (simplification)
+   - Focus on dual-head single-encoder (L1 + L2 only)
+   - Defer curve learning to future work when better targets identified
+   - Current results show L1 + L2 already provide strong performance and interpretability
+   - Phase 2 (Encoder 2 + Head 3) becomes optional extension
+
+**Current Recommendation**: 
+
+For immediate progress, **option 6** (remove L3/Encoder 2) is most pragmatic. The dual-head single-encoder (Head 1: performance, Head 2: mastery) already achieves the core interpretability goals. Learning curve prediction can be addressed in future work once:
+- Better datasets with ground truth learning trajectories become available
+- Clearer psychometric objectives are defined
+- The learnability vs meaningfulness trade-off is resolved
+
+### Implementation Checklist - Phase 2: Add Encoder 2 + Head 3 (ON HOLD - See Known Issue Above)
 
 #### Model Architecture (`pykt/models/gainakt4.py`)
 

@@ -50,6 +50,13 @@ class KTDataset(Dataset):
                 self.dori = pd.read_pickle(processed_data)
                 for key in self.dori:
                     self.dori[key] = self.dori[key]#[:100]
+        
+        # Add per-skill practice counts if not already present  
+        if 'practice_counts' not in self.dori:
+            print("Computing per-skill practice counts...")
+            from pykt.preprocess.skill_practice_counts import add_practice_counts_to_dataset
+            self.dori = add_practice_counts_to_dataset(self.dori)
+        
         print(f"file path: {file_path}, qlen: {len(self.dori['qseqs'])}, clen: {len(self.dori['cseqs'])}, rlen: {len(self.dori['rseqs'])}")
 
     def __len__(self):

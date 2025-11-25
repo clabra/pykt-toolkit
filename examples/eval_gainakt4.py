@@ -33,8 +33,11 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
     all_labels = []
     all_mastery_preds = []
     all_total_preds = []
+    all_curve_preds = []
+    all_curve_targets = []
     
     has_mastery = False  # Track if mastery predictions exist
+    has_curve = False  # Track if curve predictions exist
     
     with torch.no_grad():
         for batch in test_loader:
@@ -44,13 +47,23 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
             mask = batch['masks'].to(device)
             labels = batch['shft_rseqs'].to(device)
             
+            # Use per-skill practice counts (how many times each skill practiced)
+            attempts = batch['practice_counts'].to(device) if 'practice_counts' in batch else torch.cumsum(responses, dim=1)
+            
             # Forward pass
-            outputs = model(q=questions, r=responses, qry=questions_shifted)
+            outputs = model(q=questions, r=responses, qry=questions_shifted, attempts=attempts)
             
             # Collect predictions
             preds = outputs['bce_predictions'].cpu().numpy()
             labels_np = labels.cpu().numpy()
             mask_np = mask.cpu().numpy()
+            
+            # Check for curve predictions
+            if outputs['curve_predictions'] is not None:
+                has_curve = True
+                curve_preds = outputs['curve_predictions'].cpu().numpy()
+            else:
+                curve_preds = None
             
             # Compute combined predictions (handle None mastery_predictions when λ=1.0)
             if outputs['mastery_predictions'] is not None:
@@ -69,6 +82,16 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
                 if mastery_preds is not None:
                     all_mastery_preds.extend(mastery_preds[i][valid_indices])
                 all_total_preds.extend(combined_preds[i][valid_indices])
+                if curve_preds is not None:
+                    all_curve_preds.extend(curve_preds[i][valid_indices])
+                    # Use shifted practice counts as targets
+                    if 'shft_practice_counts' in batch:
+                        practice_targets = batch['shft_practice_counts'][i].cpu().numpy()
+                        all_curve_targets.extend(practice_targets[valid_indices])
+                    else:
+                        # Fallback to cumsum
+                        cumsum_responses = np.cumsum(labels_np[i][:np.sum(valid_indices)])
+                        all_curve_targets.extend(cumsum_responses)
     
     # Compute metrics
     all_preds = np.array(all_preds)
@@ -85,13 +108,38 @@ def evaluate(model, test_loader, device, lambda_bce=0.9):
     else:
         mastery_metrics = {'auc': 'N/A', 'acc': 'N/A'}
     
+    # Compute curve metrics if curve predictions exist
+    if has_curve:
+        all_curve_preds = np.array(all_curve_preds)
+        all_curve_targets = np.array(all_curve_targets)
+        # For curve: treat as regression
+        curve_mae = np.mean(np.abs(all_curve_preds - all_curve_targets))
+        curve_rmse = np.sqrt(np.mean((all_curve_preds - all_curve_targets) ** 2))
+        curve_within_1 = np.mean(np.abs(all_curve_preds - all_curve_targets) <= 1.0)
+        # Compute R² score (coefficient of determination) for regression
+        if len(np.unique(all_curve_targets)) > 1:
+            try:
+                from sklearn.metrics import r2_score
+                curve_r2 = r2_score(all_curve_targets, all_curve_preds)
+            except:
+                curve_r2 = 'N/A'
+        else:
+            curve_r2 = 'N/A'
+        curve_metrics = {'r2': curve_r2, 'acc': curve_within_1, 'mae': curve_mae, 'rmse': curve_rmse}
+    else:
+        curve_metrics = {'r2': 'N/A', 'acc': 'N/A', 'mae': 'N/A', 'rmse': 'N/A'}
+    
     return {
         'total_auc': total_metrics['auc'],
         'total_acc': total_metrics['acc'],
         'bce_auc': bce_metrics['auc'],
         'bce_acc': bce_metrics['acc'],
         'mastery_auc': mastery_metrics['auc'],
-        'mastery_acc': mastery_metrics['acc']
+        'mastery_acc': mastery_metrics['acc'],
+        'curve_r2': curve_metrics['r2'],
+        'curve_acc': curve_metrics['acc'],
+        'curve_mae': curve_metrics['mae'],
+        'curve_rmse': curve_metrics['rmse']
     }
 
 
@@ -251,6 +299,11 @@ def main():
     mastery_auc_str = f"{test_metrics['mastery_auc']:.4f}" if isinstance(test_metrics['mastery_auc'], float) else test_metrics['mastery_auc']
     mastery_acc_str = f"{test_metrics['mastery_acc']:.4f}" if isinstance(test_metrics['mastery_acc'], float) else test_metrics['mastery_acc']
     print(f"Mastery Head - AUC: {mastery_auc_str}, Acc: {mastery_acc_str}")
+    curve_r2_str = f"{test_metrics['curve_r2']:.4f}" if isinstance(test_metrics['curve_r2'], float) else test_metrics['curve_r2']
+    curve_acc_str = f"{test_metrics['curve_acc']:.4f}" if isinstance(test_metrics['curve_acc'], float) else test_metrics['curve_acc']
+    curve_mae_str = f"{test_metrics['curve_mae']:.4f}" if isinstance(test_metrics['curve_mae'], float) else test_metrics['curve_mae']
+    curve_rmse_str = f"{test_metrics['curve_rmse']:.4f}" if isinstance(test_metrics['curve_rmse'], float) else test_metrics['curve_rmse']
+    print(f"Curve Head - R²: {curve_r2_str}, Acc: {curve_acc_str}, MAE: {curve_mae_str}, RMSE: {curve_rmse_str}")
     print("="*80)
     
     # Save results JSON
@@ -292,8 +345,9 @@ def main():
     metrics_csv_path = os.path.join(args.run_dir, 'metrics_epoch_eval.csv')
     with open(metrics_csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'split', 'total_auc', 'bce_auc', 'mastery_auc',
-            'total_acc', 'bce_acc', 'mastery_acc'
+            'split', 'total_auc', 'bce_auc', 'mastery_auc', 'curve_r2',
+            'total_acc', 'bce_acc', 'mastery_acc', 'curve_acc',
+            'curve_mae', 'curve_rmse'
         ])
         writer.writeheader()
         writer.writerow({
@@ -301,27 +355,39 @@ def main():
             'total_auc': train_metrics['total_auc'],
             'bce_auc': train_metrics['bce_auc'],
             'mastery_auc': train_metrics['mastery_auc'],
+            'curve_r2': train_metrics['curve_r2'],
             'total_acc': train_metrics['total_acc'],
             'bce_acc': train_metrics['bce_acc'],
-            'mastery_acc': train_metrics['mastery_acc']
+            'mastery_acc': train_metrics['mastery_acc'],
+            'curve_acc': train_metrics['curve_acc'],
+            'curve_mae': train_metrics['curve_mae'],
+            'curve_rmse': train_metrics['curve_rmse']
         })
         writer.writerow({
             'split': 'validation',
             'total_auc': valid_metrics['total_auc'],
             'bce_auc': valid_metrics['bce_auc'],
             'mastery_auc': valid_metrics['mastery_auc'],
+            'curve_r2': valid_metrics['curve_r2'],
             'total_acc': valid_metrics['total_acc'],
             'bce_acc': valid_metrics['bce_acc'],
-            'mastery_acc': valid_metrics['mastery_acc']
+            'mastery_acc': valid_metrics['mastery_acc'],
+            'curve_acc': valid_metrics['curve_acc'],
+            'curve_mae': valid_metrics['curve_mae'],
+            'curve_rmse': valid_metrics['curve_rmse']
         })
         writer.writerow({
             'split': 'test',
             'total_auc': test_metrics['total_auc'],
             'bce_auc': test_metrics['bce_auc'],
             'mastery_auc': test_metrics['mastery_auc'],
+            'curve_r2': test_metrics['curve_r2'],
             'total_acc': test_metrics['total_acc'],
             'bce_acc': test_metrics['bce_acc'],
-            'mastery_acc': test_metrics['mastery_acc']
+            'mastery_acc': test_metrics['mastery_acc'],
+            'curve_acc': test_metrics['curve_acc'],
+            'curve_mae': test_metrics['curve_mae'],
+            'curve_rmse': test_metrics['curve_rmse']
         })
     
     print(f"\n✅ Results saved to: {results_path}")

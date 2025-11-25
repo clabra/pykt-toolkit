@@ -64,15 +64,20 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip):
         
         optimizer.zero_grad()
         
+        # Use per-skill practice counts (how many times each skill practiced)
+        attempts = batch['practice_counts'].to(device) if 'practice_counts' in batch else torch.cumsum(responses, dim=1)
+        # Targets: shifted practice counts (predict practice intensity from interaction patterns)
+        attempts_targets = batch['shft_practice_counts'].to(device).float() if 'shft_practice_counts' in batch else torch.cumsum(batch['shft_rseqs'].to(device), dim=1).float()
+        
         # Forward pass
-        outputs = model(q=questions, r=responses, qry=questions_shifted)
+        outputs = model(q=questions, r=responses, qry=questions_shifted, attempts=attempts)
         
         # Get targets
         targets = batch['shft_rseqs'].to(device)
         
         # Compute loss (access through module if DataParallel)
         compute_loss_fn = get_model_attr(model, 'compute_loss')
-        loss_dict = compute_loss_fn(outputs, targets)
+        loss_dict = compute_loss_fn(outputs, targets, attempts_targets=attempts_targets)
         loss = loss_dict['total_loss']
         bce_loss = loss_dict['bce_loss']
         mastery_loss = loss_dict['mastery_loss']
@@ -95,20 +100,24 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip):
     }
 
 
-def validate(model, val_loader, device, lambda_bce=0.9):
+def validate(model, val_loader, device, lambda_bce=0.7):
     """Validate the model."""
     model.eval()
     all_preds = []
     all_labels = []
     all_mastery_preds = []
     all_total_preds = []
+    all_curve_preds = []
+    all_curve_targets = []
     
     total_loss = 0.0
     total_bce_loss = 0.0
     total_mastery_loss = 0.0
+    total_curve_loss = 0.0
     num_batches = 0
     
     has_mastery = False  # Track if mastery predictions exist
+    has_curve = False  # Track if curve predictions exist
     
     with torch.no_grad():
         for batch in val_loader:
@@ -118,22 +127,35 @@ def validate(model, val_loader, device, lambda_bce=0.9):
             mask = batch['masks'].to(device)
             labels = batch['shft_rseqs'].to(device)
             
+            # Use per-skill practice counts (how many times each skill practiced)
+            attempts = batch['practice_counts'].to(device) if 'practice_counts' in batch else torch.cumsum(responses, dim=1)
+            # Targets: shifted practice counts (predict practice intensity from interaction patterns)
+            attempts_targets = batch['shft_practice_counts'].to(device).float() if 'shft_practice_counts' in batch else torch.cumsum(batch['shft_rseqs'].to(device), dim=1).float()
+            
             # Forward pass
-            outputs = model(q=questions, r=responses, qry=questions_shifted)
+            outputs = model(q=questions, r=responses, qry=questions_shifted, attempts=attempts)
             
             # Compute loss (access through module if DataParallel)
             compute_loss_fn = get_model_attr(model, 'compute_loss')
-            loss_dict = compute_loss_fn(outputs, labels)
+            loss_dict = compute_loss_fn(outputs, labels, attempts_targets=attempts_targets)
             loss = loss_dict['total_loss']
             total_loss += loss.item()
             total_bce_loss += loss_dict['bce_loss'].item()
             total_mastery_loss += loss_dict['mastery_loss'].item()
+            total_curve_loss += loss_dict['curve_loss'].item()
             num_batches += 1
             
             # Collect predictions
             preds = outputs['bce_predictions'].cpu().numpy()
             labels_np = labels.cpu().numpy()
             mask_np = mask.cpu().numpy()
+            
+            # Check for curve predictions
+            if outputs['curve_predictions'] is not None:
+                has_curve = True
+                curve_preds = outputs['curve_predictions'].cpu().numpy()
+            else:
+                curve_preds = None
             
             # Compute combined predictions (handle None mastery_predictions when λ=1.0)
             if outputs['mastery_predictions'] is not None:
@@ -152,6 +174,12 @@ def validate(model, val_loader, device, lambda_bce=0.9):
                 if mastery_preds is not None:
                     all_mastery_preds.extend(mastery_preds[i][valid_indices])
                 all_total_preds.extend(combined_preds[i][valid_indices])
+                if curve_preds is not None:
+                    all_curve_preds.extend(curve_preds[i][valid_indices])
+                    # For curve metrics, use cumsum of responses as proxy target
+                    # (in real training, this should come from attempts-to-mastery data)
+                    cumsum_responses = np.cumsum(labels_np[i][:np.sum(valid_indices)])
+                    all_curve_targets.extend(cumsum_responses)
     
     # Compute metrics
     all_preds = np.array(all_preds)
@@ -168,14 +196,40 @@ def validate(model, val_loader, device, lambda_bce=0.9):
     else:
         mastery_metrics = {'auc': 'N/A', 'acc': 'N/A'}
     
+    # Compute curve metrics if curve predictions exist
+    if has_curve:
+        all_curve_preds = np.array(all_curve_preds)
+        all_curve_targets = np.array(all_curve_targets)
+        # For curve: treat as regression
+        curve_mae = np.mean(np.abs(all_curve_preds - all_curve_targets))
+        curve_rmse = np.sqrt(np.mean((all_curve_preds - all_curve_targets) ** 2))
+        curve_within_1 = np.mean(np.abs(all_curve_preds - all_curve_targets) <= 1.0)
+        # Compute R² score (coefficient of determination) for regression
+        if len(np.unique(all_curve_targets)) > 1:
+            try:
+                from sklearn.metrics import r2_score
+                curve_r2 = r2_score(all_curve_targets, all_curve_preds)
+            except:
+                curve_r2 = 'N/A'
+        else:
+            curve_r2 = 'N/A'
+        curve_metrics = {'r2': curve_r2, 'acc': curve_within_1, 'mae': curve_mae, 'rmse': curve_rmse}
+    else:
+        curve_metrics = {'r2': 'N/A', 'acc': 'N/A', 'mae': 'N/A', 'rmse': 'N/A'}
+    
     return {
         'loss': total_loss / num_batches,
         'bce_loss': total_bce_loss / num_batches,
         'mastery_loss': total_mastery_loss / num_batches,
+        'curve_loss': total_curve_loss / num_batches,
         'bce_auc': bce_metrics['auc'],
         'bce_acc': bce_metrics['acc'],
         'mastery_auc': mastery_metrics['auc'],
         'mastery_acc': mastery_metrics['acc'],
+        'curve_r2': curve_metrics['r2'],
+        'curve_acc': curve_metrics['acc'],
+        'curve_mae': curve_metrics['mae'],
+        'curve_rmse': curve_metrics['rmse'],
         'total_auc': total_metrics['auc'],
         'total_acc': total_metrics['acc']
     }
@@ -209,6 +263,11 @@ def main():
     
     # Loss weights
     parser.add_argument('--lambda_bce', type=float, required=True)
+    parser.add_argument('--lambda_mastery', type=float, required=True,
+                       help='Mastery loss weight (if None, computed as 1.0 - lambda_bce - lambda_curve)')
+    parser.add_argument('--lambda_curve', type=float, required=True, 
+                       help='Curve loss weight (default: 0.0 for backward compatibility)')
+    parser.add_argument('--max_attempts', type=int, required=True)
     
     # Monitoring & evaluation
     parser.add_argument('--monitor_freq', type=int, required=True)
@@ -241,10 +300,11 @@ def main():
         with open(metrics_csv_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'epoch', 'lambda', 
-                'val_total_auc', 'val_bce_auc', 'val_mastery_auc',
-                'val_total_acc', 'val_bce_acc', 'val_mastery_acc',
-                'val_total_loss', 'val_bce_loss', 'val_mastery_loss'
+                'epoch', 'lambda_bce', 'lambda_mastery', 'lambda_curve',
+                'val_total_auc', 'val_bce_auc', 'val_mastery_auc', 'val_curve_r2',
+                'val_total_acc', 'val_bce_acc', 'val_mastery_acc', 'val_curve_acc',
+                'val_total_loss', 'val_bce_loss', 'val_mastery_loss', 'val_curve_loss',
+                'val_curve_mae', 'val_curve_rmse'
             ])
     
     print("="*80)
@@ -255,8 +315,15 @@ def main():
     print(f"Epochs: {args.epochs}")
     print(f"Batch size: {args.batch_size}")
     print(f"Learning rate: {args.learning_rate}")
+    # Compute lambda_mastery if not provided
+    if args.lambda_mastery is None:
+        args.lambda_mastery = 1.0 - args.lambda_bce - args.lambda_curve
+    
     print(f"Lambda BCE: {args.lambda_bce}")
-    print(f"Lambda Mastery: {1.0 - args.lambda_bce} (automatically computed)")
+    print(f"Lambda Mastery: {args.lambda_mastery}")
+    print(f"Lambda Curve: {args.lambda_curve}")
+    print(f"Lambda sum: {args.lambda_bce + args.lambda_mastery + args.lambda_curve}")
+    print(f"Max Attempts: {args.max_attempts}")
     print(f"Device: {device}")
     print(f"Experiment dir: {experiment_dir}")
     print("="*80)
@@ -303,7 +370,10 @@ def main():
         d_ff=args.d_ff,
         dropout=args.dropout,
         emb_type=args.emb_type,
-        lambda_bce=args.lambda_bce
+        lambda_bce=args.lambda_bce,
+        lambda_mastery=args.lambda_mastery,
+        lambda_curve=args.lambda_curve,
+        max_attempts=args.max_attempts
     ).to(device)
     
     # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
@@ -357,10 +427,12 @@ def main():
         # Validate
         val_metrics = validate(model, valid_loader, device, args.lambda_bce)
         mastery_auc_str = f"{val_metrics['mastery_auc']:.4f}" if isinstance(val_metrics['mastery_auc'], float) else val_metrics['mastery_auc']
+        curve_r2_str = f"{val_metrics['curve_r2']:.4f}" if isinstance(val_metrics['curve_r2'], float) else val_metrics['curve_r2']
         print(f"Valid - Loss: {val_metrics['loss']:.4f}, "
               f"Total AUC: {val_metrics['total_auc']:.4f}, "
               f"BCE AUC: {val_metrics['bce_auc']:.4f}, "
-              f"Mastery AUC: {mastery_auc_str}")
+              f"Mastery AUC: {mastery_auc_str}, "
+              f"Curve R²: {curve_r2_str}")
         
         # Save history
         epoch_results = {
@@ -382,15 +454,22 @@ def main():
             writer.writerow([
                 epoch + 1,
                 args.lambda_bce,
+                args.lambda_mastery,
+                args.lambda_curve,
                 val_metrics['total_auc'],
                 val_metrics['bce_auc'],
                 val_metrics['mastery_auc'],
+                val_metrics['curve_r2'],
                 val_metrics['total_acc'],
                 val_metrics['bce_acc'],
                 val_metrics['mastery_acc'],
+                val_metrics['curve_acc'],
                 val_metrics['loss'],
                 val_metrics['bce_loss'],
-                val_metrics['mastery_loss']
+                val_metrics['mastery_loss'],
+                val_metrics['curve_loss'],
+                val_metrics['curve_mae'],
+                val_metrics['curve_rmse']
             ])
         
         # Check for improvement (using total_auc as primary metric)
