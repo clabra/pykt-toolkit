@@ -212,6 +212,14 @@ def build_explicit_train_command(train_script, params):
         if isinstance(value, bool):
             if value:
                 cmd_parts.append(f"--{key}")
+        elif value is None or value == "None" or value == "null":
+            # Skip None/null values - these should have defaults in training script
+            # OR be constructed dynamically (e.g., rasch_path = data/{dataset}/rasch_targets.pkl)
+            if key == "rasch_path" and "dataset" in params:
+                # Construct default rasch_path from dataset
+                rasch_path = f"data/{params['dataset']}/rasch_targets.pkl"
+                cmd_parts.append(f"--{key} {rasch_path}")
+            # Otherwise skip None values entirely
         else:
             cmd_parts.append(f"--{key} {value}")
     
@@ -789,6 +797,24 @@ def main():
             print("=" * 80)
             print(f"\nResults saved to: {experiment_folder}")
             print("\nNote: Evaluation is automatically launched by the training script")
+            
+            # Auto-launch mastery states extraction for iKT model
+            if model_name == 'ikt':
+                print("\n" + "=" * 80)
+                print("LAUNCHING MASTERY STATES EXTRACTION (iKT)")
+                print("=" * 80)
+                print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                
+                mastery_result = subprocess.run(mastery_states_command, shell=True)
+                
+                if mastery_result.returncode == 0:
+                    print("\n✓ Mastery states extraction completed")
+                    print(f"  Output files in: {experiment_folder}")
+                    print(f"    - mastery_states_test.csv")
+                    print(f"    - mastery_states_summary_test.json")
+                else:
+                    print("\n⚠️  Mastery states extraction failed (non-critical)")
+            
             print("\nTo reproduce this experiment:")
             print("  python examples/run_repro_experiment.py \\")
             print(f"    --repro_experiment_id {experiment_id}")

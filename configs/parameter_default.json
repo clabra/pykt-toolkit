@@ -1,11 +1,11 @@
 {
   "defaults": {
-    "model": "gainakt4",
+    "model": "ikt",
     "dataset": "assist2015",
     "fold": 0,
     "seed": 42,
-    "train_script": "examples/train_gainakt4.py",
-    "eval_script": "examples/eval_gainakt4.py",
+    "train_script": "examples/train_ikt.py",
+    "eval_script": "examples/eval_ikt.py",
     "epochs": 30,
     "batch_size": 64,
     "learning_rate": 0.0001,
@@ -24,10 +24,10 @@
     "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_bce": 0.7,
-    "lambda_mastery": 0.1,
-    "lambda_curve": 0.2,
-    "max_attempts": 10,
+    "lambda_bce": 0.5,
+    "epsilon": 0.0,
+    "phase": 1,
+    "rasch_path": null,
     "num_trajectories": 10,
     "min_trajectory_steps": 10
   },
@@ -66,15 +66,22 @@
       "emb_type"
     ],
     "loss_weights": [
-      "lambda_bce"
+      "lambda_bce",
+      "epsilon"
+    ],
+    "training_phase": [
+      "phase"
+    ],
+    "data_paths": [
+      "rasch_path"
     ]
   },
   "fixed": {
     "lambda_constraint": {
-      "value": "lambda_mastery = 1.0 - lambda_bce - lambda_curve (when lambda_mastery is null)",
-      "rationale": "GAINAKT4 DUAL-ENCODER ARCHITECTURE (2025-11-25): Multi-task loss weights must sum to 1.0. Three losses: L1 (BCE), L2 (Mastery), L3 (Curve). When lambda_mastery is null, it is auto-computed as 1.0 - lambda_bce - lambda_curve for backward compatibility. This ensures proper gradient weighting: L_total = lambda_bce * L1 + lambda_mastery * L2 + lambda_curve * L3. Default lambda_curve=0.0 maintains Phase 1 (single-encoder) behavior.",
+      "value": "lambda_mastery = 1.0 - lambda_bce",
+      "rationale": "iKT SINGLE-ENCODER ARCHITECTURE (2025-11-27): Multi-task loss weights must sum to 1.0. Two losses: L1 (BCE), L2 (Rasch). lambda_mastery is auto-computed as 1.0 - lambda_bce. Two-phase training: Phase 1 (L_total = L2, epsilon=0), Phase 2 (L_total = lambda_bce * L1 + lambda_mastery * L2, epsilon>0). Epsilon controls tolerance for Rasch deviation in Phase 2.",
       "validated_by_experiments": []
     }
   },
-  "md5": "b0892148f3e7922bdc1ef433e55aca2b"
+  "md5": "a44a13248c56e731acca9498f796e3a9"
 }

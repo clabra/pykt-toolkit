@@ -1627,3 +1627,352 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
 - Config dictionaries control all hyperparameters
 - Easy integration with existing pykt training scripts
 
+---
+
+## Complete Training and Evaluation Workflow
+
+### Overview: Two-Phase Training Strategy
+
+The iKT model follows a two-phase training approach designed to balance prediction performance with interpretability through Rasch IRT alignment:
+
+**Phase 1: Pure Rasch Alignment** - Learn skill representations aligned with IRT theory  
+**Phase 2: Constrained Optimization** - Optimize prediction accuracy while maintaining interpretability
+
+---
+
+### Step 0: Precompute Rasch IRT Targets (One-Time Setup)
+
+Before training, calibrate Rasch model parameters and compute mastery targets from training data.
+
+```bash
+# Compute Rasch targets for assist2015
+python examples/compute_rasch_targets.py \
+    --dataset assist2015 \
+    --max_iterations 50
+
+# Output: data/assist2015/rasch_targets.pkl (201 MB)
+# Contains:
+#   - student_abilities (θ): Student ability parameters
+#   - skill_difficulties (b): Skill difficulty parameters  
+#   - rasch_targets M_rasch[n,s,t]: Mastery targets per student-skill-timestep
+
+# For other datasets:
+python examples/compute_rasch_targets.py --dataset assist2009 --max_iterations 50
+python examples/compute_rasch_targets.py --dataset statics2011 --max_iterations 50
+```
+
+**Rasch Calibration Results (assist2015)**:
+- Students: 15,275
+- Skills: 100
+- Interactions: 544,331
+- Student abilities (θ): Mean=2.475, Std=1.586, Range=[-4.667, 4.850]
+- Skill difficulties (b): Mean=-2.004, Std=0.844, Range=[-3.300, 1.094]
+
+**Note**: If Rasch targets are not available, training will fall back to random placeholders, but interpretability guarantees are lost.
+
+---
+
+### Step 1: Phase 1 Training - Pure Rasch Alignment
+
+**Objective**: Learn skill vectors {Mi} that align with IRT-derived Rasch targets M_rasch
+
+**Loss Function**: `L_total = L2` (Rasch loss only, BCE ignored)  
+**Where**: `L2 = MSE(Mi, M_rasch)` with `epsilon = 0.0` (strict alignment)
+
+**Training Command**:
+```bash
+python examples/run_repro_experiment.py \
+    --short_title ikt_phase1_rasch \
+    --phase 1 \
+    --epsilon 0.0 \
+    --lambda_bce 0.5 \
+    --epochs 20
+    
+# Rasch targets automatically loaded from data/{dataset}/rasch_targets.pkl
+# Or specify custom path:
+# --rasch_path /custom/path/rasch_targets.pkl
+```
+
+**Key Parameters**:
+- `--phase 1`: Activates Phase 1 mode (pure Rasch alignment)
+- `--epsilon 0.0`: Strict alignment, no tolerance for deviation
+- `--lambda_bce 0.5`: Weight parameter (not used in Phase 1, but required for Phase 2)
+- `--epochs 20`: Typical Phase 1 duration
+
+**Expected Behavior**:
+- **Rasch Loss (L2)**: Should decrease and converge (typically to < 0.001)
+- **BCE Loss (L1)**: Still computed for monitoring, but not used in optimization
+- **Architectural Constraints**: Positivity (Mi > 0) and monotonicity (Mi[t+1] ≥ Mi[t]) maintained by design
+- **Output**: Best checkpoint saved based on lowest Rasch loss
+
+**Monitoring**:
+```bash
+# Watch training progress
+tail -f examples/experiments/<experiment_id>/train.log
+
+# Check validation metrics
+grep "Valid" examples/experiments/<experiment_id>/train.log
+```
+
+**Phase 1 Completion Criteria**:
+- ✅ Rasch loss converges and stabilizes
+- ✅ Model learns meaningful skill representations aligned with IRT
+- ✅ No gradient explosions or instabilities
+- ✅ Best checkpoint saved for Phase 2 initialization
+
+---
+
+### Step 2: Phase 2 Training - Constrained Optimization
+
+**Objective**: Optimize prediction accuracy (AUC) while maintaining Rasch alignment within tolerance ε
+
+**Loss Function**: `L_total = λ_bce × L1 + (1-λ_bce) × L2_constrained`  
+**Where**: 
+- `L1 = BCE(predictions, targets)` - Binary cross-entropy for prediction
+- `L2_constrained = MSE(ReLU(|Mi - M_rasch| - ε))` - Rasch loss with tolerance
+- `ε > 0` - Tolerance threshold allowing deviation from Rasch targets
+
+**Training Command (Single Run)**:
+```bash
+python examples/run_repro_experiment.py \
+    --short_title ikt_phase2_eps0.1 \
+    --phase 2 \
+    --epsilon 0.1 \
+    --lambda_bce 0.5 \
+    --epochs 30
+```
+
+**Epsilon Ablation Study (Recommended)**:
+```bash
+# Train multiple models with different epsilon values
+for epsilon in 0.0 0.05 0.1 0.15 0.2 0.3; do
+    python examples/run_repro_experiment.py \
+        --short_title ikt_phase2_eps${epsilon} \
+        --phase 2 \
+        --epsilon ${epsilon} \
+        --lambda_bce 0.5 \
+        --epochs 30
+done
+```
+
+**Key Parameters**:
+- `--phase 2`: Activates Phase 2 mode (constrained optimization)
+- `--epsilon <value>`: Tolerance for Rasch deviation (0.0-0.3 typical range)
+  - **ε = 0.0**: Strict Rasch alignment (same as Phase 1)
+  - **ε = 0.05**: Tight constraint, high interpretability
+  - **ε = 0.15**: Moderate constraint, balanced trade-off
+  - **ε = 0.3**: Loose constraint, prioritizes AUC
+- `--lambda_bce 0.5`: Balanced weight between BCE and Rasch (both 50%)
+- `--epochs 30`: Typical Phase 2 duration
+
+**Expected Trade-Offs**:
+- **Small ε (0.05-0.1)**: 
+  - ✅ High Rasch alignment
+  - ✅ Strong interpretability guarantees
+  - ⚠️ Potentially lower AUC
+  
+- **Large ε (0.2-0.3)**:
+  - ✅ Higher AUC (better prediction performance)
+  - ⚠️ Weaker Rasch alignment
+  - ⚠️ Reduced interpretability
+
+- **Optimal ε**: Typically around 0.1-0.15 (dataset-dependent)
+
+**Monitoring Phase 2**:
+```bash
+# Watch both BCE and Rasch losses
+tail -f examples/experiments/<experiment_id>/train.log | grep -E "Valid|AUC"
+
+# Compare across epsilon values
+grep "Best AUC" examples/experiments/*/train.log
+```
+
+---
+
+### Step 3: Model Evaluation
+
+After training completes, evaluate the best checkpoint on test data.
+
+**Automatic Evaluation** (if `--auto_shifted_eval` was set):
+```bash
+# Evaluation runs automatically after training completes
+# Results saved in: examples/experiments/<experiment_id>/eval_results.json
+```
+
+**Manual Evaluation**:
+```bash
+python examples/eval_ikt.py \
+    --dataset assist2015 \
+    --fold 0 \
+    --model_path examples/experiments/<experiment_id>/best_model.pth \
+    --test_type window \
+    --output_dir examples/experiments/<experiment_id>/eval_results
+
+# Arguments inherited from training config.json automatically
+```
+
+**Evaluation Metrics**:
+- **AUC**: Area under ROC curve (primary metric)
+- **Accuracy**: Binary classification accuracy
+- **BCE Loss**: Binary cross-entropy loss
+- **Rasch Loss**: MSE between Mi and M_rasch (interpretability metric)
+- **Rasch Deviation**: Mean absolute deviation ||Mi - M_rasch||
+
+**Test Types**:
+- `window`: Standard window-based evaluation (pykt default)
+- `standard`: Full sequence evaluation
+- `quelevel`: Question-level evaluation (if available)
+
+---
+
+### Step 4: Results Analysis and Comparison
+
+**Compare Phase 2 Epsilon Variants**:
+```bash
+# Create comparison table
+python -c "
+import json
+import glob
+
+results = []
+for exp_dir in glob.glob('examples/experiments/*ikt_phase2_eps*'):
+    with open(f'{exp_dir}/eval_results.json', 'r') as f:
+        data = json.load(f)
+        epsilon = data['config']['epsilon']
+        auc = data['test_auc']
+        rasch_dev = data.get('test_rasch_deviation', 'N/A')
+        results.append((epsilon, auc, rasch_dev))
+
+results.sort(key=lambda x: x[0])
+print('Epsilon | Test AUC | Rasch Deviation')
+print('--------|----------|----------------')
+for eps, auc, dev in results:
+    print(f'{eps:7.2f} | {auc:8.4f} | {dev}')
+"
+```
+
+**Identify Optimal Model**:
+- Best AUC with acceptable Rasch deviation (typically ε = 0.1-0.15)
+- Check Pareto frontier: AUC vs interpretability trade-off
+- Consider application requirements:
+  - **High-stakes decisions**: Prefer interpretability (small ε)
+  - **Performance-critical**: Prefer AUC (larger ε)
+
+---
+
+### Step 5: Interpretability Analysis (Optional)
+
+Extract and analyze learned skill representations for educational insights.
+
+```bash
+# Extract skill trajectories from trained model
+python examples/analyze_ikt_interpretability.py \
+    --model_path examples/experiments/<best_model_id>/best_model.pth \
+    --rasch_path data/assist2015/rasch_targets.pkl \
+    --dataset assist2015 \
+    --num_students 100 \
+    --output_dir analysis/interpretability
+
+# Generates:
+#   - skill_correlations.csv: Correlation between Mi and M_rasch per skill
+#   - trajectory_plots/: Mastery evolution visualizations
+#   - deviation_analysis.csv: Deviation patterns by skill difficulty
+#   - interpretability_report.pdf: Comprehensive analysis report
+```
+
+**Key Analyses**:
+1. **Skill-Level Correlation**: How well do learned representations align with IRT?
+2. **Trajectory Visualizations**: Mastery growth curves for individual students
+3. **Difficulty Analysis**: Do harder skills (high b) show lower mastery?
+4. **Monotonicity Validation**: Confirm Mi[t+1] ≥ Mi[t] throughout sequences
+5. **Educational Insights**: Identify struggling students, skill gaps, learning patterns
+
+---
+
+### Complete Workflow Summary
+
+```bash
+# 0. One-time setup: Compute Rasch targets
+python examples/compute_rasch_targets.py --dataset assist2015 --max_iterations 50
+
+# 1. Phase 1: Pure Rasch alignment
+python examples/run_repro_experiment.py \
+    --short_title ikt_phase1_rasch \
+    --phase 1 --epsilon 0.0 --epochs 20
+
+# 2. Phase 2: Epsilon ablation study  
+for epsilon in 0.05 0.1 0.15 0.2 0.3; do
+    python examples/run_repro_experiment.py \
+        --short_title ikt_phase2_eps${epsilon} \
+        --phase 2 --epsilon ${epsilon} --epochs 30
+done
+
+# 3. Evaluate all models (automatic if --auto_shifted_eval set)
+# Results in: examples/experiments/*/eval_results.json
+
+# 4. Compare and select best model
+python scripts/compare_epsilon_ablation.py
+
+# 5. Generate interpretability analysis
+python examples/analyze_ikt_interpretability.py \
+    --model_path examples/experiments/<best>/best_model.pth \
+    --output_dir analysis/interpretability
+```
+
+---
+
+### Expected Timeline
+
+**For assist2015 dataset on 6x V100 GPUs**:
+- Rasch calibration: ~2-5 minutes
+- Phase 1 training (20 epochs): ~30-40 minutes
+- Phase 2 training (30 epochs, per ε): ~45-60 minutes
+- Total for full ablation (5 ε values): ~4-5 hours
+- Evaluation per model: ~5-10 minutes
+- Interpretability analysis: ~10-15 minutes
+
+**Total end-to-end workflow**: ~5-6 hours
+
+---
+
+### Troubleshooting
+
+**Issue**: Rasch loss shows 0.0000 during training
+- **Cause**: Rasch targets not loading correctly (using random placeholders)
+- **Fix**: Verify `rasch_targets.pkl` exists in `data/{dataset}/` directory
+- **Check**: Look for "✓ Loaded real Rasch IRT targets" in training log
+
+**Issue**: Phase 1 Rasch loss not decreasing
+- **Cause**: Learning rate too high, or architectural constraints conflicting
+- **Fix**: Reduce learning rate to 0.00005, increase gradient clipping
+- **Check**: Monitor gradient norms, ensure no NaN values
+
+**Issue**: Phase 2 AUC lower than baseline
+- **Cause**: Rasch constraint too strict (small ε), or Phase 1 not converged
+- **Fix**: Increase ε to 0.15-0.2, ensure Phase 1 completed successfully
+- **Check**: Compare with pure BCE baseline (no Rasch loss)
+
+**Issue**: Out of memory errors
+- **Cause**: Too many GPUs, batch size too large
+- **Fix**: Reduce batch_size from 64 to 32, or use fewer GPUs
+- **Check**: Monitor GPU memory usage with `nvidia-smi`
+
+---
+
+### References
+
+**Training Scripts**:
+- `examples/train_ikt.py` - Main training script (Phase 1 & 2)
+- `examples/eval_ikt.py` - Evaluation script
+- `examples/run_repro_experiment.py` - Experiment launcher with reproducibility checks
+- `examples/compute_rasch_targets.py` - Rasch IRT calibration
+
+**Documentation**:
+- `examples/reproducibility.md` - Reproducibility protocol and guidelines
+- `paper/rasch_model.md` - Rasch IRT theory and integration details
+- `paper/ikt_architecture_approach.md` - iKT architecture specification (this document)
+
+**Model Code**:
+- `pykt/models/ikt.py` - iKT model implementation (379 lines)
+- `pykt/config.py` - Model configuration and factory functions
+

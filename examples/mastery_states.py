@@ -5,6 +5,10 @@ Mastery States Analyzer for Knowledge Tracing Models
 This script calculates mastery states for each skill practiced in each question
 at each time step. Works with both single-skill and multi-skill questions.
 
+Supported Models:
+    - iKT: Extracts {Mi} skill vectors from Head 2 (mastery head)
+    - GainAKT4: Extracts skill_vector (KC vector) from mastery representations
+
 Usage:
     # Analyze test set (default: 20 students)
     python examples/mastery_states.py --run_dir <experiment_dir> --split test
@@ -65,6 +69,7 @@ from pykt.datasets import init_dataset4train
 from pykt.datasets.data_loader import KTDataset
 from torch.utils.data import DataLoader
 from pykt.models.gainakt4 import GainAKT4
+from pykt.models.ikt import iKT
 
 
 def load_model_and_config(run_dir, ckpt_name):
@@ -96,19 +101,38 @@ def load_model_and_config(run_dir, ckpt_name):
     
     num_c = data_config[config['dataset']]['num_c']
     
-    # Initialize model
+    # Initialize model based on model type
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = GainAKT4(
-        num_c=num_c,
-        seq_len=config['seq_len'],
-        d_model=config['d_model'],
-        n_heads=config['n_heads'],
-        num_encoder_blocks=config['num_encoder_blocks'],
-        d_ff=config['d_ff'],
-        dropout=config['dropout'],
-        emb_type=config['emb_type'],
-        lambda_bce=config['lambda_bce']
-    ).to(device)
+    model_name = config.get('model', 'gainakt4')
+    
+    if model_name == 'ikt':
+        # iKT model
+        model = iKT(
+            num_c=num_c,
+            seq_len=config['seq_len'],
+            d_model=config['d_model'],
+            n_heads=config['n_heads'],
+            num_encoder_blocks=config['num_encoder_blocks'],
+            d_ff=config['d_ff'],
+            dropout=config['dropout'],
+            emb_type=config['emb_type'],
+            lambda_bce=config['lambda_bce'],
+            epsilon=config.get('epsilon', 0.0),
+            phase=config.get('phase', 1)
+        ).to(device)
+    else:
+        # GainAKT4 model (default)
+        model = GainAKT4(
+            num_c=num_c,
+            seq_len=config['seq_len'],
+            d_model=config['d_model'],
+            n_heads=config['n_heads'],
+            num_encoder_blocks=config['num_encoder_blocks'],
+            d_ff=config['d_ff'],
+            dropout=config['dropout'],
+            emb_type=config['emb_type'],
+            lambda_bce=config['lambda_bce']
+        ).to(device)
     
     # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
     if device.type == 'cuda' and torch.cuda.device_count() > 1:
