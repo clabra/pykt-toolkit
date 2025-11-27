@@ -1976,3 +1976,418 @@ python examples/analyze_ikt_interpretability.py \
 - `pykt/models/ikt.py` - iKT model implementation (379 lines)
 - `pykt/config.py` - Model configuration and factory functions
 
+
+---
+
+## Mastery Target Methods: BKT vs IRT/Rasch
+
+The iKT model uses pre-computed mastery targets for L2 (Mastery Loss) to guide skill vector learning. We support two methods for computing these targets: **BKT (Bayesian Knowledge Tracing)** and **IRT/Rasch (Item Response Theory)**.
+
+### Overview
+
+| Aspect | BKT | IRT/Rasch |
+|--------|-----|-----------|
+| **Paradigm** | Dynamic knowledge tracing | Psychometric measurement |
+| **Parameters** | P(L0), P(T), P(S), P(G) per skill | θ (ability), β (difficulty) per skill |
+| **Learning Model** | Explicit learning transition | Bayesian evidence accumulation |
+| **Prediction** | P(correct) = P(L)×(1-P(S)) + (1-P(L))×P(G) | P(correct) = σ(θ-β) |
+| **Monotonicity** | Near-monotonic with learning | Non-monotonic with uncertainty |
+| **Interpretability** | Educational (learning, slip, guess) | Psychometric (latent ability) |
+
+### Computation Scripts
+
+#### 1. BKT Targets
+
+```bash
+# Compute BKT mastery targets
+python examples/compute_bkt_targets.py \
+  --dataset assist2015 \
+  --output_path data/assist2015/bkt_targets.pkl
+```
+
+**Process:**
+1. Prepares data in pyBKT format (user_id, skill_name, correct, order_id)
+2. Fits BKT model via EM algorithm (learns P(L0), P(T), P(S), P(G) per skill)
+3. Runs forward algorithm to compute P(learned) at each timestep
+4. Saves targets as `bkt_targets.pkl`
+
+**Output structure:**
+```python
+{
+    'bkt_targets': {student_id: torch.Tensor[seq_len, num_skills]},
+    'bkt_params': {skill_id: {'prior', 'learns', 'slips', 'guesses'}},
+    'metadata': {'dataset', 'num_students', 'num_skills', 'method': 'BKT'}
+}
+```
+
+#### 2. IRT/Rasch Targets
+
+```bash
+# Compute IRT/Rasch mastery targets (dynamic skill-specific)
+python examples/compute_rasch_targets.py \
+  --dataset assist2015 \
+  --dynamic \
+  --learning_rate 0.0 \
+  --output_path data/assist2015/rasch_targets_cumulative.pkl
+```
+
+**Process:**
+1. Calibrates Rasch model on all training data using py-irt
+2. Computes skill-specific ability θₛ for each student
+3. At each timestep t, recalibrates θₛ using all observations of skill s
+4. Computes mastery: M[t,s] = σ(θₛ - βₛ)
+
+**Output structure:**
+```python
+{
+    'rasch_targets': {student_id: torch.Tensor[seq_len, num_skills]},
+    'student_abilities': {student_id: float},
+    'skill_difficulties': {skill_id: float},
+    'metadata': {'dataset', 'num_students', 'num_skills', 'method': 'dynamic IRT'}
+}
+```
+
+### Training with Mastery Methods
+
+The `--mastery_method` parameter specifies which approach to use:
+
+```bash
+# Train with BKT targets (default)
+python examples/train_ikt.py \
+  --config configs/your_config.json \
+  --rasch_path data/assist2015/bkt_targets.pkl \
+  --mastery_method bkt
+
+# Train with IRT/Rasch targets
+python examples/train_ikt.py \
+  --config configs/your_config.json \
+  --rasch_path data/assist2015/rasch_targets_cumulative.pkl \
+  --mastery_method irt
+```
+
+**Implementation notes:**
+- The loading function automatically detects file format (`bkt_targets` vs `rasch_targets` key)
+- Both formats are normalized internally to common `rasch_targets` key
+- L2 loss computation is identical for both methods: MSE(Mi, M_target)
+
+### Comparison: Student 2606 Example
+
+#### Predictions Table
+
+| Step | Skill | Resp | BKT_M  | BKT_P  | Rasch_M | Rasch_P | BKT_Err | Rasch_Err |
+|------|-------|------|--------|--------|---------|---------|---------|-----------|
+| 0    | 92    | 0    | 0.6220 | 0.5520 | 0.2034  | 0.2034  | 0.3047  | 0.0414    |
+| 1    | 4     | 1    | 0.7758 | 0.6907 | 0.9889  | 0.9889  | 0.0957  | 0.0001    |
+| 2    | 4     | 0    | 0.6500 | 0.6532 | 0.6667  | 0.6667  | 0.4267  | 0.4445    |
+| 3    | 4     | 0    | 0.5127 | 0.6123 | 0.5000  | 0.5000  | 0.3749  | 0.2500    |
+| ...  | ...   | ...  | ...    | ...    | ...     | ...     | ...     | ...       |
+| Mean | -     | -    | 0.4967 | 0.6049 | 0.4170  | 0.4170  | 0.2408  | 0.1845    |
+
+**Legend:**
+- **BKT_M**: BKT Mastery P(learned)
+- **BKT_P**: BKT Prediction = P(L)×(1-P(S)) + (1-P(L))×P(G)
+- **Rasch_P**: Rasch Prediction (same as mastery)- **Rasch_M**: Rasch Mastery σ(θ-
+- **Errors**: Squared prediction error (response - prediction)²
+
+#### Performance Metrics
+
+| Metric | BKT | Rasch | Winner | Difference |
+|--------|-----|-------|--------|------------|
+| **MSE** (lower better) | 0.2408 | 0.1845 | Rasch | -23.4% |
+| **RMSE** (lower better) | 0.4908 | 0.4295 | Rasch | -12.5% |
+| **AUC** (higher better) | 0.8037 | 0.7778 | BKT | +3.3% |
+
+#### Skill-Level Analysis
+
+**Skill 4** (14 attempts, 50% success rate):
+```
+Responses: [1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1]
+BKT:       [0.776, 0.650, 0.513, 0.673, 0.797, 0.676, 0.539, 0.695, 0.558, 0.430, 0.332, 0.510, 0.671, 0.795]
+Rasch:     [0.989, 0.667, 0.500, 0.603, 0.665, 0.574, 0.502, 0.558, 0.502, 0.455, 0.416, 0.462, 0.501, 0.535]
+
+BKT:   Range=0.464, Trend=6/13 increases, Avg|diff|=0.097
+Rasch: Range=0.573, Trend=6/13 increases, Avg|diff|=0.097
+```
+
+**Skill 19** (15 attempts, 53% success rate):
+```
+Responses: [0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1]
+BKT:       [0.415, 0.242, 0.151, 0.294, 0.176, 0.327, 0.506, 0.302, 0.180, 0.332, 0.511, 0.305, 0.482, 0.656, 0.793]
+Rasch:     [0.065, 0.017, 0.008, 0.362, 0.290, 0.408, 0.486, 0.430, 0.385, 0.444, 0.491, 0.453, 0.492, 0.526, 0.556]
+
+BKT:   Range=0.641, Trend=8/14 increases, Avg|diff|=0.133
+Rasch: Range=0.547, Trend=8/14 increases, Avg|diff|=0.133
+```
+
+**Skill 92** (2 attempts, 0% success rate):
+```
+Responses: [0, 0]
+BKT:       [0.622, 0.647]    # Optimistic due to learning transition
+Rasch:     [0.203, 0.039]    # Pessimistic based on evidence
+
+BKT:   Trend=1/1 increases
+Rasch: Trend=0/1 increases (decreases)
+```
+
+### Statistical Properties
+
+#### BKT Characteristics:
+- **Mean prediction**: 0.6049 (moderate, bounded by slip/guess)
+- **Prediction range**: [0.485, 0.733] (narrow, stable)
+- **Standard deviation**: 0.066 (low variability)
+- **Behavior**: Smoother predictions, maintains optimism even after errors
+
+#### Rasch Characteristics:
+- **Mean prediction**: 0.4170 (lower, evidence-driven)
+- **Prediction range**: [0.008, 0.989] (wide, adaptive)
+- **Standard deviation**: 0.213 (high variability)
+- **Behavior**: More extreme values, adapts quickly to evidence
+
+### Interpretation
+
+#### BKT Advantages:
+1. **Better AUC (0.804 vs 0.778)**: Superior at ranking/discrimination
+2. **Educational interpretation**: P(T) models learning explicitly
+3. **Stable predictions**: Slip/guess parameters prevent extreme values
+4. **Optimistic for struggling students**: Maintains belief in learning potential
+
+#### Rasch Advantages:
+1. **Better MSE (0.185 vs 0.241)**: Superior calibration/accuracy
+2. **Evidence-based**: Adapts quickly to actual performance
+3. **Realistic for low performers**: Doesn't overestimate poor students
+4. **Psychometric foundation**: Established measurement theory
+
+### Recommendations
+
+#### Use **BKT** when:
+- **Educational applications** require interpretable parameters (learning rate, slip, guess)
+- **Ranking quality** matters more than absolute accuracy
+- **Optimistic estimates** are preferred (encouragement, adaptive sequencing)
+- **Learning dynamics** need to be modeled explicitly
+- Dataset has clear learning progression patterns
+
+#### Use **Rasch/IRT** when:
+- **Prediction accuracy** (MSE) is the primary concern
+- **Calibration** matters for downstream applications
+- **Conservative estimates** are preferred (assessment, placement)
+- **Psychometric properties** (reliability, validity) are important
+- Dataset has heterogeneous skill difficulties
+
+#### For iKT Training:
+- **L2 Loss** uses MSE, favoring calibration → **Rasch may be better**
+- **Interpretability** of learned skill vectors → **BKT may be better**
+- **Default choice**: **BKT** (balances both objectives, more KT-appropriate)
+
+### Practical Usage
+
+#### 1. Generate Both Targets (Recommended)
+
+```bash
+# Generate BKT targets
+python examples/compute_bkt_targets.py \
+  --dataset assist2015 \
+  --output_path data/assist2015/bkt_targets.pkl
+
+# Generate IRT targets
+python examples/compute_rasch_targets.py \
+  --dataset assist2015 \
+  --dynamic \
+  --learning_rate 0.0 \
+  --output_path data/assist2015/rasch_targets_cumulative.pkl
+```
+
+#### 2. Train with Both Methods
+
+**Note**: The iKT model uses an **automatic two-phase training** strategy:
+- **Phase 1** (Rasch Alignment): Pure L2 loss to initialize skill vectors matching mastery targets
+- **Phase 2** (Constrained Optimization): Combined loss λ_bce×L1 + λ_mastery×(L2+L3) with epsilon tolerance
+- **Automatic switching**: Phase 1 runs until convergence (early stopping), then automatically switches to Phase 2
+
+**How it works:**
+1. Training starts in Phase 1 with pure Rasch alignment (L2 loss only)
+2. When Phase 1 converges (patience epochs without improvement), automatically switches to Phase 2
+3. Phase 2 continues with combined loss until convergence or epochs exhausted
+4. Warnings issued if insufficient epochs for both phases to converge
+
+**Training modes:**
+
+```bash
+# DEFAULT: Automatic two-phase training
+# Phase 1 runs until convergence, then auto-switches to Phase 2
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets.pkl \
+  --override mastery_method=bkt
+
+# Manual Phase 1 only (for debugging/analysis)
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets.pkl \
+  --override mastery_method=bkt \
+  --override phase=1
+
+# Manual Phase 2 only (advanced use, not recommended)
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets.pkl \
+  --override mastery_method=bkt \
+  --override phase=2
+
+# With different mastery methods
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/rasch_targets_cumulative.pkl \
+  --override mastery_method=irt
+
+# With monotonic targets
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets_mono.pkl \
+  --override mastery_method=bkt_mono
+```
+
+**Recommendations:**
+- **Default (phase=null)**: Use automatic two-phase for production training
+- **Manual phase=1**: Only for analyzing Phase 1 convergence
+- **Manual phase=2**: Advanced use only, requires careful setup
+
+#### 3. Compare Results
+
+Compare the trained models on:
+- **AUC/ACC** on test set (performance prediction)
+- **L2 loss** convergence (mastery alignment)
+- **Interpretability** of learned skill vectors
+- **Monotonicity** satisfaction rate
+
+### Implementation Details
+
+The mastery method parameter is handled transparently:
+
+1. **Parameter specification**: `--mastery_method {bkt,irt}` (default: `bkt`)
+2. **File detection**: Automatic based on `bkt_targets` vs `rasch_targets` key
+3. **Normalization**: Both formats converted to common `rasch_targets` internally
+4. **Loss computation**: Identical MSE(Mi, M_target) for both methods
+5. **Metadata tracking**: Method recorded in experiment config for reproducibility
+
+### Monotonic Smoothing (New Feature)
+
+Both BKT and IRT methods now support optional **monotonic smoothing**, which enforces that once a student's mastery probability increases for a skill, it never decreases in subsequent timesteps.
+
+#### Algorithm
+
+For each student and each skill independently:
+1. Start with first timestep value (unchanged)
+2. For timestep $t$ from 1 to $T-1$:
+   - If $M[t] < M[t-1]$: set $M[t] = M[t-1]$ (force monotonicity)
+   - Otherwise: keep $M[t]$ unchanged (already monotonic)
+
+**Properties:**
+- **Skill-wise independence**: Each skill's trajectory is smoothed independently
+- **Forward-only**: Single pass through the sequence, O(seq_len × num_skills)
+- **Preserves increases**: Only prevents decreases, never reduces mastery values
+- **No lookahead**: Decision at timestep $t$ only depends on $t-1$
+
+**Example for Skill 42:**
+```
+Original:  [0.60, 0.75, 0.65, 0.80, 0.70]
+Smoothed:  [0.60, 0.75, 0.75, 0.80, 0.80]
+            ↑     ↑     ↑     ↑     ↑
+            keep  keep  fix   keep  fix
+```
+
+#### File Generation
+
+Both computation scripts now automatically generate **two versions** of each target file:
+
+```bash
+# Generate BKT targets (creates both standard and monotonic versions)
+python examples/compute_bkt_targets.py --dataset assist2015
+# Output:
+#   - data/assist2015/bkt_targets.pkl (standard, monotonic=False)
+#   - data/assist2015/bkt_targets_mono.pkl (smoothed, monotonic=True)
+
+# Generate IRT targets (creates both standard and monotonic versions)
+python examples/compute_rasch_targets.py \
+  --dataset assist2015 \
+  --dynamic \
+  --learning_rate 0.0
+# Output:
+#   - data/assist2015/rasch_targets_cumulative.pkl (standard, monotonic=False)
+#   - data/assist2015/rasch_targets_cumulative_mono.pkl (smoothed, monotonic=True)
+```
+
+**Naming convention**: Monotonic versions have `_mono` suffix before `.pkl`
+
+#### Training with Monotonic Targets
+
+The `--mastery_method` parameter now accepts **four values**:
+- `bkt`: Standard BKT (allows non-monotonic trajectories)
+- `irt`: Standard IRT/Rasch (allows non-monotonic trajectories)
+- `bkt_mono`: Monotonic BKT (enforces monotonicity)
+- `irt_mono`: Monotonic IRT/Rasch (enforces monotonicity)
+
+**Examples:**
+
+```bash
+# Train with standard BKT
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets.pkl \
+  --override mastery_method=bkt
+
+# Train with monotonic BKT
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/bkt_targets_mono.pkl \
+  --override mastery_method=bkt_mono
+
+# Train with standard IRT
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/rasch_targets_cumulative.pkl \
+  --override mastery_method=irt
+
+# Train with monotonic IRT
+python examples/run_repro_experiment.py \
+  --config configs/my_config.json \
+  --override rasch_path=data/assist2015/rasch_targets_cumulative_mono.pkl \
+  --override mastery_method=irt_mono
+```
+
+The training script automatically verifies that the file's `metadata['monotonic']` field matches the requested method and displays a warning if there's a mismatch.
+
+#### When to Use Monotonic Smoothing
+
+**Use monotonic smoothing when:**
+- You believe mastery is truly **permanent** (no forgetting)
+- Educational policy requires **"no regression"** guarantees
+- You want more **optimistic/encouraging** progression trajectories
+- Slip/guess parameters might **overestimate measurement uncertainty**
+- Downstream applications require **guaranteed monotonic progression**
+
+**Use standard (non-monotonic) when:**
+- **Forgetting** is a real phenomenon in your domain
+- You want **measurement uncertainty** reflected in targets
+- **Statistical realism** is more important than pedagogical messaging
+- You want to preserve the **theoretical properties** of BKT or IRT (especially slip/guess in BKT)
+
+#### Comparison Summary
+
+| Version | BKT Standard | BKT Monotonic | IRT Standard | IRT Monotonic |
+|---------|--------------|---------------|--------------|---------------|
+| **Trajectory** | Can decrease | Never decreases | Can decrease | Never decreases |
+| **Realism** | Realistic uncertainty | Idealized progression | Realistic uncertainty | Idealized progression |
+| **Forgetting** | Allowed (via slip) | Not allowed | Allowed (ability drop) | Not allowed |
+| **Use Case** | Research, realism | Education, policy | Psychometrics | High-stakes assessment |
+
+### Future Extensions
+
+Potential hybrid approaches:
+- **Ensemble**: Weighted average of BKT and Rasch predictions
+- **Adaptive**: Use BKT early (learning), switch to Rasch late (assessment)
+- **Skill-specific**: BKT for high-practice skills, Rasch for sparse data
+- **Multi-parameter IRT**: Extend to 2PL/3PL models with discrimination parameters
+- **Hybrid monotonicity**: Apply smoothing only to select skills or time ranges
+
+---
+

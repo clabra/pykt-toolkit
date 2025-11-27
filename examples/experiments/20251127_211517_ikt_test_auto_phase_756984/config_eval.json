@@ -1,0 +1,17 @@
+{
+  "run_dir": "/workspaces/pykt-toolkit/examples/experiments/20251127_211517_ikt_test_auto_phase_756984",
+  "ckpt_name": "model_best.pth",
+  "dataset": "assist2015",
+  "fold": 0,
+  "batch_size": 64,
+  "seq_len": 200,
+  "d_model": 256,
+  "n_heads": 4,
+  "num_encoder_blocks": 8,
+  "d_ff": 1536,
+  "dropout": 0.2,
+  "emb_type": "qid",
+  "lambda_bce": 1.0,
+  "epsilon": 0.05,
+  "phase": 2
+}

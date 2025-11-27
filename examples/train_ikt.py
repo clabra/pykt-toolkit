@@ -57,21 +57,25 @@ def get_model_attr(model, attr_name):
     return getattr(model, attr_name)
 
 
-def load_rasch_targets(rasch_path, dataset_path, num_c):
+def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method='bkt'):
     """
-    Load pre-computed Rasch mastery targets from preprocessed data.
+    Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
     
     Args:
-        rasch_path: Path to Rasch targets pickle file (if None, uses default or random)
+        rasch_path: Path to mastery targets pickle file (if None, uses default or random)
         dataset_path: Path to dataset directory
         num_c: Number of concepts/skills
+        mastery_method: Method used ('bkt', 'irt', 'bkt_mono', 'irt_mono')
     
     Returns:
-        dict: Dictionary with Rasch targets and metadata
+        dict: Dictionary with mastery targets and metadata
               - If file exists: {'rasch_targets': dict, 'student_abilities': dict, ...}
               - If not: {'mode': 'random', 'num_c': num_c}
     """
     import pickle
+    
+    # Determine if monotonic version requested
+    is_monotonic = mastery_method.endswith('_mono')
     
     # Determine Rasch file path
     if rasch_path is None:
@@ -79,28 +83,51 @@ def load_rasch_targets(rasch_path, dataset_path, num_c):
     
     # Try to load from file
     if os.path.exists(rasch_path):
-        print(f"✓ Loading Rasch targets from: {rasch_path}")
+        print(f"✓ Loading mastery targets from: {rasch_path}")
+        print(f"  Method: {mastery_method.upper()}")
+        if is_monotonic:
+            print(f"  Monotonic smoothing: ENABLED")
+        
         try:
             with open(rasch_path, 'rb') as f:
                 data = pickle.load(f)
             
-            # Validate loaded data
-            if 'rasch_targets' not in data:
-                raise ValueError("Invalid Rasch file: missing 'rasch_targets' key")
+            # Handle both BKT and IRT formats
+            # Normalize to common 'rasch_targets' key
+            if 'bkt_targets' in data:
+                data['rasch_targets'] = data['bkt_targets']
+                print(f"  Loaded BKT targets for {len(data['bkt_targets'])} students")
+                if 'bkt_params' in data:
+                    print(f"  BKT parameters available for {len(data['bkt_params'])} skills")
+            elif 'rasch_targets' in data:
+                print(f"  Loaded IRT/Rasch targets for {len(data['rasch_targets'])} students")
+            else:
+                raise ValueError("Invalid mastery file: missing 'bkt_targets' or 'rasch_targets' key")
             
-            print(f"  Loaded targets for {len(data['rasch_targets'])} students")
             if 'metadata' in data:
-                print(f"  Metadata: {data['metadata']}")
+                meta = data['metadata']
+                print(f"  Metadata: {meta}")
+                
+                # Verify monotonic status if specified
+                file_monotonic = meta.get('monotonic', False)
+                if is_monotonic and not file_monotonic:
+                    print(f"  ⚠️  WARNING: Requested monotonic version but file has monotonic={file_monotonic}")
+                    print(f"             Make sure you're loading the correct file (e.g., *_mono.pkl)")
+                elif not is_monotonic and file_monotonic:
+                    print(f"  ⚠️  WARNING: Requested standard version but file has monotonic={file_monotonic}")
+                    print(f"             Make sure you're loading the correct file (not *_mono.pkl)")
             
             return data
             
         except Exception as e:
-            print(f"✗ Failed to load Rasch targets: {e}")
+            print(f"✗ Failed to load mastery targets: {e}")
             print("  Falling back to random initialization")
     else:
-        print(f"⚠️  Rasch targets not found at: {rasch_path}")
+        print(f"⚠️  Mastery targets not found at: {rasch_path}")
         print("  Using random initialization in [0.0, 1.0] (placeholder)")
-        print(f"  To compute real targets, run: python examples/compute_rasch_targets.py --dataset {{dataset}}")
+        print(f"  To compute real targets:")
+        print(f"    BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}")
+        print(f"    IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic")
     
     # Fallback: Return flag for random generation
     return {'mode': 'random', 'num_c': num_c}
@@ -286,10 +313,12 @@ def main():
     parser.add_argument('--lambda_bce', type=float, required=True)
     parser.add_argument('--epsilon', type=float, required=True, 
                        help='Rasch tolerance threshold for Phase 2 (0.0 for Phase 1)')
-    parser.add_argument('--phase', type=int, required=True, 
-                       help='Training phase: 1 (Rasch alignment) or 2 (constrained optimization)')
+    parser.add_argument('--phase', type=str, required=True,
+                       help='Training phase: "1" (Rasch alignment), "2" (constrained optimization), or "null" (automatic two-phase)')
     parser.add_argument('--rasch_path', type=str, required=True,
                        help='Path to Rasch targets file (default: data/{dataset}/rasch_targets.pkl)')
+    parser.add_argument('--mastery_method', type=str, required=True, choices=['bkt', 'irt', 'bkt_mono', 'irt_mono'],
+                       help='Method for mastery targets: bkt, irt, bkt_mono (monotonic BKT), or irt_mono (monotonic IRT)')
     
     # Monitoring & evaluation
     parser.add_argument('--monitor_freq', type=int, required=True)
@@ -328,17 +357,26 @@ def main():
                 'train_total_loss', 'train_bce_loss', 'train_rasch_loss'
             ])
     
+    # Determine training mode
+    # Handle string "null" from CLI (required for reproducibility compliance)
+    if args.phase == "null" or args.phase is None:
+        training_mode = "automatic_two_phase"
+        current_phase = 1  # Start with Phase 1
+    else:
+        training_mode = "manual_single_phase"
+        current_phase = int(args.phase)
+    
     print("="*80)
     print("iKT Training")
     print("="*80)
     print(f"Dataset: {args.dataset}")
     print(f"Fold: {args.fold}")
+    print(f"Training mode: {'Automatic two-phase (Phase 1 → Phase 2)' if training_mode == 'automatic_two_phase' else f'Manual single-phase (Phase {current_phase})'}")
     print(f"Epochs: {args.epochs}")
     print(f"Batch size: {args.batch_size}")
     print(f"Learning rate: {args.learning_rate}")
     print(f"Lambda BCE: {args.lambda_bce} (Lambda Mastery: {1.0 - args.lambda_bce})")
     print(f"Epsilon: {args.epsilon}")
-    print(f"Phase: {args.phase}")
     print(f"Device: {device}")
     print(f"Experiment dir: {experiment_dir}")
     print("="*80)
@@ -376,8 +414,8 @@ def main():
     print(f"✓ Validation batches: {len(valid_loader)}")
     
     # Load Rasch targets if available
-    print("\n🎯 Loading Rasch targets...")
-    rasch_targets = load_rasch_targets(args.rasch_path, dataset_path, num_c)
+    print("\n🎯 Loading Mastery targets...")
+    rasch_targets = load_rasch_targets(args.rasch_path, dataset_path, num_c, args.mastery_method)
     if rasch_targets is not None:
         if rasch_targets.get('mode') == 'random':
             print(f"✓ Using random Rasch targets (placeholder)")
@@ -436,10 +474,17 @@ def main():
     
     # Training loop
     print("\n🚀 Starting training...")
-    print(f"Phase {args.phase}: {'Rasch Alignment' if args.phase == 1 else 'Constrained Optimization'}")
+    if training_mode == "automatic_two_phase":
+        print(f"Phase 1: Rasch Alignment (will auto-switch to Phase 2 on convergence)")
+    else:
+        print(f"Phase {current_phase}: {'Rasch Alignment' if current_phase == 1 else 'Constrained Optimization'}")
+    
     best_val_auc = 0.0
     patience_counter = 0
     history = []
+    phase1_converged = False
+    phase1_best_epoch = 0
+    phase2_started_epoch = 0
     
     for epoch in range(args.epochs):
         print(f"\n{'='*80}")
@@ -477,7 +522,7 @@ def main():
             writer = csv.writer(f)
             writer.writerow([
                 epoch + 1,
-                args.phase,
+                current_phase,  # Use current_phase instead of args.phase
                 args.lambda_bce,
                 args.epsilon,
                 val_metrics['bce_auc'],
@@ -494,6 +539,8 @@ def main():
         if val_metrics['bce_auc'] > best_val_auc:
             best_val_auc = val_metrics['bce_auc']
             patience_counter = 0
+            if training_mode == "automatic_two_phase" and current_phase == 1:
+                phase1_best_epoch = epoch + 1
             
             # Save best model (handle DataParallel wrapper)
             checkpoint_path = os.path.join(experiment_dir, 'model_best.pth')
@@ -513,8 +560,62 @@ def main():
             print(f"Patience: {patience_counter}/{args.patience}")
             
             if patience_counter >= args.patience:
-                print("\n⏹️  Early stopping triggered")
-                break
+                # Check if we should switch phases in automatic mode
+                if training_mode == "automatic_two_phase" and current_phase == 1 and not phase1_converged:
+                    print("\n" + "="*80)
+                    print("✓ PHASE 1 CONVERGED - SWITCHING TO PHASE 2")
+                    print("="*80)
+                    print(f"Phase 1 best epoch: {phase1_best_epoch}")
+                    print(f"Phase 1 best AUC: {best_val_auc:.4f}")
+                    
+                    # Mark Phase 1 as converged
+                    phase1_converged = True
+                    phase2_started_epoch = epoch + 1
+                    
+                    # Switch to Phase 2
+                    current_phase = 2
+                    model.phase = 2  # Update model's phase
+                    
+                    # Reset early stopping for Phase 2
+                    patience_counter = 0
+                    best_val_auc = 0.0  # Reset to find best in Phase 2
+                    
+                    print(f"Switching to Phase 2: Constrained Optimization")
+                    print(f"Remaining epochs: {args.epochs - epoch - 1}")
+                    print(f"Loss: λ_bce={args.lambda_bce} × L1 + λ_mastery={(1-args.lambda_bce):.3f} × (L2 + L3)")
+                    print(f"Epsilon tolerance: {args.epsilon}")
+                    print("="*80 + "\n")
+                    continue  # Continue training, don't break
+                else:
+                    # Either manual mode or Phase 2 converged - stop training
+                    if training_mode == "automatic_two_phase" and current_phase == 2:
+                        print("\n⏹️  Phase 2 converged - Training complete")
+                    else:
+                        print("\n⏹️  Early stopping triggered")
+                    break
+    
+    # Check if training completed successfully
+    print("\n" + "="*80)
+    print("TRAINING SUMMARY")
+    print("="*80)
+    
+    if training_mode == "automatic_two_phase":
+        if phase1_converged and current_phase == 2:
+            print("✓ Two-phase training completed successfully")
+            print(f"  Phase 1: Converged at epoch {phase1_best_epoch}")
+            print(f"  Phase 2: Started at epoch {phase2_started_epoch}, ran for {epoch - phase2_started_epoch + 1} epochs")
+        elif not phase1_converged:
+            print("⚠️  WARNING: Training stopped but Phase 1 did not converge")
+            print(f"   Consider increasing --epochs (current: {args.epochs})")
+        elif current_phase == 1:
+            print("⚠️  WARNING: Phase 1 converged but no epochs left for Phase 2")
+            print(f"   Phase 1 converged at epoch {epoch + 1}")
+            print(f"   Consider increasing --epochs (current: {args.epochs})")
+    else:
+        print(f"✓ Single-phase training (Phase {current_phase}) completed")
+    
+    print(f"Best validation AUC: {best_val_auc:.4f}")
+    print("="*80 + "\n")
     
     # Save training history
     history_path = os.path.join(experiment_dir, 'training_history.json')
@@ -522,13 +623,40 @@ def main():
         json.dump(history, f, indent=2)
     
     # Save final metrics
+    # Check if training completed successfully
+    print("\n" + "="*80)
+    print("TRAINING SUMMARY")
+    print("="*80)
+    
+    if training_mode == "automatic_two_phase":
+        if phase1_converged and current_phase == 2:
+            print("✓ Two-phase training completed successfully")
+            print(f"  Phase 1: Converged at epoch {phase1_best_epoch}")
+            print(f"  Phase 2: Started at epoch {phase2_started_epoch}, ran for {epoch - phase2_started_epoch + 1} epochs")
+        elif not phase1_converged:
+            print("⚠️  WARNING: Training stopped but Phase 1 did not converge")
+            print(f"   Consider increasing --epochs (current: {args.epochs})")
+        elif current_phase == 1:
+            print("⚠️  WARNING: Phase 1 converged but no epochs left for Phase 2")
+            print(f"   Phase 1 converged at epoch {epoch + 1}")
+            print(f"   Consider increasing --epochs (current: {args.epochs})")
+    else:
+        print(f"✓ Single-phase training (Phase {current_phase}) completed")
+    
+    print(f"Best validation AUC: {best_val_auc:.4f}")
+    print("="*80 + "\n")
+    
     final_metrics = {
         'best_val_bce_auc': best_val_auc,
         'final_epoch': epoch + 1,
         'total_params': num_params,
-        'phase': args.phase,
+        'phase': current_phase,
         'lambda_bce': args.lambda_bce,
-        'epsilon': args.epsilon
+        'epsilon': args.epsilon,
+        'training_mode': training_mode,
+        'phase1_converged': phase1_converged if training_mode == "automatic_two_phase" else None,
+        'phase1_best_epoch': phase1_best_epoch if training_mode == "automatic_two_phase" else None,
+        'phase2_started_epoch': phase2_started_epoch if training_mode == "automatic_two_phase" and phase1_converged else None
     }
     metrics_path = os.path.join(experiment_dir, 'final_metrics.json')
     with open(metrics_path, 'w') as f:
@@ -564,7 +692,7 @@ def main():
             '--emb_type', args.emb_type,
             '--lambda_bce', str(args.lambda_bce),
             '--epsilon', str(args.epsilon),
-            '--phase', str(args.phase)
+            '--phase', str(current_phase)
         ]
         
         try:

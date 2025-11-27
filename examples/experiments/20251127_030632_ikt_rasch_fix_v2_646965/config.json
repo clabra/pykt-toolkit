@@ -1,0 +1,111 @@
+{
+  "input": {
+    "short_title": "rasch_fix_v2",
+    "epochs": 3,
+    "epsilon": 0.0,
+    "phase": 1
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title rasch_fix_v2 --epochs 3 --epsilon 0.0 --phase 1",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt.py --auto_shifted_eval --batch_size 64 --d_ff 1536 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 3 --epsilon 0.0 --fold 0 --gradient_clip 1.0 --lambda_bce 0.5 --learning_rate 0.0001 --min_trajectory_steps 10 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 8 --num_trajectories 10 --optimizer Adam --patience 4 --phase 1 --rasch_path data/assist2015/rasch_targets.pkl --seed 42 --seq_len 200 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_ikt.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251127_030632_ikt_rasch_fix_v2_646965 --ckpt_name model_best.pth --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200 --d_model 256 --n_heads 4 --num_encoder_blocks 8 --d_ff 1536 --dropout 0.2 --emb_type qid --lambda_bce 0.5",
+    "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/examples/experiments/20251127_030632_ikt_rasch_fix_v2_646965 --num_students 20 --split test",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 646965"
+  },
+  "experiment": {
+    "id": "20251127_030632_ikt_rasch_fix_v2_646965",
+    "short_title": "rasch_fix_v2",
+    "experiment_id": "646965",
+    "created": "20251127_030632"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "model": "ikt",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "train_script": "examples/train_ikt.py",
+    "eval_script": "examples/eval_ikt.py",
+    "epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.0001,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "lambda_bce": 0.5,
+    "epsilon": 0.0,
+    "phase": 1,
+    "rasch_path": null,
+    "num_trajectories": 10,
+    "min_trajectory_steps": 10
+  },
+  "overrides": {
+    "epochs": 3
+  },
+  "types": {
+    "launcher": [
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval",
+      "num_trajectories",
+      "min_trajectory_steps"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "loss_weights": [
+      "lambda_bce",
+      "epsilon"
+    ],
+    "training_phase": [
+      "phase"
+    ],
+    "data_paths": [
+      "rasch_path"
+    ]
+  },
+  "md5": "a44a13248c56e731acca9498f796e3a9",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}

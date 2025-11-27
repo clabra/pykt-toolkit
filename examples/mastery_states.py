@@ -72,6 +72,48 @@ from pykt.models.gainakt4 import GainAKT4
 from pykt.models.ikt import iKT
 
 
+def load_rasch_targets(dataset_name, data_config):
+    """
+    Load pre-computed Rasch IRT targets for L2 loss input.
+    
+    Args:
+        dataset_name: Name of dataset
+        data_config: Dataset configuration dict
+    
+    Returns:
+        dict: Rasch targets or {'mode': 'random'} if not available
+    """
+    import pickle
+    
+    # Get dataset path
+    dataset_cfg = data_config.get(dataset_name, {})
+    dataset_path = dataset_cfg.get('dpath', f'/workspaces/pykt-toolkit/data/{dataset_name}')
+    rasch_path = os.path.join(dataset_path, 'rasch_targets.pkl')
+    
+    # Try to load from file
+    if os.path.exists(rasch_path):
+        print(f"✓ Loading Rasch targets from: {rasch_path}")
+        try:
+            with open(rasch_path, 'rb') as f:
+                data = pickle.load(f)
+            
+            # Validate
+            if 'rasch_targets' not in data:
+                raise ValueError("Invalid Rasch file: missing 'rasch_targets' key")
+            
+            print(f"  Loaded targets for {len(data['rasch_targets'])} students")
+            return data
+            
+        except Exception as e:
+            print(f"✗ Failed to load Rasch targets: {e}")
+    else:
+        print(f"⚠️  Rasch targets not found at: {rasch_path}")
+        print("  L2 (Rasch Loss) inputs will be empty in CSV")
+    
+    # Fallback: no Rasch targets
+    return {'mode': 'random'}
+
+
 def load_model_and_config(run_dir, ckpt_name):
     """Load trained model and configuration."""
     # Load config
@@ -148,18 +190,109 @@ def load_model_and_config(run_dir, ckpt_name):
     return model, config, data_config, device, num_c
 
 
-def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None):
+def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
     """
-    Extract mastery states for each skill at each time step.
+    Select students stratified by sequence length.
+    
+    Creates 5 bins with 20% of sequence length range each, then randomly
+    selects num_students_per_bin from each bin.
+    
+    Args:
+        data_loader: DataLoader with student data
+        num_students_per_bin: Number of students to select per bin (default: 3)
+    
+    Returns:
+        set: Selected student IDs
+    """
+    import numpy as np
+    
+    # First pass: collect sequence lengths for all students
+    student_lengths = {}
+    
+    for batch_idx, batch in enumerate(data_loader):
+        mask = batch['masks'].cpu().numpy()  # [B, L]
+        
+        if 'uids' in batch:
+            uids = batch['uids'].cpu().numpy()
+        else:
+            uids = np.arange(batch_idx * mask.shape[0], (batch_idx + 1) * mask.shape[0])
+        
+        # Count valid timesteps per student
+        for i, uid in enumerate(uids):
+            seq_len = int(mask[i].sum())
+            if seq_len > 0:
+                student_lengths[int(uid)] = seq_len
+    
+    if not student_lengths:
+        print("⚠️  No students found in dataset")
+        return set()
+    
+    # Calculate bins
+    lengths = np.array(list(student_lengths.values()))
+    min_len = lengths.min()
+    max_len = lengths.max()
+    
+    print(f"\n📊 Sequence length distribution:")
+    print(f"   Min: {min_len}, Max: {max_len}")
+    
+    # Create 5 bins with 20% of range each
+    bin_edges = np.linspace(min_len, max_len + 1, 6)  # 6 edges = 5 bins
+    bins = [(bin_edges[i], bin_edges[i+1]) for i in range(5)]
+    
+    # Assign students to bins
+    binned_students = {i: [] for i in range(5)}
+    for uid, length in student_lengths.items():
+        for bin_idx, (low, high) in enumerate(bins):
+            if low <= length < high or (bin_idx == 4 and length == high):  # Last bin includes max
+                binned_students[bin_idx].append(uid)
+                break
+    
+    # Select students from each bin
+    selected = set()
+    print(f"\n🎯 Stratified sampling (target: {num_students_per_bin} students per bin):")
+    
+    for bin_idx in range(5):
+        bin_low, bin_high = bins[bin_idx]
+        available = binned_students[bin_idx]
+        
+        if available:
+            # Randomly select up to num_students_per_bin
+            num_select = min(num_students_per_bin, len(available))
+            selected_from_bin = np.random.choice(available, size=num_select, replace=False)
+            selected.update(selected_from_bin)
+            
+            print(f"   Bin {bin_idx+1} [{int(bin_low):3d}-{int(bin_high):3d}): "
+                  f"{len(available):4d} available, {num_select} selected")
+        else:
+            print(f"   Bin {bin_idx+1} [{int(bin_low):3d}-{int(bin_high):3d}): "
+                  f"   0 available, 0 selected")
+    
+    print(f"\n✓ Total selected: {len(selected)} students")
+    return selected
+
+
+def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None, rasch_targets=None):
+    """
+    Extract mastery states and loss inputs for each skill at each time step.
     
     Args:
         max_students: Maximum number of students to process (None for all)
+                     Stratified by sequence length if provided
+        rasch_targets: Dict with Rasch IRT targets (for L2 loss input)
     
     Returns:
-        mastery_data: List of dicts with student_id, time_step, question_id, skills, responses, mastery_states
+        mastery_data: List of dicts with student_id, time_step, question_id, skills, responses, 
+                      and loss inputs (L1, L2, L3)
     """
     model.eval()
     mastery_data = []
+    
+    # Stratified sampling by sequence length if max_students specified
+    selected_students = None
+    if max_students is not None:
+        num_students_per_bin = max(1, max_students // 5)  # Distribute across 5 bins
+        selected_students = select_students_by_sequence_length(data_loader, num_students_per_bin)
+    
     students_processed = 0
     
     with torch.no_grad():
@@ -172,17 +305,41 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
             responses = batch['rseqs'].to(device)  # [B, L]
             questions_shifted = batch['shft_cseqs'].to(device)  # [B, L]
             mask = batch['masks'].to(device)  # [B, L]
+            labels = batch['shft_rseqs'].to(device)  # [B, L] - targets for BCE loss
             
             # Get student IDs if available
             if 'uids' in batch:
                 student_ids = batch['uids'].cpu().numpy()
+                uids = batch['uids']
             else:
                 # Generate sequential IDs if not available
                 student_ids = np.arange(batch_idx * questions.shape[0], 
                                        (batch_idx + 1) * questions.shape[0])
+                uids = None
             
-            # Forward pass to get skill vectors (mastery states)
-            outputs = model(q=questions, r=responses, qry=questions_shifted)
+            # Prepare Rasch targets for this batch (L2 loss input)
+            rasch_batch = None
+            if rasch_targets is not None and rasch_targets.get('mode') != 'random':
+                rasch_data = rasch_targets.get('rasch_targets', {})
+                batch_size, seq_len = questions.shape
+                rasch_batch = torch.zeros(batch_size, seq_len, num_concepts, device=device)
+                
+                if uids is not None:
+                    for i, uid in enumerate(uids):
+                        uid_val = uid.item() if torch.is_tensor(uid) else uid
+                        if uid_val in rasch_data:
+                            # Get stored targets for this student
+                            stored_targets = rasch_data[uid_val]  # [stored_seq_len, num_concepts]
+                            
+                            # Extract skill-level Rasch values (max across timesteps since they're constant per skill)
+                            # This handles the case where test sequences differ from training sequences
+                            skill_rasch = stored_targets.max(dim=0)[0]  # [num_concepts]
+                            
+                            # Broadcast to all timesteps for this batch
+                            rasch_batch[i, :, :] = skill_rasch.to(device)
+            
+            # Forward pass to get skill vectors (mastery states) and predictions
+            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=rasch_batch)
             
             # Check if mastery head is active (skill_vector will be None when λ=1.0)
             if outputs['skill_vector'] is None:
@@ -195,24 +352,37 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                 print("="*80)
                 return []
             
-            # skill_vector contains mastery state for each concept at each time step
-            # Shape: [B, L, num_concepts]
-            skill_vector = outputs['skill_vector'].cpu().numpy()
+            # Extract all outputs for loss computation
+            # L1 (BCE): bce_predictions vs labels
+            # L2 (Rasch): skill_vector (Mi) vs rasch_batch (M_rasch)
+            # L3 (Constraints): architectural constraints on skill_vector
+            
+            skill_vector = outputs['skill_vector'].cpu().numpy()  # [B, L, num_concepts] - Head 2 output (Mi)
+            bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
+            logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits (pre-sigmoid)
             
             # Convert to numpy for processing
             questions_np = questions.cpu().numpy()
             responses_np = responses.cpu().numpy()
             mask_np = mask.cpu().numpy()
+            labels_np = labels.cpu().numpy()  # Target for L1 BCE loss
+            
+            # Rasch targets for L2 loss (if available)
+            if rasch_batch is not None:
+                rasch_targets_np = rasch_batch.cpu().numpy()  # [B, L, num_concepts]
+            else:
+                rasch_targets_np = None
             
             # Process each student in the batch
             batch_size, seq_len = questions_np.shape
             
             for student_idx in range(batch_size):
-                # Check student limit
-                if max_students is not None and students_processed >= max_students:
-                    break
-                
                 student_id = student_ids[student_idx]
+                
+                # Check if this student is selected (stratified sampling)
+                if selected_students is not None and student_id not in selected_students:
+                    continue
+                
                 students_processed += 1
                 
                 # Process each time step
@@ -224,30 +394,61 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                     question_id = int(questions_np[student_idx, time_step])
                     response = int(responses_np[student_idx, time_step])
                     
-                    # Get mastery states for all skills at this time step
-                    # Note: In single-skill datasets like assist2015, typically only one skill per question
-                    # But this approach works for multi-skill questions too
+                    # L1 (BCE Loss) inputs:
+                    # - Prediction: bce_predictions[student_idx, time_step]
+                    # - Target: labels_np[student_idx, time_step]
+                    # - Logit: logits[student_idx, time_step] (pre-sigmoid)
+                    bce_prediction = float(bce_predictions[student_idx, time_step])
+                    bce_target = int(labels_np[student_idx, time_step])
+                    bce_logit = float(logits[student_idx, time_step])
+                    
+                    # Get mastery states for all skills at this time step (L2 loss input)
                     mastery_vector = skill_vector[student_idx, time_step, :]
                     
-                    # Find which skills are involved in this question
-                    # For single-skill: question_id corresponds to skill_id (concept_id)
-                    # For multi-skill: would need additional mapping data
-                    skills_involved = [question_id]  # Simplified for single-skill case
+                    # For single-skill: question_id corresponds to skill_id
+                    skill_id = question_id  # Simplified for single-skill case
                     
-                    # Extract mastery values for involved skills
-                    mastery_values = {
-                        skill_id: float(mastery_vector[skill_id]) 
-                        for skill_id in skills_involved if skill_id < num_concepts
-                    }
+                    if skill_id >= num_concepts:
+                        continue  # Skip invalid skill IDs
                     
-                    # Store the data
+                    # L2 (Rasch Loss) inputs:
+                    # - Prediction: skill_vector (Mi) from Head 2
+                    # - Target: rasch_targets (M_rasch) pre-computed from IRT
+                    mi_value = float(mastery_vector[skill_id])  # Head 2 output for this skill
+                    m_rasch_value = None
+                    if rasch_targets_np is not None:
+                        m_rasch_value = float(rasch_targets_np[student_idx, time_step, skill_id])
+                    
+                    # L3 (Architectural Constraints) - implicit in architecture:
+                    # - Positivity: Mi > 0 (enforced by Softplus)
+                    # - Monotonicity: Mi[t] ≤ Mi[t+1] (enforced by cummax)
+                    # Check if this is the first occurrence of this skill for this student
+                    mi_prev = None
+                    if time_step > 0:
+                        # Get previous mastery value for monotonicity check
+                        mi_prev = float(mastery_vector[skill_id])  # This is post-cummax
+                        # Find actual previous timestep with valid data
+                        for prev_t in range(time_step - 1, -1, -1):
+                            if mask_np[student_idx, prev_t] == 1:
+                                mi_prev = float(skill_vector[student_idx, prev_t, skill_id])
+                                break
+                    
+                    # Store comprehensive data for all loss inputs
                     mastery_data.append({
                         'student_id': int(student_id),
                         'time_step': int(time_step),
                         'question_id': question_id,
-                        'skills': skills_involved,
+                        'skill_id': skill_id,
                         'response': response,
-                        'mastery_states': mastery_values,
+                        # L1 BCE Loss inputs
+                        'bce_prediction': bce_prediction,
+                        'bce_target': bce_target,
+                        'bce_logit': bce_logit,
+                        # L2 Rasch Loss inputs
+                        'mi_value': mi_value,  # Head 2 output (skill vector)
+                        'm_rasch_value': m_rasch_value,  # Rasch IRT target
+                        # L3 Constraint checks
+                        'mi_prev': mi_prev,  # Previous mastery (for monotonicity)
                         'batch_idx': batch_idx
                     })
     
@@ -261,10 +462,13 @@ def compute_mastery_statistics(mastery_data, num_concepts):
     skill_mastery = defaultdict(list)
     skill_progression = defaultdict(lambda: defaultdict(list))
     
+    # New data structure has mi_value directly at top level
     for entry in mastery_data:
-        for skill_id, mastery_value in entry['mastery_states'].items():
-            skill_mastery[skill_id].append(mastery_value)
-            skill_progression[skill_id][entry['time_step']].append(mastery_value)
+        skill_id = entry['skill_id']
+        mi_value = entry['mi_value']
+        
+        skill_mastery[skill_id].append(mi_value)
+        skill_progression[skill_id][entry['time_step']].append(mi_value)
     
     # Compute statistics
     statistics = {
@@ -302,24 +506,73 @@ def compute_mastery_statistics(mastery_data, num_concepts):
 
 
 def save_mastery_states_csv(mastery_data, output_path):
-    """Save mastery states to CSV file."""
+    """
+    Save mastery states and loss inputs to CSV file.
     
-    # Flatten the data for CSV
+    Columns:
+    - Basic: student_id, time_step, question_id, skill_id, response
+    - L1 (BCE): bce_logit, bce_prediction, bce_target
+    - L2 (Rasch): mi_value, m_rasch_value, rasch_deviation
+    - L3 (Constraints): mi_prev, is_positive, is_monotonic
+    """
+    
+    # Prepare rows with all loss inputs
     rows = []
     for entry in mastery_data:
-        for skill_id, mastery_value in entry['mastery_states'].items():
-            rows.append({
-                'student_id': entry['student_id'],
-                'time_step': entry['time_step'],
-                'question_id': entry['question_id'],
-                'skill_id': skill_id,
-                'response': entry['response'],
-                'mastery_state': mastery_value
-            })
+        # Basic info
+        student_id = entry['student_id']
+        time_step = entry['time_step']
+        question_id = entry['question_id']
+        skill_id = entry['skill_id']
+        response = entry['response']
+        
+        # L1 (BCE Loss) inputs
+        bce_logit = entry['bce_logit']
+        bce_prediction = entry['bce_prediction']
+        bce_target = entry['bce_target']
+        
+        # L2 (Rasch Loss) inputs
+        mi_value = entry['mi_value']
+        m_rasch_value = entry.get('m_rasch_value')
+        rasch_deviation = None
+        if m_rasch_value is not None:
+            rasch_deviation = abs(mi_value - m_rasch_value)
+        
+        # L3 (Constraint) checks
+        mi_prev = entry.get('mi_prev')
+        is_positive = mi_value > 0  # Softplus ensures this
+        is_monotonic = True  # Default for first occurrence
+        if mi_prev is not None:
+            is_monotonic = mi_value >= mi_prev  # cummax ensures this
+        
+        rows.append({
+            'student_id': student_id,
+            'time_step': time_step,
+            'question_id': question_id,
+            'skill_id': skill_id,
+            'response': response,
+            # L1 inputs
+            'bce_logit': f'{bce_logit:.6f}',
+            'bce_prediction': f'{bce_prediction:.6f}',
+            'bce_target': bce_target,
+            # L2 inputs
+            'mi_value': f'{mi_value:.6f}',
+            'm_rasch_value': f'{m_rasch_value:.6f}' if m_rasch_value is not None else '',
+            'rasch_deviation': f'{rasch_deviation:.6f}' if rasch_deviation is not None else '',
+            # L3 constraints
+            'mi_prev': f'{mi_prev:.6f}' if mi_prev is not None else '',
+            'is_positive': is_positive,
+            'is_monotonic': is_monotonic
+        })
     
     # Write to CSV
     if rows:
-        fieldnames = ['student_id', 'time_step', 'question_id', 'skill_id', 'response', 'mastery_state']
+        fieldnames = [
+            'student_id', 'time_step', 'question_id', 'skill_id', 'response',
+            'bce_logit', 'bce_prediction', 'bce_target',
+            'mi_value', 'm_rasch_value', 'rasch_deviation',
+            'mi_prev', 'is_positive', 'is_monotonic'
+        ]
         with open(output_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -336,8 +589,8 @@ def main():
                        help='Checkpoint filename (default: model_best.pth)')
     parser.add_argument('--split', type=str, default='test', choices=['train', 'valid', 'test'],
                        help='Data split to analyze (default: test)')
-    parser.add_argument('--num_students', type=int, default=20,
-                       help='Number of students to process (default: 20)')
+    parser.add_argument('--num_students', type=int, default=15,
+                       help='Target number of students (default: 15). Stratified by sequence length: 5 bins, ~3 students per bin')
     
     args = parser.parse_args()
     
@@ -384,9 +637,16 @@ def main():
     
     print(f"✓ Data loaded: {len(data_loader)} batches")
     
+    # Load Rasch targets for L2 loss input (iKT only)
+    rasch_targets = None
+    if config.get('model') == 'ikt':
+        print(f"\n📊 Loading Rasch IRT targets...")
+        rasch_targets = load_rasch_targets(config['dataset'], data_config)
+    
     # Extract mastery states
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
-    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, max_students=args.num_students)
+    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, 
+                                         max_students=args.num_students, rasch_targets=rasch_targets)
     
     # Check if mastery data is available
     if not mastery_data:

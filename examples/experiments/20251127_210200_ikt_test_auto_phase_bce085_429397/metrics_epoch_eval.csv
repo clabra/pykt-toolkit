@@ -1,0 +1,2 @@
+timestamp,checkpoint,split,auc,acc,bce_loss,rasch_loss,num_samples
+2025-11-27T21:12:44.881047,model_best.pth,test,0.7157509899099757,0.745675820256776,0.09185737450836134,0.0,134592

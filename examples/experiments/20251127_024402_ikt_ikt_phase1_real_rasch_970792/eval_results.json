@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-11-27T02:51:16.973812",
+  "checkpoint": "model_best.pth",
+  "dataset": "assist2015",
+  "fold": 0,
+  "num_concepts": 100,
+  "num_parameters": 10725989,
+  "results": {
+    "test": {
+      "auc": 0.7192779864598435,
+      "acc": 0.7477190323347599,
+      "bce_loss": 0.09112313969946298,
+      "rasch_loss": 0.0,
+      "num_samples": 134592
+    }
+  }
+}

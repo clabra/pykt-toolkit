@@ -1,0 +1,12 @@
+{
+  "best_val_bce_auc": 0.7206004987520509,
+  "final_epoch": 19,
+  "total_params": 10725989,
+  "phase": 2,
+  "lambda_bce": 1.0,
+  "epsilon": 0.05,
+  "training_mode": "automatic_two_phase",
+  "phase1_converged": true,
+  "phase1_best_epoch": 8,
+  "phase2_started_epoch": 13
+}

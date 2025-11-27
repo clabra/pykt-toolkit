@@ -25,9 +25,10 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "lambda_bce": 0.5,
-    "epsilon": 0.0,
-    "phase": 1,
+    "epsilon": 0.05,
+    "phase": null,
     "rasch_path": null,
+    "mastery_method": "bkt",
     "num_trajectories": 10,
     "min_trajectory_steps": 10
   },
@@ -83,5 +84,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "a44a13248c56e731acca9498f796e3a9"
+  "md5": "bce34e59a26292ebcc2523f34af0b577"
 }

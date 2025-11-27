@@ -118,7 +118,8 @@ def main():
     parser.add_argument('--emb_type', type=str, required=True)
     parser.add_argument('--lambda_bce', type=float, required=True)
     parser.add_argument('--epsilon', type=float, required=True)
-    parser.add_argument('--phase', type=int, required=True)
+    parser.add_argument('--phase', type=int, default=2,
+                       help='Phase for evaluation (default: 2 for full model with both heads)')
     
     args = parser.parse_args()
     

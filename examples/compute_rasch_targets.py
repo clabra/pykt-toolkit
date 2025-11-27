@@ -211,18 +211,52 @@ def calibrate_rasch_model(irt_df, max_iterations=100):
         raise
 
 
-def compute_rasch_targets(df, student_abilities, skill_difficulties, num_skills):
+def enforce_monotonicity_skill_wise(targets_dict):
+    """
+    Enforce monotonicity for each skill independently.
+    Once mastery increases for a skill, it cannot decrease in future timesteps.
+    
+    Args:
+        targets_dict: dict {uid: torch.Tensor [seq_len, num_skills]}
+    
+    Returns:
+        smoothed_dict: dict with same structure, monotonic per skill
+    """
+    smoothed = {}
+    
+    for uid, target_matrix in targets_dict.items():
+        seq_len, num_skills = target_matrix.shape
+        smoothed_matrix = target_matrix.clone()
+        
+        # For each skill column independently
+        for skill_id in range(num_skills):
+            # Forward pass: ensure M[t] >= M[t-1]
+            for t in range(1, seq_len):
+                if smoothed_matrix[t, skill_id] < smoothed_matrix[t-1, skill_id]:
+                    smoothed_matrix[t, skill_id] = smoothed_matrix[t-1, skill_id]
+        
+        smoothed[uid] = smoothed_matrix
+    
+    return smoothed
+
+
+def compute_rasch_targets(df, student_abilities, skill_difficulties, num_skills, dynamic=True, learning_rate=0.1):
     """
     Compute Rasch mastery targets M_rasch[n,s,t] for each student-skill-timestep.
     
-    Rasch model: P(correct | θ, b) = σ(θ - b)
-    We use this probability as the mastery target.
+    Three modes:
+    1. Static (dynamic=False): P(correct | θ, b) = σ(θ - b) with constant θ
+    2. Dynamic incremental (dynamic=True, learning_rate>0): θₜ = θₜ₋₁ + α × error
+    3. Dynamic cumulative (dynamic=True, learning_rate=0): Recalibrate θ at each timestep
+       using all observations up to that point (snapshot approach)
     
     Args:
         df: DataFrame with student sequences
-        student_abilities: dict mapping student_id -> ability θ
+        student_abilities: dict mapping student_id -> initial ability θ₀
         skill_difficulties: dict mapping skill_id -> difficulty b
         num_skills: Total number of skills in the dataset
+        dynamic: If True, model learning progression; if False, use static abilities
+        learning_rate: α parameter (0 = cumulative recalibration, >0 = incremental updates)
     
     Returns:
         rasch_targets: dict mapping student_id -> tensor of shape (seq_len, num_skills)
@@ -231,15 +265,28 @@ def compute_rasch_targets(df, student_abilities, skill_difficulties, num_skills)
     print("COMPUTING RASCH TARGETS")
     print("="*80)
     
+    if not dynamic:
+        mode = "Static (constant ability)"
+    elif learning_rate == 0:
+        mode = "Dynamic - Cumulative recalibration (snapshot approach)"
+    else:
+        mode = "Dynamic - Incremental updates"
+    
+    print(f"Mode: {mode}")
+    if dynamic:
+        print(f"Learning rate (α): {learning_rate}")
+    
     rasch_targets = {}
     students_without_ability = []
     
     for idx, row in df.iterrows():
         uid = row['uid']
         concepts = [int(c) for c in row['concepts'].split(',') if c != '-1']
+        responses = [int(r) for r in row['responses'].split(',') if r != '-1']
+        selectmasks = [int(m) for m in row['selectmasks'].split(',') if m != '-1']
         
-        # Get student ability (default to 0 if not calibrated)
-        theta = student_abilities.get(uid, 0.0)
+        # Get initial student ability (default to 0 if not calibrated)
+        theta_initial = student_abilities.get(uid, 0.0)
         if uid not in student_abilities:
             students_without_ability.append(uid)
         
@@ -247,16 +294,110 @@ def compute_rasch_targets(df, student_abilities, skill_difficulties, num_skills)
         seq_len = len(concepts)
         target_tensor = torch.zeros(seq_len, num_skills, dtype=torch.float32)
         
-        # Compute mastery for each timestep and skill
-        for t, skill_id in enumerate(concepts):
-            # Get skill difficulty (default to 0 if not calibrated)
-            b = skill_difficulties.get(skill_id, 0.0)
+        if not dynamic:
+            # Static mode: constant ability for all timesteps
+            for t, (skill_id, mask) in enumerate(zip(concepts, selectmasks)):
+                if mask == 0:
+                    continue
+                b = skill_difficulties.get(skill_id, 0.0)
+                mastery = torch.sigmoid(torch.tensor(theta_initial - b))
+                target_tensor[t, skill_id] = mastery
+        
+        elif learning_rate == 0:
+            # Cumulative recalibration: Skill-specific ability estimation
+            # Each skill maintains its own ability θₛ based only on observations of that skill
+            # θₛ is recalculated from scratch each time skill s is practiced, using ALL past observations of s
             
-            # Rasch probability: P(correct) = σ(θ - b)
-            mastery = torch.sigmoid(torch.tensor(theta - b))
+            skill_observations = {}  # Track observations per skill: {skill_id: [responses]}
+            skill_abilities = {}     # Track current ability per skill: {skill_id: theta_s}
             
-            # Set mastery for this skill at this timestep
-            target_tensor[t, skill_id] = mastery
+            for t, (skill_id, response, mask) in enumerate(zip(concepts, responses, selectmasks)):
+                if mask == 0:
+                    continue
+                
+                # Initialize skill-specific tracking on first encounter
+                if skill_id not in skill_observations:
+                    skill_observations[skill_id] = []
+                    # Start with global initial ability as prior
+                    skill_abilities[skill_id] = theta_initial
+                
+                # Add current observation for this skill
+                skill_observations[skill_id].append(response)
+                
+                # Recalibrate ability for THIS skill using ALL observations of this skill
+                obs_list = skill_observations[skill_id]
+                n_obs = len(obs_list)
+                n_correct = sum(obs_list)
+                
+                if n_obs > 0:
+                    # Empirical success rate for this skill
+                    success_rate = n_correct / n_obs
+                    
+                    # Get skill difficulty
+                    b = skill_difficulties.get(skill_id, 0.0)
+                    
+                    # Bayesian update: blend prior (initial ability) with evidence (empirical rate)
+                    # Prior precision (confidence in initial estimate)
+                    prior_precision = 1.0
+                    
+                    # Evidence precision (confidence in empirical rate, grows with observations)
+                    evidence_precision = n_obs
+                    
+                    # Posterior estimate of ability for this skill
+                    # More observations → more weight on empirical success rate
+                    total_precision = prior_precision + evidence_precision
+                    
+                    # Convert success rate back to ability scale via inverse sigmoid
+                    # θ = log(p / (1 - p)) + b  where p is success probability
+                    if success_rate > 0.999:
+                        success_rate = 0.999
+                    elif success_rate < 0.001:
+                        success_rate = 0.001
+                    
+                    empirical_ability = np.log(success_rate / (1 - success_rate)) + b
+                    
+                    # Weighted average: prior + evidence
+                    theta_skill = (prior_precision * theta_initial + evidence_precision * empirical_ability) / total_precision
+                    
+                    skill_abilities[skill_id] = theta_skill
+                
+                # Compute mastery for ALL skills at this timestep
+                # Each skill uses its own ability estimate (or global initial if not yet practiced)
+                for s in range(num_skills):
+                    b_s = skill_difficulties.get(s, 0.0)
+                    
+                    if s in skill_abilities:
+                        # Use skill-specific ability
+                        theta_s = skill_abilities[s]
+                    else:
+                        # Not yet practiced: use global initial ability
+                        theta_s = theta_initial
+                    
+                    mastery = 1.0 / (1.0 + np.exp(-(theta_s - b_s)))
+                    target_tensor[t, s] = mastery
+        
+        else:
+            # Incremental update mode (original dynamic)
+            theta_t = theta_initial
+            skill_first_encounter = {}
+            
+            for t, (skill_id, response, mask) in enumerate(zip(concepts, responses, selectmasks)):
+                if mask == 0:
+                    continue
+                
+                b = skill_difficulties.get(skill_id, 0.0)
+                
+                if skill_id not in skill_first_encounter:
+                    skill_first_encounter[skill_id] = t
+                    theta_skill = theta_initial
+                else:
+                    theta_skill = theta_t
+                
+                mastery = torch.sigmoid(torch.tensor(theta_skill - b))
+                prediction_error = response - mastery.item()
+                theta_t = theta_t + learning_rate * prediction_error
+                
+                target_tensor[t, skill_id] = mastery
         
         rasch_targets[uid] = target_tensor
     
@@ -326,6 +467,10 @@ def main():
                         help='Output path for Rasch targets (default: data/{dataset}/rasch_targets.pkl)')
     parser.add_argument('--max_iterations', type=int, default=100,
                         help='Maximum iterations for EM algorithm')
+    parser.add_argument('--dynamic', action='store_true',
+                        help='Use dynamic IRT (model learning progression over time)')
+    parser.add_argument('--learning_rate', type=float, default=0.1,
+                        help='Learning rate for dynamic ability updates (default: 0.1)')
     
     args = parser.parse_args()
     
@@ -362,7 +507,9 @@ def main():
         df, 
         student_abilities, 
         skill_difficulties,
-        num_skills
+        num_skills,
+        dynamic=args.dynamic,
+        learning_rate=args.learning_rate
     )
     
     # Save results
@@ -371,7 +518,9 @@ def main():
         'num_students': len(student_abilities),
         'num_skills': num_skills,
         'num_calibrated_skills': len(skill_difficulties),
-        'max_iterations': args.max_iterations
+        'max_iterations': args.max_iterations,
+        'dynamic': args.dynamic,
+        'learning_rate': args.learning_rate if args.dynamic else None
     }
     
     save_rasch_targets(
@@ -382,10 +531,13 @@ def main():
         metadata
     )
     
+    output_path_mono = args.output_path.replace('.pkl', '_mono.pkl')
+    
     print("\n" + "="*80)
     print("RASCH TARGET COMPUTATION COMPLETE")
     print("="*80)
-    print(f"Use --rasch_path {args.output_path} when training iKT model")
+    print(f"Use --rasch_path {args.output_path} --mastery_method irt (standard)")
+    print(f"Use --rasch_path {output_path_mono} --mastery_method irt_mono (monotonic)")
     print("="*80)
 
 

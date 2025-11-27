@@ -212,14 +212,18 @@ def build_explicit_train_command(train_script, params):
         if isinstance(value, bool):
             if value:
                 cmd_parts.append(f"--{key}")
-        elif value is None or value == "None" or value == "null":
-            # Skip None/null values - these should have defaults in training script
-            # OR be constructed dynamically (e.g., rasch_path = data/{dataset}/rasch_targets.pkl)
+        elif value is None or value == "null":
+            # For reproducibility: pass "null" as string literal (required=True compliance)
+            # Special case: construct rasch_path dynamically
             if key == "rasch_path" and "dataset" in params:
-                # Construct default rasch_path from dataset
                 rasch_path = f"data/{params['dataset']}/rasch_targets.pkl"
                 cmd_parts.append(f"--{key} {rasch_path}")
-            # Otherwise skip None values entirely
+            else:
+                # Pass "null" as string to satisfy required=True
+                cmd_parts.append(f"--{key} null")
+        elif value == "None":
+            # String "None" should be passed as "null" for consistency
+            cmd_parts.append(f"--{key} null")
         else:
             cmd_parts.append(f"--{key} {value}")
     
@@ -234,7 +238,7 @@ def build_trajectory_command(experiment_folder, num_students=10, min_steps=10):
     cmd = f"{python_path} {trajectory_script} --run_dir {experiment_folder} --num_students {num_students} --min_steps {min_steps}"
     return cmd
 
-def build_mastery_states_command(experiment_folder, num_students=20, split='test'):
+def build_mastery_states_command(experiment_folder, num_students=15, split='test'):
     """
     Build command to extract mastery states.
     """
@@ -720,7 +724,7 @@ def main():
         
         train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
-        mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=20, split='test')
+        mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=15, split='test')
         repro_command = build_repro_command(sys.argv[0], experiment_id)
         
         # Build new config structure - NO redundant typed sections
@@ -785,44 +789,52 @@ def main():
             print(f"  {train_command}")
             return
         
-        # Launch training
-        print("\n" + "=" * 80)
-        print("LAUNCHING TRAINING")
-        print("=" * 80 + "\n")
-        result = subprocess.run(train_command, shell=True)
+        # Launch training (automatic two-phase for iKT if phase=None)
+        if model_name == 'ikt' and training_params.get('phase') is None:
+            print("\n" + "=" * 80)
+            print("AUTOMATIC TWO-PHASE TRAINING (iKT)")
+            print("=" * 80)
+            print("Phase 1 will run until convergence, then automatically switch to Phase 2")
+            print("=" * 80 + "\n")
         
-        if result.returncode == 0:
+        # Launch training
             print("\n" + "=" * 80)
-            print("✓ TRAINING COMPLETED SUCCESSFULLY")
-            print("=" * 80)
-            print(f"\nResults saved to: {experiment_folder}")
-            print("\nNote: Evaluation is automatically launched by the training script")
+            print("LAUNCHING TRAINING")
+            print("=" * 80 + "\n")
+            result = subprocess.run(train_command, shell=True)
             
-            # Auto-launch mastery states extraction for iKT model
-            if model_name == 'ikt':
+            if result.returncode == 0:
                 print("\n" + "=" * 80)
-                print("LAUNCHING MASTERY STATES EXTRACTION (iKT)")
+                print("✓ TRAINING COMPLETED SUCCESSFULLY")
                 print("=" * 80)
-                print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                print(f"\nResults saved to: {experiment_folder}")
+                print("\nNote: Evaluation is automatically launched by the training script")
                 
-                mastery_result = subprocess.run(mastery_states_command, shell=True)
+                # Auto-launch mastery states extraction for iKT model
+                if model_name == 'ikt':
+                    print("\n" + "=" * 80)
+                    print("LAUNCHING MASTERY STATES EXTRACTION (iKT)")
+                    print("=" * 80)
+                    print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                    
+                    mastery_result = subprocess.run(mastery_states_command, shell=True)
+                    
+                    if mastery_result.returncode == 0:
+                        print("\n✓ Mastery states extraction completed")
+                        print(f"  Output files in: {experiment_folder}")
+                        print(f"    - mastery_states_test.csv")
+                        print(f"    - mastery_states_summary_test.json")
+                    else:
+                        print("\n⚠️  Mastery states extraction failed (non-critical)")
                 
-                if mastery_result.returncode == 0:
-                    print("\n✓ Mastery states extraction completed")
-                    print(f"  Output files in: {experiment_folder}")
-                    print(f"    - mastery_states_test.csv")
-                    print(f"    - mastery_states_summary_test.json")
-                else:
-                    print("\n⚠️  Mastery states extraction failed (non-critical)")
-            
-            print("\nTo reproduce this experiment:")
-            print("  python examples/run_repro_experiment.py \\")
-            print(f"    --repro_experiment_id {experiment_id}")
-        else:
-            print("\n" + "=" * 80)
-            print("❌ TRAINING FAILED")
-            print("=" * 80)
-            sys.exit(result.returncode)
+                print("\nTo reproduce this experiment:")
+                print("  python examples/run_repro_experiment.py \\")
+                print(f"    --repro_experiment_id {experiment_id}")
+            else:
+                print("\n" + "=" * 80)
+                print("❌ TRAINING FAILED")
+                print("=" * 80)
+                sys.exit(result.returncode)
 
 if __name__ == "__main__":
     main()
