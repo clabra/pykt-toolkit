@@ -1,1 +1,1 @@
-../paper/gainakt4_architecture_approach.md
+../paper/ikt_architecture_approach.md
