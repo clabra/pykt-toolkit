@@ -310,7 +310,7 @@ class ParameterAuditor:
                 train_content = f.read()
             
             # Launcher-only parameters that should NOT have argparse entries
-            launcher_only = {'model', 'train_script', 'eval_script', 'max_correlation_students'}
+            launcher_only = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
             
             # Extract all add_argument calls with parameter names
             arg_pattern = r"parser\.add_argument\(\s*['\"]--(\w+)['\"]"

@@ -4,6 +4,7 @@
     "dataset": "assist2015",
     "fold": 0,
     "seed": 42,
+    "short_title": "test",
     "train_script": "examples/train_ikt.py",
     "eval_script": "examples/eval_ikt.py",
     "epochs": 30,
@@ -34,6 +35,7 @@
   },
   "types": {
     "launcher": [
+      "short_title",
       "train_script",
       "eval_script"
     ],
@@ -84,5 +86,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "bce34e59a26292ebcc2523f34af0b577"
+  "md5": "8cc0a6b942c3fdc6d0e8877f54da003b"
 }

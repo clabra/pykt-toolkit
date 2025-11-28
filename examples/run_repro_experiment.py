@@ -109,7 +109,7 @@ def generate_experiment_id():
     """Generate a unique 6-digit experiment ID."""
     return str(random.randint(100000, 999999))
 
-def find_experiment_folder(experiment_id, base_dir="examples/experiments"):
+def find_experiment_folder(experiment_id, base_dir="experiments"):
     """Find experiment folder containing the given experiment ID."""
     base_path = Path(base_dir)
     if not base_path.exists():
@@ -135,7 +135,7 @@ def create_experiment_folder(model_name, short_title, experiment_id, is_repro=Fa
     if is_repro:
         folder_name += "_repro"
     
-    folder_path = Path("examples/experiments") / folder_name
+    folder_path = Path("experiments") / folder_name
     folder_path.mkdir(parents=True, exist_ok=False)
     
     return folder_path
@@ -203,7 +203,7 @@ def build_explicit_train_command(train_script, params):
     cmd_parts = [python_path, train_script]
     
     # Launcher-only parameters (not passed to training script)
-    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students'}
+    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
     
     # Add all parameters explicitly (exclude launcher-only params)
     for key, value in sorted(params.items()):
@@ -384,8 +384,8 @@ def main():
                        help='Path to training script (default from config)')
     parser.add_argument('--model_name', type=str, default=None,
                        help='Model name for folder naming (default from config, ignored in reproduction mode)')
-    parser.add_argument('--short_title', type=str,
-                       help='Short title for experiment folder (required in training mode, ignored in reproduction mode)')
+    parser.add_argument('--short_title', type=str, default=None,
+                       help='Short title for experiment folder (default: from parameter_default.json, ignored in reproduction mode)')
     
     # Reproduction mode - single parameter
     parser.add_argument('--repro_experiment_id', type=str,
@@ -406,7 +406,7 @@ def main():
     # Dynamically add arguments for ALL parameters in defaults
     for param_name, default_value in available_params.items():
         # Skip parameters already defined above
-        if param_name in ['train_script', 'model', 'dataset', 'fold', 'eval_script']:
+        if param_name in ['train_script', 'model', 'dataset', 'fold', 'eval_script', 'short_title']:
             continue
         
         # Determine argument type based on default value
@@ -592,10 +592,6 @@ def main():
     # TRAINING MODE
     # ========================================
     else:
-        # Validate required parameter in training mode
-        if not args.short_title:
-            parser.error("--short_title is required in training mode")
-        
         print("=" * 80)
         print("TRAINING MODE")
         print("=" * 80)
@@ -615,6 +611,7 @@ def main():
             default_model = get_required_param(defaults, "defaults", "model")
             default_train_script = get_required_param(defaults, "defaults", "train_script")
             default_eval_script = get_required_param(defaults, "defaults", "eval_script")
+            default_short_title = get_required_param(defaults, "defaults", "short_title")
         except ValueError as e:
             print("❌ ERROR: Missing required parameter in parameter_default.json")
             print(f"   {str(e)}")
@@ -626,11 +623,7 @@ def main():
         model_name = args.model_name if args.model_name is not None else default_model
         train_script = args.train_script if args.train_script is not None else default_train_script
         eval_script = default_eval_script  # eval_script has no CLI argument
-        
-        # Validate required parameter (short_title must be provided)
-        if not args.short_title:
-            print("❌ ERROR: --short_title is required in training mode")
-            sys.exit(1)
+        short_title = args.short_title if args.short_title is not None else default_short_title
         
         # Generate new experiment ID
         experiment_id = generate_experiment_id()
@@ -639,7 +632,7 @@ def main():
         # Create experiment folder
         experiment_folder = create_experiment_folder(
             model_name=model_name,
-            short_title=args.short_title,
+            short_title=short_title,
             experiment_id=experiment_id,
             is_repro=False
         )
