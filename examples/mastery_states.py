@@ -70,6 +70,7 @@ from pykt.datasets.data_loader import KTDataset
 from torch.utils.data import DataLoader
 from pykt.models.gainakt4 import GainAKT4
 from pykt.models.ikt import iKT
+from pykt.models.ikt2 import iKT2
 
 
 def load_rasch_targets(dataset_name, data_config):
@@ -161,6 +162,20 @@ def load_model_and_config(run_dir, ckpt_name):
             lambda_penalty=config['lambda_penalty'],
             epsilon=config['epsilon'],
             phase=config.get('phase')
+        ).to(device)
+    elif model_name == 'ikt2':
+        # iKT2 model
+        model = iKT2(
+            num_c=num_c,
+            seq_len=config['seq_len'],
+            d_model=config['d_model'],
+            n_heads=config['n_heads'],
+            num_encoder_blocks=config['num_encoder_blocks'],
+            d_ff=config['d_ff'],
+            dropout=config['dropout'],
+            emb_type=config['emb_type'],
+            lambda_align=config.get('lambda_align', 1.0),
+            phase=config.get('phase', 1)
         ).to(device)
     else:
         # GainAKT4 model (default)
@@ -271,11 +286,12 @@ def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
     return selected
 
 
-def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None):
+def extract_mastery_states(model, data_loader, device, num_concepts, config, max_students=None):
     """
     Extract mastery states and loss inputs for each skill at each time step.
     
     Args:
+        config: Model configuration dict (needed to detect model type)
         max_students: Maximum number of students to process (None for all)
                      Stratified by sequence length if provided
     
@@ -320,25 +336,55 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
             # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
             outputs = model(q=questions, r=responses, qry=questions_shifted)
             
-            # Check if mastery head is active (skill_vector will be None when λ=1.0)
-            if outputs['skill_vector'] is None:
-                print("\n" + "="*80)
-                print("⚠️  MASTERY STATES NOT AVAILABLE")
-                print("="*80)
-                print("The model was trained with λ_bce=1.0 (pure BCE mode).")
-                print("Mastery head (Head 2) was not computed, so skill vectors are unavailable.")
-                print("Mastery states analysis requires λ_bce < 1.0 to activate Head 2.")
-                print("="*80)
-                return []
+            # Detect model type from outputs
+            model_name = config.get('model', 'gainakt4')
             
-            # Extract all outputs for loss computation
-            # L1 (BCE): bce_predictions vs labels
-            # L2 (Rasch): skill_vector (Mi) vs rasch_batch (M_rasch)
-            # L3 (Constraints): architectural constraints on skill_vector
-            
-            skill_vector = outputs['skill_vector'].cpu().numpy()  # [B, L, num_concepts] - Head 2 output (Mi)
-            bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
-            logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits (pre-sigmoid)
+            if model_name == 'ikt2':
+                # iKT2: Per-interaction IRT mastery, not per-skill vectors
+                # Check if outputs are available
+                if 'mastery_irt' not in outputs:
+                    print("\n" + "="*80)
+                    print("⚠️  MASTERY STATES NOT AVAILABLE")
+                    print("="*80)
+                    print("iKT2 model outputs not found.")
+                    print("="*80)
+                    return []
+                
+                # Extract iKT2 outputs
+                # iKT2 returns per-interaction mastery M_IRT = σ(θ - β), not per-skill vectors
+                mastery_irt = outputs['mastery_irt'].cpu().numpy()  # [B, L] - IRT mastery per interaction
+                theta_t = outputs['theta_t'].cpu().numpy()  # [B, L] - student ability
+                beta_k = outputs['beta_k'].cpu().numpy()  # [B, L] - skill difficulty
+                bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
+                logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits
+                
+                skill_vector = None  # iKT2 doesn't have per-skill vectors
+            else:
+                # GainAKT4/iKT: Per-skill mastery vectors
+                # Check if mastery head is active (skill_vector will be None when λ=1.0)
+                if outputs['skill_vector'] is None:
+                    print("\n" + "="*80)
+                    print("⚠️  MASTERY STATES NOT AVAILABLE")
+                    print("="*80)
+                    print("The model was trained with λ_bce=1.0 (pure BCE mode).")
+                    print("Mastery head (Head 2) was not computed, so skill vectors are unavailable.")
+                    print("Mastery states analysis requires λ_bce < 1.0 to activate Head 2.")
+                    print("="*80)
+                    return []
+                
+                # Extract all outputs for loss computation
+                # L1 (BCE): bce_predictions vs labels
+                # L2 (Rasch): skill_vector (Mi) vs rasch_batch (M_rasch)
+                # L3 (Constraints): architectural constraints on skill_vector
+                
+                skill_vector = outputs['skill_vector'].cpu().numpy()  # [B, L, num_concepts] - Head 2 output (Mi)
+                bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
+                logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits (pre-sigmoid)
+                
+                # iKT2-specific outputs not available for other models
+                mastery_irt = None
+                theta_t = None
+                beta_k = None
             
             # Convert to numpy for processing
             questions_np = questions.cpu().numpy()
@@ -381,39 +427,56 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                     bce_target = int(labels_np[student_idx, time_step])
                     bce_logit = float(logits[student_idx, time_step])
                     
-                    # Get mastery states for all skills at this time step (L2 loss input)
-                    mastery_vector = skill_vector[student_idx, time_step, :]
-                    
                     # For single-skill: question_id corresponds to skill_id
                     skill_id = question_id  # Simplified for single-skill case
                     
                     if skill_id >= num_concepts:
                         continue  # Skip invalid skill IDs
                     
-                    # L2 (Alignment) inputs:
-                    # - Prediction: skill_vector (Mi) from Head 2
-                    # - Target: beta_targets (skill-only targets from embeddings)
-                    mi_value = float(mastery_vector[skill_id])  # Head 2 output for this skill
-                    m_rasch_value = None
-                    if beta_targets_np is not None:
-                        m_rasch_value = float(beta_targets_np[student_idx, time_step, skill_id])
-                    
-                    # L3 (Architectural Constraints) - implicit in architecture:
-                    # - Positivity: Mi > 0 (enforced by Softplus)
-                    # - Monotonicity: Mi[t] ≤ Mi[t+1] (enforced by cummax)
-                    # Check if this is the first occurrence of this skill for this student
-                    mi_prev = None
-                    if time_step > 0:
-                        # Get previous mastery value for monotonicity check
-                        mi_prev = float(mastery_vector[skill_id])  # This is post-cummax
-                        # Find actual previous timestep with valid data
-                        for prev_t in range(time_step - 1, -1, -1):
-                            if mask_np[student_idx, prev_t] == 1:
-                                mi_prev = float(skill_vector[student_idx, prev_t, skill_id])
-                                break
+                    # Model-specific mastery extraction
+                    if model_name == 'ikt2':
+                        # iKT2: Per-interaction IRT mastery
+                        mi_value = float(mastery_irt[student_idx, time_step])  # M_IRT = σ(θ - β)
+                        theta_value = float(theta_t[student_idx, time_step])  # Student ability
+                        beta_value = float(beta_k[student_idx, time_step])  # Skill difficulty
+                        m_rasch_value = None  # iKT2 doesn't use static Rasch targets
+                        mi_prev = None
+                        if time_step > 0:
+                            for prev_t in range(time_step - 1, -1, -1):
+                                if mask_np[student_idx, prev_t] == 1:
+                                    mi_prev = float(mastery_irt[student_idx, prev_t])
+                                    break
+                    else:
+                        # GainAKT4/iKT: Per-skill mastery vectors
+                        # Get mastery states for all skills at this time step (L2 loss input)
+                        mastery_vector = skill_vector[student_idx, time_step, :]
+                        
+                        # L2 (Alignment) inputs:
+                        # - Prediction: skill_vector (Mi) from Head 2
+                        # - Target: beta_targets (skill-only targets from embeddings)
+                        mi_value = float(mastery_vector[skill_id])  # Head 2 output for this skill
+                        theta_value = None  # Not applicable for these models
+                        beta_value = None  # Not applicable for these models
+                        m_rasch_value = None
+                        if beta_targets_np is not None:
+                            m_rasch_value = float(beta_targets_np[student_idx, time_step, skill_id])
+                        
+                        # L3 (Architectural Constraints) - implicit in architecture:
+                        # - Positivity: Mi > 0 (enforced by Softplus)
+                        # - Monotonicity: Mi[t] ≤ Mi[t+1] (enforced by cummax)
+                        # Check if this is the first occurrence of this skill for this student
+                        mi_prev = None
+                        if time_step > 0:
+                            # Get previous mastery value for monotonicity check
+                            mi_prev = float(mastery_vector[skill_id])  # This is post-cummax
+                            # Find actual previous timestep with valid data
+                            for prev_t in range(time_step - 1, -1, -1):
+                                if mask_np[student_idx, prev_t] == 1:
+                                    mi_prev = float(skill_vector[student_idx, prev_t, skill_id])
+                                    break
                     
                     # Store comprehensive data for all loss inputs
-                    mastery_data.append({
+                    data_entry = {
                         'student_id': int(student_id),
                         'time_step': int(time_step),
                         'question_id': question_id,
@@ -424,12 +487,19 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                         'bce_target': bce_target,
                         'bce_logit': bce_logit,
                         # L2 Rasch Loss inputs
-                        'mi_value': mi_value,  # Head 2 output (skill vector)
-                        'm_rasch_value': m_rasch_value,  # Rasch IRT target
+                        'mi_value': mi_value,  # Head 2 output (skill vector or IRT mastery)
+                        'm_rasch_value': m_rasch_value,  # Rasch IRT target (if available)
                         # L3 Constraint checks
                         'mi_prev': mi_prev,  # Previous mastery (for monotonicity)
                         'batch_idx': batch_idx
-                    })
+                    }
+                    
+                    # Add iKT2-specific fields
+                    if model_name == 'ikt2':
+                        data_entry['theta'] = theta_value  # Student ability
+                        data_entry['beta'] = beta_value  # Skill difficulty
+                    
+                    mastery_data.append(data_entry)
     
     return mastery_data
 
@@ -524,7 +594,7 @@ def save_mastery_states_csv(mastery_data, output_path):
         if mi_prev is not None:
             is_monotonic = mi_value >= mi_prev  # cummax ensures this
         
-        rows.append({
+        row = {
             'student_id': student_id,
             'time_step': time_step,
             'question_id': question_id,
@@ -542,16 +612,29 @@ def save_mastery_states_csv(mastery_data, output_path):
             'mi_prev': f'{mi_prev:.6f}' if mi_prev is not None else '',
             'is_positive': is_positive,
             'is_monotonic': is_monotonic
-        })
+        }
+        
+        # Add iKT2-specific fields if available
+        if 'theta' in entry:
+            row['theta'] = f"{entry['theta']:.6f}"
+        if 'beta' in entry:
+            row['beta'] = f"{entry['beta']:.6f}"
+        
+        rows.append(row)
     
     # Write to CSV
     if rows:
+        # Base fieldnames
         fieldnames = [
             'student_id', 'time_step', 'question_id', 'skill_id', 'response',
             'bce_logit', 'bce_prediction', 'bce_target',
             'mi_value', 'm_rasch_value', 'rasch_deviation',
             'mi_prev', 'is_positive', 'is_monotonic'
         ]
+        
+        # Add iKT2-specific fields if present
+        if rows and 'theta' in rows[0]:
+            fieldnames.extend(['theta', 'beta'])
         with open(output_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -619,10 +702,8 @@ def main():
     # Extract mastery states
     # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
-    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, 
-                                         max_students=args.num_students)
-    
-    # Check if mastery data is available
+    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, config,
+                                          max_students=args.num_students)    # Check if mastery data is available
     if not mastery_data:
         print("\n" + "="*80)
         print("MASTERY STATES EXTRACTION SKIPPED")

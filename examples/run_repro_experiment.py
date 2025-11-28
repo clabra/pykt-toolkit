@@ -268,24 +268,37 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     python_path = sys.executable
     cmd_parts = [python_path, eval_script]
     
-    # Add run_dir and checkpoint name
-    cmd_parts.append(f"--run_dir {experiment_folder}")
-    cmd_parts.append(f"--ckpt_name model_best.pth")
-    
-    # Core evaluation parameters (common to all models)
-    core_eval_params = [
-        'dataset', 'fold', 'batch_size',  # data
-        'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
-    ]
-    
-    # Model-specific evaluation parameters
+    # Model-specific checkpoint handling
     model = params.get('model', 'gainakt2exp')
-    if model == 'gainakt2exp':
-        model_eval_params = ['lambda_bce']  # GainAKT loss configuration
-    elif model == 'ikt':
-        model_eval_params = ['lambda_penalty', 'epsilon', 'phase']  # iKT loss configuration
-    else:
+    
+    if model == 'ikt2':
+        # ikt2 eval script uses --checkpoint with full path
+        checkpoint_path = f"{experiment_folder}/model_best.pth"
+        cmd_parts.append(f"--checkpoint {checkpoint_path}")
+        # ensure results are written to the experiment folder
+        cmd_parts.append(f"--output_dir {experiment_folder}")
+        
+        # ikt2 eval script only needs minimal parameters
+        core_eval_params = ['dataset', 'fold', 'batch_size', 'seq_len']
         model_eval_params = []
+    else:
+        # Other models use --run_dir and --ckpt_name
+        cmd_parts.append(f"--run_dir {experiment_folder}")
+        cmd_parts.append(f"--ckpt_name model_best.pth")
+        
+        # Core evaluation parameters (common to all models)
+        core_eval_params = [
+            'dataset', 'fold', 'batch_size',  # data
+            'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
+        ]
+        
+        # Model-specific evaluation parameters
+        if model == 'gainakt2exp':
+            model_eval_params = ['lambda_bce']  # GainAKT loss configuration
+        elif model == 'ikt':
+            model_eval_params = ['lambda_penalty', 'epsilon', 'phase']  # iKT loss configuration
+        else:
+            model_eval_params = []
     
     eval_params = core_eval_params + model_eval_params
     
@@ -801,41 +814,44 @@ def main():
             print(f"  {train_command}")
             return
         
-        # Launch training (automatic two-phase for iKT if phase=None)
-        if model_name == 'ikt' and training_params.get('phase') is None:
+        # Launch training (automatic two-phase for iKT/iKT2 if phase=None)
+        if model_name in ['ikt', 'ikt2'] and training_params.get('phase') is None:
             print("\n" + "=" * 80)
-            print("AUTOMATIC TWO-PHASE TRAINING (iKT)")
+            print(f"AUTOMATIC TWO-PHASE TRAINING ({model_name.upper()})")
             print("=" * 80)
             print("Phase 1 will run until convergence, then automatically switch to Phase 2")
             print("=" * 80 + "\n")
         
         # Launch training
+        print("\n" + "=" * 80)
+        print("LAUNCHING TRAINING")
+        print("=" * 80 + "\n")
+        result = subprocess.run(train_command, shell=True)
+        
+        if result.returncode == 0:
             print("\n" + "=" * 80)
-            print("LAUNCHING TRAINING")
-            print("=" * 80 + "\n")
-            result = subprocess.run(train_command, shell=True)
+            print("✓ TRAINING COMPLETED SUCCESSFULLY")
+            print("=" * 80)
+            print(f"\nResults saved to: {experiment_folder}")
+            print("\nNote: Evaluation is automatically launched by the training script")
             
-            if result.returncode == 0:
-                print("\n" + "=" * 80)
-                print("✓ TRAINING COMPLETED SUCCESSFULLY")
-                print("=" * 80)
-                print(f"\nResults saved to: {experiment_folder}")
-                print("\nNote: Evaluation is automatically launched by the training script")
-                
-                # Auto-launch mastery states extraction for iKT model
-                if model_name == 'ikt':
+            # Auto-launch mastery states extraction for iKT/iKT2 models
+            if model_name in ['ikt', 'ikt2']:
                     print("\n" + "=" * 80)
-                    print("LAUNCHING MASTERY STATES EXTRACTION (iKT)")
+                    print(f"LAUNCHING MASTERY STATES EXTRACTION ({model_name.upper()})")
                     print("=" * 80)
-                    print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                    if model_name == 'ikt':
+                        print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                    else:
+                        print("\nExtracting IRT mastery states (θ, β, M_IRT) for interpretability analysis...")
                     
                     mastery_result = subprocess.run(mastery_states_command, shell=True)
                     
                     if mastery_result.returncode == 0:
                         print("\n✓ Mastery states extraction completed")
                         print(f"  Output files in: {experiment_folder}")
-                        print(f"    - mastery_states_test.csv")
-                        print(f"    - mastery_states_summary_test.json")
+                        print(f"    - mastery_test.csv")
+                        print(f"    - mastery_test.json")
                         
                         # Generate comprehensive analysis plots
                         print("\n" + "=" * 80)
@@ -856,15 +872,15 @@ def main():
                             print("\n⚠️  Plot generation failed (non-critical)")
                     else:
                         print("\n⚠️  Mastery states extraction failed (non-critical)")
-                
-                print("\nTo reproduce this experiment:")
-                print("  python examples/run_repro_experiment.py \\")
-                print(f"    --repro_experiment_id {experiment_id}")
-            else:
-                print("\n" + "=" * 80)
-                print("❌ TRAINING FAILED")
-                print("=" * 80)
-                sys.exit(result.returncode)
+            
+            print("\nTo reproduce this experiment:")
+            print("  python examples/run_repro_experiment.py \\")
+            print(f"    --repro_experiment_id {experiment_id}")
+        else:
+            print("\n" + "=" * 80)
+            print("❌ TRAINING FAILED")
+            print("=" * 80)
+            sys.exit(result.returncode)
 
 if __name__ == "__main__":
     main()

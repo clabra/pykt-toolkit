@@ -23,5 +23,11 @@ set -e  # Exit on error
 cd /workspaces/pykt-toolkit
 source /home/vscode/.pykt-env/bin/activate
 
-# Launch with reproducibility infrastructure
-python examples/run_repro_experiment.py "$@"
+# Launch with reproducibility infrastructure in background
+nohup python examples/run_repro_experiment.py "$@" > run.log 2>&1 &
+
+# Get the process ID
+PID=$!
+echo "Training launched in background with PID: $PID"
+echo "Monitor progress with: tail -f run.log"
+echo "Check training logs in: experiments/[experiment_folder]/train_explicit.log"
