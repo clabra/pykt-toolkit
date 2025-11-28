@@ -1,0 +1,2 @@
+timestamp,checkpoint,l1_bce,auc,accuracy,l2_mse,l2_mae,corr_rasch,penalty_loss,violation_rate,mean_violation,max_violation,total_loss,loss_ratio_l1,loss_ratio_penalty,num_samples
+2025-11-28T15:56:08.191095,model_best.pth,0.09284510005448686,0.7046628068482427,0.7433354136947218,3.697475767694414e-05,0.006047357805073261,0.0,0.0,0.0,0.0,0.0,0.09284510005448686,1.0,0.0,134592

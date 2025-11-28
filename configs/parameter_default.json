@@ -25,7 +25,7 @@
     "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_bce": 0.5,
+    "lambda_penalty": 100.0,
     "epsilon": 0.05,
     "phase": null,
     "rasch_path": null,
@@ -69,7 +69,7 @@
       "emb_type"
     ],
     "loss_weights": [
-      "lambda_bce",
+      "lambda_penalty",
       "epsilon"
     ],
     "training_phase": [
@@ -80,11 +80,11 @@
     ]
   },
   "fixed": {
-    "lambda_constraint": {
-      "value": "lambda_mastery = 1.0 - lambda_bce",
-      "rationale": "iKT SINGLE-ENCODER ARCHITECTURE (2025-11-27): Multi-task loss weights must sum to 1.0. Two losses: L1 (BCE), L2 (Rasch). lambda_mastery is auto-computed as 1.0 - lambda_bce. Two-phase training: Phase 1 (L_total = L2, epsilon=0), Phase 2 (L_total = lambda_bce * L1 + lambda_mastery * L2, epsilon>0). Epsilon controls tolerance for Rasch deviation in Phase 2.",
+    "penalty_constraint": {
+      "value": "L_total = L1 + lambda_penalty * mean(max(0, |Mi - M_rasch| - epsilon)^2)",
+      "rationale": "iKT SINGLE-ENCODER ARCHITECTURE (2025-11-28): Soft barrier approach for Phase 2. Primary objective: optimize L1 (BCE) for maximum AUC. Constraint enforcement: large penalty (lambda_penalty) on deviations beyond tolerance (epsilon). No penalty when |Mi - M_rasch| <= epsilon. Recommended ranges: lambda_penalty in [10.0, 1000.0], epsilon in [0.05, 0.15]. Phase 1 (L_total = L2, epsilon=0). Phase 2 uses soft barrier for interpretability constraint.",
       "validated_by_experiments": []
     }
   },
-  "md5": "8cc0a6b942c3fdc6d0e8877f54da003b"
+  "md5": "639332eca458c02d375a4ce038fc681b"
 }

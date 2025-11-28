@@ -248,13 +248,22 @@ def build_mastery_states_command(experiment_folder, num_students=15, split='test
     return cmd
 
 
+def build_analysis_plots_command(experiment_folder):
+    """
+    Build command to generate comprehensive analysis plots.
+    """
+    python_path = sys.executable
+    plots_script = "examples/generate_analysis_plots.py"
+    cmd = f"{python_path} {plots_script} --run_dir {experiment_folder}"
+    return cmd
+
+
 def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
     Build explicit evaluation command with ALL parameters.
     Similar to build_explicit_train_command but for evaluation.
     
-    For GainAKT4: Only requires dataset, architecture, and lambda_bce parameters.
-    The eval script will auto-detect question-level files and run fusion evaluation.
+    Model-aware: adjusts parameters based on model type.
     """
     python_path = sys.executable
     cmd_parts = [python_path, eval_script]
@@ -263,12 +272,22 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     cmd_parts.append(f"--run_dir {experiment_folder}")
     cmd_parts.append(f"--ckpt_name model_best.pth")
     
-    # GainAKT4 evaluation parameters (explicit, zero defaults)
-    eval_params = [
+    # Core evaluation parameters (common to all models)
+    core_eval_params = [
         'dataset', 'fold', 'batch_size',  # data
         'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',  # architecture
-        'lambda_bce'  # loss configuration
     ]
+    
+    # Model-specific evaluation parameters
+    model = params.get('model', 'gainakt2exp')
+    if model == 'gainakt2exp':
+        model_eval_params = ['lambda_bce']  # GainAKT loss configuration
+    elif model == 'ikt':
+        model_eval_params = ['lambda_penalty', 'epsilon', 'phase']  # iKT loss configuration
+    else:
+        model_eval_params = []
+    
+    eval_params = core_eval_params + model_eval_params
     
     for key in eval_params:
         if key in params:
@@ -276,7 +295,7 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
             cmd_parts.append(f"--{key} {value}")
         else:
             # Should never happen if parameter_default.json is complete
-            raise ValueError(f"Required evaluation parameter '{key}' not found in config")
+            raise ValueError(f"Required evaluation parameter '{key}' not found in config (model: {model})")
     
     return " ".join(cmd_parts)
 
@@ -817,6 +836,24 @@ def main():
                         print(f"  Output files in: {experiment_folder}")
                         print(f"    - mastery_states_test.csv")
                         print(f"    - mastery_states_summary_test.json")
+                        
+                        # Generate comprehensive analysis plots
+                        print("\n" + "=" * 80)
+                        print("Generating analysis plots...")
+                        print("=" * 80)
+                        
+                        plots_command = build_analysis_plots_command(experiment_folder)
+                        plots_result = subprocess.run(plots_command, shell=True)
+                        
+                        if plots_result.returncode == 0:
+                            print("\n✓ Analysis plots generated successfully")
+                            print(f"  Plot files in: {experiment_folder}/plots/")
+                            print(f"    - loss_evolution.png")
+                            print(f"    - auc_vs_violations.png")
+                            print(f"    - deviation_histogram.png")
+                            print(f"    - per_skill_alignment.png")
+                        else:
+                            print("\n⚠️  Plot generation failed (non-critical)")
                     else:
                         print("\n⚠️  Mastery states extraction failed (non-critical)")
                 

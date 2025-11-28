@@ -235,12 +235,24 @@ class ParameterAuditor:
             with open(param_file, 'r') as f:
                 defaults = json.load(f)['defaults']
             
-            # Critical parameters that must be present (GainAKT4-specific)
-            required_params = [
+            # Critical parameters that must be present (model-agnostic core + model-specific)
+            # Core parameters (all models)
+            core_params = [
                 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout',
-                'batch_size', 'epochs', 'learning_rate', 'lambda_bce',
+                'batch_size', 'epochs', 'learning_rate',
                 'seed', 'optimizer', 'weight_decay', 'patience'
             ]
+            
+            # Model-specific parameters (check what's actually in defaults)
+            model = defaults.get('model', 'unknown')
+            if model == 'gainakt2exp':
+                model_specific_params = ['lambda_bce']
+            elif model == 'ikt':
+                model_specific_params = ['lambda_penalty', 'epsilon', 'phase']
+            else:
+                model_specific_params = []
+            
+            required_params = core_params + model_specific_params
             
             missing = [p for p in required_params if p not in defaults]
             

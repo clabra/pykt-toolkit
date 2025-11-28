@@ -7,11 +7,13 @@ Architecture:
   → Head 2 (Mastery): Outputs skill vector {Mi} [B, L, num_c] with Rasch Loss (L2)
 
 Two-Phase Training:
-- Phase 1: Psychometric Grounding - L2 = MSE(Mi, M_rasch) with epsilon=0
-- Phase 2: Constrained Optimization - L2 = MSE(ReLU(|Mi - M_rasch| - epsilon))
+- Phase 1: Psychometric Grounding - L_total = L2 = MSE(Mi, M_rasch) with epsilon=0
+- Phase 2: Constrained Optimization - L_total = L1 + λ_penalty × mean(max(0, |Mi - M_rasch| - ε)²)
 
-Multi-task learning: L_total = λ_bce * L1 + (1 - λ_bce) * L2
-Constraint: λ_bce + λ_mastery = 1.0 (λ_mastery = 1 - λ_bce)
+Phase 2 Strategy:
+- Primary objective: Optimize L1 (BCE) for maximum AUC
+- Constraint enforcement: Large penalty (λ_penalty) on deviations beyond tolerance (ε)
+- No penalty when |Mi - M_rasch| ≤ ε (soft barrier approach)
 
 Key Features:
 - Positivity: Softplus activation ensures Mi > 0
@@ -156,9 +158,9 @@ class iKT(nn.Module):
     Constraint: λ_bce + λ_mastery = 1.0 (λ_mastery = 1 - λ_bce)
     """
     
-    def __init__(self, num_c, seq_len, d_model=256, n_heads=4, num_encoder_blocks=4,
-                 d_ff=512, dropout=0.2, emb_type='qid', lambda_bce=0.5, 
-                 epsilon=0.0, phase=1):
+    def __init__(self, num_c, seq_len, d_model, n_heads, num_encoder_blocks,
+                 d_ff, dropout, emb_type, lambda_penalty, 
+                 epsilon, phase):
         super().__init__()
         
         self.num_c = num_c
@@ -168,12 +170,11 @@ class iKT(nn.Module):
         self.epsilon = epsilon  # Tolerance threshold for Phase 2
         self.phase = phase  # 1 or 2
         
-        # Lambda weights: λ_mastery = 1 - λ_bce (constraint enforced)
-        self.lambda_bce = lambda_bce
-        self.lambda_mastery = 1.0 - lambda_bce
+        # Penalty weight for Phase 2 constraint enforcement
+        self.lambda_penalty = lambda_penalty
         
-        # Validate constraint
-        assert 0.0 <= lambda_bce <= 1.0, f"lambda_bce must be in [0, 1], got {lambda_bce}"
+        # Validate lambda_penalty is positive
+        assert lambda_penalty > 0, f"lambda_penalty must be positive, got {lambda_penalty}"
         
         # === SINGLE ENCODER: Performance & Mastery Pathway ===
         # Embeddings for binary responses (0/1)
@@ -261,30 +262,25 @@ class iKT(nn.Module):
         bce_predictions = torch.sigmoid(logits)
         
         # === HEAD 2: Mastery Estimation ===
-        # Conditional computation: skip if λ_mastery = 0 (no gradient flow)
-        if self.lambda_mastery > 0:
-            # Step 1: MLP1 → Skill Vector {Mi} with positivity
-            skill_vector = self.mlp1(h)  # [B, L, num_c], guaranteed positive by Softplus
-            
-            # Step 2: Enforce monotonicity (cumulative max across time)
-            skill_vector = torch.cummax(skill_vector, dim=1)[0]  # [B, L, num_c]
-            
-            # Step 3: Compute Rasch loss if targets provided
-            if rasch_targets is not None:
-                # Phase-dependent loss computation
-                if self.phase == 1:
-                    # Phase 1: Direct MSE (epsilon=0)
-                    rasch_loss = F.mse_loss(skill_vector, rasch_targets, reduction='mean')
-                else:
-                    # Phase 2: MSE with epsilon tolerance
-                    deviation = torch.abs(skill_vector - rasch_targets)
-                    violation = torch.relu(deviation - self.epsilon)
-                    rasch_loss = torch.mean(violation ** 2)
+        # Always compute mastery head - this is the core feature of iKT
+        # Step 1: MLP1 → Skill Vector {Mi} with positivity
+        skill_vector = self.mlp1(h)  # [B, L, num_c], guaranteed positive by Softplus
+        
+        # Step 2: Enforce monotonicity (cumulative max across time)
+        skill_vector = torch.cummax(skill_vector, dim=1)[0]  # [B, L, num_c]
+        
+        # Step 3: Compute Rasch loss if targets provided
+        if rasch_targets is not None:
+            # Phase-dependent loss computation
+            if self.phase == 1:
+                # Phase 1: Direct MSE (epsilon=0)
+                rasch_loss = F.mse_loss(skill_vector, rasch_targets, reduction='mean')
             else:
-                rasch_loss = None
+                # Phase 2: MSE with epsilon tolerance
+                deviation = torch.abs(skill_vector - rasch_targets)
+                violation = torch.relu(deviation - self.epsilon)
+                rasch_loss = torch.mean(violation ** 2)
         else:
-            # Skip mastery head computation when λ_mastery=0 (pure BCE mode)
-            skill_vector = None
             rasch_loss = None
         
         return {
@@ -299,7 +295,8 @@ class iKT(nn.Module):
         Compute two-task loss with phase-dependent behavior.
         
         Phase 1: L_total = L2 (Rasch loss only)
-        Phase 2: L_total = λ_bce * L1 + (1 - λ_bce) * L2
+        Phase 2: L_total = L1 + λ_penalty × L2_penalty
+                 where L2_penalty = mean(max(0, |Mi - M_rasch| - ε)²)
         
         Args:
             output: dict from forward()
@@ -310,6 +307,7 @@ class iKT(nn.Module):
                 - 'total_loss': phase-dependent weighted loss
                 - 'bce_loss': L1 (performance prediction)
                 - 'rasch_loss': L2 (Rasch mastery alignment)
+                - 'penalty_loss': L2_penalty (constraint violation penalty)
         """
         device = output['logits'].device
         
@@ -328,9 +326,13 @@ class iKT(nn.Module):
             # No rasch_loss computed in forward (no targets provided)
             # Create zero loss with gradient for compatibility
             rasch_loss = bce_loss * 0.0
+            penalty_loss = bce_loss * 0.0
         elif rasch_loss.dim() > 0:
             # Handle DataParallel case: reduce to scalar if needed
             rasch_loss = rasch_loss.mean()
+            penalty_loss = rasch_loss  # Already computed as penalty in forward()
+        else:
+            penalty_loss = rasch_loss
         
         # Phase-dependent total loss
         if self.phase == 1:
@@ -341,13 +343,15 @@ class iKT(nn.Module):
                 # No Rasch targets available - use BCE for training
                 total_loss = bce_loss
         else:
-            # Phase 2: Weighted combination
-            total_loss = self.lambda_bce * bce_loss + self.lambda_mastery * rasch_loss
+            # Phase 2: L_total = L1 + λ_penalty × L2_penalty
+            # L2_penalty is pre-computed in forward() as soft barrier
+            total_loss = bce_loss + self.lambda_penalty * penalty_loss
         
         return {
             'total_loss': total_loss,
             'bce_loss': bce_loss,
-            'rasch_loss': rasch_loss
+            'rasch_loss': rasch_loss,
+            'penalty_loss': penalty_loss if self.phase == 2 else rasch_loss * 0.0
         }
 
 
@@ -355,31 +359,43 @@ def create_model(config):
     """
     Factory function to create iKT model.
     
+    All parameters are REQUIRED and must be present in config.
+    No hardcoded defaults per reproducibility guidelines.
+    Defaults should come from configs/parameter_default.json.
+    
     Required config keys:
         - num_c: number of skills
         - seq_len: sequence length
-        - d_model: model dimension (default: 256)
-        - n_heads: number of attention heads (default: 4)
-        - num_encoder_blocks: number of encoder blocks (default: 4)
-        - d_ff: feed-forward dimension (default: 512)
-        - dropout: dropout rate (default: 0.2)
-        - emb_type: embedding type (default: 'qid')
-        - lambda_bce: BCE loss weight (default: 0.5)
-        - epsilon: tolerance threshold for Phase 2 (default: 0.0)
-        - phase: training phase 1 or 2 (default: 1)
-    
-    Note: lambda_mastery = 1.0 - lambda_bce (constraint enforced automatically)
+        - d_model: model dimension
+        - n_heads: number of attention heads
+        - num_encoder_blocks: number of encoder blocks
+        - d_ff: feed-forward dimension
+        - dropout: dropout rate
+        - emb_type: embedding type
+        - lambda_penalty: penalty coefficient for Phase 2 constraint
+                         Recommended range: [10.0, 1000.0]
+        - epsilon: tolerance threshold for Phase 2
+                   Recommended range: [0.05, 0.15]
+        - phase: training phase 1 or 2
     """
+    # Fail-fast: require all parameters (no .get() with defaults)
+    required_keys = ['num_c', 'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks',
+                     'd_ff', 'dropout', 'emb_type', 'lambda_penalty', 'epsilon', 'phase']
+    for key in required_keys:
+        if key not in config:
+            raise KeyError(f"Required config parameter '{key}' not found. "
+                          f"All defaults must be specified in parameter_default.json")
+    
     return iKT(
         num_c=config['num_c'],
         seq_len=config['seq_len'],
-        d_model=config.get('d_model', 256),
-        n_heads=config.get('n_heads', 4),
-        num_encoder_blocks=config.get('num_encoder_blocks', 4),
-        d_ff=config.get('d_ff', 512),
-        dropout=config.get('dropout', 0.2),
-        emb_type=config.get('emb_type', 'qid'),
-        lambda_bce=config.get('lambda_bce', 0.5),
-        epsilon=config.get('epsilon', 0.0),
-        phase=config.get('phase', 1)
+        d_model=config['d_model'],
+        n_heads=config['n_heads'],
+        num_encoder_blocks=config['num_encoder_blocks'],
+        d_ff=config['d_ff'],
+        dropout=config['dropout'],
+        emb_type=config['emb_type'],
+        lambda_penalty=config['lambda_penalty'],
+        epsilon=config['epsilon'],
+        phase=config['phase']
     )

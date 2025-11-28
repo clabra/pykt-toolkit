@@ -27,15 +27,36 @@ from pykt.models.ikt import iKT
 from examples.experiment_utils import compute_auc_acc
 
 
-def evaluate_split(model, test_loader, device, split_name='test'):
-    """Evaluate model on a data split."""
+def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_data=None, lambda_penalty=None, epsilon=None):
+    """
+    Evaluate model on a data split with comprehensive metrics.
+    
+    Args:
+        rasch_targets_data: Dict with 'rasch_targets' and 'metadata' keys (from load_rasch_targets)
+    
+    Returns 13 metrics:
+    - L1 Performance: l1_bce, auc, accuracy
+    - L2 Alignment: l2_mse, l2_mae, corr_rasch
+    - L2_penalty Violations: penalty_loss, violation_rate, mean_violation, max_violation
+    - L_total Combined: total_loss, loss_ratio_l1, loss_ratio_penalty
+    """
     model.eval()
     all_preds = []
     all_labels = []
+    all_skill_vectors = []
+    all_rasch_values = []
     
     total_bce_loss = 0.0
-    total_rasch_loss = 0.0
+    total_penalty_loss = 0.0
+    total_loss = 0.0
     num_batches = 0
+    
+    # Extract rasch data if available
+    rasch_data = None
+    num_c = None
+    if rasch_targets_data is not None:
+        rasch_data = rasch_targets_data.get('rasch_targets', {})
+        num_c = rasch_targets_data['metadata']['num_skills']
     
     with torch.no_grad():
         for batch in test_loader:
@@ -45,8 +66,20 @@ def evaluate_split(model, test_loader, device, split_name='test'):
             mask = batch['masks'].to(device)
             labels = batch['shft_rseqs'].to(device)
             
-            # Forward pass (no Rasch targets in evaluation)
-            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=None)
+            # Construct Rasch batch from UIDs (like in training)
+            batch_rasch = None
+            if rasch_data is not None:
+                uids = batch['uids']
+                batch_size, seq_len = questions.shape
+                batch_rasch = torch.zeros(batch_size, seq_len, num_c, device=device)
+                for i, uid in enumerate(uids):
+                    if uid in rasch_data:
+                        target_tensor = rasch_data[uid]
+                        actual_len = min(target_tensor.shape[0], seq_len)
+                        batch_rasch[i, :actual_len, :] = target_tensor[:actual_len, :].to(device)
+            
+            # Forward pass
+            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=batch_rasch)
             
             # Compute loss
             if hasattr(model, 'module'):
@@ -55,10 +88,12 @@ def evaluate_split(model, test_loader, device, split_name='test'):
                 loss_dict = model.compute_loss(outputs, labels)
             
             total_bce_loss += loss_dict['bce_loss'].item()
-            total_rasch_loss += loss_dict['rasch_loss'].item()
+            if 'penalty_loss' in loss_dict:
+                total_penalty_loss += loss_dict['penalty_loss'].item()
+            total_loss += loss_dict['total_loss'].item()
             num_batches += 1
             
-            # Collect predictions
+            # Collect predictions and labels
             preds = outputs['bce_predictions'].cpu().numpy()
             labels_np = labels.cpu().numpy()
             mask_np = mask.cpu().numpy()
@@ -68,29 +103,110 @@ def evaluate_split(model, test_loader, device, split_name='test'):
                 valid_indices = mask_np[i] == 1
                 all_preds.extend(preds[i][valid_indices])
                 all_labels.extend(labels_np[i][valid_indices])
+            
+            # Collect skill vectors and Rasch targets if available
+            if 'skill_vector' in outputs and batch_rasch is not None:
+                skill_vec = outputs['skill_vector'].detach().cpu().numpy()
+                rasch_batch_np = batch_rasch.cpu().numpy()
+                
+                # Flatten: (batch_size, seq_len, num_skills) -> list
+                for i in range(len(skill_vec)):
+                    all_skill_vectors.append(skill_vec[i])
+                    all_rasch_values.append(rasch_batch_np[i])
     
-    # Compute metrics
+    # Compute L1 metrics (performance prediction)
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
     
     if len(all_preds) == 0:
         print(f"⚠️  Warning: No valid predictions for {split_name} split")
         return {
-            'auc': 0.0,
-            'acc': 0.0,
-            'bce_loss': 0.0,
-            'rasch_loss': 0.0,
+            'l1_bce': 0.0, 'auc': 0.0, 'accuracy': 0.0,
+            'l2_mse': 0.0, 'l2_mae': 0.0, 'corr_rasch': 0.0,
+            'penalty_loss': 0.0, 'violation_rate': 0.0, 'mean_violation': 0.0, 'max_violation': 0.0,
+            'total_loss': 0.0, 'loss_ratio_l1': 0.0, 'loss_ratio_penalty': 0.0,
             'num_samples': 0
         }
     
-    metrics = compute_auc_acc(all_labels, all_preds)
+    performance_metrics = compute_auc_acc(all_labels, all_preds)
+    l1_bce = total_bce_loss / num_batches if num_batches > 0 else 0.0
+    auc = performance_metrics['auc']
+    accuracy = performance_metrics['acc']
+    
+    # Compute L2 and L2_penalty metrics if Rasch targets are available
+    if len(all_skill_vectors) > 0 and rasch_data is not None:
+        # Flatten skill vectors and Rasch targets
+        skill_flat = np.concatenate([sv.flatten() for sv in all_skill_vectors])
+        rasch_flat = np.concatenate([rv.flatten() for rv in all_rasch_values])
+        
+        # L2 alignment metrics
+        l2_mse = np.mean((skill_flat - rasch_flat) ** 2)
+        l2_mae = np.mean(np.abs(skill_flat - rasch_flat))
+        
+        # Correlation
+        if np.std(skill_flat) > 1e-6 and np.std(rasch_flat) > 1e-6:
+            corr_rasch = np.corrcoef(skill_flat, rasch_flat)[0, 1]
+        else:
+            corr_rasch = 0.0
+        
+        # L2_penalty violation metrics
+        deviations = np.abs(skill_flat - rasch_flat)
+        eps = epsilon if epsilon is not None else 0.0
+        violations = np.maximum(0, deviations - eps)
+        
+        violation_mask = violations > 0
+        violation_rate = np.mean(violation_mask)
+        mean_violation = np.mean(violations[violation_mask]) if np.any(violation_mask) else 0.0
+        max_violation = np.max(violations) if len(violations) > 0 else 0.0
+        penalty_loss = total_penalty_loss / num_batches if num_batches > 0 else 0.0
+    else:
+        # No Rasch targets provided - set alignment metrics to 0
+        l2_mse = 0.0
+        l2_mae = 0.0
+        corr_rasch = 0.0
+        penalty_loss = 0.0
+        violation_rate = 0.0
+        mean_violation = 0.0
+        max_violation = 0.0
+    
+    # Compute L_total combined metrics
+    avg_total_loss = total_loss / num_batches if num_batches > 0 else 0.0
+    
+    # Loss ratios
+    if avg_total_loss > 0:
+        loss_ratio_l1 = l1_bce / avg_total_loss
+        if lambda_penalty is not None and penalty_loss > 0:
+            loss_ratio_penalty = (lambda_penalty * penalty_loss) / avg_total_loss
+        else:
+            loss_ratio_penalty = 0.0
+    else:
+        loss_ratio_l1 = 0.0
+        loss_ratio_penalty = 0.0
     
     return {
-        'auc': metrics['auc'],
-        'acc': metrics['acc'],
-        'bce_loss': total_bce_loss / num_batches if num_batches > 0 else 0.0,
-        'rasch_loss': total_rasch_loss / num_batches if num_batches > 0 else 0.0,
-        'num_samples': len(all_preds)
+        # L1 Performance
+        'l1_bce': float(l1_bce),
+        'auc': float(auc),
+        'accuracy': float(accuracy),
+        
+        # L2 Alignment
+        'l2_mse': float(l2_mse),
+        'l2_mae': float(l2_mae),
+        'corr_rasch': float(corr_rasch),
+        
+        # L2_penalty Violations
+        'penalty_loss': float(penalty_loss),
+        'violation_rate': float(violation_rate),
+        'mean_violation': float(mean_violation),
+        'max_violation': float(max_violation),
+        
+        # L_total Combined
+        'total_loss': float(avg_total_loss),
+        'loss_ratio_l1': float(loss_ratio_l1),
+        'loss_ratio_penalty': float(loss_ratio_penalty),
+        
+        # Meta
+        'num_samples': int(len(all_preds))
     }
 
 
@@ -116,10 +232,16 @@ def main():
     parser.add_argument('--d_ff', type=int, required=True)
     parser.add_argument('--dropout', type=float, required=True)
     parser.add_argument('--emb_type', type=str, required=True)
-    parser.add_argument('--lambda_bce', type=float, required=True)
+    parser.add_argument('--lambda_penalty', type=float, required=True)
     parser.add_argument('--epsilon', type=float, required=True)
     parser.add_argument('--phase', type=int, default=2,
                        help='Phase for evaluation (default: 2 for full model with both heads)')
+    
+    # Rasch/IRT parameters
+    parser.add_argument('--mastery_method', type=str, default='rasch',
+                       help='Method for mastery estimation (rasch or bkt)')
+    parser.add_argument('--diff_as_ones', action='store_true',
+                       help='Use ones instead of difficulty estimates for Rasch')
     
     args = parser.parse_args()
     
@@ -180,6 +302,32 @@ def main():
     print(f"✓ Datasets loaded:")
     print(f"  - Test: {len(test_loader)} batches ({num_c} concepts)")
     
+    # Load Rasch targets
+    print(f"\n📊 Loading Rasch/IRT targets...")
+    from examples.train_ikt import load_rasch_targets
+    
+    # Determine rasch_path based on mastery_method
+    if args.mastery_method == 'bkt':
+        rasch_filename = 'bkt_targets.pkl'
+    elif args.mastery_method == 'irt':
+        rasch_filename = 'rasch_targets.pkl'
+    elif args.mastery_method == 'bkt_mono':
+        rasch_filename = 'bkt_mono_targets.pkl'
+    elif args.mastery_method == 'irt_mono':
+        rasch_filename = 'rasch_mono_targets.pkl'
+    else:
+        rasch_filename = 'rasch_targets.pkl'
+    
+    rasch_path = os.path.join(dataset_config['dpath'], rasch_filename)
+    
+    rasch_targets_data = load_rasch_targets(
+        rasch_path=rasch_path,
+        dataset_path=dataset_config['dpath'],
+        num_c=num_c,
+        mastery_method=args.mastery_method
+    )
+    print(f"✓ Rasch targets data loaded")
+    
     # Initialize model
     print(f"\n🏗️  Initializing model...")
     model = iKT(
@@ -191,7 +339,7 @@ def main():
         d_ff=args.d_ff,
         dropout=args.dropout,
         emb_type=args.emb_type,
-        lambda_bce=args.lambda_bce,
+        lambda_penalty=args.lambda_penalty,
         epsilon=args.epsilon,
         phase=args.phase
     ).to(device)
@@ -221,40 +369,53 @@ def main():
     
     if train_loader:
         print("\n📈 Evaluating on TRAIN split...")
-        train_results = evaluate_split(model, train_loader, device, 'train')
+        train_results = evaluate_split(model, train_loader, device, 'train', 
+                                      rasch_targets_data=rasch_targets_data, 
+                                      lambda_penalty=args.lambda_penalty, 
+                                      epsilon=args.epsilon)
         results['train'] = train_results
-        print(f"Train - AUC: {train_results['auc']:.4f}, ACC: {train_results['acc']:.4f}, "
-              f"BCE Loss: {train_results['bce_loss']:.4f}, Samples: {train_results['num_samples']}")
+        print(f"Train - AUC: {train_results['auc']:.4f}, ACC: {train_results['accuracy']:.4f}, "
+              f"L1: {train_results['l1_bce']:.4f}, L2_MSE: {train_results['l2_mse']:.4f}, "
+              f"Violations: {train_results['violation_rate']*100:.1f}%")
     
     if valid_loader:
         print("\n📊 Evaluating on VALID split...")
-        valid_results = evaluate_split(model, valid_loader, device, 'valid')
+        valid_results = evaluate_split(model, valid_loader, device, 'valid',
+                                       rasch_targets_data=rasch_targets_data,
+                                       lambda_penalty=args.lambda_penalty,
+                                       epsilon=args.epsilon)
         results['valid'] = valid_results
-        print(f"Valid - AUC: {valid_results['auc']:.4f}, ACC: {valid_results['acc']:.4f}, "
-              f"BCE Loss: {valid_results['bce_loss']:.4f}, Samples: {valid_results['num_samples']}")
+        print(f"Valid - AUC: {valid_results['auc']:.4f}, ACC: {valid_results['accuracy']:.4f}, "
+              f"L1: {valid_results['l1_bce']:.4f}, L2_MSE: {valid_results['l2_mse']:.4f}, "
+              f"Violations: {valid_results['violation_rate']*100:.1f}%")
     
     if test_loader:
         print("\n🎯 Evaluating on TEST split...")
-        test_results = evaluate_split(model, test_loader, device, 'test')
+        test_results = evaluate_split(model, test_loader, device, 'test',
+                                      rasch_targets_data=rasch_targets_data,
+                                      lambda_penalty=args.lambda_penalty,
+                                      epsilon=args.epsilon)
         results['test'] = test_results
-        print(f"Test - AUC: {test_results['auc']:.4f}, ACC: {test_results['acc']:.4f}, "
-              f"BCE Loss: {test_results['bce_loss']:.4f}, Samples: {test_results['num_samples']}")
+        print(f"Test - AUC: {test_results['auc']:.4f}, ACC: {test_results['accuracy']:.4f}, "
+              f"L1: {test_results['l1_bce']:.4f}, L2_MSE: {test_results['l2_mse']:.4f}, "
+              f"Violations: {test_results['violation_rate']*100:.1f}%")
     
     print("\n" + "="*80)
     print("SUMMARY")
     print("="*80)
     
-    # Print summary table
-    print(f"\n{'Split':<10} {'AUC':<10} {'ACC':<10} {'BCE Loss':<12} {'Samples':<10}")
-    print("-" * 52)
+    # Print comprehensive summary table
+    print(f"\n{'Split':<10} {'AUC':<10} {'ACC':<10} {'L1_BCE':<10} {'L2_MSE':<10} {'Corr':<10} {'Viol%':<10}")
+    print("-" * 70)
     for split_name in ['train', 'valid', 'test']:
         if split_name in results:
             r = results[split_name]
-            print(f"{split_name.capitalize():<10} {r['auc']:<10.4f} {r['acc']:<10.4f} "
-                  f"{r['bce_loss']:<12.4f} {r['num_samples']:<10}")
+            print(f"{split_name.capitalize():<10} {r['auc']:<10.4f} {r['accuracy']:<10.4f} "
+                  f"{r['l1_bce']:<10.4f} {r['l2_mse']:<10.4f} {r['corr_rasch']:<10.3f} "
+                  f"{r['violation_rate']*100:<10.1f}")
     
     # Save results to JSON
-    results_json_path = os.path.join(args.run_dir, 'eval_results.json')
+    results_json_path = os.path.join(args.run_dir, 'metrics_test.json')
     eval_results = {
         'timestamp': datetime.now().isoformat(),
         'checkpoint': args.ckpt_name,
@@ -262,6 +423,11 @@ def main():
         'fold': args.fold,
         'num_concepts': num_c,
         'num_parameters': num_params,
+        'hyperparameters': {
+            'lambda_penalty': args.lambda_penalty,
+            'epsilon': args.epsilon,
+            'phase': args.phase
+        },
         'results': results
     }
     
@@ -269,42 +435,33 @@ def main():
         json.dump(eval_results, f, indent=2)
     print(f"\n✓ Results saved to: {results_json_path}")
     
-    # Save config used for evaluation
-    config_eval_path = os.path.join(args.run_dir, 'config_eval.json')
-    with open(config_eval_path, 'w') as f:
-        json.dump(vars(args), f, indent=2)
-    print(f"✓ Evaluation config saved to: {config_eval_path}")
-    
-    # Append to metrics_epoch_eval.csv for reproducibility tracking
-    metrics_eval_csv_path = os.path.join(args.run_dir, 'metrics_epoch_eval.csv')
-    csv_exists = os.path.exists(metrics_eval_csv_path)
-    
-    with open(metrics_eval_csv_path, 'a', newline='') as f:
-        writer = csv.writer(f)
-        if not csv_exists:
-            # Write header
+    # Write metrics to metrics_test.csv
+    if 'test' in results:
+        test_csv_path = os.path.join(args.run_dir, 'metrics_test.csv')
+        test_csv_exists = os.path.exists(test_csv_path)
+        
+        with open(test_csv_path, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not test_csv_exists:
+                # Write header
+                writer.writerow([
+                    'lambda_penalty', 'epsilon',
+                    'test_auc', 'test_l1_auc', 'test_l2_mae', 'test_l2_mse', 'test_l2_penalty'
+                ])
+            
+            # Write test results
+            r = results['test']
             writer.writerow([
-                'timestamp', 'checkpoint', 'split',
-                'auc', 'acc', 'bce_loss', 'rasch_loss', 'num_samples'
+                args.lambda_penalty,
+                args.epsilon,
+                r['auc'],  # test_auc
+                r['auc'],  # test_l1_auc (same as test_auc)
+                r['l2_mae'],  # test_l2_mae
+                r['l2_mse'],  # test_l2_mse
+                r['penalty_loss']  # test_l2_penalty
             ])
         
-        # Write results for each split
-        timestamp = datetime.now().isoformat()
-        for split_name in ['train', 'valid', 'test']:
-            if split_name in results:
-                r = results[split_name]
-                writer.writerow([
-                    timestamp,
-                    args.ckpt_name,
-                    split_name,
-                    r['auc'],
-                    r['acc'],
-                    r['bce_loss'],
-                    r['rasch_loss'],
-                    r['num_samples']
-                ])
-    
-    print(f"✓ Metrics appended to: {metrics_eval_csv_path}")
+        print(f"✓ Test metrics saved to: {test_csv_path}")
     
     print("\n" + "="*80)
     print("✅ Evaluation completed successfully")

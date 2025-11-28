@@ -27,7 +27,7 @@ iKT Architecture:
 
 Two-Phase Training:
 - Phase 1: Pure Rasch alignment (L_total = L2, epsilon=0)
-- Phase 2: Constrained optimization (L_total = λ_bce * L1 + λ_mastery * L2, epsilon>0)
+- Phase 2: Constrained optimization (L_total = L1 + λ_penalty × mean(max(0, |Mi-M_rasch|-ε)²), epsilon>0)
 """
 
 import os
@@ -57,12 +57,13 @@ def get_model_attr(model, attr_name):
     return getattr(model, attr_name)
 
 
-def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method='bkt'):
+def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
     """
     Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
     
     Args:
         rasch_path: Path to mastery targets pickle file (if None, uses default or random)
+        mastery_method: Method for mastery computation (required, no default per reproducibility guidelines)
         dataset_path: Path to dataset directory
         num_c: Number of concepts/skills
         mastery_method: Method used ('bkt', 'irt', 'bkt_mono', 'irt_mono')
@@ -121,25 +122,41 @@ def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method='bkt'):
             
         except Exception as e:
             print(f"✗ Failed to load mastery targets: {e}")
-            print("  Falling back to random initialization")
+            raise RuntimeError(
+                f"Failed to load Rasch/IRT targets from {rasch_path}.\n"
+                f"iKT requires pre-computed mastery targets for training.\n"
+                f"Please generate them first:\n"
+                f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+                f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic"
+            ) from e
     else:
-        print(f"⚠️  Mastery targets not found at: {rasch_path}")
-        print("  Using random initialization in [0.0, 1.0] (placeholder)")
-        print(f"  To compute real targets:")
-        print(f"    BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}")
-        print(f"    IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic")
-    
-    # Fallback: Return flag for random generation
-    return {'mode': 'random', 'num_c': num_c}
+        # Rasch targets are REQUIRED - no random fallback
+        raise FileNotFoundError(
+            f"Rasch/IRT mastery targets not found at: {rasch_path}\n"
+            f"iKT requires pre-computed mastery targets for training.\n"
+            f"Please generate them first:\n"
+            f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+            f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic\n\n"
+            f"Expected file location: {rasch_path}"
+        )
 
 
 def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_targets=None):
-    """Train for one epoch."""
+    """Train for one epoch with comprehensive metrics tracking."""
     model.train()
     total_loss = 0.0
     total_bce_loss = 0.0
     total_rasch_loss = 0.0
+    total_penalty_loss = 0.0
     num_batches = 0
+    
+    # For AUC/accuracy computation
+    all_preds = []
+    all_labels = []
+    
+    # For Rasch alignment metrics
+    all_skill_vectors = []
+    all_rasch_targets = []
     
     for batch in train_loader:
         questions = batch['cseqs'].to(device)
@@ -184,6 +201,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         loss = loss_dict['total_loss']
         bce_loss = loss_dict['bce_loss']
         rasch_loss = loss_dict['rasch_loss']
+        penalty_loss = loss_dict.get('penalty_loss', torch.tensor(0.0))
         
         # Backward pass
         loss.backward()
@@ -194,17 +212,122 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         total_loss += loss.item()
         total_bce_loss += bce_loss.item()
         total_rasch_loss += rasch_loss.item()
+        total_penalty_loss += penalty_loss.item()
         num_batches += 1
+        
+        # Collect predictions for AUC/accuracy
+        preds = outputs['bce_predictions'].detach().cpu().numpy()
+        labels_np = targets.cpu().numpy()
+        mask_np = mask.cpu().numpy()
+        
+        for i in range(len(preds)):
+            valid_indices = mask_np[i] == 1
+            all_preds.extend(preds[i][valid_indices])
+            all_labels.extend(labels_np[i][valid_indices])
+        
+        # Collect skill vectors and Rasch targets for alignment metrics
+        if outputs.get('skill_vector') is not None and rasch_batch is not None:
+            all_skill_vectors.append(outputs['skill_vector'].detach().cpu())
+            all_rasch_targets.append(rasch_batch.cpu())
+    
+    # Compute aggregate metrics
+    avg_total_loss = total_loss / num_batches
+    avg_bce_loss = total_bce_loss / num_batches
+    avg_rasch_loss = total_rasch_loss / num_batches
+    avg_penalty_loss = total_penalty_loss / num_batches
+    
+    # Compute AUC and accuracy
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+    bce_metrics = compute_auc_acc(all_labels, all_preds)
+    
+    # Compute Rasch alignment metrics
+    rasch_metrics = {}
+    if all_skill_vectors and all_rasch_targets:
+        skill_vectors = torch.cat(all_skill_vectors, dim=0)  # [N, L, num_c]
+        rasch_targets_cat = torch.cat(all_rasch_targets, dim=0)  # [N, L, num_c]
+        
+        # Flatten for metrics
+        Mi_flat = skill_vectors.reshape(-1).numpy()
+        M_rasch_flat = rasch_targets_cat.reshape(-1).numpy()
+        
+        # MSE and MAE
+        rasch_metrics['mse'] = np.mean((Mi_flat - M_rasch_flat) ** 2)
+        rasch_metrics['mae'] = np.mean(np.abs(Mi_flat - M_rasch_flat))
+        
+        # Correlation
+        if len(np.unique(Mi_flat)) > 1 and len(np.unique(M_rasch_flat)) > 1:
+            rasch_metrics['correlation'] = np.corrcoef(Mi_flat, M_rasch_flat)[0, 1]
+        else:
+            rasch_metrics['correlation'] = 0.0
+        
+        # Violation metrics (assuming epsilon from model)
+        model_obj = model.module if hasattr(model, 'module') else model
+        epsilon = model_obj.epsilon
+        lambda_penalty = model_obj.lambda_penalty
+        
+        deviations = np.abs(Mi_flat - M_rasch_flat)
+        violations = np.maximum(0, deviations - epsilon)
+        
+        rasch_metrics['violation_rate'] = np.mean(deviations > epsilon)
+        rasch_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
+        rasch_metrics['max_violation'] = np.max(violations)
+    else:
+        rasch_metrics = {
+            'mse': 0.0, 'mae': 0.0, 'correlation': 0.0,
+            'violation_rate': 0.0, 'mean_violation': 0.0, 'max_violation': 0.0
+        }
+        epsilon = 0.0
+        lambda_penalty = 1.0
+    
+    # Compute loss ratios
+    if avg_total_loss > 0:
+        loss_ratio_l1 = avg_bce_loss / avg_total_loss
+        loss_ratio_penalty = (lambda_penalty * avg_penalty_loss) / avg_total_loss if avg_penalty_loss > 0 else 0.0
+    else:
+        loss_ratio_l1 = 0.0
+        loss_ratio_penalty = 0.0
     
     return {
-        'loss': total_loss / num_batches,
-        'bce_loss': total_bce_loss / num_batches,
-        'rasch_loss': total_rasch_loss / num_batches
+        # L1 - Performance
+        'l1_bce': avg_bce_loss,
+        'auc': bce_metrics['auc'],
+        'accuracy': bce_metrics['acc'],
+        
+        # L2 - Alignment  
+        'l2_mse': rasch_metrics['mse'],
+        'l2_mae': rasch_metrics['mae'],
+        'corr_rasch': rasch_metrics['correlation'],
+        
+        # L2_penalty - Violations
+        'penalty_loss': avg_penalty_loss,
+        'violation_rate': rasch_metrics['violation_rate'],
+        'mean_violation': rasch_metrics['mean_violation'],
+        'max_violation': rasch_metrics['max_violation'],
+        
+        # L_total - Combined
+        'total_loss': avg_total_loss,
+        'loss_ratio_l1': loss_ratio_l1,
+        'loss_ratio_penalty': loss_ratio_penalty,
+        
+        # Legacy (for backwards compatibility)
+        'loss': avg_total_loss,
+        'bce_loss': avg_bce_loss,
+        'rasch_loss': avg_rasch_loss
     }
 
 
-def validate(model, val_loader, device, lambda_bce=0.5, rasch_targets=None):
-    """Validate the model."""
+def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
+    """
+    Validate the model with comprehensive metrics tracking.
+    
+    Args:
+        model: iKT model instance
+        val_loader: validation data loader
+        device: torch device
+        lambda_penalty: penalty coefficient (required, no default per reproducibility guidelines)
+        rasch_targets: optional Rasch targets dict
+    """
     model.eval()
     all_preds = []
     all_labels = []
@@ -212,7 +335,12 @@ def validate(model, val_loader, device, lambda_bce=0.5, rasch_targets=None):
     total_loss = 0.0
     total_bce_loss = 0.0
     total_rasch_loss = 0.0
+    total_penalty_loss = 0.0
     num_batches = 0
+    
+    # For Rasch alignment metrics
+    all_skill_vectors = []
+    all_rasch_targets = []
     
     with torch.no_grad():
         for batch in val_loader:
@@ -252,9 +380,12 @@ def validate(model, val_loader, device, lambda_bce=0.5, rasch_targets=None):
             compute_loss_fn = get_model_attr(model, 'compute_loss')
             loss_dict = compute_loss_fn(outputs, labels)
             loss = loss_dict['total_loss']
+            penalty_loss = loss_dict.get('penalty_loss', torch.tensor(0.0))
+            
             total_loss += loss.item()
             total_bce_loss += loss_dict['bce_loss'].item()
             total_rasch_loss += loss_dict['rasch_loss'].item()
+            total_penalty_loss += penalty_loss.item()
             num_batches += 1
             
             # Collect predictions
@@ -267,17 +398,96 @@ def validate(model, val_loader, device, lambda_bce=0.5, rasch_targets=None):
                 valid_indices = mask_np[i] == 1
                 all_preds.extend(preds[i][valid_indices])
                 all_labels.extend(labels_np[i][valid_indices])
+            
+            # Collect skill vectors and Rasch targets for alignment metrics
+            if outputs.get('skill_vector') is not None and rasch_batch is not None:
+                all_skill_vectors.append(outputs['skill_vector'].cpu())
+                all_rasch_targets.append(rasch_batch.cpu())
     
-    # Compute metrics
+    # Compute aggregate metrics
+    avg_total_loss = total_loss / num_batches
+    avg_bce_loss = total_bce_loss / num_batches
+    avg_rasch_loss = total_rasch_loss / num_batches
+    avg_penalty_loss = total_penalty_loss / num_batches
+    
+    # Compute AUC and accuracy
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
-    
     bce_metrics = compute_auc_acc(all_labels, all_preds)
     
+    # Compute Rasch alignment metrics
+    rasch_metrics = {}
+    if all_skill_vectors and all_rasch_targets:
+        skill_vectors = torch.cat(all_skill_vectors, dim=0)  # [N, L, num_c]
+        rasch_targets_cat = torch.cat(all_rasch_targets, dim=0)  # [N, L, num_c]
+        
+        # Flatten for metrics
+        Mi_flat = skill_vectors.reshape(-1).numpy()
+        M_rasch_flat = rasch_targets_cat.reshape(-1).numpy()
+        
+        # MSE and MAE
+        rasch_metrics['mse'] = np.mean((Mi_flat - M_rasch_flat) ** 2)
+        rasch_metrics['mae'] = np.mean(np.abs(Mi_flat - M_rasch_flat))
+        
+        # Correlation
+        if len(np.unique(Mi_flat)) > 1 and len(np.unique(M_rasch_flat)) > 1:
+            rasch_metrics['correlation'] = np.corrcoef(Mi_flat, M_rasch_flat)[0, 1]
+        else:
+            rasch_metrics['correlation'] = 0.0
+        
+        # Violation metrics
+        model_obj = model.module if hasattr(model, 'module') else model
+        epsilon = model_obj.epsilon
+        lambda_penalty_val = model_obj.lambda_penalty
+        
+        deviations = np.abs(Mi_flat - M_rasch_flat)
+        violations = np.maximum(0, deviations - epsilon)
+        
+        rasch_metrics['violation_rate'] = np.mean(deviations > epsilon)
+        rasch_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
+        rasch_metrics['max_violation'] = np.max(violations)
+    else:
+        rasch_metrics = {
+            'mse': 0.0, 'mae': 0.0, 'correlation': 0.0,
+            'violation_rate': 0.0, 'mean_violation': 0.0, 'max_violation': 0.0
+        }
+        epsilon = 0.0
+        lambda_penalty_val = 1.0
+    
+    # Compute loss ratios
+    if avg_total_loss > 0:
+        loss_ratio_l1 = avg_bce_loss / avg_total_loss
+        loss_ratio_penalty = (lambda_penalty_val * avg_penalty_loss) / avg_total_loss if avg_penalty_loss > 0 else 0.0
+    else:
+        loss_ratio_l1 = 0.0
+        loss_ratio_penalty = 0.0
+    
     return {
-        'loss': total_loss / num_batches,
-        'bce_loss': total_bce_loss / num_batches,
-        'rasch_loss': total_rasch_loss / num_batches,
+        # L1 - Performance
+        'l1_bce': avg_bce_loss,
+        'auc': bce_metrics['auc'],
+        'accuracy': bce_metrics['acc'],
+        
+        # L2 - Alignment  
+        'l2_mse': rasch_metrics['mse'],
+        'l2_mae': rasch_metrics['mae'],
+        'corr_rasch': rasch_metrics['correlation'],
+        
+        # L2_penalty - Violations
+        'penalty_loss': avg_penalty_loss,
+        'violation_rate': rasch_metrics['violation_rate'],
+        'mean_violation': rasch_metrics['mean_violation'],
+        'max_violation': rasch_metrics['max_violation'],
+        
+        # L_total - Combined
+        'total_loss': avg_total_loss,
+        'loss_ratio_l1': loss_ratio_l1,
+        'loss_ratio_penalty': loss_ratio_penalty,
+        
+        # Legacy (for backwards compatibility)
+        'loss': avg_total_loss,
+        'bce_loss': avg_bce_loss,
+        'rasch_loss': avg_rasch_loss,
         'bce_auc': bce_metrics['auc'],
         'bce_acc': bce_metrics['acc']
     }
@@ -310,7 +520,8 @@ def main():
     parser.add_argument('--seq_len', type=int, required=True)
     
     # iKT-specific parameters
-    parser.add_argument('--lambda_bce', type=float, required=True)
+    parser.add_argument('--lambda_penalty', type=float, required=True,
+                        help='Penalty coefficient for Phase 2 constraint (recommended: 10.0-1000.0)')
     parser.add_argument('--epsilon', type=float, required=True, 
                        help='Rasch tolerance threshold for Phase 2 (0.0 for Phase 1)')
     parser.add_argument('--phase', type=str, required=True,
@@ -345,16 +556,14 @@ def main():
         print("⚠️  WARNING: EXPERIMENT_DIR not set. Using current directory.")
         experiment_dir = '.'
     
-    # Initialize metrics_epoch.csv for reproducibility
-    metrics_csv_path = os.path.join(experiment_dir, 'metrics_epoch.csv')
+    # Initialize metrics_epoch.csv with comprehensive metrics
+    metrics_csv_path = os.path.join(experiment_dir, 'metrics_validation.csv')
     if not os.path.exists(metrics_csv_path):
         with open(metrics_csv_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'epoch', 'phase', 'lambda_bce', 'epsilon',
-                'val_bce_auc', 'val_bce_acc',
-                'val_total_loss', 'val_bce_loss', 'val_rasch_loss',
-                'train_total_loss', 'train_bce_loss', 'train_rasch_loss'
+                'epoch', 'phase', 'lambda_penalty', 'epsilon',
+                'val_auc', 'val_l1_auc', 'val_l2_mae', 'val_l2_mse', 'val_l2_penalty'
             ])
     
     # Determine training mode
@@ -375,7 +584,7 @@ def main():
     print(f"Epochs: {args.epochs}")
     print(f"Batch size: {args.batch_size}")
     print(f"Learning rate: {args.learning_rate}")
-    print(f"Lambda BCE: {args.lambda_bce} (Lambda Mastery: {1.0 - args.lambda_bce})")
+    print(f"Lambda_penalty (constraint coefficient): {args.lambda_penalty}")
     print(f"Epsilon: {args.epsilon}")
     print(f"Device: {device}")
     print(f"Experiment dir: {experiment_dir}")
@@ -436,7 +645,7 @@ def main():
         d_ff=args.d_ff,
         dropout=args.dropout,
         emb_type=args.emb_type,
-        lambda_bce=args.lambda_bce,
+        lambda_penalty=args.lambda_penalty,
         epsilon=args.epsilon,
         phase=args.phase
     ).to(device)
@@ -493,46 +702,46 @@ def main():
         
         # Train
         train_metrics = train_epoch(model, train_loader, optimizer, device, args.gradient_clip, rasch_targets)
-        print(f"Train - Loss: {train_metrics['loss']:.4f}, "
-              f"BCE: {train_metrics['bce_loss']:.4f}, "
-              f"Rasch: {train_metrics['rasch_loss']:.4f}")
+        print(f"Train - Total Loss: {train_metrics['total_loss']:.4f}, "
+              f"L1 (BCE): {train_metrics['l1_bce']:.4f}, "
+              f"AUC: {train_metrics['auc']:.4f}, "
+              f"Penalty: {train_metrics['penalty_loss']:.4f}, "
+              f"Violations: {train_metrics['violation_rate']:.2%}")
         
         # Validate
-        val_metrics = validate(model, valid_loader, device, args.lambda_bce, rasch_targets)
-        print(f"Valid - Loss: {val_metrics['loss']:.4f}, "
-              f"AUC: {val_metrics['bce_auc']:.4f}, "
-              f"ACC: {val_metrics['bce_acc']:.4f}, "
-              f"Rasch: {val_metrics['rasch_loss']:.4f}")
+        val_metrics = validate(model, valid_loader, device, args.lambda_penalty, rasch_targets)
+        print(f"Valid - Total Loss: {val_metrics['total_loss']:.4f}, "
+              f"L1 (BCE): {val_metrics['l1_bce']:.4f}, "
+              f"AUC: {val_metrics['auc']:.4f}, "
+              f"Penalty: {val_metrics['penalty_loss']:.4f}, "
+              f"Violations: {val_metrics['violation_rate']:.2%}")
         
-        # Save history
+        # Save comprehensive epoch results with hyperparameters
         epoch_results = {
             'epoch': epoch + 1,
-            'train_loss': train_metrics['loss'],
-            'train_bce_loss': train_metrics['bce_loss'],
-            'train_rasch_loss': train_metrics['rasch_loss'],
-            'val_loss': val_metrics['loss'],
-            'val_bce_auc': val_metrics['bce_auc'],
-            'val_bce_acc': val_metrics['bce_acc'],
-            'val_rasch_loss': val_metrics['rasch_loss']
+            'phase': current_phase,
+            'lambda_penalty': args.lambda_penalty,
+            'epsilon': args.epsilon,
+            'train': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
+                     for k, v in train_metrics.items()},
+            'validation': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
+                          for k, v in val_metrics.items()}
         }
         history.append(epoch_results)
         
-        # Append to metrics_epoch.csv for reproducibility
+        # Append to metrics_validation.csv for reproducibility
         with open(metrics_csv_path, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 epoch + 1,
-                current_phase,  # Use current_phase instead of args.phase
-                args.lambda_bce,
+                current_phase,
+                args.lambda_penalty,
                 args.epsilon,
-                val_metrics['bce_auc'],
-                val_metrics['bce_acc'],
-                val_metrics['loss'],
-                val_metrics['bce_loss'],
-                val_metrics['rasch_loss'],
-                train_metrics['loss'],
-                train_metrics['bce_loss'],
-                train_metrics['rasch_loss']
+                val_metrics['auc'],  # val_auc (AUC from predictions)
+                val_metrics['auc'],  # val_l1_auc (same as val_auc, from L1/BCE head)
+                val_metrics['l2_mae'],  # val_l2_mae
+                val_metrics['l2_mse'],  # val_l2_mse
+                val_metrics['penalty_loss']  # val_l2_penalty
             ])
         
         # Check for improvement (using bce_auc as primary metric)
@@ -582,7 +791,7 @@ def main():
                     
                     print(f"Switching to Phase 2: Constrained Optimization")
                     print(f"Remaining epochs: {args.epochs - epoch - 1}")
-                    print(f"Loss: λ_bce={args.lambda_bce} × L1 + λ_mastery={(1-args.lambda_bce):.3f} × (L2 + L3)")
+                    print(f"Loss: L_total = L1 + λ_penalty={args.lambda_penalty} × L2_penalty")
                     print(f"Epsilon tolerance: {args.epsilon}")
                     print("="*80 + "\n")
                     continue  # Continue training, don't break
@@ -617,10 +826,13 @@ def main():
     print(f"Best validation AUC: {best_val_auc:.4f}")
     print("="*80 + "\n")
     
-    # Save training history
-    history_path = os.path.join(experiment_dir, 'training_history.json')
-    with open(history_path, 'w') as f:
+    # Save training+validation history
+    results_path = os.path.join(experiment_dir, 'metrics_validation_training.json')
+    with open(results_path, 'w') as f:
         json.dump(history, f, indent=2)
+    
+    print(f"✓ Saved training+validation metrics to: {results_path}")
+    print(f"✓ Saved CSV metrics to: {metrics_csv_path}")
     
     # Save final metrics
     # Check if training completed successfully
@@ -651,16 +863,14 @@ def main():
         'final_epoch': epoch + 1,
         'total_params': num_params,
         'phase': current_phase,
-        'lambda_bce': args.lambda_bce,
+        'lambda_penalty': args.lambda_penalty,
         'epsilon': args.epsilon,
         'training_mode': training_mode,
         'phase1_converged': phase1_converged if training_mode == "automatic_two_phase" else None,
         'phase1_best_epoch': phase1_best_epoch if training_mode == "automatic_two_phase" else None,
         'phase2_started_epoch': phase2_started_epoch if training_mode == "automatic_two_phase" and phase1_converged else None
     }
-    metrics_path = os.path.join(experiment_dir, 'final_metrics.json')
-    with open(metrics_path, 'w') as f:
-        json.dump(final_metrics, f, indent=2)
+    # Final metrics now stored in metrics_validation_training.json (last epoch)
     
     print("\n" + "="*80)
     print("✅ Training completed successfully")
@@ -690,7 +900,7 @@ def main():
             '--d_ff', str(args.d_ff),
             '--dropout', str(args.dropout),
             '--emb_type', args.emb_type,
-            '--lambda_bce', str(args.lambda_bce),
+            '--lambda_penalty', str(args.lambda_penalty),
             '--epsilon', str(args.epsilon),
             '--phase', str(current_phase)
         ]

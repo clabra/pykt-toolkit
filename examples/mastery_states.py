@@ -158,9 +158,9 @@ def load_model_and_config(run_dir, ckpt_name):
             d_ff=config['d_ff'],
             dropout=config['dropout'],
             emb_type=config['emb_type'],
-            lambda_bce=config['lambda_bce'],
-            epsilon=config.get('epsilon', 0.0),
-            phase=config.get('phase', 1)
+            lambda_penalty=config['lambda_penalty'],
+            epsilon=config['epsilon'],
+            phase=config.get('phase')
         ).to(device)
     else:
         # GainAKT4 model (default)
@@ -671,12 +671,12 @@ def main():
     print("\n💾 Saving results...")
     
     # Save CSV
-    csv_path = os.path.join(args.run_dir, f'mastery_states_{args.split}.csv')
+    csv_path = os.path.join(args.run_dir, f'mastery_{args.split}.csv')
     num_rows = save_mastery_states_csv(mastery_data, csv_path)
     print(f"✓ Saved {num_rows} rows to: {csv_path}")
     
     # Save statistics JSON
-    stats_path = os.path.join(args.run_dir, f'mastery_states_summary_{args.split}.json')
+    stats_path = os.path.join(args.run_dir, f'mastery_{args.split}.json')
     with open(stats_path, 'w') as f:
         json.dump(statistics, f, indent=2)
     print(f"✓ Saved summary to: {stats_path}")

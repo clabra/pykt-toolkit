@@ -27,9 +27,9 @@
 | **Heads** | 1 per encoder | 2 on Encoder 1 | 3 total (2 on Encoder 1, 1 on Encoder 2) | 2 (Prediction + Mastery) |
 | **Input Types** | Questions + Responses | Questions + Responses | Questions + Responses + Attempts (integer) | Questions + Responses |
 | **Learning** | Independent optimization | Multi-task joint (Encoder 1) | Hybrid (Encoder 1: joint L1+L2, Encoder 2: L3) | Two-phase (Rasch init → constrained opt) |
-| **Gradient Flow** | Separate to each encoder | Accumulated to Encoder 1 | Encoder 1 from L1+L2, Encoder 2 from L3 | Phase 1: L2 only; Phase 2: λ×L1 + (1-λ)×L2 |
+| **Gradient Flow** | Separate to each encoder | Accumulated to Encoder 1 | Encoder 1 from L1+L2, Encoder 2 from L3 | Phase 1: L2 only; Phase 2: L1 + λ_penalty×L2_penalty |
 | **Losses** | L1 (BCE), L2 (IM) | L1 (BCE), L2 (Mastery) | L1 (BCE), L2 (Mastery), L3 (Curve MSE/MAE) | L1 (BCE), L2 (Rasch MSE with ε tolerance) |
-| **Loss Constraint** | λ₁ + λ₂ = 1.0 | λ_bce + λ_mastery = 1.0 | λ_bce + λ_mastery + λ_curve = 1.0 | λ_bce + λ_mastery = 1.0, L2 uses ε in Phase 2 |
+| **Loss Constraint** | λ₁ + λ₂ = 1.0 | λ_bce + λ_mastery = 1.0 | λ_bce + λ_mastery + λ_curve = 1.0 | Phase 1: Pure L2; Phase 2: L1 primary + λ_penalty×L2_penalty (soft barrier with ε) |
 | **Interpretability** | Sigmoid learning curves | Skill vector {KCi} decomposition | {KCi} decomposition + IRT learning curves | Semantic alignment via Rasch grounding |
 | **Psychometric Grounding** | Heuristic curves | Architectural constraints | IRT-based (Rasch model) with preprocessing | **Rasch 1PL IRT (explicit θ/b parameters)** |
 | **Complexity** | High (dual encoders) | Medium (single encoder) | High (dual encoders + preprocessing) | **Low (single encoder, no curves)** |
@@ -68,12 +68,12 @@ This interpretability gap has profound implications: educators cannot trust mode
 
 **Two Phases Approach**:
 
-1. **Phase 1 - Psychometric Grounding (Rasch Loss)**: 
-   We initialize the model by training it to reproduce skill mastery estimates derived from Item Response Theory (IRT), specifically the Rasch model. This establishes alignment with a theoretical reference $\{M_{\text{Rasch}}\}$ where each student-skill mastery value has a clear psychometric interpretation: it represents the probability of correct response based on validated ability-difficulty parameters. This initialization ensures the model starts in a semantically consistent region of the parameter space, not an arbitrary random configuration.
+1. **Phase 1 - Psychometric Grounding (Rasch Alignment)**: 
+   We initialize the model by training it **exclusively** to reproduce skill mastery estimates derived from Item Response Theory (IRT), specifically the Rasch model. During this phase, **only L2 (Rasch MSE loss) influences backpropagation** - the performance prediction head (L1/BCE) is not optimized. This establishes perfect alignment with theoretical reference $\{M_{\text{Rasch}}\}$, where each student-skill mastery value has clear psychometric interpretation: probability of correct response based on validated ability-difficulty parameters. The model learns interpretable representations without concern for prediction accuracy.
 
-2. **Phase 2 - Constrained Optimization (Rasch Tolerance)**:
+2. **Phase 2 - Performance Optimization with Soft Constraints**:
 
-During performance optimization, we prevent the model from deviating excessively from the psychometrically grounded theoretical reference. The Rasch loss with epsilon tolerance acts as a semantic regularizer: it allows the model to improve predictive accuracy but penalizes configurations that move too far from the IRT baseline. The tolerance threshold $\epsilon$ controls this trade-off explicitly.
+After achieving interpretable initialization, we switch to optimizing prediction performance (AUC). The loss becomes $L_{\text{total}} = L_1 + \lambda_{\text{penalty}} \times L_{2\_\text{penalty}}$, where **L1 (BCE) is the primary objective** driving model learning. The second term $L_{2\_\text{penalty}}$ acts as a **soft barrier constraint**: it adds no penalty when deviations from Rasch values stay within tolerance $\epsilon$, but imposes quadratic penalties for violations. This allows the model to improve AUC while maintaining interpretability - the learned mastery estimates can deviate slightly from IRT values (within $\epsilon$) to better predict student responses, but large deviations are prevented by the penalty term.
 
 **Key Advantages**:
 
@@ -101,102 +101,175 @@ This approach bridges the gap between deep learning performance and educational 
 
 ### Two-Phase Training Algorithm
 
-**Phase 1: Psychometric Initialization (Warm-start with Rasch Grounding)**
+**Phase 1: Psychometric Initialization (Rasch Alignment)**
 
+**Objective**: Learn to produce skill mastery estimates {Mi} that align with theoretical IRT/Rasch values. The model learns interpretable representations without optimizing for prediction performance.
+
+**Loss Function**: 
 ```
-Algorithm: PHASE1_RASCH_INITIALIZATION
+L_total = L2 = MSE(Mi_predicted, Mi_rasch)
+```
+
+**Key Characteristics**:
+- **Only L2 influences backpropagation** - performance loss L1 (BCE) is computed but NOT used for gradient updates
+- **ε = 0** - exact alignment required, no tolerance
+- **Gradient flow**: Only through mastery estimation head (Head 2)
+- **Performance head (Head 1)** is updated via shared encoder gradients from L2, but not directly optimized
+
+**Algorithm**:
+```
+Algorithm: PHASE1_RASCH_ALIGNMENT
 Input: 
     - Training data D = {(q_i, r_i, a_i)} where q=questions, r=responses, a=attempts
-    - Rasch model parameters: skill_difficulties δ_s, student_abilities β_n
+    - Pre-computed Rasch mastery targets {Mi_rasch} for all students/skills
     - Hyperparameters: epochs_phase1, learning_rate_phase1
 Output:
-    - Initial model weights θ_init
-    - Reference mastery levels {M_rasch} for each skill (from Rasch IRT)
+    - Model weights θ_init with interpretable mastery representations
+    - Reference {Mi_rasch} (carried forward to Phase 2)
 
-1. Compute theoretical mastery targets from Rasch model:
+1. Pre-compute theoretical mastery targets from IRT/Rasch model:
    FOR each student n, skill s:
-       Mi_rasch[n,s] = sigmoid(β_n - δ_s)  // IRT-based mastery probability
+       Mi_rasch[n,s] = sigmoid(ability_n - difficulty_s)
    END FOR
 
 2. Initialize model with random weights θ
 
-3. Train with L2 (Rasch Loss) only:
+3. Train with L2 (Rasch Alignment) ONLY:
    FOR epoch = 1 to epochs_phase1:
        FOR each batch B in D:
-           // Forward pass
-           outputs = model.forward(B.questions, B.responses)
+           // Forward pass (generates both BCE predictions and mastery estimates)
+           outputs = model.forward(B.questions, B.responses, Mi_rasch)
            Mi_predicted = outputs['skill_vector']  // Model's {Mi} estimates
            
-           // Rasch Loss: Penalize deviation from theoretical values
-           L2 = MSE(Mi_predicted, Mi_rasch)
+           // Compute L2 (Rasch alignment loss)
+           L2 = MSE(Mi_predicted, Mi_rasch)  // epsilon=0 in Phase 1
            
-           // Backward pass
-           L2.backward()
+           // CRITICAL: Use L2 for backpropagation (L1 ignored)
+           L_total = L2  // Only Rasch loss drives learning
+           
+           // Backward pass - gradients flow only through mastery head
+           L_total.backward()
            optimizer.step()
        END FOR
        
-       // Early stopping if L2 converges
-       IF L2_validation < threshold:
+       // Monitor convergence
+       IF L2_validation < 0.01:  // Good alignment achieved
            BREAK
        END IF
    END FOR
 
-4. Save initialization state:
-   θ_init = model.state_dict()
+4. Save Phase 1 checkpoint:
+   θ_init = model.state_dict()  // Interpretable initialization
    
-5. RETURN θ_init
-   
-   // Note: No need to save M0 - Phase 2 uses Mi_rasch directly
+5. RETURN θ_init, {Mi_rasch}  // Ready for Phase 2
 ```
 
-**Phase 2: Constrained Optimization (Performance with Interpretability Constraints)**
+**Expected Outcome**:
+- L2 (MSE vs Rasch) → near 0 (< 0.01)
+- Model learns interpretable skill mastery representations
+- Performance (AUC) may be suboptimal - not the objective yet
 
+**Phase 2: Performance Optimization with Soft Interpretability Constraints**
+
+**Objective**: Maximize prediction performance (AUC) while maintaining interpretability by penalizing large deviations from the Rasch-aligned representations learned in Phase 1.
+
+**Loss Function**: 
 ```
-Algorithm: PHASE2_CONSTRAINED_TRAINING
+L_total = L1 + λ_penalty × L2_penalty
+
+where:
+  L1 = BCE(predictions, targets)  // Performance loss
+  L2_penalty = mean(max(0, |Mi - Mi_rasch| - ε)²)  // Soft barrier constraint
+```
+
+**Key Characteristics**:
+- **L1 drives optimization** - performance loss (BCE) is the primary objective
+- **L2_penalty acts as constraint** - penalizes deviations beyond tolerance ε
+- **No penalty within tolerance** - if |Mi - Mi_rasch| ≤ ε, no constraint loss
+- **Quadratic penalty beyond ε** - violations are penalized with increasing severity
+- **λ_penalty controls trade-off** - larger values enforce stricter interpretability
+
+**Soft Barrier Mechanism**:
+```
+For each skill mastery estimate Mi:
+  deviation = |Mi - Mi_rasch|
+  
+  if deviation ≤ ε:
+      penalty = 0  // Within tolerance - no penalty
+  else:
+      excess = deviation - ε
+      penalty = (excess)²  // Quadratic penalty on excess
+```
+
+**Algorithm**:
+```
+Algorithm: PHASE2_PERFORMANCE_OPTIMIZATION
 Input:
-    - Initial weights θ_init from Phase 1
-    - Rasch mastery targets {Mi_rasch} (pre-computed, fixed)
-    - Hyperparameters: lambda, epsilon, epochs_phase2, learning_rate_phase2
+    - Weights θ_init from Phase 1 (interpretable initialization)
+    - Fixed Rasch targets {Mi_rasch} (reference from Phase 1)
+    - Hyperparameters: λ_penalty, ε, epochs_phase2, learning_rate_phase2
 Output:
-    - Final trained model θ_final
+    - Final model θ_final (high AUC + interpretable)
     - Final mastery estimates {Mi_final}
 
-1. Initialize model with θ_init
+1. Initialize model with θ_init from Phase 1
 
-2. Define constraint violation detector:
-   FUNCTION is_forbidden(Mi, Mi_rasch, epsilon):
-       // Check if any skill's mastery deviates excessively from Rasch values
-       max_deviation = max(|Mi - Mi_rasch|)
-       RETURN max_deviation > epsilon
+2. Define soft barrier constraint function:
+   FUNCTION compute_penalty_loss(Mi, Mi_rasch, ε):
+       deviation = |Mi - Mi_rasch|  // Absolute difference per skill
+       violation = ReLU(deviation - ε)  // Zero if within ε, excess otherwise
+       penalty = mean(violation²)  // Quadratic penalty on violations
+       RETURN penalty
    END FUNCTION
 
-3. Define L2 constrained loss with epsilon tolerance:
-   FUNCTION compute_L2_constrained(Mi, Mi_rasch, epsilon):
-       deviation = |Mi - Mi_rasch|  // Per-skill deviations from Rasch targets
+3. Training loop with constrained optimization:
+   FOR epoch = 1 to epochs_phase2:
+       FOR each batch B in D:
+           // Forward pass
+           outputs = model.forward(B.questions, B.responses, Mi_rasch)
+           predictions = outputs['bce_predictions']
+           Mi_predicted = outputs['skill_vector']
+           
+           // L1: Performance loss (PRIMARY OBJECTIVE)
+           L1 = binary_cross_entropy(predictions, B.targets)
+           
+           // L2_penalty: Soft barrier constraint (SECONDARY)
+           L2_penalty = compute_penalty_loss(Mi_predicted, Mi_rasch, ε)
+           
+           // Total loss: Performance + Constraint penalty
+           L_total = L1 + λ_penalty × L2_penalty
+           
+           // CRITICAL: Backpropagation uses L_total
+           // Gradients flow primarily from L1 (improving AUC)
+           // Additional gradients from L2_penalty when violations occur
+           L_total.backward()
+           optimizer.step()
+       END FOR
        
-       // Soft constraint: Penalize deviations proportional to excess
-       violation = max(0, deviation - epsilon)  // Only penalize excess beyond epsilon
-       L2 = mean(violation^2)  // Quadratic penalty
-       
-       RETURN L2
-   END FUNCTION
+       // Monitor both objectives
+       IF AUC_validation > target AND violation_rate < 5%:
+           BREAK  // Both objectives satisfied
+       END IF
+   END FOR
 
-4. Define combined loss function:
-   FUNCTION compute_total_loss(outputs, targets, Mi, Mi_rasch, lambda, epsilon):
-       // L1: Predictive performance loss
-       L1 = binary_cross_entropy(outputs['predictions'], targets)
-       
-       // L2: Constrained Rasch alignment with epsilon tolerance
-       L2 = compute_L2_constrained(Mi, Mi_rasch, epsilon)
-       
-       // Combined loss with lambda weighting
-       // lambda=1.0: pure performance (L1 only)
-       // lambda=0.0: pure Rasch alignment with tolerance (L2 only)
-       // lambda in (0,1): trade-off
-       LT = lambda * L1 + (1 - lambda) * L2
-       
-       RETURN LT, L1, L2
-   END FUNCTION
+4. Save final model:
+   θ_final = model.state_dict()
+   
+5. RETURN θ_final, {Mi_final}
+```
+
+**Expected Behavior**:
+- **Early Phase 2**: Small AUC improvements, violations may increase slightly as model explores
+- **Mid Phase 2**: AUC increases steadily, violations stabilize below ε threshold  
+- **Late Phase 2**: Convergence with high AUC (>0.75) and low violations (<5%)
+
+**Hyperparameter Guidance**:
+- **λ_penalty ∈ [10, 1000]**: Balance between performance and interpretability
+  - Low (10-50): Prioritize AUC, accept more violations
+  - High (500-1000): Strict interpretability, may sacrifice AUC
+- **ε ∈ [0.05, 0.15]**: Tolerance for deviations
+  - Small (0.05): Tight constraint, high interpretability
+  - Large (0.15): More flexibility, better AUC potential
 
 5. Train with constrained optimization:
    FOR epoch = 1 to epochs_phase2:
@@ -299,7 +372,7 @@ Input:
    - Optimal hyperparameter recommendations
 
 RETURN analysis_report
-```
+
 
 **Key Design Decisions**
 
@@ -590,7 +663,7 @@ graph TD
         Concat1["Concat h, v, skill_emb"]
         PredHead["MLP Prediction Head"]
         BCEPred[["Performance Predictions"]]
-        L1["L1: BCE Loss"]
+        L1["L1: Performance BCE Loss<br/>-1/N Σ[y·log(ŷ) + <br/>(1-y)·log(1-ŷ)]"]
     end
     
     subgraph "Head 2: Mastery"
@@ -601,17 +674,12 @@ graph TD
         
         KCVector[["Skill Vector KCi after Softplus"]]
         MonotonicKC[["Monotonic Skill Vector Mi<br/>Final output of Head 2"]]
-    end
-    
-    subgraph "Two-Phase Training"
-        Phase1["Phase 1: Rasch Init"]
-        Phase2["Phase 2: Constrained Opt with epsilon"]
         
-        L2["L2: Rasch MSE Loss<br/>Phase 2 adds epsilon tolerance"]
+        L2["L2: IRT MSE Loss<br/>1/(|S|·|N|) Σ(Mi - M_irt)²"]
     end
     
     subgraph "Optimization"
-        LTotal["Total Loss L_total"]
+        LTotal["L_total: Total Loss<br/>Phase 1: L_total = L2<br/>Phase 2: L_total = L1 + λ_penalty × mean(max(0, |Mi-M_rasch|-ε)²)"]
         Backprop["Backpropagation"]
     end
     
@@ -650,10 +718,8 @@ graph TD
     Positivity --> KCVector
     KCVector --> Monotonicity
     Monotonicity --> MonotonicKC
-    
-    %% Two-phase training flow - Mi directly compared to Rasch
-    Rasch_M0 --> L2
     MonotonicKC --> L2
+    Rasch_M0 --> L2
     
     %% Loss combination
     L1 --> LTotal
@@ -661,8 +727,8 @@ graph TD
     LTotal --> Backprop
     
     %% Gradient flow
-    Backprop -.->|Phase 1: Gradient L2| KnowledgeState
-    Backprop -.->|Phase 2: Lambda times L1 plus L2_constrained| KnowledgeState
+    Backprop -.->|Phase 1: Gradient from L2 only| KnowledgeState
+    Backprop -.->|Phase 2: Gradient from L1 + λ_penalty × L2_penalty| KnowledgeState
     
     %% Styling
     classDef encoder_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
@@ -759,14 +825,13 @@ L1 = F.binary_cross_entropy_with_logits(logits, targets)
 
 **Note**: This section describes GainAKT4's Head 2. For iKT differences, see the notes below.
 
-**Conditional Computation**:
+**Phase-Dependent Computation**:
 ```python
-# GainAKT4: Skip Head 2 computation when λ_mastery = 0 (pure BCE mode)
-if self.lambda_mastery > 0:
-    # Compute mastery head
-    kc_vector = self.mlp1(h1)
-    kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]
-    mastery_logits = self.mlp2(kc_vector_mono).squeeze(-1)
+# iKT: Always compute mastery head (no conditional logic)
+# Compute mastery head
+kc_vector = self.mlp1(h1)
+kc_vector_mono = torch.cummax(kc_vector, dim=1)[0]
+mastery_logits = self.mlp2(kc_vector_mono).squeeze(-1)
     mastery_predictions = torch.sigmoid(mastery_logits)
 else:
     # Skip forward pass entirely (saves ~10-15% computation)
@@ -896,18 +961,21 @@ L2_constrained = torch.mean(violation ** 2)
 
 ### 6. Two-Phase Loss Function
 
-**Total Loss**: Phase-dependent combination of losses
+**Total Loss**: Phase-dependent optimization objective
 
 ```python
-# Phase 1: Rasch initialization
-L_total = L2  # Direct MSE(Mi, M_rasch)
+# Phase 1: Rasch alignment (exact)
+L_total = L2 = MSE(Mi, M_rasch)  # Only L2, L1 not used for backpropagation
+                                  # epsilon = 0 (exact alignment required)
 
-# Phase 2: Constrained optimization
-L_total = lambda_bce * L1 + (1 - lambda_bce) * L2_constrained
+# Phase 2: Performance optimization with soft constraint
+L_total = L1 + λ_penalty × L2_penalty
 
 # Where:
-# L1 = BCE loss (Head 1 - performance prediction)
-# L2 = Rasch MSE loss with epsilon tolerance (Head 2 - mastery alignment)
+# L1 = BCE(predictions, targets)  # Performance prediction loss (PRIMARY)
+# L2_penalty = mean(max(0, |Mi - M_rasch| - ε)²)  # Soft barrier constraint
+# λ_penalty: penalty strength (typically 10-1000)
+# ε (epsilon): tolerance threshold (typically 0.05-0.15)
 ```**Loss Components**:
 ```python
 # L1: Performance prediction loss (BCE)
@@ -943,17 +1011,18 @@ L2_constrained = torch.mean(violation ** 2)  # Quadratic penalty for excess devi
 # In Phase 2, epsilon creates a "tolerance zone" around Rasch values
 ```
 
-**Lambda Parameters**:
+**Hyperparameters**:
 ```python
-
-lambda_bce # L1 weight (Phase 2)
-lambda_mastery # L2 weight (Phase 2)
-# Note: lambda_bce + lambda_mastery = 1.0 in Phase 2
-
+λ_penalty   # Penalty strength for constraint violations (Phase 2)
+            # Range: [10, 1000], higher = stricter interpretability
+            
+ε (epsilon) # Tolerance threshold for deviations from Rasch values
+            # Range: [0.05, 0.15], smaller = tighter constraint
 ```
 
 **Gradient Flow**:
-- **Encoder 1** receives gradients from: `lambda_bce * ∂L1/∂w₁ + lambda_mastery * ∂L2/∂w₁`
+- **Phase 1**: Gradients only from L2 (Rasch alignment)
+- **Phase 2**: Gradients primarily from L1 (BCE) + correction from L2_penalty when violations occur
 - **Encoder 2** receives gradients from: `lambda_curve * ∂L3/∂w₂` -> NOT USED IN iKT
 - Independent optimization pathways reduce objective conflicts
 
@@ -971,13 +1040,11 @@ else:
 [END COMMENT]
     
 
-# Skip Head 2 forward pass when lambda_mastery = 0
-if self.lambda_mastery > 0:
-    # Head 2 outputs skill vector {Mi} directly (no MLP2/Sigmoid)
-    skill_vector = self.mastery_head(h1)  # [B, L, num_c]
-    
-    # L2 for iKT: Rasch MSE Loss on skill vector
-    if training_phase == 1:
+# Head 2 outputs skill vector {Mi} directly (no MLP2/Sigmoid)
+skill_vector = self.mastery_head(h1)  # [B, L, num_c]
+
+# L2 for iKT: Rasch MSE Loss on skill vector
+if training_phase == 1:
         # Phase 1: Direct MSE (no epsilon)
         L2 = F.mse_loss(skill_vector, rasch_mastery_targets)
     else:
@@ -990,12 +1057,12 @@ else:
     skill_vector = None
 
 # Compute total loss L_total
-# Phase 1: L_total = L2 (Rasch initialization only)
-# Phase 2: L_total = lambda_bce * L1 + (1 - lambda_bce) * L2_constrained
+# Phase 1: L_total = L2 (only Rasch alignment, L1 ignored)
+# Phase 2: L_total = L1 + λ_penalty * L2_penalty (performance + soft constraint)
 if training_phase == 1:
-    L_total = L2
+    L_total = L2  # L1 not used for backpropagation
 else:  # Phase 2
-    L_total = lambda_bce * L1 + (1 - lambda_bce) * L2
+    L_total = L1 + lambda_penalty * L2_penalty  # L1 primary objective
 ```
 
 **Architectural Guarantees**:
@@ -1184,8 +1251,8 @@ model = create_mon_model(config)  # Same config, different class
 ```
 
 **Config Keys** (identical for both):
-- Required: `num_c`, `seq_len`
-- Optional: `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`, `lambda_bce`, `lambda_mastery`, `lambda_curve`, `max_attempts`
+- Required: `num_c`, `seq_len`, `lambda_penalty`, `epsilon`, `phase`
+- Optional: `d_model`, `n_heads`, `num_encoder_blocks`, `d_ff`, `dropout`, `emb_type`
 - iKTMon only: `monitor_frequency` (default: 50)
 
 ---
@@ -1293,14 +1360,13 @@ def forward(self, q, r, qry, n_a_batch_data, skill_difficulties_data):
     # NO MLP2 in iKT: skill_vector is the final output [B, L, num_c]
     
     # L2: Rasch loss computation with phase-dependent epsilon
-    if self.lambda_mastery > 0:
-      if self.training_phase == 1:
-          # Phase 1: Direct MSE (no epsilon)
-          rasch_loss = F.mse_loss(skill_vector, rasch_targets)
-      else:
-          # Phase 2: MSE with epsilon tolerance
-          deviation = torch.abs(skill_vector - rasch_targets)
-          violation = torch.relu(deviation - self.epsilon)
+    if self.training_phase == 1:
+        # Phase 1: Direct MSE (no epsilon)
+        rasch_loss = F.mse_loss(skill_vector, rasch_targets)
+    else:
+        # Phase 2: MSE with epsilon tolerance
+        deviation = torch.abs(skill_vector - rasch_targets)
+        violation = torch.relu(deviation - self.epsilon)
           rasch_loss = torch.mean(violation ** 2)
     else:
         rasch_loss = None
@@ -1358,23 +1424,53 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
 
 - **Transfer Learning**: Pre-train Phase 1 on large dataset, fine-tune Phase 2 on target dataset.
 
+---
+
+## Implementation Status Summary
+
+### ✅ Fully Implemented
+- **Model Architecture**: iKT class with dual-stream encoder, Head 1 (BCE), Head 2 (mastery with positivity/monotonicity)
+- **Phase-Dependent Training**: Phase 1 (L2 only), Phase 2 (L1 + λ_penalty × L2_penalty)
+- **Loss Computation**: Phase-aware total loss, comprehensive metrics tracking
+- **Training Pipeline**: `train_ikt.py` with Rasch target loading, validation, checkpointing
+- **Evaluation**: `eval_ikt.py` with AUC, mastery deviation analysis, JSON outputs
+- **Preprocessing**: Rasch IRT calibration (`compute_rasch_targets.py`), BKT targets (`compute_bkt_targets.py`)
+- **Visualization**: 4 analysis plots (loss evolution, AUC vs violations, deviation histogram, per-skill alignment)
+- **Reproducibility**: All hyperparameters (lambda_penalty, epsilon, phase) saved to outputs
+
+### ✅ All Critical Issues Resolved
+
+**Previous Issue (FIXED)**:
+1. ~~**Line 266 in `pykt/models/ikt.py`**: References undefined `self.lambda_mastery`~~
+   - **Status**: ✅ FIXED - Removed conditional check, Head 2 always computes now
+   - **Fix Applied**: Removed `if self.lambda_mastery > 0:` conditional
+   - **Rationale**: iKT always needs mastery head - it's the core feature of the model
+
+### ⚠️ Incomplete/Missing Features
+- **Unit Tests**: No embedding/tokenization/gradient flow tests
+- **Gradient Monitoring**: Not logging gradient norms during training
+- **Per-Skill Curve Analysis**: Predicted vs actual attempts comparison not implemented
+- **Ablation Studies**: Systematic hyperparameter sweeps pending
+
+---
 
 ### Implementation Checklist 
 
 #### Model Architecture (`pykt/models/ikt.py`)
 
-- [ ] Create `iKT` class inheriting from `nn.Module`
-- [ ] Add constructor parameters:
-  - [ ] `num_c` (number of skills/concepts)
-  - [ ] `seq_len` (maximum sequence length)
-  - [ ] `emb_size` / `d_model` (embedding dimension)
-  - [ ] `num_attn_heads` (attention heads)
-  - [ ] `n_blocks` (number of transformer blocks)
-  - [ ] `dropout` (dropout rate)
-  - [ ] `lambda_bce`, `lambda_mastery` (loss weights for Phase 2)
-  - [ ] Note: `lambda_bce + lambda_mastery = 1.0` in Phase 2
-  - [ ] `epsilon` (consistency tolerance threshold)
-  - [ ] `rasch_loss_activated` (Phase 1 vs Phase 2 flag)
+- [x] ✅ Create `iKT` class inheriting from `nn.Module`
+- [x] ✅ Add constructor parameters:
+  - [x] ✅ `num_c` (number of skills/concepts)
+  - [x] ✅ `seq_len` (maximum sequence length)
+  - [x] ✅ `d_model` (embedding dimension)
+  - [x] ✅ `n_heads` (attention heads) 
+  - [x] ✅ `num_encoder_blocks` (number of transformer blocks)
+  - [x] ✅ `d_ff` (feedforward dimension)
+  - [x] ✅ `dropout` (dropout rate)
+  - [x] ✅ `emb_type` (embedding type)
+  - [x] ✅ `lambda_penalty` (penalty strength for constraint violations in Phase 2)
+  - [x] ✅ `epsilon` (tolerance threshold for Rasch deviations)
+  - [x] ✅ `phase` (1 = Rasch alignment only, 2 = performance optimization with constraints)
 
 **Encoder 1 Implementation**:
 - [ ] Add Encoder 1 class 
@@ -1387,47 +1483,65 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
   - [ ] **Transformer stack**: N encoder blocks with dual-stream attention (identical structure to GainAKT4 Encoder 1)
   - [ ] **Output**: Correctness Predictions
   
-**Head 2 Mastery Implementation**:
+**Forward Pass Implementation**:
+- [x] ✅ Accept inputs: `forward(q, r, qry=None, rasch_targets=None)`
+  - [x] ✅ `q`: [B, L] - skill IDs
+  - [x] ✅ `r`: [B, L] - binary responses (0/1)
+  - [x] ✅ `qry`: [B, L] - query skills (optional, defaults to q)
+  - [x] ✅ `rasch_targets`: [B, L, num_c] - pre-computed Rasch mastery targets (optional)
+- [x] ✅ Single encoder path for both heads (shared representations)
+- [x] ✅ Compute predictions:
+  - [x] ✅ Head 1: BCE predictions from `[h, v, skill_emb]`
+  - [x] ✅ Head 2: Skill vector `{Mi}` from `h` with positivity + monotonicity
+- [x] ✅ Compute Rasch loss within forward pass (phase-dependent):
+  - [x] ✅ Phase 1: `rasch_loss = F.mse_loss(skill_vector, rasch_targets)` (epsilon=0)
+  - [x] ✅ Phase 2: `rasch_loss = mean(relu(|skill_vector - rasch_targets| - epsilon)²)` (soft barrier)
+- [x] ✅ Return dictionary: `{'bce_predictions', 'skill_vector', 'rasch_loss', 'logits'}`
 
+**Loss Computation (`compute_loss` method)**:
+- [x] ✅ L1 (BCE): Binary cross-entropy with logits for performance prediction
+- [x] ✅ L2 (Rasch): Phase-dependent MSE alignment (computed in forward pass)
+- [x] ✅ Phase-dependent total loss:
+  - [x] ✅ Phase 1: `L_total = rasch_loss` (L2 only, epsilon=0)
+  - [x] ✅ Phase 2: `L_total = bce_loss + lambda_penalty * penalty_loss` (L1 + constrained L2)
+- [x] ✅ Return loss dictionary: `{'total_loss', 'bce_loss', 'rasch_loss', 'penalty_loss'}`
+- [x] ✅ Handles DataParallel case (reduce to scalar if needed)
 
-**Forward Pass Updates**:
-- [ ] Accept three inputs: `forward(questions, responses, attempts, ...)`
-  - [ ] `questions`: [B, L] - skill IDs (shared by both encoders)
-  - [ ] `responses`: [B, L] - binary 0/1 (for Encoder 1)
-  - [ ] `attempts`: [B, L] - integer attempts-to-mastery (for Encoder 2)
-- [ ] Route inputs to encoder:
-  - [ ] Encoder 1: Head 1 and Head 2
-
-- [ ] Compute predictions from all heads:
-  - [ ] Head 1: BCE predictions from h1
-  - [ ] Head 2: Mastery predictions from h1
-
-- [ ] Compute losses:
-  - [ ] L1 = BCE loss (boolean targets)
-  - [ ] L2 = Mastery loss (boolean targets)
-  - [ ] L3 = consistency loss 
-- [ ] Return all losses and predictions in output dictionary
-
-**Conditional Computation**:
-- [ ] Skip Head 1 - L1 when `lambda_bce = 0` 
-- [ ] Skip Head 2 - L2 when `lambda_mastery = 0` 
-- [ ] Full mode when all lambdas > 0
+**Phase-Dependent Behavior**:
+- [x] ✅ Phase 1: Use only L2 for backpropagation (L1 computed but ignored in total_loss)
+- [x] ✅ Phase 2: Use L1 + λ_penalty × L2_penalty for backpropagation
+- [x] ✅ Epsilon: 0 in Phase 1 (exact alignment), >0 in Phase 2 (tolerance)
 
 **Hyperparameters**:
-- [ ] `epsilon` (consistency tolerance, e.g., 0.1, 0.15, 0.2)
-- [ ] `lambda_bce` (weight for L1 BCE loss in Phase 2, e.g., 0.7-0.9)
-- [ ] `lambda_mastery` (weight for L2 Rasch loss, Phase 1: 1.0, Phase 2: 1 - lambda_bce)
-- [ ] `epochs_phase1` (Phase 1 training epochs, e.g., 20-50)
-- [ ] `epochs_phase2` (Phase 2 training epochs, e.g., 50-200)
-- [ ] `learning_rate_phase1` (e.g., 0.001)
-- [ ] `learning_rate_phase2` (e.g., 0.0005, typically lower than Phase 1)
+- [x] ✅ `epsilon` (tolerance threshold for Rasch deviations, e.g., 0.05, 0.10, 0.15)
+- [x] ✅ `lambda_penalty` (penalty strength for violations, e.g., 10-1000)
+- [ ] ⚠️ `epochs_phase1` - not in model, handled by training script
+- [ ] ⚠️ `epochs_phase2` - not in model, handled by training script
+- [ ] ⚠️ `learning_rate_phase1` - not in model, handled by training script
+- [ ] ⚠️ `learning_rate_phase2` - not in model, handled by training script
 
 ### Training Script (`examples/train_ikt.py`)
 
+**Rasch Targets Loading**:
+- [x] ✅ `load_rasch_targets()` function implemented
+  - [x] ✅ Loads from `rasch_targets.pkl` or `bkt_targets.pkl`
+  - [x] ✅ Raises `FileNotFoundError` if targets missing (NO random fallback)
+  - [x] ✅ Validates file format and normalizes keys
+  - [x] ✅ Returns dict with `rasch_targets`, `student_abilities`, metadata
+
+**Training Modes**:
+- [x] ✅ Manual single-phase: `--phase 1` or `--phase 2`
+- [x] ✅ Automatic two-phase: `--phase null` (starts Phase 1, switches to Phase 2 on convergence)
+- [x] ✅ Automatic phase switching fully implemented:
+  - [x] ✅ Detects Phase 1 convergence via early stopping patience
+  - [x] ✅ Automatically switches to Phase 2 (updates `model.phase = 2`)
+  - [x] ✅ Resets early stopping counter for Phase 2
+  - [x] ✅ Continues training until Phase 2 converges
+  - [x] ✅ Comprehensive logging of phase transitions
+
 **Phase 1: Rasch Initialization (L2 only)**:
-- [ ] Set `rasch_loss_activated=True` in model config
-- [ ] Load Rasch-computed mastery targets from preprocessing
-- [ ] Training loop:
+- [x] ✅ Load Rasch-computed mastery targets from preprocessing
+- [x] ✅ Training loop with phase-dependent loss:
   ```python
   for epoch in range(epochs_phase1):
       for batch in train_loader:
@@ -1466,117 +1580,144 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
           mastery_current = outputs['skill_vector']
           deviation = torch.abs(mastery_current - rasch_targets[batch_indices])
           violation = torch.relu(deviation - epsilon)
-          L2 = torch.mean(violation ** 2)
+          L2_penalty = torch.mean(violation ** 2)
           
-          # Combined loss
-          L_total = lambda_bce * L1 + (1 - lambda_bce) * L2
+          # Phase-dependent loss
+          if phase == 1:
+              L_total = L2  # Only Rasch alignment (epsilon=0)
+          else:  # phase == 2
+              L_total = L1 + lambda_penalty * L2_penalty  # Performance + constraint
           
           L_total.backward()
           optimizer.step()
           
           # Log component losses
-          logger.log({'L1': L1.item(), 'L2': L2.item(), 'L_total': L_total.item()})
+          logger.log({'L1': L1.item(), 'L2_penalty': L2_penalty.item(), 'L_total': L_total.item()})
   ```
 
+**Actual Training Implementation**:
+- [x] ✅ `train_epoch()` function:
+  - [x] ✅ Loads Rasch targets per batch from dict using student UIDs
+  - [x] ✅ Calls `model(q, r, qry, rasch_targets=rasch_batch)`
+  - [x] ✅ Calls `model.compute_loss(outputs, targets)` for phase-dependent loss
+  - [x] ✅ Backward pass with gradient clipping
+  - [x] ✅ Returns comprehensive metrics dict
+- [x] ✅ **Loss Computation**: Phase-dependent (handled by model.compute_loss())
   ```python
-  outputs = model(
-      questions=batch['questions'],
-      responses=batch['responses'],
-      mastery=batch['mastery'],  # mastery levels
-      rasch=batch['rasch'],  # rasch pre-calculated values 
-      ...
-  )
+  loss_dict = model.compute_loss(outputs, targets)
+  loss = loss_dict['total_loss']  # Phase 1: L2, Phase 2: L1 + λ_penalty * L2_penalty
+  bce_loss = loss_dict['bce_loss']
+  rasch_loss = loss_dict['rasch_loss']
+  penalty_loss = loss_dict['penalty_loss']
   ```
-- [ ] **Loss Computation**: Two-loss weighted sum
-  ```python
-  L1 = outputs['bce_loss']
-  L2 = outputs['rasch_loss'] if lambda_mastery > 0 else 0.0
-  # Note: L2 includes epsilon tolerance in Phase 2
-  L_total = lambda_bce * L1 + (1 - lambda_bce) * L2
-  ```
-- [ ] **Logging**: Track both losses separately
-  - [ ] Log L1, L2 individually each batch
-  - [ ] Log L_total (total loss)
-  - [ ] Monitor convergence patterns for each loss
-- [ ] **Gradient Monitoring**: Verify gradients flow to both encoders
-  - [ ] Monitor `encoder1.weight.grad.norm()` 
-  - [ ] Log gradient norms periodically
-- [ ] **Validation**: Evaluate mastery deviations from Rasch values
-  - [ ] Compute max deviation: `max_dev = max(|M_predicted - M_rasch|)`
-  - [ ] Verify constraint satisfaction: `max_dev <= epsilon`
-  - [ ] Track constraint violation frequency across batches
-  - [ ] Monitor AUC on validation set
-  - [ ] Log Pareto metrics: (AUC, max_deviation) pairs for different lambda/epsilon
+- [x] ✅ **Logging**: Track all loss components
+  - [x] ✅ Log L1 (bce_loss), L2 (rasch_loss), penalty_loss per batch
+  - [x] ✅ Log L_total (optimization objective)
+  - [x] ✅ Compute and log violation_rate and mean_violation
+  - [x] ✅ Per-epoch CSV with all metrics
+  - [x] ✅ JSON results with hyperparameters (lambda_penalty, epsilon, phase)
+- [ ] ⚠️ **Gradient Monitoring**: Not implemented
+  - [ ] ❌ Monitor `encoder.weight.grad.norm()` 
+  - [ ] ❌ Log gradient norms periodically
+- [x] ✅ **Validation**: Evaluate mastery deviations from Rasch values
+  - [x] ✅ Compute max deviation: `max_dev = max(|M_predicted - M_rasch|)`
+  - [x] ✅ Compute mean deviation and violation statistics
+  - [x] ✅ Track constraint violation frequency across batches
+  - [x] ✅ Monitor AUC on validation set
+  - [x] ✅ All metrics saved to JSON and CSV
+
+**Checkpoint and Mastery State Extraction**:
+- [x] ✅ Best model checkpoint saved based on validation AUC
+- [x] ✅ Phase-specific checkpoints in automatic mode (Phase 1 best → Phase 2 initialization)
+- [x] ✅ Mastery states extraction after training via `mastery_states.py`
+- [x] ✅ Analysis plots generation via `generate_analysis_plots.py`
 
 ### Evaluation Script (`examples/eval_ikt.py`)
 
 **Multi-output evaluation**:
-- [] Evaluate outputs: BCE predictions and Mastery predictions
-- [] Compute separate AUC: `bce_auc`, `mastery_auc`, `consistency_auc`
-- [] Handle None skill_vector when λ_mastery=0 (display N/A metrics)
-- [] Note: iKT outputs skill_vector {Mi} [B, L, num_c], not scalar mastery_predictions
-- [] Report metrics in results with conditional formatting
-- [] Graceful handling in mastery_states.py when λ_mastery=0
-- [ ] Add per-skill curve analysis:
-  - [ ] Compare predicted vs actual attempts for each skill
-  - [ ] Identify skills with best/worst curve predictions
-  - [ ] Generate scatter plots: predicted vs actual attempts
+- [x] ✅ `test_epoch()` function implemented
+  - [x] ✅ Evaluate outputs: BCE predictions and skill_vector mastery
+  - [x] ✅ Compute AUC and accuracy from BCE predictions
+  - [x] ✅ Handle None skill_vector gracefully (when no Rasch targets)
+  - [x] ✅ Extract skill vectors for mastery deviation analysis
+- [x] ✅ Mastery alignment metrics:
+  - [x] ✅ Compute deviation statistics: mean, max, violations beyond epsilon
+  - [x] ✅ Per-skill mastery deviation analysis
+  - [x] ✅ Correlation between predicted and Rasch mastery
+- [x] ✅ Comprehensive JSON output:
+  - [x] ✅ Results for train/valid/test splits
+  - [x] ✅ Hyperparameters section (lambda_penalty, epsilon, phase)
+  - [x] ✅ Model metadata (num_concepts, num_parameters)
+  - [x] ✅ Graceful handling in mastery_states.py
+- [ ] ❌ **NOT IMPLEMENTED**: Per-skill curve analysis
+  - [ ] ❌ Compare predicted vs actual attempts for each skill
+  - [ ] ❌ Identify skills with best/worst curve predictions
+  - [ ] ❌ Generate scatter plots: predicted vs actual attempts
 
+### Preprocessing Scripts
 
-### Preprocessing (`examples/rasch`)
-- [ ] Implement Rasch IRT calibration script:
-  - [ ] Estimate student abilities β_n using maximum likelihood
-  - [ ] Estimate skill difficulties δ_s using maximum likelihood
-  - [ ] Compute mastery targets: `M_rasch[n,s] = sigmoid(β_n - δ_s)`
-  - [ ] Save to file: `data/assist2015/rasch_mastery.pkl`
-- [ ] Add Rasch preprocessing to data loader:
-  - [ ] Load pre-computed Rasch values during batch construction
-  - [ ] Add `rasch_targets` field to batch dictionary
-  - [ ] Handle students not in Rasch calibration set (cold-start)
-- [ ] Validate Rasch calibration quality:
-  - [ ] Check correlation between Rasch mastery and observed success rates
-  - [ ] Verify ability/difficulty distributions are reasonable
-  - [ ] Generate diagnostic plots (ICC/TCC curves)
+**Rasch IRT Calibration (`examples/compute_rasch_targets.py`)**:
+- [x] ✅ Implement Rasch IRT calibration script:
+  - [x] ✅ Estimate student abilities θ_n using maximum likelihood
+  - [x] ✅ Estimate skill difficulties b_s using maximum likelihood
+  - [x] ✅ Compute mastery targets: Dynamic per-timestep based on BKT-like progression
+  - [x] ✅ Save to file: `data/{dataset}/rasch_targets.pkl`
+  - [x] ✅ Comprehensive statistics and validation
+
+**BKT Calibration (`examples/compute_bkt_targets.py`)**:
+- [x] ✅ Alternative mastery target computation using BKT
+  - [x] ✅ Estimate P(L0), P(T), P(S), P(G) parameters
+  - [x] ✅ Compute per-student-skill-timestep mastery probabilities
+  - [x] ✅ Save to `data/{dataset}/bkt_targets.pkl`
+
+**Data Loading Integration**:
+- [x] ✅ Rasch targets loaded in `train_ikt.py` via `load_rasch_targets()`
+  - [x] ✅ Load pre-computed values from pkl file
+  - [x] ✅ Map to batches using student UIDs
+  - [x] ✅ Pad/truncate to match sequence length
+  - [x] ✅ Handle students not in calibration (raises error, no cold-start fallback)
 
 ### Parameter Configuration
 
-**Phase 1: Two-loss parameters **:
-- [ ] Add to `configs/parameter_default.json`:
+**Soft Barrier Loss Parameters**:
+- [x] ✅ Added to `configs/parameter_default.json`:
   ```json
-  "lambda_bce": 0.7,
-  "lambda_mastery": 0.3,
-  "epsilon": 0.15,
+  "lambda_penalty": 100,
+  "epsilon": 0.10,
+  "phase": 2,
   ```
+- [x] ✅ All parameters logged to output JSON files for reproducibility
   
-  Note: lambda_bce + lambda_mastery = 1.0 in Phase 2
+**Note**: `lambda_penalty` controls penalty strength independently; `epsilon` defines the tolerance zone.
 
-### Testing
+### Testing and Validation
 
-**Encoder tests**:
-- [ ] Verify embedding table size
-- [ ] Test tokenization
-- [ ] Verify output shape: h1
-- [ ] Test Head 4 forward pass
-- [] Test gradient flow (see script above)
-- [] Verify Encoder 1 receives gradients from appropiate heads
-- [] Test with monotonicity constraint (enforced architecturally via cummax)
-- [] Sanity check: training loss should decrease for L1 and L2 (both phases)
-- [] Launch test experiment with examples/run_repro_experiment.py
+**Unit Tests**:
+- [ ] ❌ **NOT IMPLEMENTED**: Embedding table size verification
+- [ ] ❌ **NOT IMPLEMENTED**: Tokenization tests
+- [ ] ❌ **NOT IMPLEMENTED**: Output shape verification
+- [ ] ❌ **NOT IMPLEMENTED**: Gradient flow tests
+- [ ] ❌ **NOT IMPLEMENTED**: Monotonicity constraint tests
 
+**Integration Tests**:
+- [x] ✅ Full forward pass tested (q, r, qry, rasch_targets)
+- [x] ✅ Losses computed correctly (verified in training runs)
+- [x] ✅ Head 2 always computes mastery (fixed: removed undefined `self.lambda_mastery` conditional)
+- [x] ✅ Sanity checks passed: All losses decrease during training
 
-- [ ] **Integration Tests**:
-  - [ ] Test full forward pass with three inputs 
-  - [ ] Verify losses computed correctly
-  - [ ] Test conditional modes: with different lambdas = 0.0
-- [ ] **Sanity Checks**:
-  - [ ] All losses should decrease during training
-  - [ ] Master predictions should be similar to actual rasch values according to tolerance given by the parameter 
-- [ ] **Ablation Experiments**:
-  - [ ] Baseline: λ_bce=1.0, λ_mastery=0.0 (pure performance, no L2)
-  - [ ] Mastery-focused: λ_bce=0.0, λ_mastery=1.0 (pure Rasch alignment)
-  - [ ] Balanced: λ_bce=0.7, λ_mastery=0.3 (performance-interpretability trade-off)
+**Ablation Experiments**:
+- [ ] ⚠️ **IN PROGRESS**: Phase 1 pure Rasch alignment tests
+- [ ] ⚠️ **IN PROGRESS**: Phase 2 ablation with varying λ_penalty and ε
+- [ ] ⚠️ **PENDING**: Optimal hyperparameter selection based on AUC-interpretability trade-off
 
----
+**Analysis and Visualization**:
+- [x] ✅ Mastery states extraction implemented (`mastery_states.py`)
+- [x] ✅ Analysis plots implemented (`generate_analysis_plots.py`):
+  - [x] ✅ Loss evolution plot
+  - [x] ✅ AUC vs violation rate scatter plot
+  - [x] ✅ Deviation histogram
+  - [x] ✅ Per-skill alignment plot
+- [x] ✅ Integration with `run_repro_experiment.py`---
 
 ---
 
@@ -1584,9 +1725,9 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
 
 | Parameter | Description | Recommended | Range |
 |-----------|-------------|-------------|-------|
-| `epsilon` | Consistency tolerance (max allowed deviation from M0) | 0.15 | [0.05, 0.30] |
-| `lambda_bce` | Weight for L1 BCE loss (Phase 2) | 0.7 | [0.5, 1.0] |
-| `lambda_mastery` | Weight for L2 Rasch loss (Phase 2) | 0.3 | [0.0, 0.5] |
+| `epsilon` | Soft barrier tolerance (allowed deviation from Rasch) | 0.10 | [0.05, 0.15] |
+| `lambda_penalty` | Penalty strength for violations beyond ε | 100 | [10, 1000] |
+| `phase` | Training phase (1=Rasch only, 2=BCE+penalty) | 2 | {1, 2} |
 | `epochs_phase1` | Rasch initialization epochs | 30 | [20, 100] |
 | `epochs_phase2` | Constrained optimization epochs | 100 | [50, 300] |
 | `learning_rate_phase1` | Phase 1 learning rate | 0.001 | [0.0005, 0.005] |
@@ -1608,10 +1749,10 @@ See `paper/rasch_model.md` for a detailed account of theory and implementation.
 - Monitoring is opt-in via callback registration
 - Zero overhead when monitoring disabled
 
-**2. Conditional Computation**
-- Skip Head 2 when λ_mastery=0 (pure BCE mode)
-- L2 automatically adapts based on training phase (epsilon=0 in Phase 1, epsilon>0 in Phase 2)
-- All modes work without code changes (just config adjustment)
+**2. Phase-Dependent Training**
+- Phase 1: Pure L2 Rasch alignment (ε=0, λ_penalty unused)
+- Phase 2: L1 + λ_penalty × L2_penalty (ε>0 enables soft barrier)
+- Training progression: strict alignment → constrained optimization
 
 **3. Architectural Constraints**
 - Softplus activation enforces positivity (KCi > 0)
@@ -1685,7 +1826,6 @@ python examples/run_repro_experiment.py \
     --short_title ikt_phase1_rasch \
     --phase 1 \
     --epsilon 0.0 \
-    --lambda_bce 0.5 \
     --epochs 20
     
 # Rasch targets automatically loaded from data/{dataset}/rasch_targets.pkl
@@ -1694,9 +1834,8 @@ python examples/run_repro_experiment.py \
 ```
 
 **Key Parameters**:
-- `--phase 1`: Activates Phase 1 mode (pure Rasch alignment)
-- `--epsilon 0.0`: Strict alignment, no tolerance for deviation
-- `--lambda_bce 0.5`: Weight parameter (not used in Phase 1, but required for Phase 2)
+- `--phase 1`: Activates Phase 1 mode (pure Rasch alignment, L2 only)
+- `--epsilon 0.0`: Must be 0 in Phase 1 (strict alignment)
 - `--epochs 20`: Typical Phase 1 duration
 
 **Expected Behavior**:
@@ -1726,43 +1865,48 @@ grep "Valid" examples/experiments/<experiment_id>/train.log
 
 **Objective**: Optimize prediction accuracy (AUC) while maintaining Rasch alignment within tolerance ε
 
-**Loss Function**: `L_total = λ_bce × L1 + (1-λ_bce) × L2_constrained`  
+**Loss Function**: `L_total = L1 + λ_penalty × L2_penalty`  
 **Where**: 
 - `L1 = BCE(predictions, targets)` - Binary cross-entropy for prediction
-- `L2_constrained = MSE(ReLU(|Mi - M_rasch| - ε))` - Rasch loss with tolerance
-- `ε > 0` - Tolerance threshold allowing deviation from Rasch targets
+- `L2_penalty = mean(max(0, |Mi - M_rasch| - ε)²)` - Soft barrier penalty
+- `ε > 0` - Tolerance threshold (violations beyond ε incur quadratic penalty)
+- `λ_penalty` - Penalty strength (higher = stricter Rasch alignment)
 
 **Training Command (Single Run)**:
 ```bash
 python examples/run_repro_experiment.py \
-    --short_title ikt_phase2_eps0.1 \
+    --short_title ikt_phase2_lam100_eps0.1 \
     --phase 2 \
     --epsilon 0.1 \
-    --lambda_bce 0.5 \
+    --lambda_penalty 100 \
     --epochs 30
 ```
 
-**Epsilon Ablation Study (Recommended)**:
+**Hyperparameter Ablation Study (Recommended)**:
 ```bash
-# Train multiple models with different epsilon values
-for epsilon in 0.0 0.05 0.1 0.15 0.2 0.3; do
+# Grid search over lambda_penalty and epsilon
+for lambda_penalty in 10 100 1000; do
+  for epsilon in 0.05 0.10 0.15; do
     python examples/run_repro_experiment.py \
-        --short_title ikt_phase2_eps${epsilon} \
+        --short_title ikt_phase2_lam${lambda_penalty}_eps${epsilon} \
         --phase 2 \
         --epsilon ${epsilon} \
-        --lambda_bce 0.5 \
+        --lambda_penalty ${lambda_penalty} \
         --epochs 30
+  done
 done
 ```
 
 **Key Parameters**:
-- `--phase 2`: Activates Phase 2 mode (constrained optimization)
-- `--epsilon <value>`: Tolerance for Rasch deviation (0.0-0.3 typical range)
-  - **ε = 0.0**: Strict Rasch alignment (same as Phase 1)
+- `--phase 2`: Activates Phase 2 mode (L1 + λ_penalty × L2_penalty)
+- `--epsilon <value>`: Soft barrier tolerance (0.05-0.15 typical range)
   - **ε = 0.05**: Tight constraint, high interpretability
-  - **ε = 0.15**: Moderate constraint, balanced trade-off
-  - **ε = 0.3**: Loose constraint, prioritizes AUC
-- `--lambda_bce 0.5`: Balanced weight between BCE and Rasch (both 50%)
+  - **ε = 0.10**: Moderate constraint, balanced trade-off
+  - **ε = 0.15**: Looser constraint, more flexibility
+- `--lambda_penalty <value>`: Penalty strength (10-1000)
+  - **λ = 10**: Weak penalty, prioritizes AUC
+  - **λ = 100**: Balanced (recommended starting point)
+  - **λ = 1000**: Strong penalty, prioritizes interpretability
 - `--epochs 30`: Typical Phase 2 duration
 
 **Expected Trade-Offs**:
@@ -2388,6 +2532,614 @@ Potential hybrid approaches:
 - **Skill-specific**: BKT for high-practice skills, Rasch for sparse data
 - **Multi-parameter IRT**: Extend to 2PL/3PL models with discrimination parameters
 - **Hybrid monotonicity**: Apply smoothing only to select skills or time ranges
+
+---
+
+## Comprehensive Metrics Tracking
+
+### Overview
+
+The iKT training and evaluation system generates comprehensive metrics per epoch to track the trade-off between performance (AUC) and interpretability (Rasch alignment). Metrics are organized into four categories corresponding to loss components.
+
+### Output Files
+
+**Training Phase:**
+- `results_training.json`: Training metrics per epoch
+- `results_validation.json`: Validation metrics per epoch  
+- `results_training_validation.json`: Combined training+validation per epoch
+- `metrics_epoch.csv`: All metrics in CSV format (training + validation)
+
+**Testing Phase:**
+- `results_test.json`: Final test set metrics
+- `metrics_epoch_test.csv`: Test metrics in CSV format
+
+### Metric Categories
+
+#### 1. L1 - Performance Prediction Metrics
+
+**Purpose:** Measure next-response prediction accuracy (primary objective in Phase 2)
+
+| Metric | Description | Interpretation | Target |
+|--------|-------------|----------------|---------|
+| `l1_bce` | Binary Cross-Entropy Loss | Lower = better predictions | Minimize |
+| `auc` | Area Under ROC Curve | Discrimination ability (0.5-1.0) | Maximize (>0.75) |
+| `accuracy` | Classification accuracy | Overall correctness (0-1) | Maximize (>0.70) |
+
+**Interpretation:**
+- **AUC** is the primary performance metric - measures model's ability to rank correct/incorrect responses
+- Values 0.7-0.8 are good, >0.8 are excellent for knowledge tracing
+- L1 should decrease throughout training; plateauing indicates convergence
+
+---
+
+#### 2. L2 - Rasch Alignment Metrics
+
+**Purpose:** Measure how well skill mastery estimates align with theoretical Rasch/IRT values
+
+| Metric | Description | Interpretation | Target |
+|--------|-------------|----------------|---------|
+| `l2_mse` | Mean Squared Error vs M_rasch | Average squared deviation | Minimize |
+| `l2_mae` | Mean Absolute Error vs M_rasch | Average absolute deviation | Minimize (<0.1) |
+| `corr_rasch` | Pearson correlation with M_rasch | Linear relationship strength (-1 to 1) | Maximize (>0.8) |
+
+**Interpretation:**
+- **MSE** and **MAE** quantify alignment quality - lower is better
+- **Correlation** measures if Mi and M_rasch move together (high correlation = good interpretability)
+- In Phase 1, these metrics should approach zero as model learns Rasch targets
+- In Phase 2, some deviation is expected as model prioritizes AUC
+
+**Typical Values:**
+- Phase 1 (end): MSE <0.01, MAE <0.05, Correlation >0.95
+- Phase 2 (with ε=0.1): MSE <0.02, MAE <0.12, Correlation >0.85
+
+---
+
+#### 3. L2_penalty - Constraint Violation Metrics
+
+**Purpose:** Track violations of the interpretability constraint (|Mi - M_rasch| > ε)
+
+| Metric | Description | Interpretation | Target |
+|--------|-------------|----------------|---------|
+| `penalty_loss` | Soft barrier penalty value | Penalty actually applied | Should be near 0 |
+| `violation_rate` | % of (student, skill) pairs violating constraint | Fraction exceeding ε (0-1) | <5% |
+| `mean_violation` | Average excess deviation (when violating) | Mean of max(0, \|Mi-M_rasch\|-ε) | <0.05 |
+| `max_violation` | Worst-case excess deviation | Largest constraint violation | <0.15 |
+
+**Interpretation:**
+- **Penalty Loss** reflects how much the constraint is being violated - should be small in Phase 2
+- **Violation Rate** shows what percentage of mastery estimates exceed tolerance
+  - <1%: Excellent constraint satisfaction
+  - 1-5%: Good constraint satisfaction  
+  - 5-10%: Acceptable (may need larger λ_penalty)
+  - >10%: Poor - increase λ_penalty or ε
+- **Mean/Max Violation** show severity of violations when they occur
+
+**Phase-Specific Behavior:**
+- Phase 1: All violation metrics should be ~0 (direct MSE minimization)
+- Phase 2: Some violations expected as model optimizes AUC within tolerance
+
+---
+
+#### 4. L_total - Combined Loss Metrics
+
+**Purpose:** Track overall optimization objective and loss composition
+
+| Metric | Description | Interpretation | Target |
+|--------|-------------|----------------|---------|
+| `total_loss` | L_total value | Overall optimization objective | Minimize |
+| `loss_ratio_l1` | L1 / L_total | Fraction from performance loss (0-1) | Phase-dependent |
+| `loss_ratio_penalty` | (λ_penalty × L2_penalty) / L_total | Fraction from constraint penalty (0-1) | Should be small |
+
+**Interpretation:**
+- **Total Loss** should decrease monotonically during training
+- **Loss Ratios** show which component dominates:
+  - Phase 1: `loss_ratio_l1` ≈ 0, most loss from L2
+  - Phase 2 (no violations): `loss_ratio_l1` ≈ 1.0, `loss_ratio_penalty` ≈ 0
+  - Phase 2 (with violations): `loss_ratio_l1` < 1.0, penalty contributes
+
+**Healthy Training Signature:**
+- Phase 2 with well-tuned λ_penalty: `loss_ratio_penalty` < 0.1 (constraint rarely violated)
+- If `loss_ratio_penalty` > 0.3: Increase λ_penalty to enforce constraint more strongly
+
+---
+
+### Recommended Parameter Ranges
+
+Based on metric analysis, recommended hyperparameter ranges:
+
+| Parameter | Range | Rationale |
+|-----------|-------|-----------|
+| **λ_penalty** | [100, 1000] | Sufficient to deter violations without dominating L_total |
+| **ε (epsilon)** | [0.05, 0.15] | Balance interpretability (lower) vs AUC (higher) |
+
+**Tuning Strategy:**
+1. Start with λ_penalty=100, ε=0.10
+2. If `violation_rate > 10%`: Increase λ_penalty (e.g., 100 → 500)
+3. If `auc_drop > 0.03` from Phase 1: Increase ε (e.g., 0.10 → 0.15)
+4. Monitor `loss_ratio_penalty`: Should stabilize <0.15 when converged
+
+---
+
+### Monitoring During Training
+
+**Key Plots to Generate:**
+
+1. **Loss Evolution** (4 subplots):
+   - L_total, L1, L2_penalty, L2_MSE over epochs
+   - Identify convergence and phase transitions
+
+2. **AUC vs Violation Rate**:
+   - Pareto frontier: Performance vs interpretability trade-off
+   - Optimal point: High AUC, low violations
+
+3. **Deviation Histogram**:
+   - Distribution of |Mi - M_rasch| with ε threshold line
+   - Shows concentration of deviations relative to tolerance
+
+4. **Loss Ratio Stacked Area**:
+   - `loss_ratio_l1` and `loss_ratio_penalty` over epochs
+   - Visualize dominance of each component
+
+**Critical Warning Signs:**
+- ❌ `violation_rate > 20%`: Constraint not enforced (increase λ_penalty)
+- ❌ `auc` drops >5% from Phase 1 to Phase 2: ε too restrictive
+- ❌ `penalty_loss` not decreasing in Phase 2: Learning rate too high or λ_penalty too small
+- ❌ `corr_rasch < 0.7` in Phase 2: Poor interpretability, consider retuning
+
+---
+
+### Example Interpretation
+
+**Epoch 15 (Phase 2) Metrics:**
+```json
+{
+  "l1_bce": 0.423,
+  "auc": 0.782,
+  "accuracy": 0.741,
+  "l2_mse": 0.018,
+  "l2_mae": 0.105,
+  "corr_rasch": 0.873,
+  "penalty_loss": 0.008,
+  "violation_rate": 0.032,
+  "mean_violation": 0.023,
+  "max_violation": 0.087,
+  "total_loss": 0.431,
+  "loss_ratio_l1": 0.981,
+  "loss_ratio_penalty": 0.019
+}
+```
+
+**Analysis:**
+- ✅ **Performance**: AUC=0.782 is strong, accuracy=0.741 is good
+- ✅ **Alignment**: MAE=0.105, correlation=0.873 indicate good interpretability
+- ✅ **Violations**: 3.2% violation rate is excellent (well within tolerance)
+- ✅ **Loss Balance**: 98.1% of loss from L1, only 1.9% from penalty (optimal)
+- **Conclusion**: Model is performing well with strong interpretability guarantees
+
+---
+
+### CSV Format Reference
+
+**metrics_epoch.csv columns:**
+```
+epoch, phase, lambda_penalty, epsilon,
+val_l1_bce, val_auc, val_accuracy,
+val_l2_mse, val_l2_mae, val_corr_rasch,
+val_penalty_loss, val_violation_rate, val_mean_violation, val_max_violation,
+val_total_loss, val_loss_ratio_l1, val_loss_ratio_penalty,
+train_l1_bce, train_auc, train_accuracy,
+train_l2_mse, train_l2_mae, train_corr_rasch,
+train_penalty_loss, train_violation_rate, train_mean_violation, train_max_violation,
+train_total_loss, train_loss_ratio_l1, train_loss_ratio_penalty
+```
+
+This format enables easy import into analysis tools (pandas, R, Excel) for visualization and statistical analysis.
+
+---
+
+## Analysis Plots and Interpretation
+
+After training, comprehensive analysis plots are automatically generated via `examples/generate_analysis_plots.py`. These visualizations enable detailed understanding of model convergence, performance-interpretability trade-offs, and constraint satisfaction.
+
+### Plot Generation
+
+Plots are generated automatically by `run_repro_experiment.py` after mastery states extraction:
+
+```bash
+python examples/generate_analysis_plots.py --run_dir experiments/20251128_123456_ikt_test_abcdef
+```
+
+Output: Four PNG files in `{run_dir}/plots/`:
+1. `loss_evolution.png` - Loss component trajectories
+2. `auc_vs_violations.png` - Pareto frontier visualization
+3. `deviation_histogram.png` - Deviation distribution analysis
+4. `per_skill_alignment.png` - Heatmap of per-skill MSE
+
+---
+
+### Plot 1: Loss Evolution
+
+**Purpose:** Track convergence of each loss component across training epochs.
+
+**Structure:** 4 subplots arranged in 2×2 grid:
+- **Top-left**: L_total (overall optimization objective)
+- **Top-right**: L1 (Binary Cross-Entropy / performance)
+- **Bottom-left**: L2_penalty (constraint violation penalty)
+- **Bottom-right**: L2 (MSE vs Rasch targets)
+
+**Features:**
+- Validation metrics (circles) and training metrics (squares)
+- Red dashed vertical line indicates Phase 1 → Phase 2 transition
+- Grid for easy reading of values
+
+**Interpretation:**
+
+**Phase 1 Behavior (L_total = L2):**
+- L2 should decrease rapidly toward zero
+- L_total ≈ L2 (high correlation)
+- L1 may increase initially (not being optimized)
+- L2_penalty = 0 (epsilon=0, perfect alignment required)
+
+**Phase 2 Behavior (L_total = L1 + λ_penalty × L2_penalty):**
+- L1 should decrease (optimizing for AUC)
+- L2 may increase slightly (relaxed alignment)
+- L2_penalty should be small (violations rare)
+- L_total driven primarily by L1 component
+
+**Healthy Training Signatures:**
+- ✅ Monotonic decrease in L_total (no oscillations)
+- ✅ L2 < 0.02 at end of Phase 1 (good initialization)
+- ✅ L1 decreases throughout Phase 2 (performance improving)
+- ✅ L2_penalty < 0.01 in Phase 2 (constraints satisfied)
+
+**Warning Signs:**
+- ❌ L_total increasing or oscillating → Learning rate too high
+- ❌ L2 > 0.05 at Phase 1 end → Need more Phase 1 epochs
+- ❌ L2_penalty > 0.1 in Phase 2 → Increase λ_penalty or ε
+- ❌ Large gap between train/val metrics → Overfitting
+
+**Example Expected Plot:**
+```
+[Phase 1: Epochs 0-10]          [Phase 2: Epochs 11-30]
+L_total: ████▌▎  → 0.01         L_total: ▌▎ → 0.42
+L1:      ▌▌▌▌▌▌▌▌▌ (ignored)    L1:      ████▌▎ → 0.42
+L2_penalty: 0                    L2_penalty: ▎ → 0.008
+L2:      ████▌▎  → 0.01         L2:      ▎ (0.018, slight increase ok)
+```
+
+---
+
+### Plot 2: AUC vs Violation Rate (Pareto Frontier)
+
+**Purpose:** Visualize performance-interpretability trade-off to identify optimal configurations.
+
+**Structure:** Scatter plot with:
+- **X-axis**: Violation Rate (% of mastery estimates exceeding tolerance ε)
+- **Y-axis**: AUC (prediction performance)
+- **Color**: Epoch number (gradient from early=dark to late=bright)
+- **Red circle**: Best AUC epoch (highlighted)
+
+**Reference Lines:**
+- Green dashed horizontal line at AUC=0.75 (good performance threshold)
+- Orange dashed vertical line at 5% violations (target constraint satisfaction)
+- Green shaded region: Optimal zone (AUC>0.75, violations<5%)
+
+**Interpretation:**
+
+**Pareto Frontier Analysis:**
+- Points in **upper-left** (high AUC, low violations) are optimal
+- Points in **lower-right** (low AUC, high violations) indicate poor convergence
+- Trajectory should move toward optimal region as training progresses
+
+**Epoch Progression (Color Gradient):**
+- Dark points (early epochs): Typically higher violations, lower AUC
+- Bright points (late epochs): Should cluster in optimal region
+- Movement from dark→bright should show improvement in both dimensions
+
+**Configuration Quality:**
+- **Well-tuned** (λ_penalty, ε): Points converge to green zone
+- **λ_penalty too small**: Points remain in high-violation region (right side)
+- **ε too small**: High AUC but violations >10% (forced trade-off)
+- **ε too large**: Low violations but AUC plateau below potential
+
+**Example Interpretations:**
+
+**Scenario A: Excellent Configuration**
+```
+Most points in green zone (AUC>0.77, violations<3%)
+Best epoch: AUC=0.79, violations=2.1%
+→ Well-balanced, ready for deployment
+```
+
+**Scenario B: Need Higher λ_penalty**
+```
+Points scattered with violations 5-15%
+Best epoch: AUC=0.78, violations=8.5%
+→ Increase λ_penalty from 100 to 500
+```
+
+**Scenario C: ε Too Restrictive**
+```
+Tight cluster with violations <1% but AUC=0.72
+→ Increase ε from 0.05 to 0.10 for better AUC
+```
+
+**Expected Plot Example:**
+```
+1.00 ┤                                    ● Best (Epoch 28)
+     │                               ◉ ◉ ◉
+0.80 ┤─────────── Good Threshold ◉ ◉ ◉ ◉ ◉ ◉ [Green Zone]
+     │                         ◉ ◉ ◉
+0.75 ┤                     ◉ ◉ ◉
+     │                 ◉ ◉
+0.70 ┤             ◉ ◉
+     │         ◉ ◉
+     └─────┬─────┬─────┬─────┬─────┬──────
+           0     5    10    15    20    25
+                 ↑ Target
+           Violation Rate (%)
+```
+
+---
+
+### Plot 3: Deviation Histogram
+
+**Purpose:** Understand distribution of deviations |Mi - M_rasch| and verify constraint satisfaction.
+
+**Structure:** 4 subplots showing deviation histograms at key training stages:
+1. **Top-left**: Initial epoch (beginning of Phase 1)
+2. **Top-right**: Phase transition (end of Phase 1, start of Phase 2)
+3. **Bottom-left**: Mid-training (middle of Phase 2)
+4. **Bottom-right**: Final epoch (end of training)
+
+**Features:**
+- Blue histogram: Frequency of deviations
+- Red dashed line: ε threshold (tolerance boundary)
+- Red shaded region: Violation zone (deviations > ε)
+- Text box: Statistics (violation rate, mean violation, max violation)
+
+**Interpretation:**
+
+**Phase 1 Evolution:**
+- **Initial**: Deviations spread widely (uniform/high variance)
+- **Phase Transition**: Deviations concentrated near zero (successful alignment)
+- Most mass should be below ε by end of Phase 1
+
+**Phase 2 Evolution:**
+- Deviations may spread slightly as model optimizes AUC
+- Most mass remains below ε (constraint enforcement)
+- Tail extends into violation zone but with low frequency
+
+**Distribution Shapes:**
+
+**Healthy Pattern:**
+```
+Initial:      [Wide, uniform distribution]
+Phase Trans:  [Narrow peak at 0, minimal tail]
+Mid-training: [Peak at 0, small tail beyond ε]
+Final:        [Similar to mid, stable distribution]
+```
+
+**Problematic Patterns:**
+
+**Pattern A: Poor Phase 1 (insufficient epochs)**
+```
+Phase Transition shows wide distribution, not concentrated
+→ Increase Phase 1 epochs or decrease Phase 1 LR
+```
+
+**Pattern B: Degradation in Phase 2**
+```
+Final histogram shows large tail beyond ε
+→ Increase λ_penalty (100→500) to enforce constraint
+```
+
+**Pattern C: Over-constrained**
+```
+All mass below ε=0.05, but AUC poor (<0.75)
+→ Increase ε to 0.10 for more flexibility
+```
+
+**Expected Plot Example:**
+```
+Epoch 1 (Initial):          Epoch 10 (Phase Trans):
+   │ ▄▄▄▄▄▄▄▄▄▄               │     ████
+   │ ██████████               │     ████
+   │ ██████████               │    ▄████▄
+   └──────────── |Mi-M|       └──ε─────── |Mi-M|
+      [Spread]                   [Concentrated]
+
+Epoch 20 (Mid):             Epoch 30 (Final):
+   │     ████                 │     ████
+   │    ▄████                 │    ▄████
+   │   ▄████▄▄                │   ▄████▄
+   └──ε────────── |Mi-M|      └──ε─────── |Mi-M|
+      [3% beyond ε]              [2% beyond ε]
+```
+
+**Statistics Interpretation:**
+- **Violation Rate**: 2-5% ideal, <10% acceptable, >10% problematic
+- **Mean Violation**: Should be <0.05 (small excursions beyond ε)
+- **Max Violation**: Should be <0.15 (no extreme outliers)
+
+---
+
+### Plot 4: Per-Skill Alignment Heatmap
+
+**Purpose:** Identify skills with poor alignment across students to guide model refinement.
+
+**Structure:** Heatmap with:
+- **Rows**: Individual students (sampled up to 30 for visualization)
+- **Columns**: Skills (top 50 by variance, most interesting)
+- **Color**: log₁₀(Squared Error) - darker (red) = worse alignment, lighter (green) = better
+- Data from final epoch test set (mastery_states_test.csv)
+
+**Interpretation:**
+
+**Overall Patterns:**
+
+**Uniform Green (Light):**
+```
+Most cells light green → Good alignment across all student-skill pairs
+Model successfully learned interpretable representations
+```
+
+**Vertical Stripes (Skill Issues):**
+```
+Entire column red → Specific skill(s) poorly aligned
+Possible causes:
+- Skill has very few training examples
+- Skill difficulty estimate (Rasch) inaccurate
+- Skill concept too abstract for encoder
+```
+
+**Horizontal Stripes (Student Issues):**
+```
+Entire row red → Specific student(s) poorly aligned
+Possible causes:
+- Student has unusual learning pattern
+- Outlier in training data
+- Insufficient interaction history
+```
+
+**Random Scatter (Cell-specific Issues):**
+```
+Isolated red cells → Rare student-skill combinations
+Generally acceptable, may represent edge cases
+```
+
+**Quantitative Analysis:**
+
+Use heatmap to:
+1. **Identify problematic skills**: Count red cells per column
+2. **Compute skill-wise MSE**: Average squared errors per skill
+3. **Prioritize data collection**: Focus on high-error skills
+4. **Validate Rasch estimates**: Cross-check red columns with IRT fit
+
+**Actionable Insights:**
+
+**Finding 1: Skill 42 shows consistent high error**
+```
+Action: Examine Rasch difficulty estimate for skill 42
+- Check if skill has sufficient data for IRT calibration
+- Consider excluding from alignment loss if unreliable
+```
+
+**Finding 2: 3 students have uniformly high errors**
+```
+Action: Investigate student data quality
+- Check for data entry errors
+- Verify students have sufficient interactions
+- Consider outlier removal or student-specific modeling
+```
+
+**Finding 3: Random scatter, no clear pattern**
+```
+Interpretation: Good overall alignment
+Minor errors are expected and acceptable
+Model is performing well
+```
+
+**Expected Plot Example:**
+```
+Per-Skill Alignment Heatmap (30 students × 50 skills)
+
+Student ID
+  s001  [▓▓░░░░░░▓▓░░░░░...] ← Good student
+  s002  [░░░░░░░░░░░░░░░...]
+  s003  [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓...] ← Problematic student
+  s004  [░░░░░░░░░░░░░░░...]
+  ...
+  s030  [░░░▓░░░░░░░░░░░...]
+         ↑       ↑
+      Problem  Good
+       skill   skills
+       (skill 2)
+
+Color: ░ = Green (low error), ▓ = Red (high error)
+```
+
+**Diagnostic Workflow:**
+
+1. **Load heatmap**: Identify red regions
+2. **Extract skill IDs**: List skills with >30% red cells
+3. **Cross-reference with Rasch**: Check difficulty estimates
+4. **Inspect training data**: Count interactions per skill
+5. **Decision**:
+   - If skill has <50 interactions → Mark as "sparse", lower weight
+   - If Rasch estimate unreliable → Use data-driven difficulty
+   - If skill concept abstract → Accept higher error as inevitable
+
+---
+
+### Integrated Analysis Strategy
+
+**Step 1: Loss Evolution → Convergence Quality**
+- Check Phase 1 achieved L2<0.02 (good initialization)
+- Verify Phase 2 shows decreasing L1 (performance improving)
+- Confirm L2_penalty<0.01 (constraints satisfied)
+
+**Step 2: AUC vs Violations → Configuration Quality**
+- Identify if best epoch in optimal zone (AUC>0.75, violations<5%)
+- If not, determine direction: increase λ_penalty or increase ε?
+
+**Step 3: Deviation Histogram → Constraint Understanding**
+- Verify final distribution concentrated below ε
+- Check violation rate aligns with target (<5%)
+- Assess if ε threshold is appropriate for application
+
+**Step 4: Per-Skill Alignment → Data Quality**
+- Identify problematic skills (red columns)
+- Prioritize data collection or model refinement
+- Validate Rasch estimates for high-error skills
+
+**Step 5: Combined Decision**
+
+**Scenario A: All plots green**
+```
+✅ Loss converged, AUC>0.75, violations<5%, no red skills
+→ Model ready for deployment
+```
+
+**Scenario B: High violations (Plot 2 + 3)**
+```
+⚠️ AUC good but violations>10%
+→ Increase λ_penalty: 100→500, retrain Phase 2
+```
+
+**Scenario C: Low AUC (Plot 2)**
+```
+⚠️ Violations low but AUC<0.75
+→ Increase ε: 0.05→0.10, or extend Phase 2 training
+```
+
+**Scenario D: Skill issues (Plot 4)**
+```
+⚠️ 5 skills show consistent misalignment
+→ Exclude from loss or collect more data
+```
+
+---
+
+### Reproducibility and Documentation
+
+All plots are:
+- **Automatically generated** by `run_repro_experiment.py` after training
+- **Deterministic** given same metrics_epoch.csv and config.json
+- **High-resolution** (300 DPI) suitable for papers
+- **Self-contained** (include hyperparameters in titles)
+
+**Plot Metadata:**
+- Each plot title includes: λ_penalty, ε values
+- Loss evolution marks phase transitions
+- AUC vs violations highlights best epoch
+- Deviation histograms show statistics
+
+This enables:
+1. **Cross-experiment comparison** (consistent visual format)
+2. **Paper inclusion** (publication-quality figures)
+3. **Reproducibility audits** (plots regenerated from raw data)
+4. **Hyperparameter tuning** (visual guidance for next iteration)
 
 ---
 
