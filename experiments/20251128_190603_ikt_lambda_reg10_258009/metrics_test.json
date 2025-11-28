@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-11-28T19:22:53.740046",
+  "checkpoint": "model_best.pth",
+  "dataset": "assist2015",
+  "fold": 0,
+  "num_concepts": 100,
+  "num_parameters": 10726089,
+  "hyperparameters": {
+    "lambda_penalty": 100.0,
+    "epsilon": 0.05,
+    "phase": 2
+  },
+  "results": {
+    "test": {
+      "l1_bce": 0.09190263800689431,
+      "auc": 0.7154155701884882,
+      "accuracy": 0.7462182001902045,
+      "l2_mse": 0.041575029492378235,
+      "l2_mae": 0.1903628259897232,
+      "corr_beta": NaN,
+      "penalty_loss": 0.02498483657836914,
+      "violation_rate": 0.95,
+      "mean_violation": 0.14925023913383484,
+      "max_violation": 0.3921698331832886,
+      "total_loss": 2.5903863007905055,
+      "loss_ratio_l1": 0.035478352390471056,
+      "loss_ratio_penalty": 0.9645216456998921,
+      "num_samples": 134592
+    }
+  }
+}

@@ -1,0 +1,2 @@
+epoch,phase,lambda_penalty,epsilon,val_auc,val_l1_auc,val_l2_mae,val_l2_mse,val_l2_penalty
+1,1,100.0,0.05,0.6872146118586501,0.6872146118586501,0.17552626,0.03627708,0.0

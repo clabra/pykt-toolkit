@@ -300,15 +300,7 @@ def main():
     else:
         rasch_filename = 'rasch_targets.pkl'
     
-    rasch_path = os.path.join(dataset_config['dpath'], rasch_filename)
-    
-    rasch_targets_data = load_rasch_targets(
-        rasch_path=rasch_path,
-        dataset_path=dataset_config['dpath'],
-        num_c=num_c,
-        mastery_method=args.mastery_method
-    )
-    print(f"✓ Rasch targets data loaded")
+    # Option 1b: No rasch_targets needed - model uses internal embeddings
     
     # Initialize model
     print(f"\n🏗️  Initializing model...")
@@ -352,7 +344,6 @@ def main():
     if train_loader:
         print("\n📈 Evaluating on TRAIN split...")
         train_results = evaluate_split(model, train_loader, device, 'train', 
-                                      rasch_targets_data=rasch_targets_data, 
                                       lambda_penalty=args.lambda_penalty, 
                                       epsilon=args.epsilon)
         results['train'] = train_results
@@ -363,7 +354,6 @@ def main():
     if valid_loader:
         print("\n📊 Evaluating on VALID split...")
         valid_results = evaluate_split(model, valid_loader, device, 'valid',
-                                       rasch_targets_data=rasch_targets_data,
                                        lambda_penalty=args.lambda_penalty,
                                        epsilon=args.epsilon)
         results['valid'] = valid_results
@@ -374,7 +364,6 @@ def main():
     if test_loader:
         print("\n🎯 Evaluating on TEST split...")
         test_results = evaluate_split(model, test_loader, device, 'test',
-                                      rasch_targets_data=rasch_targets_data,
                                       lambda_penalty=args.lambda_penalty,
                                       epsilon=args.epsilon)
         results['test'] = test_results
