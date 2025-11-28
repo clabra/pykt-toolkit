@@ -27,13 +27,12 @@ from pykt.models.ikt import iKT
 from examples.experiment_utils import compute_auc_acc
 
 
-def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_data=None, lambda_penalty=None, epsilon=None):
+def evaluate_split(model, test_loader, device, split_name='test', lambda_penalty=None, epsilon=None):
     """
     Evaluate model on a data split with comprehensive metrics.
     
     Args:
-        rasch_targets_data: Dict with 'rasch_targets' and 'metadata' keys (from load_rasch_targets)
-    
+            
     Returns 13 metrics:
     - L1 Performance: l1_bce, auc, accuracy
     - L2 Alignment: l2_mse, l2_mae, corr_rasch
@@ -44,42 +43,25 @@ def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_
     all_preds = []
     all_labels = []
     all_skill_vectors = []
-    all_rasch_values = []
+    all_beta_values = []
     
     total_bce_loss = 0.0
     total_penalty_loss = 0.0
     total_loss = 0.0
     num_batches = 0
     
-    # Extract rasch data if available
-    rasch_data = None
-    num_c = None
-    if rasch_targets_data is not None:
-        rasch_data = rasch_targets_data.get('rasch_targets', {})
-        num_c = rasch_targets_data['metadata']['num_skills']
+    # No rasch_targets needed (Option 1b) - model uses internal embeddings
     
     with torch.no_grad():
         for batch in test_loader:
             questions = batch['cseqs'].to(device)
             responses = batch['rseqs'].to(device)
             questions_shifted = batch['shft_cseqs'].to(device)
-            mask = batch['masks'].to(device)
             labels = batch['shft_rseqs'].to(device)
-            
-            # Construct Rasch batch from UIDs (like in training)
-            batch_rasch = None
-            if rasch_data is not None:
-                uids = batch['uids']
-                batch_size, seq_len = questions.shape
-                batch_rasch = torch.zeros(batch_size, seq_len, num_c, device=device)
-                for i, uid in enumerate(uids):
-                    if uid in rasch_data:
-                        target_tensor = rasch_data[uid]
-                        actual_len = min(target_tensor.shape[0], seq_len)
-                        batch_rasch[i, :actual_len, :] = target_tensor[:actual_len, :].to(device)
+            mask = batch['masks'].to(device)
             
             # Forward pass
-            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=batch_rasch)
+            outputs = model(q=questions, r=responses, qry=questions_shifted)
             
             # Compute loss
             if hasattr(model, 'module'):
@@ -105,14 +87,14 @@ def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_
                 all_labels.extend(labels_np[i][valid_indices])
             
             # Collect skill vectors and Rasch targets if available
-            if 'skill_vector' in outputs and batch_rasch is not None:
+            if 'skill_vector' in outputs and outputs.get("beta_targets") is not None:
                 skill_vec = outputs['skill_vector'].detach().cpu().numpy()
-                rasch_batch_np = batch_rasch.cpu().numpy()
+                rasch_batch_np = outputs.get("beta_targets").cpu().numpy()
                 
                 # Flatten: (batch_size, seq_len, num_skills) -> list
                 for i in range(len(skill_vec)):
                     all_skill_vectors.append(skill_vec[i])
-                    all_rasch_values.append(rasch_batch_np[i])
+                    all_beta_values.append(rasch_batch_np[i])
     
     # Compute L1 metrics (performance prediction)
     all_preds = np.array(all_preds)
@@ -122,7 +104,7 @@ def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_
         print(f"⚠️  Warning: No valid predictions for {split_name} split")
         return {
             'l1_bce': 0.0, 'auc': 0.0, 'accuracy': 0.0,
-            'l2_mse': 0.0, 'l2_mae': 0.0, 'corr_rasch': 0.0,
+            'l2_mse': 0.0, 'l2_mae': 0.0, 'corr_beta': 0.0,
             'penalty_loss': 0.0, 'violation_rate': 0.0, 'mean_violation': 0.0, 'max_violation': 0.0,
             'total_loss': 0.0, 'loss_ratio_l1': 0.0, 'loss_ratio_penalty': 0.0,
             'num_samples': 0
@@ -133,11 +115,11 @@ def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_
     auc = performance_metrics['auc']
     accuracy = performance_metrics['acc']
     
-    # Compute L2 and L2_penalty metrics if Rasch targets are available
-    if len(all_skill_vectors) > 0 and rasch_data is not None:
+    # Compute L2 and L2_penalty metrics if beta targets are available
+    if len(all_skill_vectors) > 0 and len(all_beta_values) > 0:
         # Flatten skill vectors and Rasch targets
         skill_flat = np.concatenate([sv.flatten() for sv in all_skill_vectors])
-        rasch_flat = np.concatenate([rv.flatten() for rv in all_rasch_values])
+        rasch_flat = np.concatenate([rv.flatten() for rv in all_beta_values])
         
         # L2 alignment metrics
         l2_mse = np.mean((skill_flat - rasch_flat) ** 2)
@@ -192,7 +174,7 @@ def evaluate_split(model, test_loader, device, split_name='test', rasch_targets_
         # L2 Alignment
         'l2_mse': float(l2_mse),
         'l2_mae': float(l2_mae),
-        'corr_rasch': float(corr_rasch),
+        'corr_beta': float(corr_rasch),
         
         # L2_penalty Violations
         'penalty_loss': float(penalty_loss),
@@ -411,7 +393,7 @@ def main():
         if split_name in results:
             r = results[split_name]
             print(f"{split_name.capitalize():<10} {r['auc']:<10.4f} {r['accuracy']:<10.4f} "
-                  f"{r['l1_bce']:<10.4f} {r['l2_mse']:<10.4f} {r['corr_rasch']:<10.3f} "
+                  f"{r['l1_bce']:<10.4f} {r['l2_mse']:<10.4f} {r['corr_beta']:<10.3f} "
                   f"{r['violation_rate']*100:<10.1f}")
     
     # Save results to JSON

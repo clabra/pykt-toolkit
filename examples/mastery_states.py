@@ -271,14 +271,13 @@ def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
     return selected
 
 
-def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None, rasch_targets=None):
+def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None):
     """
     Extract mastery states and loss inputs for each skill at each time step.
     
     Args:
         max_students: Maximum number of students to process (None for all)
                      Stratified by sequence length if provided
-        rasch_targets: Dict with Rasch IRT targets (for L2 loss input)
     
     Returns:
         mastery_data: List of dicts with student_id, time_step, question_id, skills, responses, 
@@ -317,29 +316,9 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                                        (batch_idx + 1) * questions.shape[0])
                 uids = None
             
-            # Prepare Rasch targets for this batch (L2 loss input)
-            rasch_batch = None
-            if rasch_targets is not None and rasch_targets.get('mode') != 'random':
-                rasch_data = rasch_targets.get('rasch_targets', {})
-                batch_size, seq_len = questions.shape
-                rasch_batch = torch.zeros(batch_size, seq_len, num_concepts, device=device)
-                
-                if uids is not None:
-                    for i, uid in enumerate(uids):
-                        uid_val = uid.item() if torch.is_tensor(uid) else uid
-                        if uid_val in rasch_data:
-                            # Get stored targets for this student
-                            stored_targets = rasch_data[uid_val]  # [stored_seq_len, num_concepts]
-                            
-                            # Extract skill-level Rasch values (max across timesteps since they're constant per skill)
-                            # This handles the case where test sequences differ from training sequences
-                            skill_rasch = stored_targets.max(dim=0)[0]  # [num_concepts]
-                            
-                            # Broadcast to all timesteps for this batch
-                            rasch_batch[i, :, :] = skill_rasch.to(device)
-            
             # Forward pass to get skill vectors (mastery states) and predictions
-            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=rasch_batch)
+            # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
+            outputs = model(q=questions, r=responses, qry=questions_shifted)
             
             # Check if mastery head is active (skill_vector will be None when λ=1.0)
             if outputs['skill_vector'] is None:
@@ -367,11 +346,11 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
             mask_np = mask.cpu().numpy()
             labels_np = labels.cpu().numpy()  # Target for L1 BCE loss
             
-            # Rasch targets for L2 loss (if available)
-            if rasch_batch is not None:
-                rasch_targets_np = rasch_batch.cpu().numpy()  # [B, L, num_concepts]
+            # Beta targets for alignment comparison (skill-only targets from embeddings)
+            if 'beta_targets' in outputs:
+                beta_targets_np = outputs['beta_targets'].cpu().numpy()  # [B, L, num_concepts]
             else:
-                rasch_targets_np = None
+                beta_targets_np = None
             
             # Process each student in the batch
             batch_size, seq_len = questions_np.shape
@@ -411,13 +390,13 @@ def extract_mastery_states(model, data_loader, device, num_concepts, max_student
                     if skill_id >= num_concepts:
                         continue  # Skip invalid skill IDs
                     
-                    # L2 (Rasch Loss) inputs:
+                    # L2 (Alignment) inputs:
                     # - Prediction: skill_vector (Mi) from Head 2
-                    # - Target: rasch_targets (M_rasch) pre-computed from IRT
+                    # - Target: beta_targets (skill-only targets from embeddings)
                     mi_value = float(mastery_vector[skill_id])  # Head 2 output for this skill
                     m_rasch_value = None
-                    if rasch_targets_np is not None:
-                        m_rasch_value = float(rasch_targets_np[student_idx, time_step, skill_id])
+                    if beta_targets_np is not None:
+                        m_rasch_value = float(beta_targets_np[student_idx, time_step, skill_id])
                     
                     # L3 (Architectural Constraints) - implicit in architecture:
                     # - Positivity: Mi > 0 (enforced by Softplus)
@@ -637,16 +616,11 @@ def main():
     
     print(f"✓ Data loaded: {len(data_loader)} batches")
     
-    # Load Rasch targets for L2 loss input (iKT only)
-    rasch_targets = None
-    if config.get('model') == 'ikt':
-        print(f"\n📊 Loading Rasch IRT targets...")
-        rasch_targets = load_rasch_targets(config['dataset'], data_config)
-    
     # Extract mastery states
+    # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
     mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, 
-                                         max_students=args.num_students, rasch_targets=rasch_targets)
+                                         max_students=args.num_students)
     
     # Check if mastery data is available
     if not mastery_data:

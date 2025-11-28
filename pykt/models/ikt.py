@@ -189,6 +189,13 @@ class iKT(nn.Module):
             for _ in range(num_encoder_blocks)
         ])
         
+        # Skill difficulty embeddings (Option 1b)
+        # Learnable parameters regularized toward IRT-calibrated values
+        self.skill_difficulty_emb = nn.Embedding(num_c, 1)
+        # Initialize to neutral value (0.0 difficulty -> 0.5 mastery probability)
+        # Will be overridden with IRT values during training initialization
+        nn.init.constant_(self.skill_difficulty_emb.weight, 0.0)
+        
         # Head 1: Performance Prediction (BCE)
         # Deeper architecture matching AKT for better capacity
         self.prediction_head = nn.Sequential(
@@ -212,19 +219,18 @@ class iKT(nn.Module):
             nn.Softplus()  # Ensures Mi > 0
         )
     
-    def forward(self, q, r, qry=None, rasch_targets=None):
+    def forward(self, q, r, qry=None):
         """
         Args:
             q: [B, L] - question IDs
             r: [B, L] - responses (0 or 1)
             qry: [B, L] - query question IDs (optional, defaults to q)
-            rasch_targets: [B, L, num_c] - pre-computed Rasch mastery targets (optional)
         
         Returns:
             dict with keys:
                 - 'bce_predictions': [B, L] from Head 1
-                - 'skill_vector': [B, L, num_c] - interpretable {Mi} (None if λ_mastery=0)
-                - 'rasch_targets': [B, L, num_c] - passed through for loss computation (None if not provided)
+                - 'skill_vector': [B, L, num_c] - interpretable {Mi}
+                - 'beta_targets': [B, L, num_c] - skill-only mastery targets from embeddings
                 - 'logits': [B, L] - BCE logits for loss computation
         """
         batch_size, seq_len = q.size()
@@ -269,45 +275,46 @@ class iKT(nn.Module):
         # Step 2: Enforce monotonicity (cumulative max across time)
         skill_vector = torch.cummax(skill_vector, dim=1)[0]  # [B, L, num_c]
         
-        # Step 3: Compute Rasch loss if targets provided
-        if rasch_targets is not None:
-            # Phase-dependent loss computation
-            if self.phase == 1:
-                # Phase 1: Direct MSE (epsilon=0)
-                rasch_loss = F.mse_loss(skill_vector, rasch_targets, reduction='mean')
-            else:
-                # Phase 2: MSE with epsilon tolerance
-                deviation = torch.abs(skill_vector - rasch_targets)
-                violation = torch.relu(deviation - self.epsilon)
-                rasch_loss = torch.mean(violation ** 2)
-        else:
-            rasch_loss = None
+        # Step 3: Compute skill-only mastery targets from difficulty embeddings
+        # Extract skill difficulties: [K]
+        beta_skills = self.skill_difficulty_emb.weight.squeeze(-1)  # [num_c]
+        
+        # Compute mastery targets: M_k = sigmoid(-beta_k)
+        # Higher difficulty (positive beta) -> lower mastery probability
+        mastery_targets_1d = torch.sigmoid(-beta_skills)  # [num_c]
+        
+        # Broadcast to batch dimensions: [1, 1, num_c] -> [B, L, num_c]
+        beta_targets = mastery_targets_1d.unsqueeze(0).unsqueeze(0)  # [1, 1, num_c]
+        beta_targets = beta_targets.expand(batch_size, seq_len, -1)  # [B, L, num_c]
         
         return {
             'bce_predictions': bce_predictions,
             'skill_vector': skill_vector,  # Interpretable {Mi} [B, L, num_c]
-            'rasch_loss': rasch_loss,  # L2 (phase-dependent)
+            'beta_targets': beta_targets,  # Skill-only targets [B, L, num_c]
             'logits': logits
         }
     
-    def compute_loss(self, output, targets):
+    def compute_loss(self, output, targets, beta_irt=None, lambda_reg=0.1):
         """
-        Compute two-task loss with phase-dependent behavior.
+        Compute loss with phase-dependent behavior and skill regularization.
         
-        Phase 1: L_total = L2 (Rasch loss only)
-        Phase 2: L_total = L1 + λ_penalty × L2_penalty
-                 where L2_penalty = mean(max(0, |Mi - M_rasch| - ε)²)
+        Phase 1: L_total = L1 + λ_reg × L_reg
+        Phase 2: L_total = L1 + λ_penalty × L2_penalty + λ_reg × L_reg
+                 where L2_penalty = mean(max(0, |Mi - sigma(-beta)| - ε)²)
+                       L_reg = MSE(beta_learned, beta_irt)
         
         Args:
             output: dict from forward()
             targets: [B, L] - ground truth responses (0 or 1) for L1
+            beta_irt: [K] - IRT-calibrated skill difficulties (optional)
+            lambda_reg: regularization strength for skill embeddings
         
         Returns:
             dict with keys:
                 - 'total_loss': phase-dependent weighted loss
                 - 'bce_loss': L1 (performance prediction)
-                - 'rasch_loss': L2 (Rasch mastery alignment)
                 - 'penalty_loss': L2_penalty (constraint violation penalty)
+                - 'reg_loss': L_reg (skill difficulty regularization)
         """
         device = output['logits'].device
         
@@ -318,40 +325,39 @@ class iKT(nn.Module):
             reduction='mean'
         )
         
-        # L2: Rasch Loss (Head 2 - Mastery Alignment)
-        # Use pre-computed rasch_loss from forward() if available
-        rasch_loss = output.get('rasch_loss')
-        
-        if rasch_loss is None:
-            # No rasch_loss computed in forward (no targets provided)
-            # Create zero loss with gradient for compatibility
-            rasch_loss = bce_loss * 0.0
-            penalty_loss = bce_loss * 0.0
-        elif rasch_loss.dim() > 0:
-            # Handle DataParallel case: reduce to scalar if needed
-            rasch_loss = rasch_loss.mean()
-            penalty_loss = rasch_loss  # Already computed as penalty in forward()
+        # L_reg: Skill Difficulty Regularization Loss
+        if beta_irt is not None:
+            beta_learned = self.skill_difficulty_emb.weight.squeeze(-1)  # [K]
+            reg_loss = F.mse_loss(beta_learned, beta_irt, reduction='mean')
         else:
-            penalty_loss = rasch_loss
+            # No IRT targets - no regularization
+            reg_loss = torch.tensor(0.0, device=device)
+        
+        # L2_penalty: Interpretability Constraint (Phase 2 only)
+        if self.phase == 2:
+            skill_vector = output['skill_vector']  # [B, L, K]
+            beta_targets = output['beta_targets']  # [B, L, K]
+            
+            # Compute violations: max(0, |Mi - sigma(-beta)| - epsilon)
+            deviation = torch.abs(skill_vector - beta_targets)
+            violation = torch.relu(deviation - self.epsilon)
+            penalty_loss = torch.mean(violation ** 2)
+        else:
+            penalty_loss = torch.tensor(0.0, device=device)
         
         # Phase-dependent total loss
         if self.phase == 1:
-            # Phase 1: Pure Rasch alignment (but fallback to BCE if no Rasch targets)
-            if output.get('rasch_loss') is not None:
-                total_loss = rasch_loss
-            else:
-                # No Rasch targets available - use BCE for training
-                total_loss = bce_loss
+            # Phase 1: Predictive learning + skill regularization
+            total_loss = bce_loss + lambda_reg * reg_loss
         else:
-            # Phase 2: L_total = L1 + λ_penalty × L2_penalty
-            # L2_penalty is pre-computed in forward() as soft barrier
-            total_loss = bce_loss + self.lambda_penalty * penalty_loss
+            # Phase 2: Performance + interpretability + regularization
+            total_loss = bce_loss + self.lambda_penalty * penalty_loss + lambda_reg * reg_loss
         
         return {
             'total_loss': total_loss,
             'bce_loss': bce_loss,
-            'rasch_loss': rasch_loss,
-            'penalty_loss': penalty_loss if self.phase == 2 else rasch_loss * 0.0
+            'penalty_loss': penalty_loss,
+            'reg_loss': reg_loss
         }
 
 

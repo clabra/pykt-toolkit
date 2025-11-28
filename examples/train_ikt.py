@@ -57,6 +57,48 @@ def get_model_attr(model, attr_name):
     return getattr(model, attr_name)
 
 
+def load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c):
+    """
+    Load IRT-calibrated skill difficulties for Option 1b regularization.
+    
+    Args:
+        rasch_path: Path to rasch_targets.pkl file (if None, uses default)
+        dataset_path: Path to dataset directory
+        num_c: Number of skills
+    
+    Returns:
+        torch.Tensor of shape [num_c] with skill difficulties (beta values),
+        or None if file doesn't exist
+    """
+    import pickle
+    
+    if rasch_path is None:
+        rasch_path = os.path.join(dataset_path, 'rasch_targets.pkl')
+    
+    if not os.path.exists(rasch_path):
+        print(f"⚠️  No IRT file found at {rasch_path}, skipping skill regularization")
+        return None
+    
+    try:
+        with open(rasch_path, 'rb') as f:
+            data = pickle.load(f)
+        
+        if 'skill_difficulties' in data:
+            # Extract skill difficulties as a list ordered by skill index
+            skill_diff_dict = data['skill_difficulties']
+            skill_difficulties = [skill_diff_dict.get(k, 0.0) for k in range(num_c)]
+            beta_irt = torch.tensor(skill_difficulties, dtype=torch.float32)
+            print(f"✓ Loaded IRT skill difficulties for {num_c} skills")
+            print(f"  Difficulty range: [{beta_irt.min():.3f}, {beta_irt.max():.3f}]")
+            return beta_irt
+        else:
+            print(f"⚠️  No 'skill_difficulties' key in {rasch_path}, skipping regularization")
+            return None
+    except Exception as e:
+        print(f"⚠️  Failed to load skill difficulties: {e}")
+        return None
+
+
 def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
     """
     Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
@@ -141,12 +183,12 @@ def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
         )
 
 
-def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_targets=None):
-    """Train for one epoch with comprehensive metrics tracking."""
+def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=None, lambda_reg=0.1):
+    """Train for one epoch with Option 1b skill regularization."""
     model.train()
     total_loss = 0.0
     total_bce_loss = 0.0
-    total_rasch_loss = 0.0
+    total_reg_loss = 0.0
     total_penalty_loss = 0.0
     num_batches = 0
     
@@ -154,9 +196,9 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
     all_preds = []
     all_labels = []
     
-    # For Rasch alignment metrics
+    # For skill-target alignment metrics
     all_skill_vectors = []
-    all_rasch_targets = []
+    all_beta_targets = []
     
     for batch in train_loader:
         questions = batch['cseqs'].to(device)
@@ -166,41 +208,18 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         
         optimizer.zero_grad()
         
-        # Prepare Rasch targets if available
-        rasch_batch = None
-        if rasch_targets is not None:
-            if rasch_targets.get('mode') == 'random':
-                # Generate random Rasch targets in [0.0, 1.0] range
-                batch_size, seq_len = questions.shape
-                num_c = rasch_targets['num_c']
-                rasch_batch = torch.rand(batch_size, seq_len, num_c, device=device)
-            else:
-                # Load real Rasch targets for this batch
-                rasch_data = rasch_targets.get('rasch_targets', {})
-                uids = batch['uids']
-                batch_size, seq_len = questions.shape
-                num_c = rasch_targets['metadata']['num_skills']
-                
-                rasch_batch = torch.zeros(batch_size, seq_len, num_c, device=device)
-                for i, uid in enumerate(uids):
-                    if uid in rasch_data:
-                        target_tensor = rasch_data[uid]
-                        # Pad or truncate to match seq_len
-                        actual_len = min(target_tensor.shape[0], seq_len)
-                        rasch_batch[i, :actual_len, :] = target_tensor[:actual_len, :].to(device)
-        
-        # Forward pass
-        outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=rasch_batch)
+        # Forward pass (no rasch_targets needed - model uses internal embeddings)
+        outputs = model(q=questions, r=responses, qry=questions_shifted)
         
         # Get targets
         targets = batch['shft_rseqs'].to(device)
         
-        # Compute loss (access through module if DataParallel)
+        # Compute loss with skill regularization (access through module if DataParallel)
         compute_loss_fn = get_model_attr(model, 'compute_loss')
-        loss_dict = compute_loss_fn(outputs, targets)
+        loss_dict = compute_loss_fn(outputs, targets, beta_irt=beta_irt, lambda_reg=lambda_reg)
         loss = loss_dict['total_loss']
         bce_loss = loss_dict['bce_loss']
-        rasch_loss = loss_dict['rasch_loss']
+        reg_loss = loss_dict['reg_loss']
         penalty_loss = loss_dict.get('penalty_loss', torch.tensor(0.0))
         
         # Backward pass
@@ -211,7 +230,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         
         total_loss += loss.item()
         total_bce_loss += bce_loss.item()
-        total_rasch_loss += rasch_loss.item()
+        total_reg_loss += reg_loss.item()
         total_penalty_loss += penalty_loss.item()
         num_batches += 1
         
@@ -225,15 +244,15 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
             all_preds.extend(preds[i][valid_indices])
             all_labels.extend(labels_np[i][valid_indices])
         
-        # Collect skill vectors and Rasch targets for alignment metrics
-        if outputs.get('skill_vector') is not None and rasch_batch is not None:
+        # Collect skill vectors and beta targets for alignment metrics
+        if outputs.get('skill_vector') is not None and outputs.get('beta_targets') is not None:
             all_skill_vectors.append(outputs['skill_vector'].detach().cpu())
-            all_rasch_targets.append(rasch_batch.cpu())
+            all_beta_targets.append(outputs['beta_targets'].detach().cpu())
     
     # Compute aggregate metrics
     avg_total_loss = total_loss / num_batches
     avg_bce_loss = total_bce_loss / num_batches
-    avg_rasch_loss = total_rasch_loss / num_batches
+    avg_reg_loss = total_reg_loss / num_batches
     avg_penalty_loss = total_penalty_loss / num_batches
     
     # Compute AUC and accuracy
@@ -241,39 +260,39 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
     all_labels = np.array(all_labels)
     bce_metrics = compute_auc_acc(all_labels, all_preds)
     
-    # Compute Rasch alignment metrics
-    rasch_metrics = {}
-    if all_skill_vectors and all_rasch_targets:
+    # Compute skill alignment metrics (vs beta targets)
+    alignment_metrics = {}
+    if all_skill_vectors and all_beta_targets:
         skill_vectors = torch.cat(all_skill_vectors, dim=0)  # [N, L, num_c]
-        rasch_targets_cat = torch.cat(all_rasch_targets, dim=0)  # [N, L, num_c]
+        beta_targets_cat = torch.cat(all_beta_targets, dim=0)  # [N, L, num_c]
         
         # Flatten for metrics
         Mi_flat = skill_vectors.reshape(-1).numpy()
-        M_rasch_flat = rasch_targets_cat.reshape(-1).numpy()
+        beta_flat = beta_targets_cat.reshape(-1).numpy()
         
         # MSE and MAE
-        rasch_metrics['mse'] = np.mean((Mi_flat - M_rasch_flat) ** 2)
-        rasch_metrics['mae'] = np.mean(np.abs(Mi_flat - M_rasch_flat))
+        alignment_metrics['mse'] = np.mean((Mi_flat - beta_flat) ** 2)
+        alignment_metrics['mae'] = np.mean(np.abs(Mi_flat - beta_flat))
         
         # Correlation
-        if len(np.unique(Mi_flat)) > 1 and len(np.unique(M_rasch_flat)) > 1:
-            rasch_metrics['correlation'] = np.corrcoef(Mi_flat, M_rasch_flat)[0, 1]
+        if len(np.unique(Mi_flat)) > 1 and len(np.unique(beta_flat)) > 1:
+            alignment_metrics['correlation'] = np.corrcoef(Mi_flat, beta_flat)[0, 1]
         else:
-            rasch_metrics['correlation'] = 0.0
+            alignment_metrics['correlation'] = 0.0
         
         # Violation metrics (assuming epsilon from model)
         model_obj = model.module if hasattr(model, 'module') else model
         epsilon = model_obj.epsilon
         lambda_penalty = model_obj.lambda_penalty
         
-        deviations = np.abs(Mi_flat - M_rasch_flat)
+        deviations = np.abs(Mi_flat - beta_flat)
         violations = np.maximum(0, deviations - epsilon)
         
-        rasch_metrics['violation_rate'] = np.mean(deviations > epsilon)
-        rasch_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
-        rasch_metrics['max_violation'] = np.max(violations)
+        alignment_metrics['violation_rate'] = np.mean(deviations > epsilon)
+        alignment_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
+        alignment_metrics['max_violation'] = np.max(violations)
     else:
-        rasch_metrics = {
+        alignment_metrics = {
             'mse': 0.0, 'mae': 0.0, 'correlation': 0.0,
             'violation_rate': 0.0, 'mean_violation': 0.0, 'max_violation': 0.0
         }
@@ -295,15 +314,15 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         'accuracy': bce_metrics['acc'],
         
         # L2 - Alignment  
-        'l2_mse': rasch_metrics['mse'],
-        'l2_mae': rasch_metrics['mae'],
-        'corr_rasch': rasch_metrics['correlation'],
+        'l2_mse': alignment_metrics['mse'],
+        'l2_mae': alignment_metrics['mae'],
+        'corr_beta': alignment_metrics['correlation'],
         
         # L2_penalty - Violations
         'penalty_loss': avg_penalty_loss,
-        'violation_rate': rasch_metrics['violation_rate'],
-        'mean_violation': rasch_metrics['mean_violation'],
-        'max_violation': rasch_metrics['max_violation'],
+        'violation_rate': alignment_metrics['violation_rate'],
+        'mean_violation': alignment_metrics['mean_violation'],
+        'max_violation': alignment_metrics['max_violation'],
         
         # L_total - Combined
         'total_loss': avg_total_loss,
@@ -313,11 +332,11 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, rasch_tar
         # Legacy (for backwards compatibility)
         'loss': avg_total_loss,
         'bce_loss': avg_bce_loss,
-        'rasch_loss': avg_rasch_loss
+        'reg_loss': avg_reg_loss
     }
 
 
-def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
+def validate(model, val_loader, device, lambda_penalty, beta_irt=None, lambda_reg=0.1):
     """
     Validate the model with comprehensive metrics tracking.
     
@@ -326,7 +345,7 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
         val_loader: validation data loader
         device: torch device
         lambda_penalty: penalty coefficient (required, no default per reproducibility guidelines)
-        rasch_targets: optional Rasch targets dict
+        beta_irt: optional IRT skill difficulties, lambda_reg: regularization coefficient
     """
     model.eval()
     all_preds = []
@@ -334,13 +353,13 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
     
     total_loss = 0.0
     total_bce_loss = 0.0
-    total_rasch_loss = 0.0
+    total_reg_loss = 0.0
     total_penalty_loss = 0.0
     num_batches = 0
     
     # For Rasch alignment metrics
     all_skill_vectors = []
-    all_rasch_targets = []
+    all_beta_targets = []
     
     with torch.no_grad():
         for batch in val_loader:
@@ -351,8 +370,8 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
             labels = batch['shft_rseqs'].to(device)
             
             # Prepare Rasch targets if available
-            rasch_batch = None
-            if rasch_targets is not None:
+            # rasch_batch removed (Option 1b)
+            if False:  # rasch_targets removed (Option 1b)
                 if rasch_targets.get('mode') == 'random':
                     # Generate random Rasch targets in [0.0, 1.0] range
                     batch_size, seq_len = questions.shape
@@ -374,7 +393,7 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
                             rasch_batch[i, :actual_len, :] = target_tensor[:actual_len, :].to(device)
             
             # Forward pass
-            outputs = model(q=questions, r=responses, qry=questions_shifted, rasch_targets=rasch_batch)
+            outputs = model(q=questions, r=responses, qry=questions_shifted)
             
             # Compute loss (access through module if DataParallel)
             compute_loss_fn = get_model_attr(model, 'compute_loss')
@@ -384,7 +403,7 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
             
             total_loss += loss.item()
             total_bce_loss += loss_dict['bce_loss'].item()
-            total_rasch_loss += loss_dict['rasch_loss'].item()
+            total_reg_loss += loss_dict['reg_loss'].item()
             total_penalty_loss += penalty_loss.item()
             num_batches += 1
             
@@ -400,14 +419,14 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
                 all_labels.extend(labels_np[i][valid_indices])
             
             # Collect skill vectors and Rasch targets for alignment metrics
-            if outputs.get('skill_vector') is not None and rasch_batch is not None:
+            if outputs.get("skill_vector") is not None and outputs.get("beta_targets") is not None:
                 all_skill_vectors.append(outputs['skill_vector'].cpu())
-                all_rasch_targets.append(rasch_batch.cpu())
+                all_beta_targets.append(outputs["beta_targets"].detach().cpu())
     
     # Compute aggregate metrics
     avg_total_loss = total_loss / num_batches
     avg_bce_loss = total_bce_loss / num_batches
-    avg_rasch_loss = total_rasch_loss / num_batches
+    avg_reg_loss = total_reg_loss / num_batches
     avg_penalty_loss = total_penalty_loss / num_batches
     
     # Compute AUC and accuracy
@@ -416,36 +435,36 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
     bce_metrics = compute_auc_acc(all_labels, all_preds)
     
     # Compute Rasch alignment metrics
-    rasch_metrics = {}
-    if all_skill_vectors and all_rasch_targets:
+    alignment_metrics = {}
+    if all_skill_vectors and all_beta_targets:
         skill_vectors = torch.cat(all_skill_vectors, dim=0)  # [N, L, num_c]
-        rasch_targets_cat = torch.cat(all_rasch_targets, dim=0)  # [N, L, num_c]
+        beta_targets_cat = torch.cat(all_beta_targets, dim=0)  # [N, L, num_c]
         
         # Flatten for metrics
         Mi_flat = skill_vectors.reshape(-1).numpy()
-        M_rasch_flat = rasch_targets_cat.reshape(-1).numpy()
+        beta_flat = beta_targets_cat.reshape(-1).numpy()
         
         # MSE and MAE
-        rasch_metrics['mse'] = np.mean((Mi_flat - M_rasch_flat) ** 2)
-        rasch_metrics['mae'] = np.mean(np.abs(Mi_flat - M_rasch_flat))
+        alignment_metrics['mse'] = np.mean((Mi_flat - beta_flat) ** 2)
+        alignment_metrics['mae'] = np.mean(np.abs(Mi_flat - beta_flat))
         
         # Correlation
-        if len(np.unique(Mi_flat)) > 1 and len(np.unique(M_rasch_flat)) > 1:
-            rasch_metrics['correlation'] = np.corrcoef(Mi_flat, M_rasch_flat)[0, 1]
+        if len(np.unique(Mi_flat)) > 1 and len(np.unique(beta_flat)) > 1:
+            alignment_metrics['correlation'] = np.corrcoef(Mi_flat, beta_flat)[0, 1]
         else:
-            rasch_metrics['correlation'] = 0.0
+            alignment_metrics['correlation'] = 0.0
         
         # Violation metrics
         model_obj = model.module if hasattr(model, 'module') else model
         epsilon = model_obj.epsilon
         lambda_penalty_val = model_obj.lambda_penalty
         
-        deviations = np.abs(Mi_flat - M_rasch_flat)
+        deviations = np.abs(Mi_flat - beta_flat)
         violations = np.maximum(0, deviations - epsilon)
         
-        rasch_metrics['violation_rate'] = np.mean(deviations > epsilon)
-        rasch_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
-        rasch_metrics['max_violation'] = np.max(violations)
+        alignment_metrics['violation_rate'] = np.mean(deviations > epsilon)
+        alignment_metrics['mean_violation'] = np.mean(violations[violations > 0]) if np.any(violations > 0) else 0.0
+        alignment_metrics['max_violation'] = np.max(violations)
     else:
         rasch_metrics = {
             'mse': 0.0, 'mae': 0.0, 'correlation': 0.0,
@@ -469,15 +488,15 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
         'accuracy': bce_metrics['acc'],
         
         # L2 - Alignment  
-        'l2_mse': rasch_metrics['mse'],
-        'l2_mae': rasch_metrics['mae'],
-        'corr_rasch': rasch_metrics['correlation'],
+        'l2_mse': alignment_metrics['mse'],
+        'l2_mae': alignment_metrics['mae'],
+        'corr_beta': alignment_metrics['correlation'],
         
         # L2_penalty - Violations
         'penalty_loss': avg_penalty_loss,
-        'violation_rate': rasch_metrics['violation_rate'],
-        'mean_violation': rasch_metrics['mean_violation'],
-        'max_violation': rasch_metrics['max_violation'],
+        'violation_rate': alignment_metrics['violation_rate'],
+        'mean_violation': alignment_metrics['mean_violation'],
+        'max_violation': alignment_metrics['max_violation'],
         
         # L_total - Combined
         'total_loss': avg_total_loss,
@@ -487,7 +506,7 @@ def validate(model, val_loader, device, lambda_penalty, rasch_targets=None):
         # Legacy (for backwards compatibility)
         'loss': avg_total_loss,
         'bce_loss': avg_bce_loss,
-        'rasch_loss': avg_rasch_loss,
+        'reg_loss': avg_reg_loss,
         'bce_auc': bce_metrics['auc'],
         'bce_acc': bce_metrics['acc']
     }
@@ -522,6 +541,8 @@ def main():
     # iKT-specific parameters
     parser.add_argument('--lambda_penalty', type=float, required=True,
                         help='Penalty coefficient for Phase 2 constraint (recommended: 10.0-1000.0)')
+    parser.add_argument('--lambda_reg', type=float, required=True,
+                        help='Regularization coefficient for skill difficulty embeddings (recommended: 0.01-1.0)')
     parser.add_argument('--epsilon', type=float, required=True, 
                        help='Rasch tolerance threshold for Phase 2 (0.0 for Phase 1)')
     parser.add_argument('--phase', type=str, required=True,
@@ -622,17 +643,9 @@ def main():
     print(f"✓ Training batches: {len(train_loader)}")
     print(f"✓ Validation batches: {len(valid_loader)}")
     
-    # Load Rasch targets if available
-    print("\n🎯 Loading Mastery targets...")
-    rasch_targets = load_rasch_targets(args.rasch_path, dataset_path, num_c, args.mastery_method)
-    if rasch_targets is not None:
-        if rasch_targets.get('mode') == 'random':
-            print(f"✓ Using random Rasch targets (placeholder)")
-        else:
-            rasch_data = rasch_targets.get('rasch_targets', {})
-            print(f"✓ Loaded real Rasch IRT targets for {len(rasch_data)} students")
-    else:
-        print(f"⚠️  No Rasch targets - training in pure BCE mode (lambda_mastery will be ignored)")
+    # Load IRT skill difficulties for regularization (Option 1b)
+    print("\n🎯 Loading IRT skill difficulties...")
+    skill_difficulties = load_skill_difficulties_from_irt(args.rasch_path, dataset_path, num_c)
     
     # Initialize model
     print("\n🏗️  Initializing model...")
@@ -649,6 +662,14 @@ def main():
         epsilon=args.epsilon,
         phase=args.phase
     ).to(device)
+    
+    # Initialize skill difficulty embeddings with IRT values
+    if skill_difficulties is not None:
+        with torch.no_grad():
+            model.skill_difficulty_emb.weight.copy_(
+                skill_difficulties.unsqueeze(1).to(device)
+            )
+        print(f"✓ Initialized skill difficulty embeddings with IRT values")
     
     # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
     if device.type == 'cuda':
@@ -701,15 +722,17 @@ def main():
         print(f"{'='*80}")
         
         # Train
-        train_metrics = train_epoch(model, train_loader, optimizer, device, args.gradient_clip, rasch_targets)
+        beta_irt_device = skill_difficulties.to(device) if skill_difficulties is not None else None
+        train_metrics = train_epoch(model, train_loader, optimizer, device, args.gradient_clip, 
+                                     beta_irt=beta_irt_device, lambda_reg=args.lambda_reg)
         print(f"Train - Total Loss: {train_metrics['total_loss']:.4f}, "
               f"L1 (BCE): {train_metrics['l1_bce']:.4f}, "
               f"AUC: {train_metrics['auc']:.4f}, "
-              f"Penalty: {train_metrics['penalty_loss']:.4f}, "
-              f"Violations: {train_metrics['violation_rate']:.2%}")
+              f"L_reg: {train_metrics.get('reg_loss', 0.0):.4f}, "
+              f"Penalty: {train_metrics['penalty_loss']:.4f}")
         
         # Validate
-        val_metrics = validate(model, valid_loader, device, args.lambda_penalty, rasch_targets)
+        val_metrics = validate(model, valid_loader, device, args.lambda_penalty, beta_irt=beta_irt_device, lambda_reg=args.lambda_reg)
         print(f"Valid - Total Loss: {val_metrics['total_loss']:.4f}, "
               f"L1 (BCE): {val_metrics['l1_bce']:.4f}, "
               f"AUC: {val_metrics['auc']:.4f}, "
@@ -760,7 +783,7 @@ def main():
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_bce_auc': val_metrics['bce_auc'],
                 'val_bce_acc': val_metrics['bce_acc'],
-                'val_rasch_loss': val_metrics['rasch_loss'],
+                'val_reg_loss': val_metrics.get('reg_loss', 0.0),
                 'config': vars(args)
             }, checkpoint_path)
             print(f"✓ Saved best model (AUC: {best_val_auc:.4f})")

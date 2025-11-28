@@ -26,6 +26,7 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "lambda_penalty": 100.0,
+    "lambda_reg": 0.1,
     "epsilon": 0.05,
     "phase": null,
     "rasch_path": null,
@@ -86,5 +87,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "639332eca458c02d375a4ce038fc681b"
+  "md5": "fd7f18bd0fa1ed924af9d73c6196d68a"
 }

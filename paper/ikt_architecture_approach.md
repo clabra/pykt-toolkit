@@ -97,6 +97,228 @@ This approach bridges the gap between deep learning performance and educational 
 
 **In Summary**: iKT demonstrates that interpretability need not be sacrificed for performance. By constraining the solution space to representations that are both predictive and semantically grounded, we achieve a model that is simultaneously accurate, interpretable, and theoretically justified—addressing the core limitations of existing deep knowledge tracing models. 
 
+
+---
+
+## Overfitting Issue and Architectural Revision
+
+### Problem: Student-Specific Target Memorization
+
+**Initial Approach**: Phase 1 trained the model to align mastery estimates $M_i[s,k]$ with per-student Rasch targets computed as:
+$$M_{rasch}[s,k] = \sigma(\theta_s - \beta_k)$$
+
+where $\theta_s$ is student $s$'s ability and $\beta_k$ is skill $k$'s difficulty.
+
+**Critical Issue Discovered**: Experiment `20251128_162143_ikt_test_285650` revealed **Phase 1 overfitting**:
+- Training $L_2$ MSE decreased from 0.0429 → 0.000672 (excellent fit)
+- Validation $L_2$ MSE **increased** from 0.000027 → 0.000321 (generalization failure)
+
+**Root Cause**: The model memorized **student-specific** mastery values for training students rather than learning generalizable skill representations. Since $M_{rasch}[s,k]$ includes student ability $\theta_s$, the model learned to reproduce training students' specific probabilities but couldn't generalize to validation students with different abilities.
+
+**Evidence of Memorization**: 
+- Model achieved near-perfect alignment with training data (MSE 0.000672)
+- Same model performed worse on validation data than at initialization
+- Classic overfitting signature: training improves while validation degrades
+
+### Solution: Option 1b - Skill-Centric Regularization
+
+**New Approach**: Replace per-student targets with **learnable skill difficulty embeddings** $\{\beta_k\}$ regularized toward IRT-calibrated values. This removes student-specific supervision and forces the model to learn skill representations that generalize across students.
+
+**Key Changes**:
+
+1. **Add Skill Difficulty Embeddings**:
+   - Create learnable parameters $\beta \in \mathbb{R}^K$ (one per skill)
+   - Initialize with IRT-calibrated difficulties from Rasch analysis
+   - These represent the model's learned difficulty estimates
+
+2. **Remove Per-Student Rasch Targets**:
+   - No longer pass $M_{rasch}[s,k] = \sigma(\theta_s - \beta_k)$ to model
+   - Model doesn't see student abilities $\theta_s$ during training
+   - Prevents memorization of student-specific patterns
+
+3. **Add Regularization Loss**:
+   - Constrain skill embeddings to stay close to IRT estimates
+   - $L_{reg} = \frac{1}{K} \sum_{k=1}^{K} (\beta_k - \beta_k^{IRT})^2$
+   - Provides skill-level guidance without student-specific bias
+
+4. **Modify Phase 2 Penalty**:
+   - Compare mastery states to skill-only targets: $\sigma(-\beta)$
+   - $L_{2,penalty} = \frac{1}{BLK} \sum \max(0, |M_i - \sigma(-\beta)|^2 - \epsilon)$
+   - Enforces interpretability based on learned difficulties, not memorized patterns
+
+**Expected Benefits**:
+- **Prevents Overfitting**: No student-specific targets to memorize
+- **Improves Generalization**: Model learns skill representations that work across all students
+- **Maintains Interpretability**: Skill difficulties remain grounded in IRT theory
+- **Reduces Complexity**: Simpler training (no per-student target construction)
+
+### Implementation Plan (Option 1b)
+
+**Phase 1: Model Architecture Changes** (`pykt/models/ikt.py`)
+
+1. **Add skill difficulty embedding**:
+   ```python
+   def __init__(self, num_c, ...):
+       # ... existing code ...
+       self.skill_difficulty_emb = nn.Embedding(num_c, 1)
+       # Initialize with IRT values if provided
+   ```
+
+2. **Update forward method**:
+   ```python
+   def forward(self, q, r, qshft):
+       # Remove rasch_targets parameter
+       # ... encoder/decoder logic ...
+       
+       # Extract skill difficulties from embedding
+       beta_skills = self.skill_difficulty_emb.weight.squeeze()  # [K]
+       
+       # Compute skill-only mastery targets
+       mastery_targets = torch.sigmoid(-beta_skills)  # [K]
+       
+       # Broadcast to batch dimensions
+       beta_batch = mastery_targets.unsqueeze(0).unsqueeze(0)  # [1, 1, K]
+       beta_batch = beta_batch.expand(B, L, self.num_c)  # [B, L, K]
+       
+       return {
+           'y': y_pred,
+           'skill_vector': skill_vector,
+           'beta_targets': beta_batch
+       }
+   ```
+
+3. **Update compute_loss method**:
+   ```python
+   def compute_loss(self, outputs, labels, phase, lambda_penalty, epsilon, 
+                    beta_irt, lambda_reg=0.1):
+       L1 = BCE(outputs['y'], labels)
+       Mi = outputs['skill_vector']
+       beta_targets = outputs['beta_targets']
+       
+       # Regularization loss (always active)
+       beta_learned = self.skill_difficulty_emb.weight.squeeze()
+       L_reg = ((beta_learned - beta_irt) ** 2).mean()
+       
+       if phase == 1:
+           # Phase 1: Predictive learning + skill regularization
+           L_total = L1 + lambda_reg * L_reg
+       else:
+           # Phase 2: Add interpretability constraint
+           deviations = (Mi - beta_targets).abs()
+           violations = torch.clamp(deviations - epsilon, min=0.0)
+           L2_penalty = (violations ** 2).mean()
+           L_total = L1 + lambda_penalty * L2_penalty + lambda_reg * L_reg
+       
+       return L_total, {
+           'L1': L1.item(),
+           'L2_penalty': L2_penalty.item() if phase == 2 else 0.0,
+           'L_reg': L_reg.item()
+       }
+   ```
+
+**Phase 2: Training Script Updates** (`examples/train_ikt.py`)
+
+1. **Load IRT skill difficulties** (not per-student targets):
+   ```python
+   # Load only skill difficulties from rasch_targets.pkl
+   with open(rasch_path, 'rb') as f:
+       rasch_data = pickle.load(f)
+   skill_difficulties = torch.tensor(
+       [rasch_data['skill_difficulties'][k] for k in range(num_skills)],
+       dtype=torch.float32
+   )
+   ```
+
+2. **Initialize model with IRT difficulties**:
+   ```python
+   model = iKT(num_c=num_skills, ...)
+   # Initialize embedding with IRT values
+   with torch.no_grad():
+       model.skill_difficulty_emb.weight.copy_(
+           skill_difficulties.unsqueeze(1)
+       )
+   ```
+
+3. **Remove per-student rasch_batch construction**:
+   ```python
+   # OLD: rasch_batch = construct_per_student_targets(uids, rasch_data)
+   # NEW: Nothing needed - model uses internal embeddings
+   
+   # Forward pass no longer needs rasch_targets
+   outputs = model(q, r, qshft)  # No rasch parameter
+   ```
+
+4. **Update loss computation call**:
+   ```python
+   loss, metrics = model.compute_loss(
+       outputs, labels, phase, lambda_penalty, epsilon,
+       beta_irt=skill_difficulties.to(device),
+       lambda_reg=config['lambda_reg']
+   )
+   ```
+
+**Phase 3: Evaluation Script Updates** (`examples/eval_ikt.py`)
+
+1. **Remove rasch_targets loading and passing**:
+   ```python
+   # OLD: rasch_targets_data = load_rasch_targets(...)
+   # OLD: outputs = model(q, r, qshft, rasch_targets=rasch_batch)
+   
+   # NEW: Model uses internal embeddings
+   outputs = model(q, r, qshft)
+   ```
+
+2. **Update metrics collection**:
+   ```python
+   # Extract learned skill difficulties for analysis
+   beta_learned = model.skill_difficulty_emb.weight.squeeze().cpu().numpy()
+   
+   # Compare with IRT estimates
+   beta_irt = load_skill_difficulties(rasch_path)
+   difficulty_correlation = np.corrcoef(beta_learned, beta_irt)[0, 1]
+   ```
+
+**Phase 4: Configuration Updates**
+
+1. **Add new parameter** to `configs/parameter_default.json`:
+   ```json
+   {
+     "lambda_reg": 0.1,
+     "lambda_reg_help": "Regularization strength for skill difficulty embeddings"
+   }
+   ```
+
+2. **Update parameters_audit.py**:
+   ```python
+   EXPECTED_PARAMS['ikt'].add('lambda_reg')
+   ```
+
+**Phase 5: Documentation Updates**
+
+1. Update `paper/ikt_architecture_approach.md` (this file)
+2. Update `paper/STATUS_iKT.md` with new approach
+3. Add explanation to model docstring in `pykt/models/ikt.py`
+
+**Phase 6: Testing and Validation**
+
+1. **Smoke test**: Train for 2 epochs, verify no crashes
+2. **Overfitting test**: Monitor train vs validation $L_{reg}$ convergence
+3. **Generalization test**: Compare validation metrics with old approach
+4. **Ablation study**: Test with different $\lambda_{reg}$ values (0.01, 0.1, 1.0)
+5. **Full training**: Run complete experiment on assist2015
+
+**Expected Outcomes**:
+- Validation $L_2$ metrics should **not increase** during Phase 1
+- Model should generalize to unseen students
+- Learned skill difficulties should correlate highly with IRT estimates (r > 0.8)
+- Performance (AUC) should remain competitive with baseline
+
+**Success Criteria**:
+- ✅ Validation MSE decreases or stays stable (no overfitting)
+- ✅ Correlation between learned and IRT difficulties > 0.8
+- ✅ AUC on test set ≥ baseline performance
+- ✅ Violation rate < 10% in Phase 2
+
 ## Training Algorithm
 
 ### Two-Phase Training Algorithm
