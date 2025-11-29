@@ -471,6 +471,75 @@ Option 1b successfully fixed overfitting but revealed that the penalty loss cons
 
 Replace the flawed `|M_i - β| < ε` constraint with **IRT-based mastery inference**: compute mastery using the Rasch formula by inferring student ability from the hidden state.
 
+### Important Clarifications: IRT Assumptions and Model Behavior
+
+#### 1. Classical IRT Static Ability Assumption
+
+**py-irt calibration**: The py-irt library (used in `examples/compute_rasch_targets.py`) treats each student as having **one global θ_i averaged across all their interactions**, ignoring temporal learning progression. This is consistent with classical IRT theory, which:
+
+- Assumes **static abilities**: IRT was designed for cross-sectional assessment (e.g., standardized tests administered once)
+- Computes **one θ per student**: The global ability θ_i represents the student's overall proficiency level across all observed interactions
+- **Averages across time**: If a student shows θ=-0.5 in Week 1 and θ=1.2 in Week 10, py-irt outputs a single value (e.g., θ=0.5) that averages these states
+- **Not skill-specific**: Classical IRT produces one θ_i per student, not separate θ values per skill
+
+**Why we use it anyway**: Despite this limitation, IRT-calibrated skill difficulties β_IRT provide valuable priors for regularization. The model learns dynamic, skill-specific abilities through the ability encoder (see below), while using IRT difficulties as weak guidance.
+
+**Trade-off acknowledged**: We sacrifice pure psychometric correctness (static, global abilities) for practical benefits (dynamic learning modeling with IRT-grounded difficulty priors).
+
+#### 2. θ_t in iKT is a GLOBAL Scalar, NOT Per-Skill
+
+**Critical distinction**: In our model, `θ_t` represents **student ability at timestep t**, extracted as:
+
+```python
+theta_t = self.ability_encoder(h).squeeze(-1)  # [B, L] - one scalar per timestep
+```
+
+**Key properties**:
+- **Shape**: `[batch_size, sequence_length]` - one value per student per timestep
+- **NOT per-skill**: Unlike classical IRT (which would have independent θ per student-skill pair), θ_t is a single scalar
+- **NOT skill-specific**: When answering Skill 2, then Skill 75, then Skill 2 again, the model uses three different θ_t values (context-dependent), but each is still a scalar—not separate tracking per skill
+- **NO reset mechanism**: θ_t doesn't reset to some default value when the student switches skills; it evolves continuously based on the encoded history in h[t]
+
+**Contrast with classical IRT**:
+- **Classical IRT**: θ_i is global per student (one value for all skills, all time)
+- **iKT θ_t**: Timestep-specific scalar that varies as learning progresses, but still global (not decomposed by skill)
+
+#### 3. How θ_t Captures Skill-Specific Performance Without Being Per-Skill
+
+**The mechanism**:
+
+1. **Rich context encoding**: `h[t]` (the hidden state from the encoder) is a high-dimensional vector (typically 256D) that encodes:
+   - Which skills have been practiced (skill IDs embedded in interaction tokens)
+   - How well the student performed on each (responses r encoded)
+   - The order and recency of interactions (positional encoding + sequential processing)
+
+2. **Context-dependent extraction**: The ability encoder is a simple MLP:
+   ```python
+   ability_encoder: h[t] [d_model] → FC → ReLU → Dropout → FC → θ_t [1]
+   ```
+   This extracts a **summary scalar** from the rich context h[t].
+
+3. **Implicit skill differentiation**: When the model processes different skill patterns:
+   - **Skill 2 context** in h[t] (e.g., struggling student, low recent performance) → ability_encoder outputs **low θ_t** (e.g., -0.009)
+   - **Skill 75 context** in h[t] (e.g., high mastery, consistent correct responses) → ability_encoder outputs **high θ_t** (e.g., 0.842)
+   - **Back to Skill 2** later → h[t] now includes additional history → may produce similar low θ_t if patterns remain consistent
+
+4. **No explicit reset**: θ_t doesn't mechanically reset when skills change. Instead, it's **context-dependent**: the model "remembers" which skill context it's in through h[t] and produces an appropriate θ_t for that context.
+
+**Evidence from Student 1038**:
+- Step 25 (Skill 2): θ_t = -0.009 (low ability context)
+- Step 29 (Skill 75): θ_t = 0.842 (high ability context)
+- Step 32 (back to Skill 2): θ_t = -0.009 (returns to low ability context)
+
+This shows the model learned to extract context-appropriate abilities from h[t] without needing explicit per-skill tracking.
+
+**Limitations and trade-offs**:
+- **Not true per-skill IRT**: Classical IRT would maintain independent θ for each student-skill pair; we use a global scalar
+- **Potential for cross-skill contamination**: If a student excels at Skill A and struggles with Skill B, θ_t during Skill B interactions might be influenced by recent Skill A success
+- **Pragmatic compromise**: We trade psychometric purity for computational efficiency and transfer learning benefits (shared representations across skills)
+
+**Why it works**: The encoder's capacity to build rich contextual representations (h[t]) allows the simple ability_encoder to extract meaningful, context-appropriate ability estimates despite being a scalar. This is similar to how language models extract sentiment (one scalar) from rich contextual embeddings.
+
 ### Architecture
 
 **New Component: Ability Encoder**
@@ -3798,6 +3867,15 @@ This comparison proves that Phase 2 is essential for interpretability and that t
 1. **Increase λ_reg**: 0.1 → 0.5 to improve β correlation with Rasch (0.60 → 0.75+ expected)
 2. **Extend Phase 2**: Allow 20-30 epochs to explore potential AUC recovery while maintaining high IRT correlation
 3. **Target r > 0.85**: Tune λ_align or extend Phase 2 to reach "very strong" interpretability threshold
+
+**Hyperparameter exploration**:
+1. ✅ **Lambda_align tuning**: Explore [0.5, 1.0, 2.0, 5.0] in Phase 2 to find optimal performance-interpretability balance
+2. ✅ **Lambda_reg tuning**: Test [0.01, 0.1, 0.5, 1.0] to improve β alignment with Rasch IRT targets
+3. ✅ **Phase 1 duration**: Increase patience from 4 to 6 epochs for stronger performance foundation before IRT alignment
+4. ❌ **Do NOT reverse phase objectives**: Starting with interpretability (Phase 1: high λ_align) fails because L_align = MSE(p_correct, M_IRT) requires stable p_correct from L_BCE training first; otherwise both sides are random noise leading to trivial solutions (constant predictions) and poor convergence
+5. ❌ **Do NOT weaken L_BCE in Phase 1**: The current approach (Phase 1: performance → Phase 2: interpretability) succeeds because supervised learning on actual responses provides the necessary anchor; reversing this order or weakening L_BCE eliminates the grounding signal, causing the model to optimize self-consistency between two random predictions rather than learning from data
+
+**Why current phase order works**: Phase 1 establishes a stable performance predictor (p_correct grounded in student responses via L_BCE), creating a meaningful target for Phase 2's IRT alignment. Attempting interpretability-first training would force L_align to minimize MSE between two uninitialized predictions (p_correct ≈ 0.5, M_IRT ≈ 0.5), converging to trivial constant solutions with no data fidelity. The performance-then-interpretability sequence follows standard ML practices: pretraining on primary supervised task, then adding auxiliary constraints for refinement.
 
 **Generalization validation**:
 1. Replicate on assist2009, algebra05 to verify cross-dataset consistency
