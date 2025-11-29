@@ -1,0 +1,24 @@
+{
+  "difficulty_fidelity": 0.8523422029382411,
+  "p_value": 8.098553287081824e-21,
+  "num_skills": 70,
+  "mse": 0.22316309339973475,
+  "mae": 0.2819798976080895,
+  "model_beta_stats": {
+    "mean": -1.946450957142857,
+    "std": 0.7493755688257188,
+    "min": -3.048944,
+    "max": 0.021101
+  },
+  "rasch_beta_stats": {
+    "mean": -2.0525451027921267,
+    "std": 0.8802037623355715,
+    "min": -3.2995128631591797,
+    "max": 1.0935026407241821
+  },
+  "metadata": {
+    "experiment_dir": "/workspaces/pykt-toolkit/experiments/20251129_201108_ikt2_irt-noise-01-reg-001_877700",
+    "dataset": "assist2015",
+    "rasch_file": "{'dataset': 'assist2015', 'num_students': 15275, 'num_skills': 100, 'num_calibrated_skills': 100, 'max_iterations': 50}"
+  }
+}

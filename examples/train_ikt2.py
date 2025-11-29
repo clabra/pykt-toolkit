@@ -445,6 +445,8 @@ def main():
                         help='Alignment coefficient for IRT mastery (recommended: 1.0)')
     parser.add_argument('--lambda_reg', type=float, required=True,
                         help='Regularization coefficient for skill difficulty embeddings (recommended: 0.1)')
+    parser.add_argument('--irt_noise', type=float, required=True,
+                        help='Noise level for IRT initialization (0.0=exact, 0.1=10%% std, recommended: 0.0-0.2)')
     parser.add_argument('--phase', type=str, required=True,
                        help='Training phase: "1" (BCE + align), "2" (BCE + align + reg), or "null" (automatic two-phase)')
     parser.add_argument('--rasch_path', type=str, required=True,
@@ -581,12 +583,17 @@ def main():
           f"num_encoder_blocks={args.num_encoder_blocks}, d_ff={args.d_ff}")
     
     # Initialize skill difficulties from IRT calibration (fixes scale drift)
-    if skill_difficulties is not None:
-        beta_irt_device = skill_difficulties.to(device)
-        model.load_irt_difficulties(beta_irt_device)
-    else:
-        print("⚠️  No IRT difficulties loaded - β parameters initialized at 0.0")
-    print(f"  Hyperparameters: lambda_align={args.lambda_align}, lambda_reg={args.lambda_reg}")
+    # COMMENTED: Direct IRT init creates "lazy learning" - model doesn't learn from data
+    # Better approach: Initialize to 0.0 and let regularization pull toward IRT scale
+    # Evidence: Exp 947580 (no init) achieves BKT r=0.506, while exp 524632 (with init) 
+    # gets only r=0.302 despite identical AUC. Regularization-based learning is superior.
+    # if skill_difficulties is not None:
+    #     beta_irt_device = skill_difficulties.to(device)
+    #     model.load_irt_difficulties(beta_irt_device, noise_epsilon=args.irt_noise)
+    # else:
+    #     print("⚠️  No IRT difficulties loaded - β parameters initialized at 0.0")
+    print("✓ β parameters initialized at 0.0 (will learn via regularization)")
+    print(f"  Hyperparameters: lambda_align={args.lambda_align}, lambda_reg={args.lambda_reg}, irt_noise={args.irt_noise}")
     print()
     
     # Use DataParallel if multiple GPUs available

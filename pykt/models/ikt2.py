@@ -225,24 +225,57 @@ class iKT2(nn.Module):
             nn.Linear(d_ff, 1)  # Output: scalar ability θ_i(t)
         )
     
-    def load_irt_difficulties(self, beta_irt):
+    def load_irt_difficulties(self, beta_irt, noise_epsilon=0.0):
         """
-        Initialize skill difficulty embeddings from IRT-calibrated values.
+        Initialize skill difficulty embeddings from IRT-calibrated values with optional noise.
         
         This fixes scale drift: instead of starting from 0.0 and relying on weak
         regularization to reach IRT scale (mean=-0.6, std=0.4), we initialize
         directly from IRT calibration. Model can still fine-tune based on data.
         
+        Optional noise perturbation forces learning by preventing lazy convergence:
+        β_init = β_IRT + ε·N(0, σ_IRT), clipped to [β_min - 2σ, β_max + 2σ]
+        
         Args:
             beta_irt: [num_c] tensor - IRT-calibrated skill difficulties
+            noise_epsilon: float - noise magnitude as fraction of IRT std (default: 0.0 = exact init)
+                          Examples: 0.1 = 10% noise, 0.2 = 20% noise
         
         Returns:
             None (modifies self.skill_difficulty_emb.weight in-place)
         """
-        with torch.no_grad():
-            self.skill_difficulty_emb.weight.copy_(beta_irt.view(-1, 1))
-        print(f"✓ Initialized skill difficulties from IRT calibration")
-        print(f"  β_init: mean={beta_irt.mean().item():.4f}, std={beta_irt.std().item():.4f}")
+        if noise_epsilon > 0:
+            # Add proportional Gaussian noise to force exploration
+            std_irt = beta_irt.std().item()
+            mean_irt = beta_irt.mean().item()
+            noise = torch.randn_like(beta_irt) * (noise_epsilon * std_irt)
+            beta_noisy = beta_irt + noise
+            
+            # Clip to reasonable bounds: stay within IRT scale ± 2σ
+            # This prevents extreme outliers that would break scale
+            beta_min = beta_irt.min().item()
+            beta_max = beta_irt.max().item()
+            lower_bound = beta_min - 2 * std_irt
+            upper_bound = beta_max + 2 * std_irt
+            beta_init = torch.clamp(beta_noisy, lower_bound, upper_bound)
+            
+            with torch.no_grad():
+                self.skill_difficulty_emb.weight.copy_(beta_init.view(-1, 1))
+            
+            # Report clipping statistics
+            n_clipped = ((beta_noisy < lower_bound) | (beta_noisy > upper_bound)).sum().item()
+            
+            print(f"✓ Initialized skill difficulties from IRT calibration with {noise_epsilon*100:.1f}% noise")
+            print(f"  β_IRT: mean={mean_irt:.4f}, std={std_irt:.4f}, range=[{beta_min:.2f}, {beta_max:.2f}]")
+            print(f"  β_init: mean={beta_init.mean().item():.4f}, std={beta_init.std().item():.4f}")
+            print(f"  Noise: std={noise_epsilon * std_irt:.4f}, clipped={n_clipped}/{len(beta_irt)} values")
+            print(f"  Bounds: [{lower_bound:.2f}, {upper_bound:.2f}] (IRT range ± 2σ)")
+        else:
+            # Exact initialization (original behavior)
+            with torch.no_grad():
+                self.skill_difficulty_emb.weight.copy_(beta_irt.view(-1, 1))
+            print(f"✓ Initialized skill difficulties from IRT calibration (exact)")
+            print(f"  β_init: mean={beta_irt.mean().item():.4f}, std={beta_irt.std().item():.4f}")
     
     def forward(self, q, r, qry=None):
         """

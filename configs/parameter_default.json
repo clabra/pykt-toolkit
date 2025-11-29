@@ -27,7 +27,8 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "lambda_penalty": 100.0,
-    "lambda_reg": 0.1,
+    "lambda_reg": 0.01,
+    "irt_noise": 0.0,
     "epsilon": 0.05,
     "phase": null,
     "mastery_method": "bkt",
@@ -72,6 +73,8 @@
     ],
     "loss_weights": [
       "lambda_penalty",
+      "lambda_reg",
+      "irt_noise",
       "epsilon",
       "lambda_align"
     ],
@@ -89,5 +92,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "b8bf31fbf13382e12cb2cba89b916841"
+  "md5": "a270129784d887b8ce3780d0e70893fe"
 }
