@@ -27,8 +27,10 @@ iKT2 Architecture:
 - Ability encoder: 2-layer MLP extracting θ_i(t) from hidden states
 
 Two-Phase Training:
-- Phase 1: Pure IRT alignment (L_total = L_BCE + λ_align × L_align)
-- Phase 2: Add skill difficulty regularization (L_total = L_BCE + λ_align × L_align + λ_reg × L_reg)
+- Phase 1: Warmup - Performance learning + difficulty regularization (L_total = L_BCE + λ_reg × L_reg)
+- Phase 2: IRT Alignment - Add alignment constraint (L_total = L_BCE + λ_align × L_align + λ_reg × L_reg)
+
+Note: Phase 1 establishes good representations before enforcing IRT consistency in Phase 2.
 """
 
 import os
@@ -58,23 +60,23 @@ def get_model_attr(model, attr_name):
     return getattr(model, attr_name)
 
 
-def load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c):
+def load_skill_difficulties_from_irt(rasch_path, num_c):
     """
     Load IRT-calibrated skill difficulties for regularization.
     
     Args:
-        rasch_path: Path to rasch_targets.pkl file (if None, uses default)
-        dataset_path: Path to dataset directory
+        rasch_path: Path to rasch_targets.pkl file (explicit, no fallback)
         num_c: Number of skills
     
     Returns:
         torch.Tensor of shape [num_c] with skill difficulties (beta values),
         or None if file doesn't exist
+    
+    Note:
+        Path must be explicitly provided via --rasch_path CLI argument.
+        No hardcoded defaults allowed (Explicit Parameters, Zero Defaults).
     """
     import pickle
-    
-    if rasch_path is None:
-        rasch_path = os.path.join(dataset_path, 'rasch_targets.pkl')
     
     if not os.path.exists(rasch_path):
         print(f"⚠️  No IRT file found at {rasch_path}, skipping skill regularization")
@@ -100,7 +102,7 @@ def load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c):
         return None
 
 
-def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=None, lambda_reg=0.1):
+def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt, lambda_reg):
     """
     Train for one epoch with comprehensive metrics tracking.
     
@@ -110,8 +112,12 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
         optimizer: optimizer instance
         device: torch device
         gradient_clip: gradient clipping threshold (0 to disable)
-        beta_irt: optional IRT skill difficulties for regularization
-        lambda_reg: regularization coefficient
+        beta_irt: IRT skill difficulties for regularization (required, can be None)
+        lambda_reg: regularization coefficient (required, explicit)
+    
+    Note:
+        All parameters REQUIRED. No defaults per reproducibility guidelines.
+        Code will fail if parameters not explicitly provided.
     """
     model.train()
     
@@ -203,11 +209,11 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
         alignment_metrics['mse'] = np.mean((mastery_np - all_labels) ** 2)
         alignment_metrics['mae'] = np.mean(np.abs(mastery_np - all_labels))
         
-        # Correlation between M_IRT and p_correct (should be high if alignment works)
+        # Head Agreement: Correlation between M_IRT and p_correct (IRT consistency)
         if len(np.unique(mastery_np)) > 1 and len(np.unique(p_correct_np)) > 1:
-            alignment_metrics['irt_correlation'] = np.corrcoef(mastery_np, p_correct_np)[0, 1]
+            alignment_metrics['head_agreement'] = np.corrcoef(mastery_np, p_correct_np)[0, 1]
         else:
-            alignment_metrics['irt_correlation'] = 0.0
+            alignment_metrics['head_agreement'] = 0.0
         
         # Average IRT mastery
         alignment_metrics['mean_mastery'] = np.mean(mastery_np)
@@ -215,7 +221,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
         alignment_metrics = {
             'mse': 0.0,
             'mae': 0.0,
-            'irt_correlation': 0.0,
+            'head_agreement': 0.0,
             'mean_mastery': 0.0
         }
     
@@ -239,7 +245,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
         'align_loss': avg_align_loss,
         'align_mse': alignment_metrics['mse'],
         'align_mae': alignment_metrics['mae'],
-        'irt_correlation': alignment_metrics['irt_correlation'],
+        'head_agreement': alignment_metrics['head_agreement'],
         'mean_mastery': alignment_metrics['mean_mastery'],
         
         # L_reg - Skill Difficulty Regularization
@@ -257,7 +263,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
     }
 
 
-def validate(model, val_loader, device, beta_irt=None, lambda_reg=0.1):
+def validate(model, val_loader, device, beta_irt, lambda_reg):
     """
     Validate the model with comprehensive metrics tracking.
     
@@ -265,8 +271,12 @@ def validate(model, val_loader, device, beta_irt=None, lambda_reg=0.1):
         model: iKT2 model instance
         val_loader: validation data loader
         device: torch device
-        beta_irt: optional IRT skill difficulties
-        lambda_reg: regularization coefficient
+        beta_irt: IRT skill difficulties (required, can be None)
+        lambda_reg: regularization coefficient (required, explicit)
+    
+    Note:
+        All parameters REQUIRED. No defaults per reproducibility guidelines.
+        Code will fail if parameters not explicitly provided.
     """
     model.eval()
     
@@ -349,18 +359,18 @@ def validate(model, val_loader, device, beta_irt=None, lambda_reg=0.1):
         alignment_metrics['mse'] = np.mean((mastery_np - all_labels) ** 2)
         alignment_metrics['mae'] = np.mean(np.abs(mastery_np - all_labels))
         
-        # Correlation
+        # Head Agreement: Correlation between M_IRT and p_correct (IRT consistency)
         if len(np.unique(mastery_np)) > 1 and len(np.unique(p_correct_np)) > 1:
-            alignment_metrics['irt_correlation'] = np.corrcoef(mastery_np, p_correct_np)[0, 1]
+            alignment_metrics['head_agreement'] = np.corrcoef(mastery_np, p_correct_np)[0, 1]
         else:
-            alignment_metrics['irt_correlation'] = 0.0
+            alignment_metrics['head_agreement'] = 0.0
         
         alignment_metrics['mean_mastery'] = np.mean(mastery_np)
     else:
         alignment_metrics = {
             'mse': 0.0,
             'mae': 0.0,
-            'irt_correlation': 0.0,
+            'head_agreement': 0.0,
             'mean_mastery': 0.0
         }
     
@@ -384,7 +394,7 @@ def validate(model, val_loader, device, beta_irt=None, lambda_reg=0.1):
         'align_loss': avg_align_loss,
         'align_mse': alignment_metrics['mse'],
         'align_mae': alignment_metrics['mae'],
-        'irt_correlation': alignment_metrics['irt_correlation'],
+        'head_agreement': alignment_metrics['head_agreement'],
         'mean_mastery': alignment_metrics['mean_mastery'],
         
         # L_reg - Skill Difficulty Regularization
@@ -438,7 +448,7 @@ def main():
     parser.add_argument('--phase', type=str, required=True,
                        help='Training phase: "1" (BCE + align), "2" (BCE + align + reg), or "null" (automatic two-phase)')
     parser.add_argument('--rasch_path', type=str, required=True,
-                       help='Path to Rasch targets file (default: data/{dataset}/rasch_targets.pkl)')
+                       help='Path to Rasch targets file (explicit, e.g., data/{dataset}/rasch_targets.pkl)')
     
     # Compatibility parameters (for iKT, ignored by iKT2)
     parser.add_argument('--lambda_penalty', type=float, required=True,
@@ -480,7 +490,7 @@ def main():
             writer = csv.writer(f)
             writer.writerow([
                 'epoch', 'phase', 'lambda_align', 'lambda_reg',
-                'val_auc', 'val_align_mse', 'val_align_mae', 'val_irt_correlation', 'val_reg_loss'
+                'val_auc', 'val_align_mse', 'val_align_mae', 'val_head_agreement', 'val_reg_loss'
             ])
     
     # Determine training mode
@@ -542,8 +552,8 @@ def main():
     print(f"  Skills: {num_c}\n")
     
     # Load skill difficulties from IRT calibration
-    rasch_path = args.rasch_path if args.rasch_path != 'null' else None
-    skill_difficulties = load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c)
+    # rasch_path comes explicitly from CLI (no hidden defaults)
+    skill_difficulties = load_skill_difficulties_from_irt(args.rasch_path, num_c)
     print()
     
     # Create model
@@ -558,16 +568,24 @@ def main():
         dropout=args.dropout,
         emb_type=args.emb_type,
         lambda_align=args.lambda_align,
+        lambda_reg=args.lambda_reg,
         phase=current_phase
     ).to(device)
     
-    print(f"✓ Model created")
+    print(f"\u2713 Model created")
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"  Total parameters: {total_params:,}")
     print(f"  Trainable parameters: {trainable_params:,}")
     print(f"  Architecture: d_model={args.d_model}, n_heads={args.n_heads}, "
           f"num_encoder_blocks={args.num_encoder_blocks}, d_ff={args.d_ff}")
+    
+    # Initialize skill difficulties from IRT calibration (fixes scale drift)
+    if skill_difficulties is not None:
+        beta_irt_device = skill_difficulties.to(device)
+        model.load_irt_difficulties(beta_irt_device)
+    else:
+        print("⚠️  No IRT difficulties loaded - β parameters initialized at 0.0")
     print(f"  Hyperparameters: lambda_align={args.lambda_align}, lambda_reg={args.lambda_reg}")
     print()
     
@@ -611,7 +629,7 @@ def main():
               f"BCE: {train_metrics['l1_bce']:.4f}, "
               f"AUC: {train_metrics['auc']:.4f}, "
               f"Align: {train_metrics['align_loss']:.4f}, "
-              f"IRT_r: {train_metrics['irt_correlation']:.3f}")
+              f"Head_Agr: {train_metrics['head_agreement']:.3f}")
         
         # Validate
         val_metrics = validate(model, valid_loader, device, beta_irt=beta_irt_device, lambda_reg=args.lambda_reg)
@@ -619,7 +637,7 @@ def main():
               f"BCE: {val_metrics['l1_bce']:.4f}, "
               f"AUC: {val_metrics['auc']:.4f}, "
               f"Align: {val_metrics['align_loss']:.4f}, "
-              f"IRT_r: {val_metrics['irt_correlation']:.3f}")
+              f"Head_Agr: {val_metrics['head_agreement']:.3f}")
         
         # Save comprehensive epoch results with hyperparameters
         epoch_results = {
@@ -645,7 +663,7 @@ def main():
                 val_metrics['auc'],
                 val_metrics['align_mse'],
                 val_metrics['align_mae'],
-                val_metrics['irt_correlation'],
+                val_metrics['head_agreement'],
                 val_metrics['reg_loss']
             ])
         
@@ -665,7 +683,7 @@ def main():
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_auc': val_metrics['auc'],
                 'val_acc': val_metrics['accuracy'],
-                'val_irt_correlation': val_metrics['irt_correlation'],
+                'val_head_agreement': val_metrics['head_agreement'],
                 'config': vars(args)
             }, checkpoint_path)
             print(f"✓ Saved best model (AUC: {best_val_auc:.4f})")

@@ -1,14 +1,16 @@
 {
   "defaults": {
-    "model": "gainakt4",
+    "model": "ikt2",
     "dataset": "assist2015",
+    "rasch_path": "data/assist2015/rasch_targets.pkl",
     "fold": 0,
     "seed": 42,
-    "train_script": "examples/train_gainakt4.py",
-    "eval_script": "examples/eval_gainakt4.py",
+    "short_title": "test",
+    "train_script": "examples/train_ikt2.py",
+    "eval_script": "examples/eval_ikt2.py",
     "epochs": 30,
     "batch_size": 64,
-    "learning_rate": 0.000174,
+    "learning_rate": 0.0001,
     "weight_decay": 1.7571e-05,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
@@ -20,16 +22,22 @@
     "seq_len": 200,
     "d_model": 256,
     "n_heads": 4,
-    "num_encoder_blocks": 4,
-    "d_ff": 512,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_bce": 0.9,
+    "lambda_penalty": 100.0,
+    "lambda_reg": 0.1,
+    "epsilon": 0.05,
+    "phase": null,
+    "mastery_method": "bkt",
     "num_trajectories": 10,
-    "min_trajectory_steps": 10
+    "min_trajectory_steps": 10,
+    "lambda_align": 1.0
   },
   "types": {
     "launcher": [
+      "short_title",
       "train_script",
       "eval_script"
     ],
@@ -63,15 +71,23 @@
       "emb_type"
     ],
     "loss_weights": [
-      "lambda_bce"
+      "lambda_penalty",
+      "epsilon",
+      "lambda_align"
+    ],
+    "training_phase": [
+      "phase"
+    ],
+    "data_paths": [
+      "rasch_path"
     ]
   },
   "fixed": {
-    "lambda_constraint": {
-      "value": "lambda_mastery = 1.0 - lambda_bce",
-      "rationale": "GAINAKT4 ARCHITECTURE (2025-11-22): Multi-task loss weights must sum to 1.0. lambda_bce is the only configurable parameter; lambda_mastery is automatically computed as 1.0 - lambda_bce. This ensures proper gradient weighting: L_total = lambda_bce * L1 + (1 - lambda_bce) * L2.",
+    "penalty_constraint": {
+      "value": "L_total = L1 + lambda_penalty * mean(max(0, |Mi - M_rasch| - epsilon)^2)",
+      "rationale": "iKT SINGLE-ENCODER ARCHITECTURE (2025-11-28): Soft barrier approach for Phase 2. Primary objective: optimize L1 (BCE) for maximum AUC. Constraint enforcement: large penalty (lambda_penalty) on deviations beyond tolerance (epsilon). No penalty when |Mi - M_rasch| <= epsilon. Recommended ranges: lambda_penalty in [10.0, 1000.0], epsilon in [0.05, 0.15]. Phase 1 (L_total = L2, epsilon=0). Phase 2 uses soft barrier for interpretability constraint.",
       "validated_by_experiments": []
     }
   },
-  "md5": "80e4b8ec246f57f54a7247d03e8c878a"
+  "md5": "568dec418f49c8666b7e1f734c65aded"
 }

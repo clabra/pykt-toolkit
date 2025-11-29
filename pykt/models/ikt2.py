@@ -163,8 +163,13 @@ class iKT2(nn.Module):
     """
     
     def __init__(self, num_c, seq_len, d_model, n_heads, num_encoder_blocks,
-                 d_ff, dropout, emb_type, lambda_align=1.0, lambda_reg=0.1,
-                 phase=1):
+                 d_ff, dropout, emb_type, lambda_align, lambda_reg, phase):
+        """
+        Initialize iKT2 model.
+        
+        All parameters REQUIRED (no defaults) per reproducibility guidelines.
+        Defaults must come from configs/parameter_default.json.
+        """
         super().__init__()
         
         self.num_c = num_c
@@ -173,7 +178,7 @@ class iKT2(nn.Module):
         self.emb_type = emb_type
         self.phase = phase  # 1 or 2
         
-        # Hyperparameters
+        # Hyperparameters (explicit, no defaults)
         self.lambda_align = lambda_align  # IRT alignment weight (Phase 2)
         self.lambda_reg = lambda_reg      # Difficulty regularization weight (both phases)
         
@@ -197,7 +202,7 @@ class iKT2(nn.Module):
         # Skill difficulty embeddings (retained from Option 1b)
         # Learnable parameters regularized toward IRT-calibrated values
         self.skill_difficulty_emb = nn.Embedding(num_c, 1)
-        # Initialize to neutral value (0.0 difficulty)
+        # Initialize to neutral value (0.0 difficulty) - will be overridden by load_irt_difficulties()
         nn.init.constant_(self.skill_difficulty_emb.weight, 0.0)
         
         # === HEAD 1: Performance Prediction ===
@@ -219,6 +224,25 @@ class iKT2(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(d_ff, 1)  # Output: scalar ability θ_i(t)
         )
+    
+    def load_irt_difficulties(self, beta_irt):
+        """
+        Initialize skill difficulty embeddings from IRT-calibrated values.
+        
+        This fixes scale drift: instead of starting from 0.0 and relying on weak
+        regularization to reach IRT scale (mean=-0.6, std=0.4), we initialize
+        directly from IRT calibration. Model can still fine-tune based on data.
+        
+        Args:
+            beta_irt: [num_c] tensor - IRT-calibrated skill difficulties
+        
+        Returns:
+            None (modifies self.skill_difficulty_emb.weight in-place)
+        """
+        with torch.no_grad():
+            self.skill_difficulty_emb.weight.copy_(beta_irt.view(-1, 1))
+        print(f"✓ Initialized skill difficulties from IRT calibration")
+        print(f"  β_init: mean={beta_irt.mean().item():.4f}, std={beta_irt.std().item():.4f}")
     
     def forward(self, q, r, qry=None):
         """
@@ -289,7 +313,7 @@ class iKT2(nn.Module):
             'logits': logits  # Legacy compatibility
         }
     
-    def compute_loss(self, output, targets, beta_irt=None, lambda_reg=0.1):
+    def compute_loss(self, output, targets, beta_irt, lambda_reg):
         """
         Compute phase-dependent loss with IRT alignment.
         
@@ -299,7 +323,8 @@ class iKT2(nn.Module):
         Args:
             output: dict from forward()
             targets: [B, L] - ground truth responses (0 or 1)
-            beta_irt: [K] - IRT-calibrated skill difficulties (optional)
+            beta_irt: [K] - IRT-calibrated skill difficulties (required, can be None tensor)
+            lambda_reg: Regularization weight (required, explicit)
         
         Returns:
             dict with keys:
@@ -307,6 +332,10 @@ class iKT2(nn.Module):
                 - 'bce_loss': L_BCE (performance prediction)
                 - 'alignment_loss': L_align (IRT alignment, Phase 2 only)
                 - 'reg_loss': L_reg (skill difficulty regularization)
+        
+        Note:
+            All parameters REQUIRED. No defaults per reproducibility guidelines.
+            Code will fail if parameters not explicitly provided.
         """
         device = output['logits'].device
         

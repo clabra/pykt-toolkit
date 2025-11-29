@@ -6,6 +6,8 @@ Approach based on **Explicit Parameters, Zero Defaults**.
 
 This document describes the reproducibility infrastructure for training, evaluating, and reproducing experiments oriented to evaluate Deep Knowledge Tracing models. The system enforces **zero hidden defaults**: all training parameters and evaluation parameters must be explicitly specified via command line. A single launcher script (`examples/run_repro_experiment.py`) manages the complete workflow.
 
+There are no default values in function signatures. Code should fail immediately if any parameter is not explicitly provided. All parameteres are set in ´configs/parameter_default.json´ or explicitly set in the launching command. 
+
 **Key Features:**
 - ✅ Single source of truth: `configs/parameter_default.json`
 - ✅ Explicit commands: ALL parameters visible in generated commands

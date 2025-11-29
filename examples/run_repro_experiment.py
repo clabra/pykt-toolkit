@@ -248,6 +248,26 @@ def build_mastery_states_command(experiment_folder, num_students=15, split='test
     return cmd
 
 
+def build_bkt_validation_command(experiment_folder, params):
+    """
+    Build command to compute BKT validation metric.
+    
+    Args:
+        experiment_folder: Path to experiment directory
+        params: Config parameters (needs dataset)
+    """
+    python_path = sys.executable
+    bkt_script = "examples/compute_bkt_correlation.py"
+    
+    cmd = (
+        f"{python_path} {bkt_script} "
+        f"--experiment_dir {experiment_folder} "
+        f"--dataset {params['dataset']} "
+        f"--output_file bkt_validation.json"
+    )
+    return cmd
+
+
 def build_analysis_plots_command(experiment_folder):
     """
     Build command to generate comprehensive analysis plots.
@@ -750,6 +770,29 @@ def main():
         train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
         mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=15, split='test')
+        
+        # Interpretability correlation commands (for iKT2)
+        python_path = sys.executable
+        head_agreement_command = (
+            f"{python_path} examples/compute_head_agreement.py "
+            f"--experiment_dir {experiment_dir_abs} "
+            f"--update_csv"
+        )
+        difficulty_fidelity_command = (
+            f"{python_path} examples/compute_irt_correlation.py "
+            f"--experiment_dir {experiment_dir_abs} "
+            f"--dataset {training_params['dataset']} "
+            f"--update_csv"
+        )
+        bkt_correlation_command = (
+            f"{python_path} examples/compute_bkt_correlation.py "
+            f"--experiment_dir {experiment_dir_abs} "
+            f"--dataset {training_params['dataset']} "
+            f"--output_file bkt_validation_final.json "
+            f"--update_csv"
+        )
+        
+        bkt_validation_command = build_bkt_validation_command(experiment_dir_abs, training_params)
         repro_command = build_repro_command(sys.argv[0], experiment_id)
         
         # Build new config structure - NO redundant typed sections
@@ -761,6 +804,10 @@ def main():
                 "train_explicit": train_command_explicit,
                 "eval_explicit": eval_command_explicit,
                 "mastery_states": mastery_states_command,
+                "head_agreement": head_agreement_command,
+                "difficulty_fidelity": difficulty_fidelity_command,
+                "bkt_correlation": bkt_correlation_command,
+                "bkt_validation": bkt_validation_command,
                 "reproduce": repro_command
             },
             "experiment": {
@@ -852,6 +899,79 @@ def main():
                         print(f"  Output files in: {experiment_folder}")
                         print(f"    - mastery_test.csv")
                         print(f"    - mastery_test.json")
+                        
+                        # Compute interpretability metrics for iKT2
+                        if model_name == 'ikt2':
+                            # Head Agreement (M_IRT vs p_correct) - PRIMARY interpretability metric
+                            print("\n" + "=" * 80)
+                            print("COMPUTING HEAD AGREEMENT (IRT Consistency)")
+                            print("=" * 80)
+                            print("\nComparing M_IRT mastery vs p_correct predictions...")
+                            
+                            head_agreement_command = (
+                                f"{python_path} examples/compute_head_agreement.py "
+                                f"--experiment_dir {experiment_dir_abs} "
+                                f"--update_csv"
+                            )
+                            
+                            head_result = subprocess.run(head_agreement_command, shell=True)
+                            
+                            if head_result.returncode == 0:
+                                print("\n✓ Head agreement computed successfully")
+                                print(f"  Output file: {experiment_folder}/head_agreement_test.json")
+                                print(f"  Updated: {experiment_folder}/metrics_test.csv")
+                            else:
+                                print("\n⚠️  Head agreement failed (non-critical)")
+                                print("  Note: Requires mastery_test.csv")
+                            
+                            # Difficulty Fidelity (β_learned vs β_IRT) - SECONDARY validation metric
+                            print("\n" + "=" * 80)
+                            print("COMPUTING DIFFICULTY FIDELITY")
+                            print("=" * 80)
+                            print("\nComparing learned difficulty (β) vs IRT-calibrated difficulty...")
+                            
+                            irt_command = (
+                                f"{python_path} examples/compute_irt_correlation.py "
+                                f"--experiment_dir {experiment_dir_abs} "
+                                f"--dataset {training_params['dataset']} "
+                                f"--update_csv"
+                            )
+                            
+                            irt_result = subprocess.run(irt_command, shell=True)
+                            
+                            if irt_result.returncode == 0:
+                                print("\n✓ Difficulty fidelity computed successfully")
+                                print(f"  Output file: {experiment_folder}/irt_correlation_test.json")
+                                print(f"  Updated: {experiment_folder}/metrics_test.csv")
+                            else:
+                                print("\n⚠️  Difficulty fidelity failed (non-critical)")
+                                print("  Note: Requires rasch_targets.pkl and mastery_test.csv")
+                            
+                            # BKT correlation (M_IRT vs P(L_t))
+                            print("\n" + "=" * 80)
+                            print("COMPUTING BKT CORRELATION")
+                            print("=" * 80)
+                            print("\nComparing model mastery (M_IRT) vs BKT P(L_t)...")
+                            
+                            bkt_command = (
+                                f"{python_path} examples/compute_bkt_correlation.py "
+                                f"--experiment_dir {experiment_dir_abs} "
+                                f"--dataset {training_params['dataset']} "
+                                f"--output_file bkt_validation_final.json "
+                                f"--update_csv"
+                            )
+                            
+                            bkt_result = subprocess.run(bkt_command, shell=True)
+                            
+                            if bkt_result.returncode == 0:
+                                print("\n✓ BKT correlation computed successfully")
+                                print(f"  Output file: {experiment_folder}/bkt_validation_final.json")
+                                print(f"  Updated: {experiment_folder}/metrics_test.csv")
+                            else:
+                                print("\n⚠️  BKT correlation failed (non-critical)")
+                                print("  Note: Requires bkt_targets.pkl and mastery_test.csv")
+                                print(f"  Check: data/{training_params['dataset']}/bkt_targets.pkl exists")
+                                print(f"  Check: {experiment_folder}/mastery_test.csv exists")
                         
                         # Generate comprehensive analysis plots
                         print("\n" + "=" * 80)

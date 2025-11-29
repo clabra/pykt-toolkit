@@ -35,7 +35,7 @@ def load_metrics_csv(run_dir):
     
     df = pd.read_csv(csv_path)
     
-    # Verify required columns exist (comprehensive metrics format)
+    # Check for comprehensive metrics format
     required_cols = [
         'epoch', 'phase', 'val_l1_bce', 'val_auc', 'val_accuracy',
         'val_l2_mse', 'val_penalty_loss', 'val_violation_rate',
@@ -44,14 +44,23 @@ def load_metrics_csv(run_dir):
     
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        raise ValueError(
-            f"CSV missing required columns: {missing_cols}\n"
-            f"This script requires comprehensive metrics format.\n"
-            f"Please retrain the model with the current train_ikt.py implementation."
-        )
+        # Check if we have minimal columns for basic plots
+        minimal_cols = ['epoch', 'val_auc']
+        if all(col in df.columns for col in minimal_cols):
+            print(f"⚠️  Missing detailed metrics columns: {missing_cols}")
+            print(f"   Available columns: {list(df.columns)}")
+            print(f"   Will generate basic plots only (AUC trends)")
+            return df, False  # Return df with flag indicating limited data
+        else:
+            raise ValueError(
+                f"CSV missing required columns: {missing_cols}\n"
+                f"Available columns: {list(df.columns)}\n"
+                f"Need at least: {minimal_cols}\n"
+                f"This script requires metrics from training runs."
+            )
     
     print(f"✓ Loaded {len(df)} epochs from metrics_validation.csv")
-    return df
+    return df, True  # Return df with flag indicating comprehensive data
 
 
 def load_mastery_states(run_dir, split='test'):
@@ -80,6 +89,51 @@ def load_config(run_dir):
     lambda_penalty = config.get('lambda_penalty', 100.0)
     print(f"✓ Loaded config: epsilon={epsilon}, lambda_penalty={lambda_penalty}")
     return {'epsilon': epsilon, 'lambda_penalty': lambda_penalty}
+
+
+def plot_auc_trend_simple(df, output_path, config):
+    """
+    Simple AUC trend plot for minimal data scenarios.
+    Works with just 'epoch' and 'val_auc' columns.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    epochs = df['epoch'].values
+    val_auc = df['val_auc'].values
+    
+    ax.plot(epochs, val_auc, 'o-', linewidth=2, markersize=8, color='#2ecc71', label='Validation AUC')
+    
+    # Add grid and labels
+    ax.grid(True, alpha=0.3)
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('AUC', fontsize=12)
+    ax.set_title('Validation AUC Over Training', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=11)
+    
+    # Add value annotations if few epochs
+    if len(epochs) <= 10:
+        for i, (e, auc) in enumerate(zip(epochs, val_auc)):
+            ax.annotate(f'{auc:.4f}', 
+                       xy=(e, auc), 
+                       xytext=(0, 10), 
+                       textcoords='offset points',
+                       ha='center', 
+                       fontsize=9,
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
+    
+    # Add best AUC marker
+    best_idx = val_auc.argmax()
+    best_epoch = epochs[best_idx]
+    best_auc = val_auc[best_idx]
+    ax.plot(best_epoch, best_auc, '*', markersize=20, color='gold', 
+            markeredgecolor='darkgoldenrod', markeredgewidth=2, 
+            label=f'Best: {best_auc:.4f} @ Epoch {best_epoch}', zorder=10)
+    ax.legend(fontsize=11)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved: {output_path}")
+    plt.close()
 
 
 def plot_loss_evolution(df, output_path, config):
@@ -347,6 +401,12 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
         print(f"⚠️  Skipping per-skill alignment plot (need student_id and skill_id columns)")
         return
     
+    # Check if rasch column has valid data
+    if mastery_df[rasch_col].isna().all():
+        print(f"⚠️  Skipping per-skill alignment plot ({rasch_col} column is empty)")
+        print(f"   This plot requires IRT alignment (M_rasch values)")
+        return
+    
     # Compute per-student-skill squared error
     mastery_df['squared_error'] = (mastery_df[mi_col] - mastery_df[rasch_col]) ** 2
     
@@ -416,7 +476,7 @@ def main():
     
     # Load data
     try:
-        metrics_df = load_metrics_csv(args.run_dir)
+        metrics_df, has_comprehensive = load_metrics_csv(args.run_dir)
         config = load_config(args.run_dir)
         mastery_df = load_mastery_states(args.run_dir, split='test')
     except Exception as e:
@@ -429,21 +489,31 @@ def main():
     
     # Generate plots
     try:
-        # Plot 1: Loss Evolution
-        print("1. Loss Evolution...")
-        plot_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
-        
-        # Plot 2: AUC vs Violations
-        print("2. AUC vs Violation Rate...")
-        plot_auc_vs_violations(metrics_df, os.path.join(plots_dir, 'auc_vs_violations.png'), config)
-        
-        # Plot 3: Deviation Histogram
-        print("3. Deviation Histogram...")
-        plot_deviation_histogram(metrics_df, os.path.join(plots_dir, 'deviation_histogram.png'), config)
-        
-        # Plot 4: Per-Skill Alignment
-        print("4. Per-Skill Alignment Heatmap...")
-        plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
+        if has_comprehensive:
+            # Plot 1: Loss Evolution
+            print("1. Loss Evolution...")
+            plot_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
+            
+            # Plot 2: AUC vs Violations
+            print("2. AUC vs Violation Rate...")
+            plot_auc_vs_violations(metrics_df, os.path.join(plots_dir, 'auc_vs_violations.png'), config)
+            
+            # Plot 3: Deviation Histogram
+            print("3. Deviation Histogram...")
+            plot_deviation_histogram(metrics_df, os.path.join(plots_dir, 'deviation_histogram.png'), config)
+            
+            # Plot 4: Per-Skill Alignment (works with mastery data only)
+            print("4. Per-Skill Alignment Heatmap...")
+            plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
+        else:
+            print("⚠️  Limited data available - generating basic plots only")
+            
+            # Generate simple AUC trend if we have the data
+            if 'val_auc' in metrics_df.columns and 'epoch' in metrics_df.columns:
+                print("1. Simple AUC Trend...")
+                plot_auc_trend_simple(metrics_df, os.path.join(plots_dir, 'auc_trend.png'), config)
+            else:
+                print("   Cannot generate any plots (missing 'epoch' and 'val_auc' columns)")
         
     except Exception as e:
         print(f"❌ Error generating plots: {e}")

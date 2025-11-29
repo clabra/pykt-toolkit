@@ -1,0 +1,7 @@
+{
+  "test_auc": 0.7147683150604727,
+  "test_acc": 0.7455643723252496,
+  "irt_correlation": 0.5738547706474193,
+  "bkt_correlation_standard": 0.47065781616000657,
+  "bkt_correlation_timelagged": 0.569934625150339
+}

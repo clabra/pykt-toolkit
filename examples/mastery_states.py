@@ -175,6 +175,7 @@ def load_model_and_config(run_dir, ckpt_name):
             dropout=config['dropout'],
             emb_type=config['emb_type'],
             lambda_align=config.get('lambda_align', 1.0),
+            lambda_reg=config.get('lambda_reg', 0.1),
             phase=config.get('phase', 1)
         ).to(device)
     else:

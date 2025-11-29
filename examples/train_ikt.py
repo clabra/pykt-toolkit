@@ -57,23 +57,23 @@ def get_model_attr(model, attr_name):
     return getattr(model, attr_name)
 
 
-def load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c):
+def load_skill_difficulties_from_irt(rasch_path, num_c):
     """
     Load IRT-calibrated skill difficulties for Option 1b regularization.
     
     Args:
-        rasch_path: Path to rasch_targets.pkl file (if None, uses default)
-        dataset_path: Path to dataset directory
+        rasch_path: Path to rasch_targets.pkl file (explicit, no fallback)
         num_c: Number of skills
     
     Returns:
         torch.Tensor of shape [num_c] with skill difficulties (beta values),
         or None if file doesn't exist
+    
+    Note:
+        Path must be explicitly provided via --rasch_path CLI argument.
+        No hardcoded defaults allowed (Explicit Parameters, Zero Defaults).
     """
     import pickle
-    
-    if rasch_path is None:
-        rasch_path = os.path.join(dataset_path, 'rasch_targets.pkl')
     
     if not os.path.exists(rasch_path):
         print(f"⚠️  No IRT file found at {rasch_path}, skipping skill regularization")
@@ -99,14 +99,12 @@ def load_skill_difficulties_from_irt(rasch_path, dataset_path, num_c):
         return None
 
 
-def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
+def load_rasch_targets(rasch_path, num_c, mastery_method):
     """
     Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
     
     Args:
-        rasch_path: Path to mastery targets pickle file (if None, uses default or random)
-        mastery_method: Method for mastery computation (required, no default per reproducibility guidelines)
-        dataset_path: Path to dataset directory
+        rasch_path: Path to mastery targets pickle file (explicit, no fallback)
         num_c: Number of concepts/skills
         mastery_method: Method used ('bkt', 'irt', 'bkt_mono', 'irt_mono')
     
@@ -114,15 +112,15 @@ def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
         dict: Dictionary with mastery targets and metadata
               - If file exists: {'rasch_targets': dict, 'student_abilities': dict, ...}
               - If not: {'mode': 'random', 'num_c': num_c}
+    
+    Note:
+        Path must be explicitly provided via --rasch_path CLI argument.
+        No hardcoded defaults allowed (Explicit Parameters, Zero Defaults).
     """
     import pickle
     
     # Determine if monotonic version requested
     is_monotonic = mastery_method.endswith('_mono')
-    
-    # Determine Rasch file path
-    if rasch_path is None:
-        rasch_path = os.path.join(dataset_path, 'rasch_targets.pkl')
     
     # Try to load from file
     if os.path.exists(rasch_path):
@@ -183,7 +181,7 @@ def load_rasch_targets(rasch_path, dataset_path, num_c, mastery_method):
         )
 
 
-def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=None, lambda_reg=0.1):
+def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt, lambda_reg):
     """Train for one epoch with Option 1b skill regularization."""
     model.train()
     total_loss = 0.0
@@ -336,7 +334,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt=
     }
 
 
-def validate(model, val_loader, device, lambda_penalty, beta_irt=None, lambda_reg=0.1):
+def validate(model, val_loader, device, lambda_penalty, beta_irt, lambda_reg):
     """
     Validate the model with comprehensive metrics tracking.
     
@@ -645,7 +643,8 @@ def main():
     
     # Load IRT skill difficulties for regularization (Option 1b)
     print("\n🎯 Loading IRT skill difficulties...")
-    skill_difficulties = load_skill_difficulties_from_irt(args.rasch_path, dataset_path, num_c)
+    # rasch_path comes explicitly from CLI (no hidden defaults)
+    skill_difficulties = load_skill_difficulties_from_irt(args.rasch_path, num_c)
     
     # Initialize model
     print("\n🏗️  Initializing model...")

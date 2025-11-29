@@ -44,7 +44,7 @@ def main():
     model = iKT2(
         num_c=num_c, seq_len=args.seq_len, d_model=256, n_heads=4,
         num_encoder_blocks=8, d_ff=1536, dropout=0.2, emb_type='qid',
-        lambda_align=1.0, lambda_reg=0.1
+        lambda_align=1.0, lambda_reg=0.1, phase='eval'
     ).to(device)
     
     # Load checkpoint

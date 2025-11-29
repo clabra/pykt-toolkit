@@ -38,12 +38,17 @@ def load_dataset_sequences(dataset_name, data_dir="data"):
     return df
 
 
-def prepare_irt_data(df):
+def prepare_irt_data(df, use_final_ability=False):
     """
     Convert sequence data to IRT format: (student_id, skill_id, response).
     
     For multi-skill datasets (assist2009), each question may have multiple skills.
     We create separate records for each skill.
+    
+    Args:
+        df: DataFrame with student sequences
+        use_final_ability: If True, only use the LAST interaction per student-skill pair
+                          (for computing consolidated mastery levels)
     """
     irt_records = []
     
@@ -64,6 +69,14 @@ def prepare_irt_data(df):
                 })
     
     irt_df = pd.DataFrame(irt_records)
+    
+    if use_final_ability:
+        # Keep only the LAST interaction per student-skill pair
+        # This represents consolidated mastery after all practice with that skill
+        print(f"Filtering to final abilities: keeping only last interaction per student-skill...")
+        irt_df = irt_df.sort_values('timestep').groupby(['student_id', 'skill_id']).tail(1).reset_index(drop=True)
+        print(f"Reduced to {len(irt_df)} records (final interactions)")
+    
     print(f"Prepared {len(irt_df)} IRT records from {df['uid'].nunique()} students")
     print(f"Number of unique skills: {irt_df['skill_id'].nunique()}")
     print(f"Response distribution: {irt_df['response'].value_counts().to_dict()}")
@@ -471,6 +484,8 @@ def main():
                         help='Use dynamic IRT (model learning progression over time)')
     parser.add_argument('--learning_rate', type=float, default=0.1,
                         help='Learning rate for dynamic ability updates (default: 0.1)')
+    parser.add_argument('--use_final_ability', action='store_true',
+                        help='Use only final interaction per student-skill for IRT calibration (consolidated mastery)')
     
     args = parser.parse_args()
     
@@ -484,13 +499,14 @@ def main():
     print(f"Dataset: {args.dataset}")
     print(f"Data directory: {args.data_dir}")
     print(f"Output path: {args.output_path}")
+    print(f"Use final ability: {args.use_final_ability}")
     print("="*80 + "\n")
     
     # Load dataset
     df = load_dataset_sequences(args.dataset, args.data_dir)
     
     # Prepare IRT data
-    irt_df = prepare_irt_data(df)
+    irt_df = prepare_irt_data(df, use_final_ability=args.use_final_ability)
     
     # Calibrate Rasch model
     student_abilities, skill_difficulties = calibrate_rasch_model(
@@ -520,7 +536,9 @@ def main():
         'num_calibrated_skills': len(skill_difficulties),
         'max_iterations': args.max_iterations,
         'dynamic': args.dynamic,
-        'learning_rate': args.learning_rate if args.dynamic else None
+        'learning_rate': args.learning_rate if args.dynamic else None,
+        'use_final_ability': args.use_final_ability,
+        'calibration_method': 'final_ability_per_skill' if args.use_final_ability else 'averaged_ability'
     }
     
     save_rasch_targets(

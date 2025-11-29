@@ -2,6 +2,7 @@
   "defaults": {
     "model": "ikt2",
     "dataset": "assist2015",
+    "rasch_path": "data/assist2015/rasch_targets.pkl",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
@@ -29,7 +30,6 @@
     "lambda_reg": 0.1,
     "epsilon": 0.05,
     "phase": null,
-    "rasch_path": null,
     "mastery_method": "bkt",
     "num_trajectories": 10,
     "min_trajectory_steps": 10,
@@ -89,5 +89,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "568dec418f49c8666b7e1f734c65aded"
+  "md5": "b8bf31fbf13382e12cb2cba89b916841"
 }
