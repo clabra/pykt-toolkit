@@ -445,6 +445,8 @@ def main():
                         help='Alignment coefficient for IRT mastery (recommended: 1.0)')
     parser.add_argument('--lambda_reg', type=float, required=True,
                         help='Regularization coefficient for skill difficulty embeddings (recommended: 0.1)')
+    parser.add_argument('--lambda_interpretability', type=float, required=True,
+                        help='[Not currently used] Weight for interpretability in checkpoint selection (kept for future use)')
     parser.add_argument('--phase', type=str, required=True,
                        help='Training phase: "1" (BCE + align), "2" (BCE + align + reg), or "null" (automatic two-phase)')
     parser.add_argument('--rasch_path', type=str, required=True,
@@ -580,12 +582,19 @@ def main():
     print(f"  Architecture: d_model={args.d_model}, n_heads={args.n_heads}, "
           f"num_encoder_blocks={args.num_encoder_blocks}, d_ff={args.d_ff}")
     
-    # Initialize skill difficulties from IRT calibration (fixes scale drift)
-    if skill_difficulties is not None:
-        beta_irt_device = skill_difficulties.to(device)
-        model.load_irt_difficulties(beta_irt_device)
-    else:
-        print("⚠️  No IRT difficulties loaded - β parameters initialized at 0.0")
+    # COMMENTED OUT: Direct IRT initialization causes "lazy learning" problem
+    # - Reduces model's incentive to learn from data
+    # - Drops BKT correlation by ~32-40% (e.g., 0.506 → 0.345)
+    # - Weak regularization (λ_reg=0.01) is sufficient for scale preservation
+    # See experiments: 947580 (no init, I=0.766) vs 346878 (with init, I=0.692)
+    #
+    # if skill_difficulties is not None:
+    #     beta_irt_device = skill_difficulties.to(device)
+    #     model.load_irt_difficulties(beta_irt_device)
+    # else:
+    #     print("⚠️  No IRT difficulties loaded - β parameters initialized at 0.0")
+    
+    print("  ✓ β parameters initialized at 0.0 (learning from data with weak regularization)")
     print(f"  Hyperparameters: lambda_align={args.lambda_align}, lambda_reg={args.lambda_reg}")
     print()
     
@@ -668,6 +677,11 @@ def main():
             ])
         
         # Check for improvement (using AUC as primary metric)
+        # COMPOSITE SCORE APPROACH (commented out):
+        # composite_score = (1 - args.lambda_interpretability) * val_metrics['auc'] + args.lambda_interpretability * val_metrics['head_agreement']
+        # if composite_score > best_composite_score:
+        #     best_composite_score = composite_score
+        
         if val_metrics['auc'] > best_val_auc:
             best_val_auc = val_metrics['auc']
             patience_counter = 0

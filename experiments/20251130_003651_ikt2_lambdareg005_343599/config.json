@@ -1,0 +1,121 @@
+{
+  "input": {
+    "short_title": "lambdareg005",
+    "lambda_reg": 0.05
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title lambdareg005 --short_title lambdareg005 --lambda_reg 0.05",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt2.py --auto_shifted_eval --batch_size 64 --d_ff 1536 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 30 --epsilon 0.05 --fold 0 --gradient_clip 1.0 --lambda_align 1.0 --lambda_interpretability 0.0 --lambda_penalty 100.0 --lambda_reg 0.05 --learning_rate 0.0001 --mastery_method bkt --min_trajectory_steps 10 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 8 --num_trajectories 10 --optimizer Adam --patience 4 --phase null --rasch_path data/assist2015/rasch_targets.pkl --seed 42 --seq_len 200 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_ikt2.py --checkpoint /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599/model_best.pth --output_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200",
+    "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --num_students 15 --split test",
+    "head_agreement": "/home/vscode/.pykt-env/bin/python examples/compute_head_agreement.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --update_csv",
+    "difficulty_fidelity": "/home/vscode/.pykt-env/bin/python examples/compute_irt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --dataset assist2015 --update_csv",
+    "bkt_correlation": "/home/vscode/.pykt-env/bin/python examples/compute_bkt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --dataset assist2015 --output_file bkt_validation_final.json --update_csv",
+    "bkt_validation": "/home/vscode/.pykt-env/bin/python examples/compute_bkt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251130_003651_ikt2_lambdareg005_343599 --dataset assist2015 --output_file bkt_validation.json",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 343599"
+  },
+  "experiment": {
+    "id": "20251130_003651_ikt2_lambdareg005_343599",
+    "short_title": "lambdareg005",
+    "experiment_id": "343599",
+    "created": "20251130_003651"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "model": "ikt2",
+    "dataset": "assist2015",
+    "rasch_path": "data/assist2015/rasch_targets.pkl",
+    "fold": 0,
+    "seed": 42,
+    "short_title": "test",
+    "train_script": "examples/train_ikt2.py",
+    "eval_script": "examples/eval_ikt2.py",
+    "epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.0001,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 4,
+    "monitor_freq": 50,
+    "use_amp": false,
+    "use_wandb": false,
+    "auto_shifted_eval": true,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "lambda_penalty": 100.0,
+    "lambda_reg": 0.01,
+    "lambda_interpretability": 0.0,
+    "epsilon": 0.05,
+    "phase": null,
+    "mastery_method": "bkt",
+    "num_trajectories": 10,
+    "min_trajectory_steps": 10,
+    "lambda_align": 1.0
+  },
+  "overrides": {
+    "short_title": "lambdareg005",
+    "lambda_reg": 0.05
+  },
+  "types": {
+    "launcher": [
+      "short_title",
+      "train_script",
+      "eval_script"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "monitor_freq",
+      "use_amp",
+      "use_wandb",
+      "auto_shifted_eval",
+      "num_trajectories",
+      "min_trajectory_steps"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "loss_weights": [
+      "lambda_penalty",
+      "epsilon",
+      "lambda_align"
+    ],
+    "training_phase": [
+      "phase"
+    ],
+    "data_paths": [
+      "rasch_path"
+    ]
+  },
+  "md5": "b6adaf48e2400648edb787237b8b0913",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}
