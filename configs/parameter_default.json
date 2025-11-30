@@ -27,7 +27,7 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "lambda_penalty": 100.0,
-    "lambda_reg": 0.1,
+    "lambda_reg": 0.01,
     "epsilon": 0.05,
     "phase": null,
     "mastery_method": "bkt",
