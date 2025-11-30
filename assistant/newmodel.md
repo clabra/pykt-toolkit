@@ -1,1 +1,1 @@
-../paper/ikt_architecture_approach.md
+../paper/ikt3_architecture_approach.md
