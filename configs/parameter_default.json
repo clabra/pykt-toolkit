@@ -1,21 +1,22 @@
 {
   "defaults": {
-    "model": "ikt2",
+    "model": "ikt3",
     "dataset": "assist2015",
     "rasch_path": "data/assist2015/rasch_targets.pkl",
+    "reference_path": null,
     "fold": 0,
     "seed": 42,
     "short_title": "test",
-    "train_script": "examples/train_ikt2.py",
-    "eval_script": "examples/eval_ikt2.py",
-    "epochs": 30,
+    "train_script": "examples/train_ikt3.py",
+    "eval_script": "examples/eval_ikt3.py",
+    "epochs": 40,
     "batch_size": 64,
     "learning_rate": 0.0001,
     "weight_decay": 1.7571e-05,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
     "patience": 4,
-    "monitor_freq": 50,
+    "monitor_freq": 5,
     "use_amp": false,
     "use_wandb": false,
     "auto_shifted_eval": true,
@@ -26,14 +27,10 @@
     "d_ff": 1536,
     "dropout": 0.2,
     "emb_type": "qid",
-    "lambda_penalty": 100.0,
-    "lambda_reg": 0.01,
-    "epsilon": 0.05,
-    "phase": null,
-    "mastery_method": "bkt",
-    "num_trajectories": 10,
-    "min_trajectory_steps": 10,
-    "lambda_align": 1.0
+    "phase1_epochs": 10,
+    "lambda_int": 0.8,
+    "target_ratio": 0.4,
+    "experiments_dir": "experiments"
   },
   "types": {
     "launcher": [
@@ -73,14 +70,21 @@
     "loss_weights": [
       "lambda_penalty",
       "epsilon",
-      "lambda_align"
+      "lambda_align",
+      "lambda_int"
+    ],
+    "ikt3_specific": [
+      "phase1_epochs",
+      "target_ratio",
+      "reference_path"
     ],
     "training_phase": [
       "phase"
     ],
     "data_paths": [
       "rasch_path"
-    ]
+    ],
+    "experiments_dir": "str"
   },
   "fixed": {
     "penalty_constraint": {
@@ -89,5 +93,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "b8bf31fbf13382e12cb2cba89b916841"
+  "md5": "31d0738717359bcc1e4a2f1e82c65e5d"
 }

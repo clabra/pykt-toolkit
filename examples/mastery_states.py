@@ -71,6 +71,7 @@ from torch.utils.data import DataLoader
 from pykt.models.gainakt4 import GainAKT4
 from pykt.models.ikt import iKT
 from pykt.models.ikt2 import iKT2
+from pykt.models.ikt3 import iKT3
 
 
 def load_rasch_targets(dataset_name, data_config):
@@ -122,10 +123,14 @@ def load_model_and_config(run_dir, ckpt_name):
     with open(config_path, 'r') as f:
         full_config = json.load(f)
     
-    #config = full_config['defaults']
-    # Merge defaults with overrides (overrides take precedence)
-    config = full_config['defaults'].copy()
-    config.update(full_config.get('overrides', {}))
+    # Handle both flat config (iKT3) and structured config (iKT2)
+    if 'defaults' in full_config:
+        # Structured config: merge defaults with overrides
+        config = full_config['defaults'].copy()
+        config.update(full_config.get('overrides', {}))
+    else:
+        # Flat config: use as-is
+        config = full_config.copy()
     
     # Setup data config
     # Load data config from configs/data_config.json
@@ -146,7 +151,32 @@ def load_model_and_config(run_dir, ckpt_name):
     
     # Initialize model based on model type
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_name = config.get('model', 'gainakt4')
+    
+    # Detect model type from config if not explicitly specified
+    if 'model' in config:
+        model_name = config['model']
+    elif 'target_ratio' in config:
+        # iKT3 has target_ratio parameter
+        model_name = 'ikt3'
+    elif 'lambda_align' in config and 'lambda_reg' in config:
+        # iKT2 has both lambda_align and lambda_reg
+        model_name = 'ikt2'
+    elif 'lambda_penalty' in config or 'epsilon' in config:
+        # iKT has lambda_penalty or epsilon
+        model_name = 'ikt'
+    else:
+        # Fallback: check parameter_default.json
+        try:
+            param_defaults_path = os.path.join(project_root, 'configs', 'parameter_default.json')
+            with open(param_defaults_path, 'r') as f:
+                param_defaults = json.load(f)
+                model_name = param_defaults.get('model', 'gainakt4')
+            print(f"Model type not found in config, using from parameter_default.json: {model_name}")
+        except:
+            model_name = 'gainakt4'
+            print(f"Could not load parameter_default.json, using default: {model_name}")
+    
+    print(f"Detected model type: {model_name}")
     
     if model_name == 'ikt':
         # iKT model
@@ -178,6 +208,29 @@ def load_model_and_config(run_dir, ckpt_name):
             lambda_reg=config.get('lambda_reg', 0.1),
             phase=config.get('phase', 1)
         ).to(device)
+    elif model_name == 'ikt3':
+        # iKT3 model - simplified architecture with fixed IRT difficulties
+        # Load beta_irt if available
+        beta_irt = None
+        rasch_path = config.get('rasch_path')
+        if rasch_path and os.path.exists(rasch_path):
+            import pickle
+            with open(rasch_path, 'rb') as f:
+                rasch_data = pickle.load(f)
+                if 'beta_irt' in rasch_data:
+                    beta_irt = torch.tensor(rasch_data['beta_irt'], dtype=torch.float32)
+        
+        model = iKT3(
+            num_c=num_c,
+            d_model=config['d_model'],
+            n_heads=config['n_heads'],
+            num_encoder_blocks=config['num_encoder_blocks'],
+            d_ff=config['d_ff'],
+            dropout=config['dropout'],
+            seq_len=config['seq_len'],
+            beta_irt=beta_irt,
+            target_ratio=config.get('target_ratio', 0.4)
+        ).to(device)
     else:
         # GainAKT4 model (default)
         model = GainAKT4(
@@ -198,12 +251,26 @@ def load_model_and_config(run_dir, ckpt_name):
     
     # Load checkpoint
     checkpoint_path = os.path.join(run_dir, ckpt_name)
+    
+    # Handle both naming conventions: best_model.pt (iKT3) and model_best.pth (iKT2)
+    if not os.path.exists(checkpoint_path):
+        # Try alternative naming
+        alt_names = ['best_model.pt', 'model_best.pth', 'model_best.pt', 'best_model.pth']
+        for alt_name in alt_names:
+            alt_path = os.path.join(run_dir, alt_name)
+            if os.path.exists(alt_path):
+                checkpoint_path = alt_path
+                print(f"Using checkpoint: {alt_name}")
+                break
+        else:
+            raise FileNotFoundError(f"Checkpoint not found: {os.path.join(run_dir, ckpt_name)} (also tried {alt_names})")
+    
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model_to_load = model.module if isinstance(model, torch.nn.DataParallel) else model
     model_to_load.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
-    return model, config, data_config, device, num_c
+    return model, config, data_config, device, num_c, model_name
 
 
 def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
@@ -287,7 +354,7 @@ def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
     return selected
 
 
-def extract_mastery_states(model, data_loader, device, num_concepts, config, max_students=None):
+def extract_mastery_states(model, data_loader, device, num_concepts, config, model_name='gainakt4', max_students=None):
     """
     Extract mastery states and loss inputs for each skill at each time step.
     
@@ -317,9 +384,9 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
             if max_students is not None and students_processed >= max_students:
                 break
             
-            questions = batch['cseqs'].to(device)  # [B, L]
-            responses = batch['rseqs'].to(device)  # [B, L]
-            questions_shifted = batch['shft_cseqs'].to(device)  # [B, L]
+            questions = batch['cseqs'].long().to(device)  # [B, L]
+            responses = batch['rseqs'].long().to(device)  # [B, L]
+            questions_shifted = batch['shft_cseqs'].long().to(device)  # [B, L-1]
             mask = batch['masks'].to(device)  # [B, L]
             labels = batch['shft_rseqs'].to(device)  # [B, L] - targets for BCE loss
             
@@ -337,29 +404,36 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
             # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
             outputs = model(q=questions, r=responses, qry=questions_shifted)
             
-            # Detect model type from outputs
-            model_name = config.get('model', 'gainakt4')
+            # Use model type detected during initialization (don't re-detect here)
+            # model_name should be available from outer scope
             
-            if model_name == 'ikt2':
-                # iKT2: Per-interaction IRT mastery, not per-skill vectors
+            if model_name in ['ikt2', 'ikt3']:
+                # iKT2/iKT3: Per-interaction IRT mastery, not per-skill vectors
                 # Check if outputs are available
-                if 'mastery_irt' not in outputs:
+                if 'theta_t' not in outputs:
                     print("\n" + "="*80)
                     print("⚠️  MASTERY STATES NOT AVAILABLE")
                     print("="*80)
-                    print("iKT2 model outputs not found.")
+                    print(f"{model_name.upper()} model outputs not found.")
                     print("="*80)
                     return []
                 
-                # Extract iKT2 outputs
-                # iKT2 returns per-interaction mastery M_IRT = σ(θ - β), not per-skill vectors
-                mastery_irt = outputs['mastery_irt'].cpu().numpy()  # [B, L] - IRT mastery per interaction
+                # Extract iKT2/iKT3 outputs
+                # Both return per-interaction IRT mastery M_IRT = σ(θ - β), not per-skill vectors
                 theta_t = outputs['theta_t'].cpu().numpy()  # [B, L] - student ability
                 beta_k = outputs['beta_k'].cpu().numpy()  # [B, L] - skill difficulty
-                bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
-                logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits
                 
-                skill_vector = None  # iKT2 doesn't have per-skill vectors
+                # Calculate mastery_irt from theta and beta
+                mastery_irt = 1.0 / (1.0 + np.exp(-(theta_t - beta_k)))  # σ(θ - β)
+                
+                if model_name == 'ikt2':
+                    bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
+                    logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits
+                else:  # ikt3
+                    bce_predictions = outputs.get('p_correct', mastery_irt).cpu().numpy()  # [B, L]
+                    logits = None  # iKT3 doesn't have separate logits
+                
+                skill_vector = None  # iKT2/iKT3 don't have per-skill vectors
             else:
                 # GainAKT4/iKT: Per-skill mastery vectors
                 # Check if mastery head is active (skill_vector will be None when λ=1.0)
@@ -423,10 +497,10 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
                     # L1 (BCE Loss) inputs:
                     # - Prediction: bce_predictions[student_idx, time_step]
                     # - Target: labels_np[student_idx, time_step]
-                    # - Logit: logits[student_idx, time_step] (pre-sigmoid)
+                    # - Logit: logits[student_idx, time_step] (pre-sigmoid) - only for iKT2
                     bce_prediction = float(bce_predictions[student_idx, time_step])
                     bce_target = int(labels_np[student_idx, time_step])
-                    bce_logit = float(logits[student_idx, time_step])
+                    bce_logit = float(logits[student_idx, time_step]) if logits is not None else None
                     
                     # For single-skill: question_id corresponds to skill_id
                     skill_id = question_id  # Simplified for single-skill case
@@ -435,12 +509,12 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
                         continue  # Skip invalid skill IDs
                     
                     # Model-specific mastery extraction
-                    if model_name == 'ikt2':
-                        # iKT2: Per-interaction IRT mastery
+                    if model_name in ['ikt2', 'ikt3']:
+                        # iKT2/iKT3: Per-interaction IRT mastery
                         mi_value = float(mastery_irt[student_idx, time_step])  # M_IRT = σ(θ - β)
                         theta_value = float(theta_t[student_idx, time_step])  # Student ability
                         beta_value = float(beta_k[student_idx, time_step])  # Skill difficulty
-                        m_rasch_value = None  # iKT2 doesn't use static Rasch targets
+                        m_rasch_value = None  # iKT2/iKT3 don't use static Rasch targets
                         mi_prev = None
                         if time_step > 0:
                             for prev_t in range(time_step - 1, -1, -1):
@@ -495,8 +569,8 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
                         'batch_idx': batch_idx
                     }
                     
-                    # Add iKT2-specific fields
-                    if model_name == 'ikt2':
+                    # Add iKT2/iKT3-specific fields
+                    if model_name in ['ikt2', 'ikt3']:
                         data_entry['theta'] = theta_value  # Student ability
                         data_entry['beta'] = beta_value  # Skill difficulty
                     
@@ -602,7 +676,7 @@ def save_mastery_states_csv(mastery_data, output_path):
             'skill_id': skill_id,
             'response': response,
             # L1 inputs
-            'bce_logit': f'{bce_logit:.6f}',
+            'bce_logit': f'{bce_logit:.6f}' if bce_logit is not None else '',
             'bce_prediction': f'{bce_prediction:.6f}',
             'bce_target': bce_target,
             # L2 inputs
@@ -667,7 +741,7 @@ def main():
     
     # Load model and config
     print("\n📊 Loading model and configuration...")
-    model, config, data_config, device, num_concepts = load_model_and_config(
+    model, config, data_config, device, num_concepts, model_name = load_model_and_config(
         args.run_dir, args.ckpt_name
     )
     print(f"✓ Model loaded successfully")
@@ -703,7 +777,7 @@ def main():
     # Extract mastery states
     # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
-    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, config,
+    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, config, model_name,
                                           max_students=args.num_students)    # Check if mastery data is available
     if not mastery_data:
         print("\n" + "="*80)

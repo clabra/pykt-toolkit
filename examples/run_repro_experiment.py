@@ -109,7 +109,7 @@ def generate_experiment_id():
     """Generate a unique 6-digit experiment ID."""
     return str(random.randint(100000, 999999))
 
-def find_experiment_folder(experiment_id, base_dir="experiments"):
+def find_experiment_folder(experiment_id, base_dir):
     """Find experiment folder containing the given experiment ID."""
     base_path = Path(base_dir)
     if not base_path.exists():
@@ -127,7 +127,7 @@ def find_experiment_folder(experiment_id, base_dir="experiments"):
     # If only repro folders found, return the first one
     return candidates[0] if candidates else None
 
-def create_experiment_folder(model_name, short_title, experiment_id, is_repro=False):
+def create_experiment_folder(model_name, short_title, experiment_id, experiments_dir, is_repro=False):
     """Create experiment folder with naming convention: YYYYMMDD_HHMMSS_modelname_title_XXXXXX[_repro]"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -135,14 +135,14 @@ def create_experiment_folder(model_name, short_title, experiment_id, is_repro=Fa
     if is_repro:
         folder_name += "_repro"
     
-    folder_path = Path("experiments") / folder_name
+    folder_path = Path(experiments_dir) / folder_name
     folder_path.mkdir(parents=True, exist_ok=False)
     
     return folder_path
 
-def load_config_from_experiment(experiment_id):
+def load_config_from_experiment(experiment_id, experiments_dir):
     """Load config.json from existing experiment folder."""
-    folder = find_experiment_folder(experiment_id)
+    folder = find_experiment_folder(experiment_id, experiments_dir)
     if folder is None:
         raise FileNotFoundError(f"No experiment folder found containing ID: {experiment_id}")
     
@@ -203,7 +203,7 @@ def build_explicit_train_command(train_script, params):
     cmd_parts = [python_path, train_script]
     
     # Launcher-only parameters (not passed to training script)
-    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
+    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title', 'experiments_dir'}
     
     # Add all parameters explicitly (exclude launcher-only params)
     for key, value in sorted(params.items()):
@@ -291,14 +291,14 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     # Model-specific checkpoint handling
     model = params.get('model', 'gainakt2exp')
     
-    if model == 'ikt2':
-        # ikt2 eval script uses --checkpoint with full path
-        checkpoint_path = f"{experiment_folder}/model_best.pth"
+    if model in ['ikt2', 'ikt3']:
+        # ikt2/ikt3 eval scripts use --checkpoint with full path
+        checkpoint_path = f"{experiment_folder}/best_model.pt" if model == 'ikt3' else f"{experiment_folder}/model_best.pth"
         cmd_parts.append(f"--checkpoint {checkpoint_path}")
         # ensure results are written to the experiment folder
         cmd_parts.append(f"--output_dir {experiment_folder}")
         
-        # ikt2 eval script only needs minimal parameters
+        # ikt2/ikt3 eval scripts only need minimal parameters
         core_eval_params = ['dataset', 'fold', 'batch_size', 'seq_len']
         model_eval_params = []
     else:
@@ -537,7 +537,7 @@ def main():
         print(f"Searching for experiment ID: {args.repro_experiment_id}")
         
         # Load original config unchanged
-        config, original_folder = load_config_from_experiment(args.repro_experiment_id)
+        config, original_folder = load_config_from_experiment(args.repro_experiment_id, defaults['defaults']['experiments_dir'])
         print(f"✓ Found original experiment: {original_folder.name}")
         print("✓ Loaded config.json")
         
@@ -580,6 +580,7 @@ def main():
             model_name=model_name,
             short_title=repro_short_title,
             experiment_id=args.repro_experiment_id,
+            experiments_dir=defaults['experiments_dir'],
             is_repro=True
         )
         print(f"✓ Created reproduction folder: {repro_folder.name}")
@@ -686,6 +687,7 @@ def main():
             model_name=model_name,
             short_title=short_title,
             experiment_id=experiment_id,
+            experiments_dir=defaults['defaults']['experiments_dir'],
             is_repro=False
         )
         print(f"✓ Created experiment folder: {experiment_folder.name}")
@@ -861,8 +863,8 @@ def main():
             print(f"  {train_command}")
             return
         
-        # Launch training (automatic two-phase for iKT/iKT2 if phase=None)
-        if model_name in ['ikt', 'ikt2'] and training_params.get('phase') is None:
+        # Launch training (automatic two-phase for iKT/iKT2/iKT3 if phase=None)
+        if model_name in ['ikt', 'ikt2', 'ikt3'] and training_params.get('phase') is None:
             print("\n" + "=" * 80)
             print(f"AUTOMATIC TWO-PHASE TRAINING ({model_name.upper()})")
             print("=" * 80)
@@ -880,15 +882,31 @@ def main():
             print("✓ TRAINING COMPLETED SUCCESSFULLY")
             print("=" * 80)
             print(f"\nResults saved to: {experiment_folder}")
-            print("\nNote: Evaluation is automatically launched by the training script")
             
-            # Auto-launch mastery states extraction for iKT/iKT2 models
-            if model_name in ['ikt', 'ikt2']:
+            # Auto-launch evaluation for all iKT models
+            if model_name in ['ikt', 'ikt2', 'ikt3']:
+                print("\n" + "=" * 80)
+                print(f"LAUNCHING TEST EVALUATION ({model_name.upper()})")
+                print("=" * 80)
+                print(f"\nEvaluating best model on test set...")
+                
+                eval_result = subprocess.run(eval_command_explicit, shell=True)
+                
+                if eval_result.returncode == 0:
+                    print("\n✓ Test evaluation completed")
+                    print(f"  Output file: {experiment_folder}/metrics_test.csv")
+                else:
+                    print("\n⚠️  Test evaluation failed")
+            
+            # Auto-launch mastery states extraction for iKT/iKT2/iKT3 models
+            if model_name in ['ikt', 'ikt2', 'ikt3']:
                     print("\n" + "=" * 80)
                     print(f"LAUNCHING MASTERY STATES EXTRACTION ({model_name.upper()})")
                     print("=" * 80)
                     if model_name == 'ikt':
                         print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
+                    elif model_name == 'ikt3':
+                        print("\nExtracting IRT mastery states (θ, β, M_IRT) for interpretability analysis...")
                     else:
                         print("\nExtracting IRT mastery states (θ, β, M_IRT) for interpretability analysis...")
                     

@@ -177,7 +177,6 @@ graph TD
     subgraph "Input Layer"
         Input_q[["Input Questions q<br/>[B, L]"]]
         Input_r[["Input Responses r<br/>[B, L]"]]
-        Ground_Truth_r[["Ground Truth Responses<br/>[B, L]"]]
         Beta_IRT[["Pre-computed IRT Difficulties β_IRT<br/>[num_skills] (fixed)"]]
         P_ref[["Pre-computed IRT Predictions p_ref<br/>[B, L] (from reference model)"]]
     end
@@ -240,9 +239,9 @@ graph TD
     end
     
     subgraph "Loss Components"
-        L_per["L_per: Performance Loss<br/>MSE(r_true, r_pred)<br/>Measures prediction accuracy"]
+        L_per["L_per: Performance Loss<br/>BCE(m_pred, r_true)<br/>Measures prediction accuracy"]
         
-        L_ali["L_ali: Alignment Loss<br/>MSE(p_ref, m_pred)<br/>Measures IRT alignment"]
+        L_ali["L_ali: Alignment Loss<br/>BCE(m_pred, p_ref)<br/>Measures IRT alignment"]
     end
     
     subgraph "Optimization"
@@ -289,8 +288,8 @@ graph TD
     MasteryPred --> ResponsePred --> RPred
     
     %% Loss computation
-    RPred --> L_per
-    Ground_Truth_r --> L_per
+    MasteryPred --> L_per
+    Input_r --> L_per
     
     MasteryPred --> L_ali
     P_ref --> L_ali
@@ -328,7 +327,7 @@ graph TD
     classDef head_style fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
     classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
     
-    class Input_q,Input_r,Ground_Truth_r,Beta_IRT,P_ref input_style
+    class Input_q,Input_r,Beta_IRT,P_ref input_style
     class Tokens,Context_Emb,Pos_Emb,Context_Seq emb_style
     class H_Input,H_Q_Proj,H_K_Proj,H_V_Proj,H_Attn,H_Weighted,H_Concat,H_Out_Proj,H_Residual attn_style
     class FFN,FFN_Res attn_style

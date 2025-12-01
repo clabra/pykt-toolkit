@@ -322,7 +322,7 @@ class ParameterAuditor:
                 train_content = f.read()
             
             # Launcher-only parameters that should NOT have argparse entries
-            launcher_only = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
+            launcher_only = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title', 'experiments_dir'}
             
             # Extract all add_argument calls with parameter names
             arg_pattern = r"parser\.add_argument\(\s*['\"]--(\w+)['\"]"
@@ -514,7 +514,7 @@ class ParameterAuditor:
                 launcher_content = f.read()
             
             # Expected launcher-only parameters (should be excluded from training command)
-            expected_excluded = {'model', 'train_script', 'eval_script', 'max_correlation_students'}
+            expected_excluded = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'experiments_dir'}
             
             # Find the parameter filtering logic
             # Look for the pattern where parameters are excluded or filtered

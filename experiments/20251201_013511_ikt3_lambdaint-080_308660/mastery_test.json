@@ -1,0 +1,3882 @@
+{
+  "total_observations": 1421,
+  "num_concepts": 100,
+  "skills_observed": 70,
+  "skill_statistics": {
+    "32": {
+      "count": 21,
+      "mean": 0.7512964208920797,
+      "std": 0.052338485688922506,
+      "min": 0.6373687982559204,
+      "max": 0.8218440413475037,
+      "median": 0.7649317383766174,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.8075302243232727,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.8218440413475037,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.7851760983467102,
+          "count": 1
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.6942855715751648,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7598127722740173,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7531512379646301,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.749955952167511,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.802700400352478,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.8141286373138428,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.772029459476471,
+          "count": 1
+        }
+      ]
+    },
+    "14": {
+      "count": 17,
+      "mean": 0.7187660126125112,
+      "std": 0.10421470862571112,
+      "min": 0.5541349053382874,
+      "max": 0.8946186304092407,
+      "median": 0.7114772200584412,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.8756288290023804,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.8946186304092407,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7414562106132507,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.8511170744895935,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.6526651978492737,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.5541349053382874,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.6360405683517456,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.7841268181800842,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.5959783792495728,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.7107930779457092,
+          "count": 1
+        }
+      ]
+    },
+    "74": {
+      "count": 22,
+      "mean": 0.692438082261519,
+      "std": 0.13638675878070347,
+      "min": 0.34860095381736755,
+      "max": 0.8678788542747498,
+      "median": 0.7299542427062988,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.7896676659584045,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.6553689241409302,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.8325579762458801,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.6799922585487366,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.7236694991588593,
+          "count": 2
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.7685973048210144,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.6298466920852661,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.634303867816925,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.7511477470397949,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.7498988509178162,
+          "count": 1
+        }
+      ]
+    },
+    "84": {
+      "count": 9,
+      "mean": 0.6225891179508634,
+      "std": 0.1333770923783675,
+      "min": 0.33523547649383545,
+      "max": 0.7449901103973389,
+      "median": 0.7005924582481384,
+      "progression_sample": [
+        {
+          "time_step": 9,
+          "mean_mastery": 0.7448102831840515,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.7005924582481384,
+          "count": 1
+        },
+        {
+          "time_step": 90,
+          "mean_mastery": 0.5298370122909546,
+          "count": 1
+        },
+        {
+          "time_step": 91,
+          "mean_mastery": 0.5953248143196106,
+          "count": 1
+        },
+        {
+          "time_step": 127,
+          "mean_mastery": 0.7359663248062134,
+          "count": 1
+        },
+        {
+          "time_step": 128,
+          "mean_mastery": 0.5110159516334534,
+          "count": 1
+        },
+        {
+          "time_step": 129,
+          "mean_mastery": 0.7449901103973389,
+          "count": 1
+        },
+        {
+          "time_step": 130,
+          "mean_mastery": 0.7055296301841736,
+          "count": 1
+        },
+        {
+          "time_step": 131,
+          "mean_mastery": 0.33523547649383545,
+          "count": 1
+        }
+      ]
+    },
+    "94": {
+      "count": 6,
+      "mean": 0.7938094337781271,
+      "std": 0.02694397710046688,
+      "min": 0.7494926452636719,
+      "max": 0.836130678653717,
+      "median": 0.7980619966983795,
+      "progression_sample": [
+        {
+          "time_step": 12,
+          "mean_mastery": 0.7494926452636719,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.8062109351158142,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.7748983502388,
+          "count": 1
+        },
+        {
+          "time_step": 75,
+          "mean_mastery": 0.7929041385650635,
+          "count": 1
+        },
+        {
+          "time_step": 76,
+          "mean_mastery": 0.8032198548316956,
+          "count": 1
+        },
+        {
+          "time_step": 77,
+          "mean_mastery": 0.836130678653717,
+          "count": 1
+        }
+      ]
+    },
+    "86": {
+      "count": 16,
+      "mean": 0.6183187011629343,
+      "std": 0.1579183174302647,
+      "min": 0.3274160921573639,
+      "max": 0.8409597277641296,
+      "median": 0.7087419927120209,
+      "progression_sample": [
+        {
+          "time_step": 25,
+          "mean_mastery": 0.5060742497444153,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.4797339141368866,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.4854140281677246,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.48697251081466675,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.8409597277641296,
+          "count": 1
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.6965900659561157,
+          "count": 1
+        },
+        {
+          "time_step": 46,
+          "mean_mastery": 0.720893919467926,
+          "count": 1
+        },
+        {
+          "time_step": 56,
+          "mean_mastery": 0.7263038158416748,
+          "count": 1
+        },
+        {
+          "time_step": 57,
+          "mean_mastery": 0.7596372961997986,
+          "count": 1
+        },
+        {
+          "time_step": 58,
+          "mean_mastery": 0.5140748620033264,
+          "count": 1
+        }
+      ]
+    },
+    "58": {
+      "count": 8,
+      "mean": 0.5577478818595409,
+      "std": 0.15272201773192698,
+      "min": 0.3019469678401947,
+      "max": 0.7496795058250427,
+      "median": 0.5960353910923004,
+      "progression_sample": [
+        {
+          "time_step": 26,
+          "mean_mastery": 0.544960618019104,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.6471101641654968,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.7496795058250427,
+          "count": 1
+        },
+        {
+          "time_step": 29,
+          "mean_mastery": 0.39723172783851624,
+          "count": 1
+        },
+        {
+          "time_step": 140,
+          "mean_mastery": 0.43763604760169983,
+          "count": 1
+        },
+        {
+          "time_step": 141,
+          "mean_mastery": 0.6850880980491638,
+          "count": 1
+        },
+        {
+          "time_step": 142,
+          "mean_mastery": 0.6983299255371094,
+          "count": 1
+        },
+        {
+          "time_step": 143,
+          "mean_mastery": 0.3019469678401947,
+          "count": 1
+        }
+      ]
+    },
+    "87": {
+      "count": 16,
+      "mean": 0.7178358882665634,
+      "std": 0.12373756467923717,
+      "min": 0.540056586265564,
+      "max": 0.9461464285850525,
+      "median": 0.7559997737407684,
+      "progression_sample": [
+        {
+          "time_step": 30,
+          "mean_mastery": 0.7613878846168518,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.8336344361305237,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.6680333018302917,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.585595428943634,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.7670965194702148,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.7683810591697693,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.5734245181083679,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.5746025443077087,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.9461464285850525,
+          "count": 1
+        },
+        {
+          "time_step": 48,
+          "mean_mastery": 0.5473338961601257,
+          "count": 1
+        }
+      ]
+    },
+    "83": {
+      "count": 12,
+      "mean": 0.7748738576968511,
+      "std": 0.12298168248748614,
+      "min": 0.414000928401947,
+      "max": 0.8799060583114624,
+      "median": 0.8134686052799225,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.8318068981170654,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.8755661249160767,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.7625520825386047,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.8295916318893433,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.8448306918144226,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.8430298566818237,
+          "count": 1
+        },
+        {
+          "time_step": 84,
+          "mean_mastery": 0.7973455786705017,
+          "count": 1
+        },
+        {
+          "time_step": 85,
+          "mean_mastery": 0.7847462892532349,
+          "count": 1
+        },
+        {
+          "time_step": 86,
+          "mean_mastery": 0.6584187746047974,
+          "count": 1
+        },
+        {
+          "time_step": 129,
+          "mean_mastery": 0.8799060583114624,
+          "count": 1
+        }
+      ]
+    },
+    "3": {
+      "count": 13,
+      "mean": 0.6800793558359146,
+      "std": 0.20418302987864365,
+      "min": 0.18575836718082428,
+      "max": 0.8027673959732056,
+      "median": 0.762826681137085,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.7988214492797852,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7840806245803833,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.752626895904541,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.18575836718082428,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.8027673959732056,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.7694287300109863,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.7729469537734985,
+          "count": 1
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.7997731566429138,
+          "count": 1
+        },
+        {
+          "time_step": 46,
+          "mean_mastery": 0.7486705780029297,
+          "count": 1
+        },
+        {
+          "time_step": 47,
+          "mean_mastery": 0.22545963525772095,
+          "count": 1
+        }
+      ]
+    },
+    "76": {
+      "count": 40,
+      "mean": 0.8238951951265335,
+      "std": 0.08426884273642132,
+      "min": 0.6622193455696106,
+      "max": 0.9856873154640198,
+      "median": 0.8301404714584351,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.7225686311721802,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.7252333760261536,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.9388375282287598,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.8330457210540771,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.8157393336296082,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.7453956007957458,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.7761178612709045,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.7576434016227722,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.9648312926292419,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.7936234474182129,
+          "count": 1
+        }
+      ]
+    },
+    "50": {
+      "count": 13,
+      "mean": 0.6847477555274963,
+      "std": 0.17518082826660877,
+      "min": 0.4474077522754669,
+      "max": 0.9367614388465881,
+      "median": 0.7337949872016907,
+      "progression_sample": [
+        {
+          "time_step": 68,
+          "mean_mastery": 0.4474077522754669,
+          "count": 1
+        },
+        {
+          "time_step": 69,
+          "mean_mastery": 0.49677252769470215,
+          "count": 1
+        },
+        {
+          "time_step": 70,
+          "mean_mastery": 0.5425844788551331,
+          "count": 1
+        },
+        {
+          "time_step": 71,
+          "mean_mastery": 0.49280259013175964,
+          "count": 1
+        },
+        {
+          "time_step": 72,
+          "mean_mastery": 0.8552592992782593,
+          "count": 1
+        },
+        {
+          "time_step": 98,
+          "mean_mastery": 0.5508010387420654,
+          "count": 1
+        },
+        {
+          "time_step": 103,
+          "mean_mastery": 0.5224725604057312,
+          "count": 1
+        },
+        {
+          "time_step": 104,
+          "mean_mastery": 0.7576161623001099,
+          "count": 1
+        },
+        {
+          "time_step": 105,
+          "mean_mastery": 0.9086077213287354,
+          "count": 1
+        },
+        {
+          "time_step": 132,
+          "mean_mastery": 0.91285240650177,
+          "count": 1
+        }
+      ]
+    },
+    "71": {
+      "count": 9,
+      "mean": 0.5534497367011176,
+      "std": 0.05925473951042996,
+      "min": 0.4831652045249939,
+      "max": 0.689690113067627,
+      "median": 0.5554900169372559,
+      "progression_sample": [
+        {
+          "time_step": 23,
+          "mean_mastery": 0.4838261008262634,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.4831652045249939,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.5662229061126709,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.5554900169372559,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.5651208162307739,
+          "count": 1
+        },
+        {
+          "time_step": 73,
+          "mean_mastery": 0.5887747406959534,
+          "count": 1
+        },
+        {
+          "time_step": 74,
+          "mean_mastery": 0.5221773386001587,
+          "count": 1
+        },
+        {
+          "time_step": 106,
+          "mean_mastery": 0.689690113067627,
+          "count": 1
+        },
+        {
+          "time_step": 107,
+          "mean_mastery": 0.5265803933143616,
+          "count": 1
+        }
+      ]
+    },
+    "1": {
+      "count": 4,
+      "mean": 0.7156566381454468,
+      "std": 0.06245964126695083,
+      "min": 0.6220603585243225,
+      "max": 0.7813411355018616,
+      "median": 0.7296125292778015,
+      "progression_sample": [
+        {
+          "time_step": 83,
+          "mean_mastery": 0.6968972682952881,
+          "count": 1
+        },
+        {
+          "time_step": 119,
+          "mean_mastery": 0.7623277902603149,
+          "count": 1
+        },
+        {
+          "time_step": 120,
+          "mean_mastery": 0.7813411355018616,
+          "count": 1
+        },
+        {
+          "time_step": 121,
+          "mean_mastery": 0.6220603585243225,
+          "count": 1
+        }
+      ]
+    },
+    "81": {
+      "count": 11,
+      "mean": 0.807052883234891,
+      "std": 0.05369936005691578,
+      "min": 0.6900485157966614,
+      "max": 0.8695046901702881,
+      "median": 0.8049384951591492,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.7888349294662476,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.8049384951591492,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.6900485157966614,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.8695046901702881,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.7960665822029114,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.8673205375671387,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.8622844219207764,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.8430356979370117,
+          "count": 1
+        },
+        {
+          "time_step": 93,
+          "mean_mastery": 0.8353320956230164,
+          "count": 1
+        },
+        {
+          "time_step": 138,
+          "mean_mastery": 0.7757229804992676,
+          "count": 1
+        }
+      ]
+    },
+    "52": {
+      "count": 19,
+      "mean": 0.5292699352691048,
+      "std": 0.09116924246117483,
+      "min": 0.2556054890155792,
+      "max": 0.6769722700119019,
+      "median": 0.5212228298187256,
+      "progression_sample": [
+        {
+          "time_step": 13,
+          "mean_mastery": 0.5699440240859985,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.5296589136123657,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.5460659265518188,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.5148740410804749,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.4834177494049072,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.48016592860221863,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.4680576026439667,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.539642333984375,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.45302706956863403,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.5212228298187256,
+          "count": 1
+        }
+      ]
+    },
+    "8": {
+      "count": 30,
+      "mean": 0.8650816977024078,
+      "std": 0.07907971699562703,
+      "min": 0.5802998542785645,
+      "max": 0.9537023901939392,
+      "median": 0.8895629346370697,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.792945384979248,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7998830080032349,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7479819655418396,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.7335518002510071,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.8108989000320435,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.7707865238189697,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.5802998542785645,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.9310819506645203,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.9199516773223877,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.9537023901939392,
+          "count": 1
+        }
+      ]
+    },
+    "7": {
+      "count": 21,
+      "mean": 0.8648618516467866,
+      "std": 0.12026723217414614,
+      "min": 0.3584858775138855,
+      "max": 0.9387807846069336,
+      "median": 0.8984377384185791,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.9128761887550354,
+          "count": 3
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.9387807846069336,
+          "count": 3
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.8426045477390289,
+          "count": 2
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.893793523311615,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.915134608745575,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.8984377384185791,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.867255687713623,
+          "count": 1
+        },
+        {
+          "time_step": 87,
+          "mean_mastery": 0.9238288402557373,
+          "count": 1
+        },
+        {
+          "time_step": 88,
+          "mean_mastery": 0.9079453349113464,
+          "count": 1
+        },
+        {
+          "time_step": 89,
+          "mean_mastery": 0.8455332517623901,
+          "count": 1
+        }
+      ]
+    },
+    "12": {
+      "count": 36,
+      "mean": 0.6687734801736143,
+      "std": 0.1712830734928317,
+      "min": 0.23128952085971832,
+      "max": 0.8229594230651855,
+      "median": 0.7279943525791168,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.8229594230651855,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.816481351852417,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.4761069715023041,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.8059236407279968,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.8070105910301208,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.6297094225883484,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.6164506673812866,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.7138770818710327,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.7125450372695923,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.6963438391685486,
+          "count": 1
+        }
+      ]
+    },
+    "11": {
+      "count": 49,
+      "mean": 0.8138356147980204,
+      "std": 0.08206231263461983,
+      "min": 0.5070109963417053,
+      "max": 0.9645088315010071,
+      "median": 0.8028956651687622,
+      "progression_sample": [
+        {
+          "time_step": 6,
+          "mean_mastery": 0.8338192701339722,
+          "count": 2
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.8004940748214722,
+          "count": 2
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.8811218738555908,
+          "count": 2
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.8120453357696533,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.9160193800926208,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.7818312048912048,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.7419423460960388,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.6700629591941833,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.8925137519836426,
+          "count": 1
+        },
+        {
+          "time_step": 71,
+          "mean_mastery": 0.8010777831077576,
+          "count": 1
+        }
+      ]
+    },
+    "9": {
+      "count": 31,
+      "mean": 0.8309446866473844,
+      "std": 0.14030057330480175,
+      "min": 0.23861826956272125,
+      "max": 0.9492083787918091,
+      "median": 0.8690117597579956,
+      "progression_sample": [
+        {
+          "time_step": 9,
+          "mean_mastery": 0.9492083787918091,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.8953078985214233,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.9016198515892029,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.9345235824584961,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.9321257472038269,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.8636011481285095,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.8690117597579956,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.8036160469055176,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.5530474185943604,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.8806728720664978,
+          "count": 1
+        }
+      ]
+    },
+    "77": {
+      "count": 15,
+      "mean": 0.8025814334551493,
+      "std": 0.16618952914950982,
+      "min": 0.28226983547210693,
+      "max": 0.9213453531265259,
+      "median": 0.8732112050056458,
+      "progression_sample": [
+        {
+          "time_step": 12,
+          "mean_mastery": 0.9213453531265259,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.9102368354797363,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.8812462091445923,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.8882055282592773,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.8732112050056458,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.8573548197746277,
+          "count": 1
+        },
+        {
+          "time_step": 51,
+          "mean_mastery": 0.8149115443229675,
+          "count": 1
+        },
+        {
+          "time_step": 52,
+          "mean_mastery": 0.804520845413208,
+          "count": 1
+        },
+        {
+          "time_step": 53,
+          "mean_mastery": 0.5428009033203125,
+          "count": 1
+        },
+        {
+          "time_step": 81,
+          "mean_mastery": 0.8942006230354309,
+          "count": 1
+        }
+      ]
+    },
+    "57": {
+      "count": 24,
+      "mean": 0.5923491045832634,
+      "std": 0.1331296422842859,
+      "min": 0.32756131887435913,
+      "max": 0.8136276602745056,
+      "median": 0.6263900995254517,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.6663236021995544,
+          "count": 2
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.5596473515033722,
+          "count": 2
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.5819359421730042,
+          "count": 2
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.5643464922904968,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.43140682578086853,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.4710240066051483,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.4938335418701172,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.4514642357826233,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.8136276602745056,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.8045116066932678,
+          "count": 1
+        }
+      ]
+    },
+    "61": {
+      "count": 19,
+      "mean": 0.7363541188992953,
+      "std": 0.10693362605672081,
+      "min": 0.4530465006828308,
+      "max": 0.8642362356185913,
+      "median": 0.7844641804695129,
+      "progression_sample": [
+        {
+          "time_step": 8,
+          "mean_mastery": 0.4530465006828308,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.6885379552841187,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.6965954899787903,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.5720865726470947,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.6646323204040527,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.6519408822059631,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.6080517172813416,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.8321995139122009,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.8228898048400879,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.7980828881263733,
+          "count": 1
+        }
+      ]
+    },
+    "2": {
+      "count": 30,
+      "mean": 0.565657626092434,
+      "std": 0.1613404853209581,
+      "min": 0.12695473432540894,
+      "max": 0.8258923292160034,
+      "median": 0.5872152149677277,
+      "progression_sample": [
+        {
+          "time_step": 21,
+          "mean_mastery": 0.7558460831642151,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.7384809851646423,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.7255655527114868,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.17228560149669647,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.7183221578598022,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.6031638979911804,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.6754998564720154,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.6982274651527405,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.8258923292160034,
+          "count": 1
+        },
+        {
+          "time_step": 67,
+          "mean_mastery": 0.627460241317749,
+          "count": 1
+        }
+      ]
+    },
+    "79": {
+      "count": 17,
+      "mean": 0.8743948340415955,
+      "std": 0.033082122320981434,
+      "min": 0.7959844470024109,
+      "max": 0.9352928400039673,
+      "median": 0.8667231798171997,
+      "progression_sample": [
+        {
+          "time_step": 14,
+          "mean_mastery": 0.8615452647209167,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.7959844470024109,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.8805652260780334,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.8257869482040405,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.8907317519187927,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.8497613668441772,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.8623335957527161,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.9024868607521057,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.9018323421478271,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.8985706567764282,
+          "count": 1
+        }
+      ]
+    },
+    "78": {
+      "count": 19,
+      "mean": 0.9100507309562281,
+      "std": 0.04040445479160118,
+      "min": 0.8122507929801941,
+      "max": 0.9593014717102051,
+      "median": 0.9234794974327087,
+      "progression_sample": [
+        {
+          "time_step": 19,
+          "mean_mastery": 0.8593980073928833,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.9309406876564026,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.8885377049446106,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.8122507929801941,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.8687252998352051,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.8701790571212769,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.9379347562789917,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.9199473261833191,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.9340872764587402,
+          "count": 1
+        },
+        {
+          "time_step": 29,
+          "mean_mastery": 0.9593014717102051,
+          "count": 1
+        }
+      ]
+    },
+    "62": {
+      "count": 28,
+      "mean": 0.7927140050700733,
+      "std": 0.09813153346653572,
+      "min": 0.4883194863796234,
+      "max": 0.906683623790741,
+      "median": 0.811433345079422,
+      "progression_sample": [
+        {
+          "time_step": 26,
+          "mean_mastery": 0.7365210354328156,
+          "count": 2
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.8534965515136719,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.7824892401695251,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.8889286518096924,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.893413782119751,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.8593993186950684,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.6858593672513962,
+          "count": 2
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.8406668305397034,
+          "count": 2
+        },
+        {
+          "time_step": 46,
+          "mean_mastery": 0.6919141113758087,
+          "count": 2
+        },
+        {
+          "time_step": 47,
+          "mean_mastery": 0.8493916988372803,
+          "count": 1
+        }
+      ]
+    },
+    "63": {
+      "count": 20,
+      "mean": 0.7651975765824318,
+      "std": 0.15457785197806873,
+      "min": 0.39919131994247437,
+      "max": 0.9108886122703552,
+      "median": 0.8372693955898285,
+      "progression_sample": [
+        {
+          "time_step": 33,
+          "mean_mastery": 0.8851275444030762,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.8835994601249695,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.5938722491264343,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.8382002711296082,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.8428137600421906,
+          "count": 2
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.6781176328659058,
+          "count": 2
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.8158072233200073,
+          "count": 1
+        },
+        {
+          "time_step": 50,
+          "mean_mastery": 0.6561409831047058,
+          "count": 1
+        },
+        {
+          "time_step": 51,
+          "mean_mastery": 0.7469200491905212,
+          "count": 1
+        },
+        {
+          "time_step": 52,
+          "mean_mastery": 0.8463639616966248,
+          "count": 1
+        }
+      ]
+    },
+    "33": {
+      "count": 79,
+      "mean": 0.6765350299545482,
+      "std": 0.09948750089879793,
+      "min": 0.4479342997074127,
+      "max": 0.950367271900177,
+      "median": 0.7055661082267761,
+      "progression_sample": [
+        {
+          "time_step": 7,
+          "mean_mastery": 0.6746941804885864,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.5185777544975281,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.6779769062995911,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.5530157685279846,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.5555198192596436,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.609494686126709,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.492205947637558,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.6426236629486084,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.5176000595092773,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.6499151587486267,
+          "count": 1
+        }
+      ]
+    },
+    "5": {
+      "count": 63,
+      "mean": 0.6379655107619271,
+      "std": 0.158124824779287,
+      "min": 0.30994749069213867,
+      "max": 0.9251910448074341,
+      "median": 0.6822449564933777,
+      "progression_sample": [
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7610834240913391,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.8332511186599731,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.4076390862464905,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.6822449564933777,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.36103555560112,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.7456799149513245,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.524979293346405,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.5270411968231201,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.786718487739563,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.4624933898448944,
+          "count": 1
+        }
+      ]
+    },
+    "28": {
+      "count": 24,
+      "mean": 0.6773183879752954,
+      "std": 0.10295688124458599,
+      "min": 0.47676387429237366,
+      "max": 0.9699084162712097,
+      "median": 0.6844010055065155,
+      "progression_sample": [
+        {
+          "time_step": 37,
+          "mean_mastery": 0.5721724033355713,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.6342737674713135,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.6757974624633789,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.9699084162712097,
+          "count": 1
+        },
+        {
+          "time_step": 53,
+          "mean_mastery": 0.7076561450958252,
+          "count": 1
+        },
+        {
+          "time_step": 54,
+          "mean_mastery": 0.7358097434043884,
+          "count": 1
+        },
+        {
+          "time_step": 55,
+          "mean_mastery": 0.5983327031135559,
+          "count": 1
+        },
+        {
+          "time_step": 56,
+          "mean_mastery": 0.7120364904403687,
+          "count": 1
+        },
+        {
+          "time_step": 57,
+          "mean_mastery": 0.7245782613754272,
+          "count": 1
+        },
+        {
+          "time_step": 58,
+          "mean_mastery": 0.6080269813537598,
+          "count": 1
+        }
+      ]
+    },
+    "29": {
+      "count": 41,
+      "mean": 0.5564032502290679,
+      "std": 0.18333435705506124,
+      "min": 0.24337467551231384,
+      "max": 0.9818605184555054,
+      "median": 0.526066780090332,
+      "progression_sample": [
+        {
+          "time_step": 59,
+          "mean_mastery": 0.7282158136367798,
+          "count": 1
+        },
+        {
+          "time_step": 60,
+          "mean_mastery": 0.5088590979576111,
+          "count": 1
+        },
+        {
+          "time_step": 61,
+          "mean_mastery": 0.5123519897460938,
+          "count": 1
+        },
+        {
+          "time_step": 62,
+          "mean_mastery": 0.8337011337280273,
+          "count": 1
+        },
+        {
+          "time_step": 70,
+          "mean_mastery": 0.8958844542503357,
+          "count": 1
+        },
+        {
+          "time_step": 74,
+          "mean_mastery": 0.4410932958126068,
+          "count": 1
+        },
+        {
+          "time_step": 75,
+          "mean_mastery": 0.42355844378471375,
+          "count": 1
+        },
+        {
+          "time_step": 76,
+          "mean_mastery": 0.4535003900527954,
+          "count": 1
+        },
+        {
+          "time_step": 77,
+          "mean_mastery": 0.37314164638519287,
+          "count": 1
+        },
+        {
+          "time_step": 78,
+          "mean_mastery": 0.5738731622695923,
+          "count": 1
+        }
+      ]
+    },
+    "69": {
+      "count": 67,
+      "mean": 0.5546601952901528,
+      "std": 0.1474044778710527,
+      "min": 0.13277140259742737,
+      "max": 0.8684231638908386,
+      "median": 0.5539380311965942,
+      "progression_sample": [
+        {
+          "time_step": 10,
+          "mean_mastery": 0.6289825439453125,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.6588518619537354,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.49611711502075195,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.4920123517513275,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.7484217882156372,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.5322183966636658,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.5582826137542725,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.6881487369537354,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.68097323179245,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.8684231638908386,
+          "count": 1
+        }
+      ]
+    },
+    "37": {
+      "count": 13,
+      "mean": 0.6981837657781748,
+      "std": 0.18228360585281836,
+      "min": 0.25626030564308167,
+      "max": 0.8821894526481628,
+      "median": 0.7642645835876465,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.33194395899772644,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.717056930065155,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.6379296779632568,
+          "count": 1
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.25626030564308167,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.8821894526481628,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.7861162424087524,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.8328150510787964,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.8232084512710571,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.7642645835876465,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.7275384664535522,
+          "count": 1
+        }
+      ]
+    },
+    "56": {
+      "count": 12,
+      "mean": 0.7959539045890173,
+      "std": 0.09219992874183329,
+      "min": 0.659500002861023,
+      "max": 0.9558063745498657,
+      "median": 0.7895019948482513,
+      "progression_sample": [
+        {
+          "time_step": 14,
+          "mean_mastery": 0.8857933878898621,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.8653255701065063,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.9558063745498657,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.7320403456687927,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.7299637794494629,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.6753273010253906,
+          "count": 1
+        },
+        {
+          "time_step": 69,
+          "mean_mastery": 0.843483567237854,
+          "count": 1
+        },
+        {
+          "time_step": 70,
+          "mean_mastery": 0.8250177502632141,
+          "count": 1
+        },
+        {
+          "time_step": 71,
+          "mean_mastery": 0.9035521745681763,
+          "count": 1
+        },
+        {
+          "time_step": 84,
+          "mean_mastery": 0.7539862394332886,
+          "count": 1
+        }
+      ]
+    },
+    "17": {
+      "count": 19,
+      "mean": 0.7224167804968985,
+      "std": 0.09993394529344338,
+      "min": 0.5874063372612,
+      "max": 0.9547021389007568,
+      "median": 0.6976500153541565,
+      "progression_sample": [
+        {
+          "time_step": 30,
+          "mean_mastery": 0.7166604399681091,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.7786991000175476,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.62213134765625,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.6188594698905945,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.6277540922164917,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.6106712818145752,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.6766457557678223,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.5874063372612,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.7105929255485535,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.6886239647865295,
+          "count": 1
+        }
+      ]
+    },
+    "0": {
+      "count": 6,
+      "mean": 0.8956185281276703,
+      "std": 0.019518026718035247,
+      "min": 0.8701881766319275,
+      "max": 0.9277961850166321,
+      "median": 0.8951330780982971,
+      "progression_sample": [
+        {
+          "time_step": 90,
+          "mean_mastery": 0.9082772731781006,
+          "count": 1
+        },
+        {
+          "time_step": 91,
+          "mean_mastery": 0.9023110270500183,
+          "count": 1
+        },
+        {
+          "time_step": 92,
+          "mean_mastery": 0.9277961850166321,
+          "count": 1
+        },
+        {
+          "time_step": 103,
+          "mean_mastery": 0.8879551291465759,
+          "count": 1
+        },
+        {
+          "time_step": 104,
+          "mean_mastery": 0.8701881766319275,
+          "count": 1
+        },
+        {
+          "time_step": 105,
+          "mean_mastery": 0.8771833777427673,
+          "count": 1
+        }
+      ]
+    },
+    "10": {
+      "count": 36,
+      "mean": 0.8459719402922524,
+      "std": 0.06089598775861985,
+      "min": 0.6528512835502625,
+      "max": 0.9450459480285645,
+      "median": 0.8634893298149109,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.7636848092079163,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7966735363006592,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7608460187911987,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.9027280211448669,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.8386772274971008,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.8847845792770386,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.8617368340492249,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.8655655980110168,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.8890526294708252,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.7976649403572083,
+          "count": 1
+        }
+      ]
+    },
+    "75": {
+      "count": 16,
+      "mean": 0.7908205948770046,
+      "std": 0.07206544753192828,
+      "min": 0.6248698830604553,
+      "max": 0.9112536907196045,
+      "median": 0.8063413500785828,
+      "progression_sample": [
+        {
+          "time_step": 11,
+          "mean_mastery": 0.8452463150024414,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.8433665037155151,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.7868082225322723,
+          "count": 2
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.8505814671516418,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.8739217519760132,
+          "count": 1
+        },
+        {
+          "time_step": 72,
+          "mean_mastery": 0.7486228346824646,
+          "count": 1
+        },
+        {
+          "time_step": 73,
+          "mean_mastery": 0.7439894676208496,
+          "count": 1
+        },
+        {
+          "time_step": 74,
+          "mean_mastery": 0.6248698830604553,
+          "count": 1
+        },
+        {
+          "time_step": 96,
+          "mean_mastery": 0.6838445663452148,
+          "count": 1
+        },
+        {
+          "time_step": 97,
+          "mean_mastery": 0.8457358479499817,
+          "count": 1
+        }
+      ]
+    },
+    "30": {
+      "count": 17,
+      "mean": 0.5939760155537549,
+      "std": 0.13955191461625413,
+      "min": 0.160384863615036,
+      "max": 0.7551973462104797,
+      "median": 0.5967480540275574,
+      "progression_sample": [
+        {
+          "time_step": 18,
+          "mean_mastery": 0.7159406542778015,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.6890039443969727,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.478507399559021,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.5379806160926819,
+          "count": 1
+        },
+        {
+          "time_step": 29,
+          "mean_mastery": 0.5293930768966675,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.5550903677940369,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.5641108155250549,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.5967480540275574,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.5025719404220581,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.5524092316627502,
+          "count": 1
+        }
+      ]
+    },
+    "65": {
+      "count": 18,
+      "mean": 0.5690350780884424,
+      "std": 0.194850963782764,
+      "min": 0.15417100489139557,
+      "max": 0.7996754050254822,
+      "median": 0.6153898239135742,
+      "progression_sample": [
+        {
+          "time_step": 69,
+          "mean_mastery": 0.6287037134170532,
+          "count": 1
+        },
+        {
+          "time_step": 70,
+          "mean_mastery": 0.6630929708480835,
+          "count": 1
+        },
+        {
+          "time_step": 71,
+          "mean_mastery": 0.6020759344100952,
+          "count": 1
+        },
+        {
+          "time_step": 109,
+          "mean_mastery": 0.593695342540741,
+          "count": 1
+        },
+        {
+          "time_step": 110,
+          "mean_mastery": 0.7261214256286621,
+          "count": 1
+        },
+        {
+          "time_step": 111,
+          "mean_mastery": 0.7469093203544617,
+          "count": 1
+        },
+        {
+          "time_step": 112,
+          "mean_mastery": 0.20937396585941315,
+          "count": 1
+        },
+        {
+          "time_step": 121,
+          "mean_mastery": 0.485619455575943,
+          "count": 1
+        },
+        {
+          "time_step": 122,
+          "mean_mastery": 0.20641186833381653,
+          "count": 1
+        },
+        {
+          "time_step": 151,
+          "mean_mastery": 0.7990695238113403,
+          "count": 1
+        }
+      ]
+    },
+    "18": {
+      "count": 25,
+      "mean": 0.6034491097927094,
+      "std": 0.17885782656925323,
+      "min": 0.28622737526893616,
+      "max": 0.9879693984985352,
+      "median": 0.6212403178215027,
+      "progression_sample": [
+        {
+          "time_step": 96,
+          "mean_mastery": 0.7163828015327454,
+          "count": 1
+        },
+        {
+          "time_step": 113,
+          "mean_mastery": 0.7800986170768738,
+          "count": 1
+        },
+        {
+          "time_step": 114,
+          "mean_mastery": 0.7518661022186279,
+          "count": 1
+        },
+        {
+          "time_step": 115,
+          "mean_mastery": 0.9879693984985352,
+          "count": 1
+        },
+        {
+          "time_step": 130,
+          "mean_mastery": 0.31645825505256653,
+          "count": 1
+        },
+        {
+          "time_step": 131,
+          "mean_mastery": 0.3746491074562073,
+          "count": 1
+        },
+        {
+          "time_step": 132,
+          "mean_mastery": 0.414186954498291,
+          "count": 1
+        },
+        {
+          "time_step": 133,
+          "mean_mastery": 0.5977244973182678,
+          "count": 1
+        },
+        {
+          "time_step": 134,
+          "mean_mastery": 0.6625505089759827,
+          "count": 1
+        },
+        {
+          "time_step": 135,
+          "mean_mastery": 0.28622737526893616,
+          "count": 1
+        }
+      ]
+    },
+    "53": {
+      "count": 15,
+      "mean": 0.704118569691976,
+      "std": 0.176136108060641,
+      "min": 0.3277676999568939,
+      "max": 0.8883160352706909,
+      "median": 0.7695115804672241,
+      "progression_sample": [
+        {
+          "time_step": 17,
+          "mean_mastery": 0.8883160352706909,
+          "count": 1
+        },
+        {
+          "time_step": 18,
+          "mean_mastery": 0.8525664210319519,
+          "count": 1
+        },
+        {
+          "time_step": 19,
+          "mean_mastery": 0.5081403255462646,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.8581357002258301,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.8729066252708435,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.7714197635650635,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.7695115804672241,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.7292156219482422,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.3420772850513458,
+          "count": 1
+        },
+        {
+          "time_step": 107,
+          "mean_mastery": 0.7211499214172363,
+          "count": 1
+        }
+      ]
+    },
+    "60": {
+      "count": 58,
+      "mean": 0.564567149456205,
+      "std": 0.1518467128179347,
+      "min": 0.20950455963611603,
+      "max": 0.9065272808074951,
+      "median": 0.530600368976593,
+      "progression_sample": [
+        {
+          "time_step": 19,
+          "mean_mastery": 0.5323454737663269,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.726109504699707,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.6275456845760345,
+          "count": 2
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.6921451091766357,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.6983760595321655,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.525484025478363,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.39712175726890564,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.3833121359348297,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.6527162194252014,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.6682478189468384,
+          "count": 1
+        }
+      ]
+    },
+    "4": {
+      "count": 11,
+      "mean": 0.815002826127139,
+      "std": 0.06629954358693119,
+      "min": 0.71559739112854,
+      "max": 0.9524605870246887,
+      "median": 0.8035988211631775,
+      "progression_sample": [
+        {
+          "time_step": 51,
+          "mean_mastery": 0.7530694603919983,
+          "count": 1
+        },
+        {
+          "time_step": 52,
+          "mean_mastery": 0.71559739112854,
+          "count": 1
+        },
+        {
+          "time_step": 53,
+          "mean_mastery": 0.8035988211631775,
+          "count": 1
+        },
+        {
+          "time_step": 54,
+          "mean_mastery": 0.7973837852478027,
+          "count": 1
+        },
+        {
+          "time_step": 55,
+          "mean_mastery": 0.9193239808082581,
+          "count": 1
+        },
+        {
+          "time_step": 168,
+          "mean_mastery": 0.8439101576805115,
+          "count": 1
+        },
+        {
+          "time_step": 169,
+          "mean_mastery": 0.8075186610221863,
+          "count": 1
+        },
+        {
+          "time_step": 170,
+          "mean_mastery": 0.7623763680458069,
+          "count": 1
+        },
+        {
+          "time_step": 171,
+          "mean_mastery": 0.78829425573349,
+          "count": 1
+        },
+        {
+          "time_step": 172,
+          "mean_mastery": 0.8214976191520691,
+          "count": 1
+        }
+      ]
+    },
+    "51": {
+      "count": 23,
+      "mean": 0.5822682989680249,
+      "std": 0.15364628831082758,
+      "min": 0.2729944586753845,
+      "max": 0.8448840379714966,
+      "median": 0.6302775144577026,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.2729944586753845,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.6680315136909485,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.644666314125061,
+          "count": 1
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.6302775144577026,
+          "count": 1
+        },
+        {
+          "time_step": 69,
+          "mean_mastery": 0.681712806224823,
+          "count": 1
+        },
+        {
+          "time_step": 70,
+          "mean_mastery": 0.5301514267921448,
+          "count": 1
+        },
+        {
+          "time_step": 71,
+          "mean_mastery": 0.6745951771736145,
+          "count": 1
+        },
+        {
+          "time_step": 72,
+          "mean_mastery": 0.7114647030830383,
+          "count": 1
+        },
+        {
+          "time_step": 73,
+          "mean_mastery": 0.8448840379714966,
+          "count": 1
+        },
+        {
+          "time_step": 110,
+          "mean_mastery": 0.374105304479599,
+          "count": 1
+        }
+      ]
+    },
+    "49": {
+      "count": 15,
+      "mean": 0.4689133753379186,
+      "std": 0.1669683712546554,
+      "min": 0.24431094527244568,
+      "max": 0.8263471722602844,
+      "median": 0.4710124731063843,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.2538532316684723,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.24760179221630096,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.2573407292366028,
+          "count": 1
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.3556944578886032,
+          "count": 2
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.553400382399559,
+          "count": 2
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.5119373202323914,
+          "count": 2
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.43324004113674164,
+          "count": 2
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.4710124731063843,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.6167432069778442,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.6522576212882996,
+          "count": 1
+        }
+      ]
+    },
+    "20": {
+      "count": 12,
+      "mean": 0.6838698809345564,
+      "std": 0.16269576019484264,
+      "min": 0.4314233064651489,
+      "max": 0.9258173704147339,
+      "median": 0.706164538860321,
+      "progression_sample": [
+        {
+          "time_step": 6,
+          "mean_mastery": 0.8279678225517273,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.8427929282188416,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.9258173704147339,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.7171103954315186,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.5765465497970581,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.6444149017333984,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.4887685775756836,
+          "count": 1
+        },
+        {
+          "time_step": 29,
+          "mean_mastery": 0.714196503162384,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.6981325745582581,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.8882400989532471,
+          "count": 1
+        }
+      ]
+    },
+    "22": {
+      "count": 6,
+      "mean": 0.7309708644946417,
+      "std": 0.10821483299220441,
+      "min": 0.4954133927822113,
+      "max": 0.8145257234573364,
+      "median": 0.7745424807071686,
+      "progression_sample": [
+        {
+          "time_step": 9,
+          "mean_mastery": 0.4954133927822113,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.7326407432556152,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.7753457427024841,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.773739218711853,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.7941603660583496,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.8145257234573364,
+          "count": 1
+        }
+      ]
+    },
+    "54": {
+      "count": 3,
+      "mean": 0.9037633538246155,
+      "std": 0.03176506947625668,
+      "min": 0.8750655055046082,
+      "max": 0.9480431079864502,
+      "median": 0.8881814479827881,
+      "progression_sample": [
+        {
+          "time_step": 35,
+          "mean_mastery": 0.8881814479827881,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.8750655055046082,
+          "count": 1
+        },
+        {
+          "time_step": 37,
+          "mean_mastery": 0.9480431079864502,
+          "count": 1
+        }
+      ]
+    },
+    "73": {
+      "count": 6,
+      "mean": 0.8032603959242502,
+      "std": 0.01306361771830224,
+      "min": 0.7855662107467651,
+      "max": 0.828199565410614,
+      "median": 0.8009479343891144,
+      "progression_sample": [
+        {
+          "time_step": 44,
+          "mean_mastery": 0.8078287243843079,
+          "count": 1
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.8026309013366699,
+          "count": 1
+        },
+        {
+          "time_step": 47,
+          "mean_mastery": 0.7960720062255859,
+          "count": 1
+        },
+        {
+          "time_step": 48,
+          "mean_mastery": 0.7992649674415588,
+          "count": 1
+        },
+        {
+          "time_step": 49,
+          "mean_mastery": 0.828199565410614,
+          "count": 1
+        },
+        {
+          "time_step": 50,
+          "mean_mastery": 0.7855662107467651,
+          "count": 1
+        }
+      ]
+    },
+    "64": {
+      "count": 36,
+      "mean": 0.6695134788751602,
+      "std": 0.09828165558732965,
+      "min": 0.31003570556640625,
+      "max": 0.7918444275856018,
+      "median": 0.6745309829711914,
+      "progression_sample": [
+        {
+          "time_step": 1,
+          "mean_mastery": 0.45095765590667725,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.7832099795341492,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7918444275856018,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.6973576545715332,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.7719366550445557,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.6650086641311646,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.6611083149909973,
+          "count": 1
+        },
+        {
+          "time_step": 10,
+          "mean_mastery": 0.7071204781532288,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.6494511961936951,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.6192335486412048,
+          "count": 1
+        }
+      ]
+    },
+    "82": {
+      "count": 6,
+      "mean": 0.6446353197097778,
+      "std": 0.0523037140932626,
+      "min": 0.5835094451904297,
+      "max": 0.7298250198364258,
+      "median": 0.6294871866703033,
+      "progression_sample": [
+        {
+          "time_step": 63,
+          "mean_mastery": 0.6375024318695068,
+          "count": 1
+        },
+        {
+          "time_step": 64,
+          "mean_mastery": 0.6214719414710999,
+          "count": 1
+        },
+        {
+          "time_step": 65,
+          "mean_mastery": 0.5835094451904297,
+          "count": 1
+        },
+        {
+          "time_step": 66,
+          "mean_mastery": 0.6968105435371399,
+          "count": 1
+        },
+        {
+          "time_step": 67,
+          "mean_mastery": 0.7298250198364258,
+          "count": 1
+        },
+        {
+          "time_step": 68,
+          "mean_mastery": 0.5986925363540649,
+          "count": 1
+        }
+      ]
+    },
+    "13": {
+      "count": 30,
+      "mean": 0.7512397597233454,
+      "std": 0.12917902472952836,
+      "min": 0.41938158869743347,
+      "max": 0.9371995329856873,
+      "median": 0.7832799851894379,
+      "progression_sample": [
+        {
+          "time_step": 6,
+          "mean_mastery": 0.6456972360610962,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.7342477440834045,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.7334577441215515,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.6600298285484314,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.8866950869560242,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.8877120614051819,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.9371995329856873,
+          "count": 1
+        },
+        {
+          "time_step": 38,
+          "mean_mastery": 0.8883423805236816,
+          "count": 1
+        },
+        {
+          "time_step": 39,
+          "mean_mastery": 0.8735330700874329,
+          "count": 1
+        },
+        {
+          "time_step": 40,
+          "mean_mastery": 0.7007713913917542,
+          "count": 1
+        }
+      ]
+    },
+    "45": {
+      "count": 18,
+      "mean": 0.6970219363768896,
+      "std": 0.14333778600105132,
+      "min": 0.2508958876132965,
+      "max": 0.8306024670600891,
+      "median": 0.7572287023067474,
+      "progression_sample": [
+        {
+          "time_step": 19,
+          "mean_mastery": 0.7627108097076416,
+          "count": 1
+        },
+        {
+          "time_step": 20,
+          "mean_mastery": 0.7603564858436584,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.6147045493125916,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.8306024670600891,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.8227413296699524,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.7541009187698364,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.8025704026222229,
+          "count": 1
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.8299158811569214,
+          "count": 1
+        },
+        {
+          "time_step": 86,
+          "mean_mastery": 0.7865596413612366,
+          "count": 1
+        },
+        {
+          "time_step": 87,
+          "mean_mastery": 0.7836220860481262,
+          "count": 1
+        }
+      ]
+    },
+    "25": {
+      "count": 14,
+      "mean": 0.4691482995237623,
+      "std": 0.13483715374979402,
+      "min": 0.14753320813179016,
+      "max": 0.6489615440368652,
+      "median": 0.4909309893846512,
+      "progression_sample": [
+        {
+          "time_step": 22,
+          "mean_mastery": 0.4943372905254364,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.63916015625,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.6359607577323914,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.37900400161743164,
+          "count": 1
+        },
+        {
+          "time_step": 89,
+          "mean_mastery": 0.2915385961532593,
+          "count": 1
+        },
+        {
+          "time_step": 100,
+          "mean_mastery": 0.4212595224380493,
+          "count": 1
+        },
+        {
+          "time_step": 101,
+          "mean_mastery": 0.4425387978553772,
+          "count": 1
+        },
+        {
+          "time_step": 109,
+          "mean_mastery": 0.40241941809654236,
+          "count": 1
+        },
+        {
+          "time_step": 110,
+          "mean_mastery": 0.4899522662162781,
+          "count": 1
+        },
+        {
+          "time_step": 111,
+          "mean_mastery": 0.14753320813179016,
+          "count": 1
+        }
+      ]
+    },
+    "21": {
+      "count": 19,
+      "mean": 0.7739542283509907,
+      "std": 0.10712125675275545,
+      "min": 0.5130292773246765,
+      "max": 0.9575747847557068,
+      "median": 0.7832978963851929,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.7478763461112976,
+          "count": 1
+        },
+        {
+          "time_step": 1,
+          "mean_mastery": 0.7512057423591614,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.5830287337303162,
+          "count": 1
+        },
+        {
+          "time_step": 90,
+          "mean_mastery": 0.7979002594947815,
+          "count": 1
+        },
+        {
+          "time_step": 91,
+          "mean_mastery": 0.8171305060386658,
+          "count": 1
+        },
+        {
+          "time_step": 92,
+          "mean_mastery": 0.6710249781608582,
+          "count": 1
+        },
+        {
+          "time_step": 93,
+          "mean_mastery": 0.8161922097206116,
+          "count": 1
+        },
+        {
+          "time_step": 94,
+          "mean_mastery": 0.7832978963851929,
+          "count": 1
+        },
+        {
+          "time_step": 95,
+          "mean_mastery": 0.9575747847557068,
+          "count": 1
+        },
+        {
+          "time_step": 97,
+          "mean_mastery": 0.8198411464691162,
+          "count": 1
+        }
+      ]
+    },
+    "67": {
+      "count": 11,
+      "mean": 0.6585880572145636,
+      "std": 0.12349719616643061,
+      "min": 0.3538058400154114,
+      "max": 0.790746808052063,
+      "median": 0.7308138012886047,
+      "progression_sample": [
+        {
+          "time_step": 30,
+          "mean_mastery": 0.7498199939727783,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.5999442934989929,
+          "count": 1
+        },
+        {
+          "time_step": 96,
+          "mean_mastery": 0.7523323893547058,
+          "count": 1
+        },
+        {
+          "time_step": 97,
+          "mean_mastery": 0.6105307340621948,
+          "count": 1
+        },
+        {
+          "time_step": 98,
+          "mean_mastery": 0.7396113872528076,
+          "count": 1
+        },
+        {
+          "time_step": 99,
+          "mean_mastery": 0.790746808052063,
+          "count": 1
+        },
+        {
+          "time_step": 100,
+          "mean_mastery": 0.5443185567855835,
+          "count": 1
+        },
+        {
+          "time_step": 101,
+          "mean_mastery": 0.7308138012886047,
+          "count": 1
+        },
+        {
+          "time_step": 102,
+          "mean_mastery": 0.5520106554031372,
+          "count": 2
+        },
+        {
+          "time_step": 103,
+          "mean_mastery": 0.6223293542861938,
+          "count": 1
+        }
+      ]
+    },
+    "40": {
+      "count": 12,
+      "mean": 0.7301197250684103,
+      "std": 0.0869129320300442,
+      "min": 0.5913983583450317,
+      "max": 0.9044659733772278,
+      "median": 0.7484705448150635,
+      "progression_sample": [
+        {
+          "time_step": 4,
+          "mean_mastery": 0.6899154782295227,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.7607050538063049,
+          "count": 1
+        },
+        {
+          "time_step": 6,
+          "mean_mastery": 0.6260596513748169,
+          "count": 1
+        },
+        {
+          "time_step": 7,
+          "mean_mastery": 0.8219060301780701,
+          "count": 1
+        },
+        {
+          "time_step": 8,
+          "mean_mastery": 0.776544451713562,
+          "count": 1
+        },
+        {
+          "time_step": 9,
+          "mean_mastery": 0.9044659733772278,
+          "count": 1
+        },
+        {
+          "time_step": 104,
+          "mean_mastery": 0.5913983583450317,
+          "count": 1
+        },
+        {
+          "time_step": 105,
+          "mean_mastery": 0.7021855115890503,
+          "count": 1
+        },
+        {
+          "time_step": 106,
+          "mean_mastery": 0.614397406578064,
+          "count": 1
+        },
+        {
+          "time_step": 107,
+          "mean_mastery": 0.7462114691734314,
+          "count": 1
+        }
+      ]
+    },
+    "92": {
+      "count": 23,
+      "mean": 0.772471855516019,
+      "std": 0.07482373496031389,
+      "min": 0.6068179607391357,
+      "max": 0.8882865905761719,
+      "median": 0.7727285027503967,
+      "progression_sample": [
+        {
+          "time_step": 22,
+          "mean_mastery": 0.7586256861686707,
+          "count": 1
+        },
+        {
+          "time_step": 23,
+          "mean_mastery": 0.7476907968521118,
+          "count": 1
+        },
+        {
+          "time_step": 24,
+          "mean_mastery": 0.6068179607391357,
+          "count": 1
+        },
+        {
+          "time_step": 25,
+          "mean_mastery": 0.7426994442939758,
+          "count": 1
+        },
+        {
+          "time_step": 26,
+          "mean_mastery": 0.7727285027503967,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.6463198065757751,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.7226631045341492,
+          "count": 1
+        },
+        {
+          "time_step": 64,
+          "mean_mastery": 0.80848628282547,
+          "count": 1
+        },
+        {
+          "time_step": 65,
+          "mean_mastery": 0.8252105712890625,
+          "count": 1
+        },
+        {
+          "time_step": 66,
+          "mean_mastery": 0.8489781618118286,
+          "count": 1
+        }
+      ]
+    },
+    "23": {
+      "count": 3,
+      "mean": 0.757287323474884,
+      "std": 0.07057827307410126,
+      "min": 0.6671104431152344,
+      "max": 0.8394302725791931,
+      "median": 0.7653212547302246,
+      "progression_sample": [
+        {
+          "time_step": 78,
+          "mean_mastery": 0.8394302725791931,
+          "count": 1
+        },
+        {
+          "time_step": 79,
+          "mean_mastery": 0.7653212547302246,
+          "count": 1
+        },
+        {
+          "time_step": 80,
+          "mean_mastery": 0.6671104431152344,
+          "count": 1
+        }
+      ]
+    },
+    "34": {
+      "count": 12,
+      "mean": 0.8111587911844254,
+      "std": 0.1147110049265201,
+      "min": 0.5600583553314209,
+      "max": 0.9514271020889282,
+      "median": 0.8445911407470703,
+      "progression_sample": [
+        {
+          "time_step": 20,
+          "mean_mastery": 0.8761457204818726,
+          "count": 1
+        },
+        {
+          "time_step": 21,
+          "mean_mastery": 0.8148722648620605,
+          "count": 1
+        },
+        {
+          "time_step": 22,
+          "mean_mastery": 0.9126250147819519,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.8327056765556335,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.8648623824119568,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.9514271020889282,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.6243454217910767,
+          "count": 1
+        },
+        {
+          "time_step": 45,
+          "mean_mastery": 0.8556127548217773,
+          "count": 1
+        },
+        {
+          "time_step": 97,
+          "mean_mastery": 0.5600583553314209,
+          "count": 1
+        },
+        {
+          "time_step": 98,
+          "mean_mastery": 0.7043138146400452,
+          "count": 1
+        }
+      ]
+    },
+    "6": {
+      "count": 6,
+      "mean": 0.6861302653948466,
+      "std": 0.08605190257161034,
+      "min": 0.6166190505027771,
+      "max": 0.834567129611969,
+      "median": 0.6330873370170593,
+      "progression_sample": [
+        {
+          "time_step": 3,
+          "mean_mastery": 0.6166190505027771,
+          "count": 1
+        },
+        {
+          "time_step": 4,
+          "mean_mastery": 0.6394641399383545,
+          "count": 1
+        },
+        {
+          "time_step": 5,
+          "mean_mastery": 0.834567129611969,
+          "count": 1
+        },
+        {
+          "time_step": 106,
+          "mean_mastery": 0.6267105340957642,
+          "count": 1
+        },
+        {
+          "time_step": 107,
+          "mean_mastery": 0.6239244937896729,
+          "count": 1
+        },
+        {
+          "time_step": 108,
+          "mean_mastery": 0.775496244430542,
+          "count": 1
+        }
+      ]
+    },
+    "66": {
+      "count": 12,
+      "mean": 0.6821590711673101,
+      "std": 0.07765647929466692,
+      "min": 0.5530175566673279,
+      "max": 0.8106279969215393,
+      "median": 0.668611615896225,
+      "progression_sample": [
+        {
+          "time_step": 10,
+          "mean_mastery": 0.6750070452690125,
+          "count": 1
+        },
+        {
+          "time_step": 11,
+          "mean_mastery": 0.6949628591537476,
+          "count": 1
+        },
+        {
+          "time_step": 12,
+          "mean_mastery": 0.5879448056221008,
+          "count": 1
+        },
+        {
+          "time_step": 13,
+          "mean_mastery": 0.6590558290481567,
+          "count": 1
+        },
+        {
+          "time_step": 14,
+          "mean_mastery": 0.595199704170227,
+          "count": 1
+        },
+        {
+          "time_step": 15,
+          "mean_mastery": 0.6622161865234375,
+          "count": 1
+        },
+        {
+          "time_step": 16,
+          "mean_mastery": 0.6538729071617126,
+          "count": 1
+        },
+        {
+          "time_step": 17,
+          "mean_mastery": 0.8106279969215393,
+          "count": 1
+        },
+        {
+          "time_step": 125,
+          "mean_mastery": 0.7552546858787537,
+          "count": 1
+        },
+        {
+          "time_step": 126,
+          "mean_mastery": 0.7804095149040222,
+          "count": 1
+        }
+      ]
+    },
+    "27": {
+      "count": 3,
+      "mean": 0.7571483254432678,
+      "std": 0.08002907427106352,
+      "min": 0.644080400466919,
+      "max": 0.8180080652236938,
+      "median": 0.8093565106391907,
+      "progression_sample": [
+        {
+          "time_step": 0,
+          "mean_mastery": 0.8093565106391907,
+          "count": 1
+        },
+        {
+          "time_step": 2,
+          "mean_mastery": 0.644080400466919,
+          "count": 1
+        },
+        {
+          "time_step": 3,
+          "mean_mastery": 0.8180080652236938,
+          "count": 1
+        }
+      ]
+    },
+    "24": {
+      "count": 34,
+      "mean": 0.5438480526208878,
+      "std": 0.13938512199832187,
+      "min": 0.38439980149269104,
+      "max": 0.9263215065002441,
+      "median": 0.4922597110271454,
+      "progression_sample": [
+        {
+          "time_step": 26,
+          "mean_mastery": 0.5013505816459656,
+          "count": 1
+        },
+        {
+          "time_step": 27,
+          "mean_mastery": 0.7270282506942749,
+          "count": 1
+        },
+        {
+          "time_step": 28,
+          "mean_mastery": 0.5222700834274292,
+          "count": 1
+        },
+        {
+          "time_step": 29,
+          "mean_mastery": 0.4902946352958679,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.46558651328086853,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.7587692141532898,
+          "count": 1
+        },
+        {
+          "time_step": 32,
+          "mean_mastery": 0.44245249032974243,
+          "count": 1
+        },
+        {
+          "time_step": 33,
+          "mean_mastery": 0.7192227244377136,
+          "count": 1
+        },
+        {
+          "time_step": 34,
+          "mean_mastery": 0.44512590765953064,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.6986618638038635,
+          "count": 1
+        }
+      ]
+    },
+    "15": {
+      "count": 7,
+      "mean": 0.6301300355366298,
+      "std": 0.09729947721379473,
+      "min": 0.4818723797798157,
+      "max": 0.7298367023468018,
+      "median": 0.6847692728042603,
+      "progression_sample": [
+        {
+          "time_step": 34,
+          "mean_mastery": 0.7269495129585266,
+          "count": 1
+        },
+        {
+          "time_step": 35,
+          "mean_mastery": 0.6847692728042603,
+          "count": 1
+        },
+        {
+          "time_step": 36,
+          "mean_mastery": 0.4818723797798157,
+          "count": 1
+        },
+        {
+          "time_step": 41,
+          "mean_mastery": 0.5695486664772034,
+          "count": 1
+        },
+        {
+          "time_step": 42,
+          "mean_mastery": 0.7023029327392578,
+          "count": 1
+        },
+        {
+          "time_step": 43,
+          "mean_mastery": 0.7298367023468018,
+          "count": 1
+        },
+        {
+          "time_step": 44,
+          "mean_mastery": 0.5156307816505432,
+          "count": 1
+        }
+      ]
+    },
+    "26": {
+      "count": 12,
+      "mean": 0.6075379997491837,
+      "std": 0.05295838024762374,
+      "min": 0.5031300187110901,
+      "max": 0.6971661448478699,
+      "median": 0.6163112819194794,
+      "progression_sample": [
+        {
+          "time_step": 55,
+          "mean_mastery": 0.6690126061439514,
+          "count": 1
+        },
+        {
+          "time_step": 56,
+          "mean_mastery": 0.5849791765213013,
+          "count": 1
+        },
+        {
+          "time_step": 57,
+          "mean_mastery": 0.6971661448478699,
+          "count": 1
+        },
+        {
+          "time_step": 58,
+          "mean_mastery": 0.5816828012466431,
+          "count": 1
+        },
+        {
+          "time_step": 59,
+          "mean_mastery": 0.609563946723938,
+          "count": 1
+        },
+        {
+          "time_step": 60,
+          "mean_mastery": 0.651275098323822,
+          "count": 1
+        },
+        {
+          "time_step": 61,
+          "mean_mastery": 0.5544126629829407,
+          "count": 1
+        },
+        {
+          "time_step": 62,
+          "mean_mastery": 0.6265990734100342,
+          "count": 1
+        },
+        {
+          "time_step": 63,
+          "mean_mastery": 0.5495350360870361,
+          "count": 1
+        },
+        {
+          "time_step": 64,
+          "mean_mastery": 0.6400408148765564,
+          "count": 1
+        }
+      ]
+    },
+    "42": {
+      "count": 3,
+      "mean": 0.8996145327885946,
+      "std": 0.005399176332844923,
+      "min": 0.8938779830932617,
+      "max": 0.9068469405174255,
+      "median": 0.8981186747550964,
+      "progression_sample": [
+        {
+          "time_step": 29,
+          "mean_mastery": 0.9068469405174255,
+          "count": 1
+        },
+        {
+          "time_step": 30,
+          "mean_mastery": 0.8981186747550964,
+          "count": 1
+        },
+        {
+          "time_step": 31,
+          "mean_mastery": 0.8938779830932617,
+          "count": 1
+        }
+      ]
+    }
+  }
+}
