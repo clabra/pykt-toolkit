@@ -64,8 +64,9 @@ when you change any parameter default value (the reference values are in paper/p
 - Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon.
 - Use "we" instead of "you" following academic writing conventions. 
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
-- Avoid creating documentation files unless specifically asked for them. Provide feedback directly in responses instead.
-- After chamges in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If do, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
+- If you need to create documentation files, create them in `./tmp`folder, unless I specifically ask for them. 
+- Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. 
+- After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
 - When creating or modifyng texts don't include time estimations 
 
 
