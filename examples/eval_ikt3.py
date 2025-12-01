@@ -22,6 +22,57 @@ from pykt.models.ikt3 import iKT3
 from examples.experiment_utils import compute_auc_acc
 
 
+def precompute_p_ref_from_rasch_targets(rasch_targets, dataset_uids, dataset_cseqs, num_skills):
+    """
+    Pre-compute p_ref for all sequences in dataset, aligned with dataset order.
+    
+    Args:
+        rasch_targets: dict mapping student_id -> tensor [seq_len, num_skills]
+        dataset_uids: tensor/list of UIDs for each sequence in dataset
+        dataset_cseqs: tensor/list of concept sequences [num_sequences, seq_len]
+        num_skills: total number of skills
+    
+    Returns:
+        list of tensors: p_ref[i] is tensor [seq_len] for sequence i
+    """
+    if rasch_targets is None:
+        return None
+    
+    p_ref_list = []
+    num_sequences = len(dataset_uids)
+    
+    for idx in range(num_sequences):
+        uid = int(dataset_uids[idx].item()) if torch.is_tensor(dataset_uids[idx]) else int(dataset_uids[idx])
+        cseq = dataset_cseqs[idx]
+        seq_len = len(cseq)
+        
+        # Initialize p_ref for this sequence
+        p_ref_seq = torch.zeros(seq_len, dtype=torch.float32)
+        
+        if uid not in rasch_targets:
+            # Student not in rasch_targets, use default 0.5
+            p_ref_seq[:] = 0.5
+        else:
+            # Get rasch targets for this student [student_seq_len, num_skills]
+            student_targets = rasch_targets[uid]
+            student_seq_len = student_targets.shape[0]
+            
+            # Extract mastery probabilities for each timestep
+            for t in range(seq_len):
+                if t < student_seq_len:
+                    skill_id = int(cseq[t].item()) if torch.is_tensor(cseq[t]) else int(cseq[t])
+                    if skill_id >= 0 and skill_id < student_targets.shape[1]:
+                        p_ref_seq[t] = student_targets[t, skill_id]
+                    else:
+                        p_ref_seq[t] = 0.5  # Default for invalid skill ID
+                else:
+                    p_ref_seq[t] = 0.5  # Beyond student sequence, use default
+        
+        p_ref_list.append(p_ref_seq)
+    
+    return p_ref_list
+
+
 def extract_p_ref_from_rasch_targets(rasch_targets, batch, device):
     """
     Extract reference predictions (p_ref) from rasch_targets for current batch.
@@ -70,7 +121,7 @@ def extract_p_ref_from_rasch_targets(rasch_targets, batch, device):
     return p_ref
 
 
-def evaluate(model, data_loader, device, rasch_targets=None):
+def evaluate(model, data_loader, device, p_ref_list=None):
     """
     Evaluate model on test set.
     
@@ -78,6 +129,7 @@ def evaluate(model, data_loader, device, rasch_targets=None):
         model: iKT3 model
         data_loader: DataLoader for evaluation
         device: torch device
+        p_ref_list: Pre-computed list of p_ref tensors aligned with dataset order
     
     Returns:
         dict with evaluation metrics
@@ -97,13 +149,38 @@ def evaluate(model, data_loader, device, rasch_targets=None):
     total_samples = 0
     
     with torch.no_grad():
-        for batch in data_loader:
+        for batch_idx, batch in enumerate(data_loader):
             # Move batch to device
             q = batch['cseqs'].long().to(device)
             r = batch['rseqs'].long().to(device)
             qry = batch['shft_cseqs'].long().to(device)
             targets = batch['shft_rseqs'].float().to(device)
             mask = batch['masks'].to(device)
+            
+            # Extract p_ref from pre-computed list
+            p_ref = None
+            if p_ref_list is not None:
+                batch_size = targets.shape[0]
+                start_idx = batch_idx * data_loader.batch_size
+                end_idx = start_idx + batch_size
+                
+                # Stack p_ref tensors for this batch
+                batch_p_ref = []
+                for idx in range(start_idx, min(end_idx, len(p_ref_list))):
+                    # Slice [1:] to match shifted predictions (skip first timestep)
+                    batch_p_ref.append(p_ref_list[idx][1:])
+                
+                if batch_p_ref:
+                    # Pad sequences to max length in batch if needed
+                    max_len = max(len(p) for p in batch_p_ref)
+                    padded_p_ref = []
+                    for p in batch_p_ref:
+                        if len(p) < max_len:
+                            padded = torch.cat([p, torch.full((max_len - len(p),), 0.5)])
+                            padded_p_ref.append(padded)
+                        else:
+                            padded_p_ref.append(p)
+                    p_ref = torch.stack(padded_p_ref).to(device)
             
             # Forward pass (use shifted sequences for autoregressive prediction)
             outputs = model(q, r, qry)
@@ -117,12 +194,11 @@ def evaluate(model, data_loader, device, rasch_targets=None):
             loss_per = (loss_per * mask).sum() / mask.sum()
             
             # L_ali: BCE(m_pred, p_ref) - compare against reference IRT predictions
-            if rasch_targets is not None:
-                p_ref = extract_p_ref_from_rasch_targets(rasch_targets, batch, device)
+            if p_ref is not None:
                 loss_ali = torch.nn.functional.binary_cross_entropy(m_pred, p_ref, reduction='none')
                 loss_ali = (loss_ali * mask).sum() / mask.sum()
             else:
-                # Fallback: if no rasch_targets, use true responses (same as L_per)
+                # Fallback: if no p_ref, use true responses (same as L_per)
                 loss_ali = torch.nn.functional.binary_cross_entropy(m_pred, targets, reduction='none')
                 loss_ali = (loss_ali * mask).sum() / mask.sum()
             
@@ -139,10 +215,10 @@ def evaluate(model, data_loader, device, rasch_targets=None):
             beta_k = outputs['beta_k'].cpu().numpy()
             
             # Extract p_ref for auc_ali computation
-            if rasch_targets is not None:
+            if p_ref is not None:
                 p_ref_np = p_ref.cpu().numpy()
             else:
-                # Fallback: use targets if no rasch_targets available
+                # Fallback: use targets if no p_ref available
                 p_ref_np = targets_np
             
             mask_np = mask.cpu().numpy()
@@ -295,6 +371,21 @@ def main():
             rasch_targets = data['rasch_targets']
             print(f"✓ Loaded rasch_targets for L_ali: {len(rasch_targets)} students")
     
+    # Pre-compute p_ref for test/valid set
+    p_ref_list = None
+    if rasch_targets is not None:
+        print("Pre-computing p_ref for evaluation set...")
+        eval_dataset = data_loader.dataset
+        if hasattr(eval_dataset, 'dori') and 'uids' in eval_dataset.dori:
+            eval_uids = eval_dataset.dori['uids']
+            eval_cseqs = eval_dataset.dori['cseqs']
+            p_ref_list = precompute_p_ref_from_rasch_targets(
+                rasch_targets, eval_uids, eval_cseqs, num_c
+            )
+            print(f"✓ Pre-computed p_ref for {len(p_ref_list)} evaluation sequences")
+        else:
+            print("⚠️  Cannot access dataset UIDs for p_ref pre-computation")
+    
     # Initialize model
     print(f"\n{'='*60}")
     print("Initializing model...")
@@ -325,10 +416,10 @@ def main():
     
     # Evaluate
     print(f"\n{'='*60}")
-    print(f"Evaluating on {args.split} set...")
+    print("Evaluating on test set...")
     print(f"{'='*60}")
     
-    metrics = evaluate(model, data_loader, device, rasch_targets=rasch_targets)
+    metrics = evaluate(model, data_loader, device, p_ref_list=p_ref_list)
     
     # Print results
     print(f"\n{'='*60}")

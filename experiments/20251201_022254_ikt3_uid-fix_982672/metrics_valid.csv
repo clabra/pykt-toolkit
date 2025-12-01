@@ -1,0 +1,2 @@
+epoch,phase,lambda_int,train_loss,train_per_loss,train_ali_loss,train_auc_per,train_acc_per,train_corr_ali,train_mse_ali,valid_loss,valid_per_loss,valid_ali_loss,valid_auc_per,valid_acc_per,valid_corr_ali,valid_mse_ali
+1,1,0.0,0.5923084000527511,0.5923084000527511,0.0,0.0,0.0,0.0,0.0,0.5522578405065246,0.5522578405065246,0.0,0.6445198958681437,0.7392188731763812,-0.06645725652304159,0.7143002450466156

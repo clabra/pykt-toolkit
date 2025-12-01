@@ -137,58 +137,59 @@ def load_rasch_targets_as_reference(rasch_path):
         return None
 
 
-def extract_p_ref_from_rasch_targets(rasch_targets, batch, device):
+def precompute_p_ref_from_rasch_targets(rasch_targets, dataset_uids, dataset_cseqs, num_skills):
     """
-    Extract reference predictions (p_ref) from rasch_targets for current batch.
+    Pre-compute p_ref for all sequences in dataset, aligned with dataset order.
     
     Args:
         rasch_targets: dict mapping student_id -> tensor [seq_len, num_skills]
-        batch: Current batch dict with 'uids', 'questions', etc.
-        device: torch device
+        dataset_uids: tensor/list of UIDs for each sequence in dataset
+        dataset_cseqs: tensor/list of concept sequences [num_sequences, seq_len]
+        num_skills: total number of skills
     
     Returns:
-        p_ref: tensor [B, L] with reference mastery probabilities
+        list of tensors: p_ref[i] is tensor [seq_len] for sequence i
     """
     if rasch_targets is None:
         return None
     
-    # Extract UIDs from batch (need to be added to dataloader)
-    if 'uids' not in batch:
-        return None
+    p_ref_list = []
+    num_sequences = len(dataset_uids)
     
-    uids = batch['uids']  # [B]
-    questions = batch['cseqs'].cpu().numpy()  # [B, L]
-    batch_size, seq_len = questions.shape
-    
-    # Build p_ref tensor
-    p_ref = torch.zeros(batch_size, seq_len, device=device)
-    
-    for i, uid in enumerate(uids):
+    for idx in range(num_sequences):
+        uid = int(dataset_uids[idx].item()) if torch.is_tensor(dataset_uids[idx]) else int(dataset_uids[idx])
+        cseq = dataset_cseqs[idx]
+        seq_len = len(cseq)
+        
+        # Initialize p_ref for this sequence
+        p_ref_seq = torch.zeros(seq_len, dtype=torch.float32)
+        
         if uid not in rasch_targets:
             # Student not in rasch_targets, use default 0.5
-            p_ref[i, :] = 0.5
-            continue
-        
-        # Get rasch targets for this student [student_seq_len, num_skills]
-        student_targets = rasch_targets[uid]
-        student_seq_len = student_targets.shape[0]
-        
-        # Extract mastery probabilities for the questions in this batch
-        for t in range(seq_len):
-            if t < student_seq_len:
-                skill_id = questions[i, t]
-                if skill_id >= 0 and skill_id < student_targets.shape[1]:
-                    p_ref[i, t] = student_targets[t, skill_id]
+            p_ref_seq[:] = 0.5
+        else:
+            # Get rasch targets for this student [student_seq_len, num_skills]
+            student_targets = rasch_targets[uid]
+            student_seq_len = student_targets.shape[0]
+            
+            # Extract mastery probabilities for each timestep
+            for t in range(seq_len):
+                if t < student_seq_len:
+                    skill_id = int(cseq[t].item()) if torch.is_tensor(cseq[t]) else int(cseq[t])
+                    if skill_id >= 0 and skill_id < student_targets.shape[1]:
+                        p_ref_seq[t] = student_targets[t, skill_id]
+                    else:
+                        p_ref_seq[t] = 0.5  # Default for invalid skill ID
                 else:
-                    p_ref[i, t] = 0.5  # Default for invalid skill ID
-            else:
-                p_ref[i, t] = 0.5  # Beyond student sequence, use default
+                    p_ref_seq[t] = 0.5  # Beyond student sequence, use default
+        
+        p_ref_list.append(p_ref_seq)
     
-    return p_ref
+    return p_ref_list
 
 
 def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0, 
-                rasch_targets=None, use_amp=False, gradient_clip=None):
+                p_ref_list=None, use_amp=False, gradient_clip=None):
     """
     Train for one epoch.
     
@@ -199,7 +200,7 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
         device: torch device
         phase: Training phase (1 or 2)
         lambda_int: Alignment weight (Phase 2 only)
-        rasch_targets: Dict mapping student_id -> rasch targets (Phase 2 only)
+        p_ref_list: Pre-computed list of p_ref tensors aligned with dataset order
         use_amp: Whether to use automatic mixed precision
         gradient_clip: Gradient clipping value (None to disable)
     
@@ -224,15 +225,31 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
         if mask is not None:
             mask = mask.to(device)
         
-        # Get reference predictions for Phase 2
+        # Get reference predictions for Phase 2 from pre-computed list
         p_ref = None
-        if phase == 2:
-            if rasch_targets is not None:
-                # Extract p_ref from rasch_targets based on batch student IDs
-                p_ref = extract_p_ref_from_rasch_targets(rasch_targets, batch, device)
+        if phase == 2 and p_ref_list is not None:
+            # Extract p_ref from pre-computed list using batch indices
+            batch_size = targets.shape[0]
+            start_idx = batch_idx * train_loader.batch_size
+            end_idx = start_idx + batch_size
             
-            # Fallback: if no rasch_targets or extraction failed, use model's predictions
-            # This allows training to proceed but without real alignment
+            # Stack p_ref tensors for this batch
+            batch_p_ref = []
+            for idx in range(start_idx, min(end_idx, len(p_ref_list))):
+                # Slice [1:] to match shifted predictions (skip first timestep)
+                batch_p_ref.append(p_ref_list[idx][1:])
+            
+            if batch_p_ref:
+                # Pad sequences to max length in batch if needed
+                max_len = max(len(p) for p in batch_p_ref)
+                padded_p_ref = []
+                for p in batch_p_ref:
+                    if len(p) < max_len:
+                        padded = torch.cat([p, torch.full((max_len - len(p),), 0.5)])
+                        padded_p_ref.append(padded)
+                    else:
+                        padded_p_ref.append(p)
+                p_ref = torch.stack(padded_p_ref).to(device)
         
         optimizer.zero_grad()
         
@@ -298,7 +315,7 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
     }
 
 
-def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, rasch_targets=None):
+def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, p_ref_list=None):
     """
     Evaluate model on validation/test set.
     
@@ -308,7 +325,7 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, rasch_targets=
         device: torch device
         phase: Training phase (1 or 2)
         lambda_int: Alignment weight
-        rasch_targets: Dict mapping student_id -> rasch targets
+        p_ref_list: Pre-computed list of p_ref tensors aligned with dataset order
     
     Returns:
         dict with evaluation metrics
@@ -325,7 +342,7 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, rasch_targets=
     all_p_ref = []  # reference IRT predictions for auc_ali
     
     with torch.no_grad():
-        for batch in data_loader:
+        for batch_idx, batch in enumerate(data_loader):
             # Move batch to device and cast to appropriate types
             q = batch['cseqs'].long().to(device)  # Current questions
             r = batch['rseqs'].long().to(device)  # Current responses
@@ -335,11 +352,31 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, rasch_targets=
             if mask is not None:
                 mask = mask.to(device)
             
-            # Get reference predictions for Phase 2
+            # Get reference predictions from pre-computed list
             p_ref = None
-            if phase == 2:
-                if rasch_targets is not None:
-                    p_ref = extract_p_ref_from_rasch_targets(rasch_targets, batch, device)
+            if p_ref_list is not None:
+                # Extract p_ref from pre-computed list using batch indices
+                batch_size = targets.shape[0]
+                start_idx = batch_idx * data_loader.batch_size
+                end_idx = start_idx + batch_size
+                
+                # Stack p_ref tensors for this batch
+                batch_p_ref = []
+                for idx in range(start_idx, min(end_idx, len(p_ref_list))):
+                    # Slice [1:] to match shifted predictions (skip first timestep)
+                    batch_p_ref.append(p_ref_list[idx][1:])
+                
+                if batch_p_ref:
+                    # Pad sequences to max length in batch if needed
+                    max_len = max(len(p) for p in batch_p_ref)
+                    padded_p_ref = []
+                    for p in batch_p_ref:
+                        if len(p) < max_len:
+                            padded = torch.cat([p, torch.full((max_len - len(p),), 0.5)])
+                            padded_p_ref.append(padded)
+                        else:
+                            padded_p_ref.append(p)
+                    p_ref = torch.stack(padded_p_ref).to(device)
             
             # Forward pass (with shifted questions for proper autoregressive prediction)
             outputs = model(q, r, qry)
@@ -529,17 +566,32 @@ def main():
     # Load IRT difficulties
     beta_irt = load_skill_difficulties_from_irt(args.rasch_path, num_c)
     
-    # Load rasch targets for reference predictions (Phase 2 alignment)
-    # Note: We use the same rasch_targets for both train and valid
-    # since they contain student-specific mastery probabilities
-    p_ref_train = None
-    p_ref_valid = None
+    # Load rasch targets and pre-compute p_ref lists aligned with dataset order
+    p_ref_train_list = None
+    p_ref_valid_list = None
     if args.rasch_path and os.path.exists(args.rasch_path):
         rasch_targets_all = load_rasch_targets_as_reference(args.rasch_path)
         if rasch_targets_all:
-            # Use same targets for both splits (they're student-specific)
-            p_ref_train = rasch_targets_all
-            p_ref_valid = rasch_targets_all
+            print("Pre-computing p_ref for training set...")
+            # Access dataset UIDs and sequences
+            train_dataset = train_loader.dataset
+            if hasattr(train_dataset, 'dori') and 'uids' in train_dataset.dori:
+                train_uids = train_dataset.dori['uids']
+                train_cseqs = train_dataset.dori['cseqs']
+                p_ref_train_list = precompute_p_ref_from_rasch_targets(
+                    rasch_targets_all, train_uids, train_cseqs, num_c
+                )
+                print(f"✓ Pre-computed p_ref for {len(p_ref_train_list)} training sequences")
+            
+            print("Pre-computing p_ref for validation set...")
+            valid_dataset = valid_loader.dataset
+            if hasattr(valid_dataset, 'dori') and 'uids' in valid_dataset.dori:
+                valid_uids = valid_dataset.dori['uids']
+                valid_cseqs = valid_dataset.dori['cseqs']
+                p_ref_valid_list = precompute_p_ref_from_rasch_targets(
+                    rasch_targets_all, valid_uids, valid_cseqs, num_c
+                )
+                print(f"✓ Pre-computed p_ref for {len(p_ref_valid_list)} validation sequences")
     
     # Initialize model
     print(f"\n{'='*60}")
@@ -624,14 +676,14 @@ def main():
         # Train
         train_metrics = train_epoch(
             model, train_loader, optimizer, device,
-            phase=phase, lambda_int=lambda_int, rasch_targets=p_ref_train,
+            phase=phase, lambda_int=lambda_int, p_ref_list=p_ref_train_list,
             use_amp=args.use_amp, gradient_clip=args.gradient_clip
         )
         
         # Evaluate
         valid_metrics = evaluate(
             model, valid_loader, device,
-            phase=phase, lambda_int=lambda_int, rasch_targets=p_ref_valid
+            phase=phase, lambda_int=lambda_int, p_ref_list=p_ref_valid_list
         )
         
         # Print metrics
