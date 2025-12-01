@@ -138,9 +138,9 @@ class ScaledAbilityEncoder(nn.Module):
             target_ratio: Target θ/β scale ratio (default 0.4, valid range 0.3-0.5)
         """
         super().__init__()
-        # Ability encoder receives [h, v, skill_emb] concatenated
+        # Ability encoder receives [h, skill_emb] concatenated
         self.ability_encoder = nn.Sequential(
-            nn.Linear(d_model * 3, d_ff),  # Now accepts h + v + skill_emb
+            nn.Linear(d_model * 2, d_ff),  # Changed from d_model to d_model * 2
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, 1)
@@ -163,18 +163,17 @@ class ScaledAbilityEncoder(nn.Module):
         self.beta_std = beta_irt_stats['std'] if beta_irt_stats else 0.8
         self.target_ratio = target_ratio
         
-    def forward(self, h, v, skill_emb):
+    def forward(self, h, skill_emb):
         """
         Args:
-            h: [B, L, d_model] - knowledge state from encoder
-            v: [B, L, d_model] - value projection (specialized view)
+            h: [B, L, d_model] - encoder hidden states
             skill_emb: [B, L, d_model] - skill embeddings for query skills
         
         Returns:
             theta_t: [B, L] - scaled student abilities
         """
-        # Concatenate knowledge state, value view, and skill embeddings
-        concat = torch.cat([h, v, skill_emb], dim=-1)  # [B, L, d_model * 3]
+        # Concatenate knowledge state with skill embeddings
+        concat = torch.cat([h, skill_emb], dim=-1)  # [B, L, d_model * 2]
         
         # Extract raw ability
         theta_raw = self.ability_encoder(concat).squeeze(-1)  # [B, L]
@@ -246,10 +245,6 @@ class iKT3(nn.Module):
             EncoderBlock(n_heads, d_model, d_ff, dropout)
             for _ in range(num_encoder_blocks)
         ])
-        
-        # Value projection: creates specialized view from encoder output
-        # This mimics iKT2's dual-encoder pattern with minimal parameters
-        self.value_proj = nn.Linear(d_model, d_model)
         
         # Compute β_IRT statistics for scale initialization
         beta_irt_stats = None
@@ -347,22 +342,19 @@ class iKT3(nn.Module):
         for encoder_block in self.encoder_blocks:
             h = encoder_block(h, mask=mask)  # [B, L, d_model]
         
-        # 3. Create value projection - specialized view for ability encoding
-        v = self.value_proj(h)  # [B, L, d_model]
-        
-        # 4. Get skill embeddings for query skills (next questions to predict)
+        # 3. Get skill embeddings for query skills (next questions to predict)
         skill_emb = self.skill_embedding(qry)  # [B, L, d_model]
         
-        # 5. Ability encoder: extract student ability from h, v, and skill context
-        theta_t = self.ability_encoder(h, v, skill_emb)  # [B, L]
+        # 4. Ability encoder: extract student ability from context + skill context
+        theta_t = self.ability_encoder(h, skill_emb)  # [B, L]
         
-        # 6. Lookup skill difficulties from pre-computed IRT values
+        # 5. Lookup skill difficulties from pre-computed IRT values
         beta_k = self.beta_irt[qry]  # [B, L] - fixed, not learnable
         
-        # 7. Compute mastery probability using IRT-like formula
+        # 6. Compute mastery probability using IRT-like formula
         m_pred = torch.sigmoid(theta_t - beta_k)  # [B, L]
         
-        # 8. Generate response predictions (same as mastery for performance loss)
+        # 7. Generate response predictions (same as mastery for performance loss)
         p_correct = m_pred  # [B, L] - continuous predictions for BCE loss
         
         return {
