@@ -1,0 +1,2 @@
+split,loss_per,loss_ali,auc_per,acc_per,auc_ali,acc_ali,theta_mean,theta_std,beta_mean,beta_std,theta_beta_ratio
+test,1.153434,0.628809,0.556087,0.366787,0.335876,0.933830,-3.037090,0.836447,-1.963160,0.782878,1.068425

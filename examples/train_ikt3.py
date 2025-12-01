@@ -261,10 +261,9 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
             with torch.cuda.amp.autocast():
                 outputs = model(q, r, qry)
                 
-                # If no p_ref provided, use fallback (should not happen in normal training)
+                # p_ref must be provided for alignment training
                 if p_ref is None:
-                    # Fallback: use model's own predictions (no real alignment)
-                    p_ref = outputs['m_pred'].detach()
+                    raise ValueError("p_ref is None - alignment training requires pre-computed IRT reference predictions")
                 
                 loss_dict = model.compute_loss(
                     outputs, targets, p_ref=p_ref, 
@@ -285,10 +284,9 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
             # Normal precision training
             outputs = model(q, r)
             
-            # If no p_ref provided, use fallback (should not happen in normal training)
+            # p_ref must be provided for alignment training
             if p_ref is None:
-                # Fallback: use model's own predictions (no real alignment)
-                p_ref = outputs['m_pred'].detach()
+                raise ValueError("p_ref is None - alignment training requires pre-computed IRT reference predictions")
             
             loss_dict = model.compute_loss(
                 outputs, targets, p_ref=p_ref,
@@ -384,9 +382,9 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, p_ref_list=Non
             # Forward pass (with shifted questions for proper autoregressive prediction)
             outputs = model(q, r, qry)
             
-            # If no p_ref provided, use fallback
+            # p_ref must be provided for alignment evaluation
             if p_ref is None:
-                p_ref = outputs['m_pred'].detach()
+                raise ValueError("p_ref is None - alignment evaluation requires pre-computed IRT reference predictions")
             
             loss_dict = model.compute_loss(
                 outputs, targets, p_ref=p_ref,
