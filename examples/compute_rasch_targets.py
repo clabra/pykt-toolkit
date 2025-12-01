@@ -84,17 +84,29 @@ def prepare_irt_data(df, use_final_ability=False):
     return irt_df
 
 
-def calibrate_rasch_model(irt_df, max_iterations=100):
+def calibrate_rasch_model(irt_df, max_iterations=100, seed=42):
     """
     Calibrate Rasch model using py-irt library.
+    
+    Args:
+        irt_df: DataFrame with IRT records
+        max_iterations: Maximum EM iterations
+        seed: Random seed for reproducibility
     
     Returns:
         student_abilities: dict mapping student_id -> ability (theta)
         skill_difficulties: dict mapping skill_id -> difficulty (b)
     """
+    # Set random seeds for reproducibility
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    
     print("\n" + "="*80)
     print("RASCH MODEL CALIBRATION")
     print("="*80)
+    print(f"Random seed: {seed}")
     
     # Encode student and skill IDs
     student_encoder = LabelEncoder()
@@ -486,6 +498,8 @@ def main():
                         help='Learning rate for dynamic ability updates (default: 0.1)')
     parser.add_argument('--use_final_ability', action='store_true',
                         help='Use only final interaction per student-skill for IRT calibration (consolidated mastery)')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducible calibration (default: 42)')
     
     args = parser.parse_args()
     
@@ -511,7 +525,8 @@ def main():
     # Calibrate Rasch model
     student_abilities, skill_difficulties = calibrate_rasch_model(
         irt_df, 
-        max_iterations=args.max_iterations
+        max_iterations=args.max_iterations,
+        seed=args.seed
     )
     
     # Get number of skills
@@ -535,6 +550,7 @@ def main():
         'num_skills': num_skills,
         'num_calibrated_skills': len(skill_difficulties),
         'max_iterations': args.max_iterations,
+        'seed': args.seed,
         'dynamic': args.dynamic,
         'learning_rate': args.learning_rate if args.dynamic else None,
         'use_final_ability': args.use_final_ability,
