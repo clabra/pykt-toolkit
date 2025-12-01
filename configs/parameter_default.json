@@ -31,7 +31,7 @@
     "emb_type": "qid",
     "phase1_epochs": 10,
     "lambda_int": 0.5,
-    "lambda_scale": 0.0,
+    "lambda_scale": 0.05,
     "target_ratio": 0.4,
     "experiments_dir": "experiments"
   },
@@ -99,5 +99,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "d5d4f6fe6f38c2205ada5668a533d53e"
+  "md5": "47c8958fc50bd116c64ec055f544ce94"
 }

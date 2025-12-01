@@ -402,10 +402,10 @@ class iKT3(nn.Module):
             p_ref: Reference IRT predictions [B, L] in [0, 1] (REQUIRED - no default)
             phase: Training phase (1 or 2) (REQUIRED - no default)
             lambda_int: Alignment weight λ_int for Phase 2 (REQUIRED - no default)
-            lambda_scale: Scale regularization weight λ_scale for Phase 2 (REQUIRED - no default)
+            lambda_scale: Scale regularization weight λ_scale for both phases (REQUIRED - no default)
             mask: Optional mask for valid positions [B, L]
             
-        Phase 1: L_total = L_ali (align m_pred with IRT reference)
+        Phase 1: L_total = L_ali + λ_scale×L_scale (align with IRT reference + enforce proper scaling)
         Phase 2: L_total = L_per + λ_int×L_ali + λ_scale×L_scale (optimize performance + maintain alignment + enforce ratio)
             
         Note: Following reproducibility.md "zero defaults" principle - all parameters must be explicitly provided.
@@ -450,8 +450,11 @@ class iKT3(nn.Module):
             else:
                 L_ali = loss_ali.mean()
             
-            # Phase 1: Use only alignment loss
-            L_total = L_ali
+            # Extract scale loss from outputs
+            L_scale = outputs['scale_loss']
+            
+            # Phase 1: Alignment + scale regularization (ensure proper scaling from the start)
+            L_total = L_ali + lambda_scale * L_scale
             
         elif phase == 2:
             # Phase 2: Combine performance + alignment + scale regularization
