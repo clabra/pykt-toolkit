@@ -490,8 +490,8 @@ def main():
                         help='Root directory for datasets')
     parser.add_argument('--output_path', type=str, default=None,
                         help='Output path for Rasch targets (default: data/{dataset}/rasch_targets.pkl)')
-    parser.add_argument('--max_iterations', type=int, default=100,
-                        help='Maximum iterations for EM algorithm')
+    parser.add_argument('--max_iterations', type=int, default=300,
+                        help='Maximum iterations for EM algorithm (default: 300 for optimal convergence)')
     parser.add_argument('--dynamic', action='store_true',
                         help='Use dynamic IRT (model learning progression over time)')
     parser.add_argument('--learning_rate', type=float, default=0.1,
