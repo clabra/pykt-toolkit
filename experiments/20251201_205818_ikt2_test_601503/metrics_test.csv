@@ -1,0 +1,2 @@
+split,auc,acc,head_agreement,difficulty_fidelity,bkt_correlation_standard,bkt_correlation_timelagged
+test,0.715413,0.74607,0.8577695751525397,0.928017042883454,0.2937432246616959,0.3650735453156146

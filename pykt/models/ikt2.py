@@ -104,13 +104,21 @@ class EncoderBlock(nn.Module):
         
         self.attention = MultiHeadAttention(n_heads, d_model, dropout)
         
-        # Separate layer norms for dual streams
+        # Separate layer norms for dual streams (symmetric)
         self.norm1_ctx = nn.LayerNorm(d_model)
         self.norm1_val = nn.LayerNorm(d_model)
         self.norm2_ctx = nn.LayerNorm(d_model)
+        self.norm2_val = nn.LayerNorm(d_model)  # Added for symmetric value stream
         
-        # Feed-forward network
-        self.ffn = nn.Sequential(
+        # Feed-forward networks (one per stream for symmetric processing)
+        self.ffn_ctx = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, d_model),
+            nn.Dropout(dropout)
+        )
+        self.ffn_val = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.ReLU(),
             nn.Dropout(dropout),
@@ -137,9 +145,12 @@ class EncoderBlock(nn.Module):
         context_seq = self.norm1_ctx(context_seq + attn_output)
         value_seq = self.norm1_val(value_seq + attn_output)
         
-        # Feed-forward only on context stream (dropout on FFN path)
-        ffn_output = self.ffn(context_seq)
-        context_seq = self.norm2_ctx(context_seq + self.dropout(ffn_output))
+        # Feed-forward on BOTH streams (symmetric processing)
+        ffn_output_ctx = self.ffn_ctx(context_seq)
+        context_seq = self.norm2_ctx(context_seq + self.dropout(ffn_output_ctx))
+        
+        ffn_output_val = self.ffn_val(value_seq)
+        value_seq = self.norm2_val(value_seq + self.dropout(ffn_output_val))
         
         return context_seq, value_seq
 
@@ -207,9 +218,7 @@ class iKT2(nn.Module):
         
         # === HEAD 1: Performance Prediction ===
         self.prediction_head = nn.Sequential(
-            # Ablation of value stream
-            #nn.Linear(d_model * 3, d_ff),  # [h, v, skill_emb]
-            nn.Linear(d_model * 2, d_ff),  # [h, skill_emb]
+            nn.Linear(d_model * 3, d_ff),  # [h, v, skill_emb]
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, 256),  # Additional layer for depth
@@ -291,9 +300,7 @@ class iKT2(nn.Module):
         
         # === HEAD 1: Performance Prediction ===
         skill_emb = self.skill_embedding(qry)  # [B, L, d_model]
-        # Abaltion of value stream
-        #concat = torch.cat([h, v, skill_emb], dim=-1)  # [B, L, 3*d_model]
-        concat = torch.cat([h, skill_emb], dim=-1)  # [B, L, 3*d_model]
+        concat = torch.cat([h, v, skill_emb], dim=-1)  # [B, L, 3*d_model]
         logits = self.prediction_head(concat).squeeze(-1)  # [B, L]
         bce_predictions = torch.sigmoid(logits)
         
