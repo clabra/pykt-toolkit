@@ -362,10 +362,13 @@ class iKT3(nn.Module):
         Args:
             outputs: Model outputs dict with 'p_correct', 'm_pred', etc.
             targets: True responses [B, L] in {0, 1}
-            p_ref: Reference IRT predictions [B, L] in [0, 1] (Phase 2 only)
+            p_ref: Reference IRT predictions [B, L] in [0, 1] (required for both phases)
             phase: Training phase (1 or 2)
-            lambda_int: Alignment weight λ_int ∈ [0, 1]
+            lambda_int: Alignment weight λ_int for Phase 2
             mask: Optional mask for valid positions [B, L]
+            
+        Phase 1: L_total = L_ali (align m_pred with IRT reference)
+        Phase 2: L_total = L_per + λ_int×L_ali (optimize performance + maintain alignment)
             
         Returns:
             dict with loss components and total loss
@@ -393,12 +396,25 @@ class iKT3(nn.Module):
         
         # Phase-dependent loss computation
         if phase == 1:
-            # Phase 1: Pure performance learning
-            L_total = L_per
-            L_ali = torch.tensor(0.0, device=L_per.device)
+            # Phase 1: Pure alignment learning with IRT reference
+            assert p_ref is not None, "p_ref required for Phase 1"
+            assert torch.all((p_ref >= 0) & (p_ref <= 1)), "p_ref must be in [0, 1]"
+            
+            # Compute alignment loss (BCE equivalent to KL divergence)
+            loss_ali = F.binary_cross_entropy(m_pred, p_ref, reduction='none')  # [B, L]
+            
+            # Apply mask if provided
+            if mask is not None:
+                loss_ali = loss_ali * mask
+                L_ali = loss_ali.sum() / mask.sum()
+            else:
+                L_ali = loss_ali.mean()
+            
+            # Phase 1: Use only alignment loss
+            L_total = L_ali
             
         elif phase == 2:
-            # Phase 2: Balanced performance + alignment
+            # Phase 2: Combine performance + alignment
             assert p_ref is not None, "p_ref required for Phase 2"
             assert torch.all((p_ref >= 0) & (p_ref <= 1)), "p_ref must be in [0, 1]"
             
@@ -412,8 +428,8 @@ class iKT3(nn.Module):
             else:
                 L_ali = loss_ali.mean()
             
-            # Weighted combination
-            L_total = (1 - lambda_int) * L_per + lambda_int * L_ali
+            # Weighted combination: L_per + λ_int * L_ali
+            L_total = L_per + lambda_int * L_ali
             
         else:
             raise ValueError(f"Invalid phase: {phase}. Must be 1 or 2.")

@@ -28,7 +28,7 @@
     "dropout": 0.2,
     "emb_type": "qid",
     "phase1_epochs": 10,
-    "lambda_int": 0.8,
+    "lambda_int": 0.2,
     "target_ratio": 0.4,
     "experiments_dir": "experiments"
   },
@@ -93,5 +93,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "31d0738717359bcc1e4a2f1e82c65e5d"
+  "md5": "2ea3fb943ae3bbc5d2d0c580025a97ab"
 }

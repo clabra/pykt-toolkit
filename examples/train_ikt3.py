@@ -23,8 +23,8 @@ iKT3 Architecture:
 - IRT formula: m_pred = σ(θ - β)
 
 Two-Phase Training:
-- Phase 1: Performance learning (L_total = L_per)
-- Phase 2: Alignment (L_total = (1-λ_int)×L_per + λ_int×L_ali)
+- Phase 1: Alignment learning (L_total = L_ali)
+- Phase 2: Performance + Alignment (L_total = L_per + λ_int×L_ali)
 
 Key Simplifications from iKT2:
 - No learnable skill difficulties
@@ -199,10 +199,13 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
         optimizer: Optimizer
         device: torch device
         phase: Training phase (1 or 2)
-        lambda_int: Alignment weight (Phase 2 only)
+        lambda_int: Alignment weight for Phase 2
         p_ref_list: Pre-computed list of p_ref tensors aligned with dataset order
         use_amp: Whether to use automatic mixed precision
         gradient_clip: Gradient clipping value (None to disable)
+    
+    Phase 1: L_total = L_ali (align m_pred with IRT reference)
+    Phase 2: L_total = L_per + λ_int×L_ali (optimize performance + maintain alignment)
     
     Returns:
         dict with epoch metrics
@@ -225,9 +228,9 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
         if mask is not None:
             mask = mask.to(device)
         
-        # Get reference predictions for Phase 2 from pre-computed list
+        # Get reference predictions from pre-computed list (required for both phases)
         p_ref = None
-        if phase == 2 and p_ref_list is not None:
+        if p_ref_list is not None:
             # Extract p_ref from pre-computed list using batch indices
             batch_size = targets.shape[0]
             start_idx = batch_idx * train_loader.batch_size
@@ -258,8 +261,8 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
             with torch.cuda.amp.autocast():
                 outputs = model(q, r, qry)
                 
-                # If no p_ref provided for Phase 2, skip alignment loss
-                if phase == 2 and p_ref is None:
+                # If no p_ref provided, use fallback (should not happen in normal training)
+                if p_ref is None:
                     # Fallback: use model's own predictions (no real alignment)
                     p_ref = outputs['m_pred'].detach()
                 
@@ -282,8 +285,8 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
             # Normal precision training
             outputs = model(q, r)
             
-            # If no p_ref provided for Phase 2, skip alignment loss
-            if phase == 2 and p_ref is None:
+            # If no p_ref provided, use fallback (should not happen in normal training)
+            if p_ref is None:
                 # Fallback: use model's own predictions (no real alignment)
                 p_ref = outputs['m_pred'].detach()
             
@@ -381,8 +384,8 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, p_ref_list=Non
             # Forward pass (with shifted questions for proper autoregressive prediction)
             outputs = model(q, r, qry)
             
-            # If no p_ref provided for Phase 2, skip alignment loss
-            if phase == 2 and p_ref is None:
+            # If no p_ref provided, use fallback
+            if p_ref is None:
                 p_ref = outputs['m_pred'].detach()
             
             loss_dict = model.compute_loss(
@@ -655,11 +658,11 @@ def main():
         if epoch <= args.phase1_epochs:
             phase = 1
             lambda_int = 0.0
-            phase_name = "Phase 1 (Performance)"
+            phase_name = "Phase 1 (Alignment)"
         else:
             phase = 2
             lambda_int = args.lambda_int
-            phase_name = f"Phase 2 (Alignment λ={lambda_int:.2f})"
+            phase_name = f"Phase 2 (Performance + Alignment λ={lambda_int:.2f})"
             
             # Reset patience counter when transitioning to Phase 2
             if not phase1_completed:
