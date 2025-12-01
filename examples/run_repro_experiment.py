@@ -297,9 +297,11 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         cmd_parts.append(f"--checkpoint {checkpoint_path}")
         # ensure results are written to the experiment folder
         cmd_parts.append(f"--output_dir {experiment_folder}")
+        # Add required split parameter (always 'test' for auto-evaluation)
+        cmd_parts.append("--split test")
         
-        # ikt2/ikt3 eval scripts only need minimal parameters
-        core_eval_params = ['dataset', 'fold', 'batch_size', 'seq_len']
+        # ikt2/ikt3 eval scripts need these parameters
+        core_eval_params = ['dataset', 'fold', 'batch_size', 'seq_len', 'device']
         model_eval_params = []
     else:
         # Other models use --run_dir and --ckpt_name

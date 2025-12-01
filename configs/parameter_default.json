@@ -20,6 +20,8 @@
     "use_amp": false,
     "use_wandb": false,
     "auto_shifted_eval": true,
+    "device": "cuda",
+    "num_workers": 4,
     "seq_len": 200,
     "d_model": 256,
     "n_heads": 4,
@@ -29,6 +31,7 @@
     "emb_type": "qid",
     "phase1_epochs": 10,
     "lambda_int": 0.5,
+    "lambda_scale": 0.0,
     "target_ratio": 0.4,
     "experiments_dir": "experiments"
   },
@@ -55,6 +58,8 @@
       "use_amp",
       "use_wandb",
       "auto_shifted_eval",
+      "device",
+      "num_workers",
       "num_trajectories",
       "min_trajectory_steps"
     ],
@@ -71,7 +76,8 @@
       "lambda_penalty",
       "epsilon",
       "lambda_align",
-      "lambda_int"
+      "lambda_int",
+      "lambda_scale"
     ],
     "ikt3_specific": [
       "phase1_epochs",
@@ -93,5 +99,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "9b696d39a4a7a7161819f41c71d94a72"
+  "md5": "d5d4f6fe6f38c2205ada5668a533d53e"
 }

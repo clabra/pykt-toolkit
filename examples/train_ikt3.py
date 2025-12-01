@@ -189,7 +189,7 @@ def precompute_p_ref_from_rasch_targets(rasch_targets, dataset_uids, dataset_cse
 
 
 def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0, 
-                p_ref_list=None, use_amp=False, gradient_clip=None):
+                lambda_scale=0.0, p_ref_list=None, use_amp=False, gradient_clip=None):
     """
     Train for one epoch.
     
@@ -267,7 +267,7 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
                 
                 loss_dict = model.compute_loss(
                     outputs, targets, p_ref=p_ref, 
-                    phase=phase, lambda_int=lambda_int, mask=mask
+                    phase=phase, lambda_int=lambda_int, lambda_scale=lambda_scale, mask=mask
                 )
             
             # Backward pass with gradient scaling
@@ -290,7 +290,7 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
             
             loss_dict = model.compute_loss(
                 outputs, targets, p_ref=p_ref,
-                phase=phase, lambda_int=lambda_int, mask=mask
+                phase=phase, lambda_int=lambda_int, lambda_scale=lambda_scale, mask=mask
             )
             
             # Backward pass
@@ -316,7 +316,7 @@ def train_epoch(model, train_loader, optimizer, device, phase=1, lambda_int=0.0,
     }
 
 
-def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, p_ref_list=None):
+def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, lambda_scale=0.0, p_ref_list=None):
     """
     Evaluate model on validation/test set.
     
@@ -388,7 +388,7 @@ def evaluate(model, data_loader, device, phase=1, lambda_int=0.0, p_ref_list=Non
             
             loss_dict = model.compute_loss(
                 outputs, targets, p_ref=p_ref,
-                phase=phase, lambda_int=lambda_int, mask=mask
+                phase=phase, lambda_int=lambda_int, lambda_scale=lambda_scale, mask=mask
             )
             
             # Accumulate metrics
@@ -494,14 +494,15 @@ def main():
     parser.add_argument('--patience', type=int, required=True, help='Early stopping patience')
     parser.add_argument('--phase1_epochs', type=int, required=True, help='Epochs for Phase 1')
     parser.add_argument('--lambda_int', type=float, required=True, help='Alignment weight for Phase 2')
+    parser.add_argument('--lambda_scale', type=float, required=True, help='Scale regularization weight for Phase 2')
     
-    # System parameters
+    # Runtime parameters
     parser.add_argument('--seed', type=int, required=True, help='Random seed')
     parser.add_argument('--use_amp', action='store_true', help='Use mixed precision')
     parser.add_argument('--use_wandb', action='store_true', help='Use Weights & Biases logging')
     parser.add_argument('--auto_shifted_eval', action='store_true', help='Auto-shifted evaluation')
-    parser.add_argument('--device', type=str, default='cuda', help='Device')
-    parser.add_argument('--num_workers', type=int, default=4, help='DataLoader workers')
+    parser.add_argument('--device', type=str, required=True, help='Device')
+    parser.add_argument('--num_workers', type=int, required=True, help='DataLoader workers')
     
     # Logging parameters
     parser.add_argument('--save_dir', type=str, help='Directory to save model (auto from EXPERIMENT_DIR if not set)')
@@ -677,14 +678,16 @@ def main():
         # Train
         train_metrics = train_epoch(
             model, train_loader, optimizer, device,
-            phase=phase, lambda_int=lambda_int, p_ref_list=p_ref_train_list,
+            phase=phase, lambda_int=lambda_int, lambda_scale=args.lambda_scale,
+            p_ref_list=p_ref_train_list,
             use_amp=args.use_amp, gradient_clip=args.gradient_clip
         )
         
         # Evaluate
         valid_metrics = evaluate(
             model, valid_loader, device,
-            phase=phase, lambda_int=lambda_int, p_ref_list=p_ref_valid_list
+            phase=phase, lambda_int=lambda_int, lambda_scale=args.lambda_scale,
+            p_ref_list=p_ref_valid_list
         )
         
         # Print metrics

@@ -296,13 +296,13 @@ def main():
     # Model parameters
     parser.add_argument('--checkpoint', type=str, required=True, help='Path to saved model checkpoint')
     parser.add_argument('--dataset', type=str, required=True, help='Dataset name')
-    parser.add_argument('--fold', type=int, default=0, help='Fold number')
-    parser.add_argument('--batch_size', type=int, default=64, help='Batch size')
-    parser.add_argument('--seq_len', type=int, default=200, help='Sequence length')
-    parser.add_argument('--device', type=str, default='cuda', help='Device')
-    parser.add_argument('--split', type=str, default='test', choices=['valid', 'test'],
+    parser.add_argument('--fold', type=int, required=True, help='Fold number')
+    parser.add_argument('--batch_size', type=int, required=True, help='Batch size')
+    parser.add_argument('--seq_len', type=int, required=True, help='Sequence length')
+    parser.add_argument('--device', type=str, required=True, help='Device')
+    parser.add_argument('--split', type=str, required=True, choices=['valid', 'test'],
                         help='Which split to evaluate')
-    parser.add_argument('--output_dir', type=str, default=None, help='Directory to save results')
+    parser.add_argument('--output_dir', type=str, required=True, help='Directory to save results')
     
     args = parser.parse_args()
     
@@ -356,7 +356,7 @@ def main():
     print(f"✓ Dataset initialized: {num_c} skills")
     
     # Load IRT difficulties and rasch_targets
-    rasch_path = config.get('rasch_path', None)
+    rasch_path = config['rasch_path']
     beta_irt = None
     rasch_targets = None
     if rasch_path and os.path.exists(rasch_path):
@@ -402,7 +402,7 @@ def main():
         dropout=config['dropout'],
         seq_len=config['seq_len'],
         beta_irt=beta_irt,
-        target_ratio=config.get('target_ratio', 0.4)
+        target_ratio=config['target_ratio']
     ).to(device)
     
     # Load model weights

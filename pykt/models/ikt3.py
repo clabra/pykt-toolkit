@@ -26,7 +26,7 @@ import torch.nn.functional as F
 class MultiHeadAttention(nn.Module):
     """Multi-head self-attention with causal masking."""
     
-    def __init__(self, n_heads, d_model, dropout=0.1):
+    def __init__(self, n_heads, d_model, dropout):
         super().__init__()
         assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
         
@@ -89,7 +89,7 @@ class MultiHeadAttention(nn.Module):
 class EncoderBlock(nn.Module):
     """Transformer encoder block with self-attention and feed-forward network."""
     
-    def __init__(self, n_heads, d_model, d_ff, dropout=0.1):
+    def __init__(self, n_heads, d_model, d_ff, dropout):
         super().__init__()
         self.attention = MultiHeadAttention(n_heads, d_model, dropout)
         self.norm1 = nn.LayerNorm(d_model)
@@ -128,14 +128,14 @@ class ScaledAbilityEncoder(nn.Module):
     Ensures θ and β have compatible scales for IRT formula σ(θ - β).
     """
     
-    def __init__(self, d_model, d_ff, dropout=0.1, beta_irt_stats=None, target_ratio=0.4):
+    def __init__(self, d_model, d_ff, dropout, beta_irt_stats, target_ratio):
         """
         Args:
             d_model: Hidden dimension from encoder
             d_ff: Feedforward dimension
-            dropout: Dropout rate
-            beta_irt_stats: Dict with 'mean' and 'std' of β_IRT (from calibration)
-            target_ratio: Target θ/β scale ratio (default 0.4, valid range 0.3-0.5)
+            dropout: Dropout rate (REQUIRED - no default)
+            beta_irt_stats: Dict with 'mean' and 'std' of β_IRT from calibration (REQUIRED - no default)
+            target_ratio: Target θ/β scale ratio (REQUIRED - no default, valid range 0.3-0.5)
         """
         super().__init__()
         # Ability encoder receives [h, skill_emb] concatenated
@@ -211,19 +211,21 @@ class iKT3(nn.Module):
     Simplified architecture with single output head and fixed skill difficulties.
     """
     
-    def __init__(self, num_c, d_model=256, n_heads=4, num_encoder_blocks=8, 
-                 d_ff=1536, dropout=0.2, seq_len=200, beta_irt=None, target_ratio=0.4):
+    def __init__(self, num_c, d_model, n_heads, num_encoder_blocks, 
+                 d_ff, dropout, seq_len, beta_irt, target_ratio):
         """
         Args:
-            num_c: Number of skills (concepts)
-            d_model: Model dimension
-            n_heads: Number of attention heads
-            num_encoder_blocks: Number of transformer encoder layers
-            d_ff: Feedforward dimension
-            dropout: Dropout rate
-            seq_len: Maximum sequence length
-            beta_irt: Pre-computed IRT skill difficulties [num_c]
-            target_ratio: Target θ/β scale ratio (0.3-0.5 valid range)
+            num_c: Number of skills (concepts) (REQUIRED - no default)
+            d_model: Model dimension (REQUIRED - no default)
+            n_heads: Number of attention heads (REQUIRED - no default)
+            num_encoder_blocks: Number of transformer encoder layers (REQUIRED - no default)
+            d_ff: Feedforward dimension (REQUIRED - no default)
+            dropout: Dropout rate (REQUIRED - no default)
+            seq_len: Maximum sequence length (REQUIRED - no default)
+            beta_irt: Pre-computed IRT skill difficulties [num_c] (REQUIRED - no default)
+            target_ratio: Target θ/β scale ratio (REQUIRED - no default, valid range 0.3-0.5)
+            
+        Note: Following reproducibility.md "zero defaults" principle - all parameters must be explicitly provided.
         """
         super().__init__()
         self.num_c = num_c
@@ -302,6 +304,28 @@ class iKT3(nn.Module):
             self.beta_irt.copy_(beta_irt)
         print(f"✓ Loaded IRT skill difficulties: mean={beta_irt.mean():.4f}, std={beta_irt.std():.4f}")
     
+    def compute_scale_loss(self, theta_t, beta_k):
+        """
+        Compute scale regularization loss to enforce target theta/beta ratio.
+        
+        Penalizes deviation of theta_std/beta_std from target_ratio.
+        
+        Args:
+            theta_t: [B, L] - student abilities
+            beta_k: [B, L] - skill difficulties
+            
+        Returns:
+            scale_loss: scalar - L2 penalty on ratio deviation
+        """
+        theta_std = theta_t.std()
+        beta_std = beta_k.std()
+        current_ratio = theta_std / (beta_std + 1e-8)
+        target_ratio = self.ability_encoder.target_ratio
+        
+        # L2 penalty on ratio deviation
+        scale_loss = (current_ratio - target_ratio) ** 2
+        return scale_loss
+    
     def forward(self, q, r, qry=None):
         """
         Forward pass for iKT3 model with proper autoregressive prediction.
@@ -357,27 +381,34 @@ class iKT3(nn.Module):
         # 7. Generate response predictions (same as mastery for performance loss)
         p_correct = m_pred  # [B, L] - continuous predictions for BCE loss
         
+        # 8. Compute scale loss for regularization (used in Phase 2 training)
+        scale_loss = self.compute_scale_loss(theta_t, beta_k)
+        
         return {
             'p_correct': p_correct,     # Performance predictions (for L_per)
             'm_pred': m_pred,           # Mastery probability (for L_ali)
             'theta_t': theta_t,         # Student ability (interpretability)
             'beta_k': beta_k,           # Skill difficulty (interpretability)
+            'scale_loss': scale_loss    # Scale regularization loss
         }
     
-    def compute_loss(self, outputs, targets, p_ref=None, phase=1, lambda_int=0.0, mask=None):
+    def compute_loss(self, outputs, targets, p_ref, phase, lambda_int, lambda_scale, mask=None):
         """
         Compute loss based on training phase.
         
         Args:
-            outputs: Model outputs dict with 'p_correct', 'm_pred', etc.
+            outputs: Model outputs dict with 'p_correct', 'm_pred', 'scale_loss', etc.
             targets: True responses [B, L] in {0, 1}
-            p_ref: Reference IRT predictions [B, L] in [0, 1] (required for both phases)
-            phase: Training phase (1 or 2)
-            lambda_int: Alignment weight λ_int for Phase 2
+            p_ref: Reference IRT predictions [B, L] in [0, 1] (REQUIRED - no default)
+            phase: Training phase (1 or 2) (REQUIRED - no default)
+            lambda_int: Alignment weight λ_int for Phase 2 (REQUIRED - no default)
+            lambda_scale: Scale regularization weight λ_scale for Phase 2 (REQUIRED - no default)
             mask: Optional mask for valid positions [B, L]
             
         Phase 1: L_total = L_ali (align m_pred with IRT reference)
-        Phase 2: L_total = L_per + λ_int×L_ali (optimize performance + maintain alignment)
+        Phase 2: L_total = L_per + λ_int×L_ali + λ_scale×L_scale (optimize performance + maintain alignment + enforce ratio)
+            
+        Note: Following reproducibility.md "zero defaults" principle - all parameters must be explicitly provided.
             
         Returns:
             dict with loss components and total loss
@@ -423,7 +454,7 @@ class iKT3(nn.Module):
             L_total = L_ali
             
         elif phase == 2:
-            # Phase 2: Combine performance + alignment
+            # Phase 2: Combine performance + alignment + scale regularization
             assert p_ref is not None, "p_ref required for Phase 2"
             assert torch.all((p_ref >= 0) & (p_ref <= 1)), "p_ref must be in [0, 1]"
             
@@ -437,8 +468,11 @@ class iKT3(nn.Module):
             else:
                 L_ali = loss_ali.mean()
             
-            # Weighted combination: L_per + λ_int * L_ali
-            L_total = L_per + lambda_int * L_ali
+            # Extract scale loss from outputs
+            L_scale = outputs['scale_loss']
+            
+            # Weighted combination: L_per + λ_int * L_ali + λ_scale * L_scale
+            L_total = L_per + lambda_int * L_ali + lambda_scale * L_scale
             
         else:
             raise ValueError(f"Invalid phase: {phase}. Must be 1 or 2.")
@@ -446,9 +480,11 @@ class iKT3(nn.Module):
         return {
             'total_loss': L_total,
             'per_loss': L_per,
-            'alignment_loss': L_ali,
+            'alignment_loss': L_ali if phase > 0 else torch.tensor(0.0),
+            'scale_loss': outputs['scale_loss'] if phase == 2 else torch.tensor(0.0),
             'phase': phase,
             'lambda_int': lambda_int,
+            'lambda_scale': lambda_scale,
         }
     
     def monitor_scale_health(self, theta_t, beta_k, epoch):

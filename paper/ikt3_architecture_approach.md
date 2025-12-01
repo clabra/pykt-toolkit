@@ -123,9 +123,9 @@ Measures alignment between predictions from our model and predictions from other
 
 We use this loss: 
 
-$L_{\text{total}} = (1 - \lambda_{\text{ali}}) \times L_{\text{per}} + \lambda_{\text{int}} \times L_{\text{ali}}$, 
+$L_{\text{total}} = L_{\text{per}} + \lambda_{\text{int}} \times L_{\text{ali}} + \lambda_{\text{scale}} \times L_{\text{scale}}$
 
-where L_per optimizes performance predictions (AUC, accuracy), L_ali optmizes aligment with reference model and \lambda_{\text{int}} allows to control the desired trade-off between performance and interpretability.  
+where L_per optimizes performance predictions (AUC, accuracy), L_ali optimizes alignment with reference model, L_scale enforces target θ/β ratio, λ_int controls the performance-interpretability trade-off, and λ_scale controls scale regularization strength (0.0 = disabled, 0.05 = recommended for gentle guidance, higher values = stricter enforcement).  
 
 $L_{\text{ali}} = f(Mc´, Mc)$, where $Mc´=f({Fi})$, ${Fi}$: factor set inferred by our model (usually obtained through feeding the context vector h produced by attention mechanisms into a MLP). For f() we use MSE or any function suitable to measure the difference between two real numbers. 
 
@@ -141,12 +141,12 @@ The model could be extended to also learn skill difficulties β_k. Measure of al
 
 In phase 1, we initialize the model by training it to predict student performance. 
 
-Parameter \lambda_{\text{int}} remains zero in this phase in such a way that only L_{\text{per}} steer the learning of the model. 
+Parameters λ_int and λ_scale remain zero in this phase so that only L_per steers the learning of the model. 
 
    
 2. **Phase 2 - Interpretability via Semantic Alignment**:
 
-After the phase 1 warmup period, \lambda_{\text{int}} is set to a predefined value. The more high the value, the more we anchor the model to states that are compatible with expecttions from the reference model, thus maintaining interpretability. 
+After the phase 1 warmup period, λ_int is set to a predefined value (typically 0.1-0.5) and λ_scale is optionally set (typically 0.05). λ_int controls alignment with the reference model: higher values enforce stronger consistency with pedagogical expectations but may slightly reduce AUC. λ_scale enforces the target θ/β scale ratio to prevent scale drift and maintain interpretability of ability vs difficulty estimates. 
 
 **Key Advantages**:
 
@@ -878,16 +878,17 @@ def compute_alignment_loss(m_pred, p_ref, mask=None):
 ### Total Loss Function
 
 ```python
-def compute_loss(outputs, targets, p_ref=None, phase=1, lambda_int=0.0, mask=None):
+def compute_loss(outputs, targets, p_ref, phase, lambda_int, lambda_scale, mask=None):
     """
     Compute total loss based on training phase.
     
     Args:
-        outputs: Model outputs dict with 'p_correct', 'm_pred', etc.
+        outputs: Model outputs dict with 'p_correct', 'm_pred', 'scale_loss', etc.
         targets: True responses [B, L] in {0, 1}
-        p_ref: Reference IRT predictions [B, L] in [0, 1] (Phase 2 only)
+        p_ref: Reference IRT predictions [B, L] in [0, 1]
         phase: Training phase (1 or 2)
         lambda_int: Alignment weight λ_int ∈ [0, 1]
+        lambda_scale: Scale regularization weight (0.0 = disabled)
         mask: Optional mask for valid positions [B, L]
         
     Returns:
@@ -905,16 +906,19 @@ def compute_loss(outputs, targets, p_ref=None, phase=1, lambda_int=0.0, mask=Non
         # Phase 1: Pure performance learning
         L_total = L_per
         L_ali = torch.tensor(0.0, device=L_per.device)
+        L_scale = torch.tensor(0.0, device=L_per.device)
         
     elif phase == 2:
-        # Phase 2: Balanced performance + alignment
-        assert p_ref is not None, "p_ref required for Phase 2"
+        # Phase 2: Balanced performance + alignment + scale regularization
         
         # Compute alignment loss
         L_ali = compute_alignment_loss(m_pred, p_ref, mask)
         
+        # Extract scale regularization loss
+        L_scale = outputs['scale_loss']
+        
         # Weighted combination
-        L_total = (1 - lambda_int) * L_per + lambda_int * L_ali
+        L_total = L_per + lambda_int * L_ali + lambda_scale * L_scale
         
     else:
         raise ValueError(f"Invalid phase: {phase}. Must be 1 or 2.")
@@ -923,8 +927,10 @@ def compute_loss(outputs, targets, p_ref=None, phase=1, lambda_int=0.0, mask=Non
         'total_loss': L_total,
         'per_loss': L_per,
         'alignment_loss': L_ali,
+        'scale_loss': L_scale,
         'phase': phase,
         'lambda_int': lambda_int,
+        'lambda_scale': lambda_scale,
     }
 ```
 
@@ -955,6 +961,11 @@ L_align measures interpretability (i.e. aligment with predictions from reference
 ### Some hyperparameters
 
 - `lambda_int`: Higher → more interpretability but potentially lower performance
+- `lambda_scale`: Controls scale regularization to enforce target θ/β ratio
+  - 0.0 = disabled (backward compatible, no ratio enforcement)
+  - 0.05 = recommended (gentle guidance, ~5% loss weight)
+  - 0.1-0.5 = stricter enforcement (higher values may affect convergence)
+- `target_ratio`: Target θ/β scale ratio (default 0.4, valid range 0.3-0.5)
 - `phase`: Training phase (1 or 2)
 
 
@@ -1017,16 +1028,16 @@ We use Approach 1 (learnable scale parameter) with automatic initialization base
 
 ```python
 class ScaledAbilityEncoder(nn.Module):
-    def __init__(self, d_model, d_ff, dropout=0.1, beta_irt_stats=None, target_ratio=0.4):
+    def __init__(self, d_model, d_ff, dropout, beta_irt_stats, target_ratio):
         """
         Ability encoder with automatic scale control based on β_IRT statistics.
         
         Args:
             d_model: Hidden dimension from encoder
             d_ff: Feedforward dimension
-            dropout: Dropout rate
-            beta_irt_stats: Dict with 'mean' and 'std' of β_IRT (from calibration)
-            target_ratio: Target θ/β scale ratio (default 0.4)
+            dropout: Dropout rate (REQUIRED - no default)
+            beta_irt_stats: Dict with 'mean' and 'std' of β_IRT (from calibration, REQUIRED)
+            target_ratio: Target θ/β scale ratio (REQUIRED - typically 0.4)
         """
         super().__init__()
         self.ability_encoder = nn.Sequential(
@@ -1128,7 +1139,7 @@ class iKT3(nn.Module):
 
 **Approach 2: Batch Normalization** - Normalizes θ to match β_IRT statistics at each forward pass. Provides explicit control but relies on batch statistics which can be noisy and may interfere with gradient flow. Not recommended unless the learnable scale proves insufficient.
 
-**Approach 3: Soft Regularization Loss** - Adds auxiliary loss term `L_reg = weight × (std(θ)/std(β) - target_ratio)²` to penalize scale drift. Can be combined with Approach 1 if significant drift is observed during training, but typically unnecessary with proper initialization.
+**Approach 3: Scale Regularization Loss** - **IMPLEMENTED**. Adds auxiliary loss term `L_scale = (std(θ)/std(β) - target_ratio)²` to penalize scale drift. Combined with Approach 1 (learnable scale) to prevent drift during training. Controlled by λ_scale hyperparameter (0.0 = disabled, 0.05 = recommended). See L_scale documentation in the losses section above.
 
 **Monitoring Function**
 
