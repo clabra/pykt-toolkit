@@ -207,7 +207,9 @@ class iKT2(nn.Module):
         
         # === HEAD 1: Performance Prediction ===
         self.prediction_head = nn.Sequential(
-            nn.Linear(d_model * 3, d_ff),  # [h, v, skill_emb]
+            # Ablation of value stream
+            #nn.Linear(d_model * 3, d_ff),  # [h, v, skill_emb]
+            nn.Linear(d_model * 2, d_ff),  # [h, skill_emb]
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, 256),  # Additional layer for depth
@@ -289,7 +291,9 @@ class iKT2(nn.Module):
         
         # === HEAD 1: Performance Prediction ===
         skill_emb = self.skill_embedding(qry)  # [B, L, d_model]
-        concat = torch.cat([h, v, skill_emb], dim=-1)  # [B, L, 3*d_model]
+        # Abaltion of value stream
+        #concat = torch.cat([h, v, skill_emb], dim=-1)  # [B, L, 3*d_model]
+        concat = torch.cat([h, skill_emb], dim=-1)  # [B, L, 3*d_model]
         logits = self.prediction_head(concat).squeeze(-1)  # [B, L]
         bce_predictions = torch.sigmoid(logits)
         
