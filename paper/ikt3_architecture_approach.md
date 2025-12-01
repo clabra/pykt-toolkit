@@ -225,7 +225,9 @@ graph TD
     subgraph "Single Output Head: Performance & Interpretability Losses"
         direction TB
         
-        AbilityEnc["Ability Encoder<br/>Linear(d_model → d_ff)<br/>→ ReLU → Dropout<br/>→ Linear(d_ff → 1)"]
+        SkillEmb["Skill Embedding<br/>(query skills qry)<br/>[B, L, d_model]"]
+        ConcatAbility["Concatenate<br/>[h, skill_emb]<br/>[B, L, d_model * 2]"]
+        AbilityEnc["Ability Encoder<br/>Linear(d_model*2 → d_ff)<br/>→ ReLU → Dropout<br/>→ Linear(d_ff → 1)"]
         Theta[["θ_i(t)<br/>Student Ability<br/>[B, L]"]]
         
         BetaLookup["Skill Difficulty Lookup<br/>(pre-computed β_IRT)"]
@@ -277,7 +279,10 @@ graph TD
     H_Out --> Final_h
     
     %% Single Head processing
-    Final_h --> AbilityEnc --> Theta
+    Final_h --> ConcatAbility
+    Beta_IRT --> SkillEmb
+    SkillEmb --> ConcatAbility
+    ConcatAbility --> AbilityEnc --> Theta
     Input_q --> BetaLookup
     Beta_IRT --> BetaLookup --> Beta
     
@@ -462,22 +467,26 @@ L1 = F.binary_cross_entropy_with_logits(logits, targets)
 
 **Step 1: Ability Inference**
 ```python
-# Ability encoder: extracts scalar student ability from knowledge state
+# Ability encoder: extracts scalar student ability from knowledge state + skill context
+# Similar to iKT2's prediction head that used [h, v, skill_emb]
 self.ability_encoder = nn.Sequential(
-    nn.Linear(d_model, d_ff),
+    nn.Linear(d_model * 2, d_ff),  # Input: [h, skill_emb] concatenated
     nn.ReLU(),
     nn.Dropout(dropout),
     nn.Linear(d_ff, 1)  # Output: scalar ability θ_i(t)
 )
 
-# Forward pass: infer ability for each timestep
-theta_t = self.ability_encoder(h).squeeze(-1)  # [B, L]
+# Forward pass: infer ability for each timestep with skill context
+skill_emb = self.skill_embedding(qry)  # [B, L, d_model] - embeddings for query skills
+concat = torch.cat([h, skill_emb], dim=-1)  # [B, L, d_model * 2]
+theta_t = self.ability_encoder(concat).squeeze(-1)  # [B, L]
 ```
 
 **Interpretation**: 
-- `theta_t[i, t]` = student i's ability at timestep t
+- `theta_t[i, t]` = student i's ability at timestep t for skill context
 - Higher values = more capable student
-- Learned dynamically from interaction history
+- Learned dynamically from interaction history + skill-specific context
+- The skill embedding provides additional context about which skill is being predicted
 
 **Step 2: Skill Difficulty Lookup**
 ```python
