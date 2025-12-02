@@ -610,6 +610,7 @@ def main():
         print(f"Phase {current_phase}: {'BCE + IRT Alignment' if current_phase == 1 else 'BCE + IRT Alignment + Regularization'}")
     
     best_val_auc = 0.0
+    best_val_lref = float('inf')  # Lower is better for L_ref
     patience_counter = 0
     history = []
     phase1_converged = False
