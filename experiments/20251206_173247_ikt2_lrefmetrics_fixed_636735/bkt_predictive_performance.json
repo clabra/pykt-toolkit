@@ -1,0 +1,31 @@
+{
+  "bce_loss": 0.8341460166583015,
+  "accuracy": 0.7004021447721179,
+  "auc": 0.6747400212500732,
+  "confusion_matrix": {
+    "true_positives": 878,
+    "true_negatives": 167,
+    "false_positives": 299,
+    "false_negatives": 148
+  },
+  "precision": 0.745964316057774,
+  "recall": 0.8557504873294347,
+  "f1_score": 0.7970948706309579,
+  "bkt_probability_stats": {
+    "mean": 0.7372959427895963,
+    "std": 0.25245739027886027,
+    "min": 0.08077111015304439,
+    "max": 1.0
+  },
+  "actual_response_stats": {
+    "mean": 0.6876675603217158,
+    "num_correct": 1026,
+    "num_incorrect": 466
+  },
+  "num_interactions": 1492,
+  "metadata": {
+    "experiment_dir": "experiments/20251206_173247_ikt2_lrefmetrics_fixed_636735",
+    "dataset": "assist2015",
+    "bkt_targets_file": "data/assist2015/bkt_targets.pkl"
+  }
+}

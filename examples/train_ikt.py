@@ -99,86 +99,90 @@ def load_skill_difficulties_from_irt(rasch_path, num_c):
         return None
 
 
-def load_rasch_targets(rasch_path, num_c, mastery_method):
-    """
-    Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
-    
-    Args:
-        rasch_path: Path to mastery targets pickle file (explicit, no fallback)
-        num_c: Number of concepts/skills
-        mastery_method: Method used ('bkt', 'irt', 'bkt_mono', 'irt_mono')
-    
-    Returns:
-        dict: Dictionary with mastery targets and metadata
-              - If file exists: {'rasch_targets': dict, 'student_abilities': dict, ...}
-              - If not: {'mode': 'random', 'num_c': num_c}
-    
-    Note:
-        Path must be explicitly provided via --rasch_path CLI argument.
-        No hardcoded defaults allowed (Explicit Parameters, Zero Defaults).
-    """
-    import pickle
-    
-    # Determine if monotonic version requested
-    is_monotonic = mastery_method.endswith('_mono')
-    
-    # Try to load from file
-    if os.path.exists(rasch_path):
-        print(f"✓ Loading mastery targets from: {rasch_path}")
-        print(f"  Method: {mastery_method.upper()}")
-        if is_monotonic:
-            print(f"  Monotonic smoothing: ENABLED")
-        
-        try:
-            with open(rasch_path, 'rb') as f:
-                data = pickle.load(f)
-            
-            # Handle both BKT and IRT formats
-            # Normalize to common 'rasch_targets' key
-            if 'bkt_targets' in data:
-                data['rasch_targets'] = data['bkt_targets']
-                print(f"  Loaded BKT targets for {len(data['bkt_targets'])} students")
-                if 'bkt_params' in data:
-                    print(f"  BKT parameters available for {len(data['bkt_params'])} skills")
-            elif 'rasch_targets' in data:
-                print(f"  Loaded IRT/Rasch targets for {len(data['rasch_targets'])} students")
-            else:
-                raise ValueError("Invalid mastery file: missing 'bkt_targets' or 'rasch_targets' key")
-            
-            if 'metadata' in data:
-                meta = data['metadata']
-                print(f"  Metadata: {meta}")
-                
-                # Verify monotonic status if specified
-                file_monotonic = meta.get('monotonic', False)
-                if is_monotonic and not file_monotonic:
-                    print(f"  ⚠️  WARNING: Requested monotonic version but file has monotonic={file_monotonic}")
-                    print(f"             Make sure you're loading the correct file (e.g., *_mono.pkl)")
-                elif not is_monotonic and file_monotonic:
-                    print(f"  ⚠️  WARNING: Requested standard version but file has monotonic={file_monotonic}")
-                    print(f"             Make sure you're loading the correct file (not *_mono.pkl)")
-            
-            return data
-            
-        except Exception as e:
-            print(f"✗ Failed to load mastery targets: {e}")
-            raise RuntimeError(
-                f"Failed to load Rasch/IRT targets from {rasch_path}.\n"
-                f"iKT requires pre-computed mastery targets for training.\n"
-                f"Please generate them first:\n"
-                f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
-                f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic"
-            ) from e
-    else:
-        # Rasch targets are REQUIRED - no random fallback
-        raise FileNotFoundError(
-            f"Rasch/IRT mastery targets not found at: {rasch_path}\n"
-            f"iKT requires pre-computed mastery targets for training.\n"
-            f"Please generate them first:\n"
-            f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
-            f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic\n\n"
-            f"Expected file location: {rasch_path}"
-        )
+# UNUSED DEAD CODE - Function defined but never called
+# train_ikt.py only uses load_skill_difficulties_from_irt() which requires 'skill_difficulties' key
+# This function is kept commented for reference but should not be used
+#
+# def load_rasch_targets(rasch_path, num_c, mastery_method):
+#     """
+#     Load pre-computed mastery targets (BKT or IRT/Rasch, standard or monotonic).
+#     
+#     Args:
+#         rasch_path: Path to mastery targets pickle file (explicit, no fallback)
+#         num_c: Number of concepts/skills
+#         mastery_method: Method used ('bkt', 'irt', 'bkt_mono', 'irt_mono')
+#     
+#     Returns:
+#         dict: Dictionary with mastery targets and metadata
+#               - If file exists: {'rasch_targets': dict, 'student_abilities': dict, ...}
+#               - If not: {'mode': 'random', 'num_c': num_c}
+#     
+#     Note:
+#         Path must be explicitly provided via --rasch_path CLI argument.
+#         No hardcoded defaults allowed (Explicit Parameters, Zero Defaults).
+#     """
+#     import pickle
+#     
+#     # Determine if monotonic version requested
+#     is_monotonic = mastery_method.endswith('_mono')
+#     
+#     # Try to load from file
+#     if os.path.exists(rasch_path):
+#         print(f"✓ Loading mastery targets from: {rasch_path}")
+#         print(f"  Method: {mastery_method.upper()}")
+#         if is_monotonic:
+#             print(f"  Monotonic smoothing: ENABLED")
+#         
+#         try:
+#             with open(rasch_path, 'rb') as f:
+#                 data = pickle.load(f)
+#             
+#             # Handle both BKT and IRT formats
+#             # Normalize to common 'rasch_targets' key
+#             if 'bkt_targets' in data:
+#                 data['rasch_targets'] = data['bkt_targets']
+#                 print(f"  Loaded BKT targets for {len(data['bkt_targets'])} students")
+#                 if 'bkt_params' in data:
+#                     print(f"  BKT parameters available for {len(data['bkt_params'])} skills")
+#             elif 'rasch_targets' in data:
+#                 print(f"  Loaded IRT/Rasch targets for {len(data['rasch_targets'])} students")
+#             else:
+#                 raise ValueError("Invalid mastery file: missing 'bkt_targets' or 'rasch_targets' key")
+#             
+#             if 'metadata' in data:
+#                 meta = data['metadata']
+#                 print(f"  Metadata: {meta}")
+#                 
+#                 # Verify monotonic status if specified
+#                 file_monotonic = meta.get('monotonic', False)
+#                 if is_monotonic and not file_monotonic:
+#                     print(f"  ⚠️  WARNING: Requested monotonic version but file has monotonic={file_monotonic}")
+#                     print(f"             Make sure you're loading the correct file (e.g., *_mono.pkl)")
+#                 elif not is_monotonic and file_monotonic:
+#                     print(f"  ⚠️  WARNING: Requested standard version but file has monotonic={file_monotonic}")
+#                     print(f"             Make sure you're loading the correct file (not *_mono.pkl)")
+#             
+#             return data
+#             
+#         except Exception as e:
+#             print(f"✗ Failed to load mastery targets: {e}")
+#             raise RuntimeError(
+#                 f"Failed to load Rasch/IRT targets from {rasch_path}.\n"
+#                 f"iKT requires pre-computed mastery targets for training.\n"
+#                 f"Please generate them first:\n"
+#                 f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+#                 f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic"
+#             ) from e
+#     else:
+#         # Rasch targets are REQUIRED - no random fallback
+#         raise FileNotFoundError(
+#             f"Rasch/IRT mastery targets not found at: {rasch_path}\n"
+#             f"iKT requires pre-computed mastery targets for training.\n"
+#             f"Please generate them first:\n"
+#             f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+#             f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic\n\n"
+#             f"Expected file location: {rasch_path}"
+#         )
 
 
 def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt, lambda_reg):

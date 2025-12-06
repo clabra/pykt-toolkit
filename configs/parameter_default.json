@@ -3,6 +3,7 @@
     "model": "ikt2",
     "dataset": "assist2015",
     "rasch_path": "data/assist2015/rasch_targets.pkl",
+    "bkt_path": "data/assist2015/bkt_targets.pkl",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
@@ -33,7 +34,6 @@
     "use_rasch_ref": false,
     "lref_weight": 1.0,
     "lref_temperature": 0.1,
-    "mastery_method": "bkt",
     "num_trajectories": 10,
     "min_trajectory_steps": 10,
     "lambda_align": 1.0
@@ -82,7 +82,8 @@
       "phase"
     ],
     "data_paths": [
-      "rasch_path"
+      "rasch_path",
+      "bkt_path"
     ]
   },
   "fixed": {
@@ -92,5 +93,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "18fa3fe9a07309ac76534987f3cacc5d"
+  "md5": "761f60f86fb76bf02968efd8e2718d58"
 }

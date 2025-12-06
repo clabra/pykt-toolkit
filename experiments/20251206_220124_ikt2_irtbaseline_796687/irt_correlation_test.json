@@ -1,0 +1,24 @@
+{
+  "difficulty_fidelity": 0.9603799368134015,
+  "p_value": 5.149879579202114e-40,
+  "num_skills": 71,
+  "mse": 1.188046084327894,
+  "mae": 0.42316951776633804,
+  "model_beta_stats": {
+    "mean": -5.499674915492958,
+    "std": 3.838146438304477,
+    "min": -12.489949,
+    "max": 2.379354
+  },
+  "rasch_beta_stats": {
+    "mean": -5.627645119342586,
+    "std": 3.851846137993638,
+    "min": -12.728955268859863,
+    "max": 2.591738700866699
+  },
+  "metadata": {
+    "experiment_dir": "/workspaces/pykt-toolkit/experiments/20251206_220124_ikt2_irtbaseline_796687",
+    "dataset": "assist2015",
+    "rasch_file": "{'dataset': 'assist2015', 'num_students': 15275, 'num_skills': 100, 'num_calibrated_skills': 100, 'max_iterations': 300, 'seed': 42, 'dynamic': False, 'learning_rate': None, 'use_final_ability': False, 'calibration_method': 'averaged_ability'}"
+  }
+}

@@ -497,14 +497,14 @@ def main():
                        help='Training phase: "1" (BCE + align), "2" (BCE + align + reg), or "null" (automatic two-phase)')
     parser.add_argument('--rasch_path', type=str, required=True,
                        help='Path to Rasch targets file (explicit, e.g., data/{dataset}/rasch_targets.pkl)')
+    parser.add_argument('--bkt_path', type=str, required=True,
+                       help='Path to BKT targets file (for validation, e.g., data/{dataset}/bkt_targets.pkl)')
     
     # Compatibility parameters (for iKT, ignored by iKT2)
     parser.add_argument('--lambda_penalty', type=float, required=True,
                         help='[iKT only] Penalty coefficient - ignored by iKT2')
     parser.add_argument('--epsilon', type=float, required=True,
                         help='[iKT only] Tolerance threshold - ignored by iKT2')
-    parser.add_argument('--mastery_method', type=str, required=True,
-                        help='[iKT only] Mastery method - ignored by iKT2')
     
     # Monitoring & evaluation
     parser.add_argument('--monitor_freq', type=int, required=True)

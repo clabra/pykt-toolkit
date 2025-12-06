@@ -1,0 +1,2 @@
+split,auc,acc,lref_mse,lref_mae,ref_kendall,ref_spear,head_agreement,difficulty_fidelity,bkt_correlation_standard,bkt_correlation_timelagged
+test,0.715061,0.745765,0.660239,0.773693,-0.025299,-0.031107,0.8614831582928288,0.9603799368134016,0.19062837464755086,0.15598017780699297

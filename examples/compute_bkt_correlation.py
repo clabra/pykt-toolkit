@@ -22,7 +22,20 @@ from pathlib import Path
 
 
 def load_bkt_params(dataset, bkt_path=None):
-    """Load pre-trained BKT parameters."""
+    """
+    Load pre-trained BKT parameters.
+    
+    Args:
+        dataset: Dataset name (used for default path)
+        bkt_path: Path to BKT targets file (default from configs/parameter_default.json)
+    
+    Returns:
+        tuple: (bkt_params_dict, metadata_dict)
+    
+    Raises:
+        FileNotFoundError: If BKT file not found
+        ValueError: If file format is invalid (missing required keys)
+    """
     if bkt_path is None:
         bkt_path = Path(f"data/{dataset}/bkt_targets.pkl")
     else:
@@ -34,10 +47,36 @@ def load_bkt_params(dataset, bkt_path=None):
             f"Run: python examples/compute_bkt_targets.py --dataset {dataset}"
         )
     
-    with open(bkt_path, 'rb') as f:
-        bkt_data = pickle.load(f)
+    try:
+        with open(bkt_path, 'rb') as f:
+            bkt_data = pickle.load(f)
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load BKT data from {bkt_path}: {e}"
+        ) from e
     
-    return bkt_data['bkt_params'], bkt_data.get('metadata', {})  # Return params and metadata
+    # Validate required format
+    if 'bkt_params' not in bkt_data:
+        raise ValueError(
+            f"Invalid BKT file format at {bkt_path}: missing 'bkt_params' key.\n"
+            f"Expected format: {{'bkt_params': dict, 'bkt_targets': dict, 'metadata': dict}}\n"
+            f"Found keys: {list(bkt_data.keys())}"
+        )
+    
+    bkt_params = bkt_data['bkt_params']
+    
+    # Validate bkt_params structure (each skill should have 4 parameters)
+    if bkt_params:
+        first_skill = next(iter(bkt_params.values()))
+        required_keys = {'prior', 'learns', 'slips', 'guesses'}
+        if not required_keys.issubset(first_skill.keys()):
+            raise ValueError(
+                f"Invalid BKT parameters format at {bkt_path}.\n"
+                f"Each skill must have keys: {required_keys}\n"
+                f"Found keys in first skill: {set(first_skill.keys())}"
+            )
+    
+    return bkt_params, bkt_data.get('metadata', {})
 
 
 def load_model_mastery(experiment_dir):

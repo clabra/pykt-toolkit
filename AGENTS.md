@@ -16,12 +16,12 @@ Reference Documents:
 - `datasets.pdf` - explains what datasets are used to evaluate models and how to get them
 - `models.pdf` - a description and a paper for each model in `pykt/models`. Papers can be found in `papers-pykt` folder)
 
-## Data directories:
+## Datasets
 - `/data`: Processed datasets ready for training
 - `/data_original`: Raw datasets (do not modify)
+- `data/datasets.md`: details about the datasets and `keyid2idx.json`, a dictionary mapping original dataset IDs and zero-based sequential indices used internally by the pykt models. 
 
-
-### Environment Setup
+## Environment Setup
 
 Commands should be launched inside a virtual environment that can be activated with: 
 ```bash
@@ -29,7 +29,7 @@ source /home/vscode/.pykt-env/bin/activate
 ```
 The machine we are currently using has 8 GPUs. Use 5 GPUs when running commands. 
 
-### Reproducibility
+## Reproducibility
 
 We treat every training or evaluation run as a formal experiment requiring full reproductibility as detailed in `examples/reproducibility.md`. All default values for parameters should be specified in a single source of truth: `configs/parameter_default.json`. CLI flags override individual defaults; absence of a CLI flag implies the default recorded in the experiment's `config.json` (no hidden or implicit defaults allowed). The following standards must be met for an experiment to be considered reproducible.
 
@@ -38,7 +38,7 @@ We want to avoid the risks of having parameter defaults hardcoded. Changes in ha
 when you change any parameter default value (the reference values are in paper/parameters.cvs) follow guidelines in "Parameter Evolution Protocol" section. 
 
 
-### Important Constraints
+## Important Constraints
 - Always work within the activated conda pykt virtual environment (`.pykt-env`)
 - Do NOT modify files in `/data_original` directory
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
@@ -68,7 +68,8 @@ when you change any parameter default value (the reference values are in paper/p
 - Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits. 
 - After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
 - When creating or modifyng texts don't include time estimations 
-- Only do commits when I ask for. In general, I prefer commit after testing with experiments
+- Only do commits when I ask for. In general, I prefer commit after testing with experiments. 
+- In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions in case something doesn't match what is expected. 
 
 
 ## Copyright and License

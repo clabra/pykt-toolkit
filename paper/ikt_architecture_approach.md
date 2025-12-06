@@ -3248,21 +3248,14 @@ python examples/compute_rasch_targets.py \
 The `--mastery_method` parameter specifies which approach to use:
 
 ```bash
-# Train with BKT targets (default)
+# Train with IRT/Rasch targets (REQUIRED)
 python examples/train_ikt.py \
   --config configs/your_config.json \
-  --rasch_path data/assist2015/bkt_targets.pkl \
-  --mastery_method bkt
-
-# Train with IRT/Rasch targets
-python examples/train_ikt.py \
-  --config configs/your_config.json \
-  --rasch_path data/assist2015/rasch_targets_cumulative.pkl \
+  --rasch_path data/assist2015/rasch_targets.pkl \
   --mastery_method irt
 ```
 
-**Implementation notes:**
-- The loading function automatically detects file format (`bkt_targets` vs `rasch_targets` key)
+**Important**: `--rasch_path` must point to a **Rasch IRT file** containing `skill_difficulties` key. BKT files cannot be used with `train_ikt.py` as they lack the required skill difficulty values for regularization. BKT is used separately for validation via `compute_bkt_correlation.py`
 - Both formats are normalized internally to common `rasch_targets` key
 - L2 loss computation is identical for both methods: MSE(Mi, M_target)
 
