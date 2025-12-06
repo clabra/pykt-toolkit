@@ -65,9 +65,10 @@ when you change any parameter default value (the reference values are in paper/p
 - Use "we" instead of "you" following academic writing conventions. 
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 - If you need to create documentation files, create them in `./tmp`folder, unless I specifically ask for them. 
-- Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. 
+- Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits. 
 - After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
 - When creating or modifyng texts don't include time estimations 
+- Only do commits when I ask for. In general, I prefer commit after testing with experiments
 
 
 ## Copyright and License
