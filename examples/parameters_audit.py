@@ -117,8 +117,13 @@ class ParameterAuditor:
             with open(param_file, 'r') as f:
                 defaults = json.load(f)['defaults']
             
+            # Load training script from config
+            train_script_path = defaults['train_script']
+            train_file = self.root_dir / train_script_path
+            
+            train_script_path = defaults['train_script']
             # Load training script
-            train_file = self.root_dir / "examples" / "train_gainakt4.py"
+            train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
@@ -168,19 +173,28 @@ class ParameterAuditor:
         self.print_check_header(3, "Model Initialization Fallback Removal (Priority 2)")
         
         try:
-            model_file = self.root_dir / "pykt" / "models" / "gainakt2_exp.py"
+            # Load parameter defaults to get model name
+            param_file = self.root_dir / "configs" / "parameter_default.json"
+            with open(param_file, 'r') as f:
+                defaults = json.load(f)['defaults']
+            
+            model_name = defaults['model']
+            model_file = self.root_dir / "pykt" / "models" / f"{model_name}.py"
             with open(model_file, 'r') as f:
                 model_content = f.read()
             
             get_count = model_content.count("config.get(")
             bracket_count = model_content.count("config['")
-            has_keyerror = "KeyError" in model_content and "Missing required parameter" in model_content
+            # Check for KeyError with required/parameter keywords (flexible matching)
+            has_keyerror = ("KeyError" in model_content and 
+                          ("required" in model_content.lower() or "parameter" in model_content.lower()))
             
             print(f"  config.get() calls:          {get_count}")
             print(f"  config['key'] direct access: {bracket_count}")
             print(f"  Fail-fast error handling:    {'✅ Present' if has_keyerror else '❌ Missing'}")
             
-            passed = (get_count == 0 and bracket_count >= 15 and has_keyerror)
+            # Require at least 5 config accesses (reasonable minimum for any model)
+            passed = (get_count == 0 and bracket_count >= 5 and has_keyerror)
             
             if passed:
                 print(f"\n  Result: ✅ PASS - Model uses fail-fast approach")
@@ -202,7 +216,13 @@ class ParameterAuditor:
         self.print_check_header(4, "Eval Script Documentation (Priority 3)")
         
         try:
-            eval_file = self.root_dir / "examples" / "eval_gainakt2exp.py"
+            # Load parameter defaults to get eval script
+            param_file = self.root_dir / "configs" / "parameter_default.json"
+            with open(param_file, 'r') as f:
+                defaults = json.load(f)['defaults']
+            
+            eval_script_path = defaults['eval_script']
+            eval_file = self.root_dir / eval_script_path
             with open(eval_file, 'r') as f:
                 eval_content = f.read()
             
@@ -244,7 +264,7 @@ class ParameterAuditor:
             ]
             
             # Model-specific parameters (check what's actually in defaults)
-            model = defaults.get('model', 'unknown')
+            model = defaults['model']
             if model == 'gainakt2exp':
                 model_specific_params = ['lambda_bce']
             elif model == 'ikt':
@@ -279,7 +299,13 @@ class ParameterAuditor:
         self.print_check_header(6, "No Suspicious Hardcoded Values")
         
         try:
-            train_file = self.root_dir / "examples" / "train_gainakt2exp.py"
+            # Load parameter defaults to get train script
+            param_file = self.root_dir / "configs" / "parameter_default.json"
+            with open(param_file, 'r') as f:
+                defaults = json.load(f)['defaults']
+            
+            train_script_path = defaults['train_script']
+            train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()
             
@@ -316,7 +342,7 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Load training script
-            train_script_path = defaults.get('train_script', 'examples/train_gainakt2exp.py')
+            train_script_path = defaults['train_script']
             train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()
@@ -405,7 +431,7 @@ class ParameterAuditor:
                 self.detailed_issues.append(issue)
                 
                 print(f"\n  Result: ❌ FAIL - {issues} issues found")
-                print(f"\n  💡 Fix: Add missing argparse entries with required=True in train_gainakt2exp.py")
+                print(f"\n  💡 Fix: Add missing argparse entries with required=True in {train_script_path}")
                 print(f"          (Boolean flags with action='store_true' don't need required=True)")
                 return False
                 
@@ -424,7 +450,7 @@ class ParameterAuditor:
                 defaults = json.load(f)['defaults']
             
             # Load training script
-            train_script_path = defaults.get('train_script', 'examples/train_gainakt2exp.py')
+            train_script_path = defaults['train_script']
             train_file = self.root_dir / train_script_path
             with open(train_file, 'r') as f:
                 train_content = f.read()

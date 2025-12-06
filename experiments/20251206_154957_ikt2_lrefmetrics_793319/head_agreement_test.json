@@ -1,0 +1,24 @@
+{
+  "head_agreement": 0.4173964567496037,
+  "p_value": 9.245837260409165e-64,
+  "num_interactions": 1487,
+  "mse": 0.05879670350585205,
+  "mae": 0.20247849226630799,
+  "m_irt_stats": {
+    "mean": 0.8628225931405514,
+    "std": 0.21691092444702248,
+    "min": 0.077446,
+    "max": 0.999997
+  },
+  "p_correct_stats": {
+    "mean": 0.7323956368527236,
+    "std": 0.14468825251091746,
+    "min": 0.002873,
+    "max": 0.983508
+  },
+  "metadata": {
+    "experiment_dir": "/workspaces/pykt-toolkit/experiments/20251206_154957_ikt2_lrefmetrics_793319",
+    "metric_type": "head_agreement",
+    "description": "Correlation between IRT mastery (M_IRT) and performance prediction (p_correct)"
+  }
+}

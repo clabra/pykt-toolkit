@@ -1,0 +1,51 @@
+{
+  "bkt_correlation": 0.14714259264567162,
+  "p_value": 1.1956780961662823e-08,
+  "mse": 0.10280693833400047,
+  "mae": 0.2282708740682605,
+  "num_interactions": 1487,
+  "num_students": 14,
+  "num_skills": 72,
+  "supplementary_correlations": {
+    "time_lagged": {
+      "correlation": 0.12421555218614326,
+      "p_value": 0.00016531808419954517,
+      "num_interactions": 915,
+      "min_attempt": 3,
+      "operator": ">",
+      "description": "Correlation after initialization (attempt > 3, optimal threshold)"
+    },
+    "trajectory_slopes": {
+      "correlation": -0.15635486607757745,
+      "p_value": 0.030773823595421905,
+      "num_trajectories": 191,
+      "description": "Correlation of learning rates (removes initialization bias)"
+    }
+  },
+  "model_mastery_stats": {
+    "mean": 0.8628225931405514,
+    "std": 0.21691092444702248,
+    "min": 0.077446,
+    "max": 0.999997
+  },
+  "bkt_mastery_stats": {
+    "mean": 0.7727577207759548,
+    "std": 0.2525150959044378,
+    "min": 0.06522710548827383,
+    "max": 0.9999999999983729
+  },
+  "metadata": {
+    "experiment_dir": "/workspaces/pykt-toolkit/experiments/20251206_154957_ikt2_lrefmetrics_793319",
+    "dataset": "assist2015",
+    "bkt_targets_file": "data/assist2015/bkt_targets.pkl",
+    "bkt_metadata": {
+      "dataset": "assist2015",
+      "num_students": 15275,
+      "num_skills": 100,
+      "method": "BKT (Bayesian Knowledge Tracing)",
+      "model": "pyBKT",
+      "monotonic": false
+    },
+    "validation_passed": true
+  }
+}

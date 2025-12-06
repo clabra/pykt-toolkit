@@ -263,7 +263,7 @@ def train_epoch(model, train_loader, optimizer, device, gradient_clip, beta_irt,
     }
 
 
-def validate(model, val_loader, device, beta_irt, lambda_reg):
+def validate(model, val_loader, device, beta_irt, lambda_reg, rasch_targets_lookup=None):
     """
     Validate the model with comprehensive metrics tracking.
     
@@ -273,9 +273,10 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
         device: torch device
         beta_irt: IRT skill difficulties (required, can be None)
         lambda_reg: regularization coefficient (required, explicit)
+        rasch_targets_lookup: List of Rasch reference tensors [num_students, timesteps, skills] (optional)
     
     Note:
-        All parameters REQUIRED. No defaults per reproducibility guidelines.
+        All parameters REQUIRED except rasch_targets_lookup. No defaults per reproducibility guidelines.
         Code will fail if parameters not explicitly provided.
     """
     model.eval()
@@ -290,6 +291,8 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
     all_labels = []
     all_mastery_irt = []
     all_p_correct = []
+    all_irt_lref = []  # For L_ref computation
+    all_rasch_lref = []  # For L_ref computation
     
     with torch.no_grad():
         for batch in val_loader:
@@ -297,6 +300,7 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
             responses = batch['rseqs'].to(device)
             questions_shifted = batch['shft_cseqs'].to(device)
             mask = batch['masks'].to(device)
+            student_ids = batch.get('uids')  # May be None if not in batch
             
             # Forward pass
             outputs = model(q=questions, r=responses, qry=questions_shifted)
@@ -337,6 +341,40 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
                     valid_indices = mask_np[i] == 1
                     all_mastery_irt.extend(mastery_irt[i][valid_indices])
                     all_p_correct.extend(p_correct[i][valid_indices])
+                
+                # Collect L_ref data if rasch_targets available
+                # Note: rasch_targets_lookup can be either a dict or a list
+                # If dict: check if student_id in rasch_targets_lookup
+                # If list: check if 0 <= student_id < len(rasch_targets_lookup)
+                if rasch_targets_lookup is not None and student_ids is not None:
+                    irt_mastery_tensor = outputs['mastery_irt'].cpu()  # [B, L]
+                    q_cpu = questions.cpu()  # [B, L]
+                    mask_cpu = mask.cpu()  # [B, L]
+                    sid_cpu = student_ids.cpu().numpy() if hasattr(student_ids, 'cpu') else student_ids
+                    
+                    is_dict = isinstance(rasch_targets_lookup, dict)
+                    
+                    for i in range(len(irt_mastery_tensor)):
+                        student_id = int(sid_cpu[i]) if isinstance(sid_cpu, np.ndarray) else int(sid_cpu)
+                        
+                        # Check if student has Rasch data
+                        has_rasch = False
+                        if is_dict:
+                            has_rasch = student_id in rasch_targets_lookup
+                        else:  # list
+                            has_rasch = 0 <= student_id < len(rasch_targets_lookup)
+                        
+                        if has_rasch:
+                            rasch_student = rasch_targets_lookup[student_id]  # [timesteps, skills]
+                            for t_idx in range(irt_mastery_tensor.shape[1]):
+                                if mask_cpu[i, t_idx].item() == 1:
+                                    skill_id = int(q_cpu[i, t_idx].item())
+                                    if t_idx < rasch_student.shape[0] and skill_id < rasch_student.shape[1]:
+                                        irt_val = irt_mastery_tensor[i, t_idx].item()
+                                        rasch_val = rasch_student[t_idx, skill_id].item()
+                                        if not (np.isnan(irt_val) or np.isnan(rasch_val)):
+                                            all_irt_lref.append(irt_val)
+                                            all_rasch_lref.append(rasch_val)
     
     # Compute aggregate metrics
     avg_total_loss = total_loss / num_batches
@@ -384,6 +422,13 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
         loss_ratio_align = 0.0
         loss_ratio_reg = 0.0
     
+    # Compute L_ref loss if Rasch targets available
+    lref_loss = 0.0
+    if len(all_irt_lref) > 0 and len(all_rasch_lref) > 0:
+        irt_np = np.array(all_irt_lref)
+        rasch_np = np.array(all_rasch_lref)
+        lref_loss = np.mean((irt_np - rasch_np) ** 2)  # MSE
+    
     return {
         # L1 - Performance
         'l1_bce': avg_bce_loss,
@@ -399,6 +444,9 @@ def validate(model, val_loader, device, beta_irt, lambda_reg):
         
         # L_reg - Skill Difficulty Regularization
         'reg_loss': avg_reg_loss,
+        
+        # L_ref - Reference Model Alignment (if available)
+        'lref_loss': lref_loss,
         
         # L_total - Combined
         'total_loss': avg_total_loss,
@@ -468,6 +516,11 @@ def main():
     parser.add_argument('--min_trajectory_steps', type=int, required=True)
     parser.add_argument('--num_trajectories', type=int, required=True)
     
+    # L_ref hybrid loss parameters
+    parser.add_argument('--use_rasch_ref', action='store_true')
+    parser.add_argument('--lref_weight', type=float, required=True)
+    parser.add_argument('--lref_temperature', type=float, required=True)
+    
     args = parser.parse_args()
     
     # Set random seed
@@ -490,7 +543,7 @@ def main():
             writer = csv.writer(f)
             writer.writerow([
                 'epoch', 'phase', 'lambda_align', 'lambda_reg',
-                'val_auc', 'val_align_mse', 'val_align_mae', 'val_head_agreement', 'val_reg_loss'
+                'val_auc', 'val_align_mse', 'val_align_mae', 'val_head_agreement', 'val_reg_loss', 'val_lref_loss'
             ])
     
     # Determine training mode
@@ -554,6 +607,21 @@ def main():
     # Load skill difficulties from IRT calibration
     # rasch_path comes explicitly from CLI (no hidden defaults)
     skill_difficulties = load_skill_difficulties_from_irt(args.rasch_path, num_c)
+    
+    # Load Rasch reference targets for L_ref validation (if available)
+    rasch_targets_lookup = None
+    if args.rasch_path and os.path.exists(args.rasch_path):
+        try:
+            import pickle
+            with open(args.rasch_path, 'rb') as f:
+                rasch_data = pickle.load(f)
+            if 'rasch_targets' in rasch_data:
+                rasch_targets_lookup = rasch_data['rasch_targets']
+                print(f"✓ Loaded Rasch reference targets for {len(rasch_targets_lookup)} students")
+            else:
+                print("⚠️  No 'rasch_targets' in Rasch file, L_ref validation unavailable")
+        except Exception as e:
+            print(f"⚠️  Could not load Rasch targets: {e}")
     print()
     
     # Create model
@@ -633,12 +701,13 @@ def main():
               f"Head_Agr: {train_metrics['head_agreement']:.3f}")
         
         # Validate
-        val_metrics = validate(model, valid_loader, device, beta_irt=beta_irt_device, lambda_reg=args.lambda_reg)
+        val_metrics = validate(model, valid_loader, device, beta_irt=beta_irt_device, lambda_reg=args.lambda_reg, rasch_targets_lookup=rasch_targets_lookup)
         print(f"Valid - Total Loss: {val_metrics['total_loss']:.4f}, "
               f"BCE: {val_metrics['l1_bce']:.4f}, "
               f"AUC: {val_metrics['auc']:.4f}, "
               f"Align: {val_metrics['align_loss']:.4f}, "
-              f"Head_Agr: {val_metrics['head_agreement']:.3f}")
+              f"Head_Agr: {val_metrics['head_agreement']:.3f}, "
+              f"L_ref: {val_metrics.get('lref_loss', 0.0):.4f}")
         
         # Save comprehensive epoch results with hyperparameters
         epoch_results = {
@@ -665,15 +734,34 @@ def main():
                 val_metrics['align_mse'],
                 val_metrics['align_mae'],
                 val_metrics['head_agreement'],
-                val_metrics['reg_loss']
+                val_metrics['reg_loss'],
+                val_metrics.get('lref_loss', 0.0)
             ])
         
-        # Check for improvement (using AUC as primary metric)
-        if val_metrics['auc'] > best_val_auc:
-            best_val_auc = val_metrics['auc']
+        # Phase-aware improvement checking
+        improved = False
+        if current_phase == 1:
+            # Phase 1: Monitor AUC improvement
+            if val_metrics['auc'] > best_val_auc:
+                best_val_auc = val_metrics['auc']
+                improved = True
+                print(f"✓ Phase 1 improvement - AUC: {best_val_auc:.4f}")
+                if training_mode == "automatic_two_phase":
+                    phase1_best_epoch = epoch + 1
+        else:
+            # Phase 2: Monitor L_ref loss decrease (if available)
+            current_lref = val_metrics.get('lref_loss', float('inf'))
+            if current_lref < best_val_lref:
+                best_val_lref = current_lref
+                improved = True
+                print(f"✓ Phase 2 improvement - L_ref: {best_val_lref:.4f}")
+            
+            # Also update best_val_auc for logging purposes
+            if val_metrics['auc'] > best_val_auc:
+                best_val_auc = val_metrics['auc']
+        
+        if improved:
             patience_counter = 0
-            if training_mode == "automatic_two_phase" and current_phase == 1:
-                phase1_best_epoch = epoch + 1
             
             # Save best model (handle DataParallel wrapper)
             checkpoint_path = os.path.join(experiment_dir, 'model_best.pth')
@@ -685,12 +773,15 @@ def main():
                 'val_auc': val_metrics['auc'],
                 'val_acc': val_metrics['accuracy'],
                 'val_head_agreement': val_metrics['head_agreement'],
+                'val_lref_loss': val_metrics.get('lref_loss', 0.0),
                 'config': vars(args)
             }, checkpoint_path)
-            print(f"✓ Saved best model (AUC: {best_val_auc:.4f})")
         else:
             patience_counter += 1
-            print(f"Patience: {patience_counter}/{args.patience}")
+            if current_phase == 1:
+                print(f"Patience: {patience_counter}/{args.patience} (monitoring AUC)")
+            else:
+                print(f"Patience: {patience_counter}/{args.patience} (monitoring L_ref)")
             
             if patience_counter >= args.patience:
                 # Check if we should switch phases in automatic mode
@@ -714,7 +805,7 @@ def main():
                     
                     # Reset early stopping for Phase 2
                     patience_counter = 0
-                    best_val_auc = 0.0  # Reset to find best in Phase 2
+                    best_val_lref = float('inf')  # Reset to monitor L_ref in Phase 2
                     
                     print(f"Switching to Phase 2: BCE + IRT Alignment + Regularization")
                     print(f"Remaining epochs: {args.epochs - epoch - 1}")
@@ -750,6 +841,8 @@ def main():
         print(f"✓ Single-phase training (Phase {current_phase}) completed")
     
     print(f"Best validation AUC: {best_val_auc:.4f}")
+    if training_mode == "automatic_two_phase" and phase1_converged:
+        print(f"Best Phase 2 L_ref loss: {best_val_lref:.4f}")
     print("="*80 + "\n")
     
     # Save training history

@@ -1,0 +1,2 @@
+split,auc,acc,lref_mse,lref_mae,kendall_tau,spearman
+test,0.717978,0.747622,0.839261,0.889352,-0.033938,-0.041547

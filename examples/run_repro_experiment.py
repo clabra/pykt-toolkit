@@ -289,7 +289,7 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     cmd_parts = [python_path, eval_script]
     
     # Model-specific checkpoint handling
-    model = params.get('model', 'gainakt2exp')
+    model = params['model']
     
     if model == 'ikt2':
         # ikt2 eval script uses --checkpoint with full path
@@ -426,7 +426,7 @@ def main():
     with open(defaults_path, 'r') as f:
         defaults_config = json.load(f)
     
-    available_params = defaults_config.get("defaults", {})
+    available_params = defaults_config["defaults"]
     
     # Create parser with known arguments
     parser = argparse.ArgumentParser(description='Launch training or reproduce experiment (simplified)')
@@ -692,7 +692,7 @@ def main():
         
         # Build config from defaults
         # Get training defaults and add model
-        training_params = defaults.get("defaults", {}).copy()
+        training_params = defaults["defaults"].copy()
         training_params["model"] = model_name
         
         # Override dataset and fold (use resolved values, not args directly)
@@ -702,14 +702,14 @@ def main():
         # Process parameter overrides from command-line arguments
         # Check all parameters in defaults to see if they were overridden via CLI
         overrides = {}
-        for param_name in defaults.get("defaults", {}).keys():
+        for param_name in defaults["defaults"].keys():
             # Skip special parameters already handled
             if param_name in ['train_script', 'eval_script', 'model', 'dataset', 'fold']:
                 continue
             
             # Check if this parameter was provided via CLI
             arg_value = getattr(args, param_name, None)
-            default_value = defaults.get("defaults", {}).get(param_name)
+            default_value = defaults["defaults"][param_name]
             
             # For boolean parameters, argparse sets them to True/False directly
             # For others, they're None if not provided
@@ -820,10 +820,10 @@ def main():
                 "primary": training_params["seed"],
                 "all": [training_params["seed"]]
             },
-            "defaults": defaults.get("defaults", {}),  # Pristine copy of training_defaults from parameter_default.json
-            "overrides": {k: v for k, v in training_params.items() if k in defaults.get("defaults", {}) and training_params[k] != defaults["defaults"][k]},
-            "types": defaults.get("types", {}),
-            "md5": defaults.get("md5", ""),  # MD5 of original defaults from parameter_default.json
+            "defaults": defaults["defaults"],  # Pristine copy of training_defaults from parameter_default.json
+            "overrides": {k: v for k, v in training_params.items() if k in defaults["defaults"] and training_params[k] != defaults["defaults"][k]},
+            "types": defaults["types"],
+            "md5": defaults["md5"],  # MD5 of original defaults from parameter_default.json
             "reference": {
                 "parameter_default_json": "configs/parameter_default.json"
             }
