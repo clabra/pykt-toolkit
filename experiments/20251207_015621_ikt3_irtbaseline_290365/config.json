@@ -1,4 +1,21 @@
 {
+  "commands": {
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt3.py --batch_size 64 --c_stability_reg 0.01 --d_ff 1536 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 30 --fold 0 --gradient_clip 1.0 --lambda_target 0.5 --learning_rate 0.0001 --n_heads 4 --num_encoder_blocks 8 --optimizer Adam --patience 30 --reference_model irt --reference_targets_path data/assist2015/irt_extended_targets_fold0.pkl --seed 42 --seq_len 200 --warmup_epochs 50 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_ikt3.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251207_015621_ikt3_test_290365",
+    "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20251207_015621_ikt3_test_290365 --split test --num_students 15"
+  },
+  "experiment": {
+    "id": "20251207_015621_ikt3_test_290365",
+    "short_title": "ikt3_test",
+    "experiment_id": "290365",
+    "created": "20251207_015621"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
   "defaults": {
     "model": "ikt3",
     "dataset": "assist2015",
@@ -28,6 +45,7 @@
     "reference_targets_path": "data/assist2015/irt_extended_targets_fold0.pkl",
     "max_correlation_students": 1000
   },
+  "overrides": {},
   "types": {
     "launcher": [
       "short_title",
@@ -69,12 +87,8 @@
       "reference_targets_path"
     ]
   },
-  "fixed": {
-    "ikt3_loss_formula": {
-      "value": "L_total = (1 - \u03bb(t)) \u00d7 L_BCE + c \u00d7 L_stability + \u03bb(t) \u00d7 L_align",
-      "rationale": "iKT3 with pluggable reference models. Single-phase training with warm-up: \u03bb(t) = \u03bb_target \u00d7 min(1, epoch / warmup_epochs). For IRT: L_stability = l_22 (difficulty regularization), L_align = l_21 + l_23 (performance + ability alignment). Success criteria: l_21 < 0.15, l_22 < 0.10, l_23 < 0.15, val_heads_corr > 0.85",
-      "validated_by_experiments": []
-    }
-  },
-  "md5": "f7939eb45b476ccc2203f23ce5590cc2"
+  "md5": "f7939eb45b476ccc2203f23ce5590cc2",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
 }

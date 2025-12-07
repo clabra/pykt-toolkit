@@ -205,10 +205,28 @@ def build_explicit_train_command(train_script, params):
     # Launcher-only parameters (not passed to training script)
     launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
     
-    # Add all parameters explicitly (exclude launcher-only params)
+    # Model-specific parameter sets (only pass parameters the training script accepts)
+    ikt3_params = {
+        'dataset', 'fold', 'seed',
+        'reference_targets_path', 'reference_model',
+        'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
+        'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',
+        'lambda_target', 'warmup_epochs', 'c_stability_reg'
+    }
+    
+    # Determine which parameters to pass based on training script
+    if 'train_ikt3.py' in train_script:
+        allowed_params = ikt3_params
+    else:
+        # For other models, pass all parameters (backward compatibility)
+        allowed_params = None
+    
+    # Add all parameters explicitly (exclude launcher-only params and model-specific filtering)
     for key, value in sorted(params.items()):
         if key in launcher_only_params:
             continue
+        if allowed_params is not None and key not in allowed_params:
+            continue  # Skip parameters not accepted by this training script
         if isinstance(value, bool):
             if value:
                 cmd_parts.append(f"--{key}")
@@ -291,16 +309,22 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     # Model-specific checkpoint handling
     model = params['model']
     
-    if model == 'ikt2':
-        # ikt2 eval script uses --checkpoint with full path
-        checkpoint_path = f"{experiment_folder}/model_best.pth"
+    if model in ['ikt2', 'ikt3']:
+        # ikt2/ikt3 eval scripts use --checkpoint with full path
+        checkpoint_path = f"{experiment_folder}/best_model.pt"
         cmd_parts.append(f"--checkpoint {checkpoint_path}")
         # ensure results are written to the experiment folder
         cmd_parts.append(f"--output_dir {experiment_folder}")
         
-        # ikt2 eval script only needs minimal parameters
-        core_eval_params = ['dataset', 'fold', 'batch_size', 'seq_len']
+        # ikt2/ikt3 eval scripts only need minimal parameters
+        core_eval_params = ['dataset', 'fold', 'batch_size']
         model_eval_params = []
+        
+        # ikt3 needs reference_targets_path
+        if model == 'ikt3':
+            reference_targets_path = params.get('reference_targets_path')
+            if reference_targets_path:
+                cmd_parts.append(f"--reference_targets_path {reference_targets_path}")
     else:
         # Other models use --run_dir and --ckpt_name
         cmd_parts.append(f"--run_dir {experiment_folder}")
@@ -620,7 +644,31 @@ def main():
             print("✓ REPRODUCTION TRAINING COMPLETED SUCCESSFULLY")
             print("=" * 80)
             print(f"\nResults saved to: {repro_folder}")
-            print("\nNote: Evaluation is automatically launched by the training script")
+            
+            # Launch evaluation
+            print("\n" + "=" * 80)
+            print("LAUNCHING EVALUATION")
+            print("=" * 80 + "\n")
+            
+            eval_command_explicit = original_config['commands']['eval_explicit']
+            # Update experiment dir for reproduction folder
+            eval_command_explicit = eval_command_explicit.replace(f"--experiment_dir {original_folder}", f"--experiment_dir {repro_folder}")
+            eval_command_full = f"EXPERIMENT_DIR={repro_folder} {eval_command_explicit}"
+            
+            eval_result = subprocess.run(eval_command_full, shell=True)
+            
+            if eval_result.returncode == 0:
+                print("\n✓ Evaluation completed successfully")
+                print(f"  Results saved to: {repro_folder}/eval_results.json")
+            elif eval_result.returncode == 1:
+                # Exit code 1 typically means evaluation ran but success criteria not met
+                print("\n✓ Evaluation completed (success criteria not met)")
+                print(f"  Results saved to: {repro_folder}/eval_results.json")
+                print("  Check eval_results.json for detailed metrics")
+            else:
+                print("\n⚠️  Evaluation failed (non-critical)")
+                print("  You can run it manually:")
+                print(f"    {eval_command_full}")
             
             # Suggest comparison with external script
             print("\n" + "=" * 80)
@@ -861,12 +909,20 @@ def main():
             print(f"  {train_command}")
             return
         
-        # Launch training (automatic two-phase for iKT/iKT2 if phase=None)
+        # Launch training (automatic two-phase for iKT/iKT2 if phase=None, warm-up for iKT3)
         if model_name in ['ikt', 'ikt2'] and training_params.get('phase') is None:
             print("\n" + "=" * 80)
             print(f"AUTOMATIC TWO-PHASE TRAINING ({model_name.upper()})")
             print("=" * 80)
             print("Phase 1 will run until convergence, then automatically switch to Phase 2")
+            print("=" * 80 + "\n")
+        elif model_name == 'ikt3':
+            warmup_epochs = training_params.get('warmup_epochs', 50)
+            lambda_target = training_params.get('lambda_target', 0.5)
+            print("\n" + "=" * 80)
+            print(f"SINGLE-PHASE TRAINING WITH WARM-UP (iKT3)")
+            print("=" * 80)
+            print(f"λ will gradually increase from 0 to {lambda_target} over {warmup_epochs} epochs")
             print("=" * 80 + "\n")
         
         # Launch training
@@ -880,17 +936,40 @@ def main():
             print("✓ TRAINING COMPLETED SUCCESSFULLY")
             print("=" * 80)
             print(f"\nResults saved to: {experiment_folder}")
-            print("\nNote: Evaluation is automatically launched by the training script")
             
-            # Auto-launch mastery states extraction for iKT/iKT2 models
-            if model_name in ['ikt', 'ikt2']:
+            # Launch evaluation
+            print("\n" + "=" * 80)
+            print("LAUNCHING EVALUATION")
+            print("=" * 80 + "\n")
+            
+            eval_command_full = f"EXPERIMENT_DIR={experiment_dir_abs} {config['commands']['eval_explicit']}"
+            eval_result = subprocess.run(eval_command_full, shell=True)
+            
+            if eval_result.returncode == 0:
+                print("\n✓ Evaluation completed successfully")
+                print(f"  Results saved to: {experiment_folder}/eval_results.json")
+            elif eval_result.returncode == 1:
+                # Exit code 1 typically means evaluation ran but success criteria not met
+                print("\n✓ Evaluation completed (success criteria not met)")
+                print(f"  Results saved to: {experiment_folder}/eval_results.json")
+                print("  Check eval_results.json for detailed metrics")
+            else:
+                print("\n⚠️  Evaluation failed (non-critical)")
+                print("  You can run it manually:")
+                print(f"    {eval_command_full}")
+            
+            # Auto-launch mastery states extraction for iKT/iKT2/iKT3 models
+            if model_name in ['ikt', 'ikt2', 'ikt3']:
                     print("\n" + "=" * 80)
                     print(f"LAUNCHING MASTERY STATES EXTRACTION ({model_name.upper()})")
                     print("=" * 80)
                     if model_name == 'ikt':
                         print("\nExtracting {Mi} skill trajectories for Rasch alignment analysis...")
-                    else:
+                    elif model_name == 'ikt2':
                         print("\nExtracting IRT mastery states (θ, β, M_IRT) for interpretability analysis...")
+                    elif model_name == 'ikt3':
+                        ref_model = training_params.get('reference_model', 'irt')
+                        print(f"\nExtracting {ref_model.upper()} alignment factors for interpretability analysis...")
                     
                     mastery_result = subprocess.run(mastery_states_command, shell=True)
                     

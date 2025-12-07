@@ -1,25 +1,10 @@
 #!/usr/bin/env python3
 """
-Mastery States Extractor for iKT2 Neural Model
+Mastery States Analyzer for iKT3 Knowledge Tracing Model
 
-This script extracts mastery states from a TRAINED iKT2 MODEL (not from external IRT/BKT models).
-It runs the neural network forward pass and captures the model's internal mastery representations.
-
-IMPORTANT: This extracts what the MODEL learned, not external IRT/BKT baselines.
-- Loads the iKT2 neural network checkpoint
-- Runs forward pass through the model
-- Extracts mastery_irt = σ(θ - β) computed by the model internally
-- Also extracts θ (student ability) and β (skill difficulty) learned by the model
-
-The name "mastery_irt" refers to the IRT-INSPIRED FORMULA used by iKT2 internally:
-    M_IRT = σ(θ - β)
-where θ and β are LEARNED BY THE NEURAL MODEL during training.
-
-This is NOT loading an external IRT model. The model IS iKT2, which happens to use
-IRT-style computations as part of its architecture.
-
-Supported Models:
-    - iKT2: Extracts M_IRT = σ(θ - β), theta_t, beta_k from model outputs
+This script extracts IRT-based mastery states for each skill at each time step.
+For iKT3, mastery states represent M_IRT = σ(θ - β) where θ is student ability
+and β is skill difficulty, following the Rasch IRT model.
 
 Usage:
     # Analyze test set (default: 20 students)
@@ -48,10 +33,8 @@ Output Format:
         - question_id: Question attempted at this time step
         - skill_id: Skill/concept being assessed (for single-skill: skill_id == question_id)
         - response: Student's response (1=correct, 0=incorrect)
-        - mi_value: Model's mastery estimate M_IRT = σ(θ - β) from iKT2 forward pass
-        - theta: Student ability θ learned by the model
-        - beta: Skill difficulty β learned/regularized by the model
-        - bce_prediction: Correctness prediction from model's Head 1
+        - mastery_state: IRT mastery probability M = σ(θ - β) for this skill at this time step
+          (continuous value between 0 and 1, represents probability of mastery)
     
     mastery_states_summary_{split}.json:
         - total_observations: Total number of (student, time_step, skill) tuples
@@ -59,19 +42,11 @@ Output Format:
         - skills_observed: Number of skills that appeared in the data
         - skill_statistics: Per-skill aggregate metrics and temporal progression samples
 
-Use Cases:
-    1. Interpretability Analysis: Understand what the neural model learned
-    2. Validation: Compare model mastery with external baselines (BKT, Rasch IRT)
-       - Use compute_bkt_correlation.py to compare with BKT P(L_t)
-       - Use compute_irt_correlation.py to compare with Rasch IRT β values
-    3. Trajectory Visualization: See how mastery evolves during learning
-    4. Research: Demonstrate model's internal representations are meaningful
-
 Notes:
+    - For iKT3: mastery states are IRT-based mastery probabilities from Head 2
     - For single-skill datasets (like assist2015): one skill per question
-    - Extracts from NEURAL MODEL outputs, not external statistical models
-    - θ and β are learned during model training (not from external IRT calibration)
-    - M_IRT uses IRT-inspired formula but is computed by the neural network
+    - Mastery values are derived from learned θ (ability) and β (difficulty)
+    - Values represent probability that student has mastered the skill
 """
 
 import os
@@ -90,25 +65,21 @@ sys.path.insert(0, '/workspaces/pykt-toolkit')
 from pykt.datasets import init_dataset4train
 from pykt.datasets.data_loader import KTDataset
 from torch.utils.data import DataLoader
-from pykt.models.gainakt4 import GainAKT4
-from pykt.models.ikt import iKT
-from pykt.models.ikt2 import iKT2
+from pykt.models.ikt3 import iKT3
 
 
 def load_model_and_config(run_dir, ckpt_name):
-    """Load trained model and configuration."""
+    """Load trained iKT3 model and configuration."""
     # Load config
     config_path = os.path.join(run_dir, 'config.json')
     with open(config_path, 'r') as f:
         full_config = json.load(f)
     
-    #config = full_config['defaults']
     # Merge defaults with overrides (overrides take precedence)
     config = full_config['defaults'].copy()
     config.update(full_config.get('overrides', {}))
     
     # Setup data config
-    # Load data config from configs/data_config.json
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(project_root, 'configs', 'data_config.json')
     with open(config_path, 'r') as f:
@@ -124,27 +95,22 @@ def load_model_and_config(run_dir, ckpt_name):
     
     num_c = data_config[config['dataset']]['num_c']
     
-    # Initialize model based on model type
+    # Initialize iKT3 model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_name = config.get('model', 'gainakt4')
-    
-    if model_name == 'ikt2':
-        # iKT2 model
-        model = iKT2(
-            num_c=num_c,
-            seq_len=config['seq_len'],
-            d_model=config['d_model'],
-            n_heads=config['n_heads'],
-            num_encoder_blocks=config['num_encoder_blocks'],
-            d_ff=config['d_ff'],
-            dropout=config['dropout'],
-            emb_type=config['emb_type'],
-            lambda_align=config.get('lambda_align', 1.0),
-            lambda_reg=config.get('lambda_reg', 0.1),
-            phase=config.get('phase', 1)
-        ).to(device)
-    else:
-        raise ValueError(f"Unsupported model type: {model_name}")
+    model = iKT3(
+        num_c=num_c,
+        seq_len=config['seq_len'],
+        d_model=config['d_model'],
+        n_heads=config['n_heads'],
+        num_encoder_blocks=config['num_encoder_blocks'],
+        d_ff=config['d_ff'],
+        dropout=config['dropout'],
+        emb_type=config['emb_type'],
+        reference_model_type=config.get('reference_model', 'irt'),
+        lambda_target=config.get('lambda_target', 0.5),
+        warmup_epochs=config.get('warmup_epochs', 50),
+        c_stability_reg=config.get('c_stability_reg', 0.1)
+    ).to(device)
     
     # Multi-GPU support: wrap model with DataParallel if multiple GPUs available
     if device.type == 'cuda' and torch.cuda.device_count() > 1:
@@ -160,109 +126,18 @@ def load_model_and_config(run_dir, ckpt_name):
     return model, config, data_config, device, num_c
 
 
-def select_students_by_sequence_length(data_loader, num_students_per_bin=3):
+def extract_mastery_states(model, data_loader, device, num_concepts, max_students=None):
     """
-    Select students stratified by sequence length.
-    
-    Creates 5 bins with 20% of sequence length range each, then randomly
-    selects num_students_per_bin from each bin.
+    Extract mastery states for each skill at each time step.
     
     Args:
-        data_loader: DataLoader with student data
-        num_students_per_bin: Number of students to select per bin (default: 3)
-    
-    Returns:
-        set: Selected student IDs
-    """
-    import numpy as np
-    
-    # First pass: collect sequence lengths for all students
-    student_lengths = {}
-    
-    for batch_idx, batch in enumerate(data_loader):
-        mask = batch['masks'].cpu().numpy()  # [B, L]
-        
-        if 'uids' in batch:
-            uids = batch['uids'].cpu().numpy()
-        else:
-            uids = np.arange(batch_idx * mask.shape[0], (batch_idx + 1) * mask.shape[0])
-        
-        # Count valid timesteps per student
-        for i, uid in enumerate(uids):
-            seq_len = int(mask[i].sum())
-            if seq_len > 0:
-                student_lengths[int(uid)] = seq_len
-    
-    if not student_lengths:
-        print("⚠️  No students found in dataset")
-        return set()
-    
-    # Calculate bins
-    lengths = np.array(list(student_lengths.values()))
-    min_len = lengths.min()
-    max_len = lengths.max()
-    
-    print(f"\n📊 Sequence length distribution:")
-    print(f"   Min: {min_len}, Max: {max_len}")
-    
-    # Create 5 bins with 20% of range each
-    bin_edges = np.linspace(min_len, max_len + 1, 6)  # 6 edges = 5 bins
-    bins = [(bin_edges[i], bin_edges[i+1]) for i in range(5)]
-    
-    # Assign students to bins
-    binned_students = {i: [] for i in range(5)}
-    for uid, length in student_lengths.items():
-        for bin_idx, (low, high) in enumerate(bins):
-            if low <= length < high or (bin_idx == 4 and length == high):  # Last bin includes max
-                binned_students[bin_idx].append(uid)
-                break
-    
-    # Select students from each bin
-    selected = set()
-    print(f"\n🎯 Stratified sampling (target: {num_students_per_bin} students per bin):")
-    
-    for bin_idx in range(5):
-        bin_low, bin_high = bins[bin_idx]
-        available = binned_students[bin_idx]
-        
-        if available:
-            # Randomly select up to num_students_per_bin
-            num_select = min(num_students_per_bin, len(available))
-            selected_from_bin = np.random.choice(available, size=num_select, replace=False)
-            selected.update(selected_from_bin)
-            
-            print(f"   Bin {bin_idx+1} [{int(bin_low):3d}-{int(bin_high):3d}): "
-                  f"{len(available):4d} available, {num_select} selected")
-        else:
-            print(f"   Bin {bin_idx+1} [{int(bin_low):3d}-{int(bin_high):3d}): "
-                  f"   0 available, 0 selected")
-    
-    print(f"\n✓ Total selected: {len(selected)} students")
-    return selected
-
-
-def extract_mastery_states(model, data_loader, device, num_concepts, config, max_students=None):
-    """
-    Extract mastery states and loss inputs for each skill at each time step.
-    
-    Args:
-        config: Model configuration dict (needed to detect model type)
         max_students: Maximum number of students to process (None for all)
-                     Stratified by sequence length if provided
     
     Returns:
-        mastery_data: List of dicts with student_id, time_step, question_id, skills, responses, 
-                      and loss inputs (L1, L2, L3)
+        mastery_data: List of dicts with student_id, time_step, question_id, skills, responses, mastery_states
     """
     model.eval()
     mastery_data = []
-    
-    # Stratified sampling by sequence length if max_students specified
-    selected_students = None
-    if max_students is not None:
-        num_students_per_bin = max(1, max_students // 5)  # Distribute across 5 bins
-        selected_students = select_students_by_sequence_length(data_loader, num_students_per_bin)
-    
     students_processed = 0
     
     with torch.no_grad():
@@ -275,63 +150,46 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
             responses = batch['rseqs'].to(device)  # [B, L]
             questions_shifted = batch['shft_cseqs'].to(device)  # [B, L]
             mask = batch['masks'].to(device)  # [B, L]
-            labels = batch['shft_rseqs'].to(device)  # [B, L] - targets for BCE loss
             
             # Get student IDs if available
             if 'uids' in batch:
                 student_ids = batch['uids'].cpu().numpy()
-                uids = batch['uids']
             else:
                 # Generate sequential IDs if not available
                 student_ids = np.arange(batch_idx * questions.shape[0], 
                                        (batch_idx + 1) * questions.shape[0])
-                uids = None
             
-            # Forward pass to get skill vectors (mastery states) and predictions
-            # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
+            # Forward pass to get IRT mastery states
             outputs = model(q=questions, r=responses, qry=questions_shifted)
             
-            # Detect model type from outputs
-            model_name = config.get('model', 'gainakt4')
-            
-            # Check if outputs are available
+            # For iKT3, use mastery_irt which is [B, L] - mastery probability per question
+            # This represents M = σ(θ - β) for each question at each timestep
             if 'mastery_irt' not in outputs:
-                # throws exception 
-                raise ValueError(f"mastery_irt not found in model outputs")
+                print("\n" + "="*80)
+                print("⚠️  MASTERY STATES NOT AVAILABLE")
+                print("="*80)
+                print("The model does not provide mastery_irt outputs.")
+                print("="*80)
+                return []
             
-            # Extract iKT2 outputs
-            # iKT2 returns per-interaction mastery M_IRT = σ(θ - β), not per-skill vectors
-            mastery_irt = outputs['mastery_irt'].cpu().numpy()  # [B, L] - IRT mastery per interaction
-            theta_t = outputs['theta_t'].cpu().numpy()  # [B, L] - student ability
-            beta_k = outputs['beta_k'].cpu().numpy()  # [B, L] - skill difficulty
-            bce_predictions = outputs['bce_predictions'].cpu().numpy()  # [B, L] - Head 1 output
-            logits = outputs['logits'].cpu().numpy()  # [B, L] - Head 1 logits
-            
-            skill_vector = None  # iKT2 doesn't have per-skill vectors
-
+            # mastery_irt contains IRT mastery probability for each question at each time step
+            # Shape: [B, L] - one mastery value per (student, timestep) for the question answered
+            mastery_irt = outputs['mastery_irt'].cpu().numpy()  # [B, L]
             
             # Convert to numpy for processing
             questions_np = questions.cpu().numpy()
             responses_np = responses.cpu().numpy()
             mask_np = mask.cpu().numpy()
-            labels_np = labels.cpu().numpy()  # Target for L1 BCE loss
-            
-            # Beta targets for alignment comparison (skill-only targets from embeddings)
-            if 'beta_targets' in outputs:
-                beta_targets_np = outputs['beta_targets'].cpu().numpy()  # [B, L, num_concepts]
-            else:
-                beta_targets_np = None
             
             # Process each student in the batch
             batch_size, seq_len = questions_np.shape
             
             for student_idx in range(batch_size):
+                # Check student limit
+                if max_students is not None and students_processed >= max_students:
+                    break
+                
                 student_id = student_ids[student_idx]
-                
-                # Check if this student is selected (stratified sampling)
-                if selected_students is not None and student_id not in selected_students:
-                    continue
-                
                 students_processed += 1
                 
                 # Process each time step
@@ -343,61 +201,30 @@ def extract_mastery_states(model, data_loader, device, num_concepts, config, max
                     question_id = int(questions_np[student_idx, time_step])
                     response = int(responses_np[student_idx, time_step])
                     
-                    # L1 (BCE Loss) inputs:
-                    # - Prediction: bce_predictions[student_idx, time_step]
-                    # - Target: labels_np[student_idx, time_step]
-                    # - Logit: logits[student_idx, time_step] (pre-sigmoid)
-                    bce_prediction = float(bce_predictions[student_idx, time_step])
-                    bce_target = int(labels_np[student_idx, time_step])
-                    bce_logit = float(logits[student_idx, time_step])
+                    # Get IRT mastery probability for this question at this time step
+                    # For iKT3: mastery_irt is [B, L], one value per question answered
+                    mastery_value = float(mastery_irt[student_idx, time_step])
                     
-                    # For single-skill: question_id corresponds to skill_id
-                    skill_id = question_id  # Simplified for single-skill case
+                    # For single-skill datasets: question_id corresponds to skill_id
+                    # For iKT3, we track the mastery for the skill being assessed
+                    skills_involved = [question_id]  # Skill ID = Question ID for single-skill datasets
                     
-                    if skill_id >= num_concepts:
-                        continue  # Skip invalid skill IDs
+                    # Mastery value represents M_IRT = σ(θ - β) for this question
+                    mastery_values = {
+                        skill_id: mastery_value 
+                        for skill_id in skills_involved if skill_id < num_concepts
+                    }
                     
-                    # Model-specific mastery extraction
-                    if model_name == 'ikt2':
-                        # iKT2: Per-interaction IRT mastery
-                        mi_value = float(mastery_irt[student_idx, time_step])  # M_IRT = σ(θ - β)
-                        theta_value = float(theta_t[student_idx, time_step])  # Student ability
-                        beta_value = float(beta_k[student_idx, time_step])  # Skill difficulty
-                        m_rasch_value = None  # iKT2 doesn't use static Rasch targets
-                        mi_prev = None
-                        if time_step > 0:
-                            for prev_t in range(time_step - 1, -1, -1):
-                                if mask_np[student_idx, prev_t] == 1:
-                                    mi_prev = float(mastery_irt[student_idx, prev_t])
-                                    break
-                    else:
-                        raise ValueError(f"Unknown model: {model_name}")
-                    
-                    # Store comprehensive data for all loss inputs
-                    data_entry = {
+                    # Store the data
+                    mastery_data.append({
                         'student_id': int(student_id),
                         'time_step': int(time_step),
                         'question_id': question_id,
-                        'skill_id': skill_id,
+                        'skills': skills_involved,
                         'response': response,
-                        # L1 BCE Loss inputs
-                        'bce_prediction': bce_prediction,
-                        'bce_target': bce_target,
-                        'bce_logit': bce_logit,
-                        # L2 Rasch Loss inputs
-                        'mi_value': mi_value,  # Head 2 output (skill vector or IRT mastery)
-                        'm_rasch_value': m_rasch_value,  # Rasch IRT target (if available)
-                        # L3 Constraint checks
-                        'mi_prev': mi_prev,  # Previous mastery (for monotonicity)
+                        'mastery_states': mastery_values,
                         'batch_idx': batch_idx
-                    }
-                    
-                    # Add iKT2-specific fields
-                    if model_name == 'ikt2':
-                        data_entry['theta'] = theta_value  # Student ability
-                        data_entry['beta'] = beta_value  # Skill difficulty
-                    
-                    mastery_data.append(data_entry)
+                    })
     
     return mastery_data
 
@@ -409,13 +236,10 @@ def compute_mastery_statistics(mastery_data, num_concepts):
     skill_mastery = defaultdict(list)
     skill_progression = defaultdict(lambda: defaultdict(list))
     
-    # New data structure has mi_value directly at top level
     for entry in mastery_data:
-        skill_id = entry['skill_id']
-        mi_value = entry['mi_value']
-        
-        skill_mastery[skill_id].append(mi_value)
-        skill_progression[skill_id][entry['time_step']].append(mi_value)
+        for skill_id, mastery_value in entry['mastery_states'].items():
+            skill_mastery[skill_id].append(mastery_value)
+            skill_progression[skill_id][entry['time_step']].append(mastery_value)
     
     # Compute statistics
     statistics = {
@@ -453,86 +277,24 @@ def compute_mastery_statistics(mastery_data, num_concepts):
 
 
 def save_mastery_states_csv(mastery_data, output_path):
-    """
-    Save mastery states and loss inputs to CSV file.
+    """Save mastery states to CSV file."""
     
-    Columns:
-    - Basic: student_id, time_step, question_id, skill_id, response
-    - L1 (BCE): bce_logit, bce_prediction, bce_target
-    - L2 (Rasch): mi_value, m_rasch_value, rasch_deviation
-    - L3 (Constraints): mi_prev, is_positive, is_monotonic
-    """
-    
-    # Prepare rows with all loss inputs
+    # Flatten the data for CSV
     rows = []
     for entry in mastery_data:
-        # Basic info
-        student_id = entry['student_id']
-        time_step = entry['time_step']
-        question_id = entry['question_id']
-        skill_id = entry['skill_id']
-        response = entry['response']
-        
-        # L1 (BCE Loss) inputs
-        bce_logit = entry['bce_logit']
-        bce_prediction = entry['bce_prediction']
-        bce_target = entry['bce_target']
-        
-        # L2 (Rasch Loss) inputs
-        mi_value = entry['mi_value']
-        m_rasch_value = entry.get('m_rasch_value')
-        rasch_deviation = None
-        if m_rasch_value is not None:
-            rasch_deviation = abs(mi_value - m_rasch_value)
-        
-        # L3 (Constraint) checks
-        mi_prev = entry.get('mi_prev')
-        is_positive = mi_value > 0  # Softplus ensures this
-        is_monotonic = True  # Default for first occurrence
-        if mi_prev is not None:
-            is_monotonic = mi_value >= mi_prev  # cummax ensures this
-        
-        row = {
-            'student_id': student_id,
-            'time_step': time_step,
-            'question_id': question_id,
-            'skill_id': skill_id,
-            'response': response,
-            # L1 inputs
-            'bce_logit': f'{bce_logit:.6f}',
-            'bce_prediction': f'{bce_prediction:.6f}',
-            'bce_target': bce_target,
-            # L2 inputs
-            'mi_value': f'{mi_value:.6f}',
-            'm_rasch_value': f'{m_rasch_value:.6f}' if m_rasch_value is not None else '',
-            'rasch_deviation': f'{rasch_deviation:.6f}' if rasch_deviation is not None else '',
-            # L3 constraints
-            'mi_prev': f'{mi_prev:.6f}' if mi_prev is not None else '',
-            'is_positive': is_positive,
-            'is_monotonic': is_monotonic
-        }
-        
-        # Add iKT2-specific fields if available
-        if 'theta' in entry:
-            row['theta'] = f"{entry['theta']:.6f}"
-        if 'beta' in entry:
-            row['beta'] = f"{entry['beta']:.6f}"
-        
-        rows.append(row)
+        for skill_id, mastery_value in entry['mastery_states'].items():
+            rows.append({
+                'student_id': entry['student_id'],
+                'time_step': entry['time_step'],
+                'question_id': entry['question_id'],
+                'skill_id': skill_id,
+                'response': entry['response'],
+                'mastery_state': mastery_value
+            })
     
     # Write to CSV
     if rows:
-        # Base fieldnames
-        fieldnames = [
-            'student_id', 'time_step', 'question_id', 'skill_id', 'response',
-            'bce_logit', 'bce_prediction', 'bce_target',
-            'mi_value', 'm_rasch_value', 'rasch_deviation',
-            'mi_prev', 'is_positive', 'is_monotonic'
-        ]
-        
-        # Add iKT2-specific fields if present
-        if rows and 'theta' in rows[0]:
-            fieldnames.extend(['theta', 'beta'])
+        fieldnames = ['student_id', 'time_step', 'question_id', 'skill_id', 'response', 'mastery_state']
         with open(output_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -545,12 +307,12 @@ def main():
     parser = argparse.ArgumentParser(description='Extract mastery states from trained model')
     parser.add_argument('--run_dir', type=str, required=True, 
                        help='Experiment directory containing model checkpoint')
-    parser.add_argument('--ckpt_name', type=str, default='model_best.pth',
-                       help='Checkpoint filename (default: model_best.pth)')
+    parser.add_argument('--ckpt_name', type=str, default='best_model.pt',
+                       help='Checkpoint filename (default: best_model.pt)')
     parser.add_argument('--split', type=str, default='test', choices=['train', 'valid', 'test'],
                        help='Data split to analyze (default: test)')
-    parser.add_argument('--num_students', type=int, default=15,
-                       help='Target number of students (default: 15). Stratified by sequence length: 5 bins, ~3 students per bin')
+    parser.add_argument('--num_students', type=int, default=20,
+                       help='Number of students to process (default: 20)')
     
     args = parser.parse_args()
     
@@ -598,10 +360,10 @@ def main():
     print(f"✓ Data loaded: {len(data_loader)} batches")
     
     # Extract mastery states
-    # Option 1b: Model uses internal skill difficulty embeddings, no rasch_targets needed
     print(f"\n🔍 Extracting mastery states (max {args.num_students} students)...")
-    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, config,
-                                          max_students=args.num_students)    # Check if mastery data is available
+    mastery_data = extract_mastery_states(model, data_loader, device, num_concepts, max_students=args.num_students)
+    
+    # Check if mastery data is available
     if not mastery_data:
         print("\n" + "="*80)
         print("MASTERY STATES EXTRACTION SKIPPED")
@@ -624,12 +386,12 @@ def main():
     print("\n💾 Saving results...")
     
     # Save CSV
-    csv_path = os.path.join(args.run_dir, f'mastery_{args.split}.csv')
+    csv_path = os.path.join(args.run_dir, f'mastery_states_{args.split}.csv')
     num_rows = save_mastery_states_csv(mastery_data, csv_path)
     print(f"✓ Saved {num_rows} rows to: {csv_path}")
     
     # Save statistics JSON
-    stats_path = os.path.join(args.run_dir, f'mastery_{args.split}.json')
+    stats_path = os.path.join(args.run_dir, f'mastery_states_summary_{args.split}.json')
     with open(stats_path, 'w') as f:
         json.dump(statistics, f, indent=2)
     print(f"✓ Saved summary to: {stats_path}")

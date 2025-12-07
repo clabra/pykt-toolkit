@@ -1,0 +1,2 @@
+split,auc,acc,l_bce,l_stability,l_align_total,l_21_performance,l_22_difficulty,l_23_ability
+validation,0.723747,0.754606,0.086310,0.032807,4.805520,4.581631,0.032807,0.223889
