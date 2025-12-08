@@ -7,8 +7,6 @@ This project, forked from pykt-toolkit, contains the implementation of many deep
 The key contributions of the paper will be a new Transformer attention-based model witha good balance between performance (i.e. is competive in terms of AUC with state of the art attention-based models) and interpretability. Our approach higlights interpretability and causal explanations as key contributions
 
 Reference Documents:
-
-- `newmodel.md` details our aproach including the architecture of the model 
 - `papers-pykt` folder contains papers for most of the models included in `pykt/models`
 - `taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
 - `quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
@@ -70,6 +68,16 @@ when you change any parameter default value (the reference values are in paper/p
 - When creating or modifyng texts don't include time estimations 
 - Only do commits when I ask for. In general, I prefer commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for. 
 - In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions in case something doesn't match what is expected. 
+
+## Models architecture and implementation 
+
+- `assistant/newmodel.md`: points to the doc containing the description of current version of the model being tested
+- `paper/proposal.md`: description of the appraoch we are proposing as a base for the model and paper experiments 
+- `paper/models.md`: a summary with the models we explored, issues, changes and evolution 
+- `paper/implementation.md`: implementation details. A kind of history with details related to different implementations. If you don't find information about some detail in the rest of documents in the `paper` folder, look here. 
+- `paper/rasch.md`: IRT model theory and principles
+- `paper/bkt.md`: Bayesian Knowledge Tracing (BKT) theory and principles
+- `paper/theory_informed_dl.md`: Informed Deep Learning, theory and principles about how to use theoretical models to inform a deep learning model. 
 
 
 ## Copyright and License

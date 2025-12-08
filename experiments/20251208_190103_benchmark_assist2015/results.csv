@@ -1,0 +1,2 @@
+testauc,testacc,window_testauc,window_testacc,validauc,validacc,best_epoch,train_loss,save_dir,model,dataset,fold,seed,training_time_sec,exit_code,success
+0.7255,0.7511,0.7256,0.7511,0.7328266224730954,0.7586156556268188,11,,saved_model/assist2015_akt_qid_saved_model_42_0_0.2_256_512_8_4_0.0001_0_0,akt,assist2015,0,42,2518.2521409988403,0,True

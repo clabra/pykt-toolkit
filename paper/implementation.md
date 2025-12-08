@@ -1,24 +1,25 @@
-# iKT2 Architecture Approach
+# Models History
 
-**Document Version**: 2025-11-29  
-**Model Version**: iKT2 - Interpretability-by-design through IRT-based mastery inference
+**Document Version**: 2025-12-08  
+**Model Version**: iKT3 - Reference Model Alignment with Dynamic IRT Targets
 **Implementation Status**: 
-- **Current Model**: `pykt/models/ikt2.py` (IRT-based mastery inference)
-- **Training Script**: `examples/train_ikt2.py`
-- **Evaluation Script**: `examples/eval_ikt2.py`
-- **Deprecated**: `pykt/models/ikt.py` (v1/v2 - student-specific targets, superseded by iKT2)
+- **Current Model**: `pykt/models/ikt3.py` (Reference-guided alignment with pluggable theoretical models)
+- **Training Script**: `examples/train_ikt3.py`
+- **Evaluation Script**: `examples/eval_ikt3.py`
+- **Previous Models**: `pykt/models/ikt2.py` (IRT-based mastery inference), `pykt/models/ikt.py` (v1 - deprecated)
 ---
 
 ## References
 
-- Current Model: `pykt/models/ikt2.py` (IRT-based mastery inference)
-- Training: `examples/train_ikt2.py` with `--rasch_path` for IRT regularization
-- Evaluation: `examples/eval_ikt2.py`
-- Deprecated Models: `pykt/models/ikt.py`, `pykt/models/ikt_mon.py` (v1/v2 approaches)
-- iKT Documentation: `paper/STATUS_iKT.md` (historical reference)
-- PyKT Framework: `assistant/quickstart.pdf`, `assistant/contribute.pdf`
-- Reproducibility Protocol: `examples/reproducibility.md`
-- Rasch Model tehory and implementation: `paper/rasch_model.md`
+- **Current Model (iKT3)**: `pykt/models/ikt3.py` (Reference model alignment framework)
+- **Training**: `examples/train_ikt3.py` with adaptive lambda schedule and reference targets
+- **Evaluation**: `examples/eval_ikt3.py` with alignment metrics (l_21, l_22, l_23)
+- **Reference Models**: `pykt/reference_models/` (IRT, extensible to BKT)
+- **IRT Target Generation**: `examples/compute_irt_dynamic_targets.py` (time-varying ability trajectories)
+- **Previous Models**: `pykt/models/ikt2.py`, `pykt/models/ikt.py` (historical versions)
+- **Documentation**: `paper/ikt3.md` (detailed architecture), `paper/rasch.md` (IRT theory)
+- **PyKT Framework**: `assistant/quickstart.pdf`, `assistant/contribute.pdf`
+- **Reproducibility Protocol**: `examples/reproducibility.md`
 
 ---
 
@@ -63,77 +64,177 @@
 - **Root cause**: Constraint |Mi - β_k| < ε is theoretically meaningless (comparing mastery probability to difficulty)
 - **Deprecated**: Interpretability guarantee failed despite fixing overfitting
 
-**iKT v3 (Current - IRT-Based Mastery Inference)**:
-- Replaced flawed constraint with IRT-based mastery inference
-- **New**: Ability encoder extracts θ_i(t) from knowledge state h
-- **New**: Mastery computed via IRT formula M_IRT = σ(θ_i(t) - β_k)
-- **New**: L_align = MSE(p_correct, M_IRT) ensures predictions align with IRT expectations
-- **Retained**: Skill difficulty embeddings β_k from Option 1b (still useful)
-- **Retained**: L_reg = MSE(β_k, β_IRT) to keep embeddings aligned
-- **Advantage**: Theoretically grounded, interpretable components (θ, β, M), causal explanations
-- **Status**: Ready for implementation
+**iKT v3 (Current - Reference Model Alignment Framework)**:
+- **Paradigm shift**: Pluggable reference model architecture (IRT implemented, extensible to BKT)
+- **Architecture**: Dual-head transformer with reference-guided alignment
+- **Loss formulation**: L = (1-λ)×l_bce + c×l_22 + λ×(l_21 + l_23)
+  - l_bce: Binary cross-entropy prediction loss (Head 1)
+  - l_21: BCE(M_IRT, M_ref) - performance alignment with reference
+  - l_22: MSE(β_learned, β_IRT) - difficulty regularization (always active, c=0.01)
+  - l_23: MSE(θ_learned, θ_IRT) - ability alignment
+- **Key innovation**: Adaptive lambda schedule λ(t) = λ_target × min(1, epoch/warmup)
+- **Dynamic IRT**: Time-varying ability trajectories θ_i(t) solve scale collapse
+- **Critical finding (Dec 8, 2025)**: M_ref correlation = 0.1922 reveals Rasch model doesn't fit ASSIST2015
+- **Performance**: Test AUC 0.7202 (validated), below target 0.73
+- **Status**: ✅ Implementation complete, ⚠️ alignment losses exceed thresholds
 
 ---
 
-## Approach
+## iKT3: Reference Model Alignment Framework
 
-Deep learning models for knowledge tracing aim to predict learner performance over time, but most existing approaches emphasize predictive accuracy at the cost of interpretability. We present iKT, a novel framework that achieves interpretability-by-design through semantic alignment of latent states. iKT restricts the solution space to representations that are both predictive and consistent with pedagogical principles, ensuring that internal states correspond to meaningful learning concepts. This is accomplished via mechanisms that enforce semantic consistency and guide the model toward valid configurations. By adopting an interpretability-by-design paradigm, iKT offers transparent insight into knowledge evolution, enhances trustworthiness, and provides actionable guidance for educators. Experiments on benchmark knowledge tracing datasets show that iKT matches or surpasses state-of-the-art performance while delivering interpretable outputs on knowledge states and their progression along students’ learning paths.
+### Overview
 
-### The Interpretability Challenge in Knowledge Tracing
+iKT3 represents a fundamental architectural shift from direct interpretability constraints to **reference model alignment**. Instead of directly enforcing IRT consistency through hard constraints, iKT3 uses a pluggable reference model interface that allows the neural network to learn in alignment with any theoretical model (IRT, BKT, or future frameworks).
 
-**The Black Box Problem**: 
+**Core Design Principles:**
+1. **Separation of concerns**: Neural architecture (transformer encoder + dual heads) vs. theoretical grounding (reference models)
+2. **Pluggable interface**: Reference models implement standardized API (`compute_targets`, `compute_losses`)
+3. **Adaptive alignment**: Lambda schedule allows gradual transition from performance to interpretability
+4. **Dynamic targets**: Reference models can provide time-varying targets (e.g., θ_i(t) trajectories in IRT)
 
-Traditional deep learning models for knowledge tracing achieve high predictive accuracy but suffer from a fundamental interpretability deficit. During training and deployment, these models operate as opaque black boxes: their internal representations evolve without semantic grounding and they provide predictions about the future performance of the students but no information about their knowledge states or learnign trajectories. 
+### Architecture
 
-1. **Hidden Knowledge Evolution**: We cannot observe how the model's internal knowledge states change as it processes student interaction sequences, making it impossible to verify whether learned representations correspond to meaningful learning constructs.
+iKT3 consists of:
+- **Single transformer encoder** (d_model=256, n_heads=4, 8 blocks) producing knowledge state h
+- **Head 1** (performance): MLP predicting p_correct from concat[h, v, skill_emb]
+- **Head 2** (interpretability): Ability encoder extracting θ_learned + difficulty embeddings β_learned
+- **IRT formula**: M_IRT = σ(θ_learned - β_learned) computes theory-grounded mastery
+- **Reference model**: Provides pre-computed targets (β_IRT, θ_IRT, M_ref) for alignment
 
-2. **Unverified Mastery Estimates**: When the try to project latent states into skill mastery vectors, they tend to exhibit patterns that violate pedagogical principles—they might decrease over time (contradicting the monotonicity principle), take negative values (lacking interpretable semantics), or show no correlation with observed performance (breaking the fundamental link between internal state and external behavior).
+**Parameters:** ~3.0M total (comparable to GainAKT4)
 
-3. **Unconstrained Architectural Freedom**: Without explicit constraints, deep learning models can learn representations that optimize predictive loss while producing nonsensical intermediate states. The model might internally represent "mastery" as any arbitrary vector that happens to minimize cross-entropy, regardless of whether those values have educational meaning.
+### Loss Formulation
 
-4. **Post-hoc Opacity**: Even when models incorporate mechanisms such as attention weights or skill embeddings, they don't translate into interpretable output. We cannot verify in real-time whether architectural constraints like positivity or monotonicity are actually satisfied during optimization, nor can we detect when the model strays into semantically inconsistent regions of the parameter space.
+The combined loss balances three objectives:
 
-This interpretability gap has profound implications: educators cannot trust model recommendations, researchers cannot validate learning theories through model introspection, and the deployment of KT systems in high-stakes educational contexts remains problematic.
+```
+L = (1-λ) × l_bce + c × l_22 + λ × (l_21 + l_23)
+```
 
-### The iKT Solution: Interpretability-by-Design with Semantic Alignment
+**Components:**
+- **l_bce**: BCE(p_correct, targets) - predictive accuracy (Head 1)
+- **l_21**: BCE(M_IRT, M_ref) - performance alignment (Head 2 predictions vs. reference)
+- **l_22**: MSE(β_learned, β_IRT) - difficulty regularization (stability, always active)
+- **l_23**: MSE(θ_learned, θ_IRT) - ability alignment (Head 2 factors vs. reference)
 
-**Core Innovation**: Rather than treating interpretability as an afterthought or post-hoc analysis problem, iKT embeds interpretability directly into the learning process through **semantic alignment of latent states**. The model's internal representations are constrained from the outset to remain within a solution space that is both predictive and pedagogically meaningful.
+**Key distinctions:**
+- **l_22 is NOT controlled by λ**: Difficulty regularization serves stability (prevents mode collapse), not interpretability trade-off. Fixed weight c=0.01 keeps β anchored to pre-calibrated values.
+- **λ controls l_21 and l_23**: These losses trade predictive performance for theory alignment.
+- **Adaptive schedule**: λ(t) = λ_target × min(1, epoch/warmup) with warmup=50 epochs
 
-**Two Phases Approach**:
+**Rationale:** β values are pre-calibrated from IRT and represent stable dataset-level properties that shouldn't drift. In contrast, θ values and predictions are dynamically learned and represent the interpretability objective controlled by λ.
 
-1. **Phase 1 - Warmup with Performance Learning**: 
-   We initialize the model by training it to predict student performance while regularizing skill difficulty embeddings to IRT-calibrated values. The loss is $L_{\text{total}} = L_{\text{BCE}} + \lambda_{\text{reg}} \times L_{\text{reg}}$, where **L_BCE optimizes prediction accuracy** and **L_reg prevents difficulty embedding drift**. During this phase, the ability encoder learns to extract meaningful student ability θ_i(t) from the hidden state, and the model builds good performance-predictive representations without interpretability constraints yet.
-   
-2. **Phase 2 - IRT Alignment for Interpretability**:
+### Implementation Status (Dec 7-8, 2025)
 
-After the warmup period, we add an interpretability constraint to ensure predictions align with IRT-based mastery expectations. The loss becomes $L_{\text{total}} = L_{\text{BCE}} + \lambda_{\text{align}} \times L_{\text{align}} + \lambda_{\text{reg}} \times L_{\text{reg}}$, where **L_align = MSE(p_correct, mastery_irt)** enforces consistency between predicted probabilities and IRT-based mastery $M_{\text{IRT}} = \sigma(\theta_i(t) - \beta_k)$. This allows the model to maintain high AUC while ensuring its predictions are consistent with psychometric theory—students with higher ability relative to skill difficulty should have higher mastery probabilities.**Key Advantages**:
+**✅ Complete:**
+- Core model: `pykt/models/ikt3.py`
+- Reference framework: `pykt/reference_models/{base.py, irt_reference.py, __init__.py}`
+- Training: `examples/train_ikt3.py` with adaptive lambda
+- Evaluation: `examples/eval_ikt3.py` with correlation diagnostics
+- IRT targets: `examples/compute_irt_dynamic_targets.py` (time-varying θ trajectories)
 
-- **Verifiable Interpretability**: Unlike post-hoc explanations, our approach provides *guarantees* about semantic consistency through IRT alignment. We measure interpretability using Pearson correlation r between predicted probabilities p_correct and IRT-based mastery M_IRT = σ(θ - β), with target r > 0.85 indicating strong alignment with psychometric theory.
+**Performance (Experiment 161656):**
+- Test AUC: 0.7202 (baseline with λ_target=0.07)
+- Target: ≥0.73 (competitive with simpleKT)
+- Gap: -0.028
 
-- **Transparent Trade-offs**: The hyperparameter λ_align makes the performance-interpretability balance explicit. Higher values enforce stronger IRT consistency (higher r) but may slightly reduce AUC, while lower values prioritize performance. The approach systematically explores this trade-off to find configurations that are both accurate and interpretable.
+**Key Achievements:**
+- ✅ Dynamic IRT targets solved scale collapse (θ_std: 0.14 → 4.03, +2806%)
+- ✅ Adaptive lambda schedule implemented and validated
+- ✅ Pluggable reference architecture working (IRT functional, extensible to BKT)
 
-- **Real-time Monitoring**: The model captures intermediate states during training, enabling real-time verification that:
-  - Student ability θ_i(t) increases over time (learning progression)
-  - Skill difficulties β_k remain aligned with IRT calibration (corr_beta > 0.8)
-  - IRT alignment quality stays strong (irt_correlation > 0.85)
-  - Predictions are consistent with ability-difficulty relationships- **Theoretical Grounding**: By anchoring to Rasch/IRT models, we connect deep learning to psychometric research. The model's internal states are not arbitrary neural activations—they are constrained to approximate quantities (ability, difficulty, mastery) that have established educational interpretations.
+### Critical Issues: Alignment Failure
 
-- **Minimal Overhead**: The monitoring mechanisms introduce negligible computational cost (~1-2% slowdown).
+**Root Cause Identified (Dec 8, 2025):**
 
-**Practical Impact**:
+Investigation revealed the fundamental problem: **IRT reference model has poor predictive validity**
 
-This approach bridges the gap between deep learning performance and educational accountability. Users can inspect model-estimated mastery levels with confidence that they reflect pedagogically meaningful constructs. It enables validation of the model's internal learning trajectories and alignment with educational theories. And it has competitive AUC while adding interpretability guarantees that purely black-box models don't provide.
+**Evidence:**
+1. M_ref Pearson correlation: **0.1922** (target >0.7) - IRT predictions barely correlate with actual responses
+2. M_ref AUC: **0.63** - only slightly better than random (0.5)
+3. Rasch formula σ(θ - β) fundamentally incompatible with ASSIST2015 dataset
+4. Lambda experiments confirmed: l_21 ≈ 4+ across all tested values (λ ∈ [0.007, 0.15])
 
-**In Summary**: iKT demonstrates that interpretability need not be sacrificed for performance. By constraining the solution space to representations that are both predictive and semantically grounded, we achieve a model that is simultaneously accurate, interpretable, and theoretically justified—addressing the core limitations of existing deep knowledge tracing models. 
+**All Three Alignment Losses Exceed Thresholds:**
+- **l_21 = 4.06** (threshold <0.15, **27× over**) - M_IRT cannot match bad M_ref targets
+- **l_22 = 0.144** (threshold <0.10, **1.4× over**) - β learned values don't match IRT calibration
+- **l_23 = 6.79** (threshold <0.15, **45× over**) - θ learned values don't match IRT trajectories
 
+**Core Paradox:** Model achieves decent prediction (AUC=0.72) but learns non-IRT factors. This validates that ASSIST2015 contains predictive signal beyond what simple Rasch can capture.
+
+**Why Alignment Fails:**
+- l_21 tries to align M_IRT → M_ref, but M_ref itself is wrong (correlation=0.19)
+- No amount of lambda increase can fix alignment to incorrect targets
+- Model correctly "refuses" to match bad reference predictions
+
+### Strategic Decision Point
+
+**Path A: Performance-First (Reduce λ)**
+- Prioritize AUC ≥0.73, accept alignment failure
+- Use θ, β as learned features (not IRT-scale interpretable)
+- Model becomes performant but loses theory grounding
+- Risk: Interpretability metrics get worse
+
+**Path B: Alignment-First (Fix Reference Model)**
+- Investigate why Rasch doesn't fit dataset
+- Options:
+  1. Recalibrate IRT with more iterations
+  2. Try 2PL/3PL models (add discrimination parameter)
+  3. Switch to BKT reference model
+  4. Use different dataset known to fit Rasch
+- Prioritize theory consistency over AUC
+- Risk: May never achieve competitive performance
+
+**Current Recommendation:** Path B investigation warranted before abandoning theory alignment. The fact that M_ref correlation=0.19 suggests fundamental incompatibility that needs addressing at the reference model level, not the neural architecture.
+
+### Files and Scripts
+
+**Core Implementation:**
+```
+pykt/models/ikt3.py                          # Main model
+pykt/reference_models/base.py                 # Reference model interface
+pykt/reference_models/irt_reference.py        # IRT implementation
+examples/train_ikt3.py                        # Training with adaptive lambda
+examples/eval_ikt3.py                         # Evaluation with diagnostics
+```
+
+**Target Generation:**
+```
+examples/compute_irt_dynamic_targets.py       # Time-varying θ_i(t) trajectories
+data/assist2015/irt_extended_targets.pkl      # Generated targets file
+```
+
+**Documentation:**
+```
+paper/ikt3.md                                 # Comprehensive architecture docs
+paper/ikt_architecture_approach.md            # This document
+examples/reproducibility.md                   # Experiment protocol
+```
+
+### Validation Metrics
+
+**Construct Validity (H1-H3):**
+- **H1 (Factor Alignment)**: l_22 < 0.10, l_23 < 0.15 ❌ FAILED
+- **H2 (Predictive Consistency)**: l_21 < 0.15 ❌ FAILED  
+- **H3 (Integration)**: val_heads_corr > 0.85 (not yet measured)
+
+**Performance:**
+- Test AUC: 0.7202 ✅ (validated)
+- Target: 0.73 ❌ (gap: -0.028)
+
+**Reference Quality:**
+- M_ref correlation: 0.1922 ❌ (catastrophically low)
+- M_ref AUC: 0.63 ❌ (barely above random)
 
 ---
+
+
 
 ## Pre-computed IRT Skill Difficulties
 
 ### Generating β_IRT Values
 
-**Purpose**: The iKT2 model uses learnable skill difficulty embeddings regularized toward IRT-calibrated values. These pre-computed β_IRT values serve as targets for L_reg loss.
+**Purpose**: iKT models (v2, v3) use learnable skill difficulty embeddings regularized toward IRT-calibrated values. These pre-computed β_IRT values serve as targets for L_reg/l_22 loss. iKT3 also uses dynamic time-varying ability trajectories θ_i(t) from `compute_irt_dynamic_targets.py`.
 
 **Generation Script**: `examples/compute_rasch_targets.py`
 
@@ -144,7 +245,8 @@ This approach bridges the gap between deep learning performance and educational 
   - **Skill difficulties (β)**: One difficulty value per skill
 - Formula: P(correct) = σ(θ_student - β_skill)
 - Output includes student_abilities, skill_difficulties, and per-student-skill-time mastery targets
-- iKT2 uses ONLY skill_difficulties (β_IRT) for L_reg; student abilities and mastery targets are legacy
+- **iKT2** uses ONLY skill_difficulties (β_IRT) for L_reg; student abilities and mastery targets are legacy
+- **iKT3** uses skill_difficulties (β_IRT) for l_22 plus dynamic targets from `irt_extended_targets.pkl` (θ_i(t) trajectories, M_ref)
 
 **Critical Parameters for Reproducibility**:
 - `--seed 42`: Ensures reproducible calibration across runs (py-irt uses stochastic initialization)
@@ -157,10 +259,10 @@ This approach bridges the gap between deep learning performance and educational 
 - 250 iterations: Better convergence (r=0.99 vs 300 iterations)
 - 300 iterations: Optimal convergence (r=0.993 with 250) ✓ **Recommended**
 
-**Empirical Impact on Model Performance** (assist2015, iKT2):
-- 50 iter: AUC=0.7146, head_agreement=0.8061, difficulty_fidelity=0.8636
-- 300 iter: AUC=0.7150, head_agreement=0.8648 (+8.4%), difficulty_fidelity=0.8589
-- **Conclusion**: 300 iterations provides significantly better head agreement (primary interpretability metric)
+**Empirical Impact on Model Performance** (assist2015):
+- **iKT2** (deprecated): 50 iter: AUC=0.7146, head_agreement=0.8061; 300 iter: AUC=0.7150, head_agreement=0.8648 (+8.4%)
+- **iKT3** (current): Uses dynamic targets from `compute_irt_dynamic_targets.py` (time-varying θ_i(t)), Test AUC=0.7202
+- **Conclusion**: 300 iterations provides significantly better IRT calibration quality (higher correlation with ground truth)
 
 **Current Status**:
 - ✅ **assist2015**: `data/assist2015/rasch_targets.pkl` → `rasch_test_iter300.pkl` (201MB, seed=42, 300 iterations, Dec 1)
@@ -203,9 +305,12 @@ python tmp/precompute_irt_difficulties.py --dataset assist2009
 
 **Note**: The custom EM produces different scale (β ∈ [-1.4, 0.5], variance ~0.19) which results in ~4x weaker regularization. For consistency with assist2015 experiments, prefer fixing py-irt dependencies and using `compute_rasch_targets.py`.
 
-**How iKT2 Training Loads β_IRT**:
+**How iKT Training Loads β_IRT**:
 
-The training script (`examples/train_ikt2.py`) loads IRT difficulties via the `--rasch_path` parameter:
+**iKT2** (`examples/train_ikt2.py`) loads IRT difficulties via the `--rasch_path` parameter:
+**iKT3** (`examples/train_ikt3.py`) loads extended targets via the `--irt_targets_path` parameter (includes β_IRT, θ_i(t), M_ref)
+
+**Example (iKT2):**
 
 ```python
 # In train_ikt2.py
@@ -228,14 +333,22 @@ loss_dict = model.compute_loss(outputs, targets,
                                lambda_reg=0.1)      # Regularization weight
 ```
 
-**Training Command Example**:
+**Training Command Examples**:
 ```bash
-# Uses assist2015 rasch_targets.pkl for L_reg
+# iKT2 (deprecated) - Uses rasch_targets.pkl for L_reg
 python examples/train_ikt2.py \
     --dataset assist2015 \
     --rasch_path data/assist2015/rasch_targets.pkl \
     --lambda_reg 0.1 \
     --epochs 30
+
+# iKT3 (current) - Uses irt_extended_targets.pkl for l_22, l_21, l_23
+python examples/train_ikt3.py \
+    --dataset assist2015 \
+    --irt_targets_path data/assist2015/irt_extended_targets.pkl \
+    --lambda_target 0.5 \
+    --warmup_epochs 50 \
+    --epochs 200
 ```
 
 **Recommendation**: 
@@ -300,7 +413,7 @@ where $\theta_s$ is student $s$'s ability and $\beta_k$ is skill $k$'s difficult
 
 **Phase 1: Model Architecture Changes** (Historical - `pykt/models/ikt.py` deprecated)
 
-**Note**: This section describes the deprecated iKT v2 approach. The current implementation (iKT2) is in `pykt/models/ikt2.py` and uses IRT-based mastery inference instead.
+**Note**: This section describes the deprecated iKT v1/v2 approaches. The current implementation (iKT3) is in `pykt/models/ikt3.py` and uses reference model alignment with pluggable theoretical frameworks. Previous version (iKT2) is in `pykt/models/ikt2.py`.
 
 1. **Add skill difficulty embedding**:
    ```python
@@ -364,7 +477,7 @@ where $\theta_s$ is student $s$'s ability and $\beta_k$ is skill $k$'s difficult
 
 **Phase 2: Training Script Updates** (Historical - `examples/train_ikt.py` deprecated)
 
-**Note**: This section describes the deprecated iKT v2 training. The current script is `examples/train_ikt2.py`.
+**Note**: This section describes the deprecated iKT v1/v2 training. The current script is `examples/train_ikt3.py`. Previous version (iKT2) training is in `examples/train_ikt2.py`.
 
 1. **Load IRT skill difficulties** (not per-student targets):
    ```python
@@ -407,7 +520,7 @@ where $\theta_s$ is student $s$'s ability and $\beta_k$ is skill $k$'s difficult
 
 **Phase 3: Evaluation Script Updates** (Historical - `examples/eval_ikt.py` deprecated)
 
-**Note**: This section describes the deprecated iKT v2 evaluation. The current script is `examples/eval_ikt2.py`.
+**Note**: This section describes the deprecated iKT v1/v2 evaluation. The current script is `examples/eval_ikt3.py`. Previous version (iKT2) evaluation is in `examples/eval_ikt2.py`.
 
 1. **Remove rasch_targets loading and passing**:
    ```python
@@ -1660,338 +1773,13 @@ Both heads receive the same knowledge state representation (h1) from Encoder 1, 
 
 This dual-objective optimization with shared representations provides a natural regularization mechanism and interpretability-by-design.
 
----
 
-## Architectural Comparison
 
-### GainAKT3Exp (Dual-Encoder)
-```
-Input → Encoder 1 (96K params) → Head 1 → BCE Predictions → L1
-Input → Encoder 2 (71K params) → Gain Quality → Effective Practice → Sigmoid Curves → IM Predictions → L2
-
-Total: 167K parameters, two independent learning pathways
-```
-
-### GainAKT4 (Phase 1 - Dual-Head Single-Encoder)
-```
-                    ┌→ Head 1 (Performance) → BCE Predictions → L1 (BCE Loss)
-                    │
-Input → Encoder 1 → h1 ─┤
-                    │
-                    └→ Head 2 (Mastery) → MLP1 → {KCi} → MLP2 → Sigmoid → Mastery Predictions → L2 (Binary CE Loss)
-
-Note: GainAKT4 Phase 1 uses MLP2 to aggregate skills into predictions
-
-L_total = λ₁ * L1 + λ₂ * L2
-Encoder 1 receives gradients from BOTH L1 and L2 (gradient accumulation)
-```
-
-### GainAKT4 (Phase 2 - Dual-Encoder, Three-Head)
-```
-                        ┌→ Head 1 (Performance) → BCE Predictions → L1 (BCE Loss)
-                        │
-Questions + Responses → Encoder 1 → h1 ─┤
-                        │
-                        └→ Head 2 (Mastery) → MLP1 → Softplus → cummax → MLP2 → Mastery Predictions → L2 (Binary CE Loss)
-
-Note: GainAKT4 Phase 2 uses MLP2; iKT does not
-
-Questions + Attempts → Encoder 2 → h2 → Head 3 (Curve) → Curve Predictions → L3 (MSE/MAE Loss)
-
-L_total = λ_bce × L1 + λ_mastery × L2 + λ_curve × L3
-Constraint: λ_bce + λ_mastery + λ_curve = 1.0
-
-Encoder 1 receives gradients from L1 + L2
-Encoder 2 receives gradients from L3
-```
-
-### iKT (Previous Approaches)
-
-**Option 1A (Baseline - Rasch Targets)**:
-```
-                        ┌→ Head 1 (Performance) → BCE Predictions → L1 (BCE Loss)
-                        │
-Questions + Responses → Encoder 1 → h1 ─┤
-                        │
-                        └→ Head 2 (Mastery) → MLP1 → Softplus → cummax → {Mi} -> L2 (MSE vs Rasch targets)
-
-Phase 1: L_total = L2 (Rasch initialization)
-Phase 2: L_total = λ_bce × L1 + (1-λ_bce) × L2_constrained (with ε tolerance)
-
-PROBLEM: Overfitting to student-specific targets (Val MSE increased 10x)
-```
-
-**Option 1B (Learnable Embeddings)**:
-```
-                        ┌→ Head 1 (Performance) → BCE Predictions → L_BCE
-                        │
-Questions + Responses → Encoder 1 → h1 ─┤                   ┌→ β_k (skill difficulty embeddings)
-                        │                                   │
-                        └→ Head 2 (Mastery) → {Mi}          └→ L_reg = MSE(β_learned, β_IRT)
-                                              │
-                                              └→ L_penalty = mean(max(0, |Mi - βk| - ε)²)
-
-Phase 1: L_total = L_BCE + λ_reg × L_reg
-Phase 2: L_total = L_BCE + λ_penalty × L_penalty + λ_reg × L_reg
-
-SUCCESS: Fixed overfitting (Val MSE stable), perfect embedding alignment (corr=1.0)
-PROBLEM: 95% violation rate - constraint |Mi - βk| < ε is theoretically meaningless
-```
-
-**IRT-Based Mastery Inference (NEW - Proposed)**:
-```
-                        ┌→ Head 1 (Performance) → p_correct → L_BCE
-                        │
-Questions + Responses → Encoder 1 → h ─┤
-                        │              └→ Ability Encoder → θ_i(t) ┐
-                        │                                          │
-                        └→ Skill Embeddings → β_k ────────────────┤
-                                                                   ↓
-                                                      M_IRT = σ(θ - β) → L_align = MSE(p_correct, M_IRT)
-                                                                   
-                                                      L_reg = MSE(β_learned, β_IRT)
-
-Phase 1: L_total = L_BCE + λ_reg × L_reg
-Phase 2: L_total = L_BCE + λ_align × L_align + λ_reg × L_reg
-
-ADVANTAGES:
-- Theoretically grounded: Uses Rasch IRT formula M = σ(θ - β)
-- Dynamic ability: θ_i(t) inferred from knowledge state, not pre-calibrated
-- Direct alignment: No violations, just MSE between predictions and IRT mastery
-- Interpretable: θ represents ability, β represents difficulty, both have clear meaning
-```
-
-### Comparison Summary
-
-| Feature | Option 1A | Option 1B | IRT-Based (NEW) |
-|---------|-----------|-----------|------------------|
-| **Mastery Source** | Static Rasch targets | Learned {Mi} | σ(θ - β) formula |
-| **Difficulty Source** | Pre-computed IRT | Learnable embeddings | Learnable embeddings |
-| **Interpretability Method** | Direct MSE to targets | Penalty for violations | IRT alignment |
-| **Constraint Type** | Soft (MSE) | Hard (violation penalty) | Soft (MSE alignment) |
-| **Overfitting** | ❌ Yes (10x increase) | ✅ Fixed | ✅ Expected fixed |
-| **Embedding Alignment** | N/A | ✅ Perfect (corr=1.0) | ✅ Via L_reg |
-| **Violation Rate** | N/A | ❌ 95% | ✅ N/A (no violations) |
-| **Theoretical Foundation** | IRT calibration | Ad-hoc constraint | ✅ Rasch IRT model |
-| **Ability Modeling** | ❌ Pre-calibrated | ❌ None | ✅ Dynamic inference |
-| **Test AUC** | ~0.725 | 0.7153 | Expected ~0.72 |
-
----
-
-## Architecture Specification
+## iKT3 Architecture Specification
 
 ### Visual Diagram
 
-**iKT Architecture: IRT-Based Mastery Inference Design with Detailed Attention Mechanism**
-
-```mermaid
-graph TD
-    subgraph "Input Layer"
-        Input_q[["Input Questions q<br/>[B, L]"]]
-        Input_r[["Input Responses r<br/>[B, L]"]]
-        Ground_Truth_r[["Ground Truth Responses"]]
-        Beta_IRT[["IRT Difficulties β_IRT<br/>(fixed reference)"]]
-    end
-    
-    subgraph "Embedding Layer"
-        Tokens[["Interaction Tokens<br/>(q, r) pairs"]]
-        Context_Emb["Context Embedding<br/>[B, L, d_model]"]
-        Value_Emb["Value Embedding<br/>[B, L, d_model]"]
-        Skill_Emb["Skill Embedding<br/>[B, L, d_model]"]
-        Pos_Emb["Positional Embeddings<br/>[1, L, d_model]"]
-        
-        Context_Seq[["Context Sequence<br/>c = emb(q,r) + pos<br/>[B, L, d_model]"]]
-        Value_Seq[["Value Sequence<br/>v = emb(r) + pos<br/>[B, L, d_model]"]]
-    end
-    
-    subgraph "Transformer Block (Layer l)"
-        direction TB
-        
-        subgraph "Multi-Head Attention - Context"
-            C_Input[["Input: c_l-1<br/>[B, L, d_model]"]]
-            
-            C_Q_Proj["Query Projection<br/>W_Q · c<br/>[B, L, d_model]"]
-            C_K_Proj["Key Projection<br/>W_K · c<br/>[B, L, d_model]"]
-            C_V_Proj["Value Projection<br/>W_V · c<br/>[B, L, d_model]"]
-            
-            C_Q[["Q_c<br/>[B, num_heads, L, d_head]<br/>Queries: What to attend to?"]]
-            C_K[["K_c<br/>[B, num_heads, L, d_head]<br/>Keys: What information is available?"]]
-            C_V[["V_c<br/>[B, num_heads, L, d_head]<br/>Values: Actual information content"]]
-            
-            C_Attn["Attention Scores<br/>A = softmax(Q·K^T / √d_head)<br/>[B, num_heads, L, L]<br/>Causal mask applied"]
-            C_Weighted["Weighted Sum<br/>O = A · V<br/>[B, num_heads, L, d_head]"]
-            C_Concat["Concat Heads<br/>[B, L, d_model]"]
-            C_Out_Proj["Output Projection<br/>W_O · concat"]
-            C_Residual["Residual + LayerNorm"]
-        end
-        
-        subgraph "Multi-Head Attention - Value"
-            V_Input[["Input: v_l-1<br/>[B, L, d_model]"]]
-            
-            V_Q_Proj["Query Projection<br/>W_Q · v<br/>[B, L, d_model]"]
-            V_K_Proj["Key Projection<br/>W_K · v<br/>[B, L, d_model]"]
-            V_V_Proj["Value Projection<br/>W_V · v<br/>[B, L, d_model]"]
-            
-            V_Q[["Q_v<br/>[B, num_heads, L, d_head]"]]
-            V_K[["K_v<br/>[B, num_heads, L, d_head]"]]
-            V_V[["V_v<br/>[B, num_heads, L, d_head]"]]
-            
-            V_Attn["Attention Scores<br/>A = softmax(Q·K^T / √d_head)<br/>Causal mask applied"]
-            V_Weighted["Weighted Sum<br/>O = A · V"]
-            V_Concat["Concat Heads"]
-            V_Out_Proj["Output Projection"]
-            V_Residual["Residual + LayerNorm"]
-        end
-        
-        subgraph "Feed-Forward Network"
-            FFN_C["FFN(c)<br/>Linear → ReLU → Dropout → Linear"]
-            FFN_V["FFN(v)<br/>Linear → ReLU → Dropout → Linear"]
-            FFN_Res_C["Residual + LayerNorm"]
-            FFN_Res_V["Residual + LayerNorm"]
-        end
-        
-        C_Out[["c_l<br/>[B, L, d_model]"]]
-        V_Out[["v_l<br/>[B, L, d_model]"]]
-    end
-    
-    subgraph "Encoder Output"
-        Final_h[["Knowledge State h<br/>(final context)<br/>[B, L, d_model]"]]
-        Final_v[["Value State v<br/>(final value)<br/>[B, L, d_model]"]]
-    end
-    
-    subgraph "Head 1: Performance Prediction"
-        Concat1["Concat[h, v, skill_emb]<br/>[B, L, 3·d_model]"]
-        PredHead["MLP Prediction Head<br/>Linear → ReLU → Dropout → Linear"]
-        Logits[["Logits<br/>[B, L]"]]
-        BCEPred[["p_correct = σ(logits)<br/>[B, L]"]]
-        L_BCE["L_BCE: Performance Loss<br/>BCE(p_correct, targets)"]
-    end
-    
-    subgraph "Head 2: IRT-Based Mastery Inference"
-        direction TB
-        
-        AbilityEnc["Ability Encoder (NEW)<br/>Linear(d_model → d_ff)<br/>→ ReLU → Dropout<br/>→ Linear(d_ff → 1)"]
-        Theta[["θ_i(t)<br/>Student Ability<br/>[B, L] scalars"]]
-        
-        SkillDiffEmb["Skill Difficulty<br/>Embeddings β_k<br/>(learnable, regularized)"]
-        Beta[["β_k<br/>Skill Difficulty<br/>[B, L] scalars"]]
-        
-        IRTFormula["IRT Formula<br/>M_IRT = σ(θ_i(t) - β_k)<br/>Rasch 1PL model"]
-        MasteryIRT[["M_IRT<br/>IRT-based Mastery<br/>[B, L] probabilities"]]
-        
-        L_align["L_align (Phase 2+)<br/>MSE(p_correct, M_IRT)<br/>Ensures IRT consistency"]
-    end
-    
-    subgraph "Difficulty Regularization"
-        L_reg["L_reg (Both Phases)<br/>MSE(β_learned, β_IRT)<br/>Prevents embedding drift"]
-    end
-    
-    subgraph "Optimization"
-        LTotal["L_total<br/>Phase 1: L_BCE + λ_reg·L_reg<br/>Phase 2: L_BCE + λ_align·L_align + λ_reg·L_reg"]
-        Backprop["Backpropagation"]
-    end
-    
-    %% Input to Embedding flow
-    Input_q --> Tokens
-    Input_r --> Tokens
-    Tokens --> Context_Emb
-    Tokens --> Value_Emb
-    Input_q --> Skill_Emb
-    Input_q --> SkillDiffEmb
-    
-    Context_Emb --> Context_Seq
-    Value_Emb --> Value_Seq
-    Pos_Emb --> Context_Seq
-    Pos_Emb --> Value_Seq
-    
-    %% Attention mechanism - Context pathway
-    Context_Seq --> C_Input
-    C_Input --> C_Q_Proj --> C_Q
-    C_Input --> C_K_Proj --> C_K
-    C_Input --> C_V_Proj --> C_V
-    
-    C_Q --> C_Attn
-    C_K --> C_Attn
-    C_Attn --> C_Weighted
-    C_V --> C_Weighted
-    C_Weighted --> C_Concat --> C_Out_Proj --> C_Residual
-    C_Input --> C_Residual
-    
-    %% Attention mechanism - Value pathway
-    Value_Seq --> V_Input
-    V_Input --> V_Q_Proj --> V_Q
-    V_Input --> V_K_Proj --> V_K
-    V_Input --> V_V_Proj --> V_V
-    
-    V_Q --> V_Attn
-    V_K --> V_Attn
-    V_Attn --> V_Weighted
-    V_V --> V_Weighted
-    V_Weighted --> V_Concat --> V_Out_Proj --> V_Residual
-    V_Input --> V_Residual
-    
-    %% Feed-forward network
-    C_Residual --> FFN_C --> FFN_Res_C --> C_Out
-    V_Residual --> FFN_V --> FFN_Res_V --> V_Out
-    C_Residual --> FFN_Res_C
-    V_Residual --> FFN_Res_V
-    
-    %% Stack to final output
-    C_Out --> Final_h
-    V_Out --> Final_v
-    
-    %% Head 1 - Performance prediction
-    Final_h --> Concat1
-    Final_v --> Concat1
-    Skill_Emb --> Concat1
-    Concat1 --> PredHead --> Logits --> BCEPred
-    
-    %% Head 2 - IRT mastery inference
-    Final_h --> AbilityEnc --> Theta
-    SkillDiffEmb --> Beta
-    Theta --> IRTFormula
-    Beta --> IRTFormula
-    IRTFormula --> MasteryIRT
-    
-    %% Loss computation
-    BCEPred --> L_BCE
-    Ground_Truth_r --> L_BCE
-    BCEPred --> L_align
-    MasteryIRT --> L_align
-    SkillDiffEmb --> L_reg
-    Beta_IRT --> L_reg
-    
-    %% Loss aggregation
-    L_BCE --> LTotal
-    L_align --> LTotal
-    L_reg --> LTotal
-    LTotal --> Backprop
-    
-    %% Gradient flow (dotted lines)
-    Backprop -.->|∂L/∂h| Final_h
-    Backprop -.->|∂L/∂v| Final_v
-    Backprop -.->|∂L/∂β_k| SkillDiffEmb
-    
-    %% Styling
-    classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
-    classDef emb_style fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef attn_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
-    classDef qkv_style fill:#bbdefb,stroke:#1565c0,stroke-width:2px
-    classDef head1_style fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
-    classDef head2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
-    classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
-    
-    class Input_q,Input_r,Ground_Truth_r,Beta_IRT input_style
-    class Tokens,Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq emb_style
-    class C_Input,C_Q_Proj,C_K_Proj,C_V_Proj,C_Attn,C_Weighted,C_Concat,C_Out_Proj,C_Residual attn_style
-    class V_Input,V_Q_Proj,V_K_Proj,V_V_Proj,V_Attn,V_Weighted,V_Concat,V_Out_Proj,V_Residual attn_style
-    class FFN_C,FFN_V,FFN_Res_C,FFN_Res_V attn_style
-    class C_Q,C_K,C_V,V_Q,V_K,V_V qkv_style
-    class C_Out,V_Out,Final_h,Final_v attn_style
-    class Concat1,PredHead,Logits,BCEPred,L_BCE head1_style
-    class AbilityEnc,Theta,SkillDiffEmb,Beta,IRTFormula,MasteryIRT,L_align head2_style
-    class L_reg,LTotal,Backprop loss_style
-```
+See architecture diagram in `approach.md`
 
 **Key Attention Components**:
 
@@ -2006,7 +1794,8 @@ graph TD
 - **Value pathway** (v): Learns from response correctness (how well student performed)
 - Both use same attention mechanism but operate on different embeddings
 
----
+
+**Features**:
 - Adds training-time monitoring capabilities
 - Additional method: `forward_with_states()` captures intermediate representations
 - Monitoring hook: Optional callback for periodic state capture
