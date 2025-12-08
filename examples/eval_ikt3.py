@@ -64,22 +64,43 @@ def prepare_batch_ref_targets(batch, ref_targets, device):
         batch_targets['beta_irt'] = ref_targets['beta_irt'].to(device)
     
     # Student abilities - extract for current batch
+    # Supports both static (scalar per student) and dynamic (trajectory per student)
     if 'theta_irt' in ref_targets:
         uids = batch.get('uids', None)
+        is_dynamic = ref_targets.get('is_dynamic', False)
+        
         if uids is not None:
-            # Extract theta values for students in this batch
-            # theta_irt is dict with tensor keys {tensor(uid): value}
-            theta_values = []
-            for uid in uids:
-                # Convert to tensor if needed for lookup
-                uid_tensor = torch.tensor(uid) if not isinstance(uid, torch.Tensor) else uid
-                theta_val = ref_targets['theta_irt'].get(uid_tensor.item(), 0.0)
-                theta_values.append(theta_val)
-            batch_targets['theta_irt'] = torch.tensor(theta_values, dtype=torch.float32, device=device)
+            batch_size, seq_len = batch['cseqs'].shape
+            
+            if is_dynamic:
+                # Dynamic theta: {uid: [L]} trajectories
+                theta_batch = torch.zeros(batch_size, seq_len, dtype=torch.float32)
+                for i, uid in enumerate(uids):
+                    uid_key = torch.tensor(uid).item() if isinstance(uid, torch.Tensor) else uid
+                    theta_traj = ref_targets['theta_irt'].get(uid_key, None)
+                    if theta_traj is not None:
+                        # Convert to tensor if it's a list
+                        if isinstance(theta_traj, list):
+                            theta_traj = torch.tensor(theta_traj, dtype=torch.float32)
+                        actual_len = min(len(theta_traj), seq_len)
+                        theta_batch[i, :actual_len] = theta_traj[:actual_len]
+                batch_targets['theta_irt'] = theta_batch.to(device)  # [B, L]
+            else:
+                # Static theta: {uid: scalar}
+                theta_values = []
+                for uid in uids:
+                    uid_key = torch.tensor(uid).item() if isinstance(uid, torch.Tensor) else uid
+                    theta_val = ref_targets['theta_irt'].get(uid_key, 0.0)
+                    theta_values.append(theta_val)
+                batch_targets['theta_irt'] = torch.tensor(theta_values, dtype=torch.float32, device=device)  # [B]
         else:
             # No uids available, use zeros
             batch_size = batch['cseqs'].size(0)
-            batch_targets['theta_irt'] = torch.zeros(batch_size, dtype=torch.float32, device=device)
+            if is_dynamic:
+                seq_len = batch['cseqs'].size(1)
+                batch_targets['theta_irt'] = torch.zeros(batch_size, seq_len, dtype=torch.float32, device=device)
+            else:
+                batch_targets['theta_irt'] = torch.zeros(batch_size, dtype=torch.float32, device=device)
     
     # Reference predictions - extract for current batch (or zeros if not available)
     if 'm_ref' in ref_targets:
@@ -93,6 +114,9 @@ def prepare_batch_ref_targets(batch, ref_targets, device):
                 uid_tensor = torch.tensor(uid) if not isinstance(uid, torch.Tensor) else uid
                 m_ref_seq = ref_targets['m_ref'].get(uid_tensor.item(), None)
                 if m_ref_seq is not None:
+                    # Convert to tensor if it's a list
+                    if isinstance(m_ref_seq, list):
+                        m_ref_seq = torch.tensor(m_ref_seq, dtype=torch.float32)
                     # Pad or truncate to match seq_len
                     actual_len = min(len(m_ref_seq), seq_len)
                     m_ref_batch[i, :actual_len] = m_ref_seq[:actual_len]

@@ -138,6 +138,9 @@ def prepare_batch_ref_targets(batch, ref_targets, device):
                 uid_tensor = torch.tensor(uid) if not isinstance(uid, torch.Tensor) else uid
                 m_ref_seq = ref_targets['m_ref'].get(uid_tensor.item(), None)
                 if m_ref_seq is not None:
+                    # Convert to tensor if it's a list
+                    if isinstance(m_ref_seq, list):
+                        m_ref_seq = torch.tensor(m_ref_seq, dtype=torch.float32)
                     # Pad or truncate to match seq_len
                     actual_len = min(len(m_ref_seq), seq_len)
                     m_ref_batch[i, :actual_len] = m_ref_seq[:actual_len]

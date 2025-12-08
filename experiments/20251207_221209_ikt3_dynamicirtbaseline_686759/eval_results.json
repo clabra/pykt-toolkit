@@ -1,0 +1,65 @@
+{
+  "metrics": {
+    "auc": 0.7202173075795409,
+    "acc": 0.7471989419876367,
+    "l_21_performance": 4.057973044817565,
+    "l_22_difficulty": 0.14365024937958012,
+    "l_23_ability": 6.792058288073931,
+    "theta_mean": -2.650228261947632,
+    "theta_std": 3.9091498851776123,
+    "theta_min": -15.712298393249512,
+    "theta_max": 11.865970611572266,
+    "beta_mean": -4.921776294708252,
+    "beta_std": 3.6450748443603516,
+    "beta_min": -12.931991577148438,
+    "beta_max": 4.723026752471924,
+    "mastery_mean": 0.6480085849761963,
+    "mastery_std": 0.3571886122226715,
+    "mastery_min": 2.398138043702147e-08,
+    "mastery_max": 1.0,
+    "mastery_prediction_pearson": 0.022020080092202153,
+    "mastery_prediction_spearman": 0.062355059018422504
+  },
+  "criteria": {
+    "l_21_performance": {
+      "value": 4.057973044817565,
+      "threshold": 0.15,
+      "passed": false
+    },
+    "l_22_difficulty": {
+      "value": 0.14365024937958012,
+      "threshold": 0.1,
+      "passed": false
+    },
+    "l_23_ability": {
+      "value": 6.792058288073931,
+      "threshold": 0.15,
+      "passed": false
+    },
+    "theta_correlation": {
+      "value": 0.0,
+      "threshold": 0.85,
+      "passed": false
+    },
+    "beta_correlation": {
+      "value": 0.0,
+      "threshold": 0.85,
+      "passed": false
+    },
+    "overall": false
+  },
+  "config": {
+    "num_c": 100,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "reference_model_type": "irt",
+    "lambda_target": 0.5,
+    "warmup_epochs": 50,
+    "c_stability_reg": 0.01
+  }
+}

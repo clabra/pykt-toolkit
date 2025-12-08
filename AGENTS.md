@@ -68,7 +68,7 @@ when you change any parameter default value (the reference values are in paper/p
 - Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits. 
 - After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees. 
 - When creating or modifyng texts don't include time estimations 
-- Only do commits when I ask for. In general, I prefer commit after testing with experiments. 
+- Only do commits when I ask for. In general, I prefer commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for. 
 - In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions in case something doesn't match what is expected. 
 
 
