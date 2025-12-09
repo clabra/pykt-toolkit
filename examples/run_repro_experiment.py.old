@@ -5,6 +5,8 @@ Simplified reproducible experiment launcher with integrated reproduction mode.
 TRAINING MODE (default):
     Creates new experiment with 6-digit ID
     python examples/run_repro_experiment.py \
+        --train_script examples/train_gainakt2exp.py \
+        --model_name gainakt2exp \
         --dataset assist2015 \
         --short_title baseline
 
@@ -195,7 +197,7 @@ def build_train_command_from_config(train_script, config_path, experiment_dir):
     python_path = sys.executable
     return f"EXPERIMENT_DIR={experiment_dir} {python_path} {train_script} --config {config_path}"
 
-def build_explicit_train_command(train_script, params, experiment_dir=None):
+def build_explicit_train_command(train_script, params):
     """Build training command with all parameters explicit."""
     python_path = sys.executable
     cmd_parts = [python_path, train_script]
@@ -212,18 +214,9 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'lambda_target', 'warmup_epochs', 'c_stability_reg'
     }
     
-    idkt_params = {
-        'dataset', 'fold', 'seed',
-        'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
-        'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
-        'final_fc_dim', 'l2'
-    }
-    
     # Determine which parameters to pass based on training script
     if 'train_ikt3.py' in train_script:
         allowed_params = ikt3_params
-    elif 'train_idkt.py' in train_script:
-        allowed_params = idkt_params
     else:
         # For other models, pass all parameters (backward compatibility)
         allowed_params = None
@@ -251,10 +244,6 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             cmd_parts.append(f"--{key} null")
         else:
             cmd_parts.append(f"--{key} {value}")
-    
-    # Add save_dir for models that support it (idkt)
-    if experiment_dir and 'train_idkt.py' in train_script:
-        cmd_parts.append(f"--save_dir {experiment_dir}")
     
     return " ".join(cmd_parts)
 
@@ -320,14 +309,14 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     # Model-specific checkpoint handling
     model = params['model']
     
-    if model in ['ikt2', 'ikt3', 'idkt']:
-        # ikt2/ikt3/idkt eval scripts use --checkpoint with full path
+    if model in ['ikt2', 'ikt3']:
+        # ikt2/ikt3 eval scripts use --checkpoint with full path
         checkpoint_path = f"{experiment_folder}/best_model.pt"
         cmd_parts.append(f"--checkpoint {checkpoint_path}")
         # ensure results are written to the experiment folder
         cmd_parts.append(f"--output_dir {experiment_folder}")
         
-        # ikt2/ikt3/idkt eval scripts only need minimal parameters
+        # ikt2/ikt3 eval scripts only need minimal parameters
         core_eval_params = ['dataset', 'fold', 'batch_size']
         model_eval_params = []
         
@@ -336,12 +325,6 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
             reference_targets_path = params.get('reference_targets_path')
             if reference_targets_path:
                 cmd_parts.append(f"--reference_targets_path {reference_targets_path}")
-        # idkt needs architecture parameters
-        elif model == 'idkt':
-            idkt_arch_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 'emb_type', 'seq_len']
-            for param in idkt_arch_params:
-                if param in params:
-                    cmd_parts.append(f"--{param} {params[param]}")
     else:
         # Other models use --run_dir and --ckpt_name
         cmd_parts.append(f"--run_dir {experiment_folder}")
@@ -852,7 +835,7 @@ def main():
         # Select GPUs (unless user already set CUDA_VISIBLE_DEVICES)
         gpu_selection = select_gpus(args.num_gpus)
         
-        train_command_explicit = build_explicit_train_command(train_script, training_params, experiment_dir_abs)
+        train_command_explicit = build_explicit_train_command(train_script, training_params)
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
         mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=15, split='test')
         
@@ -946,7 +929,7 @@ def main():
             print(f"  {train_command}")
             return
         
-        # Launch training (automatic two-phase for iKT/iKT2 if phase=None, warm-up for iKT3, single-phase for idkt)
+        # Launch training (automatic two-phase for iKT/iKT2 if phase=None, warm-up for iKT3)
         if model_name in ['ikt', 'ikt2'] and training_params.get('phase') is None:
             print("\n" + "=" * 80)
             print(f"AUTOMATIC TWO-PHASE TRAINING ({model_name.upper()})")
@@ -960,12 +943,6 @@ def main():
             print(f"SINGLE-PHASE TRAINING WITH WARM-UP (iKT3)")
             print("=" * 80)
             print(f"λ will gradually increase from 0 to {lambda_target} over {warmup_epochs} epochs")
-            print("=" * 80 + "\n")
-        elif model_name == 'idkt':
-            print("\n" + "=" * 80)
-            print(f"SINGLE-PHASE TRAINING (iDKT)")
-            print("=" * 80)
-            print("Standard training with Rasch-based difficulty regularization")
             print("=" * 80 + "\n")
         
         # Launch training
@@ -1001,8 +978,8 @@ def main():
                 print("  You can run it manually:")
                 print(f"    {eval_command_full}")
             
-            # Auto-launch mastery states extraction for iKT/iKT2/iKT3/idkt models
-            if model_name in ['ikt', 'ikt2', 'ikt3', 'idkt']:
+            # Auto-launch mastery states extraction for iKT/iKT2/iKT3 models
+            if model_name in ['ikt', 'ikt2', 'ikt3']:
                     print("\n" + "=" * 80)
                     print(f"LAUNCHING MASTERY STATES EXTRACTION ({model_name.upper()})")
                     print("=" * 80)
@@ -1013,8 +990,6 @@ def main():
                     elif model_name == 'ikt3':
                         ref_model = training_params.get('reference_model', 'irt')
                         print(f"\nExtracting {ref_model.upper()} alignment factors for interpretability analysis...")
-                    elif model_name == 'idkt':
-                        print("\nExtracting Rasch-based difficulty trajectories for interpretability analysis...")
                     
                     mastery_result = subprocess.run(mastery_states_command, shell=True)
                     

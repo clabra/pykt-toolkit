@@ -1,31 +1,28 @@
 {
   "defaults": {
-    "model": "ikt3",
+    "model": "idkt",
     "dataset": "assist2015",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
-    "train_script": "examples/train_ikt3.py",
-    "eval_script": "examples/eval_ikt3.py",
+    "train_script": "examples/train_idkt.py",
+    "eval_script": "examples/eval_idkt.py",
     "epochs": 30,
     "batch_size": 64,
     "learning_rate": 0.0001,
-    "weight_decay": 1.7571e-05,
+    "weight_decay": 0.0,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
     "patience": 30,
     "seq_len": 200,
     "d_model": 256,
-    "n_heads": 4,
-    "num_encoder_blocks": 8,
-    "d_ff": 1536,
+    "n_heads": 8,
+    "n_blocks": 4,
+    "d_ff": 512,
     "dropout": 0.2,
     "emb_type": "qid",
-    "reference_model": "irt",
-    "lambda_target": 0.05,
-    "warmup_epochs": 50,
-    "c_stability_reg": 0.01,
-    "reference_targets_path": "data/assist2015/irt_dynamic_targets_fold0.pkl",
+    "final_fc_dim": 512,
+    "l2": 1e-05,
     "max_correlation_students": 1000
   },
   "types": {
@@ -54,27 +51,20 @@
       "seq_len",
       "d_model",
       "n_heads",
-      "num_encoder_blocks",
+      "n_blocks",
       "d_ff",
       "dropout",
-      "emb_type"
-    ],
-    "ikt3_hyperparameters": [
-      "lambda_target",
-      "warmup_epochs",
-      "c_stability_reg"
-    ],
-    "reference_model_config": [
-      "reference_model",
-      "reference_targets_path"
+      "emb_type",
+      "final_fc_dim",
+      "l2"
     ]
   },
   "fixed": {
-    "ikt3_loss_formula": {
-      "value": "L_total = (1 - \u03bb(t)) \u00d7 L_BCE + c \u00d7 L_stability + \u03bb(t) \u00d7 L_align",
-      "rationale": "iKT3 with pluggable reference models. Single-phase training with warm-up: \u03bb(t) = \u03bb_target \u00d7 min(1, epoch / warmup_epochs). For IRT: L_stability = l_22 (difficulty regularization), L_align = l_21 + l_23 (performance + ability alignment). Success criteria: l_21 < 0.15, l_22 < 0.10, l_23 < 0.15, val_heads_corr > 0.85",
+    "idkt_baseline": {
+      "value": "Initial version: iDKT = AKT (baseline for interpretability enhancements)",
+      "rationale": "Establish baseline using proven AKT architecture. Future versions will add interpretability features while maintaining performance.",
       "validated_by_experiments": []
     }
   },
-  "md5": "f920db5f748384e1e365431d2638ce3c"
+  "md5": "44be324843581319a3c9af3a9b6c0c00"
 }

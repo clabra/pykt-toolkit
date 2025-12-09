@@ -1,0 +1,19 @@
+{
+  "dataset": "assist2009",
+  "folds": [
+    0
+  ],
+  "seed": 42,
+  "models": [
+    "akt"
+  ],
+  "use_wandb": "0",
+  "add_uuid": "0",
+  "timeout_sec": 7200,
+  "benchmark_dir": "/workspaces/pykt-toolkit/experiments/20251208_225023_benchmark_assist2009",
+  "output_file": "/workspaces/pykt-toolkit/experiments/20251208_225023_benchmark_assist2009/results.csv",
+  "config_file": "/workspaces/pykt-toolkit/experiments/20251208_225023_benchmark_assist2009/config.json",
+  "error_log": "/workspaces/pykt-toolkit/experiments/20251208_225023_benchmark_assist2009/error.log",
+  "timestamp": "2025-12-08T22:50:23.134636",
+  "reproducibility_command": "python benchmark_models.py --models akt --dataset assist2009 --folds 0 --seed 42"
+}

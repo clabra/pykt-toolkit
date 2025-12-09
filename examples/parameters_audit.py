@@ -152,11 +152,12 @@ class ParameterAuditor:
                 print(f"\n  Result: ✅ PASS - All {len(critical_params)} fallback values synchronized")
                 return True
             else:
-                # Add detailed issue
+                # Add detailed issue (use dynamic train_script)
+                train_script = defaults.get('train_script', 'training script')
                 issue = {
                     'check': 'Hardcoded Fallback Synchronization',
                     'problem': f"{mismatches} critical parameter(s) have hardcoded fallback values that don't match parameter_default.json",
-                    'details': f"Check the parameters marked with ❌ above in examples/train_gainakt2exp.py",
+                    'details': f"Check the parameters marked with ❌ above in {train_script}",
                     'fix': "Update getattr() fallback values to match parameter_default.json\n     Or run: python examples/parameters_fix.py"
                 }
                 self.detailed_issues.append(issue)
@@ -185,6 +186,20 @@ class ParameterAuditor:
             
             get_count = model_content.count("config.get(")
             bracket_count = model_content.count("config['")
+            
+            # Check if model uses config dict pattern or explicit parameters
+            uses_config_dict = bracket_count > 0 or get_count > 0
+            
+            if not uses_config_dict:
+                # Model uses explicit parameters in __init__ (standard pykt pattern)
+                print(f"  Model uses explicit parameter pattern (not config dict)")
+                print(f"  config.get() calls:          0")
+                print(f"  config['key'] direct access: 0")
+                print(f"  Pattern: ✅ Explicit parameters (standard pykt)")
+                print(f"\n  Result: ✅ PASS - Model uses explicit parameters (no fallbacks possible)")
+                return True
+            
+            # For models using config dict, check for proper fail-fast approach
             # Check for KeyError with required/parameter keywords (flexible matching)
             has_keyerror = ("KeyError" in model_content and 
                           ("required" in model_content.lower() or "parameter" in model_content.lower()))
@@ -255,39 +270,59 @@ class ParameterAuditor:
             with open(param_file, 'r') as f:
                 defaults = json.load(f)['defaults']
             
-            # Critical parameters that must be present (model-agnostic core + model-specific)
-            # Core parameters (all models)
+            # Critical parameters that must be present (model-agnostic core)
+            # Core parameters (all models need these for training/evaluation)
             core_params = [
-                'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout',
                 'batch_size', 'epochs', 'learning_rate',
                 'seed', 'optimizer', 'weight_decay', 'patience'
             ]
             
+            # Model architecture params - check for at least one attention pattern
+            # Different models use different parameter names for similar concepts
+            has_attention_config = any(p in defaults for p in ['n_heads', 'num_attn_heads', 'n_head'])
+            has_model_size = any(p in defaults for p in ['d_model', 'hidden_size', 'embed_dim'])
+            has_depth = any(p in defaults for p in ['n_blocks', 'num_encoder_blocks', 'num_layers', 'n_layer'])
+            has_ffn = any(p in defaults for p in ['d_ff', 'ffn_dim', 'intermediate_size'])
+            has_dropout = 'dropout' in defaults
+            
             # Model-specific parameters (check what's actually in defaults)
             model = defaults['model']
+            model_specific_params = []
             if model == 'gainakt2exp':
                 model_specific_params = ['lambda_bce']
             elif model == 'ikt':
                 model_specific_params = ['lambda_penalty', 'epsilon', 'phase']
-            else:
-                model_specific_params = []
+            elif model == 'idkt':
+                # iDKT uses n_blocks instead of num_encoder_blocks, final_fc_dim for prediction head
+                model_specific_params = ['final_fc_dim', 'l2']
             
             required_params = core_params + model_specific_params
             
             missing = [p for p in required_params if p not in defaults]
             
-            print(f"  Required parameters checked: {len(required_params)}")
-            print(f"  Missing from defaults:       {len(missing)}")
+            print(f"  Model: {model}")
+            print(f"  Core training params:  {'✅' if all(p in defaults for p in core_params) else '❌'} ({len([p for p in core_params if p in defaults])}/{len(core_params)})")
+            print(f"  Attention config:      {'✅' if has_attention_config else '❌'}")
+            print(f"  Model size config:     {'✅' if has_model_size else '❌'}")
+            print(f"  Depth config:          {'✅' if has_depth else '❌'}")
+            print(f"  FFN config:            {'✅' if has_ffn else '❌'}")
+            print(f"  Dropout config:        {'✅' if has_dropout else '❌'}")
+            print(f"  Model-specific params: {'✅' if all(p in defaults for p in model_specific_params) else '❌'} ({len([p for p in model_specific_params if p in defaults])}/{len(model_specific_params)})")
             
             if missing:
+                print(f"\n  Missing from defaults: {len(missing)}")
                 for p in missing:
                     print(f"    ❌ {p}")
             
-            if len(missing) == 0:
+            # Pass if all core params present, basic architecture params present, and model-specific params present
+            arch_complete = has_attention_config and has_model_size and has_depth and has_ffn and has_dropout
+            passed = len(missing) == 0 and arch_complete
+            
+            if passed:
                 print(f"\n  Result: ✅ PASS - All required parameters present")
                 return True
             else:
-                print(f"\n  Result: ❌ FAIL - {len(missing)} parameters missing")
+                print(f"\n  Result: ❌ FAIL - Missing parameters or incomplete architecture config")
                 return False
                 
         except Exception as e:
@@ -422,11 +457,12 @@ class ParameterAuditor:
                     for param in sorted(missing_required):
                         details_list.append(f"  • {param}")
                 
+                # Use dynamic train_script from config
                 issue = {
                     'check': 'Argparse Completeness',
                     'problem': f"{issues} parameter(s) missing proper argparse configuration",
                     'details': '\n'.join(details_list),
-                    'fix': "Add missing argparse entries with required=True in examples/train_gainakt2exp.py\n     (Boolean flags use action='store_true' and don't need required=True)"
+                    'fix': f"Add missing argparse entries with required=True in {train_script_path}\n     (Boolean flags use action='store_true' and don't need required=True)"
                 }
                 self.detailed_issues.append(issue)
                 
@@ -506,11 +542,12 @@ class ParameterAuditor:
                     mismatch_details.append(f"  • {param}: fallback={fallback}, expected={expected}")
                     self.log(f"Mismatch {param}: fallback={fallback}, expected={expected}", "ERROR")
                 
+                # Use dynamic train_script from earlier in function
                 issue = {
                     'check': 'Dynamic Fallback Synchronization',
                     'problem': f"{len(mismatches)} parameter(s) have fallback values that don't match parameter_default.json",
                     'details': '\n'.join(mismatch_details),
-                    'fix': "Update getattr() fallback values in examples/train_gainakt2exp.py to match defaults\n     Or run: python examples/parameters_fix.py"
+                    'fix': f"Update getattr() fallback values in {train_script_path} to match defaults\n     Or run: python examples/parameters_fix.py"
                 }
                 self.detailed_issues.append(issue)
                 
@@ -681,10 +718,18 @@ class ParameterAuditor:
             print("   • Check for code synchronization issues")
             print("   • Generate commit message following conventions")
             
+            # Load train_script dynamically for help message
+            try:
+                param_file = self.root_dir / "configs" / "parameter_default.json"
+                with open(param_file, 'r') as f:
+                    train_script = json.load(f)['defaults'].get('train_script', 'training script')
+            except:
+                train_script = 'training script'
+            
             print("\n2️⃣  SKIP AUDIT (not recommended):")
             print("   Set environment variable to bypass checks:")
             print("   export SKIP_PARAMETER_AUDIT=1")
-            print("   python examples/train_gainakt2exp.py ...")
+            print(f"   python {train_script} ...")
             print("\n   ⚠️  WARNING: Skipping audit risks reproducibility violations!")
             
             print("\n3️⃣  MANUAL FIX (for understanding):")

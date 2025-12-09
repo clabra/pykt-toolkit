@@ -1,0 +1,96 @@
+{
+  "commands": {
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt3.py --batch_size 64 --c_stability_reg 0.01 --d_ff 1536 --d_model 256 --dataset assist2009 --dropout 0.2 --emb_type qid --epochs 30 --fold 0 --gradient_clip 1.0 --lambda_target 0.05 --learning_rate 0.0001 --n_heads 4 --num_encoder_blocks 8 --optimizer Adam --patience 30 --reference_model irt --reference_targets_path data/assist2015/irt_dynamic_targets_fold0.pkl --seed 42 --seq_len 200 --warmup_epochs 50 --weight_decay 1.7571e-05",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_ikt3.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251208_224742_ikt3_assist2009_189351",
+    "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20251208_224742_ikt3_assist2009_189351 --split test --num_students 15"
+  },
+  "experiment": {
+    "id": "20251208_224742_ikt3_assist2009_189351",
+    "short_title": "ikt3_assist2009",
+    "experiment_id": "189351",
+    "created": "20251208_224742"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "model": "ikt3",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "short_title": "test",
+    "train_script": "examples/train_ikt3.py",
+    "eval_script": "examples/eval_ikt3.py",
+    "epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.0001,
+    "weight_decay": 1.7571e-05,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 30,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 4,
+    "num_encoder_blocks": 8,
+    "d_ff": 1536,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "reference_model": "irt",
+    "lambda_target": 0.05,
+    "warmup_epochs": 50,
+    "c_stability_reg": 0.01,
+    "reference_targets_path": "data/assist2015/irt_dynamic_targets_fold0.pkl",
+    "max_correlation_students": 1000
+  },
+  "overrides": {
+    "dataset": "assist2009"
+  },
+  "types": {
+    "launcher": [
+      "short_title",
+      "train_script",
+      "eval_script",
+      "model",
+      "max_correlation_students"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "num_encoder_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type"
+    ],
+    "ikt3_hyperparameters": [
+      "lambda_target",
+      "warmup_epochs",
+      "c_stability_reg"
+    ],
+    "reference_model_config": [
+      "reference_model",
+      "reference_targets_path"
+    ]
+  },
+  "md5": "f920db5f748384e1e365431d2638ce3c",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}

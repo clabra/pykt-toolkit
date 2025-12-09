@@ -140,18 +140,28 @@ class ParameterFixer:
         """
         self.print_header("STEP 3: CHECKING CODE SYNCHRONIZATION")
         
+        # Load current defaults to get train/eval scripts dynamically
+        param_file = self.root_dir / "configs" / "parameter_default.json"
+        with open(param_file, 'r') as f:
+            config_data = json.load(f)
+        
+        # Get scripts from config
+        train_script = config_data['defaults'].get('train_script', 'examples/train_*.py')
+        eval_script = config_data['defaults'].get('eval_script', 'examples/eval_*.py')
+        
         files_to_check = [
-            self.root_dir / "examples" / "train_gainakt2exp.py",
-            self.root_dir / "examples" / "eval_gainakt2exp.py",
+            self.root_dir / train_script,
+            self.root_dir / eval_script,
             self.root_dir / "examples" / "run_repro_experiment.py",
         ]
         
         issues_found = []
         
         print("Scanning for hardcoded fallback values that may need updating...")
+        print(f"  Training script: {train_script}")
+        print(f"  Eval script: {eval_script}")
         
-        # Load current defaults
-        param_file = self.root_dir / "configs" / "parameter_default.json"
+        # Defaults already loaded above
         with open(param_file, 'r') as f:
             defaults = json.load(f)['defaults']
         
