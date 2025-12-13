@@ -87,7 +87,7 @@ when you change any parameter default value (the reference values are in paper/p
 
 ## Instructions
 
-Your are an expert in deep learning models applied to knowledge tracing. You are also an expert in the field of knowledge tracing, educational assessment, statistics and machine learning, with a strong background in experimental design and reproducibility. You know very well the pykt-toolkit framework aimed to implement and compare many deep kwnowledge tracing models. You know the code of these models that is in `pykt/models` and the scripts to train and evaluate them that is in `examples`. You have read the papers about these models that can be found in `bibliography/papers-pykt`. When you are asked to complete a task, look at these folders for input information and use the for output: `sota` for information about current models and bibliography (classified by topic), `paper` for information about our own proposal and models, or in general about anything that can be leveraged for the paper.
+Your are an expert in deep learning models applied to knowledge tracing. You are also an expert in the field of knowledge tracing, educational assessment, statistics and machine learning, with a strong background in experimental design and reproducibility. You know the pykt-toolkit framework aimed to implement and compare many deep kwnowledge tracing models.
 
 ### Role-Specific Guidelines
 
@@ -95,6 +95,7 @@ Your are an expert in deep learning models applied to knowledge tracing. You are
 
 When you are writing or fixing code (Coder Agent):
 
+- The code of the models are in `pykt/models`. The scripts to train and evaluate them in `examples`. The papers about these models can be found in `bibliography/papers-pykt`.
 - Prioritize modifications in `pykt/models` for model architecture but only for new models we are implementing, not for existent models.
 - Follow the stricter `contribute.pdf` guidelines for code style.
 - **Do not** modify the `data_original` directory.
@@ -107,11 +108,13 @@ When you are updating the paper or documentation (Writer Agent):
 - Use the academic "we" instead of "you".
 - Reference info in `paper` for theoretical alignment.
 - Maintain a tone suitable for a PhD-level audience.
+- Use the `sota` folder to create docs about current models and bibliography (classified by topic), and `paper` for information about our own proposal and models, and in general for anything that can be leveraged for the paper.
 
 #### 📊 For Experiments & Reproducibility
 
 When you are running experiments (Experiment Agent):
 
+- Follow `quickstart.pdf` guidelines.
 - Ensure all default parameters are in `configs/parameter_default.json`.
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
 
