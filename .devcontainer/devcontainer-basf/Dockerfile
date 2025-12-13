@@ -76,7 +76,9 @@ USER vscode
 
 # Create virtual environment in user's home directory (completely owned by vscode)
 RUN python3.8 -m venv /home/vscode/.pykt-env && \
-    /home/vscode/.pykt-env/bin/pip install --upgrade pip setuptools wheel build
+    #/home/vscode/.pykt-env/bin/pip install --upgrade pip setuptools wheel build
+    # Add uv to be able to install MCP Servers that require it
+    /home/vscode/.pykt-env/bin/pip install --upgrade pip setuptools wheel build uv
 
 # Install PyTorch and GPU packages compatible with CUDA 11.8 from the base image.
 # Fixed: Use explicit CUDA 11.8 wheel installation for proper GPU support
