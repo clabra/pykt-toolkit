@@ -1,3 +1,6 @@
+.claude
+AGENTS.md
+
 examples/__pycache__/
 examples/all_bestmodel/
 examples/all_start.sh
@@ -74,3 +77,4 @@ data/difficulty/
 data/peer_index/
 
 data/**
+
