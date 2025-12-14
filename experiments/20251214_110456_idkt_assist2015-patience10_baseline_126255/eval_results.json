@@ -1,0 +1,9 @@
+{
+  "valid_auc": 0.7336192625421911,
+  "valid_acc": 0.7585377959882821,
+  "test_auc": 0.726308709459363,
+  "test_acc": 0.7513150855920114,
+  "window_test_auc": 0.7264519568878031,
+  "window_test_acc": 0.7512997623291741,
+  "checkpoint": "/workspaces/pykt-toolkit/experiments/20251214_110456_idkt_assist2015-patience10_126255/best_model.pt"
+}

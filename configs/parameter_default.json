@@ -7,13 +7,13 @@
     "short_title": "test",
     "train_script": "examples/train_idkt.py",
     "eval_script": "examples/eval_idkt.py",
-    "epochs": 50,
+    "epochs": 200,
+    "patience": 10,
     "batch_size": 64,
     "learning_rate": 0.0001,
     "weight_decay": 0.0,
     "optimizer": "Adam",
     "gradient_clip": 1.0,
-    "patience": 30,
     "seq_len": 200,
     "d_model": 256,
     "n_heads": 8,
@@ -66,5 +66,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "a2c0c0be8dd6bb10a4f3b982768231f5"
+  "md5": "f2082199a1a383c5256fdc5e104809cc"
 }
