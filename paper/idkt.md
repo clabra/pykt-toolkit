@@ -214,11 +214,11 @@ graph TD
     subgraph "Encoder: N Blocks"
         direction TB
 
-        subgraph "Enc_MHA [Multi-Head Self-Attention]"
+        subgraph "Multi-Head Self-Attention"
             direction TB
             E_Split["Embedding split 8 segments"]
 
-            subgraph "E_Heads [8 Parallel Attention Heads]"
+            subgraph "8 Parallel Attention Heads"
                 direction LR
                 E_H1["Head 1<br/>Attn(Q1,K1,V1)<br/>γ1 (Short-term?)"]
                 E_H2["Heads 2..7<br/>...<br/>Diverse γ"]
@@ -238,14 +238,14 @@ graph TD
     subgraph "Decoder (Knowledge Retriever): 2N Blocks"
         direction TB
 
-        subgraph "Odd Layers: Self-Attention (Questions)"
+        subgraph "Self-Attention (Questions)"
             direction TB
 
-            subgraph "KR1_MHA [Multi-Head Self-Attention]"
+            subgraph "Multi-Head Self-Attention"
                 direction TB
                 KR1_Split["Embedding split 8 segments"]
 
-                subgraph "KR1_Heads [8 Parallel Heads]"
+                subgraph "8 Parallel Heads"
                     direction LR
                     KR1_H1["Head 1<br/>γ1"]
                     KR1_H2["Heads 2..7"]
@@ -259,7 +259,7 @@ graph TD
             KR_Norm1["Layer Norm + Residual"]
         end
 
-        subgraph "Even Layers: Cross-Attention"
+        subgraph "Cross-Attention"
             direction TB
 
             subgraph "KR2_MHA [Multi-Head Cross-Attention]"
