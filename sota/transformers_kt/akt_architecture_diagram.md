@@ -1,49 +1,61 @@
 ```mermaid
 graph TD
     subgraph Input_Layer ["Input Layer"]
-        Q_Seq[Question Sequence q_1...q_t]
-        R_Seq[Response Sequence r_1...r_t]
-        PID_Seq[Problem ID Sequence (Optional)]
+        Q_Seq["Question Sequence q_1...q_t"]
+        R_Seq["Response Sequence r_1...r_t"]
+        PID_Seq["Problem ID Sequence (Optional)"]
     end
 
     subgraph Embedding_Layer ["Embedding Layer"]
-        Q_Emb[Question Embedding matrix]
-        QA_Emb[Interaction (QA) Embedding matrix]
-        PID_Emb[Difficulty Embedding (Optional)]
+        Q_Emb["Question Embedding matrix"]
+        QA_Emb["Interaction (QA) Embedding matrix"]
+        PID_Emb["Difficulty Embedding (Optional)"]
 
         Q_Seq --> Q_Emb
         R_Seq --> QA_Emb
         PID_Seq --> PID_Emb
 
-        Q_Emb & PID_Emb --> Sum_Q[Sum: Question Representations (x)]
-        QA_Emb & PID_Emb --> Sum_QA[Sum: Interaction Representations (y)]
+        Q_Emb & PID_Emb --> Sum_Q["Sum: Question Representations (x)"]
+        QA_Emb & PID_Emb --> Sum_QA["Sum: Interaction Representations (y)"]
 
         %% Rasch Model variations handled here conceptually
     end
 
     subgraph Context_Encoder ["Context Encoder (Blocks 1)"]
         direction TB
-        Sum_QA --> SA_QA[Self-Attention Block]
-        SA_QA --> Context_Rep[Context Representations (y^hat)]
-        note1[Encodes history of interactions<br/>Mask=1: Peek current & past]
+        Sum_QA -- "Q, K, V" --> CE_Split["Split Heads (1..h)"]
+        CE_Split --> CE_Attn["Scaled Dot-Product Attention<br/>(per head)"]
+        CE_Attn --> CE_Concat["Concatenate heads & Linear"]
+        CE_Concat --> Context_Rep["Context Representations (y^hat)"]
+        note1["<b>Self-Attention:</b><br/>Refines interaction embeddings<br/>based on global context."]
     end
 
     subgraph Question_Encoder ["Question Encoder (Blocks 2 - Step 1)"]
         direction TB
-        Sum_Q --> SA_Q[Self-Attention Block (First Layer)]
-        SA_Q --> Quest_Rep[Question Representations (x^hat)]
-        note2[Encodes target questions<br/>Mask=1: Self-Attention on Questions]
+        Sum_Q -- "Q, K, V" --> QE_Split["Split Heads (1..h)"]
+        QE_Split --> QE_Attn["Scaled Dot-Product Attention"]
+        QE_Attn --> QE_Concat["Concatenate & Linear"]
+        QE_Concat --> Quest_Rep["Question Representations (x^hat)"]
+        note2["Encodes target questions<br/>Mask=1: Self-Attention on Questions"]
     end
 
     subgraph Knowledge_Retriever ["Knowledge Retriever (Blocks 2 - Step 2+)"]
         direction TB
-        Quest_Rep --> Attn_Query[Query]
-        Context_Rep --> Attn_KV[Key / Value]
+        Quest_Rep -- "Query: x (Target Q)" --> Attn_Query["Query Heads"]
+        Quest_Rep -- "Key: x (History Qs)" --> Attn_Key["Key Heads"]
+        Context_Rep -- "Value: y (History Ints)" --> Attn_Value["Value Heads"]
 
-        Attn_Query & Attn_KV --> Mono_Attn[Monotonic Attention Block]
-        Mono_Attn --> Retrieved_Know[Retrieved Knowledge]
+        Attn_Query & Attn_Key & Attn_Value --> KR_Split["Split into h Heads"]
 
-        note3[Attention with Exponential Decay<br/>Mask=0: Peek strictly past interactions<br/>Weights history based on relevance & distance]
+        KR_Split -- "Head 1" --> KR_H1["Head 1<br/>(Learnable Decay γ_1)"]
+        KR_Split -- "..." --> KR_HMid["..."]
+        KR_Split -- "Head h" --> KR_Hh["Head h<br/>(Learnable Decay γ_h)"]
+
+        KR_H1 & KR_HMid & KR_Hh --> KR_Mixing["Attention Weights * Values"]
+        KR_Mixing --> KR_Concat["Concatenate"]
+        KR_Concat --> Retrieved_Know["Retrieved Knowledge"]
+
+        note3["<b>Multi-Head Decay Mechanism:</b><br/>Similar questions (x*x) get weight.<br/>Each head h has a distinct<br/>decay parameter γ_h to capture<br/>short vs long-term dependencies."]
     end
 
     subgraph Output_Layer ["Output Prediction Layer"]
@@ -51,7 +63,7 @@ graph TD
         Sum_Q --> Concat
         Concat --> MLP[MLP Block]
         MLP --> Sigmoid
-        Sigmoid --> Pred[Prediction p_t]
+        Sigmoid --> Pred["Prediction p_t"]
     end
 
     %% Connections

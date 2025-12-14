@@ -1,8 +1,0 @@
-{
-  "best_val_bce_auc": 0.7254418858373691,
-  "final_epoch": 12,
-  "total_params": 10725989,
-  "phase": 1,
-  "lambda_bce": 0.5,
-  "epsilon": 0.0
-}

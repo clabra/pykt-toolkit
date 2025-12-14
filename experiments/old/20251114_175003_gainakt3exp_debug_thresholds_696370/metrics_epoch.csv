@@ -1,2 +1,0 @@
-epoch,train_loss,train_auc,val_loss,val_auc,val_accuracy,monotonicity_violation_rate,negative_gain_rate,bounds_violation_rate,mastery_correlation,gain_correlation,main_loss_share,constraint_loss_share,alignment_loss_share,lag_loss_share,retention_loss_share
-1,0.7035095487851553,0.6792110722889841,0.5198258100723734,0.7083706193931965,0.7489999902675452,0.0,0.0,0.0,0.0036862657143954267,0.06647729209540601,0.7609049059871535,0.23909509366509094,-0.0013012943788206948,0.0,0.0

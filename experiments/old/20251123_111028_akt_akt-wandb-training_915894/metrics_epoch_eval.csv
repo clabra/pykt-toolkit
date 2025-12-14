@@ -1,4 +1,0 @@
-split,total_auc,bce_auc,mastery_auc,total_acc,bce_acc,mastery_acc
-training,,,,,,,
-validation,0.732,0.732,,0.7579,0.7579,
-test,0.7215,0.7215,,0.7794,0.7794,

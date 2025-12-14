@@ -1,1 +1,0 @@
-epoch,phase,lambda_bce,epsilon,val_bce_auc,val_bce_acc,val_total_loss,val_bce_loss,val_rasch_loss,train_total_loss,train_bce_loss,train_rasch_loss

@@ -9,11 +9,11 @@ The key contributions of the paper will be a new Transformer attention-based mod
 Reference Documents:
 
 - `papers-pykt` folder contains papers for most of the models included in `pykt/models`
-- `taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
-- `quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
-- `contribute.pdf` - explains how to proceed to add new models and datasets, follow these guidelines when it comes to code generation, scripts, and documentation
-- `datasets.pdf` - explains what datasets are used to evaluate models and how to get them
-- `models.pdf` - a description and a paper for each model in `pykt/models`. Papers can be found in `papers-pykt` folder)
+- `assistant/taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
+- `assistant/quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
+- `assistant/contribute.pdf` - explains how to proceed to add new models and datasets, follow these guidelines when it comes to code generation, scripts, and documentation
+- `assistant/datasets.pdf` - explains what datasets are used to evaluate models and how to get them
+- `assistant/models.pdf` - a description and a paper for each model in `pykt/models`. Papers can be found in `papers-pykt` folder)
 
 ## Datasets
 
@@ -51,9 +51,9 @@ when you change any parameter default value (the reference values are in paper/p
 
 ### pykt Standards
 
-- We are creating a new model to contribute to the pykt framework. Follow guidelines in `contribute.pdf` and `quickstart.pdf` when it comes to create model code, training and evaluation scripts, model parameters, etc, following pykt standards.
+- We are creating a new model to contribute to the pykt framework. Follow guidelines in `assistant/contribute.pdf` and `assistant/quickstart.pdf` when it comes to create model code, training and evaluation scripts, model parameters, etc, following pykt standards.
 - Most scripts are in `examples` folder
-- New files and scripts that don't adhere to the standard guidelines described in `contribute.pdf` and `quickstart.pdf` should be created in the `pykt-toolkit/tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `pykt-toolkit/tmp` folder. This way it will be easier to do contributions to the upstream repo from which we forked.
+- New files and scripts that don't adhere to the standard guidelines described in `assistant/contribute.pdf` and `assistant/quickstart.pdf` should be created in the `pykt-toolkit/tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `pykt-toolkit/tmp` folder. This way it will be easier to do contributions to the upstream repo from which we forked.
 
 ### Operational standards
 
@@ -97,7 +97,7 @@ When you are writing or fixing code (Coder Agent):
 
 - The code of the models are in `pykt/models`. The scripts to train and evaluate them in `examples`. The papers about these models can be found in `bibliography/papers-pykt`.
 - Prioritize modifications in `pykt/models` for model architecture but only for new models we are implementing, not for existent models.
-- Follow the stricter `contribute.pdf` guidelines for code style.
+- Follow the stricter `assistant/contribute.pdf` guidelines for code style.
 - **Do not** modify the `data_original` directory.
 - Always run a small test script (e.g., in `tmp/`) before committing major changes.
 
@@ -114,7 +114,7 @@ When you are updating the paper or documentation (Writer Agent):
 
 When you are running experiments (Experiment Agent):
 
-- Follow `quickstart.pdf` guidelines.
+- Follow `assistant/quickstart.pdf` guidelines.
 - Ensure all default parameters are in `configs/parameter_default.json`.
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
 
