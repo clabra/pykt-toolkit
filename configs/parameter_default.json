@@ -7,7 +7,7 @@
     "short_title": "test",
     "train_script": "examples/train_idkt.py",
     "eval_script": "examples/eval_idkt.py",
-    "epochs": 30,
+    "epochs": 50,
     "batch_size": 64,
     "learning_rate": 0.0001,
     "weight_decay": 0.0,
@@ -66,5 +66,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "44be324843581319a3c9af3a9b6c0c00"
+  "md5": "a2c0c0be8dd6bb10a4f3b982768231f5"
 }

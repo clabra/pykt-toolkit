@@ -1,0 +1,80 @@
+services:
+  pinn:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # These allow the container user to match your host user ID, preventing permission issues
+        # You can override these in a .env file or shell environment
+        USERNAME: vscode
+        USER_UID: "${USER_UID:-1008}"
+        USER_GID: "${USER_GID:-1008}"
+    image: pinn:dev
+    container_name: pinn-dev
+
+    # Mount the current directory to the container workspace
+    volumes:
+      - .:/workspaces/pykt-toolkit
+
+    # Keep the container running so you can attach to it
+    command: /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && sleep infinity"
+
+    # Configuration for NVIDIA GPUs
+    deploy:
+      resources:
+        limits:
+          # Soft limit - can use up to 300GB RAM when available (shared machine friendly)
+          memory: 300G
+          # Soft limit - can use up to 20 CPU cores when available
+          cpus: '20'
+        reservations:
+          # No hard reservations - use resources opportunistically
+          devices:
+            - driver: nvidia
+              # Use specific GPUs via CUDA_VISIBLE_DEVICES env var instead of reserving all
+              count: all
+              capabilities: [ gpu ]
+
+    # Runtime settings from devcontainer.json
+    shm_size: '16gb'
+    privileged: true
+    init: true
+    working_dir: /workspaces/pykt-toolkit
+
+    # Increase system limits for deep learning workloads
+    ulimits:
+      # Maximum number of open file descriptors (important for DataLoader with many workers)
+      nofile:
+        soft: 65536
+        hard: 65536
+      # Maximum number of processes (important for multi-GPU training)
+      nproc:
+        soft: 65536
+        hard: 65536
+      # Memory lock limit (allows pinning memory for faster GPU transfers)
+      memlock:
+        soft: -1
+        hard: -1
+      # Stack size
+      stack:
+        soft: 67108864
+        hard: 67108864
+
+    # Use tmpfs for faster temporary file I/O (useful for caching)
+    tmpfs:
+      - /tmp:size=32G,mode=1777
+
+    # Environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # PyTorch optimizations (conservative for shared machine)
+      - OMP_NUM_THREADS=20
+      - MKL_NUM_THREADS=20
+      - OPENBLAS_NUM_THREADS=20
+      - NUMEXPR_NUM_THREADS=20
+      # Enable CUDA optimizations
+      - CUDA_LAUNCH_BLOCKING=0
+      - CUDA_CACHE_MAXSIZE=2147483648
+      # Memory allocator optimizations for PyTorch
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512

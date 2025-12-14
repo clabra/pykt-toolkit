@@ -27,7 +27,9 @@ import json
 import torch
 torch.set_num_threads(32)
 from torch.optim import SGD, Adam
+from torch.nn.functional import binary_cross_entropy
 import numpy as np
+import csv
 from datetime import datetime
 
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -179,45 +181,106 @@ def main():
     else:
         raise ValueError(f"Unknown optimizer: {args.optimizer}")
     
-    # Create checkpoint directory (not file path)
-    ckpt_path = args.save_dir
-    os.makedirs(ckpt_path, exist_ok=True)
+    # Create checkpoint directory
+    os.makedirs(args.save_dir, exist_ok=True)
     
-    # Train model (returns: test_auc, test_acc, window_testauc, window_testacc, valid_auc, valid_acc, best_epoch)
-    test_auc, test_acc, window_testauc, window_testacc, valid_auc, valid_acc, best_epoch = train_model(
-        model, train_loader, valid_loader, args.epochs, optimizer, ckpt_path, 
-        test_loader=None, test_window_loader=None, save_model=True
-    )
+    # Training Loop
+    best_valid_auc = 0.0
+    best_valid_acc = 0.0
+    best_epoch = -1
+    patience_counter = 0
+    test_auc, test_acc = -1, -1
+    window_testauc, window_testacc = -1, -1
+    
+    # Initialize metrics_epoch.csv
+    csv_path = os.path.join(args.save_dir, 'metrics_epoch.csv')
+    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc']
+    with open(csv_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=csv_headers)
+        writer.writeheader()
+
+    for epoch in range(1, args.epochs + 1):
+        model.train()
+        train_loss = 0.0
+        train_steps = 0
+        
+        for data in train_loader:
+             # Data preparation
+             q, c, r, t = data["qseqs"].to(device), data["cseqs"].to(device), data["rseqs"].to(device), data["tseqs"].to(device)
+             qshft, cshft, rshft, tshft = data["shft_qseqs"].to(device), data["shft_cseqs"].to(device), data["shft_rseqs"].to(device), data["shft_tseqs"].to(device)
+             m, sm = data["masks"].to(device), data["smasks"].to(device)
+
+             cq = torch.cat((q[:,0:1], qshft), dim=1)
+             cc = torch.cat((c[:,0:1], cshft), dim=1)
+             cr = torch.cat((r[:,0:1], rshft), dim=1)
+
+             # Forward
+             y, reg_loss = model(cc.long(), cr.long(), cq.long())
+             
+             # Loss
+             y_pred = torch.masked_select(y[:, 1:], sm)
+             y_true = torch.masked_select(rshft, sm)
+             loss = binary_cross_entropy(y_pred.double(), y_true.double()) + reg_loss
+             
+             optimizer.zero_grad()
+             loss.backward()
+             if args.gradient_clip > 0:
+                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradient_clip)
+             optimizer.step()
+             
+             train_loss += loss.item()
+             train_steps += 1
+        
+        avg_train_loss = train_loss / train_steps
+        
+        # Validation
+        valid_auc, valid_acc = evaluate(model, valid_loader, 'idkt')
+        
+        print(f"Epoch {epoch}/{args.epochs}: Train Loss={avg_train_loss:.4f}, Valid AUC={valid_auc:.4f}, Valid Acc={valid_acc:.4f}")
+        
+        # Save to CSV
+        with open(csv_path, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=csv_headers)
+            writer.writerow({
+                'epoch': epoch,
+                'train_loss': avg_train_loss,
+                'valid_auc': valid_auc,
+                'valid_acc': valid_acc
+            })
+            
+        # Checkpoint and Early Stopping
+        if valid_auc > best_valid_auc:
+            best_valid_auc = valid_auc
+            best_valid_acc = valid_acc
+            best_epoch = epoch
+            patience_counter = 0
+            
+            # Save best model directly as best_model.pt
+            torch.save(model.state_dict(), os.path.join(args.save_dir, 'best_model.pt'))
+            print(f"  ✓ Saved best model (AUC: {valid_auc:.4f})")
+            
+            # Save validation metrics
+            metrics_valid_path = os.path.join(args.save_dir, 'metrics_valid.csv')
+            with open(metrics_valid_path, 'w') as f:
+                f.write('split,auc,acc\n')
+                f.write(f'validation,{valid_auc:.6f},{valid_acc:.6f}\n')
+            print(f"  ✓ Saved validation metrics: {metrics_valid_path}")
+        else:
+            patience_counter += 1
+            if patience_counter >= args.patience:
+                print(f"Early stopping at epoch {epoch}")
+                break
     
     print(f"\nTraining completed!")
     print(f"  Best epoch: {best_epoch}")
-    print(f"  Valid AUC: {valid_auc:.4f}, Valid Acc: {valid_acc:.4f}")
-    print(f"  Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
-    if window_testauc != -1:
-        print(f"  Window Test AUC: {window_testauc:.4f}, Window Test Acc: {window_testacc:.4f}")
-    
-    # Rename checkpoint file to match expected naming convention
-    # pykt saves as {emb_type}_model.ckpt, but we need best_model.pt
-    old_ckpt_path = os.path.join(args.save_dir, f'{args.emb_type}_model.ckpt')
-    new_ckpt_path = os.path.join(args.save_dir, 'best_model.pt')
-    if os.path.exists(old_ckpt_path):
-        import shutil
-        shutil.move(old_ckpt_path, new_ckpt_path)
-        print(f"✓ Renamed checkpoint: {old_ckpt_path} → {new_ckpt_path}")
-    
-    # Save validation metrics (matching ikt3 structure)
-    metrics_valid_path = os.path.join(args.save_dir, 'metrics_valid.csv')
-    with open(metrics_valid_path, 'w') as f:
-        f.write('split,auc,acc\n')
-        f.write(f'validation,{valid_auc:.6f},{valid_acc:.6f}\n')
-    print(f"✓ Saved validation metrics: {metrics_valid_path}")
+    print(f"  Valid AUC: {best_valid_auc:.4f}, Valid Acc: {best_valid_acc:.4f}")
     
     # Save results (for backward compatibility)
     results = {
         'test_auc': float(test_auc),
         'test_acc': float(test_acc),
-        'valid_auc': float(valid_auc),
-        'valid_acc': float(valid_acc),
+        'valid_auc': float(best_valid_auc),
+        'valid_acc': float(best_valid_acc),
         'window_test_auc': float(window_testauc) if window_testauc != -1 else None,
         'window_test_acc': float(window_testacc) if window_testacc != -1 else None,
         'best_epoch': int(best_epoch),
@@ -226,7 +289,6 @@ def main():
     }
     
     results_path = os.path.join(args.save_dir, 'results.json')
-    os.makedirs(args.save_dir, exist_ok=True)
     with open(results_path, 'w') as f:
         json.dump(results, f, indent=2)
     print(f"✓ Saved training results: {results_path}")
