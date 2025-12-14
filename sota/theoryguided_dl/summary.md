@@ -101,6 +101,62 @@ Focuses on the mechanics of training deep networks using theoretical constraints
     - structured to incorporate relational inductive biases [@battaglia2018relational] from the outset, shaping their ability to learn meaningful representations even before training begin
     ```
 
+## Integrating Physics-Based Modeling With Machine Learning: A Survey (Willard et al., 2022)
+
+see paper pdf in: `bibliography/theory-guided/2020 Willard _ Integrating Physics-Based Modeling With Machine Learning.pdf`
+
+### 2. Objectives of Physics-ML Integration
+
+### 3. Physics-ML Methods
+
+#### 3.1 Physics-Guided Loss Function
+
+Loss = LossTRN(Ytrue,Ypred) + λR(W) +γLossPHY(Ypred)
+
+#### 3.2 Physics-Guided Initialization
+
+> Since many ML models require an initial choice of model parameters before training, researchers
+> have explored different ways to physically inform a model starting state. For example, in NNs,
+> weights are often initialized according to a random distribution prior to training. Poor initialization
+> can cause models to anchor in local minima, which is especially true for deep neural networks.
+> However, if physical or other contextual knowledge can be used to help inform the initialization
+> of the weights, model training can be accelerated or improved [@jia2020physics]. One way to inform the
+> initialization to assist in model training and escaping local minima is to use an ML technique
+> known as transfer learning. In transfer learning, a model can be pre-trained on a related task prior
+> to being fine-tuned with limited training data to fit the desired task. The pre-trained model serves
+> as an informed initial state that ideally is closer to the desired parameters for the desired task
+> than random initialization. One way to harness physics-based modeling knowledge is to use the
+> physics-based model’s simulated data to pre-train the ML model, which also alleviates data paucity
+> issues.
+>
+> — (Willard et al., 2022)
+
+#### 3.3 Physics-Guided Architecture
+
+- Intermediate Physical Variables: ascribe physical meaning for certain neurons in the NN ... they can help extract physically meaningful hidden representation that can be interpreted
+- Encoding invariances and symmetries: state-of-the-art deep learning architectures already encode certain types of invariance; for example, RNNs encode time invariance and CNNs can implicitly encode spatial translation, rotation, scale variance. In the same way, scientific modeling tasks may require other invariances based on physical laws ... e.g. adding a higher-order multiplicative layer that ensures the prediction lies on a rotationally invariant tensor basis
+- Physics-informed architectures for discovering governing equations
+- In Section 2.7, symbolic regression is mentioned as an approach that has shown success.
+- Encoding other domain-specific physical knowledge. Various other domain-specific physical information can be encoded into architecture that doesn’t exactly correspond to known invariances but provides meaningful structure to the optimization process depending on the task at hand.
+- Currently, human experts have manually developed the majority of domain knowledge-encoded employed architectures, which can be a time-intensive and error-prone process. Because of this, there is increasing interest in automated neural architecture search methods [13, 73, 115]. A young but promising direction in ML architecture design is to embed prior physical knowledge into neural architecture searches. Ba et al. [12] adds physically meaningful input nodes and physical operations between nodes to the neural architecture search space to enable the search algorithm to discover more ideal physics-guided ML architectures.
+
+- Auxiliary Task in Multi-Task Learning. An example of an auxiliary task in a multi-task learning framework might be related to ensuring physically consistent solutions in addition to accurate predictions ... a task-constrained loss function can be formulated to allow errors of related tasks to be back-propagated jointly to improve model generalization ... Early work in a computational chemistry application showed that a NN could be trained to predict energy by constructing a loss function that had penalties for both inaccuracy and inaccurate energy derivatives with respect to time as determined by the surrounding energy force field [199].
+- Physics-guided Gaussian process regression. Gaussian process regression (GPR) [265] is a nonpara
+  metric, Bayesian approach to regression that is increasingly being used in ML applications ... In GPR, first a Gaussian process prior must be assumed in the form of a mean function and a matrix-valued kernel or covariance function.
+
+#### 3.4 Residual modeling
+
+The oldest and most common approach for directly addressing the imperfection of physics-based
+models in the scientific community is residual modeling, where an ML model (usually linear
+regression) learns to predict the errors, or residuals, made by a physics-based model [82, 247].
+
+#### 3.5 Hybrid Physics-ML Models
+
+One straightforward method to combine physics-based and ML models is to feed the output
+of a physics-based model as input to an ML model. Karpatne et al [128] showed that using the
+output of a physics-based model as one feature in an ML model along with inputs used to drive the
+physics-based model for lake temperature modeling can improve predictions.
+
 ## Conclusion
 
 The literature indicates a strong convergence towards **Neuro-symbolic** and **Theory-guided** AI. In the context of `pykt-toolkit`, moving beyond pure Transformer-based models (like AKT/SAKT) to models that explicitly encode educational psychology principles (as seen in TGEL-Transformer) represents the current State-of-the-Art (SOTA) direction.
