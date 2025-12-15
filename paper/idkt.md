@@ -286,10 +286,22 @@ graph TD
         KR_Out[["Knowledge State: x^<br/>[B, L, d]"]]
     end
 
-    subgraph "Prediction Head"
+    subgraph "Out Head 1: Performance"
         Concat["Concat[x^, x]<br/>[B, L, 2d]"]
-        mlp_layers["MLP Layers"]
-        Pred[["Predictions p<br/>[B, L]"]]
+        mlp_layers["MLP Layers 1"]
+        Pred[["Predictions p<br/>[B, L, 1]"]]
+    end
+
+    subgraph "Out Head 2: Initial Mastery"
+        Concat2["Concat[x^, x]<br/>[B, L, 2d]"]
+        mlp_layers2["MLP Layers 2"]
+        Mastery[["Initial Mastery L0<br/>[B, L, 1]"]]
+    end
+
+    subgraph "Out Head 3: Learning Rate"
+        Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
+        mlp_layers3["MLP Layers 3"]
+        Rate[["Learning Rate T<br/>[B, L, 1]"]]
     end
 
     subgraph "Loss"
@@ -361,6 +373,14 @@ graph TD
     KR_Out --> Concat
     Final_Q --> Concat
     Concat --> mlp_layers --> Pred
+
+    %% Initial Mastery
+    KR_Out --> Concat2
+    Concat2 --> mlp_layers2 --> Mastery
+
+    %% Learning Rate
+    KR_Out --> Concat3
+    Concat3 --> mlp_layers3 --> Rate
 
     %% Loss (Abstracted)
     Pred --> L_BCE
