@@ -1,6 +1,6 @@
 ## Approach
 
-## Architecture
+## Architecture Diagrams
 
 ### iKT3
 
@@ -216,7 +216,7 @@ graph TD
 
         subgraph "Multi-Head Self-Attention"
             direction TB
-            E_Split["Embedding split 8 segments"]
+            E_Split["Global Projection (Dense) & Split"]
 
             subgraph "8 Parallel Attention Heads"
                 direction LR
@@ -243,7 +243,7 @@ graph TD
 
             subgraph "Multi-Head Self-Attention"
                 direction TB
-                KR1_Split["Embedding split 8 segments"]
+                KR1_Split["Global Projection (Dense) & Split"]
 
                 subgraph "8 Parallel Heads"
                     direction LR
@@ -455,8 +455,8 @@ graph TD
     ```
     The Multi-Head Attention mechanism in iDKT (inherited from AKT) typically consists of **8 parallel heads** (default configuration).
 
-    - Structure: Each head operates independently on a subspace of the embedding dimension ($d_{model}/8$).
-    - Splitting: The full embedding vector (e.g., $d_{model}=256$) is split into 8 smaller segments of size 32 ($256 \div 8 = 32$). Each head only sees this 32-dimensional "slice" of the data.
+    - Structure: Each head operates independently on a learned subspace of the embedding dimension.
+    - Projection & Splitting: The full embedding vector (e.g., $d_{model}=256$) is first projected by a dense layer (accessing all features), then the result is split into 8 segments. Each head's projection is derived from the **complete** input representation.
     - Independence: The attention calculation—queries, keys, values, and the learnable decay $\gamma$—happens separately and in parallel for each head. Head 1 calculates its own weighted sum without knowing what Head 2 is doing.
     - Specialization: This allows each head to specialize. One might focus on short-term mastery (via a high $\gamma$), while another tracks long-term concept retention (via a low $\gamma$).
     - Recombination: After processing, the 8 outputs are concatenated back to form the full 256-dimensional vector, combining the specialized insights from all heads.
@@ -482,3 +482,91 @@ graph TD
 - `mask=0`: Strict past-only in Knowledge Retriever (current position masked) + zero-padding for first row
 
 - **Architecture Size**: N=4 encoder blocks, 2N=8 retriever blocks, d_model=256, H=8 heads (default)
+
+## iDKT Architecture Implementation Analysis
+
+### Attention Mechanism Implementation Details
+
+Based on a deep dive into the source code (`pykt/models/idkt.py`), the attention mechanism follows a **Global Projection → Split** pattern. This is a critical distinction from architectures that might partition features to save compute or enforce sparsity.
+
+#### 1. Full Input Access (No Fragmentation)
+
+The model **does not** fragment the input embeddings before processing. Every attention head receives the **complete, full-dimensional** input representation ($d_{model}=256$) as its base input. There is no "slicing" of the input vector $x_t$ where Head 1 only sees dimensions $0..31$.
+
+#### 2. Global Projection (Feature Mixing)
+
+The projection layers (`k_linear`, `q_linear`, `v_linear`) are implemented as dense linear layers that map the full dimension to the full dimension:
+
+```python
+# pykt/models/akt.py
+
+# Initialization: Dense layers taking full d_model as input
+self.k_linear = nn.Linear(d_model, d_model, bias=bias)
+self.v_linear = nn.Linear(d_model, d_model, bias=bias)
+self.q_linear = nn.Linear(d_model, d_model, bias=bias)
+```
+
+**Significance:** The matrix multiplication $W_k \cdot x$ means that **every** feature in the projected Key space is a weighted sum of **all** features in the original input embedding. This allows each head to capture relationships involving the full feature context.
+
+#### 3. Post-Projection Splitting
+
+The "splitting" into heads happens only **after** this global projection. The resulting $d_{model}$-sized vector -- which now contains mixed information from all input features -- is reshaped (not sliced from input) into heads.
+
+```python
+# pykt/models/akt.py
+
+# Forward Pass: Project FULL input first
+# k input shape:  [Batch, Seq, d_model]
+# k output shape: [Batch, Seq, d_model]
+k_projected = self.k_linear(k)
+
+# Then SPLIT into heads
+# View shape: [Batch, Seq, Heads (8), d_head (32)]
+k = k_projected.view(bs, -1, self.h, self.d_k)
+```
+
+#### 4. Distinct Learned Transformations
+
+The heads are differentiated by their distinct learned weights in the global projection matrix, not by the data they access.
+
+- **Wrong Interpretation:** Head 1 looks at "Types of Math", Head 2 looks at "Difficulty".
+- **Correct Interpretation:** Head 1 learns a transformation $W_1$ that extracts "Short-term Math Patterns" from the _entire_ input, while Head 2 learns $W_2$ to extract "Long-term Difficulty Trends" from the _entire_ input.
+
+This implementation confirms that iDKT employs standard Transformer Multi-Head Attention, prioritizing global context awareness over feature isolation.
+
+#### 5. Multi-Scale Temporal Decay (Monotonic Attention)
+
+Each attention head applies a **different temporal formula** via a learnable decay rate. This allows the model to simultaneously track short-term (recent) and long-term (historical) dependencies.
+
+**Implementation:**
+Each head $h$ has a unique learnable parameter $\gamma_h$ (`self.gammas`). This parameter scales the "distance" between items before the exponential decay is applied.
+
+**Code Evidence (`pykt/models/akt.py`):**
+
+1.  **Per-Head Initialization**: A specific parameter is allocated for each of the `n_heads`.
+
+    ```python
+    # Init: Learnable gamma per head [n_heads, 1, 1]
+    self.gammas = nn.Parameter(torch.zeros(n_heads, 1, 1))
+    ```
+
+2.  **Decay Application**: The parameter is passed through a `Softplus` to ensure positivity, then negated to create an exponential decay factor $e^{-\gamma \cdot d}$.
+
+    ```python
+    # Forward Pass (inside attention function)
+    m = nn.Softplus()
+    # Force gamma > 0, then negate so that exp() becomes decay
+    gamma = -1. * m(gamma).unsqueeze(0)
+
+    # Apply exponential decay to the distance scores
+    total_effect = torch.clamp((dist_scores * gamma).exp(), min=1e-5, max=1e5)
+
+    # Modulate standard attention scores
+    scores = scores * total_effect
+    ```
+
+**Architectural Consequence**:
+
+- Heads with **large $\gamma$** create a steep decay, forcing the head to attend only to the immediate past (Short-Term Memory).
+- Heads with **small $\gamma$** create a flat decay, allowing the head to attend to distant history (Long-Term Memory).
+- Since $\gamma$ is learned freely, the model automatically discovers the optimal mix of time-scales needed for the dataset.

@@ -101,6 +101,8 @@ Focuses on the mechanics of training deep networks using theoretical constraints
     - structured to incorporate relational inductive biases [@battaglia2018relational] from the outset, shaping their ability to learn meaningful representations even before training begin
     ```
 
+- Hard constraints (HC): reducinng the network output space in order to make the solution exactly fulfill the known hard constraints (HC) ... to give a hysical value to some output neurons, e.g., by means of a loss function enforcing them o be equal to those variables [19], or by using models pretrained on an intermediate task [ 28].
+
 ## Integrating Physics-Based Modeling With Machine Learning: A Survey (Willard et al., 2022)
 
 see paper pdf in: `bibliography/theory-guided/2020 Willard _ Integrating Physics-Based Modeling With Machine Learning.pdf`
@@ -157,6 +159,130 @@ of a physics-based model as input to an ML model. Karpatne et al [128] showed th
 output of a physics-based model as one feature in an ML model along with inputs used to drive the
 physics-based model for lake temperature modeling can improve predictions.
 
-## Conclusion
+## Process-based Models
 
-The literature indicates a strong convergence towards **Neuro-symbolic** and **Theory-guided** AI. In the context of `pykt-toolkit`, moving beyond pure Transformer-based models (like AKT/SAKT) to models that explicitly encode educational psychology principles (as seen in TGEL-Transformer) represents the current State-of-the-Art (SOTA) direction.
+- @karpatne2024physics
+
+"The conventional approach for scientific modeling is to use process-based models (also referred to asphysics-based or science-based models), where the solution structure of relationships between inputsand response variables is rooted in scientific equations (e.g., laws of energy and mass conservation). Inparticular, process-based models make use of scientific equations to infer the evolution of time-varyinglatent or hidden variables of the system, also referred to as system states (see Figure 1). Additionally,process-based models often involve model parameters that need to be specified or calibrated (oftenwith the help of observational data) for approximating real-world phenomena ... Taken together, the conventional paradigm of scientific modeling—developed over centuries of systematic research forms the foundation of our present-day understanding of scientific systems across a wide spectrum of problemsin environmental sciences. A key feature of process-based models is their ability to provide a mechanistic understanding of the cause-effect mechanisms between input and output variables that can be used as a building blockfor advancing scientific knowledge. As a result, process-based models are continually updated andimproved by the scientific community to fill knowledge gaps in current modeling standards and discovernew theories and formulations of scientific equations that better match with observations and arescientifically meaningful and explainable. Since process-based models are rooted in scientific equationsthat are assumed to hold true in any testing scenario, they are also expected to easily generalize evenoutside the data used during model building. For example, process-based models can be made toextrapolate in space (e.g., over different geographic regions), in time (e.g., forecasting the future of asystem under varying forcings of input drivers), or in scale (e.g., discovering emergent properties oflarger-scale systems using models of smaller-scale system components)"
+
+## Methods
+
+- @karpatne2024physics
+
+Main methods: knowledge-guided learning algorithms (e.g., using loss functions), knowledge-guided architecture of ML models, and knowledge-guided pretraining or initialization of ML models.
+
+Knowledge-guided learning: the predominant method for integrating scientific knowledge into ML is to directly introduce physical principles into the training objective of ML models [20, 71, 78, 79, 128].
+
+- @evopinn
+
+the multi-objective optimization must reconcile inherently conflicting
+objectives between data fitting and physics adherence. Iden-
+tifying an appropriate aggregation of objectives to arrive at
+good (physically satisfactory) trade-off solution is also non-
+trivial [124] Moreover, the shape of the Pareto front formed
+by the multiple objectives is not known beforehand [125],
+with simple weighted-sum aggregations being insufficient to
+support all parts of non-convex fronts [126].
+...
+Multi-objective EAs (MOEAs) are tailor-made to address
+these issues [127]. In particular, Pareto dominance-based vari-
+ants of MOEAs [128] do not require the multiple loss terms to
+be scalarized, and hence are less sensitive to incommensurable
+objectives.
+
+[124] Z. Wei et al., “How to select physics-informed neural networks in the absence of ground truth: a pareto front-based strategy,”
+in 1st Workshop on the Synergy of Scientific and Machine Learning Modeling@ ICML2023, 2023.
+[125] F. M. Rohrhofer, S. Posch, C. G ̈oßnitzer, and B. C. Geiger, “On the apparent pareto front of physics-informed neural networks,” IEEE Access, 2023.
+[127] C. A. C. Coello, Evolutionary algorithms for solving multi-objective problems. Springer, 2007.
+[128] K. Deb and M. Ehrgott, “On generalized dominance structures for multi-objective optimization,” Mathematical and Computational Applications, vol. 28, no. 5, p. 100, 2023
+
+- @vonrueden2021informed
+
+a knowledge-based loss term Lk can be built into the objective function [10], [12]:
+
+Whereas L is the usual label-based loss and R is a regularization function, Lk quantifies the violation of given
+prior-knowledge equations.
+Note that **Lk only depends on the input features x i and the learned function f** and thus offers the possibility of label-free supervision [13]
+...
+Algebraic equations and inequalities can be integrated into learning algorithms via **additional loss terms** [12], [13], [33], [35] or, **more generally, via
+constrained problem formulation [36], [37], [39]**
+
+[10] M. Diligenti, S. Roychowdhury, and M. Gori, “Integrating prior
+knowledge into deep learning,” in Proc. Int. Conf. Mach. Learn.
+Appl. 2017, pp. 920–923.
+[12] A. Karpatne, W. Watkins, J. Read, and V. Kumar, “Physics-
+guided neural networks (PGNN): An application in lake temper-
+ature modeling,” 2017, arXiv:1710.11431.
+[13] R. Stewart and S. Ermon, “Label-free supervision of neural net-
+works with physics and domain knowledge,” in Proc. Conf. Artif.
+Intell., 2017, pp. 2576–2582
+
+[33] N. Muralidhar, M. R. Islam, M. Marwah, A. Karpatne, and N. Ram-
+akrishnan, “Incorporating prior domain knowledge into deep neu-
+ral networks,” in Proc. Int. Conf. Big Data, 2018, pp. 36–45.
+[35] R. Heese, M. Walczak, L. Morand, D. Helm, and M. Bortz, “The
+good, the bad and the ugly: Augmenting a black-box model with
+expert knowledge,” in Proc. Int. Conf. Artif. Neural Netw., 2019,
+pp. 391–395.
+[36] G. M. Fung, O. L. Mangasarian, and J. W. Shavlik, “Knowledge-
+based support vector machine classifiers,” in Proc. 15th Int. Conf.
+Neural Inf. Process. Syst., 2003, pp. 537–544.
+[37] O. L. Mangasarian and E. W. Wild, “Nonlinear knowledge-
+based classification,” IEEE Trans. Neural Netw., vol. 19,
+no. 10, pp. 1826–1832, Oct. 2008.
+[39] M. von Kurnatowski, J. Schmid, P. Link, R. Zache, L. Morand,
+T. Kraft, I. Schmidt, and A. Stoll, “Compensating data shortages
+in manufacturing with monotonicity knowledge,” 2020,
+arXiv:2010.15955.
+
+@elhamod2023understanding
+The Effect of Knowledge Guidance on Learning A Scientifically Meaningful Latent Space
+
+Can the KGML framework (Knowledge-Guided Machine Learning) help devise a method that discovers biologically-valid and anatomically-relevant species traits
+and, as a by-product, deliver better generalization performance on downstream ML tasks?
+...
+Answering this question entails learning species traits as features in the latent space. The
+properties of this learned space and how it corresponds to domain knowledge (e.g., biology
+in this application) is the target of my study.
+
+- @theory_guided_data_science
+
+  - 4.1 Theory-guided Initialization
+  - 4.2 Theory-guided Probabilistic Models
+
+    Another approach to reduce the variance of model pa-
+    rameters (and thus avoid model overfitting) is to introduce
+    priors in the model space. An example of the use of theory-
+    guided priors is the problem of non-invasive electrophysi-
+    ological imaging of the heart.
+    ...
+    it's easy that the system learns spurious patterns.
+    ...
+    Incorporating such theory-guided spatial distributions as
+    priors and using it along with externally collected ECG data
+    in a hierarchical Bayesian model has been shown to provide
+    promising results over traditional data science models [26],
+    [27]. Another example of theory-guided priors can be found
+    in the field of geophysics [51], where the knowledge of
+    convection-diffusion equations was used as priors for de-
+    termining the connectivity structure of subsurface aquifers.
+
+  - 4.3 Theory-guided Constrained Optimization
+  - 4.4 Theory-guided Regularization
+
+  - Hybrid TGDS Models
+    An alternate way of creating a hybrid TGDS model is to
+    use data science methods to predict intermediate quantities
+    in theory-based models that are currently being missed or
+    inaccurately estimated. By feeding data science outputs into
+    theory-based models, such a hybrid model can not only
+    show better predictive performance but also amend the
+    deficiencies in existing theory-based models. Further, the
+    outputs of theory-based models may also be used as training
+    samples in data science components [72], thus creating a
+    two-way synergy between them. Depending on the nature
+    of the model and the requirements of the application, there
+    can be multiple ways of introducing data science outputs
+    in theory-based models. In the following, we provide an
+    illustrative example of this theme of TGDS research in the
+    field of turbulence modeling.
