@@ -1,192 +1,18 @@
-## Approach
+## iDKT Model
 
-## Architecture Diagrams
+The iDKT model is based on the AKT model.
 
-### iKT3
+Relevant files:
 
-<div style="width: 1200px;">
+`pykt/models/idkt.py`: model implementation
 
-```mermaid
-graph TD
-    subgraph "Input Layer"
-        Input_q[["Input Questions q<br/>[B, L]"]]
-        Input_r[["Input Responses r<br/>[B, L]"]]
-        Ground_Truth_r[["Ground Truth Responses<br/>[B, L]"]]
-    end
+`examples/train_idkt.py`: training script
 
-    subgraph "Reference Model Targets (Pre-computed)"
-        RefTargets[["IRT Reference Targets<br/>β_IRT: [num_skills]<br/>θ_IRT: {uid: scalar}<br/>M_ref: {uid: [seq_len]}"]]
-    end
+`examples/eval_idkt.py`: evaluation script
 
-    subgraph "Embedding Layer"
-        Tokens[["Interaction Tokens<br/>(q, r) pairs"]]
-        Context_Emb["Context Embedding<br/>[B, L, d_model]"]
-        Value_Emb["Value Embedding<br/>[B, L, d_model]"]
-        Skill_Emb["Skill Embedding<br/>[B, L, d_model]"]
-        Pos_Emb["Positional Embeddings<br/>[1, L, d_model]"]
+`examples/run_repro_experiment.py`: launch experiment script
 
-        Context_Seq[["Context Sequence<br/>c = emb(q,r) + pos<br/>[B, L, d_model]"]]
-        Value_Seq[["Value Sequence<br/>v = emb(r) + pos<br/>[B, L, d_model]"]]
-    end
-
-    subgraph "Transformer Encoder"
-        direction TB
-
-        subgraph "Context Stream Attention"
-            Q_c["Q_context = Linear(c)<br/>[B, L, d_model]"]
-            K_c["K_context = Linear(c)<br/>[B, L, d_model]"]
-            V_c["V_context = Linear(c)<br/>[B, L, d_model]"]
-            Attn_c["Multi-Head Attention<br/>softmax(QK^T/√d)V"]
-            Out_c["h' = Attention(Q_c, K_c, V_c)<br/>[B, L, d_model]"]
-        end
-
-        subgraph "Value Stream Attention"
-            Q_v["Q_value = Linear(v)<br/>[B, L, d_model]"]
-            K_v["K_value = Linear(v)<br/>[B, L, d_model]"]
-            V_v["V_value = Linear(v)<br/>[B, L, d_model]"]
-            Attn_v["Multi-Head Attention<br/>softmax(QK^T/√d)V"]
-            Out_v["v' = Attention(Q_v, K_v, V_v)<br/>[B, L, d_model]"]
-        end
-
-        FFN_C["Feed-Forward Context<br/>× N blocks"]
-        FFN_V["Feed-Forward Value<br/>× N blocks"]
-
-        Note_Stack["× N Transformer Blocks<br/>(N=8, d_model=256)"]
-    end
-
-    subgraph "Encoder Output"
-        Final_h[["Knowledge State h<br/>(final context)<br/>[B, L, d_model]"]]
-        Final_v[["Value State v<br/>(final value)<br/>[B, L, d_model]"]]
-    end
-
-    subgraph "Head 1: Performance Prediction (BCE)"
-        Concat1["Concat[h, v, skill_emb]<br/>[B, L, 3·d_model]"]
-        PredHead["MLP Prediction Head<br/>Linear → ReLU → Dropout → Linear"]
-        Logits[["Logits<br/>[B, L]"]]
-        BCEPred[["p_correct = σ(logits)<br/>[B, L]"]]
-    end
-
-    subgraph "Head 2: IRT-Based Mastery (Pluggable Reference Model)"
-        Head2["IRT Mastery Estimator<br/>Inputs: h (knowledge state), q (skills)<br/>Outputs: M_IRT (mastery probabilities)<br/>[B, L] → [B, L]"]
-        MasteryIRT[["M_IRT<br/>IRT-based Mastery<br/>[B, L] probabilities"]]
-    end
-
-    subgraph "Loss Computation (via Reference Model Interface)"
-        direction LR
-
-        L_BCE["l_bce<br/>BCE(p_correct, targets)<br/>Performance Loss"]
-
-        L_21["l_21 (performance)<br/>BCE(M_IRT, M_ref)<br/>Prediction alignment"]
-
-        L_22["l_22 (difficulty)<br/>MSE(β_learned[q], β_IRT[q])<br/>Difficulty regularization<br/>(always active)"]
-
-        L_23["l_23 (ability)<br/>MSE(mean(θ_learned), θ_IRT)<br/>Ability alignment"]
-
-        LambdaSchedule["λ(epoch) Warm-up<br/>λ = λ_target × min(1, epoch/warmup)<br/>λ_target=0.5, warmup=50"]
-    end
-
-    subgraph "Combined Loss (Single-Phase Training)"
-        LTotal["L_total = (1-λ)×l_bce + c×l_22 + λ×(l_21 + l_23)<br/><br/>λ: interpretability weight (warm-up)<br/>c: stability regularization (fixed, c=0.01)"]
-        Backprop["Backpropagation<br/>Updates: θ encoder, β embeddings,<br/>prediction head, encoder"]
-    end
-
-    %% Input to Embedding flow
-    Input_q --> Tokens
-    Input_r --> Tokens
-    Tokens --> Context_Emb
-    Tokens --> Value_Emb
-    Input_q --> Skill_Emb
-
-    Context_Emb --> Context_Seq
-    Value_Emb --> Value_Seq
-    Pos_Emb --> Context_Seq
-    Pos_Emb --> Value_Seq
-
-    %% Encoder processing - Context stream
-    Context_Seq --> Q_c
-    Context_Seq --> K_c
-    Context_Seq --> V_c
-    Q_c --> Attn_c
-    K_c --> Attn_c
-    V_c --> Attn_c
-    Attn_c --> Out_c
-    Out_c --> FFN_C
-
-    %% Encoder processing - Value stream
-    Value_Seq --> Q_v
-    Value_Seq --> K_v
-    Value_Seq --> V_v
-    Q_v --> Attn_v
-    K_v --> Attn_v
-    V_v --> Attn_v
-    Attn_v --> Out_v
-    Out_v --> FFN_V
-
-    %% Final encoder outputs
-    FFN_C --> Final_h
-    FFN_V --> Final_v
-
-    %% Head 1 - Performance prediction
-    Final_h --> Concat1
-    Final_v --> Concat1
-    Skill_Emb --> Concat1
-    Concat1 --> PredHead --> Logits --> BCEPred
-
-    %% Head 2 - IRT mastery inference
-    Final_h --> Head2
-    Skill_Emb --> Head2
-    Head2 --> MasteryIRT
-
-    %% Loss computation flows
-    BCEPred --> L_BCE
-    Ground_Truth_r --> L_BCE
-
-    MasteryIRT --> L_21
-    RefTargets --> L_21
-
-    Head2 --> L_22
-    RefTargets --> L_22
-
-    Head2 --> L_23
-    RefTargets --> L_23
-
-    %% Loss aggregation with lambda schedule
-    L_BCE --> LTotal
-    L_21 --> LTotal
-    L_22 --> LTotal
-    L_23 --> LTotal
-    LambdaSchedule --> LTotal
-
-    LTotal --> Backprop
-
-    %% Gradient flow (dotted lines)
-    Backprop -.->|∂L/∂h| Final_h
-    Backprop -.->|∂L/∂v| Final_v
-    Backprop -.->|∂L/∂Head2| Head2
-
-    %% Styling
-    classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
-    classDef ref_style fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef emb_style fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef encoder_style fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
-    classDef head1_style fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
-    classDef head2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
-    classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
-    classDef combined_style fill:#f3e5f5,stroke:#6a1b9a,stroke-width:4px
-
-    class Input_q,Input_r,Ground_Truth_r input_style
-    class RefTargets ref_style
-    class Tokens,Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq emb_style
-    class Q_c,K_c,V_c,Attn_c,Out_c,Q_v,K_v,V_v,Attn_v,Out_v,FFN_C,FFN_V,Note_Stack,Final_h,Final_v encoder_style
-    class Concat1,PredHead,Logits,BCEPred head1_style
-    class Head2,MasteryIRT head2_style
-    class L_BCE,L_21,L_22,L_23,LambdaSchedule loss_style
-    class LTotal,Backprop combined_style
-```
-
-</div>
-
-### iDKT
+## iDKT Architecture Diagram
 
 <div style="width: 1000px;">
 
@@ -198,17 +24,27 @@ graph TD
         Input_pid[["Problem IDs pid<br/>[B, L]"]]
     end
 
-    subgraph "Embedding Layer"
-        Q_Emb["Question Embedding<br/>q_embed[q]: [B, L, d]"]
-        R_Emb["Response Embedding<br/>r_embed[r]: [B, L, d]"]
-        QA_Emb["Interaction Embedding<br/>qa = q_embed + r_embed<br/>[B, L, d]"]
+    subgraph "Embedding Layer (Rasch-Enhanced)"
+        direction TB
 
-        Diff_Param["Difficulty Parameter<br/>uq = difficult_param[pid]<br/>[B, L, 1]"]
-        Q_Diff_Emb["q_embed_diff[q]<br/>[B, L, d]"]
-        QA_Diff_Emb["qa_embed_diff[r]<br/>[B, L, d]"]
+        subgraph "Base Embeddings"
+            Q_Emb["q_embed (Concept c_ct)<br/>[B, L, d]"]
+            QA_Emb["qa_embed (Interaction e_ct,rt)<br/>[B, L, d]"]
+        end
 
-        Final_Q[["Enhanced Q Embedding<br/>x (Questions)<br/>[B, L, d]"]]
-        Final_QA[["Enhanced QA Embedding<br/>y (Interactions)<br/>[B, L, d]"]]
+        subgraph "Rasch Variation Embeddings"
+            Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
+            Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
+            QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
+        end
+
+        subgraph "Fusion (Rasch Formula)"
+            Formula_X["x_t = c_ct + u_q · d_ct"]
+            Formula_Y["y_t = e_ct,rt + u_q · (f_ct,rt + d_ct)"]
+        end
+
+        Final_Q[["Final Question x<br/>[B, L, d]"]]
+        Final_QA[["Final Interaction y<br/>[B, L, d]"]]
     end
 
     subgraph "Encoder: N Blocks"
@@ -311,24 +147,29 @@ graph TD
     end
 
     %% Wiring - Input/Emb
+    %% Wiring - Input/Emb
     Input_q --> Q_Emb
-    Input_r --> R_Emb
-    Q_Emb --> QA_Emb
-    R_Emb --> QA_Emb
+    Input_r --> QA_Emb
+    Input_q --> QA_Emb
 
-    %% Difficulty enhancement
+    %% Rasch Inputs
     Input_pid --> Diff_Param
     Input_q --> Q_Diff_Emb
     Input_r --> QA_Diff_Emb
 
-    Q_Emb --> Final_Q
-    Diff_Param --> Final_Q
-    Q_Diff_Emb --> Final_Q
+    %% Flow to Formulas
+    Q_Emb --> Formula_X
+    Diff_Param --> Formula_X
+    Q_Diff_Emb --> Formula_X
 
-    QA_Emb --> Final_QA
-    Diff_Param --> Final_QA
-    QA_Diff_Emb --> Final_QA
-    Q_Diff_Emb --> Final_QA
+    QA_Emb --> Formula_Y
+    Diff_Param --> Formula_Y
+    Q_Diff_Emb --> Formula_Y
+    QA_Diff_Emb --> Formula_Y
+
+    %% Formula to Final
+    Formula_X --> Final_Q
+    Formula_Y --> Final_QA
 
     %% Encoder Wiring
     Final_QA --> E_Split
@@ -403,6 +244,10 @@ graph TD
 
 **Key Features:**
 
+- **Architecture Size**
+
+  - N=4 encoder blocks, 2N=8 retriever blocks, d_model=256, H=8 heads (default)
+
 - **Context-Aware Representations** (Paper §3.1):
 
   - Question encoder produces contextualized question embeddings: `ˆxt = fenc1(x1,...,xt)`
@@ -463,25 +308,38 @@ graph TD
     ```
 
 - **Learnable Decay**: Crucially, each head $h$ possesses a unique, learnable decay parameter $\gamma_h$.
-- $\gamma_h$ controls the rate of exponential decay for the monotonic attention mechanism in that specific head.
-- Heads with **large $\gamma$** values decay information rapidly, focusing on **short-term** (recent) context.
-- Heads with **small $\gamma$** values decay information slowly, allowing the model to retain **long-term** context.
-- **Diversity**: This diversity allows the iDKT model to simultaneously attend to immediate prerequisites and foundational concepts learned much earlier in the sequence.
+
+  - $\gamma_h$ controls the rate of exponential decay for the monotonic attention mechanism in that specific head.
+  - Heads with **large $\gamma$** values decay information rapidly, focusing on **short-term** (recent) context.
+  - Heads with **small $\gamma$** values decay information slowly, allowing the model to retain **long-term** context.
+  - **Diversity**: This diversity allows the iDKT model to simultaneously attend to immediate prerequisites and foundational concepts learned much earlier in the sequence.
 
 - **Response Prediction Model** (Paper §3.3):
 
-- Input: Concatenates retrieved knowledge ht and current question embedding xt
-- Architecture: Fully-connected network + sigmoid
-- Implementation: Linear(2d, 512) → ReLU → Linear(512, 256) → ReLU → Linear(256, 1) → Sigmoid
-- Loss: Binary cross-entropy `ℓ = Σi Σt -(rit log ˆrit + (1-rit)log(1-ˆrit))`
-- End-to-end training of all parameters
+  - Input: Concatenates retrieved knowledge ht and current question embedding xt
+  - Architecture: Fully-connected network + sigmoid
+  - Implementation: Linear(2d, 512) → ReLU → Linear(512, 256) → ReLU → Linear(256, 1) → Sigmoid
+  - Loss: Binary cross-entropy `ℓ = Σi Σt -(rit log ˆrit + (1-rit)log(1-ˆrit))`
+  - End-to-end training of all parameters
 
 - **Mask Semantics**:
 
-- `mask=1`: Causal masking in encoders (can see current + past positions)
-- `mask=0`: Strict past-only in Knowledge Retriever (current position masked) + zero-padding for first row
+  - `mask=1`: Causal masking in encoders (can see current + past positions)
+  - `mask=0`: Strict past-only in Knowledge Retriever (current position masked) + zero-padding for first row
 
-- **Architecture Size**: N=4 encoder blocks, 2N=8 retriever blocks, d_model=256, H=8 heads (default)
+- **Loss**
+
+  - $L_T = L_{BCE} + L_{reg} (Rasch)$
+  - $L_{reg} = L2 * \Sigma_{q} (u_q)^2$
+
+    - $L2$: Hyperparameter controlling regularization strength (default: 1e-5)
+    - For a vector $\mathbf{x} = [x_1, x_2, ..., x_n]$, the L2 norm (or Euclidean norm) is defined as the square root of the sum of the squared vector elements:
+
+    $$ |\mathbf{x}|2 = \sqrt{x_1^2 + x_2^2 + ... + x_n^2} = \sqrt{\sum{i=1}^{n} x_i^2} $$
+
+    - Geometrically, this represents the straight-line distance from the origin $(0,0,...)$ to the point defined by the vector $\mathbf{x}$.
+
+    - This is equivalent to placing a Gaussian Prior (centered at 0) on the difficulty parameters. It tells the model: "Assume all problems are average difficulty (0) unless the data strongly proves otherwise."
 
 ## iDKT Architecture Implementation Analysis
 
@@ -569,4 +427,133 @@ Each head $h$ has a unique learnable parameter $\gamma_h$ (`self.gammas`). This 
 
 - Heads with **large $\gamma$** create a steep decay, forcing the head to attend only to the immediate past (Short-Term Memory).
 - Heads with **small $\gamma$** create a flat decay, allowing the head to attend to distant history (Long-Term Memory).
-- Since $\gamma$ is learned freely, the model automatically discovers the optimal mix of time-scales needed for the dataset.
+
+### iDKT Training Sequence
+
+<div style="background-color: #ffffe0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+
+```mermaid
+%%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#000000', 'primaryBorderColor': '#333333', 'lineColor': '#333333', 'secondaryColor': '#f4f4f4', 'tertiaryColor': '#ffffff', 'noteBkgColor': '#e6f7ff', 'noteBorderColor': '#1890ff' } } }%%
+sequenceDiagram
+    autonumber
+    actor User
+    participant Launcher as run_repro_experiment.py
+    participant Config as config.json
+    participant Trainer as train_idkt.py
+    participant Data as pykt.datasets
+    participant Model as iDKT Model
+    participant Optim as Optimizer
+
+    User->>Launcher: python examples/run_repro_experiment.py --model idkt ...
+
+    note right of Launcher: 1. Setup Phase
+    Launcher->>Launcher: Load defaults (parameter_default.json)
+    Launcher->>Launcher: Generate Experiment ID (e.g., 839210)
+    Launcher->>Launcher: Create Folder: experiments/2025..._idkt_baseline_839210
+    Launcher->>Config: Write config.json (parameters + md5)
+
+    note right of Launcher: 2. Launch Training
+    Launcher->>Trainer: subprocess.run(python examples/train_idkt.py args...)
+    activate Trainer
+
+    Trainer->>Trainer: Parse CLI Args
+    Trainer->>Trainer: Set Random Seed
+
+    Trainer->>Data: init_dataset4train(dataset, fold)
+    Data-->>Trainer: train_loader, valid_loader
+
+    Trainer->>Model: init_model('idkt', params...)
+    activate Model
+    Model->>Model: Init Embeddings (Rasch/Simple)
+    Model->>Model: Init Encoder (TransformerLayer x N)
+    Model->>Model: Init Knowledge Retriever (TransformerLayer x 2N)
+    Model-->>Trainer: model instance
+    deactivate Model
+
+    Trainer->>Optim: Init Optimizer (Adam/SGD)
+
+    note right of Trainer: 3. Training Loop
+    loop Every Epoch
+        Trainer->>Trainer: model.train()
+
+        loop Every Batch
+            Trainer->>Data: Get batch (q, c, r)
+            Trainer->>Model: forward(q, c, r)
+            activate Model
+            Model->>Model: Embedding Lookup
+            Model->>Model: Encoder (Self-Attn)
+            Model->>Model: Knowledge Retriever (Cross-Attn)
+            Model->>Model: Prediction Head
+            Model-->>Trainer: predictions, reg_loss
+            deactivate Model
+
+            Trainer->>Trainer: Loss = BCE(pred, true) + L2 * reg_loss
+            Trainer->>Optim: zero_grad()
+            Trainer->>Model: backward()
+            Trainer->>Optim: step()
+        end
+
+        note right of Trainer: Validation
+        Trainer->>Trainer: evaluate(model, valid_loader)
+
+        alt Current AUC > Best AUC
+            Trainer->>Trainer: Save best_model.pt
+            Trainer->>Trainer: Save metrics_valid.csv
+        end
+    end
+
+    Trainer->>Trainer: Save results.json
+    Trainer-->>Launcher: Return Success
+    deactivate Trainer
+
+    Launcher-->>User: Execution Complete
+```
+
+</div>
+
+### Step 18. Init Embeddings (Rasch/Simple)
+
+The embedding initialization is the step where the model sets up the learnable representations for questions, concepts, and interactions. In iDKT, this step is critical because it implements the "Rasch model-based" logic that distinguishes it from standard attention models.
+
+#### 1. Conditional Rasch Initialization (`n_pid > 0`)
+
+If the dataset provides Problem IDs (`pid`), the model initializes three specific sets of parameters to model difficulty variation. This allows the model to handle the "one-to-many" relationship where a single Concept (KC) can be tested by multiple Questions (Items) of varying difficulty.
+
+- **`difficult_param` (Scalar Difficulty)**:
+
+  - `nn.Embedding(n_pid+1, 1)`
+  - This learns a single scalar value $u_q$ for every specific problem ID. It represents the "difficulty" of that specific item instance.
+
+- **`q_embed_diff` (Question Variation Vector)**:
+
+  - `nn.Embedding(n_question+1, d_model)`
+  - This vector $d_{ct}$ captures how _this specific concept_ tends to vary or express itself across different problems. It acts as a "direction of variation" for the concept embedding.
+
+- **`qa_embed_diff` (Interaction Variation Vector)**:
+  - `nn.Embedding(2 * n_question + 1, d_model)`
+  - Similar to `q_embed_diff`, but for the interaction (concept + correctness). It models how the representation of "Answered Concept X Correctly" changes based on the difficulty of the specific problem used to test Concept X.
+
+#### 2. Base Embedding Initialization
+
+Regardless of Rasch features, the model always initializes the fundamental embeddings:
+
+- **`q_embed` (Concept Embedding)**:
+
+  - `nn.Embedding(n_question, d_model)`
+  - The base representation $c_{ct}$ for the Knowledge Component (Concept).
+
+- **`qa_embed` (Interaction Embedding)**:
+  - If `separate_qa=False` (default): `nn.Embedding(2, d_model)`
+    - Learns just two vectors: one for "Incorrect" and one for "Correct". These are added to the concept embedding.
+  - If `separate_qa=True`: `nn.Embedding(2*n_question+1, d_model)`
+    - Learns a distinct vector for every possible (Concept, Outcome) pair.
+
+#### 3. Mathematical Implication (Forward Pass Preview)
+
+During the forward pass, these embeddings are combined to form the final input `x` (Question) and `y` (Interaction):
+
+$$ x*t = c*{ct} + u*q \cdot d*{ct} $$
+
+$$ y*t = e*{(c*t, r_t)} + u_q \cdot f*{(c_t, r_t)} $$
+
+Where $u_q$ (difficulty) scales the "variation vectors" ($d_{ct}, f_{ct}$) before adding them to the base concept embeddings. This implementation effectively creates a unique embedding for every (Concept, ProblemID) pair without needing a massive lookup table for all pairs, keeping the parameter count linear to $N_{concepts} + N_{problems}$ rather than their product.

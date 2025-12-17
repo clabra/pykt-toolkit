@@ -106,9 +106,9 @@ When you are writing or fixing code (Coder Agent):
 When you are updating the paper or documentation (Writer Agent):
 
 - Use the academic "we" instead of "you".
-- Reference info in `paper` for theoretical alignment.
 - Maintain a tone suitable for a PhD-level audience.
-- Use the `sota` folder to create docs about current models and bibliography (classified by topic), and `paper` for information about our own proposal and models, and in general for anything that can be leveraged for the paper.
+- Use/create info in `paper` folder for knowledge about our approach (paper and proposed models), and experiment results.
+- Use papers in `bibliography` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `bibliography/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file.
 
 #### 📊 For Experiments & Reproducibility
 
