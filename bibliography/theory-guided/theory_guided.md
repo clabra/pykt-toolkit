@@ -298,4 +298,3 @@ Optimising hybrid loss functions remains a major implementation challenge:
 ◦ NTK Reweighting: Using Neural Tangent Kernel (NTK) analysis to dynamically tune λ based on the kernel trace to balance optimisation across different frequencies.
 ◦ Inverse-Dirichlet Weighting: Using gradient variance to adjust λ and alleviate issues like vanishing gradients in multi-scale modeling.
 • Adaptive Data Re-sampling: Instead of adjusting weights, collocation points (samples used to evaluate losses) can be dynamically re-sampled to focus training effort on areas with higher error (higher residual loss).
-In essence, whether the prior knowledge is a physical law (PDE) or a cognitive principle (forgetting curve), the learning algorithm incorporates it by formulating a differentiable cost or penalty term ... which is then carefully balanced within the comprehensive optimization objective.

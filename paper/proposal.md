@@ -28,7 +28,86 @@ This interpretability gap has profound implications: educators cannot trust mode
 
 ## Related Work
 
-See `bibliography/theory-guided/theory_guided.md` for background on theory-guided learning.
+### Interpretability and Explainability in Transformers
+
+Attention-based methods, both alone and in conjunction with activation-based and gradient-based methods, are the most employed ones. A growing attention is also devoted to the deployment of visualization techniques to help the explanation process @fantozzi2024explainability.
+
+Classification proposed in @fantozzi2024explainability employs the following classes and their combinations:
+
+- Activation: based on identifying the contribution of each input feature to the output through identigying waht neurons are activated.
+- Attention: there are three streams: (1) the papers proposing the usage of attention weights; (2) the papers using the Attention Rollout technique (a chain of cumulative attention matrices is formed by multiplying the attention matrix Al of the l-th layer by the attention matrices of the subsequent layers); and (3) the papers exploiting visualization techniques for attention weights.
+- Gradient: based on different functions of the gradient computed at different points in the neural network.
+- Perturbation: The perturbation approach identifies the relevance of a portion of the input by masking it and checking the consequences on the output.
+
+### Theory-Guided Deep Learning
+
+Theory-Guided Data Science (TGDS) is a paradigm introduced by @karpatne2017theory that leverages the wealth of scientific knowledge (theory) to improve the effectiveness of data science models in scientific disciplines.
+
+The most relevant method for our approach is based in the use of some variant of an augmented loss function:
+
+```math
+    Loss = Loss_{SUP}(Ytrue,Ypred) + \lambda R(W) +\gamma Loss_{PHY}(Ypred)
+```
+
+Where $Loss_{SUP}$ is the supervised training loss, $Loss_{PHY}$ is the physics loss, $R(W)$ is a regularization term, and $\lambda$ and $\gamma$ are hyperparameters.
+
+See `bibliography/theory-guided/theory_guided.md` for background on theory-guided learning. Some relevant papers are:
+
+- @karpatne2017theory was a foundational work defining Theory-Guided Deep Learning (TGDL). It covers:
+
+  - **Motivation:** Purely data-driven models (black-box DL) often fail to generalize to unseen scenarios (e.g., changing climate conditions) and may produce results inconsistent with known physical laws.
+  - **Core Concept:** TGDS introduces scientific consistency as an explicit requirement. It integrates domain knowledge into the learning process to ensure models are scientifically plausible and interpretable.
+  - **Approaches:**
+  - **Theory-guided Learning:** Incorporating physical laws (e.g., conservation of mass/energy) as regularization terms in the loss function.
+  - **Theory-guided Architecture:** Designing neural network architectures that respect domain structure (e.g., connectivity based on physical interactions).
+  - **Theory-guided Refinement:** Post-processing predictions to enforce consistency.
+
+- @vonrueden2021informed reviews the field including how algebraic equations and inequalities can be integrated into learning algorithms via additional loss terms or, more generally, via constrained problem formulation.
+
+- @willard2023theory reviews the field including various ways to integrate theory into machine learning including loss functions, initialization (using the physics-based model’s simulated data to pre-train the ML model), physics-guided architecture, and hybrid Physics-ML Models
+
+- @nasir2025understanding focuses on the mechanics of training deep networks using theoretical constraints:
+
+  - **Physics-Informed Neural Networks (PINNs):** A dominant approach where differential equations (PDEs) are embedded into the loss function.
+  - **Optimization:** Discusses challenges in optimizing these hybrid loss functions (balancing data loss vs. physics loss) and methods like meta-learning or evolutionary strategies to find optimal architectures.
+  - **Design:** Argues for designing networks that are inherently constrained by theory rather than just regularized by it.
+
+### Theory-Guided Loss Functions
+
+### Theory-Guided Deep Knowledge Tracing
+
+Concepts and methods from Theory-Guided Deep Learning have not been widely applied in Knowledge Tracing, except for some works that applied contrastive contrastive knowledge tracing algorithms and prediction-consistency @shukurlu2025survey, and regularization losses imposing certain consistency or monotonicity biases on model’s predictions to improve the generalization ability of KT models @lee2021consistency.
+
+### Latent Space
+
+The two main methods to factorise the latent space are:
+
+#### Latent Space Factorisation
+
+@li2020latent shows how to learn disentangled latent representations via matrix subspace projection. This then allows to change selected attributes while preserving other information. The method is much simpler than previous approaches to latent space factorisation, for example not requiring multiple epochs of training ... The variables representing attributes are fully disentangled, with one isolated variable for each attribute of the training set. In conditional generation, we can assign pure attributes combined with other latent data which does not conflict, so that the generated pictures are of high quality and not contaminated with spurious attributes. The model is a universal plugin. In theory, it can be applied to any existing AEs (if and only if the AEs use a latent vector).
+
+The approach is based on:
+
+![Latent Space Factorization](/bibliography/transformers/msp.png)
+
+$L_{MSP} = L_1 + L_2$
+
+$L_1 = ||\hat{y} − y||2 = ||M · \hat{z} − y||2$
+
+$L_2 = ||\hat{s}||2$
+
+```
+Given a latent vector z encoding x and an arbitrarily complex invertible function H(·), H(·) transforms z to a new linear space (ˆz = H(z)) such that one can find a matrix M where:
+
+(a) the projection of ˆz on M (denoted by ˆy) approaches y (i.e., ˆy captures attribute information), M · ˆz = ˆy; ˆy → y
+(b) there is an orthogonal matrix U ≡ [M; N], where N is the null space of M (i.e., M ⊥ N) and the projection of ˆz on N (denoted by ˆs) captures non-attribute information.
+
+Here L1 and L2 encode the above two constraints, respectively, and ˆy is the predicted attributes. Given that the AE relies on the information of ˆz to reconstruct x, the optimisation constraints of LAE and L2 essentially introduce an adversarial process: on the one hand, it discourages any information of ˆz to be stored in ˆs due to the penalty from L2; on the other hand, the AE requires information from ˆz to reconstruct x. So, the best solution is to only restore the essential information for reconstruction (except the attribute information) in ˆs. By optimising LMSP , we cause ˆz to be factorised, with the attribute information stored in ˆy, while ˆs only retains non-attribute information.
+```
+
+#### Concept Whitening
+
+@chen2020concept shows how to add concept whitening modules to a CNN, to align the axes of the latent space with known concepts of interest.
 
 ## Approach
 

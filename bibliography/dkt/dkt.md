@@ -70,30 +70,12 @@ Models like Ability Boosted Knowledge Tracing (ABKT) and PKT are inspired by thi
 
 While integrating psychological theories offers interpretability framed within established academic frameworks, these methods can be limited by the specificity and scope of the underlying theories, potentially failing to capture the dynamic and multifaceted nature of real-world learning fully.
 
----
+## @bai2024causal
 
-These method-
-ologies include the deployment of standardized objective metrics, such as stability [80],
-fidelity [80], and sensibility [81], to appraise the congruence in xKT’s interpretation of
+These methodologies include the deployment of standardized objective metrics, such as stability @vilone2021notions,
+fidelity @vilone2021notions, and sensibility @alvarez2018towards, to appraise the congruence in xKT’s interpretation of
 proximate or analogous data instances and the accuracy in approximating black-box
 model predictions.
-
-@article{vilone2021notions,
-title={Notions of explainability and evaluation approaches for explainable artificial intelligence},
-author={Vilone, G. and Longo, L.},
-journal={Information Fusion},
-volume={76},
-pages={89--106},
-year={2021}
-}
-
-@article{alvarez2018towards,
-title={Towards robust interpretability with self-explaining neural networks},
-author={Alvarez Melis, D. and Jaakkola, T.},
-journal={Advances in neural information processing systems},
-volume={31},
-year={2018}
-}
 
 causality
 
@@ -105,48 +87,13 @@ learning strategies might lead to diverse learning outcomes. This method enables
 more profound understanding of the direct impact of specific learning activities on
 educational results. Such in-depth causal analysis not only improves the scientific rigor
 and accuracy of knowledge tracing models but also offers valuable insights for the
-development of effective and personalized educational interventions @li2023genetic, @azhunova2022causal. Conse-
-quently, knowledge tracing technology has advanced from simply predicting outcomes
-to providing actionable insights for enhancing educational practices.
-
-@article{li2023genetic,
-title={A genetic causal explainer for deep knowledge tracing},
-author={Li, Q. and Yuan, X. and Liu, S. and Gao, L. and Wei, T. and Shen, X. and Sun, J.},
-journal={IEEE Transactions on Evolutionary Computation},
-year={2023}
-}
-
-@article{cornacchia2023auditing,
-title={Auditing fairness under unawareness through counterfactual reasoning},
-author={Cornacchia, G. and Anelli, V.W. and Biancofiore, G.M. and Narducci, F. and Pomo, C. and Ragone, A. and Di Sciascio, E.},
-journal={Information Processing & Management},
-volume={60},
-number={2},
-pages={103224},
-year={2023}
-}
-
-@article{zhu2023stable,
-title={Stable knowledge tracing using causal inference},
-author={Zhu, J. and Ma, X. and Huang, C.},
-journal={IEEE Transactions on Learning Technologies},
-year={2023}
-}
+development of effective and personalized educational interventions @li2023genetic, @azhunova2023causal.
+Consequently, knowledge tracing technology has advanced from simply predicting outcomes to providing actionable insights for enhancing educational practices.
 
 The Trade-Off Between Model Performance and Interpretability in
-Knowledge Tracing.
-In knowledge tracing, the critical future challenge is to
+Knowledge Tracing. In knowledge tracing, the critical future challenge is to
 balance model accuracy with interpretability. Achieving this balance requires creat-
 ing algorithms that are both precise in prediction and intuitive in understanding.
 Future research is expected to focus on refining deep learning architectures to sim-
 plify structures and integrate advanced attention mechanisms, aiming to balance
-high performance with better interpretability [152].
-
-@article{lee2022monacobert,
-title={Monacobert: Monotonic attention based convbert for knowledge tracing},
-author={Lee, U. and Park, Y. and Kim, Y. and Choi, S. and Kim, H.},
-journal={arXiv preprint arXiv:2208.12615},
-year={2022}
-}
-
----
+high performance with better interpretability @lee2022monacobert.
