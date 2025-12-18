@@ -1,1 +1,1 @@
-../paper/ikt3.md
+../paper/idkt.md

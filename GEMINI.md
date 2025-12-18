@@ -1,10 +1,10 @@
-This file provides guidance to work with code in this repository. The files referenced here can be found in the `assistant` folder that contains documentation with context and guidelines for assistants.
+This file provides context and guidelines about this project and code in the repository.
 
 ## Project Overview
 
-This project, forked from pykt-toolkit, contains the implementation of many deep learning models for Knowledge Tracing in the pykt/models folder. Our objective is to implement a new model, add the code to the 'models' folder as well as to implement training and evaluation scripts to be added to the 'examples' folder. We will train the model on various datasets containing student interactions and will evaluate it using metrics such as AUC, accuracy, etc. The final objective is to write a paper that describes the model and report evaluation results comparing it with other state of the art approaches implemented in the 'models' folder.
+This project uses pykt-toolkit as a starting point, forked from pykt-toolkit github repository. It contains, in the pykt/models folder, the implementation of many deep learning models for Knowledge Tracing. We want to implement a new model, add the code to the 'models' folder as well as to implement training and evaluation scripts to be added to the 'examples' folder. We will train the model on various datasets containing student interactions and will evaluate it using metrics such as AUC, accuracy, etc. The final objective is to write a paper that describes the model and report evaluation results comparing it with other state of the art approaches implemented in the 'models' folder.
 
-The key contributions of the paper will be a new Transformer attention-based model witha good balance between performance (i.e. is competive in terms of AUC with state of the art attention-based models) and interpretability. Our approach higlights interpretability and causal explanations as key contributions
+The key contributions of the paper will be a new Transformer attention-based model with a good balance between performance (i.e. is competive in terms of AUC with state of the art attention-based models) and interpretability. Our approach higlights interpretability and explanability as key contributions
 
 Reference Documents:
 
@@ -12,14 +12,14 @@ Reference Documents:
 - `assistant/taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
 - `assistant/quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
 - `assistant/contribute.pdf` - explains how to proceed to add new models and datasets, follow these guidelines when it comes to code generation, scripts, and documentation
-- `assistant/datasets.pdf` - explains what datasets are used to evaluate models and how to get them
-- `assistant/models.pdf` - a description and a paper for each model in `pykt/models`. Papers can be found in `papers-pykt` folder)
+- `assistant/datasets.pdf` - explains datasets used in the pykt-toolkit framework and how to get them
+- `assistant/models.pdf` - prvides a list with a description and a paper for each model in `pykt/models`. Many of the cited papers can be found in `papers-pykt` folder
 
 ## Datasets
 
 - `/data`: Processed datasets ready for training
 - `/data_original`: Raw datasets (do not modify)
-- `data/datasets.md`: details about the datasets and `keyid2idx.json`, a dictionary mapping original dataset IDs and zero-based sequential indices used internally by the pykt models.
+- `data/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `keyid2idx.json`, a dictionary mapping original dataset IDs and zero-based sequential indices used internally by the pykt models.
 
 ## Environment Setup
 
@@ -29,9 +29,9 @@ Commands should be launched inside a virtual environment that can be activated w
 source /home/vscode/.pykt-env/bin/activate
 ```
 
-Always check that the terminal used to launch commands runs inside a container (e.g. docker container).
+The project is run inside a docker container. Always check that the terminal used to launch commands runs inside the container.
 
-The machine we are currently using has 8 GPUs. Use 5 GPUs when running commands.
+The machine we are currently using has 8 GPUs. Try to use 5 GPUs when creating new scripts and running commands
 
 ## Reproducibility
 
@@ -46,8 +46,7 @@ when you change any parameter default value (the reference values are in paper/p
 - Always work within the activated conda pykt virtual environment (`.pykt-env`)
 - Do NOT modify files in `/data_original` directory
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
-- DO NOT modify existent models in `pykt/models` (only the new created model/s)
-- The code and scripts for existent models in the pykt framework mustn't be changed. We only want to contribute a new model, without modifing existent ones.
+- DO NOT modify existent models in `pykt/models` (only the new created model/s). The code and scripts for existent models in the pykt framework mustn't be changed. We only want to contribute a new model, without modifing existent ones.
 
 ## Guidelines
 
@@ -59,29 +58,28 @@ when you change any parameter default value (the reference values are in paper/p
 
 ### Operational standards
 
-- Training and evaluation should be launched using the commands desribed in ´examples/reproducibility.md´
-- Avoid launching commands terminating scripts tha are running in the terminal (tail command, for instance, can cause KeyboardInterrupt exceptions).
-- Launch scripts in such a way that we leverage available GPUs (less than 75% if not set otherwise) and CPUs (less than 75% of CPU power).
+- Training and evaluation should be launched using the commands described in `examples/reproducibility.md`
+- Avoid launching commands that terminate scripts tha are running in the terminal
+- Launch scripts in such a way that we leverage available GPUs (around 75% if not set otherwise) and CPUs (around 75% of CPU power)
 
 ### Code and Style Guidelines
 
 - Code documentation should include usage examples
 - Use markdown format for documentation files
-- Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon.
-- Use "we" instead of "you" following academic writing conventions.
+- Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon. Use "we" instead of "you" following academic writing conventions.
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
-- If you need to create documentation files, create them in `./tmp`folder, unless I specifically ask for them.
+- If you need to create new documentation files, create them in `./tmp`folder, unless I specifically ask for them.
 - Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits.
-- After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in "### Parameter Evolution Protocol" to propagate the changes in order to have proper reproducibility guarantees.
-- When creating or modifyng texts don't include time estimations
-- Only do commits when I ask for. In general, I prefer commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for.
-- In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions in case something doesn't match what is expected.
+- After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in `examples/reproducibility.md` to propagate the changes in order to have proper reproducibility guarantees.
+- When creating or updating plans don't include time estimations
+- Only do commits when I ask for. In general, I prefer to commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for.
+- In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions, in case something doesn't match what is expected.
 
 ## Models architecture and implementation
 
-- `assistant/newmodel.md`: points to the doc containing the description of current version of the model being tested
-- `paper/proposal.md`: description of the appraoch we are proposing as a base for the model and paper experiments
-- `paper/models.md`: a summary with the models we explored, issues, changes and evolution
+- `assistant/newmodel.md`: points to the doc containing the description of current version of the model being developed and tested
+- `paper/proposal.md`: description of the approach we are proposing as a base for the model and paper experiments
+- `paper/models.md`: a summary with the models we explored previously, issues, changes and evolution
 - `paper/implementation.md`: implementation details. A kind of history with details related to different implementations. If you don't find information about some detail in the rest of documents in the `paper` folder, look here.
 - `paper/rasch.md`: IRT model theory and principles
 - `paper/bkt.md`: Bayesian Knowledge Tracing (BKT) theory and principles

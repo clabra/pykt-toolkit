@@ -557,3 +557,5 @@ $$ x*t = c*{ct} + u*q \cdot d*{ct} $$
 $$ y*t = e*{(c*t, r_t)} + u_q \cdot f*{(c_t, r_t)} $$
 
 Where $u_q$ (difficulty) scales the "variation vectors" ($d_{ct}, f_{ct}$) before adding them to the base concept embeddings. This implementation effectively creates a unique embedding for every (Concept, ProblemID) pair without needing a massive lookup table for all pairs, keeping the parameter count linear to $N_{concepts} + N_{problems}$ rather than their product.
+
+## Next Steps

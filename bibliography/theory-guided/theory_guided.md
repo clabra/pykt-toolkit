@@ -113,7 +113,7 @@ see paper pdf in: `bibliography/theory-guided/2020 Willard _ Integrating Physics
 
 #### 3.1 Physics-Guided Loss Function
 
-Loss = LossTRN(Ytrue,Ypred) + λR(W) +γLossPHY(Ypred)
+$Loss = Loss_{TRN}(Ytrue,Ypred) + \lambda R(W) +\gamma Loss_{PHY}(Ypred)$
 
 #### 3.2 Physics-Guided Initialization
 
@@ -163,7 +163,7 @@ physics-based model for lake temperature modeling can improve predictions.
 
 - @karpatne2024physics
 
-"The conventional approach for scientific modeling is to use process-based models (also referred to asphysics-based or science-based models), where the solution structure of relationships between inputsand response variables is rooted in scientific equations (e.g., laws of energy and mass conservation). Inparticular, process-based models make use of scientific equations to infer the evolution of time-varyinglatent or hidden variables of the system, also referred to as system states (see Figure 1). Additionally,process-based models often involve model parameters that need to be specified or calibrated (oftenwith the help of observational data) for approximating real-world phenomena ... Taken together, the conventional paradigm of scientific modeling—developed over centuries of systematic research forms the foundation of our present-day understanding of scientific systems across a wide spectrum of problemsin environmental sciences. A key feature of process-based models is their ability to provide a mechanistic understanding of the cause-effect mechanisms between input and output variables that can be used as a building blockfor advancing scientific knowledge. As a result, process-based models are continually updated andimproved by the scientific community to fill knowledge gaps in current modeling standards and discovernew theories and formulations of scientific equations that better match with observations and arescientifically meaningful and explainable. Since process-based models are rooted in scientific equationsthat are assumed to hold true in any testing scenario, they are also expected to easily generalize evenoutside the data used during model building. For example, process-based models can be made toextrapolate in space (e.g., over different geographic regions), in time (e.g., forecasting the future of asystem under varying forcings of input drivers), or in scale (e.g., discovering emergent properties oflarger-scale systems using models of smaller-scale system components)"
+"The conventional approach for scientific modeling is to use process-based models (also referred to asphysics-based or science-based models), where the solution structure of relationships between inputs and response variables is rooted in scientific equations (e.g., laws of energy and mass conservation). In particular, process-based models make use of scientific equations to infer the evolution of time-varyinglatent or hidden variables of the system, also referred to as system states (see Figure 1). Additionally, process-based models often involve model parameters that need to be specified or calibrated (oftenwith the help of observational data) for approximating real-world phenomena ... Taken together, the conventional paradigm of scientific modeling—developed over centuries of systematic research forms the foundation of our present-day understanding of scientific systems across a wide spectrum of problemsin environmental sciences. A key feature of process-based models is their ability to provide a mechanistic understanding of the cause-effect mechanisms between input and output variables that can be used as a building blockfor advancing scientific knowledge. As a result, process-based models are continually updated andimproved by the scientific community to fill knowledge gaps in current modeling standards and discovernew theories and formulations of scientific equations that better match with observations and arescientifically meaningful and explainable. Since process-based models are rooted in scientific equationsthat are assumed to hold true in any testing scenario, they are also expected to easily generalize evenoutside the data used during model building. For example, process-based models can be made toextrapolate in space (e.g., over different geographic regions), in time (e.g., forecasting the future of asystem under varying forcings of input drivers), or in scale (e.g., discovering emergent properties oflarger-scale systems using models of smaller-scale system components)"
 
 ## Methods
 
@@ -286,3 +286,16 @@ in this application) is the target of my study.
     in theory-based models. In the following, we provide an
     illustrative example of this theme of TGDS research in the
     field of turbulence modeling.
+
+---
+
+## Practical Challenges in Optimization
+
+Optimising hybrid loss functions remains a major implementation challenge:
+• Loss Imbalance: The scale and convergence speeds of different losses (e.g., data loss, boundary loss, PDE residual loss) often conflict. The simplest approach uses static hyperparameters (λ) to weigh the terms.
+• Adaptive Weighting: More sophisticated methods dynamically adjust these weights during training (loss re-weighting) to balance the optimisation process and avoid convergence issues. Methods include:
+◦ Gradient Norm Reweighting: Adjusting λ based on the maximum gradient norm of one loss relative to another, to mitigate dominance by high-frequency losses (like PDE residuals).
+◦ NTK Reweighting: Using Neural Tangent Kernel (NTK) analysis to dynamically tune λ based on the kernel trace to balance optimisation across different frequencies.
+◦ Inverse-Dirichlet Weighting: Using gradient variance to adjust λ and alleviate issues like vanishing gradients in multi-scale modeling.
+• Adaptive Data Re-sampling: Instead of adjusting weights, collocation points (samples used to evaluate losses) can be dynamically re-sampled to focus training effort on areas with higher error (higher residual loss).
+In essence, whether the prior knowledge is a physical law (PDE) or a cognitive principle (forgetting curve), the learning algorithm incorporates it by formulating a differentiable cost or penalty term ... which is then carefully balanced within the comprehensive optimization objective.
