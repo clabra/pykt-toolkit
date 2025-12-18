@@ -1068,8 +1068,8 @@ def main():
                                 print(f"  Updated: {experiment_folder}/metrics_test.csv")
                             else:
                                 print("\n⚠️  BKT correlation failed (non-critical)")
-                                print("  Note: Requires bkt_targets.pkl and mastery_test.csv")
-                                print(f"  Check: data/{training_params['dataset']}/bkt_targets.pkl exists")
+                                print("  Note: Requires bkt_mastery_states.pkl and mastery_test.csv")
+                                print(f"  Check: data/{training_params['dataset']}/bkt_mastery_states.pkl exists")
                                 print(f"  Check: {experiment_folder}/mastery_test.csv exists")
                         
                         # Generate comprehensive analysis plots

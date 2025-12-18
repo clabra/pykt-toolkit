@@ -4,7 +4,7 @@
   },
   "commands": {
     "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title irtbaseline --short_title irtbaseline",
-    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt2.py --auto_shifted_eval --batch_size 64 --bkt_path data/assist2015/bkt_targets.pkl --d_ff 1536 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 30 --epsilon 0.05 --fold 0 --gradient_clip 1.0 --lambda_align 1.0 --lambda_penalty 100.0 --lambda_reg 0.01 --learning_rate 0.0001 --lref_temperature 0.1 --lref_weight 1.0 --min_trajectory_steps 10 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 8 --num_trajectories 10 --optimizer Adam --patience 4 --phase null --rasch_path data/assist2015/rasch_targets.pkl --seed 42 --seq_len 200 --weight_decay 1.7571e-05",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_ikt2.py --auto_shifted_eval --batch_size 64 --bkt_path data/assist2015/bkt_mastery_states.pkl --d_ff 1536 --d_model 256 --dataset assist2015 --dropout 0.2 --emb_type qid --epochs 30 --epsilon 0.05 --fold 0 --gradient_clip 1.0 --lambda_align 1.0 --lambda_penalty 100.0 --lambda_reg 0.01 --learning_rate 0.0001 --lref_temperature 0.1 --lref_weight 1.0 --min_trajectory_steps 10 --monitor_freq 50 --n_heads 4 --num_encoder_blocks 8 --num_trajectories 10 --optimizer Adam --patience 4 --phase null --rasch_path data/assist2015/rasch_targets.pkl --seed 42 --seq_len 200 --weight_decay 1.7571e-05",
     "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_ikt2.py --checkpoint /workspaces/pykt-toolkit/experiments/20251206_220124_ikt2_irtbaseline_796687/model_best.pth --output_dir /workspaces/pykt-toolkit/experiments/20251206_220124_ikt2_irtbaseline_796687 --dataset assist2015 --fold 0 --batch_size 64 --seq_len 200",
     "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20251206_220124_ikt2_irtbaseline_796687 --num_students 15 --split test",
     "head_agreement": "/home/vscode/.pykt-env/bin/python examples/compute_head_agreement.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251206_220124_ikt2_irtbaseline_796687 --update_csv",
@@ -29,7 +29,7 @@
     "model": "ikt2",
     "dataset": "assist2015",
     "rasch_path": "data/assist2015/rasch_targets.pkl",
-    "bkt_path": "data/assist2015/bkt_targets.pkl",
+    "bkt_path": "data/assist2015/bkt_mastery_states.pkl",
     "fold": 0,
     "seed": 42,
     "short_title": "test",

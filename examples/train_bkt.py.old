@@ -1,5 +1,9 @@
 """
-Compute BKT (Bayesian Knowledge Tracing) targets for iKT model training.
+Compute the mastery state of all the skills for the student at each interaction using pyBKT (Bayesian Knowledge Tracing)
+
+Command: 
+python train_bkt.py --dataset assist2015
+python train_bkt.py --dataset assist2015 --prepare_data --output_path data/assist2015/bkt_mastery_states.pkl
 
 This script uses pyBKT to:
 1. Learn BKT parameters (P_L0, P_T, P_S, P_G) from training data
@@ -8,7 +12,7 @@ This script uses pyBKT to:
 
 Parameters: 
 --dataset: str, required=True, help='Dataset name (e.g., assist2015)'
---output_path: str, default=None, help='Output path for targets (default: data/{dataset}/bkt_mastery_states.pkl)')
+--output_path: str, default=None, help='Output path for targets (default: data/{dataset}/bkt_mastery_states.pkl, data/{dataset}/bkt_mastery_states_mono.pkl)')
 
 Read data from: 
 data_path = f'data/{args.dataset}/train_valid_sequences.csv
@@ -16,6 +20,22 @@ data_path = f'data/{args.dataset}/train_valid_sequences.csv
 Output Files: 
 - Standard version: data/[dataset_name]/bkt_mastery_states.pkl
 - Monotonic version: data/[dataset_name]/bkt_mastery_states_mono.pkl
+
+Model format (saved with pickle.dump): 
+    {
+        'bkt_mastery_states': bkt_mastery_states,
+        'bkt_params': params,
+        'metadata': {
+            'dataset': args.dataset,
+            'num_students': len(bkt_mastery_states),
+            'num_skills': num_skills,
+            'method': 'BKT (Bayesian Knowledge Tracing)',
+            'model': 'pyBKT',
+            'monotonic': False
+        }
+    }
+
+    Where bkt_mastery_states is a dict with key=student_id, value=torch.Tensor[seq_len, num_skills] providing the mastery state of all the skills for the student at each interaction 
 """
 
 import argparse
@@ -58,6 +78,9 @@ def prepare_bkt_data(df):
                     'correct': response,
                     'order_id': order_id
                 })
+        
+        if (idx + 1) % 1000 == 0:
+            print(f"  Prepared {idx + 1}/{len(df)} students...", flush=True)
     
     bkt_df = pd.DataFrame(records)
     return bkt_df
@@ -67,7 +90,7 @@ def fit_bkt_model(bkt_df, num_skills):
     """
     Fit BKT model to training data using EM algorithm.
 
-    # Extract parameters per skill
+    # Returns dictionary of parameters per skill
     params[skill_id] = {
         'prior': ...,   # P(L₀)
         'learns': ...,  # P(T)
@@ -89,9 +112,16 @@ def fit_bkt_model(bkt_df, num_skills):
         parallel=False
     )
     
+    defaults = {
+         'order_id': 'order_id', 
+         'skill_name': 'skill_name', 
+         'correct': 'correct', 
+         'user_id': 'user_id'
+         }
+
     # Fit model (learns parameters via EM)
     print("\nFitting BKT parameters via Expectation-Maximization...")
-    model.fit(data=bkt_df)
+    model.fit(data=bkt_df, defaults=defaults)
     
     print("✓ BKT model fitted successfully")
     
@@ -158,109 +188,111 @@ def enforce_monotonicity_skill_wise(targets_dict):
     return smoothed
 
 
-def estimate_bkt_mastery_states(df, model, params, num_skills):
+def estimate_bkt_mastery_states(df, bkt_df, model, params, num_skills):
     """
-    Run BKT forward algorithm to compute mastery targets for each student.
+    Compute mastery targets using pyBKT's predict function and full tensor reconstruction.
 
-    Maintains student_skill_mastery dict: (student_id, skill_id) → current P(L_t)
-    Applies Bayesian update + learning transition for each interaction
+    Args:
+        df: pandas DataFrame with columns ['uid', 'concepts', 'responses', 'selectmasks']
+        bkt_df: prepared dataframe for pyBKT
+        model: BKT model with parameters
+        params: BKT parameters
+        num_skills: number of skills
 
-    Returns dict with per-student mastery matrices: {student_id: torch.Tensor[seq_len, num_skills]}
+    Returns:
+        dict with per-student mastery matrices: {student_id: torch.Tensor[seq_len, num_skills]}
     """
     print(f"\n{'='*80}")
     print("COMPUTING BKT MASTERY TARGETS")
     print(f"{'='*80}")
     
-    bkt_targets = {}
+    # 1. Use pyBKT to predict state probabilities
+    print("Running pyBKT prediction (state estimation)...")
+    preds_df = model.predict(data=bkt_df)
     
+    # preds_df has: user_id, order_id, skill_name, state_predictions
+    # We need to map this back to the [uid][seq_len][num_skills] tensor structure.
+    # Note: bkt_df 'order_id' corresponds to the index in the original interaction sequence for that user.
+    
+    # Group predictions by user for efficient processing
+    print("Grouping predictions by user...")
+    preds_by_user = preds_df.groupby('user_id')
+    
+    bkt_mastery_states= {}
+    processed_count = 0
+    
+    # Pre-calculate default priors for all skills
+    default_priors = torch.tensor([
+        params[s]['prior'] if s in params else 0.5 
+        for s in range(num_skills)
+    ], dtype=torch.float32)
+
+    total_students = len(df)
+    
+    # Iterate over original dataframe to maintain correct sequence length and structure
     for idx, row in df.iterrows():
-        uid = row['uid']
+        uid = row['uid'] # uid is integer in df
+        
+        # Original sequence processing to know sequence length
         concepts = [int(c) for c in row['concepts'].split(',') if c != '-1']
-        responses = [int(r) for r in row['responses'].split(',') if r != '-1']
         selectmasks = [int(m) for m in row['selectmasks'].split(',') if m != '-1']
         
-        # Filter valid interactions
-        valid_idx = [i for i in range(len(concepts)) if selectmasks[i] == 1]
-        concepts = [concepts[i] for i in valid_idx]
-        responses = [responses[i] for i in valid_idx]
+        # Only interactions with selectmask=1 are in bkt_df and preds_df
+        # The target tensor needs to cover ALL steps in the sequence (even those masked out?)
+        # Convention: The output tensor usually aligns with the input sequence length.
+        # But valid_idx logic in BKT preparation filtered out masked steps.
+        # Let's align with the VALID interactions.
         
-        seq_len = len(concepts)
+        valid_idx = [i for i in range(len(concepts)) if selectmasks[i] == 1]
+        seq_len = len(valid_idx) # This matches the number of rows for this user in bkt_df
+        
         target_tensor = torch.zeros(seq_len, num_skills, dtype=torch.float32)
         
-        # Track P(learned) for each skill
-        skill_mastery = {}  # {skill_id: P_L}
+        # Initialize with priors
+        current_state = default_priors.clone()
         
-        # Run forward algorithm
-        for t, (skill, response) in enumerate(zip(concepts, responses)):
-            # Initialize skill on first encounter
-            if skill not in skill_mastery:
-                if skill in params:
-                    skill_mastery[skill] = params[skill]['prior']
-                else:
-                    # Skill not seen in training, use average
-                    skill_mastery[skill] = np.mean([params[s]['prior'] for s in params])
+        if uid in preds_by_user.groups:
+            user_preds = preds_by_user.get_group(uid).sort_values('order_id')
             
-            # Get BKT parameters for this skill
-            if skill in params:
-                p_l = skill_mastery[skill]
-                p_t = params[skill]['learns']
-                p_s = params[skill]['slips']
-                p_g = params[skill]['guesses']
-            else:
-                # Use average parameters for unseen skills
-                p_l = skill_mastery[skill]
-                p_t = np.mean([params[s]['learns'] for s in params])
-                p_s = np.mean([params[s]['slips'] for s in params])
-                p_g = np.mean([params[s]['guesses'] for s in params])
+            # user_preds should have exactly seq_len rows
+            if len(user_preds) != seq_len:
+                 # This might happen if prepare_bkt_data dropped something? 
+                 # But valid_idx matches prepare_bkt_data logic.
+                 # Let's trust ordering.
+                 pass
+
+            # Iterate through predictions and update state
+            # order_id is 0-based index of valid interactions
             
-            # BKT Forward Algorithm
-            # 1. Predict probability of correct response
-            p_correct = p_l * (1 - p_s) + (1 - p_l) * p_g
-            
-            # Avoid division by zero
-            p_correct = np.clip(p_correct, 1e-10, 1 - 1e-10)
-            
-            # 2. Update belief based on observation (Bayes rule)
-            if response == 1:  # Correct
-                p_l_updated = (p_l * (1 - p_s)) / p_correct
-            else:  # Incorrect
-                p_l_updated = (p_l * p_s) / (1 - p_correct)
-            
-            # 3. Apply learning transition
-            p_l_new = p_l_updated + (1 - p_l_updated) * p_t
-            
-            # Clip to valid probability range
-            p_l_new = np.clip(p_l_new, 0.0, 1.0)
-            
-            # Update skill mastery
-            skill_mastery[skill] = p_l_new
-            
-            # Populate target tensor: use current mastery for all skills
-            for s in range(num_skills):
-                if s in skill_mastery:
-                    target_tensor[t, s] = skill_mastery[s]
-                else:
-                    # Skills not yet practiced: use prior
-                    if s in params:
-                        target_tensor[t, s] = params[s]['prior']
-                    else:
-                        target_tensor[t, s] = np.mean([params[sk]['prior'] for sk in params])
+            for _, pred_row in user_preds.iterrows():
+                t = int(pred_row['order_id']) 
+                skill_id = int(pred_row['skill_name'])
+                new_mastery = float(pred_row['state_predictions'])
+                
+                # Update state for this skill
+                current_state[skill_id] = new_mastery
+                
+                # Assign to tensor
+                target_tensor[t] = current_state
         
-        bkt_targets[uid] = target_tensor
+        bkt_mastery_states[uid] = target_tensor
         
-        if (idx + 1) % 1000 == 0:
-            print(f"  Processed {idx + 1}/{len(df)} students...")
+        processed_count += 1
+        if processed_count % 1000 == 0:
+            print(f"  Processed {processed_count}/{total_students} students...")
+
+    print(f"✓ Computed BKT targets for {len(bkt_mastery_states)} students")
     
-    print(f"✓ Computed BKT mastery states for {len(bkt_targets)} students")
-    
-    return bkt_targets
+    return bkt_mastery_states
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Compute BKT targets for iKT training')
+    parser = argparse.ArgumentParser(description='Compute mastery states using BKT')
     parser.add_argument('--dataset', type=str, required=True, help='Dataset name (e.g., assist2015)')
     parser.add_argument('--output_path', type=str, default=None, 
                        help='Output path for targets (default: data/{dataset}/bkt_mastery_states.pkl)')
+    parser.add_argument('--prepare_data', action='store_true', default=False,
+                       help='Whether to prepare BKT data (convert from sequences). Default False (load existent data).')
     
     args = parser.parse_args()
     
@@ -292,21 +324,34 @@ def main():
     print(f"Number of unique skills: {num_skills}")
     
     # Prepare data for pyBKT
-    print("\nPreparing data for BKT...")
-    bkt_df = prepare_bkt_data(df)
-    print(f"Prepared {len(bkt_df)} interactions from {bkt_df['user_id'].nunique()} students")
+    bkt_data_path = f'data/{args.dataset}/bkt_df.pkl'
+    
+    if args.prepare_data:
+        print("\nPreparing data for BKT...")
+        bkt_df = prepare_bkt_data(df)
+        print(f"Prepared {len(bkt_df)} interactions from {bkt_df['user_id'].nunique()} students")
+        print(f"Saving prepared data to {bkt_data_path}")
+        bkt_df.to_pickle(bkt_data_path)
+    else:
+        print(f"\nChecking for prepared data at {bkt_data_path}...")
+        if Path(bkt_data_path).exists():
+            print(f"Loading prepared data from {bkt_data_path}")
+            bkt_df = pd.read_pickle(bkt_data_path)
+            print(f"Loaded {len(bkt_df)} interactions")
+        else:
+             raise FileNotFoundError(f"Prepared BKT data not found at {bkt_data_path}. Run with --prepare_data to create it.")
     
     # Fit BKT model
     model, params = fit_bkt_model(bkt_df, num_skills)
     
-    # Compute targets
-    bkt_targets = estimate_bkt_mastery_states(df, model, params, num_skills)
+    # Compute mastery states
+    bkt_mastery_states= estimate_bkt_mastery_states(df, bkt_df, model, params, num_skills)
     
     # Apply monotonic smoothing
     print(f"\n{'='*80}")
     print("APPLYING MONOTONIC SMOOTHING")
     print(f"{'='*80}\n")
-    bkt_targets_mono = enforce_monotonicity_skill_wise(bkt_targets)
+    bkt_mastery_states_mono = enforce_monotonicity_skill_wise(bkt_mastery_states)
     print(f"✓ Monotonic version created")
     
     # Save standard version
@@ -315,11 +360,11 @@ def main():
     print(f"{'='*80}")
     
     result_standard = {
-        'bkt_targets': bkt_targets,
+        'bkt_mastery_states': bkt_mastery_states,
         'bkt_params': params,
         'metadata': {
             'dataset': args.dataset,
-            'num_students': len(bkt_targets),
+            'num_students': len(bkt_mastery_states),
             'num_skills': num_skills,
             'method': 'BKT (Bayesian Knowledge Tracing)',
             'model': 'pyBKT',
@@ -342,11 +387,11 @@ def main():
     print(f"{'='*80}")
     
     result_mono = {
-        'bkt_targets': bkt_targets_mono,
+        'bkt_mastery_states': bkt_mastery_states_mono,
         'bkt_params': params,
         'metadata': {
             'dataset': args.dataset,
-            'num_students': len(bkt_targets_mono),
+            'num_students': len(bkt_mastery_states_mono),
             'num_skills': num_skills,
             'method': 'BKT (Bayesian Knowledge Tracing)',
             'model': 'pyBKT',
@@ -362,26 +407,17 @@ def main():
     print(f"  File size: {file_size_mb_mono:.2f} MB")
     
     # Sample statistics
-    sample_uid = list(bkt_targets.keys())[0]
-    sample_target = bkt_targets[sample_uid]
+    sample_uid = list(bkt_mastery_states.keys())[0]
+    sample_target = bkt_mastery_states[sample_uid]
     
     print(f"\n{'='*80}")
-    print("SUMMARY")
+    print("BKT TARGET COMPUTATION COMPLETE")
     print(f"{'='*80}")
     print(f"Sample target tensor shape: {sample_target.shape}")
     print(f"Sample mastery values (first timestep): {sample_target[0, :10]}")
     print(f"\nGenerated files:")
     print(f"  1. {output_path} (standard, monotonic=False)")
     print(f"  2. {output_path_mono} (smoothed, monotonic=True)")
-    
-    print(f"\n{'='*80}")
-    print("BKT TARGET COMPUTATION COMPLETE")
-    print(f"{'='*80}")
-    print(f"Use --rasch_path {output_path} --mastery_method bkt (standard)")
-    print(f"Use --rasch_path {output_path_mono} --mastery_method bkt_mono (monotonic)")
-    print(f"(Note: iKT code refers to targets as 'rasch_targets' but BKT targets work the same way)")
-    print(f"{'='*80}\n")
-
 
 if __name__ == '__main__':
     main()

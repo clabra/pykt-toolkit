@@ -290,7 +290,7 @@ def main():
     
     # Determine rasch_path based on mastery_method
     if args.mastery_method == 'bkt':
-        rasch_filename = 'bkt_targets.pkl'
+        rasch_filename = 'bkt_mastery_states.pkl'
     elif args.mastery_method == 'irt':
         rasch_filename = 'rasch_targets.pkl'
     elif args.mastery_method == 'bkt_mono':

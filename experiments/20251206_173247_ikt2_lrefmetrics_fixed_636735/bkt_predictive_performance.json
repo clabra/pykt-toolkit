@@ -26,6 +26,6 @@
   "metadata": {
     "experiment_dir": "experiments/20251206_173247_ikt2_lrefmetrics_fixed_636735",
     "dataset": "assist2015",
-    "bkt_targets_file": "data/assist2015/bkt_targets.pkl"
+    "bkt_targets_file": "data/assist2015/bkt_mastery_states.pkl"
   }
 }

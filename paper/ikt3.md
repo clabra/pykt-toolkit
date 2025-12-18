@@ -1,30 +1,33 @@
 # iKT3
 
-Additional loss term for alignmet with the factor and prediction estimations of a theoretical model.  
+Additional loss term for alignmet with the factor and prediction estimations of a theoretical model.
 
 ```
-Deprecated: 
+Deprecated:
 Alignment failure with the reference model: All three alignment losses are poor
- 
+
  Root Cause:
  The IRT reference model has poor predictive validity. Model prioritizes performance over aligning to bad reference
- ```
+```
 
 ## Current Status (Dec 8, 2025)
 
 **Implementation:** ✅ Complete (single-phase training with IRT reference model)
 
 **Performance:** Competitive with pykt baselines
+
 - Test AUC: 0.7204 (ASSIST2015, fold 0, seed 42)
 - Validation AUC: 0.7258 (best at epoch 7/30)
 - Comparable to other pykt attention-based models (AKT, simpleKT)
 
 **Baseline Experiment:** `20251208_191345_ikt3_baseline_286531`
+
 - Configuration: λ_target=0.05, warmup_epochs=50, c_stability=0.01
 - Hyperparameters: d_model=256, n_heads=4, n_blocks=8, batch_size=64, lr=0.0001
 - Reproducibility: ✅ Verified (two independent runs produce identical results)
 
 **Key Achievements:**
+
 - ✅ Dynamic IRT targets solve scale collapse (θ_std: 0.14 → 4.03, +2806%)
 - ✅ Adaptive lambda schedule implemented (λ(t) = λ_target × min(1, epoch/warmup))
 - ✅ Pluggable reference model architecture (IRT working, extensible to BKT)
@@ -33,6 +36,7 @@ Alignment failure with the reference model: All three alignment losses are poor
 - ✅ Documentation complete with performance table in `paper/models.md`
 
 **Critical Issues Identified:**
+
 - ❌ **IRT alignment failure:** ALL three alignment losses far exceed thresholds
   - l_21 = 4.225 (threshold < 0.15, **28× over**) - M_IRT doesn't match M_ref
   - l_22 = 0.028 (threshold < 0.10, within limit but suboptimal) - β doesn't match IRT calibration
@@ -42,12 +46,14 @@ Alignment failure with the reference model: All three alignment losses are poor
 
 **Root Cause Analysis (CONFIRMED Dec 8, 2025):**
 Investigation revealed IRT reference model has **poor predictive validity:**
+
 1. ❌ **M_ref correlation: 0.19** (Pearson) - IRT predictions barely correlate with actual responses
 2. ❌ **M_ref AUC: 0.63** - Only slightly better than random guessing
 3. ❌ **Rasch model doesn't fit ASSIST2015** - Formula σ(θ - β) fundamentally incompatible with data
 4. ✅ **Lambda experiments validated incompatibility** - Tested λ ∈ [0.007, 0.15], l_21 always fails
 
 **Why Alignment Fails:**
+
 - l_21 = BCE(M_IRT, M_ref) tries to match model predictions to M_ref
 - But M_ref itself is wrong (correlation=0.19 with ground truth)
 - Model cannot align to bad targets no matter how high λ is
@@ -55,18 +61,20 @@ Investigation revealed IRT reference model has **poor predictive validity:**
 - **Model correctly prioritizes performance over aligning to bad reference**
 
 **Interpretation:**
+
 - Model demonstrates **learned interpretability** rather than theory-grounded alignment
 - θ, β are **meaningful features** for prediction but not on IRT scale
 - Performance comparable to other pykt models validates architecture
 - Poor IRT alignment reflects dataset limitations, not model failure
 
 **Next Steps:**
+
 - Compare with other pykt models (AKT, DKT, SAKT) using benchmark infrastructure
 - Investigate alternative reference models (BKT, DINA) that may fit ASSIST2015 better
 - Consider dataset-specific calibration or multi-dataset validation
-- Document model comparison results for paper 
+- Document model comparison results for paper
 
-## Architecture 
+## Architecture
 
 ```mermaid
 graph TD
@@ -75,25 +83,25 @@ graph TD
         Input_r[["Input Responses r<br/>[B, L]"]]
         Ground_Truth_r[["Ground Truth Responses<br/>[B, L]"]]
     end
-    
+
     subgraph "Reference Model Targets (Pre-computed)"
         RefTargets[["IRT Reference Targets<br/>β_IRT: [num_skills]<br/>θ_IRT: {uid: scalar}<br/>M_ref: {uid: [seq_len]}"]]
     end
-    
+
     subgraph "Embedding Layer"
         Tokens[["Interaction Tokens<br/>(q, r) pairs"]]
         Context_Emb["Context Embedding<br/>[B, L, d_model]"]
         Value_Emb["Value Embedding<br/>[B, L, d_model]"]
         Skill_Emb["Skill Embedding<br/>[B, L, d_model]"]
         Pos_Emb["Positional Embeddings<br/>[1, L, d_model]"]
-        
+
         Context_Seq[["Context Sequence<br/>c = emb(q,r) + pos<br/>[B, L, d_model]"]]
         Value_Seq[["Value Sequence<br/>v = emb(r) + pos<br/>[B, L, d_model]"]]
     end
-    
+
     subgraph "Transformer Encoder"
         direction TB
-        
+
         subgraph "Context Stream Attention"
             Q_c["Q_context = Linear(c)<br/>[B, L, d_model]"]
             K_c["K_context = Linear(c)<br/>[B, L, d_model]"]
@@ -101,7 +109,7 @@ graph TD
             Attn_c["Multi-Head Attention<br/>softmax(QK^T/√d)V"]
             Out_c["h' = Attention(Q_c, K_c, V_c)<br/>[B, L, d_model]"]
         end
-        
+
         subgraph "Value Stream Attention"
             Q_v["Q_value = Linear(v)<br/>[B, L, d_model]"]
             K_v["K_value = Linear(v)<br/>[B, L, d_model]"]
@@ -109,57 +117,57 @@ graph TD
             Attn_v["Multi-Head Attention<br/>softmax(QK^T/√d)V"]
             Out_v["v' = Attention(Q_v, K_v, V_v)<br/>[B, L, d_model]"]
         end
-        
+
         FFN_C["Feed-Forward Context<br/>× N blocks"]
         FFN_V["Feed-Forward Value<br/>× N blocks"]
-        
+
         Note_Stack["× N Transformer Blocks<br/>(N=8, d_model=256)"]
     end
-    
+
     subgraph "Encoder Output"
         Final_h[["Knowledge State h<br/>(final context)<br/>[B, L, d_model]"]]
         Final_v[["Value State v<br/>(final value)<br/>[B, L, d_model]"]]
     end
-    
+
     subgraph "Head 1: Performance Prediction (BCE)"
         Concat1["Concat[h, v, skill_emb]<br/>[B, L, 3·d_model]"]
         PredHead["MLP Prediction Head<br/>Linear → ReLU → Dropout → Linear"]
         Logits[["Logits<br/>[B, L]"]]
         BCEPred[["p_correct = σ(logits)<br/>[B, L]"]]
     end
-    
+
     subgraph "Head 2: IRT-Based Mastery (Pluggable Reference Model)"
         direction TB
-        
+
         AbilityEnc["Ability Encoder<br/>h → Linear(d_ff) → ReLU<br/>→ Dropout → Linear(1)"]
         Theta[["θ_learned(t)<br/>Student Ability<br/>[B, L] scalars"]]
-        
+
         SkillDiffEmb["Skill Difficulty Embeddings<br/>β_learned ~ Embedding(num_skills, 1)<br/>Initialized to 0.0"]
         Beta[["β_learned(k)<br/>Skill Difficulty<br/>[B, L] scalars"]]
-        
+
         IRTFormula["IRT Rasch Formula<br/>M_IRT = σ(θ_learned - β_learned)"]
         MasteryIRT[["M_IRT<br/>IRT-based Mastery<br/>[B, L] probabilities"]]
     end
-    
+
     subgraph "Loss Computation (via Reference Model Interface)"
         direction LR
-        
+
         L_BCE["l_bce<br/>BCE(p_correct, targets)<br/>Performance Loss"]
-        
+
         L_21["l_21 (performance)<br/>BCE(M_IRT, M_ref)<br/>Prediction alignment"]
-        
+
         L_22["l_22 (difficulty)<br/>MSE(β_learned[q], β_IRT[q])<br/>Difficulty regularization<br/>(always active)"]
-        
+
         L_23["l_23 (ability)<br/>MSE(mean(θ_learned), θ_IRT)<br/>Ability alignment"]
-        
+
         LambdaSchedule["λ(epoch) Warm-up<br/>λ = λ_target × min(1, epoch/warmup)<br/>λ_target=0.5, warmup=50"]
     end
-    
+
     subgraph "Combined Loss (Single-Phase Training)"
         LTotal["L_total = (1-λ)×l_bce + c×l_22 + λ×(l_21 + l_23)<br/><br/>λ: interpretability weight (warm-up)<br/>c: stability regularization (fixed, c=0.01)"]
         Backprop["Backpropagation<br/>Updates: θ encoder, β embeddings,<br/>prediction head, encoder"]
     end
-    
+
     %% Input to Embedding flow
     Input_q --> Tokens
     Input_r --> Tokens
@@ -167,12 +175,12 @@ graph TD
     Tokens --> Value_Emb
     Input_q --> Skill_Emb
     Input_q --> SkillDiffEmb
-    
+
     Context_Emb --> Context_Seq
     Value_Emb --> Value_Seq
     Pos_Emb --> Context_Seq
     Pos_Emb --> Value_Seq
-    
+
     %% Encoder processing - Context stream
     Context_Seq --> Q_c
     Context_Seq --> K_c
@@ -182,7 +190,7 @@ graph TD
     V_c --> Attn_c
     Attn_c --> Out_c
     Out_c --> FFN_C
-    
+
     %% Encoder processing - Value stream
     Value_Seq --> Q_v
     Value_Seq --> K_v
@@ -192,52 +200,52 @@ graph TD
     V_v --> Attn_v
     Attn_v --> Out_v
     Out_v --> FFN_V
-    
+
     %% Final encoder outputs
     FFN_C --> Final_h
     FFN_V --> Final_v
-    
+
     %% Head 1 - Performance prediction
     Final_h --> Concat1
     Final_v --> Concat1
     Skill_Emb --> Concat1
     Concat1 --> PredHead --> Logits --> BCEPred
-    
+
     %% Head 2 - IRT mastery inference
     Final_h --> AbilityEnc --> Theta
     SkillDiffEmb --> Beta
     Theta --> IRTFormula
     Beta --> IRTFormula
     IRTFormula --> MasteryIRT
-    
+
     %% Loss computation flows
     BCEPred --> L_BCE
     Ground_Truth_r --> L_BCE
-    
+
     MasteryIRT --> L_21
     RefTargets --> L_21
-    
+
     Beta --> L_22
     RefTargets --> L_22
-    
+
     Theta --> L_23
     RefTargets --> L_23
-    
+
     %% Loss aggregation with lambda schedule
     L_BCE --> LTotal
     L_21 --> LTotal
     L_22 --> LTotal
     L_23 --> LTotal
     LambdaSchedule --> LTotal
-    
+
     LTotal --> Backprop
-    
+
     %% Gradient flow (dotted lines)
     Backprop -.->|∂L/∂h| Final_h
     Backprop -.->|∂L/∂v| Final_v
     Backprop -.->|∂L/∂β| SkillDiffEmb
     Backprop -.->|∂L/∂θ| AbilityEnc
-    
+
     %% Styling
     classDef input_style fill:#ffffff,stroke:#333333,stroke-width:2px
     classDef ref_style fill:#fce4ec,stroke:#c2185b,stroke-width:2px
@@ -247,7 +255,7 @@ graph TD
     classDef head2_style fill:#fff3e0,stroke:#f57c00,stroke-width:3px
     classDef loss_style fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
     classDef combined_style fill:#f3e5f5,stroke:#6a1b9a,stroke-width:4px
-    
+
     class Input_q,Input_r,Ground_Truth_r input_style
     class RefTargets ref_style
     class Tokens,Context_Emb,Value_Emb,Skill_Emb,Pos_Emb,Context_Seq,Value_Seq emb_style
@@ -257,41 +265,46 @@ graph TD
     class L_BCE,L_21,L_22,L_23,LambdaSchedule loss_style
     class LTotal,Backprop combined_style
 ```
+
 ## Loss Formulation
 
 In Head 2, we measure consistency with the reference theoretical model through three losses:
 
-1) **Prediction alignment** (l_21): Head 2 mastery prediction (mastery_irt) <-> IRT precalculated performance probability (BCE)
-2) **Difficulty regularization** (l_22): Head 2 beta value <-> IRT precalculated difficulty (MSE)
-3) **Ability alignment** (l_23): Head 2 theta value <-> IRT precalculated ability (MSE)
+1. **Prediction alignment** (l_21): Head 2 mastery prediction (mastery_irt) <-> IRT precalculated performance probability (BCE)
+2. **Difficulty regularization** (l_22): Head 2 beta value <-> IRT precalculated difficulty (MSE)
+3. **Ability alignment** (l_23): Head 2 theta value <-> IRT precalculated ability (MSE)
 
 **Combined loss:**
+
 ```
 L = (1-λ) × l_bce + c × l_22 + λ × (l_21 + l_23)
 ```
 
 **Key insight:** l_22 is **not** controlled by λ because it serves a different purpose:
+
 - **l_22 (difficulty regularization)**: Always active, prevents drift from pre-calibrated β values (stability constraint)
 - **l_21, l_23 (interpretability alignment)**: Controlled by λ, trades off with performance (interpretability objective)
 
 **Why β regularization should be active even when interpretability is not prioritized:**
+
 1. **β is pre-calibrated**: These are stable, dataset-level properties derived from IRT calibration that shouldn't drift during training
 2. **Prevents mode collapse**: Without β anchoring, the model might learn degenerate solutions where difficulty embeddings collapse to arbitrary values
 3. **Different purpose**: β regularization is about **stability/validity** of the model, not about the interpretability trade-off—it ensures the model remains theoretically grounded regardless of λ
 
 **Parameters:**
+
 - **λ ∈ [0,1]**: Single interpretability trade-off parameter
   - λ = 0: Pure performance optimization (l_bce) + difficulty stability (c×l_22)
   - λ = 1: Full IRT consistency enforcement (all alignment losses active)
   - Can follow warm-up schedule (starting low, gradually increasing)
-  
 - **c**: Fixed difficulty regularization weight (independent of λ)
   - Suggested value: c = 0.01 (gentle regularization, always active)
   - Rationale: β values are pre-calibrated from IRT and should remain stable throughout training, regardless of interpretability priority
   - Purpose: Prevents mode collapse and maintains consistency with dataset-level difficulty calibration
-  
+
 **Design Rationale:**
-- **Separation of concerns**: 
+
+- **Separation of concerns**:
   - Difficulty regularization (c×l_22) is about **validity/stability** of pre-calibrated anchors
   - Interpretability alignment (λ×(l_21 + l_23)) is about **learning theory-consistent factors**
 - **Single parameter for analysis**: λ controls the performance-interpretability trade-off for Pareto curves
@@ -304,20 +317,19 @@ We aim to infer factor values (θ, β) that are consistent with the theoretical 
 - **l_22 acts as an always-on regularization**: Prevents β from drifting away from pre-calibrated values, maintaining theoretical validity
 - **l_21 and l_23 are interpretability objectives**: Controlled by λ to balance performance vs theory-consistent factor learning
 
-If we imagine Head 2 as a box trying to replicate the theoretical model, then we need to replicate both the box (the IRT formula) and its inputs (θ, β). However, β is pre-calibrated and should be treated as a stability constraint, while θ and performance predictions are dynamically learned and controlled by the interpretability parameter λ. 
+If we imagine Head 2 as a box trying to replicate the theoretical model, then we need to replicate both the box (the IRT formula) and its inputs (θ, β). However, β is pre-calibrated and should be treated as a stability constraint, while θ and performance predictions are dynamically learned and controlled by the interpretability parameter λ.
 
 ```mermaid
 graph LR
     theta["θ (ability)"] --> IRT
     beta["β (difficulty)"] --> IRT
-    
+
     subgraph IRT["Head 2 - IRT Model"]
         formula["M = σ(θ - β)"]
     end
-    
+
     IRT --> M["M (mastery probability)"]
 ```
-
 
 ## Hypotheses for Construct Validity (Loss-Based Formulation)
 
@@ -332,16 +344,19 @@ To demonstrate that Head 2's learned factors represent valid IRT constructs, we 
 **Hypothesis**: Minimizing alignment losses l_22 and l_23 drives learned factors toward IRT-calibrated values, establishing convergent validity.
 
 **Loss Formulation**:
+
 ```
 l_22 = MSE(β_learned, β_IRT)  # Difficulty alignment
 l_23 = MSE(θ_learned, θ_IRT)  # Ability alignment
 ```
 
-**Validation Criterion**: 
+**Validation Criterion**:
+
 - l_22 < 0.10 (low MSE between learned and IRT difficulties)
 - l_23 < 0.15 (low MSE between learned and IRT abilities, slightly higher threshold due to temporal dynamics)
 
-**Interpretation**: 
+**Interpretation**:
+
 - Low l_22 → β_learned ≈ β_IRT → model learns correct difficulty ordering
 - Low l_23 → θ_learned ≈ θ_IRT → model learns ability values consistent with psychometric calibration
 
@@ -354,6 +369,7 @@ l_23 = MSE(θ_learned, θ_IRT)  # Ability alignment
 **Hypothesis**: Minimizing l_21 ensures Head 2's IRT-based predictions match reference IRT model, validating that the learned IRT mechanism is functionally equivalent to theory.
 
 **Loss Formulation**:
+
 ```
 l_21 = BCE(M_IRT, M_ref)
 
@@ -362,7 +378,8 @@ where:
   M_ref = σ(θ_IRT - β_IRT)          # Reference IRT prediction
 ```
 
-**Validation Criterion**: 
+**Validation Criterion**:
+
 - l_21 < 0.15 (low cross-entropy between Head 2 and reference IRT)
 
 **Interpretation**: Low l_21 means that even if individual factors have small errors, their **combination through the IRT formula** produces correct predictions. This validates the entire IRT mechanism, not just individual components.
@@ -376,11 +393,13 @@ where:
 **Hypothesis**: Head 1 (data-driven) and Head 2 (theory-driven) produce compatible predictions when alignment losses are minimized, confirming successful integration of performance and interpretability.
 
 **Metric** (monitoring, not directly optimized):
+
 ```
 val_heads_corr = corr(p_correct, M_IRT) > 0.85
 ```
 
 **Interpretation**: High correlation emerges as a consequence of minimizing L_align = MSE(p_correct, M_IRT) in Phase 2. This validates that:
+
 - Head 1 learns predictive patterns compatible with IRT theory
 - Head 2 produces interpretable estimates that preserve predictive power
 - The dual-head architecture successfully balances accuracy and interpretability
@@ -398,6 +417,7 @@ iKT3 has been implemented as a **new standalone model** with pluggable reference
 **Implementation Status:** ✅ **COMPLETE** for IRT reference model
 
 **Key Files:**
+
 - `pykt/models/ikt3.py` - Core model implementation
 - `pykt/reference_models/base.py` - Abstract reference model interface
 - `pykt/reference_models/irt_reference.py` - IRT reference implementation
@@ -416,33 +436,34 @@ Defines the interface for all reference models:
 ```python
 class ReferenceModel(ABC):
     def __init__(self, model_name: str, num_skills: int)
-    
+
     @abstractmethod
     def load_targets(self, targets_path: str) -> Dict[str, torch.Tensor]:
         """Load pre-computed reference targets from file"""
-    
+
     @abstractmethod
     def compute_alignment_losses(
-        self, 
+        self,
         model_outputs: Dict[str, torch.Tensor],
         targets: Dict[str, torch.Tensor],
         lambda_weights: Dict[str, float]
     ) -> Dict[str, torch.Tensor]:
         """Compute model-specific alignment losses"""
-    
+
     @abstractmethod
     def get_loss_names(self) -> List[str]:
         """Return list of loss component names for logging"""
-    
+
     @abstractmethod
     def get_interpretable_factors(
-        self, 
+        self,
         model_outputs: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """Extract interpretable factors for validation"""
 ```
 
 **Design Benefits:**
+
 - Single interface for all reference models
 - Clean separation of concerns
 - Easy to add new reference models (2-3 days per model)
@@ -455,6 +476,7 @@ class ReferenceModel(ABC):
 #### Implementation: `pykt/reference_models/irt_reference.py`
 
 **Initialization:**
+
 ```python
 class IRTReferenceModel(ReferenceModel):
     def __init__(self, num_skills: int):
@@ -477,6 +499,7 @@ def load_targets(self, targets_path: str) -> Dict[str, torch.Tensor]:
 ```
 
 **Target File Structure:**
+
 ```python
 {
     'skill_difficulties': {0: β_0, 1: β_1, ..., 99: β_99},  # IRT difficulties
@@ -499,6 +522,7 @@ def load_targets(self, targets_path: str) -> Dict[str, torch.Tensor]:
 **Three alignment losses computed:**
 
 1. **l_21 (Performance Alignment):**
+
 ```python
 l_21 = F.binary_cross_entropy(
     model_outputs['mastery_irt'],  # Model's σ(θ_learned - β_learned)
@@ -512,6 +536,7 @@ l_21 = F.binary_cross_entropy(
 **Success threshold:** l_21 < 0.15
 
 2. **l_22 (Difficulty Regularization):**
+
 ```python
 # Extract IRT difficulties for specific skills in batch
 beta_irt_full = targets['beta_irt']     # [num_skills] all difficulties
@@ -530,6 +555,7 @@ l_22 = F.mse_loss(
 **Success threshold:** l_22 < 0.10
 
 3. **l_23 (Ability Alignment):**
+
 ```python
 # Average student ability over sequence for MSE
 theta_learned_mean = model_outputs['theta_t'].mean(dim=1)  # [B]
@@ -549,6 +575,7 @@ l_23 = F.mse_loss(
 **Success threshold:** l_23 < 0.15
 
 **Combined Output:**
+
 ```python
 return {
     'l_21_performance': l_21,
@@ -570,6 +597,7 @@ def get_interpretable_factors(self, model_outputs):
 ```
 
 Used for:
+
 - Validation metrics (correlation with reference)
 - Visualization and interpretation
 - Case study analysis
@@ -585,6 +613,7 @@ Used for:
 **Process:**
 
 1. **Load Existing Rasch Difficulties:**
+
 ```python
 # From rasch_test_iter300.pkl (already calibrated)
 skill_difficulties = {0: β_0, 1: β_1, ..., 99: β_99}
@@ -597,10 +626,10 @@ Uses simplified IRT calibration on train + validation data:
 ```python
 For each student i:
     interactions = [(question_j, response_ij), ...]
-    
+
     # Estimate θ via maximum likelihood
     θ_i = mean(logit(response_ij) + β_j) over all interactions
-    
+
     # Alternative: Use proper MLE with optimization
     θ_i = argmax_θ ∏_j P(response_ij | θ, β_j)
 ```
@@ -610,11 +639,13 @@ For each student i:
 3. **Generate Reference Predictions:**
 
 For each student-question pair:
+
 ```python
 M_ref[i, j] = σ(θ_i - β_j)  # Rasch 1PL formula
 ```
 
 4. **Save Extended Targets:**
+
 ```bash
 python examples/compute_irt_extended_targets.py \
     --dataset assist2015 \
@@ -636,6 +667,7 @@ python examples/compute_irt_extended_targets.py \
 **Key Components:**
 
 1. **Initialization with Reference Model Type:**
+
 ```python
 class iKT3(nn.Module):
     def __init__(
@@ -647,21 +679,22 @@ class iKT3(nn.Module):
         # Shared encoder (same as iKT2)
         self._init_embeddings()
         self._init_encoder()
-        
+
         # Head 1: Performance prediction (BCE)
         self._init_performance_head()
-        
+
         # Head 2: Reference-model-specific (IRT, BKT, etc.)
         if reference_model_type == 'irt':
             self._init_irt_heads()
         elif reference_model_type == 'bkt':
             self._init_bkt_heads()  # Future
-        
+
         self.reference_model = None  # Injected later
         self.reference_model_type = reference_model_type
 ```
 
 2. **IRT Head Initialization:**
+
 ```python
 def _init_irt_heads(self, d_ff, dropout):
     # Ability encoder: h → θ
@@ -671,13 +704,14 @@ def _init_irt_heads(self, d_ff, dropout):
         nn.Dropout(dropout),
         nn.Linear(d_ff, 1)
     )
-    
+
     # Difficulty embeddings: skill_id → β
     self.skill_difficulty_emb = nn.Embedding(self.num_c, 1)
     nn.init.constant_(self.skill_difficulty_emb.weight, 0.0)  # Neutral init
 ```
 
 3. **Forward Pass (IRT-specific):**
+
 ```python
 def _forward_irt(self, h, v, qry):
     """
@@ -685,24 +719,24 @@ def _forward_irt(self, h, v, qry):
         h: Knowledge state [B, L, d_model]
         v: Value state [B, L, d_model]
         qry: Query questions [B, L]
-    
+
     Returns:
         Dictionary with predictions and interpretable factors
     """
     # Extract ability from knowledge state
     theta_t = self.ability_encoder(h).squeeze(-1)  # [B, L]
-    
+
     # Extract difficulty embeddings
     beta_k = self.skill_difficulty_emb(qry).squeeze(-1)  # [B, L]
-    
+
     # IRT formula
     mastery_irt = torch.sigmoid(theta_t - beta_k)  # [B, L]
-    
+
     # Performance prediction (Head 1)
     combined = torch.cat([h, v, self.question_emb(qry)], dim=-1)
     logits = self.performance_head(combined).squeeze(-1)
     bce_predictions = torch.sigmoid(logits)
-    
+
     return {
         'logits': logits,
         'bce_predictions': bce_predictions,
@@ -715,13 +749,14 @@ def _forward_irt(self, h, v, qry):
 ```
 
 4. **Loss Computation (Delegated to Reference Model):**
+
 ```python
 def compute_loss(
-    self, 
-    output, 
-    targets, 
-    ref_targets, 
-    lambda_interp, 
+    self,
+    output,
+    targets,
+    ref_targets,
+    lambda_interp,
     lambda_reg
 ):
     """
@@ -729,28 +764,28 @@ def compute_loss(
     """
     # Performance loss
     l_bce = F.binary_cross_entropy_with_logits(
-        output['logits'], 
+        output['logits'],
         targets
     )
-    
+
     # Reference model alignment losses
     alignment_losses = self.reference_model.compute_alignment_losses(
         model_outputs=output,
         targets=ref_targets,
         lambda_weights={'lambda_interp': lambda_interp}
     )
-    
+
     # Extract components
     l_stability = alignment_losses['l_22_difficulty']  # IRT
     l_align_total = alignment_losses['l_align_total']  # l_21 + l_23
-    
+
     # Combined loss
     total_loss = (
         (1 - lambda_interp) * l_bce +
         lambda_reg * l_stability +
         lambda_interp * l_align_total
     )
-    
+
     return {
         'total_loss': total_loss,
         'l_bce': l_bce,
@@ -767,6 +802,7 @@ def compute_loss(
 **Key Features:**
 
 1. **Reference Model Injection:**
+
 ```python
 from pykt.reference_models import create_reference_model
 
@@ -785,11 +821,12 @@ ref_targets = ref_model.load_targets(args.reference_targets_path)
 ```
 
 2. **Lambda Warm-up Schedule:**
+
 ```python
 def get_lambda_interp(epoch, lambda_target, warmup_epochs):
     """
     Gradual warm-up: λ(epoch) = λ_target × min(1, epoch / warmup_epochs)
-    
+
     Example: λ_target = 0.5, warmup = 50
     - Epoch 1: λ = 0.01 (2%)
     - Epoch 25: λ = 0.25 (50%)
@@ -800,19 +837,20 @@ def get_lambda_interp(epoch, lambda_target, warmup_epochs):
 ```
 
 3. **Training Loop:**
+
 ```python
 for epoch in range(1, epochs + 1):
     lambda_current = get_lambda_interp(epoch, lambda_target, warmup_epochs)
-    
+
     for batch in train_loader:
         # Prepare batch-specific reference targets
         batch_ref_targets = prepare_batch_ref_targets(
             batch, ref_targets, device
         )
-        
+
         # Forward pass
         outputs = model(q, r, qry)
-        
+
         # Compute loss
         loss_dict = model.compute_loss(
             output=outputs,
@@ -821,17 +859,18 @@ for epoch in range(1, epochs + 1):
             lambda_interp=lambda_current,
             lambda_reg=c_stability_reg
         )
-        
+
         # Backward
         loss_dict['total_loss'].backward()
         optimizer.step()
 ```
 
 4. **Metrics Logging:**
+
 ```python
 # CSV tracking
 metrics_epoch.csv:
-    epoch, lambda_interp, 
+    epoch, lambda_interp,
     train_loss, train_auc, train_acc,
     val_loss, val_auc, val_acc,
     val_l_bce, val_l_stability, val_l_align_total,
@@ -840,7 +879,7 @@ metrics_epoch.csv:
     val_mastery_mean, val_mastery_std
 
 metrics_valid.csv:
-    split, auc, acc, 
+    split, auc, acc,
     l_21_performance, l_22_difficulty, l_23_ability
 ```
 
@@ -855,18 +894,19 @@ metrics_valid.csv:
 **Key Features:**
 
 1. **Comprehensive Metrics:**
+
 ```python
 def evaluate_model(model, test_loader, ref_targets, device):
     metrics = {
         # Performance
         'auc': ...,
         'acc': ...,
-        
+
         # Alignment losses
         'l_21_performance': ...,
         'l_22_difficulty': ...,
         'l_23_ability': ...,
-        
+
         # Factor statistics
         'theta_mean': ...,
         'theta_std': ...,
@@ -874,7 +914,7 @@ def evaluate_model(model, test_loader, ref_targets, device):
         'theta_max': ...,
         'mastery_mean': ...,
         'mastery_std': ...,
-        
+
         # Correlations (DIAGNOSTIC)
         'mastery_prediction_pearson': ...,   # M_IRT vs M_ref
         'mastery_prediction_spearman': ...,
@@ -884,6 +924,7 @@ def evaluate_model(model, test_loader, ref_targets, device):
 ```
 
 2. **Correlation Diagnostic (NEW):**
+
 ```python
 # Critical for diagnosing l_21 paradox
 mastery_irt_arr = np.array(all_mastery_irt)
@@ -909,6 +950,7 @@ print(f"Spearman: {spearman_corr:.4f}")
 ```
 
 3. **Success Criteria Check:**
+
 ```python
 def check_success_criteria(metrics, reference_model_type):
     if reference_model_type == 'irt':
@@ -934,10 +976,10 @@ def check_success_criteria(metrics, reference_model_type):
                 'passed': metrics.get('mastery_prediction_pearson', 0.0) > 0.85
             }
         }
-        
+
         overall = all(c['passed'] for c in criteria.values())
         criteria['overall'] = overall
-        
+
     return criteria
 ```
 
@@ -948,6 +990,7 @@ def check_success_criteria(metrics, reference_model_type):
 ### 7. Current Implementation Gaps
 
 #### Implemented ✅
+
 - IRT reference model with all three alignment losses
 - Pluggable reference model architecture (base class)
 - Target generation for IRT (extended targets)
@@ -956,6 +999,7 @@ def check_success_criteria(metrics, reference_model_type):
 - Reproducibility framework integration
 
 #### Not Yet Implemented ⏳
+
 - BKT reference model implementation
 - BKT target generation script
 - DINA, PFA, AFM reference models (future)
@@ -963,6 +1007,7 @@ def check_success_criteria(metrics, reference_model_type):
 - Multi-reference comparison tools
 
 #### Known Issues 🐛
+
 - **Alignment Paradox:** Low MSE (l_22, l_23) but high BCE (l_21) with low correlation
   - Root cause: Insufficient training (λ only 60% of warm-up) + weak regularization (c = 0.01)
   - Solution: Train 60+ epochs with c = 0.1
@@ -1005,6 +1050,7 @@ python examples/eval_ikt3.py \
 ```
 
 **Expected outputs:**
+
 - Training: `metrics_epoch.csv`, `metrics_valid.csv`
 - Evaluation: `metrics_test.csv`, `eval_results.json` (with correlations)
 - Success if: l_21 < 0.15, l_22 < 0.10, l_23 < 0.15, correlation > 0.85
@@ -1016,21 +1062,25 @@ python examples/eval_ikt3.py \
 ### Benefits
 
 1. **Scientific Flexibility:**
+
    - Test multiple theoretical groundings (IRT, BKT, DINA, PFA, etc.)
    - Empirically compare which theory provides best construct validity
    - Enable hybrid approaches (e.g., IRT for difficulty, BKT for learning rates)
 
 2. **Code Reusability:**
+
    - Single iKT3 model implementation works with all reference models
    - Shared encoder, training loop, evaluation pipeline
    - Only reference-specific logic encapsulated in separate modules
 
 3. **Extensibility:**
+
    - Add new reference models without modifying iKT3 core
    - Clear interface contract (ReferenceModel ABC)
    - Future models: 2-3 days implementation time
 
 4. **Comparative Analysis:**
+
    - Direct A/B testing: same architecture, different theoretical constraints
    - Isolates effect of reference model choice
    - Enables meta-analysis: which theories work best for which datasets?
@@ -1043,11 +1093,11 @@ python examples/eval_ikt3.py \
 ### Future Reference Models (Roadmap)
 
 **Immediate (Phase 1):**
-- ✅ **IRT (Rasch)**: 
+
+- ✅ **IRT (Rasch)**:
   - **Parameters**: θ (student ability), β (skill difficulty)
   - **Prediction formula**: M = σ(θ - β)
   - **Alignment losses**: l_21 (performance), l_22 (difficulty), l_23 (ability)
-  
 - ✅ **BKT (Bayesian Knowledge Tracing)**:
   - **Parameters per skill**: P(L_0) (prior), P(T) (learns), P(S) (slips), P(G) (guesses)
   - **State**: P(L_t) (mastery probability at time t)
@@ -1062,7 +1112,7 @@ python examples/eval_ikt3.py \
     - **s_j** (slip): Probability of incorrect response when all required skills are mastered
     - **g_j** (guess): Probability of correct response when at least one required skill is not mastered
     - **α_ik**: Binary mastery state (0/1) for student i on skill k
-  - **Prediction formula**: 
+  - **Prediction formula**:
     - η_ij = ∏_k α_ik^q_jk (conjunctive mastery: student must master ALL skills required by item)
     - P(correct) = (1-s_j)^η_ij × g_j^(1-η_ij)
   - **Interpretable factors**:
@@ -1074,7 +1124,6 @@ python examples/eval_ikt3.py \
     - l_22: MSE(slip_learned, s_ref) + MSE(guess_learned, g_ref)
     - l_23: Q-matrix alignment if learned (optional)
   - **Success thresholds**: l_21 < 0.10 (strict for binary), l_22 < 0.15, corr > 0.85
-  
 - **PFA** (Performance Factor Analysis):
   - **Parameters**:
     - **β_k** (difficulty): Difficulty of skill k (similar to IRT but context-dependent)
@@ -1082,7 +1131,7 @@ python examples/eval_ikt3.py \
     - **ρ_k** (decay rate): Penalty in logit scale per failed practice of skill k
     - **m_ik**(successes): Count of successful practices for student i on skill k
     - **n_ik** (failures): Count of failed practices for student i on skill k
-  - **Prediction formula**: 
+  - **Prediction formula**:
     - logit(P(correct)) = β_k + γ_k×m_ik - ρ_k×n_ik
     - Incorporates practice history explicitly
   - **Interpretable factors**:
@@ -1106,7 +1155,7 @@ python examples/eval_ikt3.py \
     - **γ_k** (slope): Learning rate for skill k
     - **Q-matrix**: [num_items × num_skills] (can be real-valued, not just binary)
     - **Opportunity count**: Number of practice opportunities per skill
-  - **Prediction formula**: 
+  - **Prediction formula**:
     - logit(P(correct)) = Σ_k q_jk × (β_k + γ_k × opp_ik)
     - Linear additive effects across multiple skills per item
   - **Interpretable factors**:
@@ -1120,7 +1169,6 @@ python examples/eval_ikt3.py \
     - l_24: Q-matrix alignment if learned (regularization to cognitive structure)
   - **Success thresholds**: l_21 < 0.15, l_22 < 0.10, l_23 < 0.15, corr > 0.85
   - **Challenge**: Handling multi-skill items requires aggregation mechanism in Head 2
-  
 - **DAS3H** (Deep Adaptive Skill Strength Simulator for Hierarchical):
   - **Parameters**:
     - **θ_ik(t)**: Time-varying skill strength for student i on skill k at time t
@@ -1128,7 +1176,7 @@ python examples/eval_ikt3.py \
     - **Decay rates d_k**: Forgetting rate per skill k
     - **β_j**: Item difficulty
     - **Learning gain Δθ**: Skill strength increase from practice
-  - **Prediction formula**: 
+  - **Prediction formula**:
     - θ_ik(t) = θ_ik(t-1) × e^(-d_k×Δt) + Σ_k' T_kk' × Δθ_k'(success/failure)
     - P(correct) = σ(θ_ik(t) - β_j)
     - Combines IRT-like prediction with temporal dynamics and transfer
@@ -1148,27 +1196,26 @@ python examples/eval_ikt3.py \
 
 **Comparison of Parameter Complexity:**
 
-| Reference Model | Static Parameters | Dynamic Parameters | Alignment Losses | Implementation Complexity |
-|-----------------|-------------------|-------------------|------------------|---------------------------|
-| **IRT** | β (difficulty) | θ (ability) | 3 (l_21, l_22, l_23) | Low |
-| **BKT** | prior, learns, slips, guesses | P(L_t) | 2 (l_21, l_22 opt) | Low-Medium |
-| **DINA** | Q-matrix, slip, guess | α (binary mastery) | 3 (l_21, l_22, l_23 opt) | Medium |
-| **PFA** | β, γ, ρ | m (successes), n (failures) | 4 (l_21, l_22, l_23, l_24 opt) | Medium |
-| **AFM** | β, γ, Q-matrix | opp (opportunities) | 4 (l_21, l_22, l_23, l_24 opt) | Medium-High |
-| **DAS3H** | β, T, d | θ(t) with decay/transfer | 5 (l_21-l_25) | High |
+| Reference Model | Static Parameters             | Dynamic Parameters          | Alignment Losses               | Implementation Complexity |
+| --------------- | ----------------------------- | --------------------------- | ------------------------------ | ------------------------- |
+| **IRT**         | β (difficulty)                | θ (ability)                 | 3 (l_21, l_22, l_23)           | Low                       |
+| **BKT**         | prior, learns, slips, guesses | P(L_t)                      | 2 (l_21, l_22 opt)             | Low-Medium                |
+| **DINA**        | Q-matrix, slip, guess         | α (binary mastery)          | 3 (l_21, l_22, l_23 opt)       | Medium                    |
+| **PFA**         | β, γ, ρ                       | m (successes), n (failures) | 4 (l_21, l_22, l_23, l_24 opt) | Medium                    |
+| **AFM**         | β, γ, Q-matrix                | opp (opportunities)         | 4 (l_21, l_22, l_23, l_24 opt) | Medium-High               |
+| **DAS3H**       | β, T, d                       | θ(t) with decay/transfer    | 5 (l_21-l_25)                  | High                      |
 
 **Research Extensions:**
-- **Hybrid Models**: 
+
+- **Hybrid Models**:
   - Combine IRT difficulty (β) + BKT learning dynamics (P(T), P(S), P(G))
   - Use DINA Q-matrix with continuous skill strengths instead of binary states
   - Parameters: θ, β, Q-matrix, P(T), P(S), P(G)
-  
-- **Multi-Grain Models**: 
+- **Multi-Grain Models**:
   - IRT at item level, BKT at skill level, DAS3H for long-term retention
   - Different reference models at different time scales
   - Parameters: hierarchical with level-specific constraints
-  
-- **Student-Adaptive**: 
+- **Student-Adaptive**:
   - Switch reference model based on learner profile (e.g., DINA for beginners, IRT for advanced)
   - Gating mechanism to select reference model per student
   - Parameters: all reference models + gating weights
@@ -1176,6 +1223,7 @@ python examples/eval_ikt3.py \
 ### Adding New Reference Models
 
 Each new reference model requires:
+
 1. Implement `ReferenceModel` subclass (150-300 lines) - follow IRT example
 2. Create target generation script (adapt `compute_irt_extended_targets.py`)
 3. Add to `REFERENCE_MODELS` registry in `__init__.py`
@@ -1191,11 +1239,11 @@ Each new reference model requires:
 class NewModelReferenceModel(ReferenceModel):
     def __init__(self, num_skills: int):
         super().__init__("NewModel", num_skills)
-    
+
     def load_targets(self, targets_path: str) -> Dict[str, torch.Tensor]:
         # Load pre-computed targets
         pass
-    
+
     def compute_alignment_losses(self, model_outputs, targets, lambda_weights):
         # Compute model-specific losses
         return {
@@ -1203,15 +1251,16 @@ class NewModelReferenceModel(ReferenceModel):
             'l_22_<name>': ...,
             'l_align_total': ...
         }
-    
+
     def get_loss_names(self) -> List[str]:
         return ['l_21_<name>', 'l_22_<name>']
-    
+
     def get_interpretable_factors(self, model_outputs):
         return {'factor1': ..., 'factor2': ...}
 ```
 
 **Registration:**
+
 ```python
 # pykt/reference_models/__init__.py
 from .new_model_reference import NewModelReferenceModel
@@ -1233,21 +1282,22 @@ The architecture has been successfully implemented with full pluggability suppor
 **Implemented Components:**
 
 1. **Abstract Reference Model Interface:** ✅ `pykt/reference_models/base.py`
+
    ```python
    class ReferenceModel(ABC):
        def __init__(self, model_name: str, num_skills: int)
-       
+
        @abstractmethod
        def load_targets(self, targets_path: str) -> Dict[str, torch.Tensor]
-       
+
        @abstractmethod
        def compute_alignment_losses(
            self, model_outputs, targets, lambda_weights
        ) -> Dict[str, torch.Tensor]
-       
+
        @abstractmethod
        def get_loss_names(self) -> List[str]
-       
+
        @abstractmethod
        def get_interpretable_factors(
            self, model_outputs
@@ -1255,6 +1305,7 @@ The architecture has been successfully implemented with full pluggability suppor
    ```
 
 2. **Model-Specific Implementations:**
+
    - ✅ `IRTReferenceModel`: Fully implemented with l_21, l_22, l_23
    - ⏳ `BKTReferenceModel`: Planned (3-6 months)
    - ⏳ `DINAReferenceModel`: Planned (6-12 months)
@@ -1267,6 +1318,7 @@ The architecture has been successfully implemented with full pluggability suppor
    - No conditional logic in core training loop
 
 **Verified Benefits:**
+
 - ✅ **Extensibility**: Can add BKT without touching iKT3 code
 - ✅ **Comparison**: Can A/B test IRT vs future models with same checkpoints
 - ✅ **Maintainability**: Each reference model is self-contained module
@@ -1281,33 +1333,34 @@ The architecture has been successfully implemented with full pluggability suppor
 **Files to Create:**
 
 1. **`pykt/reference_models/base.py`** - Abstract base class
+
    ```python
    from abc import ABC, abstractmethod
-   
+
    class ReferenceModel(ABC):
        """Abstract interface for theoretical reference models"""
-       
+
        def __init__(self, model_name: str, num_skills: int):
            self.model_name = model_name
            self.num_skills = num_skills
-       
+
        @abstractmethod
        def load_targets(self, targets_path: str) -> dict:
            """Load pre-computed reference targets"""
            pass
-       
+
        @abstractmethod
-       def compute_alignment_losses(self, model_outputs: dict, 
-                                     targets: dict, 
+       def compute_alignment_losses(self, model_outputs: dict,
+                                     targets: dict,
                                      lambda_weights: dict) -> dict:
            """Compute alignment losses for this reference model"""
            pass
-       
+
        @abstractmethod
        def get_loss_names(self) -> list:
            """Return list of loss component names"""
            pass
-       
+
        @abstractmethod
        def get_interpretable_factors(self, model_outputs: dict) -> dict:
            """Extract interpretable factors for validation"""
@@ -1315,36 +1368,37 @@ The architecture has been successfully implemented with full pluggability suppor
    ```
 
 2. **`pykt/reference_models/irt_reference.py`** - IRT implementation
+
    ```python
    class IRTReferenceModel(ReferenceModel):
        """Rasch IRT as reference model for construct validity"""
-       
+
        def __init__(self, num_skills: int):
            super().__init__("IRT", num_skills)
-       
+
        def load_targets(self, targets_path: str) -> dict:
            """Load IRT targets with θ_IRT, β_IRT, M_ref"""
            with open(targets_path, 'rb') as f:
                data = pickle.load(f)
            return {
-               'beta_irt': torch.tensor([data['skill_difficulties'][k] 
+               'beta_irt': torch.tensor([data['skill_difficulties'][k]
                                          for k in range(self.num_skills)]),
                'theta_irt': data['student_abilities'],  # dict {uid: θ}
                'm_ref': data['reference_predictions']    # dict {uid: tensor}
            }
-       
+
        def compute_alignment_losses(self, model_outputs, targets, lambda_weights):
            """Compute l_21 (performance), l_22 (difficulty), l_23 (ability)"""
            l_21 = F.binary_cross_entropy(
-               model_outputs['mastery_irt'], 
+               model_outputs['mastery_irt'],
                targets['m_ref']
            )
            l_22 = F.mse_loss(
-               model_outputs['beta_learned'], 
+               model_outputs['beta_learned'],
                targets['beta_irt']
            )
            l_23 = F.mse_loss(
-               model_outputs['theta_learned'], 
+               model_outputs['theta_learned'],
                targets['theta_irt']
            )
            return {
@@ -1353,10 +1407,10 @@ The architecture has been successfully implemented with full pluggability suppor
                'l_23_ability': l_23,
                'l_align_total': l_21 + l_23  # Combined for λ weighting
            }
-       
+
        def get_loss_names(self):
            return ['l_21_performance', 'l_22_difficulty', 'l_23_ability']
-       
+
        def get_interpretable_factors(self, model_outputs):
            return {
                'theta': model_outputs['theta_t'],
@@ -1366,13 +1420,14 @@ The architecture has been successfully implemented with full pluggability suppor
    ```
 
 3. **`pykt/reference_models/bkt_reference.py`** - BKT implementation
+
    ```python
    class BKTReferenceModel(ReferenceModel):
        """Bayesian Knowledge Tracing as reference model"""
-       
+
        def __init__(self, num_skills: int):
            super().__init__("BKT", num_skills)
-       
+
        def load_targets(self, targets_path: str) -> dict:
            """Load BKT targets with P(L_t), parameters"""
            with open(targets_path, 'rb') as f:
@@ -1382,7 +1437,7 @@ The architecture has been successfully implemented with full pluggability suppor
                'bkt_mastery': data['bkt_targets'],    # {uid: P(L_t) trajectories}
                'metadata': data['metadata']
            }
-       
+
        def compute_alignment_losses(self, model_outputs, targets, lambda_weights):
            """
            Compute BKT-specific alignment losses:
@@ -1394,7 +1449,7 @@ The architecture has been successfully implemented with full pluggability suppor
                model_outputs['mastery_bkt'],    # Model's P(L_t) estimate
                targets['bkt_mastery']
            )
-           
+
            # Parameter regularization (if model learns BKT parameters)
            if 'bkt_params_learned' in model_outputs:
                l_22 = self._compute_param_regularization(
@@ -1403,16 +1458,16 @@ The architecture has been successfully implemented with full pluggability suppor
                )
            else:
                l_22 = torch.tensor(0.0)
-           
+
            return {
                'l_21_mastery': l_21,
                'l_22_params': l_22,
                'l_align_total': l_21
            }
-       
+
        def get_loss_names(self):
            return ['l_21_mastery', 'l_22_params']
-       
+
        def get_interpretable_factors(self, model_outputs):
            return {
                'mastery_trajectory': model_outputs['mastery_bkt'],
@@ -1423,16 +1478,17 @@ The architecture has been successfully implemented with full pluggability suppor
    ```
 
 4. **`pykt/reference_models/__init__.py`**
+
    ```python
    from .base import ReferenceModel
    from .irt_reference import IRTReferenceModel
    from .bkt_reference import BKTReferenceModel
-   
+
    REFERENCE_MODELS = {
        'irt': IRTReferenceModel,
        'bkt': BKTReferenceModel
    }
-   
+
    def create_reference_model(model_type: str, num_skills: int) -> ReferenceModel:
        """Factory function for reference models"""
        if model_type not in REFERENCE_MODELS:
@@ -1442,12 +1498,13 @@ The architecture has been successfully implemented with full pluggability suppor
    ```
 
 5. **`examples/compute_reference_targets.py`** - Unified target generation
+
    ```python
    """
    Generate reference model targets for iKT3 training.
    Supports multiple reference models: IRT, BKT, etc.
    """
-   
+
    def compute_irt_targets(dataset, fold, output_path):
        """Generate extended IRT targets"""
        # Load existing rasch_test_iter300.pkl
@@ -1455,14 +1512,14 @@ The architecture has been successfully implemented with full pluggability suppor
        # Generate M_ref = σ(θ_IRT - β_IRT) for each interaction
        # Save to rasch_extended_targets_fold{fold}.pkl
        pass
-   
-   def compute_bkt_targets(dataset, fold, output_path):
+
+   def estimate_bkt_mastery_states(dataset, fold, output_path):
        """Generate BKT targets"""
-       # Use existing compute_bkt_targets.py logic
+       # Use existing train_bkt.py logic
        # Ensure format matches BKTReferenceModel.load_targets()
        # Save to bkt_extended_targets_fold{fold}.pkl
        pass
-   
+
    if __name__ == "__main__":
        parser = argparse.ArgumentParser()
        parser.add_argument('--reference_model', choices=['irt', 'bkt'], required=True)
@@ -1470,17 +1527,18 @@ The architecture has been successfully implemented with full pluggability suppor
        parser.add_argument('--fold', type=int, required=True)
        parser.add_argument('--output_path', required=True)
        args = parser.parse_args()
-       
+
        if args.reference_model == 'irt':
            compute_irt_targets(args.dataset, args.fold, args.output_path)
        elif args.reference_model == 'bkt':
-           compute_bkt_targets(args.dataset, args.fold, args.output_path)
+           estimate_bkt_mastery_states(args.dataset, args.fold, args.output_path)
    ```
 
 **Estimated effort:** 2-3 days
+
 - Design abstract interface
 - Implement IRT reference model
-- Implement BKT reference model  
+- Implement BKT reference model
 - Create unified target generation script
 - Test on ASSIST2015 and ASSIST2009
 
@@ -1491,9 +1549,11 @@ The architecture has been successfully implemented with full pluggability suppor
 **Files to Create:**
 
 1. **`pykt/models/ikt3.py`** - New model class with pluggable reference models
+
    - Copy iKT2 architecture (encoder, heads, embeddings)
    - **Key Design Change**: Make model agnostic to reference model type
    - Modify `__init__()`:
+
      ```python
      def __init__(self, num_c, seq_len, d_model, n_heads, num_encoder_blocks,
                   d_ff, dropout, emb_type, reference_model_type='irt'):
@@ -1503,43 +1563,44 @@ The architecture has been successfully implemented with full pluggability suppor
          """
          super().__init__()
          # ... (same encoder architecture as iKT2)
-         
+
          # Reference model interface (injected via factory)
          self.reference_model = None  # Set via set_reference_model()
          self.reference_model_type = reference_model_type
-         
+
          # Model-specific heads (determined by reference model)
          if reference_model_type == 'irt':
              self._init_irt_heads()
          elif reference_model_type == 'bkt':
              self._init_bkt_heads()
-     
+
      def set_reference_model(self, reference_model: ReferenceModel):
          """Inject reference model dependency"""
          self.reference_model = reference_model
-     
+
      def _init_irt_heads(self):
          """Initialize IRT-specific components"""
          self.ability_encoder = nn.Sequential(...)  # θ extraction
          self.skill_difficulty_emb = nn.Embedding(self.num_c, 1)  # β
-     
+
      def _init_bkt_heads(self):
          """Initialize BKT-specific components"""
          self.mastery_encoder = nn.Sequential(...)  # P(L_t) estimation
          # Optionally: learnable BKT parameters (prior, learns, slips, guesses)
      ```
-   
+
    - **Forward pass**: Adapts to reference model type
+
      ```python
      def forward(self, q, r, qry=None):
          # ... (shared encoder processing)
-         
+
          # Reference-model-specific outputs
          if self.reference_model_type == 'irt':
              return self._forward_irt(h, v, qry)
          elif self.reference_model_type == 'bkt':
              return self._forward_bkt(h, v, qry)
-     
+
      def _forward_irt(self, h, v, qry):
          """IRT-specific forward pass"""
          theta_t = self.ability_encoder(h).squeeze(-1)
@@ -1553,7 +1614,7 @@ The architecture has been successfully implemented with full pluggability suppor
              'beta_learned': self.skill_difficulty_emb.weight.squeeze(),
              ...
          }
-     
+
      def _forward_bkt(self, h, v, qry):
          """BKT-specific forward pass"""
          mastery_bkt = self.mastery_encoder(h)  # Estimate P(L_t)
@@ -1563,15 +1624,16 @@ The architecture has been successfully implemented with full pluggability suppor
              ...
          }
      ```
-   
+
    - **Loss computation**: Delegated to reference model
+
      ```python
      def compute_loss(self, output, targets, ref_targets, lambda_interp, lambda_reg):
          """
          Generic loss computation via reference model interface.
-         
+
          L = (1-λ) × l_bce + c × l_stability + λ × l_align
-         
+
          Args:
              output: model forward() outputs
              targets: [B, L] ground truth responses
@@ -1581,40 +1643,42 @@ The architecture has been successfully implemented with full pluggability suppor
          """
          # Performance loss (always present)
          l_bce = F.binary_cross_entropy_with_logits(output['logits'], targets)
-         
+
          # Reference model specific losses
          if self.reference_model is None:
              raise ValueError("Reference model not set. Call set_reference_model() first.")
-         
+
          alignment_losses = self.reference_model.compute_alignment_losses(
              model_outputs=output,
              targets=ref_targets,
              lambda_weights={'lambda_interp': lambda_interp, 'lambda_reg': lambda_reg}
          )
-         
+
          # Extract stability and alignment components
          l_stability = alignment_losses.get('l_22_difficulty', torch.tensor(0.0))  # IRT
          l_stability = alignment_losses.get('l_22_params', l_stability)              # BKT fallback
          l_align_total = alignment_losses['l_align_total']
-         
+
          # Combined loss
          total_loss = (1 - lambda_interp) * l_bce + lambda_reg * l_stability + lambda_interp * l_align_total
-         
+
          return {
              'total_loss': total_loss,
              'l_bce': l_bce,
              **alignment_losses  # Include all reference-specific losses
          }
      ```
-   
+
    - Add `create_model()` factory function
 
 **Estimated effort:** 3-4 days (increased due to abstraction layer)
 
 2. **`examples/train_ikt3.py`** - Training script with reference model support
+
    - Copy structure from `train_ikt2.py`
    - **Key Addition**: Reference model selection
    - Modify argparse:
+
      ```python
      parser.add_argument('--reference_model', choices=['irt', 'bkt'], required=True,
                         help='Theoretical reference model for alignment')
@@ -1627,37 +1691,40 @@ The architecture has been successfully implemented with full pluggability suppor
      parser.add_argument('--c_stability_reg', type=float, required=True,
                         help='Stability regularization weight (always active)')
      ```
-   
+
    - **Reference model initialization**:
+
      ```python
      from pykt.reference_models import create_reference_model
-     
+
      # Create model
-     model = iKT3(num_c=num_skills, ..., 
+     model = iKT3(num_c=num_skills, ...,
                   reference_model_type=args.reference_model)
-     
+
      # Inject reference model
      ref_model = create_reference_model(args.reference_model, num_skills)
      model.set_reference_model(ref_model)
-     
+
      # Load reference targets
      ref_targets = ref_model.load_targets(args.reference_targets_path)
      ```
-   
+
    - Implement warm-up schedule:
+
      ```python
      def get_lambda_interp(epoch, lambda_target, warmup_epochs):
          return lambda_target * min(1.0, epoch / warmup_epochs)
      ```
-   
+
    - **Training loop**: Pass reference targets to loss computation
+
      ```python
      for batch in train_loader:
          outputs = model(q, r, qry)
-         
+
          # Get lambda for current epoch
          lambda_current = get_lambda_interp(epoch, args.lambda_target, args.warmup_epochs)
-         
+
          # Compute loss with reference model
          loss_dict = model.compute_loss(
              output=outputs,
@@ -1667,12 +1734,13 @@ The architecture has been successfully implemented with full pluggability suppor
              lambda_reg=args.c_stability_reg
          )
      ```
-   
+
    - **Metrics logging**: Track all reference-specific losses dynamically
+
      ```python
      # Get loss names from reference model
      loss_names = ['total_loss', 'l_bce'] + model.reference_model.get_loss_names()
-     
+
      # Log all losses
      for loss_name in loss_names:
          if loss_name in loss_dict:
@@ -1682,45 +1750,48 @@ The architecture has been successfully implemented with full pluggability suppor
 **Estimated effort:** 3-4 days (increased due to reference model integration)
 
 3. **`examples/eval_ikt3.py`** - Evaluation script with reference model support
+
    - Copy from `eval_ikt2.py`
    - Adapt for reference model interface
    - **Load reference model**:
+
      ```python
      ref_model = create_reference_model(config['reference_model'], num_skills)
      model.set_reference_model(ref_model)
      ref_targets = ref_model.load_targets(config['reference_targets_path'])
      ```
-   
+
    - Compute validation metrics dynamically:
+
      ```python
      # Reference-specific metrics
      loss_names = model.reference_model.get_loss_names()
-     
+
      # Compute all losses
-     loss_dict = model.compute_loss(outputs, targets, ref_targets, 
+     loss_dict = model.compute_loss(outputs, targets, ref_targets,
                                      lambda_interp=1.0, lambda_reg=config['c_stability_reg'])
-     
+
      # Extract interpretable factors for validation
      factors = model.reference_model.get_interpretable_factors(outputs)
-     
+
      # Compute correlations (IRT: theta-ability, beta-difficulty; BKT: mastery trajectory)
      if config['reference_model'] == 'irt':
          corr_theta = compute_correlation(factors['theta'], ref_targets['theta_irt'])
          corr_beta = compute_correlation(factors['beta'], ref_targets['beta_irt'])
      elif config['reference_model'] == 'bkt':
-         corr_mastery = compute_correlation(factors['mastery_trajectory'], 
+         corr_mastery = compute_correlation(factors['mastery_trajectory'],
                                             ref_targets['bkt_mastery'])
      ```
-   
+
    - **Success criterion** (reference-model-specific):
      ```python
      if config['reference_model'] == 'irt':
-         success = (loss_dict['l_22_difficulty'] < 0.10 and 
-                   loss_dict['l_23_ability'] < 0.15 and 
-                   loss_dict['l_21_performance'] < 0.15 and 
+         success = (loss_dict['l_22_difficulty'] < 0.10 and
+                   loss_dict['l_23_ability'] < 0.15 and
+                   loss_dict['l_21_performance'] < 0.15 and
                    val_heads_corr > 0.85)
      elif config['reference_model'] == 'bkt':
-         success = (loss_dict['l_21_mastery'] < 0.10 and 
+         success = (loss_dict['l_21_mastery'] < 0.10 and
                    val_heads_corr > 0.85)
      ```
 
@@ -1733,6 +1804,7 @@ The architecture has been successfully implemented with full pluggability suppor
 **Files to Modify:**
 
 1. **`configs/parameter_default.json`**
+
    - Add new section for iKT3 parameters (reference-model-aware):
      ```json
      {
@@ -1751,7 +1823,7 @@ The architecture has been successfully implemented with full pluggability suppor
          "reference_targets_path": "data/assist2015/rasch_extended_targets_fold0.pkl",
          "irt_success_thresholds": {
            "l_21_performance": 0.15,
-           "l_22_difficulty": 0.10,
+           "l_22_difficulty": 0.1,
            "l_23_ability": 0.15,
            "val_heads_corr": 0.85
          }
@@ -1763,7 +1835,7 @@ The architecture has been successfully implemented with full pluggability suppor
          "c_stability_reg": 0.01,
          "reference_targets_path": "data/assist2015/bkt_extended_targets_fold0.pkl",
          "bkt_success_thresholds": {
-           "l_21_mastery": 0.10,
+           "l_21_mastery": 0.1,
            "val_heads_corr": 0.85
          }
        }
@@ -1772,20 +1844,22 @@ The architecture has been successfully implemented with full pluggability suppor
    - Keep existing iKT2 parameters unchanged
 
 2. **`examples/run_repro_experiment.py`**
+
    - Add model type detection for iKT3
    - **Reference model selection logic**:
+
      ```python
      if args.model == 'ikt3':
          # Determine reference model from args or defaults
          ref_model = args.reference_model or defaults['ikt3']['reference_model']
-         
+
          # Load reference-specific defaults
          ref_defaults_key = f'ikt3_{ref_model}'
          if ref_defaults_key in defaults:
              model_defaults = defaults[ref_defaults_key]
          else:
              model_defaults = defaults['ikt3']
-         
+
          # Generate command with reference model params
          cmd_params.extend([
              f"--reference_model {ref_model}",
@@ -1793,23 +1867,27 @@ The architecture has been successfully implemented with full pluggability suppor
              ...
          ])
      ```
+
    - Generate explicit commands with iKT3-specific parameters
    - Update MD5 hash computation to include iKT3 defaults
 
 3. **`examples/experiment_utils.py`**
+
    - Add `load_reference_targets()` utility function:
+
      ```python
      def load_reference_targets(reference_model_type: str, targets_path: str):
          """Load reference model targets via factory"""
          from pykt.reference_models import create_reference_model
-         
+
          # Get num_skills from path or dataset config
          num_skills = extract_num_skills_from_path(targets_path)
-         
+
          # Create reference model and load targets
          ref_model = create_reference_model(reference_model_type, num_skills)
          return ref_model.load_targets(targets_path)
      ```
+
    - Ensure compatibility with existing metric computation
 
 **Estimated effort:** 1-2 days (increased for reference model variants)
@@ -1821,6 +1899,7 @@ The architecture has been successfully implemented with full pluggability suppor
 **Files to Create/Modify:**
 
 1. **`paper/ikt3_architecture.md`** - Architecture documentation
+
    - Copy structure from ikt2_asis.md
    - Document pluggable reference model architecture
    - Explain reference model interface (base class and implementations)
@@ -1833,6 +1912,7 @@ The architecture has been successfully implemented with full pluggability suppor
      - How to add new reference models (extension guide)
 
 2. **`paper/ikt3_validation.md`** - Validation protocol
+
    - Document H1, H2, H3 hypotheses (reference-model-agnostic)
    - Explain success criteria for each reference model:
      - IRT: l_21 < 0.15, l_22 < 0.10, l_23 < 0.15, corr > 0.85
@@ -1841,6 +1921,7 @@ The architecture has been successfully implemented with full pluggability suppor
    - Comparison methodology: IRT-aligned vs BKT-aligned iKT3
 
 3. **`paper/reference_models.md`** - Reference model guide
+
    - How to implement new reference models
    - Interface requirements (ReferenceModel ABC)
    - Examples: IRT and BKT implementations
@@ -1860,16 +1941,19 @@ The architecture has been successfully implemented with full pluggability suppor
 **Tasks:**
 
 1. **Unit Tests:**
+
    - Test iKT3 loss computation with synthetic data
    - Verify warm-up schedule implementation
    - Check gradient flow through all losses
 
 2. **Integration Tests:**
+
    - Run 2-epoch training on ASSIST2015
    - Verify metrics logging (5 losses tracked)
    - Check experiment folder structure
 
 3. **Reproducibility Tests:**
+
    - Launch experiment with run_repro_experiment.py
    - Reproduce from experiment ID
    - Verify config.json integrity (MD5)
@@ -1888,52 +1972,61 @@ The architecture has been successfully implemented with full pluggability suppor
 **Tasks:**
 
 1. **Lambda Sweep (Per Reference Model):**
+
    - **iKT3-IRT**: Run 11 experiments with λ_target ∈ {0.0, 0.1, ..., 1.0}
+
      - Record: val_auc, l_21, l_22, l_23, val_heads_corr
      - Generate Pareto curve: val_auc vs mean_alignment_loss
-   
+
    - **iKT3-BKT**: Run 11 experiments with λ_target ∈ {0.0, 0.1, ..., 1.0}
      - Record: val_auc, l_21_mastery, val_heads_corr
      - Generate Pareto curve: val_auc vs l_21_mastery
 
 2. **Cross-Model Comparison Study:**
+
    - **Baseline Comparison**: iKT2 (internal alignment) vs iKT3-IRT (external alignment)
+
      - Test hypothesis: External IRT alignment improves construct validity
      - Compare: Rasch correlation, factor correlations, interpretability scores
-   
+
    - **Reference Model Comparison**: iKT3-IRT vs iKT3-BKT
+
      - Test hypothesis: Different theoretical groundings lead to different trade-offs
      - Compare Pareto frontiers: which reference model achieves better performance-interpretability balance?
      - Analyze: Do IRT and BKT alignments converge to similar mastery estimates?
-   
+
    - **Three-way Comparison**: iKT2 vs iKT3-IRT vs iKT3-BKT
      - Plot overlaid Pareto curves
      - Identify optimal λ for each variant
      - Document trade-off characteristics
 
 3. **Statistical Validation (Reference-Model-Specific):**
-   
+
    **For iKT3-IRT:**
+
    - Compute correlations:
      - corr(θ_learned, θ_IRT) - ability alignment
      - corr(β_learned, β_IRT) - difficulty alignment
      - corr(M_IRT, M_ref) - prediction alignment
    - Verify construct validity: convergent alignment with psychometric calibration
    - Compare with iKT2's IRT correlations (Kendall τ, Spearman ρ)
-   
+
    **For iKT3-BKT:**
+
    - Compute correlations:
-     - corr(mastery_learned, P(L_t)_BKT) - mastery trajectory alignment
+     - corr(mastery_learned, P(L_t)\_BKT) - mastery trajectory alignment
      - Per-skill learning rate agreement (if applicable)
    - Verify temporal consistency: do learned trajectories follow BKT dynamics?
    - Compare with classical BKT forward inference
-   
+
    **Cross-Validation:**
+
    - Test if iKT3-IRT's mastery estimates correlate with BKT's P(L_t)
    - Test if iKT3-BKT's mastery estimates correlate with IRT's M_ref
    - Hypothesis: Both should agree on high/low mastery states despite different formulations
 
 4. **Qualitative Analysis:**
+
    - **Case Studies**: Select 5-10 students and visualize:
      - IRT: θ_learned trajectory, β_learned values, M_IRT predictions
      - BKT: P(L_t) trajectories, learning rate effects
@@ -1963,7 +2056,7 @@ L(epoch) = (1 - λ(epoch)) × l_bce + c × l_22 + λ(epoch) × (l_21 + l_23)
 
 where:
   λ(epoch) = λ_target × min(1, epoch / warmup_epochs)
-  
+
 Parameters:
   - λ_target: Target interpretability weight (e.g., 0.5)
   - warmup_epochs: Number of epochs to reach λ_target (e.g., 50)
@@ -1971,25 +2064,29 @@ Parameters:
 ```
 
 **Rationale for Single-Phase:**
+
 - **l_22 (difficulty regularization)**: Always active from epoch 0 to maintain β stability
 - **l_21, l_23 (interpretability alignment)**: Gradually introduced via λ warm-up
 - No need for sequential phases since difficulty regularization serves a different purpose (stability vs interpretability)
 - Simpler implementation and easier to analyze for Pareto curves
 
 **Warm-Up Benefits:**
-- **Early epochs (λ ≈ 0)**: 
+
+- **Early epochs (λ ≈ 0)**:
   - Model focuses on predictive performance (l_bce)
   - Difficulty values stay anchored to IRT calibration (c×l_22)
-- **Middle epochs**: 
+- **Middle epochs**:
   - Gradually introduces ability and performance alignment (l_21, l_23)
-- **Late epochs (λ = λ_target)**: 
+- **Late epochs (λ = λ_target)**:
   - Full balance between performance and interpretability
   - Difficulty regularization continues to prevent drift
 
 ### Validation Protocol
 
 **Per-Epoch Validation:**
+
 1. **Compute all metrics** on validation set:
+
    - l_22, l_23, l_21 (alignment losses)
    - val_heads_corr (Pearson correlation between heads)
    - val_auc, val_acc (performance metrics)
@@ -2000,7 +2097,9 @@ Parameters:
    - Observe performance-interpretability trade-off
 
 **Final Validation (After Training):**
+
 1. **Check success criterion**:
+
    ```
    ✅ Valid IRT Constructs ⟺ (l_22 < 0.10) ∧ (l_23 < 0.15) ∧ (l_21 < 0.15) ∧ (val_heads_corr > 0.85)
    ```
@@ -2015,6 +2114,7 @@ Parameters:
 To trace the performance-interpretability trade-off curve:
 
 1. **Run experiments with different λ_target values**:
+
    - λ_target ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
    - Keep all other hyperparameters fixed (c = 0.01, warmup_epochs = 50)
    - Note: Even at λ_target = 0.0, l_22 remains active for difficulty stability
@@ -2022,8 +2122,8 @@ To trace the performance-interpretability trade-off curve:
 2. **For each run, record**:
    - Performance: val_auc, val_acc
    - Interpretability: l_22, l_23, l_21, val_heads_corr
-   
 3. **Plot Pareto curve**:
+
    - X-axis: Mean alignment loss = (l_22 + l_23 + l_21) / 3
    - Y-axis: val_auc
    - Each point represents one λ_target value
@@ -2033,11 +2133,13 @@ To trace the performance-interpretability trade-off curve:
    - Report as: "Model achieves X% AUC with valid IRT constructs (λ = Y)"
 
 **Scientific Justification**:
+
 - **H1 (l_22, l_23)**: Establishes convergent validity—learned factors align with independent psychometric calibration
 - **H2 (l_21)**: Establishes predictive validity—the IRT mechanism is correctly implemented
 - **H3 (val_heads_corr)**: Establishes integration—accuracy and interpretability are compatible
 
 **Why This is Sufficient**:
+
 1. **Construct Validity**: H1 proves the factors are psychometrically grounded
 2. **Functional Validity**: H2 proves the IRT formula works correctly with learned factors
 3. **Architectural Validity**: H3 proves the dual-head design achieves its goals
@@ -2055,14 +2157,16 @@ During iKT3 experiments, we observed paradoxical patterns where alignment metric
 ### Paradox Type 1: Good Individual Alignment, Poor Combined Prediction (Historical)
 
 **Early Experiment Results (30 epochs, λ = 0.30, static IRT):**
+
 - ✅ l_22_difficulty = 0.005 (threshold: 0.10) - Excellent β alignment
-- ✅ l_23_ability = 0.018 (threshold: 0.15) - Excellent θ alignment  
+- ✅ l_23_ability = 0.018 (threshold: 0.15) - Excellent θ alignment
 - ✗ l_21_performance = 9.58 (threshold: 0.15) - **64x over threshold**
 - ✗ Mastery prediction correlation = 0.31 (threshold: 0.85) - Poor
 
 **The Paradox:** How can θ and β individually match IRT values almost perfectly (low MSE), yet their combination through the IRT formula `M_IRT = σ(θ - β)` produces predictions that disagree fundamentally with the reference model?
 
 **Root Cause (Resolved):**
+
 - Insufficient λ warm-up (stopped at 60% of target)
 - Weak β regularization (c = 0.01 too low)
 - Static IRT targets allowing scale drift
@@ -2070,6 +2174,7 @@ During iKT3 experiments, we observed paradoxical patterns where alignment metric
 ### Paradox Type 2: Poor Alignment Despite Training (Current - Dec 7, 2025)
 
 **Recent Experiment Results (Exp 686759, 30 epochs, λ_target=0.5, dynamic IRT):**
+
 - ✅ Scale collapse SOLVED: θ_std = 4.03 (vs 0.14 baseline, +2806%)
 - ✅ Individual differences learned: θ range = 29.6 units
 - ✅ Decent prediction: Test AUC = 0.7202 (model learns to predict)
@@ -2081,29 +2186,32 @@ During iKT3 experiments, we observed paradoxical patterns where alignment metric
 
 **Critical Evidence - Baseline Comparison:**
 
-| Metric | Dynamic (λ≈0.15) | Baseline (λ≈0.07) | Analysis |
-|--------|------------------|-------------------|----------|
-| l_21 | 4.058 | 4.574 | Both FAIL (>27× threshold) |
-| l_22 | 0.144 | 0.033 | Dynamic 4.4× worse |
-| l_23 | 6.792 | 0.223 | Different targets (dynamic vs static) |
-| AUC | 0.7202 | 0.7182 | Minimal difference (+0.29%) |
+| Metric | Dynamic (λ≈0.15) | Baseline (λ≈0.07) | Analysis                              |
+| ------ | ---------------- | ----------------- | ------------------------------------- |
+| l_21   | 4.058            | 4.574             | Both FAIL (>27× threshold)            |
+| l_22   | 0.144            | 0.033             | Dynamic 4.4× worse                    |
+| l_23   | 6.792            | 0.223             | Different targets (dynamic vs static) |
+| AUC    | 0.7202           | 0.7182            | Minimal difference (+0.29%)           |
 
 **Key Insight:** Even baseline with LOWER λ=0.07 has l_21=4.57. This proves the problem is NOT lambda being too high - it's that **IRT alignment and prediction performance are fundamentally incompatible objectives for this dataset**.
 
 **Root Cause Analysis:**
 
 1. **IRT formula doesn't fit the data:**
-   - l_21 measures BCE(σ(θ - β), M_ref) 
+
+   - l_21 measures BCE(σ(θ - β), M_ref)
    - High l_21 = 4.06 means learned IRT formula predictions don't match M_ref
    - This occurs with BOTH λ=0.15 and λ=0.07, suggesting structural issue
    - Model finds better predictive patterns than IRT's simple θ - β subtraction
 
 2. **M_ref targets may be unreliable:**
+
    - M_ref computed from external IRT calibration on training data
    - If IRT assumptions don't hold (constant ability, unidimensional skills, no learning), M_ref is noisy/wrong
    - Model correctly ignores bad targets in favor of actual response patterns
 
 3. **β learning depends on IRT compatibility:**
+
    - With λ=0.07 (baseline): l_22 = 0.033 (good β alignment)
    - With λ=0.15 (dynamic): l_22 = 0.144 (poor β alignment)
    - Higher λ forces model to satisfy incompatible IRT formula, breaking β learning
@@ -2119,6 +2227,7 @@ During iKT3 experiments, we observed paradoxical patterns where alignment metric
 The paradox arises from **uncoordinated factor learning** where:
 
 1. **Low MSE ≠ Correct Combination**
+
    - MSE measures point-wise distance: `||θ_learned - θ_IRT||²`
    - But IRT predictions depend on **subtraction**: `θ - β`
    - Small individual errors compound during subtraction if they have opposite signs
@@ -2127,12 +2236,14 @@ The paradox arises from **uncoordinated factor learning** where:
      - But (θ_learned - β_learned) = (θ_IRT - β_IRT) + 0.2 (20% error)
 
 2. **Sigmoid Amplification**
+
    - The sigmoid function σ(x) is highly sensitive around x = 0 (decision boundary)
    - Small changes in (θ - β) near 0 cause large changes in predictions
    - BCE loss exponentially penalizes these prediction differences
    - This explains why l_21 can be orders of magnitude higher than l_22 + l_23
 
 3. **Insufficient λ Weight**
+
    - Training stopped at epoch 30, λ only reached 0.30 (60% of warm-up)
    - l_21 contributed only 0.30 × 9.58 = 2.87 to total loss
    - l_bce contributed much more with stronger gradient signal
@@ -2146,6 +2257,7 @@ The paradox arises from **uncoordinated factor learning** where:
 ### Correlation as Diagnostic Tool
 
 To diagnose whether high l_21 is due to:
+
 - **Scale/offset mismatch** (fixable with more training), or
 - **Fundamental disagreement** (requires architectural investigation)
 
@@ -2164,13 +2276,14 @@ correlation, _ = pearsonr(mastery_irt_clean, mastery_ref_clean)
 
 **Interpretation:**
 
-| Correlation | BCE Loss | Diagnosis | Prognosis |
-|-------------|----------|-----------|-----------|
-| > 0.85 | High | Scale/offset mismatch | ✅ Fixable with more training |
-| 0.5 - 0.85 | High | Partial alignment | ⚠️ Needs longer training + stronger c |
-| < 0.5 | High | Fundamental disagreement | ✗ Architectural issue |
+| Correlation | BCE Loss | Diagnosis                | Prognosis                             |
+| ----------- | -------- | ------------------------ | ------------------------------------- |
+| > 0.85      | High     | Scale/offset mismatch    | ✅ Fixable with more training         |
+| 0.5 - 0.85  | High     | Partial alignment        | ⚠️ Needs longer training + stronger c |
+| < 0.5       | High     | Fundamental disagreement | ✗ Architectural issue                 |
 
 **Experiment 290365 Results:**
+
 - Pearson correlation: **0.31** (poor)
 - Spearman correlation: **0.49** (moderate rank preservation)
 - Diagnosis: **Fundamental disagreement** - not a simple scaling issue
@@ -2178,21 +2291,25 @@ correlation, _ = pearsonr(mastery_irt_clean, mastery_ref_clean)
 ### Why Low Correlation Indicates Architectural Problems
 
 **High correlation + High BCE:**
+
 ```
 Model:     [0.2, 0.4, 0.6, 0.8]
 Reference: [0.3, 0.5, 0.7, 0.9]
 Correlation: 1.0 (perfect ordering)
 BCE: High (consistent 0.1 offset)
 ```
+
 → Model understands relative difficulty/ability correctly, just needs calibration
 
 **Low correlation + High BCE:**
+
 ```
 Model:     [0.2, 0.8, 0.3, 0.7]
 Reference: [0.9, 0.3, 0.7, 0.4]
 Correlation: Low (opposite orderings)
 BCE: High (fundamentally wrong)
 ```
+
 → Model learned different patterns than IRT expects - lack of construct validity
 
 ### Recommended Actions (Revised - Dec 7, 2025)
@@ -2201,6 +2318,7 @@ BCE: High (fundamentally wrong)
 
 **The Fundamental Dilemma:**
 Evidence shows IRT alignment and prediction performance are **incompatible** for this dataset:
+
 - Baseline (λ=0.07): Good β (l_22=0.033), poor predictions (l_21=4.57), low AUC (0.718)
 - Dynamic (λ=0.15): Worse β (l_22=0.144), poor predictions (l_21=4.06), marginal AUC gain (0.720)
 - Both configurations: Model learns predictive features that disagree with IRT
@@ -2216,12 +2334,14 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
 **Action:** Reduce λ_target from 0.5 to 0.0 (remove alignment entirely)
 
 **Rationale:**
+
 - IRT formula doesn't fit this dataset (l_21=4+ regardless of λ)
 - M_ref targets are unreliable (computed from incompatible IRT model)
 - Forcing alignment breaks β learning and hurts performance
 - Better to learn predictive θ/β even if not IRT-scale
 
 **Expected Outcome:**
+
 - ✅ Test AUC: 0.720 → ≥0.73 (competitive with simpleKT)
 - ✅ l_22: 0.144 → <0.05 (proper β learning restored)
 - ❌ l_21, l_23: Will increase (no longer optimized)
@@ -2242,21 +2362,25 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
 **Investigation Results:**
 
 1. **M_ref Target Quality: ❌ POOR**
+
    ```bash
    python tmp/validate_irt_quick.py
    ```
+
    **Results:**
+
    - Pearson correlation: **0.1922** (should be > 0.7)
    - AUC: **0.6274** (should be > 0.75)
    - MAE: **0.3588** (high calibration error)
-   
+
    **Diagnosis:** IRT reference predictions M_ref do NOT correlate with actual student responses. The Rasch model σ(θ - β) fundamentally does not fit the ASSIST2015 dataset.
-   
+
    **Implication:** l_21 = BCE(M_IRT, M_ref) forces the model to match **bad targets**. Even with perfect alignment, the model would perform poorly because M_ref itself is wrong
 
 **Required Actions to Fix:**
 
 2. **Recalibrate IRT from Scratch:**
+
    - Current IRT calibration produced correlation=0.19 with ground truth
    - May have convergence issues or incorrect implementation
    - Try longer calibration (more iterations)
@@ -2264,12 +2388,14 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
    - Check if skill difficulties β are reasonable
 
 3. **Test Rasch Assumptions:**
+
    - **Unidimensionality**: Single ability dimension may be insufficient
    - **Constant ability**: Students learn during sequences (violates Rasch)
    - **Local independence**: May have dependencies between consecutive items
    - If assumptions violated, Rasch model inappropriate
 
 4. **Try More Flexible IRT Models:**
+
    - **2PL**: M = σ(α × (θ - β)) with discrimination parameters α
    - **3PL**: Adds guessing parameter
    - **Multidimensional IRT**: Multiple ability dimensions
@@ -2282,12 +2408,14 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
    - May have better predictive validity than IRT
 
 **Expected Outcome if Investigations Succeed:**
+
 - ✅ M_ref correlation > 0.7 (valid reference targets)
 - ✅ l_21, l_22, l_23 decrease below thresholds
 - ✅ True IRT-scale interpretability
 - ❌ Test AUC likely 0.65-0.70 (lower than performance-first)
 
 **Expected Outcome if IRT Fundamentally Incompatible:**
+
 - ❌ Cannot fix correlation (dataset violates Rasch assumptions)
 - ❌ Need to abandon IRT and try different model
 - → Switch to Path A (performance-first) or use non-IRT reference
@@ -2306,16 +2434,17 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
 
 **Experimental Results (λ=0.05 vs λ=0.5):**
 
-| Metric | λ=0.05 (Exp 322419) | λ=0.5 (Exp 686759) | Change |
-|--------|---------------------|--------------------:|--------|
-| **Best Epoch** | 7 | 15 | Earlier convergence |
-| **Actual λ at best** | 0.007 | 0.15 | 21× lower |
-| **Test AUC** | 0.7204 | 0.7202 | **+0.02 pp** |
-| **l_21 (performance)** | 4.225 | 4.058 | **+4.1% WORSE** |
-| **l_22 (difficulty)** | 0.028 | 0.144 | **-80.9% BETTER** ✅ |
-| **l_23 (ability)** | 6.929 | 6.792 | **+2.0% WORSE** |
+| Metric                 | λ=0.05 (Exp 322419) | λ=0.5 (Exp 686759) | Change               |
+| ---------------------- | ------------------- | -----------------: | -------------------- |
+| **Best Epoch**         | 7                   |                 15 | Earlier convergence  |
+| **Actual λ at best**   | 0.007               |               0.15 | 21× lower            |
+| **Test AUC**           | 0.7204              |             0.7202 | **+0.02 pp**         |
+| **l_21 (performance)** | 4.225               |              4.058 | **+4.1% WORSE**      |
+| **l_22 (difficulty)**  | 0.028               |              0.144 | **-80.9% BETTER** ✅ |
+| **l_23 (ability)**     | 6.929               |              6.792 | **+2.0% WORSE**      |
 
 **Key Findings:**
+
 1. **Performance Impact:** Essentially neutral (+0.02 pp, negligible)
 2. **Alignment Failures Persist:**
    - l_21: STILL FAILS (4.22 vs 4.06) - IRT incompatibility unchanged
@@ -2324,12 +2453,14 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
 3. **Critical Insight:** Lower λ dramatically improves β learning (l_22) but **cannot fix l_21 or l_23**
 
 **Why this confirms IRT incompatibility:**
+
 - l_21 remains 28× over threshold at λ=0.007 (same as λ=0.15)
 - IRT formula σ(θ - β) fundamentally disagrees with dataset patterns
 - Lambda tuning only shifts **which component breaks**, not whether alignment succeeds
 - Trade-off is not smooth: either β learning OR IRT alignment, not both
 
 **Conclusion:**
+
 - ❌ Lambda reduction does NOT solve fundamental IRT incompatibility
 - ✅ Confirms β learning improves with lower λ (0.028 vs 0.144)
 - ✅ Validates hypothesis: performance and alignment are incompatible for this dataset
@@ -2342,21 +2473,25 @@ Evidence shows IRT alignment and prediction performance are **incompatible** for
 **Action:** Implement individual lambda weights
 
 **Current Loss:**
+
 ```python
 L = (1-λ) × l_bce + c × l_22 + λ × (l_21 + l_23)
 ```
 
 **Proposed Loss:**
+
 ```python
 L = (1-λ_pred) × l_bce + c × l_22 + λ_21 × l_21 + λ_23 × l_23
 ```
 
 **Recommended Weights:**
+
 - λ_21 = 0.1 (performance alignment - moderate, magnitude ~4)
 - c = 0.01 (difficulty regularization - always active)
 - λ_23 = 0.01-0.02 (ability alignment - very low due to high magnitude ~7)
 
 **Rationale:**
+
 - Fine-grained control over each loss component
 - Accounts for different loss magnitudes
 - Prevents any single loss from dominating
@@ -2394,6 +2529,7 @@ L = (1-λ_pred) × l_bce + c × l_22 + λ_21 × l_21 + λ_23 × l_23
 
 **Implementation:**
 In `examples/train_ikt3.py`, add to validation:
+
 ```python
 from scipy.stats import pearsonr
 
@@ -2406,7 +2542,8 @@ corr, _ = pearsonr(mastery_irt[valid_mask], mastery_ref[valid_mask])
 metrics_dict['val_mastery_corr'] = corr
 ```
 
-**Success Criterion:** 
+**Success Criterion:**
+
 - Correlation > 0.85: Excellent alignment (scale/offset issue only)
 - Correlation 0.5-0.85: Partial alignment (needs tuning)
 - Correlation < 0.5: Fundamental disagreement (architectural issue)
@@ -2425,12 +2562,14 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 ```
 
 **Rationale:**
+
 - θ values still computed for interpretability (not aligned to IRT)
 - β values anchored to IRT (for theoretical grounding)
 - Performance predictions aligned to IRT (for accuracy)
 - No forcing θ to match IRT trajectories (which may be noisy)
 
 **Trade-off:**
+
 - ✅ Better performance (no high-magnitude l_23 interference)
 - ✅ Simpler optimization (one less loss component)
 - ❌ Less theoretically grounded (θ not guaranteed to match IRT scale)
@@ -2440,27 +2579,28 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 
 **Critical Finding:** IRT alignment and prediction performance are **fundamentally incompatible** for ASSIST2015 dataset. Evidence:
 
-| Evidence | Finding |
-|----------|---------|
-| l_21 @ λ=0.07 | 4.574 (27× over threshold) |
-| l_21 @ λ=0.15 | 4.058 (27× over threshold) |
-| Interpretation | IRT formula doesn't fit data regardless of λ |
-| l_22 improvement | 0.033 → 0.144 (worse with higher λ) |
-| Conclusion | Higher λ breaks learning, doesn't fix alignment |
+| Evidence         | Finding                                         |
+| ---------------- | ----------------------------------------------- |
+| l_21 @ λ=0.07    | 4.574 (27× over threshold)                      |
+| l_21 @ λ=0.15    | 4.058 (27× over threshold)                      |
+| Interpretation   | IRT formula doesn't fit data regardless of λ    |
+| l_22 improvement | 0.033 → 0.144 (worse with higher λ)             |
+| Conclusion       | Higher λ breaks learning, doesn't fix alignment |
 
 **Two Valid Paths Forward:**
 
-| Aspect | Path A: Performance-First | Path B: Alignment-First |
-|--------|---------------------------|-------------------------|
-| **Philosophy** | Prediction > Theory | Theory > Prediction |
-| **Action** | Set λ=0.0, remove IRT alignment | Investigate IRT incompatibility |
-| **AUC Expected** | ≥0.73 (competitive) | 0.65-0.70 (acceptable) |
-| **Alignment** | Poor (but irrelevant) | Good (if investigations succeed) |
-| **Interpretability** | Features, not IRT-scale | True IRT parameters |
-| **Paper Focus** | ML performance | Educational theory |
-| **Risk** | No theory grounding | Never competitive performance |
+| Aspect               | Path A: Performance-First       | Path B: Alignment-First          |
+| -------------------- | ------------------------------- | -------------------------------- |
+| **Philosophy**       | Prediction > Theory             | Theory > Prediction              |
+| **Action**           | Set λ=0.0, remove IRT alignment | Investigate IRT incompatibility  |
+| **AUC Expected**     | ≥0.73 (competitive)             | 0.65-0.70 (acceptable)           |
+| **Alignment**        | Poor (but irrelevant)           | Good (if investigations succeed) |
+| **Interpretability** | Features, not IRT-scale         | True IRT parameters              |
+| **Paper Focus**      | ML performance                  | Educational theory               |
+| **Risk**             | No theory grounding             | Never competitive performance    |
 
 **Recommendation:**
+
 1. **For ML/performance paper:** Choose Path A (λ=0.0)
 2. **For educational theory paper:** Choose Path B (investigate + fix IRT)
 3. **Middle ground:** Path A + document learned factors correlate with IRT (even if not same scale)
@@ -2468,6 +2608,7 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 ### Deprecated Approaches (Tested & Rejected)
 
 **Phase 1 (λ_target=0.05):** ✅ Tested, ❌ Does not solve problem
+
 - **Hypothesis:** λ too high causing alignment failures
 - **Test:** Exp 322419 with λ_target=0.05 (actual λ=0.007 at best epoch)
 - **Results:**
@@ -2479,6 +2620,7 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 - **Recommendation:** Choose Path A (λ=0.0) or Path B (fix IRT), not intermediate λ values
 
 **Phase 2 (Separate λ components):** ⚠️ Won't solve fundamental issue
+
 - Fine-tuning weights can't fix incompatible objectives
 - If IRT formula doesn't fit data, no weight balancing helps
 - Only useful after choosing Path B and fixing IRT compatibility
@@ -2488,14 +2630,15 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 
 **Experimental Results:**
 
-| Experiment | λ_target | Actual λ | Best Epoch | Test AUC | l_21 | l_22 | l_23 | Interpretation |
-|------------|----------|----------|------------|----------|------|------|------|----------------|
-| 161656 (static) | 0.5 | 0.07 | 7 | 0.7182 | 4.574 | 0.033 | 0.223 | Baseline: Low λ, good β, collapsed θ |
-| 686759 (dynamic) | 0.5 | 0.15 | 15 | 0.7202 | 4.058 | 0.144 | 6.792 | Higher λ: breaks β, high l_23 |
-| **322419 (Phase 1)** | **0.05** | **0.007** | **7** | **0.7204** | **4.225** | **0.028** | **6.929** | **Lowest λ: PASSES l_22, FAILS l_21/l_23** |
-| simpleKT | N/A | N/A | N/A | 0.7248 | N/A | N/A | N/A | No IRT constraint, pure performance |
+| Experiment           | λ_target | Actual λ  | Best Epoch | Test AUC   | l_21      | l_22      | l_23      | Interpretation                             |
+| -------------------- | -------- | --------- | ---------- | ---------- | --------- | --------- | --------- | ------------------------------------------ |
+| 161656 (static)      | 0.5      | 0.07      | 7          | 0.7182     | 4.574     | 0.033     | 0.223     | Baseline: Low λ, good β, collapsed θ       |
+| 686759 (dynamic)     | 0.5      | 0.15      | 15         | 0.7202     | 4.058     | 0.144     | 6.792     | Higher λ: breaks β, high l_23              |
+| **322419 (Phase 1)** | **0.05** | **0.007** | **7**      | **0.7204** | **4.225** | **0.028** | **6.929** | **Lowest λ: PASSES l_22, FAILS l_21/l_23** |
+| simpleKT             | N/A      | N/A       | N/A        | 0.7248     | N/A       | N/A       | N/A       | No IRT constraint, pure performance        |
 
 **Key Insights:**
+
 1. **AUC essentially constant** (0.7182 → 0.7204) across λ ∈ [0.007, 0.15] - IRT alignment doesn't improve performance
 2. **l_21 always fails** (4.0-4.6) regardless of λ - IRT formula incompatible with dataset
 3. **l_22 inversely related to λ** - Higher λ breaks β learning (0.028 @ λ=0.007 → 0.144 @ λ=0.15)
@@ -2507,61 +2650,70 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 1. **Dynamic IRT solves scale collapse** - time-varying trajectories force individual differences (θ_std: 0.14 → 4.03)
 
 2. **Reference model compatibility is NOT guaranteed** - IRT assumptions may not hold for dataset:
+
    - l_21 ≈ 4.0-4.6 across λ ∈ [0.007, 0.15] (tested at 3 values)
    - IRT formula σ(θ - β) fundamentally disagrees with observed patterns
    - Must validate reference model predictions against ground truth BEFORE training
    - **Evidence:** Exp 322419 (λ=0.007) still has l_21=4.225, proving incompatibility persists even at minimal IRT weight
 
 3. **Lambda tuning cannot fix incompatible objectives:**
+
    - If reference model is wrong, no λ value will achieve both performance and alignment
    - Higher λ (0.15) breaks β learning (l_22=0.144) without improving IRT fit
    - Lower λ (0.007) maintains β (l_22=0.028) but still fails IRT alignment (l_21=4.225, l_23=6.929)
    - **Validated by Exp 322419:** Reducing λ by 21× (0.15 → 0.007) improves l_22 by 81% but leaves l_21/l_23 unchanged
 
 4. **Trade-off is binary, not smooth:**
+
    - Can have good β learning (l_22 < 0.10) OR high IRT weight (λ > 0.05), not both
    - AUC remains constant (~0.72) across all λ values tested - IRT alignment neither helps nor severely hurts prediction
    - Must choose: performance-first (λ=0.0) or alignment-first (fix IRT + accept lower AUC)
 
 5. **Validation protocol for reference models:**
+
    - Before implementing alignment losses, validate reference predictions correlate with ground truth
    - Check alignment losses at λ=0 (forward pass only) to detect incompatibility early
    - If baseline l_21 > 1.0 or l_23 > 1.0, investigate reference model before training
    - Early detection prevents wasted compute on incompatible objectives
 
 6. **β regularization works independently:**
+
    - l_22 responds correctly to λ changes (0.028 @ λ=0.007 vs 0.144 @ λ=0.15)
    - Difficulty regularization is separable from performance/ability alignment
    - Can maintain β stability even when abandoning IRT alignment (Path A feasible)
 
 7. **Performance ceiling without IRT:**
+
    - simpleKT achieves 0.7248 with no IRT constraints
    - iKT3 with IRT alignment stuck at 0.7202-0.7204
    - Gap (~0.004-0.005) suggests IRT constraints slightly harmful, not beneficial
    - To match simpleKT, must remove IRT alignment entirely (Path A)
    - Must choose: optimize for performance OR alignment, not both
 
-4. **Alignment losses reveal model compatibility:**
+8. **Alignment losses reveal model compatibility:**
+
    - l_21 measures if learned IRT formula matches reference predictions
    - High l_21 (>4) = reference model incompatible with dataset
    - l_22 measures if learned β matches reference difficulties
    - l_22 degradation (0.033 → 0.144) = higher λ forces incompatible alignment
 
-5. **Performance-interpretability trade-off may be BINARY:**
+9. **Performance-interpretability trade-off may be BINARY:**
+
    - Not a smooth Pareto curve with tunable λ
    - Either: competitive performance (AUC ≥0.73) with weak/no alignment
    - Or: strong alignment (l_21, l_22, l_23 < thresholds) with poor performance (AUC ~0.65)
    - Middle ground (λ=0.15) achieves neither
 
-6. **Theory-grounding requires compatible theory:**
-   - Can't force IRT consistency if IRT doesn't describe the data
-   - Better to learn predictive factors and validate they correlate with theory
-   - Than to optimize for alignment with wrong theoretical model
+10. **Theory-grounding requires compatible theory:**
 
-7. **Start with reference model validation, not training:**
-   - Before implementing iKT architecture, validate IRT predictions match student responses
-   - If M_ref has poor correlation with actual data, fix reference model first
-   - Architecture cannot compensate for incompatible theoretical foundation
+    - Can't force IRT consistency if IRT doesn't describe the data
+    - Better to learn predictive factors and validate they correlate with theory
+    - Than to optimize for alignment with wrong theoretical model
+
+11. **Start with reference model validation, not training:**
+    - Before implementing iKT architecture, validate IRT predictions match student responses
+    - If M_ref has poor correlation with actual data, fix reference model first
+    - Architecture cannot compensate for incompatible theoretical foundation
 
 ### Updated Diagnostic Protocol
 
@@ -2572,6 +2724,7 @@ L = (1-λ) × l_bce + c × l_22 + λ × l_21
 **Check:** Does l_21 remain high (>1.0) across multiple λ values?
 
 **Diagnostic:**
+
 ```python
 # Compare l_21 across experiments with different λ
 if l_21_at_low_lambda > 2.0 and l_21_at_high_lambda > 2.0:
@@ -2579,11 +2732,13 @@ if l_21_at_low_lambda > 2.0 and l_21_at_high_lambda > 2.0:
 ```
 
 **Evidence in our experiments:**
+
 - λ=0.07: l_21 = 4.57
 - λ=0.15: l_21 = 4.06
 - Conclusion: IRT incompatible regardless of λ
 
 **Action if incompatible:**
+
 - Path A: Remove alignment losses, focus on performance
 - Path B: Investigate reference model (validate M_ref, try different formula, use different theory)
 
@@ -2592,6 +2747,7 @@ if l_21_at_low_lambda > 2.0 and l_21_at_high_lambda > 2.0:
 **Check:** Compare l_21, l_22, l_23 as λ increases
 
 **Diagnostic:**
+
 ```python
 if l_21_increases_with_lambda or l_22_increases_with_lambda:
     print("Higher λ makes alignment WORSE - model being forced into bad optimum")
@@ -2600,10 +2756,12 @@ else:
 ```
 
 **Evidence in our experiments:**
+
 - λ=0.07 → λ=0.15: l_21 improved (4.57 → 4.06), l_22 degraded (0.033 → 0.144)
 - Conclusion: Mixed signal, but β learning clearly harmed
 
 **Action if degradation:**
+
 - Higher λ is counterproductive
 - Choose Path A (remove alignment) or Path B (fix reference model first)
 
@@ -2612,6 +2770,7 @@ else:
 **Check:** θ_std > 0.5 and θ range > 2.0
 
 **Diagnostic:**
+
 ```python
 if theta_std < 0.5:
     print("Scale collapse - model learning constant ability")
@@ -2620,11 +2779,13 @@ elif theta_std > 2.0:
 ```
 
 **Evidence in our experiments:**
+
 - Static IRT: θ_std = 0.14 (collapsed)
 - Dynamic IRT: θ_std = 4.03 (healthy)
 - Conclusion: Dynamic IRT solved this problem
 
 **Action if collapsed:**
+
 - Switch to dynamic IRT targets (time-varying θ)
 - Or add scale regularization pipeline
 
@@ -2633,6 +2794,7 @@ elif theta_std > 2.0:
 **Check:** l_22 < 0.10
 
 **Diagnostic:**
+
 ```python
 if l_22 > 0.10:
     print("β embeddings not matching IRT difficulties")
@@ -2641,6 +2803,7 @@ if l_22 > 0.10:
 ```
 
 **Evidence in our experiments:**
+
 - λ=0.07: l_22 = 0.033 (excellent)
 - λ=0.15: l_22 = 0.144 (poor, 4.4× worse)
 - Conclusion: Higher λ breaks β learning
@@ -2650,6 +2813,7 @@ if l_22 > 0.10:
 **Check:** Compare AUC to baselines without IRT constraints
 
 **Diagnostic:**
+
 ```python
 if auc < baseline_without_irt:
     print("IRT constraints hurting performance")
@@ -2657,6 +2821,7 @@ if auc < baseline_without_irt:
 ```
 
 **Evidence in our experiments:**
+
 - iKT3 (λ=0.15): AUC = 0.7202
 - simpleKT (no IRT): AUC = 0.7248
 - Conclusion: IRT constraints slightly hurt performance
@@ -2712,12 +2877,14 @@ This protocol identifies **structural incompatibility** before attempting parame
 ### Experiment Results (Dec 7, 2025)
 
 **Static IRT Baseline (Experiment 161656):**
+
 - Test AUC: 0.7182, Accuracy: 0.7473
 - **Scale collapse detected:** θ_std = 0.14 (94% deflation vs target 2.5)
 - Configuration: λ_target=0.5, warmup_epochs=50, training_epochs=30
 - Actual λ at best epoch (7): 0.07
 
 **Dynamic IRT (Experiment 686759):**
+
 - Test AUC: 0.7202 (+0.29%), Accuracy: 0.7472 (equivalent)
 - **Scale collapse SOLVED:** θ_std = 4.03 (healthy, +2806% improvement)
 - Configuration: λ_target=0.5, warmup_epochs=50, training_epochs=30
@@ -2729,6 +2896,7 @@ Dynamic time-varying θ trajectories naturally prevent scale collapse by forcing
 ### Performance Problem: Lambda Weight Too High
 
 Despite solving scale collapse, **both experiments achieve below state-of-the-art performance:**
+
 - iKT3 Dynamic: 0.7202 AUC
 - simpleKT: 0.7248 AUC (baseline single-block)
 - GainAKT2: 0.7224 AUC (tuned)
@@ -2737,30 +2905,33 @@ Despite solving scale collapse, **both experiments achieve below state-of-the-ar
 **Root Cause Analysis:**
 
 Test loss breakdown (Dynamic IRT, experiment 686759):
+
 - l_bce: ~0.5 (reasonable)
 - l_21 (performance alignment): 4.058 (high, but improved vs baseline 4.574)
 - **l_22 (difficulty alignment): 0.144** (catastrophic, 338% worse than baseline 0.033)
 - l_23 (ability alignment): 6.792 (30× higher than baseline - expected for dynamic trajectories)
 
 **Critical Issue:** Even with adaptive λ schedule, l_23 dominates the combined loss:
+
 - At best epoch (15): λ=0.15, so alignment weight = 0.15 × (4.058 + 0.144 + 6.792) = 1.66
 - But l_23 alone contributes: 0.15 × 6.792 = 1.02 to total loss
 - Meanwhile l_bce contributes: 0.85 × 0.5 = 0.425
 - **Result:** Model optimizes θ matching at the expense of β (difficulty) and predictions
 
 **Lambda Schedule Implementation (Already Active):**
+
 ```python
 λ(t) = λ_target × min(1, epoch / warmup_epochs)
 ```
 
 Progression for current config (λ_target=0.5, warmup=50, epochs=30):
 
-| Epoch | λ(t) | BCE Weight | IRT Weight | Status |
-|-------|------|------------|------------|--------|
-| 1     | 0.01 | 99%        | 1%         |        |
-| 5     | 0.05 | 95%        | 5%         |        |
-| 10    | 0.10 | 90%        | 10%        |        |
-| 15    | 0.15 | 85%        | 15%        | ← Best |
+| Epoch | λ(t) | BCE Weight | IRT Weight | Status  |
+| ----- | ---- | ---------- | ---------- | ------- |
+| 1     | 0.01 | 99%        | 1%         |         |
+| 5     | 0.05 | 95%        | 5%         |         |
+| 10    | 0.10 | 90%        | 10%        |         |
+| 15    | 0.15 | 85%        | 15%        | ← Best  |
 | 30    | 0.30 | 70%        | 30%        | ← Final |
 
 **The problem:** Even λ=0.15 is too high because l_23 (dynamic trajectory matching) has huge magnitude (6.79) compared to l_bce (0.5), causing IRT alignment to dominate despite the 85%/15% weight split.
@@ -2768,6 +2939,7 @@ Progression for current config (λ_target=0.5, warmup=50, epochs=30):
 ### Revised Approach
 
 **Phase 1: Reduce λ_target (Immediate Test)**
+
 - Try λ_target = 0.05 or 0.1 (currently 0.5)
 - At epoch 15: λ = 0.03 or 0.06 (vs current 0.15)
 - Expected: Better β learning (lower l_22), improved predictions
@@ -2775,17 +2947,20 @@ Progression for current config (λ_target=0.5, warmup=50, epochs=30):
 
 **Phase 2: Separate Lambda Components (Better Control)**
 Instead of single λ for all alignment losses:
+
 ```python
 L = (1-λ_pred) × l_bce + c × l_22 + λ_21 × l_21 + λ_23 × l_23
 ```
 
 Recommended weights:
+
 - λ_21 = 0.1 (performance alignment - moderate)
 - c = 0.01 (difficulty regularization - always active)
 - λ_23 = 0.01-0.02 (ability alignment - very low due to high magnitude)
 - Result: Better control over each loss component
 
 **Phase 3: Consider Removing l_23 Entirely (Radical)**
+
 - Use only l_21 + c×l_22 (no θ alignment)
 - Rationale: If l_23 hurts more than it helps, why include it?
 - θ values still computed for interpretability, just not aligned to IRT
@@ -2796,11 +2971,9 @@ Recommended weights:
 1. **Immediate:** Test λ_target = 0.05 with current setup
    - Quick experiment to validate hypothesis
    - Minimal code changes (update parameter_default.json)
-   
 2. **Short-term:** Implement separate lambda components
    - Better control over loss balance
    - Requires updating loss computation in irt_reference.py
-   
 3. **Optional:** Scale regularization pipeline (if needed)
    - May not be necessary with dynamic IRT
    - Keep documented as alternative for static targets
@@ -2809,9 +2982,10 @@ Recommended weights:
 
 ### Problem Statement
 
-**Scale Collapse Issue (Solved by Dynamic IRT):** 
+**Scale Collapse Issue (Solved by Dynamic IRT):**
 
 Previously with static IRT targets, the model learned near-constant θ values instead of learning the true distribution of student abilities. Evidence from experiments:
+
 - Experiment 161656 (static): θ_std = 0.14 vs target 2.5 (94% deflation)
 - θ_mean ≈ -0.17 throughout training (essentially constant)
 - Model outputs same θ for all students (no individual differences)
@@ -2820,11 +2994,13 @@ Previously with static IRT targets, the model learned near-constant θ values in
 **Root Cause:** Model minimized l_23 = MSE(θ_learned, θ_IRT) by compressing θ values toward a constant (mean) instead of learning the correct scale and individual differences.
 
 **Solution (Implemented):** Dynamic IRT targets with time-varying θ trajectories force the model to learn individual differences across time:
+
 - Experiment 686759 (dynamic): θ_std = 4.03 (healthy, +2806% improvement)
 - θ range: -15.7 to +11.9 (29.6 units - strong individual differences)
 - Natural prevention of scale collapse without explicit regularization
 
 **Current Status:** Scale regularization pipeline documented below is **less critical** with dynamic IRT, but remains useful for:
+
 1. Static IRT targets (if used)
 2. Other reference models without dynamic variants
 3. Additional regularization if needed
@@ -2847,6 +3023,7 @@ The pipeline combines five complementary stages, each addressing a specific aspe
 **Purpose:** Ensure learned parameters correlate with reference, regardless of scale
 
 **Implementation:**
+
 ```python
 def z_score_normalize(x, ref):
     """Normalize to match correlation, scale-invariant"""
@@ -2856,6 +3033,7 @@ def z_score_normalize(x, ref):
 ```
 
 **Properties:**
+
 - ✅ Generalizable: No dataset-specific parameters
 - ✅ Prevents gradient issues: Avoids large MSE when scales differ
 - ❌ Loses absolute scale: Only preserves relative ordering
@@ -2866,6 +3044,7 @@ def z_score_normalize(x, ref):
 **Purpose:** Match absolute scale (mean and std) of learned parameters
 
 **Implementation:**
+
 ```python
 def scale_regularization(theta_learned, theta_irt):
     """Match mean and standard deviation"""
@@ -2875,6 +3054,7 @@ def scale_regularization(theta_learned, theta_irt):
 ```
 
 **Properties:**
+
 - ✅ Preserves interpretability: Maintains absolute scale
 - ✅ Theory-grounded: Educational models require specific scales
 - ❌ Dataset-specific: Requires target mean/std for each dataset
@@ -2885,6 +3065,7 @@ def scale_regularization(theta_learned, theta_irt):
 **Purpose:** Hard constraint preventing θ_std from becoming too small
 
 **Implementation:**
+
 ```python
 def collapse_prevention(theta_learned, min_std=0.5):
     """Penalize if std falls below threshold"""
@@ -2895,6 +3076,7 @@ def collapse_prevention(theta_learned, min_std=0.5):
 ```
 
 **Properties:**
+
 - ✅ Generalizable: Simple threshold, no dataset-specific params
 - ✅ Fail-safe: Prevents catastrophic collapse
 - ❌ Heuristic: Threshold choice may require tuning
@@ -2905,26 +3087,28 @@ def collapse_prevention(theta_learned, min_std=0.5):
 **Purpose:** Match higher-order statistics (skewness, kurtosis)
 
 **Implementation:**
+
 ```python
 def distribution_shape_loss(theta_learned, theta_irt):
     """Match distribution shape beyond mean/std"""
     # Skewness: E[((x - μ) / σ)³]
     z_learned = (theta_learned - theta_learned.mean()) / theta_learned.std()
     z_irt = (theta_irt - theta_irt.mean()) / theta_irt.std()
-    
+
     skew_learned = (z_learned ** 3).mean()
     skew_irt = (z_irt ** 3).mean()
     l_skew = (skew_learned - skew_irt) ** 2
-    
+
     # Kurtosis: E[((x - μ) / σ)⁴]
     kurt_learned = (z_learned ** 4).mean()
     kurt_irt = (z_irt ** 4).mean()
     l_kurt = (kurt_learned - kurt_irt) ** 2
-    
+
     return l_skew + l_kurt
 ```
 
 **Properties:**
+
 - ✅ Fine-grained: Matches full distribution, not just moments
 - ❌ Complex: May overfit to reference distribution
 - ❌ Computationally expensive: Higher-order moments
@@ -2935,20 +3119,22 @@ def distribution_shape_loss(theta_learned, theta_irt):
 **Purpose:** Leverage model-specific relationships (e.g., θ/β ratio for IRT)
 
 **Implementation:**
+
 ```python
 def irt_ratio_constraint(theta_learned, beta_learned, theta_irt, beta_irt):
     """For IRT: Ensure θ - β distribution matches reference"""
     diff_learned = theta_learned.unsqueeze(1) - beta_learned  # [B, num_skills]
     diff_irt = theta_irt.unsqueeze(1) - beta_irt
-    
+
     # Match mean and std of differences
     l_ratio_mean = F.mse_loss(diff_learned.mean(), diff_irt.mean())
     l_ratio_std = F.mse_loss(diff_learned.std(), diff_irt.std())
-    
+
     return l_ratio_mean + l_ratio_std
 ```
 
 **Properties:**
+
 - ✅ Theory-grounded: Uses model-specific structure (IRT formula)
 - ❌ Not generalizable: Requires model-specific implementation
 - ❌ Complex: Needs both θ and β available
@@ -2957,6 +3143,7 @@ def irt_ratio_constraint(theta_learned, beta_learned, theta_irt, beta_irt):
 ### Combined Pipeline Loss
 
 **Full formula:**
+
 ```python
 l_23_pipeline = (
     w_zscore     × l_23_zscore +           # Stage 1: Correlation
@@ -2968,6 +3155,7 @@ l_23_pipeline = (
 ```
 
 **Recommended weights (for IRT):**
+
 - `w_zscore = 0.1`: Low (helps but loses scale)
 - `w_scale = 1.0`: High (critical for interpretability)
 - `w_collapse = 10.0`: Very high when triggered (safety net)
@@ -2975,6 +3163,7 @@ l_23_pipeline = (
 - `w_ratio = 0.5`: Medium (IRT-specific)
 
 **For generalizability across models (not just IRT):**
+
 - Disable Stage 5 (ratio): Set `w_ratio = 0`
 - Core pipeline: Stages 1-4 work for any reference model
 
@@ -2985,12 +3174,14 @@ l_23_pipeline = (
 **Revised Priority:**
 
 1. **Phase 1: Reduce λ_target (IMMEDIATE - Dec 7, 2025)**
+
    - Test λ_target = 0.05 (vs current 0.5)
    - Expected: Reduced IRT alignment weight, better β learning, improved AUC
    - Files to modify: `configs/parameter_default.json`
    - Experiment duration: ~2 hours (30 epochs)
 
 2. **Phase 2: Separate Lambda Components (SHORT-TERM)**
+
    - Implement individual lambda weights: λ_21, c, λ_23
    - Recommended: λ_21=0.1, c=0.01, λ_23=0.01-0.02
    - Files to modify: `pykt/reference_models/irt_reference.py`, `examples/train_ikt3.py`
@@ -3025,9 +3216,9 @@ def compute_l_23_with_pipeline(
 ) -> Dict[str, torch.Tensor]:
     """
     Multi-stage pipeline for ability alignment with scale regularization.
-    
+
     Prevents scale collapse while maintaining interpretability and generalizability.
-    
+
     Returns:
         {
             'l_23_zscore': Stage 1 loss,
@@ -3040,24 +3231,24 @@ def compute_l_23_with_pipeline(
     """
     losses = {}
     device = theta_learned.device
-    
+
     # Stage 1: Z-score normalization (correlation)
     theta_l_norm = (theta_learned - theta_learned.mean()) / (theta_learned.std() + 1e-8)
     theta_i_norm = (theta_irt - theta_irt.mean()) / (theta_irt.std() + 1e-8)
     losses['l_23_zscore'] = F.mse_loss(theta_l_norm, theta_i_norm)
-    
+
     # Stage 2: Scale regularization (interpretability)
     l_mean = F.mse_loss(theta_learned.mean(), theta_irt.mean())
     l_std = F.mse_loss(theta_learned.std(), theta_irt.std())
     losses['l_23_scale'] = l_mean + l_std
-    
+
     # Stage 3: Collapse prevention (safety)
     current_std = theta_learned.std()
     if current_std < min_std_threshold:
         losses['l_23_collapse'] = (min_std_threshold - current_std) ** 2
     else:
         losses['l_23_collapse'] = torch.tensor(0.0, device=device)
-    
+
     # Stage 4: Distribution shape matching (optional)
     z_l = (theta_learned - theta_learned.mean()) / (theta_learned.std() + 1e-8)
     z_i = (theta_irt - theta_irt.mean()) / (theta_irt.std() + 1e-8)
@@ -3066,23 +3257,23 @@ def compute_l_23_with_pipeline(
     kurt_l = (z_l ** 4).mean()
     kurt_i = (z_i ** 4).mean()
     losses['l_23_shape'] = (skew_l - skew_i) ** 2 + (kurt_l - kurt_i) ** 2
-    
+
     # Stage 5: Ratio constraints (IRT-specific, optional)
     if beta_learned is not None and beta_irt is not None:
         # Expand theta to [B, num_skills] for broadcasting
         theta_l_exp = theta_learned.unsqueeze(1)  # [B, 1]
         theta_i_exp = theta_irt.unsqueeze(1)
-        
+
         # Compute θ - β differences
         diff_learned = theta_l_exp - beta_learned  # [B, L] - [B, L]
         diff_irt = theta_i_exp - beta_irt
-        
+
         l_ratio_mean = F.mse_loss(diff_learned.mean(), diff_irt.mean())
         l_ratio_std = F.mse_loss(diff_learned.std(), diff_irt.std())
         losses['l_23_ratio'] = l_ratio_mean + l_ratio_std
     else:
         losses['l_23_ratio'] = torch.tensor(0.0, device=device)
-    
+
     # Combined pipeline loss
     losses['l_23_pipeline'] = (
         w_zscore * losses['l_23_zscore'] +
@@ -3091,7 +3282,7 @@ def compute_l_23_with_pipeline(
         w_shape * losses['l_23_shape'] +
         w_ratio * losses['l_23_ratio']
     )
-    
+
     return losses
 ```
 
@@ -3106,7 +3297,7 @@ Add new pipeline parameters to defaults section:
     "lambda_target": 0.5,
     "warmup_epochs": 50,
     "c_stability_reg": 0.01,
-    
+
     "use_scale_pipeline": true,
     "w_zscore": 0.1,
     "w_scale": 1.0,
@@ -3131,6 +3322,7 @@ Add new pipeline parameters to defaults section:
 ```
 
 Update MD5 hash after changes:
+
 ```bash
 python -c "
 import json, hashlib
@@ -3155,17 +3347,17 @@ def compute_alignment_losses(
 ) -> Dict[str, torch.Tensor]:
     """Compute IRT alignment losses with optional scale pipeline."""
     device = next(iter(model_outputs.values())).device
-    
+
     # ... l_21 and l_22 computation (unchanged) ...
-    
+
     # l_23: Ability alignment with scale pipeline
     if 'theta_t_learned' in model_outputs and 'theta_irt' in targets:
         theta_t_learned = model_outputs['theta_t_learned']  # [B, L]
         theta_irt = targets['theta_irt']
-        
+
         # Use pipeline if enabled
         use_pipeline = lambda_weights.get('use_scale_pipeline', False)
-        
+
         if use_pipeline:
             # Multi-stage pipeline
             pipeline_losses = self.compute_l_23_with_pipeline(
@@ -3180,10 +3372,10 @@ def compute_alignment_losses(
                 w_ratio=lambda_weights.get('w_ratio', 0.5),
                 min_std_threshold=lambda_weights.get('min_std_threshold', 0.5)
             )
-            
+
             # Use pipeline loss as l_23
             l_23 = pipeline_losses['l_23_pipeline']
-            
+
             # Return all stage losses for logging
             return {
                 'l_21_performance': l_21,
@@ -3202,7 +3394,7 @@ def compute_alignment_losses(
     else:
         l_23 = torch.tensor(0.0, device=device)
         print("⚠️  Warning: Cannot compute l_23 - missing theta_t_learned or theta_irt")
-    
+
     return {
         'l_21_performance': l_21,
         'l_22_difficulty': l_22,
@@ -3241,6 +3433,7 @@ if args.use_scale_pipeline:
 ```
 
 Update `metrics_epoch.csv` headers to include pipeline losses:
+
 - Standard: epoch, loss, l_bce, l_21, l_22, l_23, val_auc, val_acc
 - With pipeline: + l_23_zscore, l_23_scale, l_23_collapse, l_23_shape, l_23_ratio
 
@@ -3250,13 +3443,13 @@ Add to experiment README and metrics documentation:
 
 **Pipeline Stage Descriptions:**
 
-| Stage | Loss Name | Purpose | When Active | Expected Value |
-|-------|-----------|---------|-------------|----------------|
-| **1. Z-Score** | `l_23_zscore` | Correlation alignment (scale-free) | Always | < 1.0 (normalized MSE) |
-| **2. Scale** | `l_23_scale` | Mean/std matching (interpretability) | Always | < 5.0 (depends on scale) |
-| **3. Collapse** | `l_23_collapse` | Hard constraint: θ_std > threshold | Only if θ_std < 0.5 | 0.0 (if std healthy) |
-| **4. Shape** | `l_23_shape` | Skewness/kurtosis matching | Always (if w_shape > 0) | < 1.0 (normalized) |
-| **5. Ratio** | `l_23_ratio` | θ-β difference distribution (IRT) | Only for IRT with β | < 10.0 (depends on scale) |
+| Stage           | Loss Name       | Purpose                              | When Active             | Expected Value            |
+| --------------- | --------------- | ------------------------------------ | ----------------------- | ------------------------- |
+| **1. Z-Score**  | `l_23_zscore`   | Correlation alignment (scale-free)   | Always                  | < 1.0 (normalized MSE)    |
+| **2. Scale**    | `l_23_scale`    | Mean/std matching (interpretability) | Always                  | < 5.0 (depends on scale)  |
+| **3. Collapse** | `l_23_collapse` | Hard constraint: θ_std > threshold   | Only if θ_std < 0.5     | 0.0 (if std healthy)      |
+| **4. Shape**    | `l_23_shape`    | Skewness/kurtosis matching           | Always (if w_shape > 0) | < 1.0 (normalized)        |
+| **5. Ratio**    | `l_23_ratio`    | θ-β difference distribution (IRT)    | Only for IRT with β     | < 10.0 (depends on scale) |
 
 **Interpretation Guide:**
 
@@ -3270,13 +3463,13 @@ Add to experiment README and metrics documentation:
 
 **With pipeline enabled (`use_scale_pipeline=true`):**
 
-| Metric | Baseline (No Pipeline) | With Pipeline | Improvement |
-|--------|------------------------|---------------|-------------|
-| θ_std | 0.14 (collapsed) | 2.3-2.7 (healthy) | 16-19× larger |
-| θ_mean | -0.17 (wrong) | -0.05 to 0.05 (correct) | Matches target |
-| Correlation | 0.07 (poor) | 0.65-0.85 (good) | 9-12× better |
-| l_23 | 4.5 (high MSE) | 0.5-1.5 (low) | 3-9× smaller |
-| Interpretability | ❌ No (constant θ) | ✅ Yes (varied θ) | Fixed |
+| Metric           | Baseline (No Pipeline) | With Pipeline           | Improvement    |
+| ---------------- | ---------------------- | ----------------------- | -------------- |
+| θ_std            | 0.14 (collapsed)       | 2.3-2.7 (healthy)       | 16-19× larger  |
+| θ_mean           | -0.17 (wrong)          | -0.05 to 0.05 (correct) | Matches target |
+| Correlation      | 0.07 (poor)            | 0.65-0.85 (good)        | 9-12× better   |
+| l_23             | 4.5 (high MSE)         | 0.5-1.5 (low)           | 3-9× smaller   |
+| Interpretability | ❌ No (constant θ)     | ✅ Yes (varied θ)       | Fixed          |
 
 **Generalizability:**
 
@@ -3290,17 +3483,20 @@ Add to experiment README and metrics documentation:
 After implementing pipeline, validate with these checks:
 
 1. **Scale Health Check:**
+
    ```python
    assert val_theta_std > 0.5, "Scale collapse detected!"
    assert 0.8 * target_std < val_theta_std < 1.2 * target_std, "Scale mismatch!"
    ```
 
 2. **Correlation Check:**
+
    ```python
    assert val_correlation > 0.5, "Poor alignment!"
    ```
 
 3. **Individual Differences Check:**
+
    ```python
    theta_range = val_theta_max - val_theta_min
    assert theta_range > 2.0, "No individual differences learned!"
@@ -3316,15 +3512,13 @@ After implementing pipeline, validate with these checks:
 
 Test each stage's contribution:
 
-| Experiment | Enabled Stages | Purpose |
-|------------|----------------|---------|
-| Baseline | None (direct MSE) | Reference |
-| Ablation 1 | Stage 1 only (z-score) | Test correlation alone |
-| Ablation 2 | Stage 2 only (scale) | Test scale matching alone |
-| Ablation 3 | Stages 1+2 | Test synergy |
-| Ablation 4 | Stages 1+2+3 | Test collapse prevention |
-| Full Pipeline | Stages 1+2+3+4+5 | All features |
+| Experiment    | Enabled Stages         | Purpose                   |
+| ------------- | ---------------------- | ------------------------- |
+| Baseline      | None (direct MSE)      | Reference                 |
+| Ablation 1    | Stage 1 only (z-score) | Test correlation alone    |
+| Ablation 2    | Stage 2 only (scale)   | Test scale matching alone |
+| Ablation 3    | Stages 1+2             | Test synergy              |
+| Ablation 4    | Stages 1+2+3           | Test collapse prevention  |
+| Full Pipeline | Stages 1+2+3+4+5       | All features              |
 
 Expected finding: Stages 1+2 provide 80% of benefit, Stage 3 is safety net, Stages 4+5 provide marginal refinement.
-
- 

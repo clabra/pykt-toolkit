@@ -121,7 +121,7 @@ def main():
     }
     
     # Load data config
-    data_config_path = '/workspaces/pykt-toolkit/configs/data_config.json'
+    data_config_path = '../configs/data_config.json'
     with open(data_config_path, 'r') as f:
         data_config = json.load(f)
     

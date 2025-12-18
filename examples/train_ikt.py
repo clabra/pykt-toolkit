@@ -170,7 +170,7 @@ def load_skill_difficulties_from_irt(rasch_path, num_c):
 #                 f"Failed to load Rasch/IRT targets from {rasch_path}.\n"
 #                 f"iKT requires pre-computed mastery targets for training.\n"
 #                 f"Please generate them first:\n"
-#                 f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+#                 f"  BKT: python examples/train_bkt.py --dataset {{dataset}}\n"
 #                 f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic"
 #             ) from e
 #     else:
@@ -179,7 +179,7 @@ def load_skill_difficulties_from_irt(rasch_path, num_c):
 #             f"Rasch/IRT mastery targets not found at: {rasch_path}\n"
 #             f"iKT requires pre-computed mastery targets for training.\n"
 #             f"Please generate them first:\n"
-#             f"  BKT: python examples/compute_bkt_targets.py --dataset {{dataset}}\n"
+#             f"  BKT: python examples/train_bkt.py --dataset {{dataset}}\n"
 #             f"  IRT: python examples/compute_rasch_targets.py --dataset {{dataset}} --dynamic\n\n"
 #             f"Expected file location: {rasch_path}"
 #         )

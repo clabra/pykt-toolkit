@@ -109,7 +109,8 @@ RUN /home/vscode/.pykt-env/bin/pip install \
     "einops" \
     "matplotlib" \
     "jupyter" \
-    "seaborn"
+    "seaborn" \
+    "pyBKT"
 
 # Install additional ML packages
 RUN /home/vscode/.pykt-env/bin/pip install \

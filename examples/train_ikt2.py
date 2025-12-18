@@ -498,7 +498,7 @@ def main():
     parser.add_argument('--rasch_path', type=str, required=True,
                        help='Path to Rasch targets file (explicit, e.g., data/{dataset}/rasch_targets.pkl)')
     parser.add_argument('--bkt_path', type=str, required=True,
-                       help='Path to BKT targets file (for validation, e.g., data/{dataset}/bkt_targets.pkl)')
+                       help='Path to BKT targets file (for validation, e.g., data/{dataset}/bkt_mastery_states.pkl)')
     
     # Compatibility parameters (for iKT, ignored by iKT2)
     parser.add_argument('--lambda_penalty', type=float, required=True,

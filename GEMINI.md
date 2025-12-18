@@ -29,6 +29,8 @@ Commands should be launched inside a virtual environment that can be activated w
 source /home/vscode/.pykt-env/bin/activate
 ```
 
+Always check that the terminal used to launch commands runs inside a container (e.g. docker container).
+
 The machine we are currently using has 8 GPUs. Use 5 GPUs when running commands.
 
 ## Reproducibility
