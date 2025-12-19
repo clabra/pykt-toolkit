@@ -18,219 +18,223 @@ Relevant files:
 
 ```mermaid
 graph TD
-    subgraph "Input Layer"
-        Input_q[["Questions q<br/>[B, L]"]]
-        Input_r[["Responses r<br/>[B, L]"]]
-        Input_pid[["Problem IDs pid<br/>[B, L]"]]
-    end
-
-    subgraph "Embedding Layer (Rasch-Enhanced)"
+    subgraph "iDKT System Architecture"
         direction TB
-
-        subgraph "Base Embeddings"
-            Q_Emb["q_embed (Concept c_ct)<br/>[B, L, d]"]
-            QA_Emb["qa_embed (Interaction e_ct,rt)<br/>[B, L, d]"]
+        subgraph "Input Layer"
+            Input_q[["Questions q<br/>[B, L]"]]
+            Input_r[["Responses r<br/>[B, L]"]]
+            Input_pid[["Problem IDs pid<br/>[B, L]"]]
         end
 
-        subgraph "Rasch Variation Embeddings"
-            Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
-            Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
-            QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
-        end
-
-        subgraph "Fusion (Rasch Formula)"
-            Formula_X["x_t = c_ct + u_q · d_ct"]
-            Formula_Y["y_t = e_ct,rt + u_q · (f_ct,rt + d_ct)"]
-        end
-
-        Final_Q[["Final Question x<br/>[B, L, d]"]]
-        Final_QA[["Final Interaction y<br/>[B, L, d]"]]
-    end
-
-    subgraph "Encoder: N Blocks"
-        direction TB
-
-        subgraph "Multi-Head Self-Attention"
+        subgraph "Embedding Layer (Rasch-Enhanced)"
             direction TB
-            E_Split["Global Projection (Dense) & Split"]
 
-            subgraph "8 Parallel Attention Heads"
-                direction LR
-                E_H1["Head 1<br/>Attn(Q1,K1,V1)<br/>γ1 (Short-term?)"]
-                E_H2["Heads 2..7<br/>...<br/>Diverse γ"]
-                E_H8["Head 8<br/>Attn(Q8,K8,V8)<br/>γ8 (Long-term?)"]
+            subgraph "Base Embeddings"
+                Q_Emb["q_embed (Concept c_ct)<br/>[B, L, d]"]
+                QA_Emb["qa_embed (Interaction e_ct,rt)<br/>[B, L, d]"]
             end
 
-            E_Concat["Concatenate<br/>[B, L, d]"]
-            E_Wo["Linear Output W_o"]
+            subgraph "Rasch Variation Embeddings"
+                Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
+                Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
+                QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
+            end
+
+            subgraph "Fusion (Rasch Formula)"
+                Formula_X["x_t = c_ct + u_q · d_ct"]
+                Formula_Y["y_t = e_ct,rt + u_q · (f_ct,rt + d_ct)"]
+            end
+
+            Final_Q[["Final Question x<br/>[B, L, d]"]]
+            Final_QA[["Final Interaction y<br/>[B, L, d]"]]
         end
 
-        Enc_Norm1["Layer Norm + Residual"]
-        Enc_FFN["Feed-Forward Network"]
-        Enc_Norm2["Layer Norm + Residual"]
-        Enc_Out[["Encoded Interactions: y^<br/>[B, L, d]"]]
-    end
-
-    subgraph "Decoder (Knowledge Retriever): 2N Blocks"
-        direction TB
-
-        subgraph "Self-Attention (Questions)"
+        subgraph "Encoder: N Blocks"
             direction TB
 
             subgraph "Multi-Head Self-Attention"
                 direction TB
-                KR1_Split["Global Projection (Dense) & Split"]
+                E_Split["Global Projection (Dense) & Split"]
 
-                subgraph "8 Parallel Heads"
+                subgraph "8 Parallel Attention Heads"
                     direction LR
-                    KR1_H1["Head 1<br/>γ1"]
-                    KR1_H2["Heads 2..7"]
-                    KR1_H8["Head 8<br/>γ8"]
+                    E_H1["Head 1<br/>Attn(Q1,K1,V1)<br/>γ1 (Short-term?)"]
+                    E_H2["Heads 2..7<br/>...<br/>Diverse γ"]
+                    E_H8["Head 8<br/>Attn(Q8,K8,V8)<br/>γ8 (Long-term?)"]
                 end
 
-                KR1_Concat["Concatenate"]
-                KR1_Wo["Linear Output W_o"]
+                E_Concat["Concatenate<br/>[B, L, d]"]
+                E_Wo["Linear Output W_o"]
             end
 
-            KR_Norm1["Layer Norm + Residual"]
+            Enc_Norm1["Layer Norm + Residual"]
+            Enc_FFN["Feed-Forward Network"]
+            Enc_Norm2["Layer Norm + Residual"]
+            Enc_Out[["Encoded Interactions: y^<br/>[B, L, d]"]]
         end
 
-        subgraph "Cross-Attention"
+        subgraph "Decoder (Knowledge Retriever): 2N Blocks"
             direction TB
 
-            subgraph "KR2_MHA [Multi-Head Cross-Attention]"
+            subgraph "Self-Attention (Questions)"
                 direction TB
-                KR2_Proj_Q["Linear W_q (from Questions)"]
-                KR2_Proj_KV["Linear W_k, W_v (from Encoded y^)"]
 
-                subgraph "KR2_Heads [8 Parallel Heads]"
-                    direction LR
-                    KR2_H1["Head 1<br/>γ1"]
-                    KR2_H2["Heads 2..7"]
-                    KR2_H8["Head 8<br/>γ8"]
+                subgraph "Multi-Head Self-Attention"
+                    direction TB
+                    KR1_Split["Global Projection (Dense) & Split"]
+
+                    subgraph "8 Parallel Heads"
+                        direction LR
+                        KR1_H1["Head 1<br/>γ1"]
+                        KR1_H2["Heads 2..7"]
+                        KR1_H8["Head 8<br/>γ8"]
+                    end
+
+                    KR1_Concat["Concatenate"]
+                    KR1_Wo["Linear Output W_o"]
                 end
 
-                KR2_Concat["Concatenate"]
-                KR2_Wo["Linear Output W_o"]
+                KR_Norm1["Layer Norm + Residual"]
             end
 
-            KR_Norm2a["Layer Norm + Residual"]
-            KR_FFN["Feed-Forward Network"]
-            KR_Norm2b["Layer Norm + Residual"]
+            subgraph "Cross-Attention"
+                direction TB
+
+                subgraph "KR2_MHA [Multi-Head Cross-Attention]"
+                    direction TB
+                    KR2_Proj_Q["Linear W_q (from Questions)"]
+                    KR2_Proj_KV["Linear W_k, W_v (from Encoded y^)"]
+
+                    subgraph "KR2_Heads [8 Parallel Heads]"
+                        direction LR
+                        KR2_H1["Head 1<br/>γ1"]
+                        KR2_H2["Heads 2..7"]
+                        KR2_H8["Head 8<br/>γ8"]
+                    end
+
+                    KR2_Concat["Concatenate"]
+                    KR2_Wo["Linear Output W_o"]
+                end
+
+                KR_Norm2a["Layer Norm + Residual"]
+                KR_FFN["Feed-Forward Network"]
+                KR_Norm2b["Layer Norm + Residual"]
+            end
+
+            KR_Out[["Knowledge State: x^<br/>[B, L, d]"]]
         end
 
-        KR_Out[["Knowledge State: x^<br/>[B, L, d]"]]
+        subgraph "Output Processing"
+            subgraph "Out Head 1: Performance"
+                Concat["Concat[x^, x]<br/>[B, L, 2d]"]
+                mlp_layers["MLP Layers 1"]
+                Pred[["Predictions p_iDKT<br/>[B, L, 1]"]]
+            end
+
+            subgraph "Out Head 2: Initial Mastery (Decoupled)"
+                Item_Emb["Item Embedding x<br/>[B, L, d]"]
+                mlp_layers2["MLP Layers 2"]
+                InitMastery[["Estimated L0<br/>[B, L, 1]"]]
+            end
+
+            subgraph "Out Head 3: Learning Rate"
+                Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
+                mlp_layers3["MLP Layers 3"]
+                Rate[["Estimated T<br/>[B, L, 1]"]]
+            end
+        end
+
+        subgraph "Loss Components (Multi-Objective)"
+            L_SUP["L_sup (Supervised BCE)"]
+            L_REF["L_ref (Guidance MSE)"]
+            L_IM["L_initmastery (L0 Align)"]
+            L_RT["L_rate (T Align)"]
+            L_REG["L_rasch (L2 Reg)"]
+            L_TOTAL["L_total"]
+        end
+
+        %% Wiring - Output Heads
+        KR_Out -- "Dynamic State x^" --> Concat
+        Final_Q -- "Static Item x" --> Concat
+        Concat --> mlp_layers --> Pred
+        
+        Final_Q -- "Static Item x" --> Item_Emb
+        Item_Emb --> mlp_layers2 --> InitMastery
+        
+        KR_Out -- "Dynamic State x^" --> Concat3
+        Final_Q -- "Static Item x" --> Concat3
+        Concat3 --> mlp_layers3 --> Rate
+
+        %% Wiring - Loss
+        Pred --> L_SUP
+        Pred -- "vs BKT P(correct)" --> L_REF
+        InitMastery -- "vs BKT Prior L0" --> L_IM
+        Rate -- "vs BKT Learn Rate T" --> L_RT
+        L_SUP & L_REF & L_IM & L_RT & L_REG --> L_TOTAL
+
+        %% Wiring - Input/Emb
+        Input_q --> Q_Emb
+        Input_r --> QA_Emb
+        Input_q --> QA_Emb
+
+        %% Rasch Inputs
+        Input_pid --> Diff_Param
+        Input_q --> Q_Diff_Emb
+        Input_r --> QA_Diff_Emb
+
+        %% Flow to Formulas
+        Q_Emb --> Formula_X
+        Diff_Param --> Formula_X
+        Q_Diff_Emb --> Formula_X
+
+        QA_Emb --> Formula_Y
+        Diff_Param --> Formula_Y
+        Q_Diff_Emb --> Formula_Y
+        QA_Diff_Emb --> Formula_Y
+
+        %% Formula to Final
+        Formula_X --> Final_Q
+        Formula_Y --> Final_QA
+
+        %% Encoder Wiring
+        Final_QA --> E_Split
+        E_Split --> E_H1 & E_H2 & E_H8
+        E_H1 & E_H2 & E_H8 --> E_Concat
+        E_Concat --> E_Wo
+
+        %% Skip connection around attention
+        Final_QA -.-> Enc_Norm1
+        E_Wo --> Enc_Norm1
+
+        Enc_Norm1 --> Enc_FFN
+        Enc_Norm1 -.-> Enc_Norm2
+        Enc_FFN --> Enc_Norm2
+        Enc_Norm2 --> Enc_Out
+
+        %% Decoder Wiring - Odd (Self Attn)
+        Final_Q --> KR1_Split
+        KR1_Split --> KR1_H1 & KR1_H2 & KR1_H8 --> KR1_Concat --> KR1_Wo
+
+        Final_Q -.-> KR_Norm1
+        KR1_Wo --> KR_Norm1
+
+        %% Decoder Wiring - Even (Cross Attn)
+        KR_Norm1 --> KR2_Proj_Q
+        Enc_Out --> KR2_Proj_KV
+
+        KR2_Proj_Q --> KR2_H1 & KR2_H2 & KR2_H8
+        KR2_Proj_KV --> KR2_H1 & KR2_H2 & KR2_H8
+
+        KR2_H1 & KR2_H2 & KR2_H8 --> KR2_Concat --> KR2_Wo
+
+        KR_Norm1 -.-> KR_Norm2a
+        KR2_Wo --> KR_Norm2a
+
+        KR_Norm2a --> KR_FFN
+        KR_Norm2a -.-> KR_Norm2b
+        KR_FFN --> KR_Norm2b
+        KR_Norm2b --> KR_Out
     end
-
-    subgraph "Out Head 1: Performance"
-        Concat["Concat[x^, x]<br/>[B, L, 2d]"]
-        mlp_layers["MLP Layers 1"]
-        Pred[["Predictions p_iDKT<br/>[B, L, 1]"]]
-    end
-
-    subgraph "Out Head 2: Initial Mastery"
-        Concat2["Concat[x^, x]<br/>[B, L, 2d]"]
-        mlp_layers2["MLP Layers 2"]
-        InitMastery[["Estimated L0<br/>[B, L, 1]"]]
-    end
-
-    subgraph "Out Head 3: Learning Rate"
-        Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
-        mlp_layers3["MLP Layers 3"]
-        Rate[["Estimated T<br/>[B, L, 1]"]]
-    end
-
-    subgraph "Loss Components"
-        L_SUP["L_sup (BCE)"]
-        L_REF["L_ref (BKT Align)"]
-        L_PARAM["L_param (Theory Align)"]
-        L_REG["L_reg (Rasch)"]
-        L_TOTAL["L_total"]
-    end
-
-    %% Wiring - Loss
-    Pred --> L_SUP
-    Pred -- "vs P(BKT)" --> L_REF
-    InitMastery -- "vs L0(BKT)" --> L_PARAM
-    Rate -- "vs T(BKT)" --> L_PARAM
-    L_SUP & L_REF & L_PARAM & L_REG --> L_TOTAL
-
-    %% Wiring - Input/Emb
-    %% Wiring - Input/Emb
-    Input_q --> Q_Emb
-    Input_r --> QA_Emb
-    Input_q --> QA_Emb
-
-    %% Rasch Inputs
-    Input_pid --> Diff_Param
-    Input_q --> Q_Diff_Emb
-    Input_r --> QA_Diff_Emb
-
-    %% Flow to Formulas
-    Q_Emb --> Formula_X
-    Diff_Param --> Formula_X
-    Q_Diff_Emb --> Formula_X
-
-    QA_Emb --> Formula_Y
-    Diff_Param --> Formula_Y
-    Q_Diff_Emb --> Formula_Y
-    QA_Diff_Emb --> Formula_Y
-
-    %% Formula to Final
-    Formula_X --> Final_Q
-    Formula_Y --> Final_QA
-
-    %% Encoder Wiring
-    Final_QA --> E_Split
-    E_Split --> E_H1 & E_H2 & E_H8
-    E_H1 & E_H2 & E_H8 --> E_Concat
-    E_Concat --> E_Wo
-
-    %% Skip connection around attention
-    Final_QA -.-> Enc_Norm1
-    E_Wo --> Enc_Norm1
-
-    Enc_Norm1 --> Enc_FFN
-    Enc_Norm1 -.-> Enc_Norm2
-    Enc_FFN --> Enc_Norm2
-    Enc_Norm2 --> Enc_Out
-
-    %% Decoder Wiring - Odd (Self Attn)
-    Final_Q --> KR1_Split
-    KR1_Split --> KR1_H1 & KR1_H2 & KR1_H8 --> KR1_Concat --> KR1_Wo
-
-    Final_Q -.-> KR_Norm1
-    KR1_Wo --> KR_Norm1
-
-    %% Decoder Wiring - Even (Cross Attn)
-    KR_Norm1 --> KR2_Proj_Q
-    Enc_Out --> KR2_Proj_KV
-
-    KR2_Proj_Q --> KR2_H1 & KR2_H2 & KR2_H8
-    KR2_Proj_KV --> KR2_H1 & KR2_H2 & KR2_H8
-
-    KR2_H1 & KR2_H2 & KR2_H8 --> KR2_Concat --> KR2_Wo
-
-    KR_Norm1 -.-> KR_Norm2a
-    KR2_Wo --> KR_Norm2a
-
-    KR_Norm2a --> KR_FFN
-    KR_Norm2a -.-> KR_Norm2b
-    KR_FFN --> KR_Norm2b
-    KR_Norm2b --> KR_Out
-
-    %% Prediction
-    KR_Out --> Concat
-    Final_Q --> Concat
-    Concat --> mlp_layers --> Pred
-
-    %% Initial Mastery
-    KR_Out --> Concat2
-    Concat2 --> mlp_layers2 --> InitMastery
-
-    %% Learning Rate
-    KR_Out --> Concat3
-    Concat3 --> mlp_layers3 --> Rate
 
     %% Styling
     classDef plain fill:#fff,stroke:#333,stroke-width:1px;
@@ -1043,4 +1047,19 @@ To provide formal scientific rigor regarding the limits of BKT theory, the follo
 3.  **Cross-Model Uncertainty Intervals (iDKT-based BKT Bounds)**:
     - **Description**: Calculate the standard deviation of iDKT's predictions for a specific "BKT Mastery Level" (e.g., all interactions where BKT says $P(L)=0.8$). Use this to draw **Empirical Confidence Intervals** around the theoretical BKT curve.
     - **Goal**: Provide a "Safety Zone." Educators shouldn't treat a BKT estimation of 0.8 as a point-estimate, but as a range $[0.8 - \sigma, 0.8 + \sigma]$ derived from the Transformer's broader contextual awareness. This demonstrates that iDKT can "supervise" BKT by quantifying its inherent estimation noise.
+
+### Cross-Dataset Validation
+
+To verify the generalizability of the iDKT architecture and transparency regimen, we evaluated the model on two major educational datasets: **ASSISTments 2015** (sparse, skill-only) and **ASSISTments 2009** (dense, sequential).
+
+| Metric | Category | assist2015 | assist2009 | Generalization |
+| :--- | :--- | :---: | :---: | :---: |
+| **Test AUC** | Performance | 0.7236 | **0.8372** | **Significant Gain** |
+| **Prediction Corr** | Interpretability | **0.6623** | 0.5718 | Moderate Alignment |
+| **Initial Mastery Corr** | Interpretability | **0.9997** | 0.9996 | **Near Perfect Identity** |
+| **Learning Rate Corr** | Interpretability | **0.9997** | 0.9985 | **Near Perfect Identity** |
+
+Theory-Accuracy Tension: The predictive alignment ($p_{idkt}$ vs $p_{bkt}$) is lower on assist2009 (0.57 vs 0.66). This suggests that as the model becomes more accurate (higher AUC), it correctly identifies more complex patterns that deviate from the simple BKT theory.
+
+**Conclusion**: The iDKT model maintains near-perfect semantic grounding for its latent parameters across different pedagogical contexts. The high AUC on `assist2009` demonstrates that theoretical regularizers do not prevent the Transformer from capturing complex behavioral patterns in richer datasets.
 
