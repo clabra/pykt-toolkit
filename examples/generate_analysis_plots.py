@@ -28,39 +28,74 @@ sys.path.insert(0, '/workspaces/pykt-toolkit')
 
 
 def load_metrics_csv(run_dir):
-    """Load metrics_validation.csv with comprehensive metrics format."""
-    csv_path = os.path.join(run_dir, 'metrics_validation.csv')
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"metrics_validation.csv not found in {run_dir}")
+    """
+    Load metrics CSV. Supports:
+    1. legacy iKT: metrics_validation.csv
+    2. modern iDKT: metrics_epoch.csv
+    """
+    # Try multiple possible file names
+    possible_files = ['metrics_validation.csv', 'metrics_epoch.csv']
+    csv_path = None
+    for f in possible_files:
+        p = os.path.join(run_dir, f)
+        if os.path.exists(p):
+            csv_path = p
+            break
+            
+    if not csv_path:
+        raise FileNotFoundError(f"Neither metrics_validation.csv nor metrics_epoch.csv found in {run_dir}")
     
+    print(f"✓ Loading metrics from: {os.path.basename(csv_path)}")
     df = pd.read_csv(csv_path)
     
-    # Check for comprehensive metrics format
-    required_cols = [
+    # Map iDKT names to internal plotting names if necessary
+    mapping = {
+        'valid_auc': 'val_auc',
+        'valid_acc': 'val_accuracy',
+        'train_loss': 'train_total_loss',
+        # For iDKT, we don't have separate val_total_loss in the same CSV usually, 
+        # but we can use train_loss as a proxy or just skip if missing.
+    }
+    
+    for old_col, new_col in mapping.items():
+        if old_col in df.columns and new_col not in df.columns:
+            df[new_col] = df[old_col]
+            
+    # Check for comprehensive metrics format (iKT style)
+    required_cols_ikt = [
         'epoch', 'phase', 'val_l1_bce', 'val_auc', 'val_accuracy',
         'val_l2_mse', 'val_penalty_loss', 'val_violation_rate',
         'val_total_loss', 'train_l1_bce', 'train_l2_mse', 'train_penalty_loss'
     ]
     
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
+    # Check for comprehensive metrics format (iDKT style)
+    required_cols_idkt = [
+        'epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate'
+    ]
+    
+    has_ikt = all(col in df.columns for col in required_cols_ikt)
+    has_idkt = all(col in df.columns for col in required_cols_idkt)
+    
+    if has_ikt:
+        print(f"✓ Detected comprehensive iKT metrics format")
+        return df, "ikt"
+    elif has_idkt:
+        print(f"✓ Detected comprehensive iDKT metrics format")
+        return df, "idkt"
+    else:
         # Check if we have minimal columns for basic plots
         minimal_cols = ['epoch', 'val_auc']
         if all(col in df.columns for col in minimal_cols):
-            print(f"⚠️  Missing detailed metrics columns: {missing_cols}")
+            print(f"⚠️  Incomplete metrics detected (Missing detailed pillars)")
             print(f"   Available columns: {list(df.columns)}")
             print(f"   Will generate basic plots only (AUC trends)")
-            return df, False  # Return df with flag indicating limited data
+            return df, "basic"
         else:
             raise ValueError(
-                f"CSV missing required columns: {missing_cols}\n"
+                f"CSV missing required columns for basic plots: {['epoch', 'val_auc']}\n"
                 f"Available columns: {list(df.columns)}\n"
-                f"Need at least: {minimal_cols}\n"
-                f"This script requires metrics from training runs."
+                f"This script requires at least 'epoch' and 'val_auc' (or 'valid_auc') columns."
             )
-    
-    print(f"✓ Loaded {len(df)} epochs from metrics_validation.csv")
-    return df, True  # Return df with flag indicating comprehensive data
 
 
 def load_mastery_states(run_dir, split='test'):
@@ -135,10 +170,9 @@ def plot_auc_trend_simple(df, output_path, config):
     print(f"✓ Saved: {output_path}")
     plt.close()
 
-
-def plot_loss_evolution(df, output_path, config):
+def plot_ikt_loss_evolution(df, output_path, config):
     """
-    Plot 1: Loss Evolution (4 subplots)
+    Plot 1: Loss Evolution (4 subplots) for legacy iKT
     - L_total over epochs
     - L1 (BCE) over epochs
     - L2_penalty over epochs
@@ -207,6 +241,55 @@ def plot_loss_evolution(df, output_path, config):
     lambda_penalty = config['lambda_penalty']
     fig.suptitle(f'Loss Component Evolution (λ_penalty={lambda_penalty}, ε={epsilon})', 
                  fontsize=14, fontweight='bold', y=0.995)
+    
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved: {output_path}")
+    plt.close()
+
+def plot_idkt_loss_evolution(df, output_path, config):
+    """
+    Plot Theory-Guided Loss Evolution for iDKT
+    - L_SUP: Supervised loss
+    - L_REF: Prediction alignment loss
+    - L_IM: Initial Mastery alignment loss
+    - L_RT: Learning Rate alignment loss
+    """
+    fig = plt.figure(figsize=(14, 10))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+    
+    # Subplot 1: Supervised Loss (L_SUP)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax1.plot(df['epoch'], df['l_sup'], 'o-', label='L_SUP (BCE)', linewidth=2, markersize=4, color='#2980b9')
+    ax1.set_xlabel('Epoch', fontsize=11)
+    ax1.set_ylabel('Loss', fontsize=11)
+    ax1.set_title('Supervised Performance (L_SUP)', fontsize=12, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    
+    # Subplot 2: Prediction Alignment (L_REF)
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax2.plot(df['epoch'], df['l_ref'], 's-', label='L_REF (MSE)', linewidth=2, markersize=4, color='#27ae60')
+    ax2.set_xlabel('Epoch', fontsize=11)
+    ax2.set_ylabel('Loss', fontsize=11)
+    ax2.set_title('Prediction Alignment (L_REF)', fontsize=12, fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    
+    # Subplot 3: Initial Mastery Alignment (L_IM)
+    ax3 = fig.add_subplot(gs[1, 0])
+    ax3.plot(df['epoch'], df['l_initmastery'], 'd-', label='L_IM (MSE)', linewidth=2, markersize=4, color='#8e44ad')
+    ax3.set_xlabel('Epoch', fontsize=11)
+    ax3.set_ylabel('Loss', fontsize=11)
+    ax3.set_title('Initial Mastery Consistency (L_IM)', fontsize=12, fontweight='bold')
+    ax3.grid(True, alpha=0.3)
+    
+    # Subplot 4: Learning Rate Alignment (L_RT)
+    ax4 = fig.add_subplot(gs[1, 1])
+    ax4.plot(df['epoch'], df['l_rate'], 'v-', label='L_RT (MSE)', linewidth=2, markersize=4, color='#d35400')
+    ax4.set_xlabel('Epoch', fontsize=11)
+    ax4.set_ylabel('Loss', fontsize=11)
+    ax4.set_title('Learning Rate Consistency (L_RT)', fontsize=12, fontweight='bold')
+    ax4.grid(True, alpha=0.3)
+    
+    fig.suptitle('iDKT Theory-Guided Loss Component Evolution', fontsize=14, fontweight='bold', y=0.995)
     
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Saved: {output_path}")
@@ -476,7 +559,7 @@ def main():
     
     # Load data
     try:
-        metrics_df, has_comprehensive = load_metrics_csv(args.run_dir)
+        metrics_df, format_type = load_metrics_csv(args.run_dir)
         config = load_config(args.run_dir)
         mastery_df = load_mastery_states(args.run_dir, split='test')
     except Exception as e:
@@ -489,10 +572,10 @@ def main():
     
     # Generate plots
     try:
-        if has_comprehensive:
-            # Plot 1: Loss Evolution
-            print("1. Loss Evolution...")
-            plot_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
+        if format_type == "ikt":
+            # Plot 1: Loss Evolution (iKT version)
+            print("1. Loss Evolution (iKT)...")
+            plot_ikt_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
             
             # Plot 2: AUC vs Violations
             print("2. AUC vs Violation Rate...")
@@ -502,9 +585,19 @@ def main():
             print("3. Deviation Histogram...")
             plot_deviation_histogram(metrics_df, os.path.join(plots_dir, 'deviation_histogram.png'), config)
             
-            # Plot 4: Per-Skill Alignment (works with mastery data only)
+            # Plot 4: Per-Skill Alignment
             print("4. Per-Skill Alignment Heatmap...")
             plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
+            
+        elif format_type == "idkt":
+            # Plot 1: Loss Evolution (iDKT version)
+            print("1. Loss Evolution (iDKT)...")
+            plot_idkt_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
+            
+            # Plot 2: Per-Skill Alignment (works with mastery data)
+            print("2. Per-Skill Alignment Heatmap...")
+            plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
+            
         else:
             print("⚠️  Limited data available - generating basic plots only")
             

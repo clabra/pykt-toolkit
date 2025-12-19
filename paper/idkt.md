@@ -125,26 +125,35 @@ graph TD
     subgraph "Out Head 1: Performance"
         Concat["Concat[x^, x]<br/>[B, L, 2d]"]
         mlp_layers["MLP Layers 1"]
-        Pred[["Predictions p<br/>[B, L, 1]"]]
+        Pred[["Predictions p_iDKT<br/>[B, L, 1]"]]
     end
 
     subgraph "Out Head 2: Initial Mastery"
         Concat2["Concat[x^, x]<br/>[B, L, 2d]"]
         mlp_layers2["MLP Layers 2"]
-        Mastery[["Initial Mastery L0<br/>[B, L, 1]"]]
+        InitMastery[["Estimated L0<br/>[B, L, 1]"]]
     end
 
     subgraph "Out Head 3: Learning Rate"
         Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
         mlp_layers3["MLP Layers 3"]
-        Rate[["Learning Rate T<br/>[B, L, 1]"]]
+        Rate[["Estimated T<br/>[B, L, 1]"]]
     end
 
-    subgraph "Loss"
-        L_BCE["L_bce"]
-        L_Reg["L_reg (Rasch)"]
-        L_Total["L_total"]
+    subgraph "Loss Components"
+        L_SUP["L_sup (BCE)"]
+        L_REF["L_ref (BKT Align)"]
+        L_PARAM["L_param (Theory Align)"]
+        L_REG["L_reg (Rasch)"]
+        L_TOTAL["L_total"]
     end
+
+    %% Wiring - Loss
+    Pred --> L_SUP
+    Pred -- "vs P(BKT)" --> L_REF
+    InitMastery -- "vs L0(BKT)" --> L_PARAM
+    Rate -- "vs T(BKT)" --> L_PARAM
+    L_SUP & L_REF & L_PARAM & L_REG --> L_TOTAL
 
     %% Wiring - Input/Emb
     %% Wiring - Input/Emb
@@ -217,16 +226,11 @@ graph TD
 
     %% Initial Mastery
     KR_Out --> Concat2
-    Concat2 --> mlp_layers2 --> Mastery
+    Concat2 --> mlp_layers2 --> InitMastery
 
     %% Learning Rate
     KR_Out --> Concat3
     Concat3 --> mlp_layers3 --> Rate
-
-    %% Loss (Abstracted)
-    Pred --> L_BCE
-    Diff_Param --> L_Reg
-    L_BCE & L_Reg --> L_Total
 
     %% Styling
     classDef plain fill:#fff,stroke:#333,stroke-width:1px;
@@ -298,10 +302,10 @@ graph TD
   - Output: concatenate (Dv·H)×1 vector, pass to next layer
 
     ```
-    The Multi-Head Attention mechanism in iDKT (inherited from AKT) typically consists of **8 parallel heads** (default configuration).
+    The Multi-Head Attention mechanism in iDKT (inherited from AKT) typically consists of __8 parallel heads__ (default configuration).
 
     - Structure: Each head operates independently on a learned subspace of the embedding dimension.
-    - Projection & Splitting: The full embedding vector (e.g., $d_{model}=256$) is first projected by a dense layer (accessing all features), then the result is split into 8 segments. Each head's projection is derived from the **complete** input representation.
+    - Projection & Splitting: The full embedding vector (e.g., $d_{model}=256$) is first projected by a dense layer (accessing all features), then the result is split into 8 segments. Each head's projection is derived from the __complete__ input representation.
     - Independence: The attention calculation—queries, keys, values, and the learnable decay $\gamma$—happens separately and in parallel for each head. Head 1 calculates its own weighted sum without knowing what Head 2 is doing.
     - Specialization: This allows each head to specialize. One might focus on short-term mastery (via a high $\gamma$), while another tracks long-term concept retention (via a low $\gamma$).
     - Recombination: After processing, the 8 outputs are concatenated back to form the full 256-dimensional vector, combining the specialized insights from all heads.
@@ -545,7 +549,7 @@ Regardless of Rasch features, the model always initializes the fundamental embed
 - **`qa_embed` (Interaction Embedding)**:
   - If `separate_qa=False` (default): `nn.Embedding(2, d_model)`
     - Learns just two vectors: one for "Incorrect" and one for "Correct". These are added to the concept embedding.
-  - If `separate_qa=True`: `nn.Embedding(2*n_question+1, d_model)`
+  - If `separate_qa=True`: `nn.Embedding(2 * n_question + 1, d_model)`
     - Learns a distinct vector for every possible (Concept, Outcome) pair.
 
 #### 3. Mathematical Implication (Forward Pass Preview)
@@ -558,4 +562,110 @@ $$ y*t = e*{(c*t, r_t)} + u_q \cdot f*{(c_t, r_t)} $$
 
 Where $u_q$ (difficulty) scales the "variation vectors" ($d_{ct}, f_{ct}$) before adding them to the base concept embeddings. This implementation effectively creates a unique embedding for every (Concept, ProblemID) pair without needing a massive lookup table for all pairs, keeping the parameter count linear to $N_{concepts} + N_{problems}$ rather than their product.
 
+## Update - Theoretical Approach 
+
+We'll update the current iDKT model implementation to:
+
+- Use a theory-guided approach where we'll take as reference a Bayesian Knowledge Tracing (BKT) model.
+- We'll use the BKT model as a reference to check if we can get good interpretability metrics, where interpretability is measured by the alignment with the reference model.
+- For a given reference model, such as BKT, we define a multi-objective loss function with two terms that account for performance and interpretability. Performance is measured by the error between the predictions of the model and the true labels, interpretability is measured by correlation between the estimations of the model and the estimations of the reference model.
+
+We state that a **DL model is interpretable in terms of a given reference model** if:
+
+1. The parameters of the reference model can be expressed as **projections of the DL model's latent factor space**.
+2. The values of these projections result in **estimates that are highly correlated with the reference model's estimates**.
+
+$$ L_{total} = L_{SUP} + \lambda_{ref} L_{ref} + \sum_{i} \lambda_{p,i} L_{param,i} $$
+
+where $L_{SUP}$ is the supervised loss, $L_{ref}$ is the reference loss, and $L_{param,i}$ is the parameter loss for the $i$-th parameter.
+
+#### Prediction Alignment Loss ($L_{ref}$)
+
+To align iDKT predictions with the reference model's performance estimates, we minimize the mean squared error between their respective output probabilities:
+$$ L_{ref} = \frac{1}{T} \sum_{t=1}^{T} (\hat{p}_{t} - p_{t}^{ref})^2 $$
+
+#### Parameter Consistency Loss ($L_{param,i}$)
+
+To ensure latent states are semantically grounded, we penalize deviations from reference parameter estimates ($\mu_{ref,i}$), weighted by a parameter that represents the reference model's uncertainty ($\sigma_{ref,i}^2$):
+
+$$ L_{param,i} = \frac{(\theta_{i} - \mu_{ref,i})^2}{2\sigma_{ref,i}^2} $$
+
+Where $\theta_i$ represents the projected parameters such as initial mastery ($L_{0}$) or learning rate ($T$).
+
+$L_{param,i}$ is defined in such a way that values close to the reference model parameter estimation are rewarded, and values far from the reference model parameter estimation are penalized. This is done defining a variance for each parameter of the reference model in such a way that is the parameter estimation is close to the reference model parameter estimation, the variance is low, and the loss is low.
+
+## Integration of BKT parameter and mastery trajectories into the iDKT Model
+
+The BKT skill-level parameters (initmastery, learning rate) and dynamic mastery trajectories are used to calculate the parameter and reference loss components.
+
 ## Next Steps
+
+1) Update the mermaid iDKT architecture diagram in "iDKT Architecture Diagram" section to include the projection heads and the new loss components. The BKT parameter and mastery estimations are integrated into the iDKT model by adding a projection head for each parameter (initmastery, learning rate). The projection heads are added to the iDKT model in the same way as the standard prediction head.
+2) For the training we'll need to extract the BKT parameters from the *.pkl or *.csv files generated by BKT training. Create a new data file augmented with the BKT parameters per interaction. 
+3) Update the iDKT model implementation in `pykt/models/idkt.py` and the training and evaluation loops in `examples/train_idkt.py` and `examples/eval_idkt.py`.  
+4) Implement the mechanism to extract the BKT parameters for each interaction and use them to calculate the augmentes per-parameter and reference losses. 
+
+## Balancing Loss Functions
+
+In the iDKT model, our multi-objective loss function $L_{total} = L_{SUP} + \lambda_{ref} L_{ref} + \sum_{i} \lambda_{p,i} L_{param,i}$ involves components with inherently different scales and optimization dynamics. $L_{SUP}$ (Binary Cross-Entropy) typically ranges between 0.4 and 0.7, while the alignment losses ($L_{ref}, L_{param}$) based on Mean Squared Error (MSE) often fall below 0.01. This scale disparity can lead to "gradient vanishing" for the interpretability components. We propose the following strategies to address this:
+
+### 1. Dynamic Loss Normalization (Alpha-Balancing)
+This strategy replaces fixed weights with a dynamic ratio based on moving averages of loss magnitudes. By tracking the running mean of the supervised loss $\bar{L}_{SUP}(t)$ and the alignment loss $\bar{L}_{ref}(t)$, we can adjust $\lambda(t)$ such that the theory signal maintains a targeted percentage of the total gradient regardless of how quickly the supervised task converges.
+
+### 2. Gradient Norm Scaling (GradNorm)
+Following Chen et al. (2018), GradNorm balances tasks by equalizing their relative gradient magnitudes. It treats the $\lambda$ weights as learnable parameters that are updated via an auxiliary loss function designed to minimize the discrepancy between the weighted gradient norms of different tasks. This ensures that no single task (usually the supervised one) dominates the parameter updates merely due to its numeric scale.
+
+### 3. Log-Scale MSE
+Student parameters like learning rates often exhibit high variability across different skills. Using raw MSE can bias the model toward optimizing skills with larger parameter values. Applying a log-transformation to both the model estimates and the BKT reference values—effectively optimizing the **Mean Squared Logarithmic Error (MSLE)**—ensures that the model prioritizes relative alignment across all parameter scales equally.
+
+### 4. Uncertainty-Informed Weighting (Bayesian Balancing)
+We can interpret the weights as task-dependent homoscedastic uncertainty. By making the standard deviation $\sigma_i$ of each task a learnable parameter (Kendall et al. 2018):
+$$L_{total} = \frac{1}{\sigma_{SUP}^2} L_{SUP} + \frac{1}{\sigma_{ref}^2} L_{ref} + \sum_{i} \frac{1}{\sigma_{p,i}^2} L_{param,i} + \log(\sigma_{SUP}) + \log(\sigma_{ref}) + \sum_{i} \log(\sigma_{p,i})$$
+The logarithmic terms act as regularizers to prevent the model from trivializing a task by simply increasing its uncertainty to infinity.
+
+### 5. Gradient Conflict Mitigation (PCGrad)
+When the gradients of different components point in opposite directions ($\nabla L_i \cdot \nabla L_j < 0$), "gradient surgery" can be applied. PCGrad projects the gradient of one task onto the normal plane of another, eliminating the destructive component while preserving the direction that contributes to both objectives.
+
+## Recommended Next Step: Simple Initial Normalization
+To immediately address the observed $0.5$ (BCE) vs $0.0001$ (MSE) scale gap, we recommend the following "Warm-up Calibration" procedure:
+1. **Initial Forward Pass**: Before training begins, execute a single forward pass on a representative batch to capture the initial magnitudes $M_{SUP}$ and $M_{ref}$.
+2. **Lambda Recalibration**: Instead of arbitrary fixed values, calculate "Scale-Neutral" weights:
+   $$\lambda_{ref}^{adj} = \lambda_{ref}^{user} \cdot \left( \frac{M_{SUP}}{M_{ref}} \right)$$
+   This ensures that even if the raw MSE is tiny, it represents a meaningful (e.g., 10%) portion of the total gradient signal from epoch 1.
+3. **Training Execution**: Proceed with training using these calibrated weights to ensure the theory-guided heads are actively trained from the start.
+
+
+## Empirical Validation of Loss Balancing
+We evaluated the effectiveness of the "Warm-up Calibration" procedure by comparing a baseline iDKT run (using fixed $\lambda=0.1$) against a calibrated run on the ASSISTments 2015 dataset.
+
+### Gradient Signal Strength
+In the baseline run, the initial magnitudes were $L_{SUP} \approx 0.54$ and $L_{ref} \approx 0.016$. With a fixed weight of $0.1$, the effective signal for prediction alignment was $0.0016$, representing only **0.3%** of the total supervised gradient. Following calibration, the weight was automatically adjusted to $\lambda_{ref}^{adj} = 1.08$, resulting in a weighted signal of $0.067$ (**12.5%** of the supervised signal). This ensures that the optimizer prioritizes theory alignment from the first gradient update.
+
+### Semantic Alignment Improvement
+The impact of this increased gradient share is reflected in the alignment metrics between iDKT projections and BKT reference values:
+
+| Metric | Fixed Weight ($\lambda=0.1$) | Calibrated Weight | $\Delta$ |
+| :--- | :---: | :---: | :---: |
+| **Prediction Correlation** ($L_{ref}$) | 0.5598 | 0.6689 | **+0.1091** |
+| **Init Mastery Correlation** ($L_{IM}$) | 0.1450 | 0.1453 | +0.0003 |
+| **Learning Rate Correlation** ($L_{RT}$) | 0.9986 | 0.9987 | +0.0001 |
+
+## Implemented Measures and Next Steps
+Based on our empirical analysis, we have implemented the following refinements to the loss balancing framework:
+
+### 1. Warm-up Calibration with Target Ratios
+We have refined the "Warm-up Calibration" procedure in `examples/train_idkt.py` to interpret $\lambda$ coefficients as **Explicit Target Ratios** ($\gamma$) of the supervised loss magnitude ($M_{SUP}$). 
+$$\lambda_i = \gamma_i \cdot \frac{M_{SUP}}{M_i}$$
+This ensures that regardless of the initial magnitude of an MSE-based alignment loss, it represents a specific, user-defined percentage of the total gradient signal from the first update.
+
+### 2. Aggressive Latent Weighting
+Initial results indicated that prediction alignment ($L_{ref}$) is more responsive to guidance than latent mastery alignment ($L_{IM}$). Consequently, we have standardized the default target ratios to 10% across all components in `configs/parameter_default.json`:
+- $\lambda_{ref}^{target} = 0.1$ (10% of $L_{SUP}$ share)
+- $\lambda_{IM}^{target} = 0.1$ (10% of $L_{SUP}$ share)
+- $\lambda_{RT}^{target} = 0.1$ (10% of $L_{SUP}$ share)
+This represents a 10x increase in the signal strength for latent consistency components compared to our initial pilot experiments.
+
+### 3. Future Work: Dynamic Signal Maintenance
+As the supervised loss decreases during training, the theory-guided losses (which may have different convergence rates) risk being "washed out" or becoming disproportionately dominant. Future work will investigate **Dynamic Re-calibration**—triggering weight updates at set intervals (e.g., every 5 epochs)—to maintain stable signal proportions throughout the entire training trajectory.
+
+

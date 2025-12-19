@@ -23,15 +23,27 @@ Reference Documents:
 
 ## Environment Setup
 
-Commands should be launched inside a virtual environment that can be activated with:
+The project is run inside a Docker container (container name: `pinn-dev`). All commands related to development, training, and evaluation **MUST** be executed within this container using the dedicated virtual environment.
 
-```bash
-source /home/vscode/.pykt-env/bin/activate
-```
+### Command Execution Protocol
 
-The project is run inside a docker container. Always check that the terminal used to launch commands runs inside the container.
+To launch commands properly, follow these steps:
 
-The machine we are currently using has 8 GPUs. Try to use 5 GPUs when creating new scripts and running commands
+1.  **Terminal Entry**: Ensure you are using a terminal that is attached to the container or use `docker exec`.
+2.  **Environment Activation**: The virtual environment is located at `/home/vscode/.pykt-env`. It must be activated before running any scripts:
+    ```bash
+    source /home/vscode/.pykt-env/bin/activate
+    ```
+3.  **Working Directory**: The project root inside the container is `/workspaces/pykt-toolkit`.
+4.  **Host Machine Execution**: If running commands from the host machine, use `docker exec` to target the container:
+    ```bash
+    docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/run_repro_experiment.py ..."
+    ```
+
+### GPU Resources
+The machine has 8 GPUs.
+- **Standard Allocation**: Use 5 GPUs for training runs (e.g., `CUDA_VISIBLE_DEVICES=0,1,2,3,4`).
+- **Monitoring**: Always verify GPU availability before launching multi-GPU experiments.
 
 ## Reproducibility
 
@@ -43,7 +55,7 @@ when you change any parameter default value (the reference values are in paper/p
 
 ## Important Constraints
 
-- Always work within the activated conda pykt virtual environment (`.pykt-env`)
+- Always work within the activated .pykt-env virtual environment
 - Do NOT modify files in `/data_original` directory
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
 - DO NOT modify existent models in `pykt/models` (only the new created model/s). The code and scripts for existent models in the pykt framework mustn't be changed. We only want to contribute a new model, without modifing existent ones.

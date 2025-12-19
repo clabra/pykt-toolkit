@@ -23,6 +23,11 @@
     "emb_type": "qid",
     "final_fc_dim": 512,
     "l2": 1e-05,
+    "lambda_ref": 0.1,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "theory_guided": 1,
+    "calibrate": 1,
     "max_correlation_students": 1000
   },
   "types": {
@@ -45,7 +50,8 @@
       "weight_decay",
       "optimizer",
       "gradient_clip",
-      "patience"
+      "patience",
+      "calibrate"
     ],
     "model_config": [
       "seq_len",
@@ -56,7 +62,11 @@
       "dropout",
       "emb_type",
       "final_fc_dim",
-      "l2"
+      "l2",
+      "lambda_ref",
+      "lambda_initmastery",
+      "lambda_rate",
+      "theory_guided"
     ]
   },
   "fixed": {
@@ -66,5 +76,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f2082199a1a383c5256fdc5e104809cc"
+  "md5": "f4bb6bca18212b2febb8b1d6a3d9fc03"
 }

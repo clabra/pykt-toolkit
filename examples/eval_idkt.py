@@ -42,7 +42,8 @@ import json
 import torch
 import numpy as np
 
-sys.path.insert(0, '/workspaces/pykt-toolkit')
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from pykt.models import evaluate, init_model
 from pykt.datasets import init_dataset4train
@@ -121,7 +122,8 @@ def main():
     }
     
     # Load data config
-    data_config_path = '../configs/data_config.json'
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    data_config_path = os.path.join(project_root, 'configs/data_config.json')
     with open(data_config_path, 'r') as f:
         data_config = json.load(f)
     
@@ -130,8 +132,10 @@ def main():
         if 'dpath' in data_config[dataset_name]:
             dpath = data_config[dataset_name]['dpath']
             if dpath.startswith('../'):
-                data_config[dataset_name]['dpath'] = os.path.abspath(
-                    os.path.join(os.path.dirname(data_config_path), dpath))
+                # Strip '../' and join with project_root
+                data_config[dataset_name]['dpath'] = os.path.abspath(os.path.join(project_root, dpath.replace('../', '')))
+            elif not os.path.isabs(dpath):
+                data_config[dataset_name]['dpath'] = os.path.abspath(os.path.join(project_root, dpath))
     
     # Load dataset
     print(f"Loading dataset: {args.dataset}, fold: {args.fold}")

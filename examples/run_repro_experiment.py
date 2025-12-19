@@ -216,7 +216,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'dataset', 'fold', 'seed',
         'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
         'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
-        'final_fc_dim', 'l2'
+        'final_fc_dim', 'l2', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate'
     }
     
     # Determine which parameters to pass based on training script
@@ -856,7 +856,7 @@ def main():
         eval_command_explicit = build_explicit_eval_command(eval_script, experiment_dir_abs, training_params)
         mastery_states_command = build_mastery_states_command(experiment_dir_abs, num_students=15, split='test')
         
-        # Interpretability correlation commands (for iKT2)
+        # Interpretability correlation commands
         python_path = sys.executable
         head_agreement_command = (
             f"{python_path} examples/compute_head_agreement.py "
@@ -876,6 +876,23 @@ def main():
             f"--output_file bkt_validation_final.json "
             f"--update_csv"
         )
+        idkt_interpretability_command = (
+            f"{python_path} examples/eval_idkt_interpretability.py "
+            f"--checkpoint {experiment_dir_abs}/best_model.pt "
+            f"--output_dir {experiment_dir_abs} "
+            f"--dataset {training_params['dataset']} "
+            f"--fold {training_params['fold']} "
+            f"--batch_size {training_params['batch_size']} "
+            f"--d_model {training_params['d_model']} "
+            f"--n_heads {training_params['n_heads']} "
+            f"--n_blocks {training_params['n_blocks']} "
+            f"--d_ff {training_params['d_ff']} "
+            f"--dropout {training_params['dropout']} "
+            f"--final_fc_dim {training_params['final_fc_dim']} "
+            f"--l2 {training_params['l2']} "
+            f"--emb_type {training_params['emb_type']} "
+            f"--seq_len {training_params['seq_len']}"
+        )
         
         bkt_validation_command = build_bkt_validation_command(experiment_dir_abs, training_params)
         repro_command = build_repro_command(sys.argv[0], experiment_id)
@@ -893,6 +910,7 @@ def main():
                 "difficulty_fidelity": difficulty_fidelity_command,
                 "bkt_correlation": bkt_correlation_command,
                 "bkt_validation": bkt_validation_command,
+                "idkt_interpretability": idkt_interpretability_command,
                 "reproduce": repro_command
             },
             "experiment": {
@@ -1001,8 +1019,8 @@ def main():
                 print("  You can run it manually:")
                 print(f"    {eval_command_full}")
             
-            # Auto-launch mastery states extraction for iKT/iKT2/iKT3/idkt models
-            if model_name in ['ikt', 'ikt2', 'ikt3', 'idkt']:
+            # Auto-launch mastery states extraction for legacy iKT models
+            if model_name in ['ikt', 'ikt2', 'ikt3']:
                     print("\n" + "=" * 80)
                     print(f"LAUNCHING MASTERY STATES EXTRACTION ({model_name.upper()})")
                     print("=" * 80)
@@ -1013,8 +1031,6 @@ def main():
                     elif model_name == 'ikt3':
                         ref_model = training_params.get('reference_model', 'irt')
                         print(f"\nExtracting {ref_model.upper()} alignment factors for interpretability analysis...")
-                    elif model_name == 'idkt':
-                        print("\nExtracting Rasch-based difficulty trajectories for interpretability analysis...")
                     
                     mastery_result = subprocess.run(mastery_states_command, shell=True)
                     
@@ -1032,12 +1048,6 @@ def main():
                             print("=" * 80)
                             print("\nComparing M_IRT mastery vs p_correct predictions...")
                             
-                            head_agreement_command = (
-                                f"{python_path} examples/compute_head_agreement.py "
-                                f"--experiment_dir {experiment_dir_abs} "
-                                f"--update_csv"
-                            )
-                            
                             head_result = subprocess.run(head_agreement_command, shell=True)
                             
                             if head_result.returncode == 0:
@@ -1053,13 +1063,6 @@ def main():
                             print("COMPUTING DIFFICULTY FIDELITY")
                             print("=" * 80)
                             print("\nComparing learned difficulty (β) vs IRT-calibrated difficulty...")
-                            
-                            irt_command = (
-                                f"{python_path} examples/compute_irt_correlation.py "
-                                f"--experiment_dir {experiment_dir_abs} "
-                                f"--dataset {training_params['dataset']} "
-                                f"--update_csv"
-                            )
                             
                             irt_result = subprocess.run(irt_command, shell=True)
                             
@@ -1077,14 +1080,6 @@ def main():
                             print("=" * 80)
                             print("\nComparing model mastery (M_IRT) vs BKT P(L_t)...")
                             
-                            bkt_command = (
-                                f"{python_path} examples/compute_bkt_correlation.py "
-                                f"--experiment_dir {experiment_dir_abs} "
-                                f"--dataset {training_params['dataset']} "
-                                f"--output_file bkt_validation_final.json "
-                                f"--update_csv"
-                            )
-                            
                             bkt_result = subprocess.run(bkt_command, shell=True)
                             
                             if bkt_result.returncode == 0:
@@ -1096,6 +1091,8 @@ def main():
                                 print("  Note: Requires bkt_mastery_states.pkl and mastery_test.csv")
                                 print(f"  Check: data/{training_params['dataset']}/bkt_mastery_states.pkl exists")
                                 print(f"  Check: {experiment_folder}/mastery_test.csv exists")
+                        
+                        pass # Add common ikt metrics here if needed
                         
                         # Generate comprehensive analysis plots
                         print("\n" + "=" * 80)
@@ -1116,6 +1113,34 @@ def main():
                             print("\n⚠️  Plot generation failed (non-critical)")
                     else:
                         print("\n⚠️  Mastery states extraction failed (non-critical)")
+            
+            # Auto-launch interpretability alignment for iDKT
+            if model_name == 'idkt':
+                print("\n" + "=" * 80)
+                print("COMPUTING iDKT INTERPRETABILITY ALIGNMENT")
+                print("=" * 80)
+                print("\nComparing model predictions and projections vs BKT ground truth...")
+                
+                idkt_inter_result = subprocess.run(idkt_interpretability_command, shell=True)
+                
+                if idkt_inter_result.returncode == 0:
+                    print("\n✓ iDKT interpretability evaluation completed successfully")
+                    print(f"  Output file: {experiment_folder}/interpretability_alignment.json")
+                    
+                    # Generate analysis plots for iDKT
+                    print("\n" + "=" * 80)
+                    print("Generating analysis plots...")
+                    print("=" * 80)
+                    
+                    plots_command = build_analysis_plots_command(experiment_folder)
+                    plots_result = subprocess.run(plots_command, shell=True)
+                    
+                    if plots_result.returncode == 0:
+                        print("\n✓ Analysis plots generated successfully")
+                    else:
+                        print("\n⚠️  Plot generation failed (non-critical)")
+                else:
+                    print("\n⚠️  iDKT interpretability evaluation failed (non-critical)")
             
             print("\nTo reproduce this experiment:")
             print("  python examples/run_repro_experiment.py \\")

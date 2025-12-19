@@ -121,7 +121,11 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                 y = model(cq.long(), cc.long(), r.long())
                 y = y[:, 1:]
             elif model_name in ["akt","idkt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:                                
-                y, reg_loss = model(cc.long(), cr.long(), cq.long())
+                outputs = model(cc.long(), cr.long(), cq.long())
+                if model_name == "idkt" and len(outputs) == 4:
+                    y, im, r, reg_loss = outputs
+                else:
+                    y, reg_loss = outputs
                 y = y[:,1:]
             elif model_name in ["dtransformer", "simakt"]:
                 output, *_ = model.predict(cc.long(), cr.long(), cq.long())

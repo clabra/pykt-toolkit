@@ -30,9 +30,11 @@ from torch.optim import SGD, Adam
 from torch.nn.functional import binary_cross_entropy
 import numpy as np
 import csv
+import pickle
 from datetime import datetime
 
-sys.path.insert(0, '/workspaces/pykt-toolkit')
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from pykt.models import train_model, evaluate, init_model
 from pykt.datasets import init_dataset4train
@@ -90,11 +92,22 @@ def parse_args():
     parser.add_argument("--l2", type=float, required=True,
                       help="L2 regularization weight for Rasch difficulty parameters")
     
+    # Interpretability and Theory-Guided parameters
+    parser.add_argument("--lambda_ref", type=float, required=True,
+                      help="Weight for prediction alignment loss (L_ref)")
+    parser.add_argument("--lambda_initmastery", type=float, required=True,
+                      help="Weight for initial mastery alignment loss")
+    parser.add_argument("--lambda_rate", type=float, required=True,
+                      help="Weight for learning rate alignment loss")
+    parser.add_argument("--theory_guided", type=int, required=True,
+                      help="Enable theory-guided loss components (0 or 1)")
+    
     # Output
     parser.add_argument("--save_dir", type=str, default="saved_model/idkt",
                       help="Directory to save model checkpoints")
     parser.add_argument("--use_wandb", type=int, default=0,
                       help="Use Weights & Biases logging (0 or 1)")
+    parser.add_argument("--calibrate", type=int, required=True, help="Run initial forward pass to recalibrate lambda weights")
     
     return parser.parse_args()
 
@@ -106,7 +119,8 @@ def main():
     set_seed(args.seed)
     
     # Load data configuration
-    data_config_path = '/workspaces/pykt-toolkit/configs/data_config.json'
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    data_config_path = os.path.join(project_root, 'configs/data_config.json')
     with open(data_config_path, 'r') as f:
         data_config = json.load(f)
     
@@ -115,8 +129,10 @@ def main():
         if 'dpath' in data_config[dataset_name]:
             dpath = data_config[dataset_name]['dpath']
             if dpath.startswith('../'):
-                # Convert relative path to absolute
-                data_config[dataset_name]['dpath'] = os.path.abspath(os.path.join('/workspaces/pykt-toolkit', dpath.replace('../', '')))
+                # Strip '../' and join with project_root
+                data_config[dataset_name]['dpath'] = os.path.abspath(os.path.join(project_root, dpath.replace('../', '')))
+            elif not os.path.isabs(dpath):
+                data_config[dataset_name]['dpath'] = os.path.abspath(os.path.join(project_root, dpath))
     
     # Prepare parameters dict (pykt convention)
     params = {
@@ -141,14 +157,40 @@ def main():
         'patience': args.patience,
         'seq_len': args.seq_len,
         'l2': args.l2,
+        'lambda_ref': args.lambda_ref,
+        'lambda_initmastery': args.lambda_initmastery,
+        'lambda_rate': args.lambda_rate,
+        'theory_guided': args.theory_guided,
+        'calibrate': args.calibrate,
         'use_wandb': args.use_wandb,
         'add_uuid': 0  # Don't add UUID to save_dir
     }
     
-    # Initialize dataset
+    # Initialize dataset - Use augmented file if theory_guided is on
     print(f"Loading dataset: {args.dataset}, fold: {args.fold}")
+    
+    if args.theory_guided:
+        # Override filenames to use augmented versions
+        # NOTE: This assumes augment_with_bkt.py has been run
+        if 'train_valid_file' in data_config[args.dataset]:
+            orig = data_config[args.dataset]['train_valid_file']
+            data_config[args.dataset]['train_valid_file'] = orig.replace('.csv', '_bkt.csv')
+            print(f"  Using augmented training file: {data_config[args.dataset]['train_valid_file']}")
+
     train_loader, valid_loader = init_dataset4train(
         args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+    
+    # Load BKT Skill Parameters for L_param
+    bkt_skill_params = None
+    if args.theory_guided:
+        bkt_params_path = os.path.join(data_config[args.dataset]['dpath'], 'bkt_skill_params.pkl')
+        if os.path.exists(bkt_params_path):
+            with open(bkt_params_path, 'rb') as f:
+                bkt_skill_params = pickle.load(f)
+            print(f"  Loaded BKT skill parameters from: {bkt_params_path}")
+        else:
+            print(f"  WARNING: BKT skill parameters not found at {bkt_params_path}. L_param will be disabled.")
+            args.theory_guided = 0
     
     # Initialize model
     print(f"Initializing iDKT model...")
@@ -184,6 +226,65 @@ def main():
     # Create checkpoint directory
     os.makedirs(args.save_dir, exist_ok=True)
     
+    # Loss Calibration Pass (Warm-up)
+    if args.calibrate and args.theory_guided:
+        print("\n" + "="*80)
+        print("LOSS CALIBRATION PASS (WARM-UP)")
+        print("="*80)
+        print("Executing initial forward pass to normalize lambda weights...")
+        
+        model.eval()
+        cal_data = next(iter(train_loader))
+        with torch.no_grad():
+            q, c, r = cal_data["qseqs"].to(device), cal_data["cseqs"].to(device), cal_data["rseqs"].to(device)
+            qshft, rshft = cal_data["shft_qseqs"].to(device), cal_data["shft_rseqs"].to(device)
+            sm = cal_data["smasks"].to(device)
+
+            cq = torch.cat((q[:,0:1], qshft), dim=1)
+            # Correction: use c and cshft consistently with training loop
+            cc = torch.cat((c[:,0:1], cal_data["shft_cseqs"].to(device)), dim=1)
+            cr = torch.cat((r[:,0:1], rshft), dim=1)
+
+            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long())
+            y_pred = torch.masked_select(y[:, 1:], sm)
+            y_true = torch.masked_select(rshft, sm)
+            m_sup = binary_cross_entropy(y_pred.double(), y_true.double()).item()
+            
+            # Calibration for L_ref
+            if "bkt_p_correct" in cal_data:
+                bkt_p_shft = torch.masked_select(cal_data["bkt_p_correct"].to(device), sm)
+                m_ref = torch.mean((y_pred - bkt_p_shft)**2).item()
+                if m_ref > 0:
+                    target_ratio = args.lambda_ref
+                    args.lambda_ref = target_ratio * (m_sup / m_ref)
+                    print(f"  ✓ L_ref: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_ref:.6f} (Init MSE: {m_ref:.6f})")
+            
+            # Calibration for L_param
+            if bkt_skill_params is not None:
+                skills_shft = torch.masked_select(cc.long()[:, 1:], sm)
+                p_initmastery = torch.masked_select(initmastery[:, 1:], sm)
+                p_rate = torch.masked_select(rate[:, 1:], sm)
+                
+                r_init = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['prior'] 
+                                         for s in skills_shft]).to(device)
+                r_rate = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['learns'] 
+                                        for s in skills_shft]).to(device)
+                
+                m_init = torch.mean((p_initmastery - r_init)**2).item()
+                m_rate = torch.mean((p_rate - r_rate)**2).item()
+                
+                if m_init > 0:
+                    target_ratio = args.lambda_initmastery
+                    args.lambda_initmastery = target_ratio * (m_sup / m_init)
+                    print(f"  ✓ L_initmastery: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_initmastery:.6f} (Init MSE: {m_init:.6f})")
+                if m_rate > 0:
+                    target_ratio = args.lambda_rate
+                    args.lambda_rate = target_ratio * (m_sup / m_rate)
+                    print(f"  ✓ L_rate: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_rate:.6f} (Init MSE: {m_rate:.6f})")
+        
+        print("Calibrated weights will be used to maintain theory/supervised signal balance.")
+        print("="*80 + "\n")
+
     # Training Loop
     best_valid_auc = 0.0
     best_valid_acc = 0.0
@@ -194,7 +295,7 @@ def main():
     
     # Initialize metrics_epoch.csv
     csv_path = os.path.join(args.save_dir, 'metrics_epoch.csv')
-    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc']
+    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate']
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=csv_headers)
         writer.writeheader()
@@ -202,6 +303,10 @@ def main():
     for epoch in range(1, args.epochs + 1):
         model.train()
         train_loss = 0.0
+        train_l_sup = 0.0
+        train_l_ref = 0.0
+        train_l_initmastery = 0.0
+        train_l_rate = 0.0
         train_steps = 0
         
         for data in train_loader:
@@ -215,13 +320,47 @@ def main():
              cr = torch.cat((r[:,0:1], rshft), dim=1)
 
              # Forward
-             y, reg_loss = model(cc.long(), cr.long(), cq.long())
+             y, initmastery, rate, reg_loss = model(cc.long(), cr.long(), cq.long())
              
-             # Loss
+             # Standard Supervised Loss (L_SUP)
              y_pred = torch.masked_select(y[:, 1:], sm)
              y_true = torch.masked_select(rshft, sm)
-             loss = binary_cross_entropy(y_pred.double(), y_true.double()) + reg_loss
+             l_sup = binary_cross_entropy(y_pred.double(), y_true.double())
              
+             loss = l_sup + reg_loss
+             l_ref_val, l_init_val, l_rate_val = 0.0, 0.0, 0.0
+             
+             # Theory-Guided Alignment Losses
+             if args.theory_guided:
+                 # 1. Prediction Alignment Loss (L_ref)
+                 if "bkt_p_correct" in data:
+                     bkt_p_correct = data["bkt_p_correct"].to(device)
+                     bkt_p_shft = torch.masked_select(bkt_p_correct, sm)
+                     l_ref = torch.mean((y_pred - bkt_p_shft)**2)
+                     loss += args.lambda_ref * l_ref
+                     l_ref_val = l_ref.item()
+                 
+                 # 2. Parameter Consistency Loss (L_param)
+                 # We align model's projected 'initmastery' and 'rate' with BKT skill params
+                 if bkt_skill_params is not None:
+                     skills_shft = torch.masked_select(cc.long()[:, 1:], sm)
+                     proj_initmastery = torch.masked_select(initmastery[:, 1:], sm)
+                     proj_rate = torch.masked_select(rate[:, 1:], sm)
+                     
+                     # Get reference values for these skills
+                     ref_initmastery = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['prior'] 
+                                               for s in skills_shft]).to(device)
+                     ref_rate = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['learns'] 
+                                            for s in skills_shft]).to(device)
+                     
+                     l_initmastery = torch.mean((proj_initmastery - ref_initmastery)**2)
+                     l_rate = torch.mean((proj_rate - ref_rate)**2)
+                     
+                     l_param = args.lambda_initmastery * l_initmastery + args.lambda_rate * l_rate
+                     loss += l_param
+                     l_init_val = l_initmastery.item()
+                     l_rate_val = l_rate.item()
+
              optimizer.zero_grad()
              loss.backward()
              if args.gradient_clip > 0:
@@ -229,14 +368,21 @@ def main():
              optimizer.step()
              
              train_loss += loss.item()
+             train_l_sup += l_sup.item()
+             train_l_ref += l_ref_val
+             train_l_initmastery += l_init_val
+             train_l_rate += l_rate_val
              train_steps += 1
         
         avg_train_loss = train_loss / train_steps
+        avg_l_sup = train_l_sup / train_steps
+        avg_l_ref = train_l_ref / train_steps
+        avg_l_init = train_l_initmastery / train_steps
+        avg_l_rate = train_l_rate / train_steps
         
         # Validation
         valid_auc, valid_acc = evaluate(model, valid_loader, 'idkt')
-        
-        print(f"Epoch {epoch}/{args.epochs}: Train Loss={avg_train_loss:.4f}, Valid AUC={valid_auc:.4f}, Valid Acc={valid_acc:.4f}")
+        print(f"Epoch {epoch}/{args.epochs}: Loss={avg_train_loss:.4f} (SUP={avg_l_sup:.4f}, REF={avg_l_ref:.4f}, IM={avg_l_init:.4f}, RT={avg_l_rate:.4f}), Valid AUC={valid_auc:.4f}")
         
         # Save to CSV
         with open(csv_path, 'a', newline='') as f:
@@ -245,7 +391,11 @@ def main():
                 'epoch': epoch,
                 'train_loss': avg_train_loss,
                 'valid_auc': valid_auc,
-                'valid_acc': valid_acc
+                'valid_acc': valid_acc,
+                'l_sup': avg_l_sup,
+                'l_ref': avg_l_ref,
+                'l_initmastery': avg_l_init,
+                'l_rate': avg_l_rate
             })
             
         # Checkpoint and Early Stopping

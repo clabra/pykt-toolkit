@@ -72,6 +72,19 @@ class iDKT(nn.Module):
             ), nn.Dropout(self.dropout),
             nn.Linear(256, 1)
         )
+        
+        # Interpretability Heads: Projecting latent states to BKT-like parameters
+        self.out_initmastery = nn.Sequential(
+            nn.Linear(d_model + embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(256, 1)
+        )
+        self.out_rate = nn.Sequential(
+            nn.Linear(d_model + embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(256, 1)
+        )
+        
         self.reset()
 
     def reset(self):
@@ -121,12 +134,18 @@ class iDKT(nn.Module):
 
         concat_q = torch.cat([d_output, q_embed_data], dim=-1)
         output = self.out(concat_q).squeeze(-1)
+        
         m = nn.Sigmoid()
         preds = m(output)
+        
+        # Latent state projections
+        initmastery = m(self.out_initmastery(concat_q).squeeze(-1))
+        rate = m(self.out_rate(concat_q).squeeze(-1))
+        
         if not qtest:
-            return preds, c_reg_loss
+            return preds, initmastery, rate, c_reg_loss
         else:
-            return preds, c_reg_loss, concat_q
+            return preds, initmastery, rate, c_reg_loss, concat_q
 
 
 class Architecture(nn.Module):
