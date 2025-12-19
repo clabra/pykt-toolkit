@@ -97,7 +97,8 @@ def main():
     all_bkt_rate = []
     
     # Interaction-level records for heatmap
-    interaction_records = []
+    param_records = []     # Static Parameters (L0 vs L0)
+    traj_records = []      # Dynamic Trajectories (Pred vs Pred)
     max_export_students = 1000 # Limit to avoid massive CSVs
 
     print("Running inference for interpretability alignment...")
@@ -126,8 +127,16 @@ def main():
             idkt_im_batch = initmastery[:, 1:]
             idkt_r_batch = rate[:, 1:]
 
+            # Static BKT Priors for Initial Mastery alignment
+            bkt_im_static_batch = torch.zeros_like(cshft).float().to(device)
+            for b in range(cshft.shape[0]):
+                for s in range(cshft.shape[1]):
+                    skill_id = cshft[b, s].item()
+                    if skill_id != -1:
+                        bkt_im_static_batch[b, s] = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])['prior']
+
             all_idkt_initmastery.extend(torch.masked_select(idkt_im_batch, sm).cpu().numpy())
-            all_bkt_initmastery.extend(torch.masked_select(bkt_im_batch, sm).cpu().numpy())
+            all_bkt_initmastery.extend(torch.masked_select(bkt_im_static_batch, sm).cpu().numpy())
             
             # Reference rates
             ref_rate_batch = torch.zeros_like(cshft).float().to(device)
@@ -150,19 +159,33 @@ def main():
                 indices = torch.where(student_mask)[0]
                 
                 for idx in indices:
-                    interaction_records.append({
+                    # 1. Parameter Alignment (Static vs Static) - FOR THE GREEN PLOT
+                    param_records.append({
                         'student_id': uid,
                         'skill_id': cshft[b, idx].item(),
-                        'Mi': idkt_im_batch[b, idx].item(),
-                        'M_rasch': bkt_im_batch[b, idx].item(), # Using BKT mastery as "M_rasch" for heatmap compatibility
+                        'Mi': idkt_im_batch[b, idx].item(), # static projection
+                        'M_rasch': bkt_im_static_batch[b, idx].item(), # static prior
                     })
 
-    # Save interaction-level data for heatmap
-    if interaction_records:
-        df_mastery = pd.DataFrame(interaction_records)
-        mastery_path = os.path.join(args.output_dir, "mastery_test.csv")
-        df_mastery.to_csv(mastery_path, index=False)
-        print(f"✓ Saved interaction data for heatmap: {mastery_path}")
+                    # 2. Trajectory Alignment (Dynamic vs Dynamic) - THE GUIDANCE PLOT
+                    traj_records.append({
+                        'student_id': uid,
+                        'skill_id': cshft[b, idx].item(),
+                        'Mi': y[b, idx+1].item(), # iDKT prediction
+                        'M_rasch': bkt_p_batch[b, idx+1].item() if idx+1 < bkt_p_batch.shape[1] else bkt_p_batch[b, idx].item(), # BKT prediction
+                    })
+
+    # Save Record Files
+    if param_records:
+        df_param = pd.DataFrame(param_records)
+        param_path = os.path.join(args.output_dir, "mastery_test.csv") # Kept as mastery_test.csv for backward compatibility with plot script
+        df_param.to_csv(param_path, index=False)
+        print(f"✓ Saved Parameter Alignment (Static): {param_path}")
+        
+        df_traj = pd.DataFrame(traj_records)
+        traj_path = os.path.join(args.output_dir, "mastery_trajectory.csv")
+        df_traj.to_csv(traj_path, index=False)
+        print(f"✓ Saved Trajectory Alignment (Dynamic): {traj_path}")
 
     # Calculate Alignment Metrics
     results = {}

@@ -75,7 +75,7 @@ class iDKT(nn.Module):
         
         # Interpretability Heads: Projecting latent states to BKT-like parameters
         self.out_initmastery = nn.Sequential(
-            nn.Linear(d_model + embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(256, 1)
         )
@@ -139,7 +139,9 @@ class iDKT(nn.Module):
         preds = m(output)
         
         # Latent state projections
-        initmastery = m(self.out_initmastery(concat_q).squeeze(-1))
+        # Initial Mastery depends only on question/concept embedding (Static grounding)
+        initmastery = m(self.out_initmastery(q_embed_data).squeeze(-1))
+        # Learning rate remains dynamic (Transition depends on interaction history)
         rate = m(self.out_rate(concat_q).squeeze(-1))
         
         if not qtest:

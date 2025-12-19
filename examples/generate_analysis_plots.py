@@ -513,10 +513,14 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
     # Create heatmap
     fig, ax = plt.subplots(figsize=(14, 10))
     
-    # Use log scale for better visualization (squared errors can vary widely)
-    pivot_log = np.log10(pivot + 1e-6)  # Add small constant to avoid log(0)
+    # Use log scale with ABSOLUTE bounds for consistent visualization
+    # vmin=-6 (MSE=0.000001, very good)
+    # vmax=0  (MSE=1.0, very poor)
+    pivot_log = np.log10(pivot + 1e-10) # Smaller epsilon for more range
     
-    sns.heatmap(pivot_log, cmap='RdYlGn_r', ax=ax, cbar_kws={'label': 'log10(Squared Error)'})
+    sns.heatmap(pivot_log, cmap='RdYlGn_r', ax=ax, 
+                vmin=-6, vmax=0,
+                cbar_kws={'label': 'log10(Squared Error)'})
     
     ax.set_xlabel('Skill ID', fontsize=12)
     ax.set_ylabel('Student ID', fontsize=12)
@@ -525,7 +529,10 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
                  fontsize=13, fontweight='bold')
     
     # Add interpretation text
-    interp_text = 'Darker (red) = Higher error\nLighter (green) = Better alignment'
+    interp_text = ('Interpretability Alignment Scale:\n'
+                  'Green (≤ -4): Excellent (< 1% error)\n'
+                  'Yellow (≈ -2): Moderate (10% error)\n'
+                  'Red (≥ -1): Poor (> 30% error)')
     ax.text(1.15, 0.5, interp_text, transform=ax.transAxes, 
            fontsize=10, verticalalignment='center',
            bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
