@@ -12,9 +12,11 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 import pickle
-
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from pyBKT.models import Model, Roster
+from pykt.models.idkt_roster import IDKTRoster
 
 from pykt.models import init_model
 from pykt.datasets import init_dataset4train
@@ -41,6 +43,9 @@ def parse_args():
     parser.add_argument("--final_fc_dim", type=int, default=512)
     parser.add_argument("--l2", type=float, default=1e-5)
     parser.add_argument("--seq_len", type=int, default=200)
+    
+    parser.add_argument("--roster_sampling_rate", type=int, default=10, help="Sample every N steps for roster export")
+    parser.add_argument("--max_correlation_students", type=int, default=1000, help="Limit number of students for correlation export")
     
     return parser.parse_args()
 
@@ -99,7 +104,56 @@ def main():
     # Interaction-level records for heatmap
     param_records = []     # Static Parameters (L0 vs L0)
     traj_records = []      # Dynamic Trajectories (Pred vs Pred)
-    max_export_students = 1000 # Limit to avoid massive CSVs
+    rate_records = []      # Dynamic Rates (RT vs RT)
+    
+    # Roster-style records (Wide table format)
+    roster_bkt_records = []
+    roster_idkt_records = []
+    
+    # Limit students to capture representative sample for trajectories
+    max_export_students = args.max_correlation_students
+    
+    # Initialize Rosters
+    num_skills = data_config[args.dataset]['num_c'] # Concepts are skills in pykt
+    all_skills = list(range(num_skills))
+    
+    # Initialize BKT Model with saved params (internal structure needed for Roster.py)
+    bkt_model = Model(seed=42)
+    bkt_model.fit_model = {}
+    for sid, p in bkt_skill_params['params'].items():
+        skill_name = str(sid)
+        prior, learns, guesses, slips = p['prior'], p['learns'], p['guesses'], p['slips']
+        
+        bkt_model.fit_model[skill_name] = {
+            'prior': prior,
+            'learns': np.array([learns]),
+            'guesses': np.array([guesses]),
+            'slips': np.array([slips]),
+            'forgets': np.array([0.0]),
+            'resource_names': {'default': 0},
+            'gs_names': {'default': 0},
+            'pi_0': np.array([[1 - prior], [prior]]),
+            # As structure: [resource, [from_state, to_state]]
+            # State 0: Unmastered, State 1: Mastered
+            # learns is P(U -> M)
+            'As': np.array([[[1 - learns, learns], [0.0, 1.0]]]), 
+            # gs structure: [gs_class, [state, correctness]]
+            # State 0 (U): P(Inc) = 1-g, P(Cor) = g
+            # State 1 (M): P(Inc) = s,   P(Cor) = 1-s
+            'gs': np.array([[[1 - guesses, guesses], [slips, 1 - slips]]])
+        }
+    
+    # Pre-initialize Rosters with a fixed set of student IDs to avoid KeyError
+    # We load the unique UIDs from the augmented CSV and pick the first N
+    augmented_csv_path = os.path.join(dpath, orig_file.replace('.csv', '_bkt.csv'))
+    df_aug = pd.read_csv(augmented_csv_path)
+    all_uids_in_csv = sorted(df_aug['uid'].unique().tolist())
+    export_uids = all_uids_in_csv[:max_export_students]
+    export_uids_set = set(export_uids)
+    
+    print(f"Pre-initializing rosters for {len(export_uids)} students...")
+    bkt_roster = Roster(export_uids, [str(s) for s in all_skills], model=bkt_model)
+    idkt_roster = IDKTRoster(export_uids, all_skills, model, device=device)
 
     print("Running inference for interpretability alignment...")
     with torch.no_grad():
@@ -149,10 +203,63 @@ def main():
             all_idkt_rate.extend(torch.masked_select(idkt_r_batch, sm).cpu().numpy())
             all_bkt_rate.extend(torch.masked_select(ref_rate_batch, sm).cpu().numpy())
 
-            # Export interaction records for heatmap
+            # Export interaction records for heatmap and Rosters
             for b in range(uids.shape[0]):
                 uid = uids[b].item()
-                if uid >= max_export_students: continue
+                if uid not in export_uids_set: continue
+
+                # Handle interaction-by-interaction for roster export
+                student_mask = sm[b]
+                indices = torch.where(student_mask)[0]
+                
+                # ROSTER EXPORT OPTIMIZATION
+                # Instead of querying iDKT for all skills at every step, we:
+                # 1. Update rosters step-by-step (fast)
+                # 2. Vectorize iDKT query after student sequence completes
+                # 3. Sample steps to reduce file size and computation
+                
+                sampling_rate = args.roster_sampling_rate
+                student_mask = sm[b]
+                indices = torch.where(student_mask)[0]
+                
+                # 1. Sequential BKT Updates and Sampling
+                for step_idx, idx in enumerate(indices):
+                    skill_id = int(cshft[b, idx].item())
+                    correct = int(rshft[b, idx].item())
+                    
+                    idkt_roster.update_state(skill_id, uid, correct)
+                    bkt_roster.update_state(str(skill_id), uid, correct)
+                    
+                    # Log BKT mastery only if sampling or it's the last step
+                    if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
+                        bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), uid) for s in all_skills}
+                        roster_bkt_records.append({
+                            'student_id': uid,
+                            'step': step_idx + 1,
+                            'skill_id': skill_id,
+                            'correct': correct,
+                            **bkt_mastery
+                        })
+
+                # 2. Vectorized iDKT Mastery Retrieval
+                # This call computes all skills for all steps in one GPU operation
+                idkt_matrix = idkt_roster.get_mastery_matrix(uid) # [T, N]
+                if idkt_matrix is not None:
+                    for step_idx, idx in enumerate(indices):
+                        if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
+                            skill_id = int(cshft[b, idx].item())
+                            correct = int(rshft[b, idx].item())
+                            
+                            step_mastery = idkt_matrix[step_idx]
+                            idkt_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
+                            
+                            roster_idkt_records.append({
+                                'student_id': uid,
+                                'step': step_idx + 1,
+                                'skill_id': skill_id,
+                                'correct': correct,
+                                **idkt_mastery_formatted
+                            })
                 
                 # Get indices where mask is true for this student
                 student_mask = sm[b]
@@ -163,29 +270,58 @@ def main():
                     param_records.append({
                         'student_id': uid,
                         'skill_id': cshft[b, idx].item(),
-                        'Mi': idkt_im_batch[b, idx].item(), # static projection
-                        'M_rasch': bkt_im_static_batch[b, idx].item(), # static prior
+                        'idkt_im': idkt_im_batch[b, idx].item(), # static projection
+                        'bkt_im': bkt_im_static_batch[b, idx].item(), # static prior
                     })
 
                     # 2. Trajectory Alignment (Dynamic vs Dynamic) - THE GUIDANCE PLOT
                     traj_records.append({
                         'student_id': uid,
                         'skill_id': cshft[b, idx].item(),
-                        'Mi': y[b, idx+1].item(), # iDKT prediction
-                        'M_rasch': bkt_p_batch[b, idx+1].item() if idx+1 < bkt_p_batch.shape[1] else bkt_p_batch[b, idx].item(), # BKT prediction
+                        'y_true': int(rshft[b, idx].item()), # Ground truth label
+                        'p_idkt': y[b, idx+1].item(), # iDKT prediction
+                        'y_idkt': 1 if y[b, idx+1].item() > 0.5 else 0, # Binary iDKT
+                        'p_bkt': bkt_p_batch[b, idx].item(), # BKT prediction (aligned via sm)
+                        'y_bkt': 1 if bkt_p_batch[b, idx].item() > 0.5 else 0, # Binary BKT
+                    })
+
+                    # 3. Rate Alignment (Dynamic vs Static)
+                    rate_records.append({
+                        'student_id': uid,
+                        'skill_id': cshft[b, idx].item(),
+                        'idkt_rate': idkt_r_batch[b, idx].item(), # iDKT rate
+                        'bkt_rate': ref_rate_batch[b, idx].item(), # BKT rate
                     })
 
     # Save Record Files
     if param_records:
         df_param = pd.DataFrame(param_records)
-        param_path = os.path.join(args.output_dir, "mastery_test.csv") # Kept as mastery_test.csv for backward compatibility with plot script
+        param_path = os.path.join(args.output_dir, "traj_initmastery.csv")
         df_param.to_csv(param_path, index=False)
-        print(f"✓ Saved Parameter Alignment (Static): {param_path}")
+        print(f"✓ Saved Initial Mastery Alignment: {param_path}")
         
+    if traj_records:
         df_traj = pd.DataFrame(traj_records)
-        traj_path = os.path.join(args.output_dir, "mastery_trajectory.csv")
+        traj_path = os.path.join(args.output_dir, "traj_predictions.csv")
         df_traj.to_csv(traj_path, index=False)
-        print(f"✓ Saved Trajectory Alignment (Dynamic): {traj_path}")
+        print(f"✓ Saved Prediction Trajectory Alignment: {traj_path}")
+
+    if rate_records:
+        df_rate = pd.DataFrame(rate_records)
+        rate_path = os.path.join(args.output_dir, "traj_rate.csv")
+        df_rate.to_csv(rate_path, index=False)
+        print(f"✓ Saved Learning Rate Alignment: {rate_path}")
+
+    # Save Roster Files
+    if roster_bkt_records:
+        roster_bkt_path = os.path.join(args.output_dir, "roster_bkt.csv")
+        pd.DataFrame(roster_bkt_records).to_csv(roster_bkt_path, index=False)
+        print(f"✓ Saved BKT Roster: {roster_bkt_path}")
+        
+    if roster_idkt_records:
+        roster_idkt_path = os.path.join(args.output_dir, "roster_idkt.csv")
+        pd.DataFrame(roster_idkt_records).to_csv(roster_idkt_path, index=False)
+        print(f"✓ Saved iDKT Roster: {roster_idkt_path}")
 
     # Calculate Alignment Metrics
     results = {}

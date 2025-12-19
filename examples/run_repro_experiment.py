@@ -216,7 +216,8 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'dataset', 'fold', 'seed',
         'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
         'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
-        'final_fc_dim', 'l2', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate'
+        'final_fc_dim', 'l2', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
+        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold'
     }
     
     # Determine which parameters to pass based on training script
@@ -297,12 +298,36 @@ def build_bkt_validation_command(experiment_folder, params):
     return cmd
 
 
-def build_analysis_plots_command(experiment_folder):
+def build_analysis_plots_command(experiment_folder, params=None):
     """
     Build command to generate comprehensive analysis plots.
     """
     python_path = sys.executable
     plots_script = "examples/generate_analysis_plots.py"
+    cmd = f"{python_path} {plots_script} --run_dir {experiment_folder}"
+    
+    if params:
+        if params.get('bkt_filter', False):
+            cmd += " --filter_bkt"
+            # Automatically find matching params pkl in the data folder
+            dataset = params.get('dataset', 'assist2015')
+            cmd += f" --bkt_params_path data/{dataset}/bkt_skill_params.pkl"
+            
+            # Pass thresholds if available in params
+            if 'bkt_guess_threshold' in params:
+                cmd += f" --guess_threshold {params['bkt_guess_threshold']}"
+            if 'bkt_slip_threshold' in params:
+                cmd += f" --slip_threshold {params['bkt_slip_threshold']}"
+                
+    return cmd
+
+
+def build_validation_plots_command(experiment_folder):
+    """
+    Build command to generate specialized validation plots (consensus, residual, uncertainty).
+    """
+    python_path = sys.executable
+    plots_script = "examples/generate_validation_plots.py"
     cmd = f"{python_path} {plots_script} --run_dir {experiment_folder}"
     return cmd
 
@@ -873,6 +898,7 @@ def main():
             f"{python_path} examples/compute_bkt_correlation.py "
             f"--experiment_dir {experiment_dir_abs} "
             f"--dataset {training_params['dataset']} "
+            f"--max_students {training_params['max_correlation_students']} "
             f"--output_file bkt_validation_final.json "
             f"--update_csv"
         )
@@ -891,7 +917,9 @@ def main():
             f"--final_fc_dim {training_params['final_fc_dim']} "
             f"--l2 {training_params['l2']} "
             f"--emb_type {training_params['emb_type']} "
-            f"--seq_len {training_params['seq_len']}"
+            f"--seq_len {training_params['seq_len']} "
+            f"--roster_sampling_rate 10 "
+            f"--max_correlation_students {training_params['max_correlation_students']}"
         )
         
         bkt_validation_command = build_bkt_validation_command(experiment_dir_abs, training_params)
@@ -911,6 +939,7 @@ def main():
                 "bkt_correlation": bkt_correlation_command,
                 "bkt_validation": bkt_validation_command,
                 "idkt_interpretability": idkt_interpretability_command,
+                "validation_plots": build_validation_plots_command(experiment_dir_abs),
                 "reproduce": repro_command
             },
             "experiment": {
@@ -1099,7 +1128,7 @@ def main():
                         print("Generating analysis plots...")
                         print("=" * 80)
                         
-                        plots_command = build_analysis_plots_command(experiment_folder)
+                        plots_command = build_analysis_plots_command(experiment_folder, training_params)
                         plots_result = subprocess.run(plots_command, shell=True)
                         
                         if plots_result.returncode == 0:
@@ -1132,13 +1161,26 @@ def main():
                     print("Generating analysis plots...")
                     print("=" * 80)
                     
-                    plots_command = build_analysis_plots_command(experiment_folder)
+                    plots_command = build_analysis_plots_command(experiment_folder, training_params)
                     plots_result = subprocess.run(plots_command, shell=True)
                     
                     if plots_result.returncode == 0:
                         print("\n✓ Analysis plots generated successfully")
                     else:
                         print("\n⚠️  Plot generation failed (non-critical)")
+
+                    # Generate validation plots for iDKT
+                    print("\n" + "=" * 80)
+                    print("Generating validation plots (Consensus, Residual, Uncertainty)...")
+                    print("=" * 80)
+                    
+                    val_plots_command = build_validation_plots_command(experiment_folder)
+                    val_plots_result = subprocess.run(val_plots_command, shell=True)
+                    
+                    if val_plots_result.returncode == 0:
+                        print("\n✓ Validation plots generated successfully")
+                    else:
+                        print("\n⚠️  Validation plot generation failed (non-critical)")
                 else:
                     print("\n⚠️  iDKT interpretability evaluation failed (non-critical)")
             

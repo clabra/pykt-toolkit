@@ -28,7 +28,10 @@
     "lambda_rate": 0.1,
     "theory_guided": 1,
     "calibrate": 1,
-    "max_correlation_students": 1000
+    "max_correlation_students": 1000,
+    "bkt_filter": false,
+    "bkt_guess_threshold": 0.3,
+    "bkt_slip_threshold": 0.3
   },
   "types": {
     "launcher": [
@@ -51,7 +54,10 @@
       "optimizer",
       "gradient_clip",
       "patience",
-      "calibrate"
+      "calibrate",
+      "bkt_filter",
+      "bkt_guess_threshold",
+      "bkt_slip_threshold"
     ],
     "model_config": [
       "seq_len",
@@ -76,5 +82,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f4bb6bca18212b2febb8b1d6a3d9fc03"
+  "md5": "7d3d89adaf048b23dd42b85e812e242e"
 }

@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
+import pickle
 
 # Add project root to path
 sys.path.insert(0, '/workspaces/pykt-toolkit')
@@ -99,14 +100,29 @@ def load_metrics_csv(run_dir):
 
 
 def load_mastery_states(run_dir, split='test'):
-    """Load mastery states CSV if it exists."""
-    mastery_path = os.path.join(run_dir, f'mastery_{split}.csv')
-    if not os.path.exists(mastery_path):
-        print(f"⚠️  mastery_{split}.csv not found, skipping per-skill alignment plot")
+    """Load mastery states CSV if it exists (handles multiple naming conventions)."""
+    # Map splits to possible file names
+    possible_paths = {
+        'test': ['traj_initmastery.csv', 'initmastery_trajectory.csv', 'mastery_test.csv'],
+        'trajectory': ['traj_predictions.csv', 'predictions_trajectory.csv', 'mastery_trajectory.csv'],
+        'rate': ['traj_rate.csv', 'rate_trajectory.csv', 'mastery_rate.csv']
+    }
+    
+    possible_names = possible_paths.get(split, [f'mastery_{split}.csv'])
+    mastery_path = None
+    
+    for name in possible_names:
+        path = os.path.join(run_dir, name)
+        if os.path.exists(path):
+            mastery_path = path
+            break
+            
+    if not mastery_path:
+        print(f"⚠️  Alignment data for '{split}' not found, skipping plot")
         return None
     
     df = pd.read_csv(mastery_path)
-    print(f"✓ Loaded {len(df)} mastery state records")
+    print(f"✓ Loaded {len(df)} records from {os.path.basename(mastery_path)}")
     return df
 
 
@@ -124,6 +140,32 @@ def load_config(run_dir):
     lambda_penalty = config.get('lambda_penalty', 100.0)
     print(f"✓ Loaded config: epsilon={epsilon}, lambda_penalty={lambda_penalty}")
     return {'epsilon': epsilon, 'lambda_penalty': lambda_penalty}
+
+
+def load_bkt_params(bkt_params_path):
+    """Load BKT parameters from pickle file."""
+    if not bkt_params_path or not os.path.exists(bkt_params_path):
+        print(f"⚠️  BKT params file not found: {bkt_params_path}")
+        return None
+    
+    try:
+        with open(bkt_params_path, 'rb') as f:
+            data = pickle.load(f)
+        params = data.get('params', {})
+        print(f"✓ Loaded BKT parameters for {len(params)} skills")
+        return params
+    except Exception as e:
+        print(f"⚠️  Error loading BKT params: {e}")
+        return None
+
+
+def filter_skills_by_bkt(mastery_df, bkt_params, guess_threshold=0.3, slip_threshold=0.3):
+    """Filter out skills with extreme BKT parameters."""
+    valid_skills = [s for s, p in bkt_params.items() 
+                   if p.get('guesses', 0) <= guess_threshold 
+                   and p.get('slips', 0) <= slip_threshold]
+    filtered_df = mastery_df[mastery_df['skill_id'].isin(valid_skills)]
+    return filtered_df
 
 
 def plot_auc_trend_simple(df, output_path, config):
@@ -471,14 +513,28 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
         print("⚠️  Skipping per-skill alignment plot (no mastery states data)")
         return
     
-    # Check required columns (support both naming conventions)
-    if 'Mi' in mastery_df.columns and 'M_rasch' in mastery_df.columns:
-        mi_col, rasch_col = 'Mi', 'M_rasch'
-    elif 'mi_value' in mastery_df.columns and 'm_rasch_value' in mastery_df.columns:
-        mi_col, rasch_col = 'mi_value', 'm_rasch_value'
-    else:
-        print(f"⚠️  Skipping per-skill alignment plot (need Mi/M_rasch or mi_value/m_rasch_value columns)")
+    # Check required columns (support multiple naming conventions)
+    # 1. New descriptive names (p_idkt/p_bkt, idkt_im/bkt_im, idkt_rate/bkt_rate)
+    new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+    mi_col, rasch_col = None, None
+    
+    for c1, c2 in new_pairs:
+        if c1 in mastery_df.columns and c2 in mastery_df.columns:
+            mi_col, rasch_col = c1, c2
+            break
+            
+    # 2. Legacy names
+    if mi_col is None:
+        if 'Mi' in mastery_df.columns and 'M_rasch' in mastery_df.columns:
+            mi_col, rasch_col = 'Mi', 'M_rasch'
+        elif 'mi_value' in mastery_df.columns and 'm_rasch_value' in mastery_df.columns:
+            mi_col, rasch_col = 'mi_value', 'm_rasch_value'
+    
+    if mi_col is None:
+        print(f"⚠️  Skipping per-skill alignment plot (need descriptive names or Mi/M_rasch)")
         return
+    
+    print(f"📊 Using columns for alignment plot: {mi_col} vs {rasch_col}")
     
     if 'student_id' not in mastery_df.columns or 'skill_id' not in mastery_df.columns:
         print(f"⚠️  Skipping per-skill alignment plot (need student_id and skill_id columns)")
@@ -546,7 +602,15 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
 def main():
     parser = argparse.ArgumentParser(description='Generate comprehensive analysis plots for iKT experiments')
     parser.add_argument('--run_dir', type=str, required=True,
-                       help='Experiment directory containing metrics_validation.csv')
+                       help='Experiment directory containing metrics results')
+    parser.add_argument('--filter_bkt', action='store_true',
+                       help='Filter out skills with extreme BKT parameters')
+    parser.add_argument('--guess_threshold', type=float, default=0.3,
+                       help='Max guess rate allowed for a skill to be included (default: 0.3)')
+    parser.add_argument('--slip_threshold', type=float, default=0.3,
+                       help='Max slip rate allowed for a skill to be included (default: 0.3)')
+    parser.add_argument('--bkt_params_path', type=str,
+                       help='Path to bkt_skill_params.pkl')
     
     args = parser.parse_args()
     
@@ -564,11 +628,19 @@ def main():
     os.makedirs(plots_dir, exist_ok=True)
     print(f"✓ Plots directory: {plots_dir}\n")
     
-    # Load data
     try:
         metrics_df, format_type = load_metrics_csv(args.run_dir)
         config = load_config(args.run_dir)
-        mastery_df = load_mastery_states(args.run_dir, split='test')
+        
+        # BKT parameters for filtering (if requested)
+        bkt_params = None
+        if args.filter_bkt:
+            bkt_params = load_bkt_params(args.bkt_params_path)
+            if bkt_params:
+                print(f"✓ Skills filtered by BKT bounds: g <= {args.guess_threshold}, s <= {args.slip_threshold}")
+            else:
+                print("⚠️  Filtering requested but BKT params could not be loaded. Skipping filter.")
+
     except Exception as e:
         print(f"❌ Error loading data: {e}")
         sys.exit(1)
@@ -601,9 +673,32 @@ def main():
             print("1. Loss Evolution (iDKT)...")
             plot_idkt_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
             
-            # Plot 2: Per-Skill Alignment (works with mastery data)
-            print("2. Per-Skill Alignment Heatmap...")
-            plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
+            # Plot 2: Per-Skill Alignment Heatmaps (multiple splits)
+            print("2. Per-Skill Alignment Heatmaps...")
+            alignment_splits = ['test', 'trajectory', 'rate']
+            for split in alignment_splits:
+                df_split = load_mastery_states(args.run_dir, split=split)
+                if df_split is None:
+                    continue
+                
+                # Apply filtering if requested
+                if args.filter_bkt and bkt_params:
+                    initial_skills = df_split['skill_id'].nunique()
+                    df_split = filter_skills_by_bkt(df_split, bkt_params, 
+                                                 args.guess_threshold, args.slip_threshold)
+                    final_skills = df_split['skill_id'].nunique()
+                    print(f"   Filtering {split}: {final_skills} skills remaining (from {initial_skills})")
+                
+                suffix = "_filtered" if args.filter_bkt else ""
+                # Map internal split name to descriptive file name for plot
+                plot_name_map = {
+                    'test': 'initmastery',
+                    'trajectory': 'predictions',
+                    'rate': 'rate'
+                }
+                plot_filename = f'per_skill_alignment_{plot_name_map.get(split, split)}{suffix}.png'
+                print(f"   Generating {plot_filename}...")
+                plot_per_skill_alignment(df_split, os.path.join(plots_dir, plot_filename), config)
             
         else:
             print("⚠️  Limited data available - generating basic plots only")

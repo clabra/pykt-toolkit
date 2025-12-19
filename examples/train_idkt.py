@@ -101,13 +101,21 @@ def parse_args():
                       help="Weight for learning rate alignment loss")
     parser.add_argument("--theory_guided", type=int, required=True,
                       help="Enable theory-guided loss components (0 or 1)")
+    parser.add_argument("--calibrate", type=int, required=True, help="Run initial forward pass to recalibrate lambda weights")
+    
+    # BKT Filtering parameters (tracked in parameter_default.json)
+    parser.add_argument("--bkt_filter", action='store_true',
+                      help="Filter out skills with extreme BKT parameters (analysis only)")
+    parser.add_argument("--bkt_guess_threshold", type=float, required=True,
+                      help="Max guess rate allowed for a skill to be included")
+    parser.add_argument("--bkt_slip_threshold", type=float, required=True,
+                      help="Max slip rate allowed for a skill to be included")
     
     # Output
     parser.add_argument("--save_dir", type=str, default="saved_model/idkt",
                       help="Directory to save model checkpoints")
     parser.add_argument("--use_wandb", type=int, default=0,
                       help="Use Weights & Biases logging (0 or 1)")
-    parser.add_argument("--calibrate", type=int, required=True, help="Run initial forward pass to recalibrate lambda weights")
     
     return parser.parse_args()
 
