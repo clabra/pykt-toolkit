@@ -919,7 +919,8 @@ def main():
             f"--emb_type {training_params['emb_type']} "
             f"--seq_len {training_params['seq_len']} "
             f"--roster_sampling_rate 10 "
-            f"--max_correlation_students {training_params['max_correlation_students']}"
+            f"--max_correlation_students {training_params['max_correlation_students']} "
+            f"--skip_roster"
         )
         
         bkt_validation_command = build_bkt_validation_command(experiment_dir_abs, training_params)

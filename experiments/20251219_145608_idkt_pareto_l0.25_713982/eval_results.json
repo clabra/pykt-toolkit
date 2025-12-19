@@ -1,0 +1,9 @@
+{
+  "valid_auc": 0.717712308597015,
+  "valid_acc": 0.7488442709904719,
+  "test_auc": 0.7099777873439088,
+  "test_acc": 0.7417379933428435,
+  "window_test_auc": 0.7101522197908176,
+  "window_test_acc": 0.7418300653594772,
+  "checkpoint": "/workspaces/pykt-toolkit/experiments/20251219_145608_idkt_pareto_l0.25_713982/best_model.pt"
+}

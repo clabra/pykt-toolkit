@@ -46,6 +46,7 @@ def parse_args():
     
     parser.add_argument("--roster_sampling_rate", type=int, default=10, help="Sample every N steps for roster export")
     parser.add_argument("--max_correlation_students", type=int, default=1000, help="Limit number of students for correlation export")
+    parser.add_argument("--skip_roster", action="store_true", help="Skip expensive roster CSV export")
     
     return parser.parse_args()
 
@@ -213,53 +214,45 @@ def main():
                 indices = torch.where(student_mask)[0]
                 
                 # ROSTER EXPORT OPTIMIZATION
-                # Instead of querying iDKT for all skills at every step, we:
-                # 1. Update rosters step-by-step (fast)
-                # 2. Vectorize iDKT query after student sequence completes
-                # 3. Sample steps to reduce file size and computation
-                
-                sampling_rate = args.roster_sampling_rate
-                student_mask = sm[b]
-                indices = torch.where(student_mask)[0]
-                
-                # 1. Sequential BKT Updates and Sampling
-                for step_idx, idx in enumerate(indices):
-                    skill_id = int(cshft[b, idx].item())
-                    correct = int(rshft[b, idx].item())
-                    
-                    idkt_roster.update_state(skill_id, uid, correct)
-                    bkt_roster.update_state(str(skill_id), uid, correct)
-                    
-                    # Log BKT mastery only if sampling or it's the last step
-                    if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
-                        bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), uid) for s in all_skills}
-                        roster_bkt_records.append({
-                            'student_id': uid,
-                            'step': step_idx + 1,
-                            'skill_id': skill_id,
-                            'correct': correct,
-                            **bkt_mastery
-                        })
-
-                # 2. Vectorized iDKT Mastery Retrieval
-                # This call computes all skills for all steps in one GPU operation
-                idkt_matrix = idkt_roster.get_mastery_matrix(uid) # [T, N]
-                if idkt_matrix is not None:
+                if not args.skip_roster:
+                    sampling_rate = args.roster_sampling_rate
+                    # 1. Sequential BKT Updates and Sampling
                     for step_idx, idx in enumerate(indices):
+                        skill_id = int(cshft[b, idx].item())
+                        correct = int(rshft[b, idx].item())
+                        
+                        idkt_roster.update_state(skill_id, uid, correct)
+                        bkt_roster.update_state(str(skill_id), uid, correct)
+                        
+                        # Log BKT mastery only if sampling or it's the last step
                         if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
-                            skill_id = int(cshft[b, idx].item())
-                            correct = int(rshft[b, idx].item())
-                            
-                            step_mastery = idkt_matrix[step_idx]
-                            idkt_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
-                            
-                            roster_idkt_records.append({
+                            bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), uid) for s in all_skills}
+                            roster_bkt_records.append({
                                 'student_id': uid,
                                 'step': step_idx + 1,
                                 'skill_id': skill_id,
                                 'correct': correct,
-                                **idkt_mastery_formatted
+                                **bkt_mastery
                             })
+
+                    # 2. Vectorized iDKT Mastery Retrieval
+                    idkt_matrix = idkt_roster.get_mastery_matrix(uid) # [T, N]
+                    if idkt_matrix is not None:
+                        for step_idx, idx in enumerate(indices):
+                            if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
+                                step_mastery = idkt_matrix[step_idx]
+                                idkt_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
+                                roster_idkt_records.append({
+                                    'student_id': uid,
+                                    'step': step_idx + 1,
+                                    'skill_id': int(cshft[b, idx].item()),
+                                    'correct': int(rshft[b, idx].item()),
+                                    **idkt_mastery_formatted
+                                })
+                else:
+                    # If skipping roster, we still need to update iDKT state for internal consistency 
+                    # (though here it's only needed for the roster itself which we're skipping)
+                    pass
                 
                 # Get indices where mask is true for this student
                 student_mask = sm[b]

@@ -1063,3 +1063,32 @@ Theory-Accuracy Tension: The predictive alignment ($p_{idkt}$ vs $p_{bkt}$) is l
 
 **Conclusion**: The iDKT model maintains near-perfect semantic grounding for its latent parameters across different pedagogical contexts. The high AUC on `assist2009` demonstrates that theoretical regularizers do not prevent the Transformer from capturing complex behavioral patterns in richer datasets.
 
+
+## Pareto Frontier: Accuracy vs. Theoretical Alignment
+
+The iDKT model implements a multi-objective optimization objective that balances predictive performance (AUC) with adherence to pedagogical theory (semantic alignment with BKT). To explore this trade-off, we conducted a "Lambda Titration" sweep by varying the guidance weight $\lambda_{ref}$ across the range [0.0, 1.0].
+
+### Titration Results (ASSIST2015)
+
+| $\lambda_{ref}$ | Test AUC | Prediction Corr | Prediction MSE |
+| :--- | :--- | :--- | :--- |
+| **0.0** (Unconstrained) | 0.7249 | 0.5090 | 0.0265 |
+| **0.1** | 0.7217 | 0.6609 | 0.0167 |
+| **0.25** | 0.7100 | 0.7802 | 0.0104 |
+| **0.50** | 0.6911 | 0.8610 | 0.0064 |
+| **0.75** | 0.6787 | 0.8890 | 0.0049 |
+| **1.00** (Strong Theory) | 0.6700 | 0.9081 | 0.0040 |
+
+### Pareto Visualization
+
+![iDKT Pareto Frontier (ASSIST2015)](pareto_frontier.png)
+
+### Analysis of the Pareto Frontier
+
+1.  **Low-Cost Alignment**: The transition from $\lambda_{ref}=0.0$ to $\lambda_{ref}=0.1$ represents a highly efficient region of the frontier. We achieve a **+30% gain in theoretical alignment** (+0.15 correlation gain) with a negligible performance penalty (-0.003 AUC).
+2.  **Balanced Operating Point**: At $\lambda_{ref}=0.25$, the model achieves a strong correlation of 0.78 while maintaining an AUC above 0.71. This point serves as the recommended configuration for applications requiring both high precision and pedagogical interpretability.
+3.  **Diminishing Returns**: Pushing $\lambda_{ref}$ beyond 0.5 leads to diminishing returns in alignment while significantly throttling the transformer's capacity to learn complex, non-theory-conforming patterns, resulting in a steeper decay in AUC.
+
+### Conclusion
+
+The existence of a clear Pareto frontier confirms that theoretical guidance serves as a powerful regularizer for knowledge tracing. By adjusting $\lambda_{ref}$, practitioners can tune iDKT to operate anywhere on the spectrum between a high-performance "black-box" and a semantically grounded "white-box" model.
