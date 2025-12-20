@@ -1,0 +1,8 @@
+{
+  "prediction_mse": 0.016086546704173088,
+  "prediction_corr": 0.8433347408966252,
+  "initmastery_mse": 4.0444072510581464e-05,
+  "initmastery_corr": 0.9995400393000289,
+  "learning_rate_mse": 5.1124214223818853e-05,
+  "learning_rate_corr": 0.9980113971646195
+}

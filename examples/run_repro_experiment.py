@@ -540,6 +540,8 @@ def main():
                        help='Create config but do not train')
     parser.add_argument('--num_gpus', type=int, default=None,
                        help='Number of GPUs to use (default: ~80%% of available, e.g., 6 out of 8)')
+    parser.add_argument('--skip_roster', action='store_true',
+                       help='Skip expensive roster CSV export during interpretability evaluation')
     
     # Dynamically add arguments for ALL parameters in defaults
     for param_name, default_value in available_params.items():
@@ -919,9 +921,10 @@ def main():
             f"--emb_type {training_params['emb_type']} "
             f"--seq_len {training_params['seq_len']} "
             f"--roster_sampling_rate 10 "
-            f"--max_correlation_students {training_params['max_correlation_students']} "
-            f"--skip_roster"
+            f"--max_correlation_students {training_params['max_correlation_students']}"
         )
+        if args.skip_roster:
+            idkt_interpretability_command += " --skip_roster"
         
         bkt_validation_command = build_bkt_validation_command(experiment_dir_abs, training_params)
         repro_command = build_repro_command(sys.argv[0], experiment_id)

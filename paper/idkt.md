@@ -1079,16 +1079,62 @@ The iDKT model implements a multi-objective optimization objective that balances
 | **0.75** | 0.6787 | 0.8890 | 0.0049 |
 | **1.00** (Strong Theory) | 0.6700 | 0.9081 | 0.0040 |
 
-### Pareto Visualization
+#### Pareto Visualization (ASSIST2015)
 
 ![iDKT Pareto Frontier (ASSIST2015)](pareto_frontier.png)
 
-### Analysis of the Pareto Frontier
+#### Analysis of the Pareto Frontier (ASSIST2015)
 
 1.  **Low-Cost Alignment**: The transition from $\lambda_{ref}=0.0$ to $\lambda_{ref}=0.1$ represents a highly efficient region of the frontier. We achieve a **+30% gain in theoretical alignment** (+0.15 correlation gain) with a negligible performance penalty (-0.003 AUC).
 2.  **Balanced Operating Point**: At $\lambda_{ref}=0.25$, the model achieves a strong correlation of 0.78 while maintaining an AUC above 0.71. This point serves as the recommended configuration for applications requiring both high precision and pedagogical interpretability.
 3.  **Diminishing Returns**: Pushing $\lambda_{ref}$ beyond 0.5 leads to diminishing returns in alignment while significantly throttling the transformer's capacity to learn complex, non-theory-conforming patterns, resulting in a steeper decay in AUC.
 
+### Titration Results (ASSIST2009)
+
+| $\lambda_{ref}$ | Test AUC | Prediction Corr | Prediction MSE |
+| :--- | :--- | :--- | :--- |
+| **0.0** (Unconstrained) | 0.8356 | 0.4989 | 0.0766 |
+| **0.1** | 0.8372 | 0.5718 | 0.0640 |
+| **0.25** | 0.8137 | 0.7495 | 0.0299 |
+| **0.50** | 0.7799 | 0.8433 | 0.0161 |
+| **0.75** | 0.7621 | 0.8216 | 0.0153 |
+| **1.00** (Strong Theory) | 0.7506 | 0.8114 | 0.0138 |
+
+#### Pareto Visualization (ASSIST2009)
+
+![iDKT Pareto Frontier (ASSIST2009)](pareto_frontier_highres.png)
+
+#### Analysis of the Pareto Frontier (ASSIST2009)
+
+1.  **Win-Win Region**: For `assist2009`, we observe a "Win-Win" region between $\lambda_{ref}=0.0$ and $\lambda_{ref}=0.1$. In this range, both predictive accuracy (AUC) and theoretical alignment improve simultaneously, with the optimal performance peak at $\lambda_{ref}=0.1$ (AUC=0.8372).
+2.  **Optimal Operating Point (Elbow)**: The mathematically optimal elbow occurs at $\lambda_{ref}=0.25$. At this point, the model maintains a high AUC of **0.8137** while achieving a strong semantic alignment of **0.7495** with the reference BKT model.
+3.  **Stability Limits**: Beyond $\lambda_{ref}=0.5$, the model exhibits diminishing returns in alignment and a sharper decay in AUC, suggesting that the Transformer's capacity to model the dense dependencies in `assist2009` is constrained when forced to strictly adhere to simpler theoretical logic.
+
 ### Conclusion
 
 The existence of a clear Pareto frontier confirms that theoretical guidance serves as a powerful regularizer for knowledge tracing. By adjusting $\lambda_{ref}$, practitioners can tune iDKT to operate anywhere on the spectrum between a high-performance "black-box" and a semantically grounded "white-box" model.
+
+## Reproducing the Pareto Sweep
+
+To reproduce the Pareto frontier analysis, use the provided orchestration script.
+
+### Launching the Sweep
+Run the following command from the project root:
+```bash
+./assistant/pareto_sweep.sh
+```
+This script:
+- Generates 21 lambda values from 0.0 to 1.0 (step 0.05).
+- Distributes experiments across all 8 GPUs using a concurrency manager.
+- Logs individual experiment outputs to `assistant/log_highres_l[LAMBDA].txt`.
+
+### Result Aggregation and Reporting
+Once the experiments finish (including the interpretability evaluation), aggregate the results and generate the curve:
+```bash
+# Inside the docker container
+python assistant/gather_pareto_data.py --prefix pareto_highres_l --output assistant/pareto_metrics_highres.csv --plot assistant/pareto_frontier_highres.png
+```
+This will:
+- Collect `test_auc` and `prediction_corr` for the latest experiment of each lambda.
+- Generate a summary CSV at `assistant/pareto_metrics_highres.csv`.
+- Create the Pareto curve plot at `assistant/pareto_frontier_highres.png`.

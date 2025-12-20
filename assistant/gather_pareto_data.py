@@ -4,19 +4,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 
-def gather_results(exp_root="experiments"):
-    results = []
+def gather_results(exp_root="experiments", prefix="pareto_highres_l"):
+    raw_results = []
     # Find all pareto experiment directories
-    dirs = glob.glob(os.path.join(exp_root, "*pareto_l*"))
+    dirs = glob.glob(os.path.join(exp_root, f"*{prefix}*"))
     
     for d in dirs:
         # Extract lambda from title
         try:
-            # Format: ...pareto_l0.5_ID
-            parts = os.path.basename(d).split("_")
-            l_str = [p for p in parts if p.startswith("l")][0][1:]
-            lambda_val = float(l_str)
-        except:
+            # Format: YYYYMMDD_HHMMSS_idkt_pareto_highres_l0.55_ID
+            basename = os.path.basename(d)
+            parts = basename.split("_")
+            l_part = [p for p in parts if p.startswith("l") and '.' in p][0]
+            lambda_val = float(l_part[1:])
+            timestamp = "_".join(parts[0:2])
+        except Exception as e:
             continue
             
         eval_path = os.path.join(d, "eval_results.json")
@@ -28,23 +30,31 @@ def gather_results(exp_root="experiments"):
             with open(interp_path, 'r') as f:
                 interp_data = json.load(f)
                 
-            results.append({
+            raw_results.append({
                 'lambda': lambda_val,
+                'timestamp': timestamp,
                 'auc': eval_data.get('test_auc'),
                 'corr': interp_data.get('prediction_corr'),
                 'mse': interp_data.get('prediction_mse'),
                 'im_corr': interp_data.get('initmastery_corr'),
                 'rt_corr': interp_data.get('learning_rate_corr'),
-                'dir': os.path.basename(d)
+                'dir': basename
             })
             
-    if not results:
+    if not raw_results:
         print("Gathering results: No completed experiments found yet.")
         print(f"Checked {len(dirs)} directories in {exp_root}.")
         return pd.DataFrame()
         
-    print(f"Successfully gathered metrics from {len(results)} experiments.")
-    return pd.DataFrame(results).sort_values('lambda')
+    # Group by lambda and pick the latest timestamp
+    df_raw = pd.DataFrame(raw_results)
+    # Sort by lambda then by timestamp descending
+    df_raw = df_raw.sort_values(['lambda', 'timestamp'], ascending=[True, False])
+    # Drop duplicates for each lambda, keeping the first (latest timestamp)
+    df_final = df_raw.drop_duplicates('lambda', keep='first')
+    
+    print(f"Successfully gathered metrics from {len(df_final)} unique lambda experiments.")
+    return df_final.sort_values('lambda')
 
 def plot_pareto(df, output_path="assistant/pareto_frontier.png"):
     if df.empty:
@@ -69,7 +79,15 @@ def plot_pareto(df, output_path="assistant/pareto_frontier.png"):
     print(f"Plot saved to {output_path}")
 
 if __name__ == "__main__":
-    df = gather_results()
-    print(df)
-    df.to_csv("assistant/pareto_metrics.csv", index=False)
-    plot_pareto(df)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prefix", type=str, default="pareto_highres_l")
+    parser.add_argument("--output", type=str, default="assistant/pareto_metrics_highres.csv")
+    parser.add_argument("--plot", type=str, default="assistant/pareto_frontier_highres.png")
+    args = parser.parse_args()
+
+    df = gather_results(prefix=args.prefix)
+    if not df.empty:
+        print(df)
+        df.to_csv(args.output, index=False)
+        plot_pareto(df, output_path=args.plot)

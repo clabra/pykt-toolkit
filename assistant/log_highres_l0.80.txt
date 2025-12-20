@@ -1,0 +1,386 @@
+
+================================================================================
+REPRODUCIBILITY INFRASTRUCTURE AUDIT
+================================================================================
+Verifying 'Explicit Parameters, Zero Defaults' compliance...
+Enhanced with Priority 1 checks for complete protocol coverage
+
+📋 CHECK 1: parameter_default.json MD5 Integrity
+--------------------------------------------------------------------------------
+  Stored MD5:   7d3d89adaf048b23dd42b85e812e242e
+  Computed MD5: 7d3d89adaf048b23dd42b85e812e242e
+  Total parameters: 32
+  ✅ Match: YES
+
+📋 CHECK 2: Hardcoded Fallback Synchronization (Priority 1)
+--------------------------------------------------------------------------------
+
+  Result: ✅ PASS - All 3 fallback values synchronized
+
+📋 CHECK 3: Model Initialization Fallback Removal (Priority 2)
+--------------------------------------------------------------------------------
+  Model uses explicit parameter pattern (not config dict)
+  config.get() calls:          0
+  config['key'] direct access: 0
+  Pattern: ✅ Explicit parameters (standard pykt)
+
+  Result: ✅ PASS - Model uses explicit parameters (no fallbacks possible)
+
+📋 CHECK 4: Eval Script Documentation (Priority 3)
+--------------------------------------------------------------------------------
+  Documentation header:        ✅ Present
+  All architectural flags doc: ✅ Present
+
+  Result: ✅ PASS - Documentation complete
+
+📋 CHECK 5: Parameter Coverage in parameter_default.json
+--------------------------------------------------------------------------------
+  Model: idkt
+  Core training params:  ✅ (7/7)
+  Attention config:      ✅
+  Model size config:     ✅
+  Depth config:          ✅
+  FFN config:            ✅
+  Dropout config:        ✅
+  Model-specific params: ✅ (2/2)
+
+  Result: ✅ PASS - All required parameters present
+
+📋 CHECK 6: No Suspicious Hardcoded Values
+--------------------------------------------------------------------------------
+  ✅ No suspicious hardcoded values found
+
+  Result: ✅ PASS
+
+📋 CHECK 7: Argparse Completeness Validation (Priority 1)
+--------------------------------------------------------------------------------
+  Total parameters in defaults:    32
+  Launcher-only (excluded):         5
+  Should have argparse:             27
+  Found in argparse:                27
+  Boolean flags (store_true/false): 1
+  Non-boolean params:               26
+  Missing argparse entries:         0
+  Missing required=True:            0
+
+  Result: ✅ PASS - All parameters have proper argparse entries
+           (1 boolean flags, 26 with required=True)
+
+📋 CHECK 8: Dynamic Fallback Synchronization (Priority 1)
+--------------------------------------------------------------------------------
+  Found 0 getattr() calls in training script
+
+  Correct fallbacks: 0/0
+
+  Result: ✅ PASS - All 0 fallback values synchronized
+
+📋 CHECK 9: Launcher Filter Validation (Priority 1)
+--------------------------------------------------------------------------------
+  ⚠️  Could not find explicit filter logic in launcher
+  Checking for implicit filtering patterns...
+  ✅ All 4 launcher-only params referenced in code
+
+  Total parameters in defaults: 32
+  Should be excluded:           4
+  Should pass to training:      28
+
+  Result: ✅ PASS - Launcher filter logic correct
+
+================================================================================
+REPRODUCIBILITY AUDIT SUMMARY
+================================================================================
+✅ PASS  MD5 Integrity
+✅ PASS  Fallback Synchronization (8 params)
+✅ PASS  Model Init Fallback Removal
+✅ PASS  Eval Script Documentation
+✅ PASS  Parameter Coverage
+✅ PASS  No Suspicious Values
+✅ PASS  Argparse Completeness (Priority 1)
+✅ PASS  Dynamic Fallback Sync (Priority 1)
+✅ PASS  Launcher Filter Validation (Priority 1)
+
+================================================================================
+🎉 ALL CHECKS PASSED (9/9)
+✅ REPRODUCIBILITY INFRASTRUCTURE: FULLY COMPLIANT
+================================================================================
+
+All reproducibility requirements verified:
+  • Priority 1 (Critical Protection):
+    - All parameters have argparse with required=True ✅
+    - All getattr() fallbacks synchronized dynamically ✅
+    - Launcher filter logic validated ✅
+  • Priority 2 (Model Quality):
+    - Model .get() fallbacks removed ✅
+  • Priority 3 (Documentation):
+    - Eval documentation present ✅
+  • Infrastructure Integrity:
+    - MD5 integrity maintained ✅
+    - Parameter coverage complete ✅
+    - No suspicious values ✅
+
+✅ Protocol Coverage: ~85% (up from 60%)
+✅ Risk Level: LOW (down from MEDIUM)
+
+Safe to launch training/evaluation experiments.
+================================================================================
+Loading dataset: assist2009, fold: 0
+  Using augmented training file: train_valid_sequences_bkt.csv
+dataset_name:assist2009
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv', 'trajectories_file': 'trajectories.csv'}, 'algebra2005': {'dpath': '/workspaces/pykt-toolkit/data/algebra2005', 'num_q': 173113, 'num_c': 112, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'assist2009': {'dpath': '/workspaces/pykt-toolkit/data/assist2009', 'num_q': 17737, 'num_c': 123, 'input_type': ['questions', 'concepts'], 'max_concepts': 4, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences_bkt.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'slepemapy': {'dpath': '/workspaces/pykt-toolkit/data/slepemapy', 'num_q': 2913, 'num_c': 1458, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2017': {'dpath': '/workspaces/pykt-toolkit/data/assist2017', 'num_q': 3162, 'num_c': 102, 'input_type': ['questions', 'concepts'], 'min_seq_len': 3, 'maxlen': 500, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2012': {'dpath': '/workspaces/pykt-toolkit/data/assist2012', 'num_q': 53070, 'num_c': 265, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'statics2011': {'dpath': '/workspaces/pykt-toolkit/data/statics2011', 'num_q': 0, 'num_c': 1223, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'junyi2015': {'dpath': '/workspaces/pykt-toolkit/data/junyi2015', 'num_q': 721, 'num_c': 39, 'input_type': ['questions', 'concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'bridge2algebra2006': {'dpath': '/workspaces/pykt-toolkit/data/bridge2algebra2006', 'num_q': 129263, 'num_c': 493, 'input_type': ['questions', 'concepts'], 'max_concepts': 5, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet': {'dpath': '/workspaces/pykt-toolkit/data/ednet', 'num_q': 11901, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'nips_task34': {'dpath': '/workspaces/pykt-toolkit/data/nips_task34', 'num_q': 948, 'num_c': 57, 'input_type': ['questions', 'concepts'], 'max_concepts': 2, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'poj': {'dpath': '/workspaces/pykt-toolkit/data/poj', 'num_q': 0, 'num_c': 2748, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'peiyou': {'dpath': '/workspaces/pykt-toolkit/data/peiyou', 'num_q': 7652, 'num_c': 865, 'input_type': ['questions', 'concepts'], 'max_concepts': 6, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'train_valid_original_file': 'train_valid.csv', 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet5w': {'dpath': '/workspaces/pykt-toolkit/data/ednet5w', 'num_q': 12235, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'pretrain': {'dpath': '/workspaces/pykt-toolkit/data/pretrain', 'num_q': 340614, 'num_c': 1838, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 1024, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel_200.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv_0.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 741 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv, qlen: 741, clen: 741, rlen: 741
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv_1_2_3_4.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 3016 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv, qlen: 3016, clen: 3016, rlen: 3016
+  Loaded BKT skill parameters from: /workspaces/pykt-toolkit/data/assist2009/bkt_skill_params.pkl
+Initializing iDKT model...
+  d_model=256, n_heads=8, n_blocks=4
+  dropout=0.2, final_fc_dim=512
+Starting training for 100 epochs...
+  learning_rate=0.0001, batch_size=64
+  optimizer=Adam, l2=1e-05
+
+================================================================================
+LOSS CALIBRATION PASS (WARM-UP)
+================================================================================
+Executing initial forward pass to normalize lambda weights...
+  ✓ L_ref: Target Ratio 80.0%, Calibrated Lambda: 9.185234 (Init MSE: 0.062362)
+  ✓ L_initmastery: Target Ratio 10.0%, Calibrated Lambda: 1.531303 (Init MSE: 0.046758)
+  ✓ L_rate: Target Ratio 10.0%, Calibrated Lambda: 0.447817 (Init MSE: 0.159889)
+Calibrated weights will be used to maintain theory/supervised signal balance.
+================================================================================
+
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 1/100: Loss=0.8197 (SUP=0.5880, REF=0.0210, IM=0.0162, RT=0.0304), Valid AUC=0.7497
+  ✓ Saved best model (AUC: 0.7497)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 2/100: Loss=0.7006 (SUP=0.5585, REF=0.0145, IM=0.0046, RT=0.0045), Valid AUC=0.7595
+  ✓ Saved best model (AUC: 0.7595)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 3/100: Loss=0.6783 (SUP=0.5548, REF=0.0130, IM=0.0020, RT=0.0027), Valid AUC=0.7618
+  ✓ Saved best model (AUC: 0.7618)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 4/100: Loss=0.6634 (SUP=0.5533, REF=0.0117, IM=0.0012, RT=0.0018), Valid AUC=0.7637
+  ✓ Saved best model (AUC: 0.7637)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 5/100: Loss=0.6554 (SUP=0.5520, REF=0.0111, IM=0.0008, RT=0.0012), Valid AUC=0.7637
+  ✓ Saved best model (AUC: 0.7637)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 6/100: Loss=0.6498 (SUP=0.5512, REF=0.0106, IM=0.0007, RT=0.0009), Valid AUC=0.7637
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 7/100: Loss=0.6460 (SUP=0.5505, REF=0.0103, IM=0.0006, RT=0.0007), Valid AUC=0.7640
+  ✓ Saved best model (AUC: 0.7640)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 8/100: Loss=0.6425 (SUP=0.5503, REF=0.0099, IM=0.0005, RT=0.0006), Valid AUC=0.7641
+  ✓ Saved best model (AUC: 0.7641)
+  ✓ Saved validation metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_valid.csv
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 9/100: Loss=0.6393 (SUP=0.5497, REF=0.0097, IM=0.0004, RT=0.0005), Valid AUC=0.7634
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 10/100: Loss=0.6367 (SUP=0.5496, REF=0.0094, IM=0.0004, RT=0.0004), Valid AUC=0.7633
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 11/100: Loss=0.6345 (SUP=0.5491, REF=0.0092, IM=0.0004, RT=0.0004), Valid AUC=0.7637
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 12/100: Loss=0.6320 (SUP=0.5492, REF=0.0089, IM=0.0003, RT=0.0003), Valid AUC=0.7634
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 13/100: Loss=0.6295 (SUP=0.5486, REF=0.0087, IM=0.0003, RT=0.0003), Valid AUC=0.7635
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 14/100: Loss=0.6279 (SUP=0.5483, REF=0.0086, IM=0.0003, RT=0.0003), Valid AUC=0.7636
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 15/100: Loss=0.6256 (SUP=0.5484, REF=0.0083, IM=0.0003, RT=0.0003), Valid AUC=0.7623
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 16/100: Loss=0.6245 (SUP=0.5485, REF=0.0082, IM=0.0003, RT=0.0003), Valid AUC=0.7632
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 17/100: Loss=0.6223 (SUP=0.5481, REF=0.0080, IM=0.0002, RT=0.0002), Valid AUC=0.7619
+ts.shape: (52825,), ps.shape: (52825,)
+Epoch 18/100: Loss=0.6213 (SUP=0.5481, REF=0.0079, IM=0.0002, RT=0.0002), Valid AUC=0.7621
+Early stopping at epoch 18
+
+Training completed!
+  Best epoch: 8
+  Valid AUC: 0.7641, Valid Acc: 0.7360
+✓ Saved training results: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/results.json
+Loading dataset: assist2009, fold: 0
+dataset_name:assist2009
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv', 'trajectories_file': 'trajectories.csv'}, 'algebra2005': {'dpath': '/workspaces/pykt-toolkit/data/algebra2005', 'num_q': 173113, 'num_c': 112, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'assist2009': {'dpath': '/workspaces/pykt-toolkit/data/assist2009', 'num_q': 17737, 'num_c': 123, 'input_type': ['questions', 'concepts'], 'max_concepts': 4, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'slepemapy': {'dpath': '/workspaces/pykt-toolkit/data/slepemapy', 'num_q': 2913, 'num_c': 1458, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2017': {'dpath': '/workspaces/pykt-toolkit/data/assist2017', 'num_q': 3162, 'num_c': 102, 'input_type': ['questions', 'concepts'], 'min_seq_len': 3, 'maxlen': 500, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2012': {'dpath': '/workspaces/pykt-toolkit/data/assist2012', 'num_q': 53070, 'num_c': 265, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'statics2011': {'dpath': '/workspaces/pykt-toolkit/data/statics2011', 'num_q': 0, 'num_c': 1223, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'junyi2015': {'dpath': '/workspaces/pykt-toolkit/data/junyi2015', 'num_q': 721, 'num_c': 39, 'input_type': ['questions', 'concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'bridge2algebra2006': {'dpath': '/workspaces/pykt-toolkit/data/bridge2algebra2006', 'num_q': 129263, 'num_c': 493, 'input_type': ['questions', 'concepts'], 'max_concepts': 5, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet': {'dpath': '/workspaces/pykt-toolkit/data/ednet', 'num_q': 11901, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'nips_task34': {'dpath': '/workspaces/pykt-toolkit/data/nips_task34', 'num_q': 948, 'num_c': 57, 'input_type': ['questions', 'concepts'], 'max_concepts': 2, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'poj': {'dpath': '/workspaces/pykt-toolkit/data/poj', 'num_q': 0, 'num_c': 2748, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'peiyou': {'dpath': '/workspaces/pykt-toolkit/data/peiyou', 'num_q': 7652, 'num_c': 865, 'input_type': ['questions', 'concepts'], 'max_concepts': 6, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'train_valid_original_file': 'train_valid.csv', 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet5w': {'dpath': '/workspaces/pykt-toolkit/data/ednet5w', 'num_q': 12235, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'pretrain': {'dpath': '/workspaces/pykt-toolkit/data/pretrain', 'num_q': 340614, 'num_c': 1838, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 1024, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel_200.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv_0.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 741 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv, qlen: 741, clen: 741, rlen: 741
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv_1_2_3_4.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 3016 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences.csv, qlen: 3016, clen: 3016, rlen: 3016
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/test_sequences.csv_-1.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 904 students
+file path: /workspaces/pykt-toolkit/data/assist2009/test_sequences.csv, qlen: 904, clen: 904, rlen: 904
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/test_window_sequences.csv_-1.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 20362 students
+file path: /workspaces/pykt-toolkit/data/assist2009/test_window_sequences.csv, qlen: 20362, clen: 20362, rlen: 20362
+✓ Loaded datasets (train: 3016, valid: 741, test: 904)
+Initializing model...
+Loading checkpoint from /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/best_model.pt
+Evaluating on validation set...
+ts.shape: (52825,), ps.shape: (52825,)
+Valid AUC: 0.7641, Valid Acc: 0.7360
+Evaluating on test set...
+ts.shape: (61904,), ps.shape: (61904,)
+Test AUC: 0.7596, Test Acc: 0.7268
+ts.shape: (62040,), ps.shape: (62040,)
+Window Test AUC: 0.7610, Window Test Acc: 0.7281
+✓ Saved test metrics: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/metrics_test.csv
+
+Results saved to /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/eval_results.json
+dataset_name:assist2009
+data_config:{'assist2015': {'dpath': '/workspaces/pykt-toolkit/data/assist2015', 'num_q': 0, 'num_c': 100, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv', 'trajectories_file': 'trajectories.csv'}, 'algebra2005': {'dpath': '/workspaces/pykt-toolkit/data/algebra2005', 'num_q': 173113, 'num_c': 112, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'assist2009': {'dpath': '/workspaces/pykt-toolkit/data/assist2009', 'num_q': 17737, 'num_c': 123, 'input_type': ['questions', 'concepts'], 'max_concepts': 4, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences_bkt.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'slepemapy': {'dpath': '/workspaces/pykt-toolkit/data/slepemapy', 'num_q': 2913, 'num_c': 1458, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2017': {'dpath': '/workspaces/pykt-toolkit/data/assist2017', 'num_q': 3162, 'num_c': 102, 'input_type': ['questions', 'concepts'], 'min_seq_len': 3, 'maxlen': 500, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'assist2012': {'dpath': '/workspaces/pykt-toolkit/data/assist2012', 'num_q': 53070, 'num_c': 265, 'input_type': ['questions', 'concepts'], 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'statics2011': {'dpath': '/workspaces/pykt-toolkit/data/statics2011', 'num_q': 0, 'num_c': 1223, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'junyi2015': {'dpath': '/workspaces/pykt-toolkit/data/junyi2015', 'num_q': 721, 'num_c': 39, 'input_type': ['questions', 'concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv'}, 'bridge2algebra2006': {'dpath': '/workspaces/pykt-toolkit/data/bridge2algebra2006', 'num_q': 129263, 'num_c': 493, 'input_type': ['questions', 'concepts'], 'max_concepts': 5, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet': {'dpath': '/workspaces/pykt-toolkit/data/ednet', 'num_q': 11901, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'nips_task34': {'dpath': '/workspaces/pykt-toolkit/data/nips_task34', 'num_q': 948, 'num_c': 57, 'input_type': ['questions', 'concepts'], 'max_concepts': 2, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'poj': {'dpath': '/workspaces/pykt-toolkit/data/poj', 'num_q': 0, 'num_c': 2748, 'input_type': ['concepts'], 'max_concepts': 1, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'peiyou': {'dpath': '/workspaces/pykt-toolkit/data/peiyou', 'num_q': 7652, 'num_c': 865, 'input_type': ['questions', 'concepts'], 'max_concepts': 6, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'train_valid_original_file': 'train_valid.csv', 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'ednet5w': {'dpath': '/workspaces/pykt-toolkit/data/ednet5w', 'num_q': 12235, 'num_c': 188, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 200, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}, 'pretrain': {'dpath': '/workspaces/pykt-toolkit/data/pretrain', 'num_q': 340614, 'num_c': 1838, 'input_type': ['questions', 'concepts'], 'max_concepts': 7, 'min_seq_len': 3, 'maxlen': 1024, 'emb_path': '', 'train_valid_original_file': 'train_valid.csv', 'train_valid_file': 'train_valid_sequences.csv', 'folds': [0, 1, 2, 3, 4], 'test_original_file': 'test.csv', 'test_file': 'test_sequences.csv', 'test_window_file': 'test_window_sequences.csv', 'test_question_file': 'test_question_sequences.csv', 'test_question_window_file': 'test_question_window_sequences.csv', 'train_valid_original_file_quelevel': 'train_valid_quelevel.csv', 'train_valid_file_quelevel': 'train_valid_sequences_quelevel_200.csv', 'test_file_quelevel': 'test_sequences_quelevel.csv', 'test_window_file_quelevel': 'test_window_sequences_quelevel.csv', 'test_original_file_quelevel': 'test_quelevel.csv'}}
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv_0.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 741 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv, qlen: 741, clen: 741, rlen: 741
+Read data from processed file: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv_1_2_3_4.pkl
+Computing per-skill practice counts...
+✓ Added per-skill practice counts for 3016 students
+file path: /workspaces/pykt-toolkit/data/assist2009/train_valid_sequences_bkt.csv, qlen: 3016, clen: 3016, rlen: 3016
+Pre-initializing rosters for 1000 students...
+Running inference for interpretability alignment...
+✓ Saved Initial Mastery Alignment: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/traj_initmastery.csv
+✓ Saved Prediction Trajectory Alignment: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/traj_predictions.csv
+✓ Saved Learning Rate Alignment: /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/traj_rate.csv
+
+Alignment Results:
+  prediction_mse: 0.0148
+  prediction_corr: 0.8258
+  initmastery_mse: 0.0001
+  initmastery_corr: 0.9982
+  learning_rate_mse: 0.0003
+  learning_rate_corr: 0.9860
+================================================================================
+Generating Analysis Plots for iKT Experiment
+================================================================================
+Run directory: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129
+
+✓ Plots directory: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots
+
+✓ Loading metrics from: metrics_epoch.csv
+✓ Detected comprehensive iDKT metrics format
+✓ Loaded config: epsilon=0.05, lambda_penalty=100.0
+
+================================================================================
+Generating Plots
+================================================================================
+
+1. Loss Evolution (iDKT)...
+✓ Saved: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots/loss_evolution.png
+2. Per-Skill Alignment Heatmaps...
+✓ Loaded 44226 records from traj_initmastery.csv
+   Generating per_skill_alignment_initmastery.png...
+📊 Using columns for alignment plot: idkt_im vs bkt_im
+✓ Saved: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots/per_skill_alignment_initmastery.png
+✓ Loaded 44226 records from traj_predictions.csv
+   Generating per_skill_alignment_predictions.png...
+📊 Using columns for alignment plot: p_idkt vs p_bkt
+✓ Saved: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots/per_skill_alignment_predictions.png
+✓ Loaded 44226 records from traj_rate.csv
+   Generating per_skill_alignment_rate.png...
+📊 Using columns for alignment plot: idkt_rate vs bkt_rate
+✓ Saved: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots/per_skill_alignment_rate.png
+
+================================================================================
+✅ All plots generated successfully
+================================================================================
+
+Plots saved in: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/plots
+Generating validation plots for experiments/20251219_211024_idkt_pareto_highres_l0.80_265129...
+Error: Required files missing. (pred: True, roster: False)
+================================================================================
+REPRODUCIBILITY PRE-FLIGHT CHECK
+================================================================================
+Running parameter audit to verify infrastructure compliance...
+
+
+✅ Pre-flight check PASSED - Safe to proceed
+
+================================================================================
+TRAINING MODE
+================================================================================
+Generated experiment ID: 265129
+✓ Created experiment folder: 20251219_211024_idkt_pareto_highres_l0.80_265129
+  Override: short_title = pareto_highres_l0.80 (type: str)
+  Override: epochs = 100 (type: int)
+  Override: lambda_ref = 0.8 (type: float)
+  Override: theory_guided = 1 (type: int)
+  Override: calibrate = 1 (type: int)
+✓ Saved config.json
+✓ Config integrity verified (MD5: 7d3d89adaf048b23dd42b85e812e242e)
+
+Experiment ID:            265129
+Dataset:                  assist2009
+Fold:                     0
+Epochs:                   100
+Batch size:               64
+Learning rate:            0.0001
+
+Training command:        
+  EXPERIMENT_DIR=/workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129 /home/vscode/.pykt-env/bin/python examples/train_idkt.py --batch_size 64 --bkt_guess_threshold 0.3 --bkt_slip_threshold 0.3 --calibrate 1 --d_ff 512 --d_model 256 --dataset assist2009 --dropout 0.2 --emb_type qid --epochs 100 --final_fc_dim 512 --fold 0 --gradient_clip 1.0 --l2 1e-05 --lambda_initmastery 0.1 --lambda_rate 0.1 --lambda_ref 0.8 --learning_rate 0.0001 --n_blocks 4 --n_heads 8 --optimizer Adam --patience 10 --seed 42 --seq_len 200 --theory_guided 1 --weight_decay 0.0 --save_dir /workspaces/pykt-toolkit/experiments/20251219_211024_idkt_pareto_highres_l0.80_265129
+
+================================================================================
+SINGLE-PHASE TRAINING (iDKT)
+================================================================================
+Standard training with Rasch-based difficulty regularization
+================================================================================
+
+
+================================================================================
+LAUNCHING TRAINING
+================================================================================
+
+
+================================================================================
+✓ TRAINING COMPLETED SUCCESSFULLY
+================================================================================
+
+Results saved to: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129
+
+================================================================================
+LAUNCHING EVALUATION
+================================================================================
+
+
+✓ Evaluation completed successfully
+  Results saved to: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/eval_results.json
+
+================================================================================
+COMPUTING iDKT INTERPRETABILITY ALIGNMENT
+================================================================================
+
+Comparing model predictions and projections vs BKT ground truth...
+
+✓ iDKT interpretability evaluation completed successfully
+  Output file: experiments/20251219_211024_idkt_pareto_highres_l0.80_265129/interpretability_alignment.json
+
+================================================================================
+Generating analysis plots...
+================================================================================
+
+✓ Analysis plots generated successfully
+
+================================================================================
+Generating validation plots (Consensus, Residual, Uncertainty)...
+================================================================================
+
+✓ Validation plots generated successfully
+
+To reproduce this experiment:
+  python examples/run_repro_experiment.py \
+    --repro_experiment_id 265129
