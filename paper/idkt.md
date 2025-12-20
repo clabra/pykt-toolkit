@@ -14,7 +14,7 @@ Relevant files:
 
 ## iDKT Architecture Diagram
 
-<div style="width: 1000px;">
+<div style="width: 1900px;">
 
 ```mermaid
 graph TD
@@ -170,6 +170,7 @@ graph TD
         Pred -- "vs BKT P(correct)" --> L_REF
         InitMastery -- "vs BKT Prior L0" --> L_IM
         Rate -- "vs BKT Learn Rate T" --> L_RT
+        Diff_Param -- "u_q" --> L_REG
         L_SUP & L_REF & L_IM & L_RT & L_REG --> L_TOTAL
 
         %% Wiring - Input/Emb
@@ -349,6 +350,10 @@ graph TD
 
     - This is equivalent to placing a Gaussian Prior (centered at 0) on the difficulty parameters. It tells the model: "Assume all problems are average difficulty (0) unless the data strongly proves otherwise."
 
+- **Output Heads**
+
+  - A projection head is added for each parameter of the reference model (such as initmastery and learning rate in the case of BKT). 
+
 ## iDKT Architecture Implementation Analysis
 
 ### Attention Mechanism Implementation Details
@@ -438,7 +443,7 @@ Each head $h$ has a unique learnable parameter $\gamma_h$ (`self.gammas`). This 
 
 ### iDKT Training Sequence
 
-<div style="background-color: #ffffe0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+<div style="width: 1500px; background-color: #ffffe0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
 
 ```mermaid
 %%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#000000', 'primaryBorderColor': '#333333', 'lineColor': '#333333', 'secondaryColor': '#f4f4f4', 'tertiaryColor': '#ffffff', 'noteBkgColor': '#e6f7ff', 'noteBorderColor': '#1890ff' } } }%%
@@ -567,47 +572,129 @@ Where $u_q$ (difficulty) scales the "variation vectors" ($d_{ct}, f_{ct}$) befor
 
 ## Theoretical Alignment Approach 
 
-We'll update the current iDKT model implementation to:
+The iDKT model implements a theory-guided approach where we take as reference an intrinsically interpretable model, a Bayesian Knowledge Tracing (BKT) in this case althought it could be applied to other interpretable models. 
 
--   Use a theory-guided approach where we'll take as reference a Bayesian Knowledge Tracing (BKT) model.
--   We'll use the BKT model as a reference to check if we can get good interpretability metrics, where interpretability is measured by the alignment with the reference model.
--   For a given reference model, such as BKT, we define a multi-objective loss function with two terms that account for performance and interpretability. Performance is measured by the- **Guided Loss Integration**: Combines prediction, initial mastery, and learning rate alignment.
-- **Interpretability-by-Design**: Internal states are semantically regularized by theoretical constructs.
+Interpretability is measured by consistency with the reference model. We define a multi-objective loss function with terms that account for performance and interpretability. 
 
-## Prerequisites for New Datasets
+## Consistency with a BKT Reference Model
 
-Before running iDKT experiments on a new dataset, you must generate the BKT reference trajectories and parameters. This ensures the theory-guided loss has a ground truth to align with.
+Before running iDKT experiments on a **new dataset**, you must generate the BKT parameters that will be used as reference in iDKT training and evaluation as shown in the figure below.
+
+<div style="width: 550px; background-color: #ffffe0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+
+```mermaid
+graph TD
+    subgraph "Phase 1: BKT Baseline"
+        CSV[train_valid_sequences.csv] --> TBKT[[train_bkt.py]]
+        TBKT --> SP["bkt_skill_params.pkl<br/>(L0, T, S, G)"]
+        TBKT --> MS["bkt_mastery_states.pkl<br/>(Trained Model Object)"]
+    end
+
+    subgraph "Phase 2: Data Augmentation"
+        CSV --> ABKT[[augment_with_bkt.py]]
+        MS --> ABKT
+        ABKT --> AC["train_valid_sequences_bkt.csv<br/>(Adds P_L, P_correct sequences)"]
+    end
+
+    subgraph "Phase 3: iDKT Training"
+        AC -- "Data Loader" --> TIDKT[[train_idkt.py]]
+        SP -- "Parameter Reference" --> TIDKT
+        TIDKT --> PKL[best_model.pt]
+    end
+
+    subgraph "Phase 4: Evaluation & Interpretation"
+        PKL --> EIDKT[[eval_idkt.py]]
+        AC --> EIDKT
+        SP --> EIDKT -- "Output" --> REP[interpretability_alignment.json]
+    end
+
+    style TBKT fill:#f9f,stroke:#333,stroke-width:2px
+    style ABKT fill:#f9f,stroke:#333,stroke-width:2px
+    style TIDKT fill:#bbf,stroke:#333,stroke-width:2px
+    style EIDKT fill:#bfb,stroke:#333,stroke-width:2px
+```
+</div>
+
+Instructions to generate the BKT information is as follows: 
 
 1. **Train BKT Baseline**:
+
    Run the following command to compute mastery states and skill parameters:
    ```bash
    python examples/train_bkt.py --dataset [DATASET_NAME] --prepare_data --overwrite
    ```
-   *This generates `data/[DATASET_NAME]/bkt_skill_params.pkl` and `bkt_mastery_states.pkl`.*
+   This generates these files: 
 
-2. **Augment Dataset with Theory Trajectories**:
-   Run the following command to integrate BKT predictions into the sequence CSVs:
-   ```bash
-   python examples/augment_with_bkt.py --dataset [DATASET_NAME]
-   ```
-   *This generates `train_valid_sequences_bkt.csv`, which is required for iDKT training.*
+  - `data/[DATASET_NAME]/bkt_mastery_states.pkl`
 
-## BKT-Guided Data Augmentation
+      It contains a serialized `pyBKT` model object (specifically an instance of the `pyBKT.models.Model` class) with the complete state of the trained BKT model.
 
-The `augment_with_bkt.py` script is a critical bridge between classical pedagogical theory and the deep learning pipeline. It transforms a standard student interaction dataset into a **theory-augmented training set** by injecting the reference BKT dynamics.
+      Structure:
+      - Type: Serialized binary object.
+      - Contents: Learned parameters (priors, learns, guesses, slips) for all skills, model configuration, and training metadata.
+      - Usage: It is loaded to perform complex inference tasks, such as replaying student histories **to calculate mastery probabilities at each timestep**.
 
-### Methodology
-1. **Parameter Inheritance**: Loads a trained BKT model ([`bkt_mastery_states.pkl`](file:///home/conchalabra/projects/dl/pykt-toolkit/data/assist2009/bkt_mastery_states.pkl)) to retrieve the $\{L_0, T, S, G\}$ parameters for every skill.
-2. **Mastery Replay**: For each student sequence in the raw training data, it re-runs the Bayesian update equations (Forward Inference) to compute:
-   - **Theoretical Mastery** $P(L_t)$: The latent probability of skill mastery at each step.
-   - **Theoretical Correctness** $P(r_t)$: The expected probability of a correct response based on the BKT parameters.
-3. **Sequence Alignment**: These values are saved as new sequence-level columns in the CSV, ensuring they are perfectly synchronized with the student's actual responses.
+  - `data/[DATASET_NAME]/bkt_skill_params.pkl`
 
-### Training Signal
-The resulting `train_valid_sequences_bkt.csv` provides the **theory-guided targets** ($y_{ref}$) used in the iDKT multi-objective loss function. This allows the model to learn not just from the discrete $0/1$ student responses, but from the continuous, semantically-rich expectations of the reference theory.
+    It contains a Python dictionary where the keys are skill IDs and the values are dictionaries containing the four standard BKT pedagogical parameters for each skill.
+
+    Structure
+    - Keys: int (The ID of the skill).
+    - Values: dict containing the following keys:
+      - prior ($L_0$): Initial probability of mastery.
+      - learns ($T$): Probability of learning the skill after an interaction.
+      - guesses ($G$): Probability of a correct response given no mastery.
+      - slips ($S$): Probability of an incorrect response given mastery.
+
+      ```python
+        {
+            47: {
+                'prior': 0.6568782409955958, 
+                'learns': 0.05893676260609401, 
+                'slips': 0.29820686504546157, 
+                'guesses': 0.11304235571919413
+            }
+        }
+      ```
+
+2. BKT-data augmentation
+   
+  - Script: `examples/augment_with_bkt.py`
+  
+    Run the following script to integrate BKT predictions into the sequence CSVs. This script transforms a standard student interaction dataset into a **theory-augmented training set** by injecting BKT info. 
+    
+    ```bash
+    python examples/augment_with_bkt.py --dataset [DATASET_NAME]
+    ```
+  - Output: `data/[DATASET_NAME]/train_valid_sequences_bkt.csv`
+
+      That extends the standard `train_valid_sequences.csv` by adding two new BKT-derived columns used for theoretical guidance:
+      - `fold`, `uid`, `questions`, `concepts`, `responses`, `selectmasks`, `is_repeat`: Standard fields inherited from the base dataset.
+      - **`bkt_mastery`**: Comma-separated sequence of theoretical mastery probabilities $P(L_t)$ computed via BKT forward inference.
+      - **`bkt_p_correct`**: Comma-separated sequence of theoretical correctness probabilities $P(r_t)$ used as guidance targets for iDKT.
+
+      The relationship between these two fields is defined by the BKT observation equation explained in the following section.
+
+  - How these 2 values are calculated
+  
+    Uses `data/[dataset_name]/bkt_mastery_states.pkl` to retrieve the $\{P(L_0), P(T), P(S), P(G)\}$ parameters for every skill.
+
+    **These four parameters in BKT are utilized to update the probability of learning**, representing the likelihood of the learner’s knowledge of a specific skill. More specifically, as the learner responds to the items, BKT updates P(Lt) based on the accuracy of their response (correct or incorrect):
+
+      $$P(Lt|obst = 1) = \frac{P(Lt)(1 − P(S))}{P(Lt)(1 − P(S)) + (1 − P(Lt))P(G)}$$
+
+      $$P(Lt|obst = 0) = \frac{P(Lt)P(S)}{P(Lt)P(S) + (1 − P(Lt))(1 − P(G))}$$
+
+    As the learner transitions from one step (t) to the next (t + 1), the updated prior for the following time step can be calculated by @badrinath2021pybkt: 
+
+    $$P(Lt+1) = P(Lt|obst) + (1 − P(Lt|obst))P(T)$$
+
+    The observation equation is:
+    
+    $P(r_t) = P(L_t) \cdot (1 - S) + (1 - P(L_t)) \cdot G$
+
 
 ## Model Architecture
- estimations of the reference model.
 
 We state that a **DL model is interpretable in terms of a given reference model** if:
 
@@ -636,31 +723,31 @@ The iDKT architecture serves as an empirical "lens" to evaluate the validity of 
 
 Through these two forms, we demonstrate that iDKT provides a robust, verifiable framework for interpretability that remains valid even when the reference models themselves are imperfect.
 
-#### Prediction Alignment Loss ($L_{ref}$)
 
-To align iDKT predictions with the reference model's performance estimates, we minimize the mean squared error between their respective output probabilities:
-$$ L_{ref} = \frac{1}{T} \sum_{t=1}^{T} (\hat{p}_{t} - p_{t}^{ref})^2 $$
+#### Interpretability and Loss Functions 
 
-#### Parameter Consistency Loss ($L_{param,i}$)
+We formalize interpretability as the capacity of the model to generate latent projections that maintain consistency with the parameters of a reference model. 
 
-To ensure latent states are semantically grounded, we penalize deviations from reference parameter estimates ($\mu_{ref,i}$), weighted by a parameter that represents the reference model's uncertainty ($\sigma_{ref,i}^2$):
+Consistency can be quantified comparing projected parameters and the reference model's parameters using measures such as: 
+
+- Values difference
+- Bounded values difference defined by a certain variance
+- Values correlation
+
+The second has the advantage that avoids a possible tendency of the model to look for constant parameter values that minimize the loss but are not semantically grounded. It encourages the model to look for values close to the reference model's parameters, while allowing for some variation. This is aligned with obtaining projected parameters that are intrinsically interpretable in terms of a reference model. According to this, we could define a loss function for each parameter that penalizes deviations beyond a given variance. The difference with the typical MSE metric is that two values that are inside the variance range has the same null penalty although they are at different distances of the reference model parameter. 
 
 $$ L_{param,i} = \frac{(\theta_{i} - \mu_{ref,i})^2}{2\sigma_{ref,i}^2} $$
 
-Where $\theta_i$ represents the projected parameters such as initial mastery ($L_{0}$) or learning rate ($T$).
+Apart for a loss for each parameter, we define a consistency loss L_con that measures the difference between the prediction of the refetence model using their own parameter estimation and a prediction obtained using the projected parameters. This helps to guide the system towards a latent space that allows to obtain projected parameters that are consistent with the reference model's predictions. 
 
-$L_{param,i}$ is defined in such a way that values close to the reference model parameter estimation are rewarded, and values far from the reference model parameter estimation are penalized. This is done defining a variance for each parameter of the reference model in such a way that is the parameter estimation is close to the reference model parameter estimation, the variance is low, and the loss is low.
+$$ L_{con} = \frac{1}{T} \sum_{t=1}^{T} (\hat{p}_{t}^{ref1} - \hat{p}_{t}^{ref2})^2 $$
+
+where $\hat{p}_{t}^{ref1}$ is the prediction of the reference model using their own parameters estimation and $\hat{p}_{t}^{ref2}$ is the prediction of the reference model obtained using the projected parameter values.
 
 ## Integration of BKT parameter and mastery trajectories into the iDKT Model
 
 The BKT skill-level parameters (initmastery, learning rate) and dynamic mastery trajectories are used to calculate the parameter and reference loss components.
 
-## Next Steps
-
-1) Update the mermaid iDKT architecture diagram in "iDKT Architecture Diagram" section to include the projection heads and the new loss components. The BKT parameter and mastery estimations are integrated into the iDKT model by adding a projection head for each parameter (initmastery, learning rate). The projection heads are added to the iDKT model in the same way as the standard prediction head.
-2) For the training we'll need to extract the BKT parameters from the *.pkl or *.csv files generated by BKT training. Create a new data file augmented with the BKT parameters per interaction. 
-3) Update the iDKT model implementation in `pykt/models/idkt.py` and the training and evaluation loops in `examples/train_idkt.py` and `examples/eval_idkt.py`.  
-4) Implement the mechanism to extract the BKT parameters for each interaction and use them to calculate the augmentes per-parameter and reference losses. 
 
 ## Balancing Loss Functions
 
@@ -1138,3 +1225,34 @@ This will:
 - Collect `test_auc` and `prediction_corr` for the latest experiment of each lambda.
 - Generate a summary CSV at `assistant/pareto_metrics_highres.csv`.
 - Create the Pareto curve plot at `assistant/pareto_frontier_highres.png`.
+
+## Next Steps - Individualized Approach
+
+### 1. Item-Level Difficulty Calibration (Learned $u_q$)
+The current iDKT architecture already implements a high-resolution estimation of question difficulty through the `difficult_param` embedding ($u_q \in \mathbb{R}^1$). 
+- **Mechanism**: For each unique problem ID, the model learns a scalar bias that shifts the concept embedding. This is conceptually equivalent to the difficulty parameter in a 1PL-IRT (Rasch) model.
+- **Regularization**: The model uses L2 regularization ($L_{reg} = \lambda_{l2} \sum u_q^2$) to enforce a Gaussian prior centered at zero. This ensures that the model only attributes high difficulty to an item when student response patterns provide strong evidence for it.
+- **Extraction**: Post-training, these weights can be extracted and ranked to identify which items are statistically "hard" or "easy" within a specific knowledge component. This provides a data-driven alternative to manual item tagging.
+
+### 2. Transition to Individualized Student Profiling
+Standard BKT models assume that pedagogical parameters like Initial Mastery ($P(L_0)$) and Learning Rate ($T$) are constant for every student within a skill. A major future direction for iDKT is to leverage its Transformer backbone to individualize these parameters.
+
+#### A. Personalized Student Velocity (Personalized $T$)
+While standard BKT assigns a single $T$ per skill, iDKT can estimate a **Student Velocity** that varies based on individual learning pace:
+- **Concept**: Instead of a global $T_{skill}$, we can implement a `velocity_head` that receives the latent student history ($\hat{x}$) and potentially a learnable student-specific scalar. Currently, the iDKT `rate` head already incorporates student history, making it more dynamic than BKT.
+- **Benefit**: This distinguishes between "fast" and "slow" learners. Educators can identify students with low velocity (learning plateaus) who may require different instructional interventions, regardless of their current mastery levels.
+
+#### B. Individualized Initial Knowledge (Personalized $P(L_0)$)
+Standard BKT assumes all students start at the same $P(L_0)$ when they first encounter a skill. We propose individualizing this using a **Student Capability Baseline** ($v_s$):
+- **Mechanism**: A learnable embedding `student_param` ($v_s \in \mathbb{R}^1$) can be associated with each user ID. The initial mastery projection would then be calculated as: $L_{0}^{(s,c)} = \text{Sigmoid}(\text{Proj}(c) + v_s)$.
+- **Benefit**: This allows the model to account for unobserved prior knowledge. It prevents the model from misjudging a student's inherent ability simply because they have not yet practiced a specific topic on the platform.
+
+### 3. Summary of Granularity Gains
+The transition from global BKT parameters to individualized iDKT parameters enables a new level of educational assessment:
+- **BKT**: Per-Skill $P(L_0)$ and $T$ (Shared by all students).
+- **iDKT (Current & Proposed)**: Per-Student $P(L_0)$ (Personalized baseline) and Per-Student/Per-Step $T$ (Dynamic learning velocity).
+
+This individualized approach would allow iDKT to generate a **Multidimensional Learner Profile** summarizing student capability ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states, providing a more comprehensive view of student progress than classical models.
+
+
+

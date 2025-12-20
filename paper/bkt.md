@@ -4,42 +4,39 @@
 
 Bayesian Knowledge Tracing (BKT) is a classical probabilistic model used as a dynamic baseline to validate deep knowledge tracing models. In our framework, we use BKT to compute mastery trajectories that serve as external validation metrics for the iDKT model's interpretability claims.
 
-## Theoretical Foundation
+## pyBKT: An Accessible Library for BKT Modeling
 
-### The BKT Model
-BKT models student learning as a Hidden Markov Model (HMM) where:
-- **Hidden State**: Binary mastery status $L_t \in \{0, 1\}$ for each skill at time $t$.
-- **Observable**: Student responses (correct/incorrect) on problems practicing that skill.
+We use the **pyBKT** library, which implements Expectation-Maximization (EM) to learn BKT parameters from dataset sequences @badrinath2021pybkt. 
 
-### Core Parameters (Per Skill)
-BKT learns four parameters for each skill:
-1. **P($L_0$) - Prior Knowledge**: Probability student has mastered the skill before any practice.
-2. **P($T$) - Learning Rate**: Probability of learning (transitioning from unmastered to mastered) after each practice opportunity.
-3. **P($S$) - Slip Probability**: Probability of incorrect response despite mastery.
-4. **P($G$) - Guess Probability**: Probability of correct response without mastery.
+BKT is a probabilistic model widely used in the field of educational data mining and learning analytics. BKT offers a dynamic process of modeling the probability that a learner possesses knowledge of each skill throughout their learning journey.
 
-### Mastery Probability
-BKT computes the mastery probability $P(L_t)$ for each interaction using Bayesian inference:
+As an HMM with observable nodes, the goal of BKT is to estimate the knowledge states of individual learners over time based on their interactions with educational tasks or assessments. In BKT, the learner’s knowledge is defined as a latent variable while the learner’s responses to items (i.e., their performance) are treated as observable variables. The knowledge is represented as a binary variable, indicating whether the learner has learned the skill. The items are also scored dichotomously, with answers categorized as either correct or incorrect.
 
-**Step 1: Prediction**
-$$ P(correct) = P(L_t) \cdot (1 - P(S)) + (1 - P(L_t)) \cdot P(G) $$
+At its core, BKT leverages Bayesian inference to update and refine its estimates of a learner’s knowledge state at a particular time step t as the learner responds to questions or completes learning activities (obst). The model includes **two knowledge parameters for each learner: the probability of knowing a concept before encountering a task (i.e., prior knowledge; P(L0)), and the probability of learning or acquiring knowledge from the task at time step t (i.e., learned knowledge; P(Lt))**. The **probability of transitioning from the not-known state to the known state after each answer is the *learning* parameter denoted as P(T)**. In addition to knowledge parameters, the model also involves two performance parameters: **the probability of making a mistake when applying a known skill (slip; P(S))** and **the probability of answering an item correctly with a not-known skill (guess; P(G))** @qiu2011does.
 
-**Step 2: Bayesian Update (after observing response)**
-- If response is correct: $P(L_t | correct) = \frac{P(L_t) \cdot (1 - P(S))}{P(correct)}$
-- If response is incorrect: $P(L_t | incorrect) = \frac{P(L_t) \cdot P(S)}{1 - P(correct)}$
+**These four parameters in BKT are utilized to update the probability of learning**, representing the likelihood of the learner’s knowledge of a specific skill. More specifically, as the learner responds to the items, BKT updates P(Lt) based on the accuracy of their response (correct or incorrect):
 
-**Step 3: Learning Transition**
-$$ P(L_{t+1}) = P(L_t | response) + (1 - P(L_t | response)) \cdot P(T) $$
+   $$P(Lt|obst = 1) = \frac{P(Lt)(1 − P(S))}{P(Lt)(1 − P(S)) + (1 − P(Lt))P(G)}$$
 
-## Parameter Estimation
+   $$P(Lt|obst = 0) = \frac{P(Lt)P(S)}{P(Lt)P(S) + (1 − P(Lt))(1 − P(G))}$$
 
-We use the **pyBKT** library, which implements Expectation-Maximization (EM) to learn BKT parameters from dataset sequences.
+As the learner transitions from one step (t) to the next (t + 1), the updated prior for the following time step can be calculated by @badrinath2021pybkt: 
 
-### Training and Evaluation Script
+$$P(Lt+1) = P(Lt|obst) + (1 − P(Lt|obst))P(T)$$
+
+which suggests that the learner is likely to transition from a not-known state to a known state by learning from immediate feedback and any other instructional support; however, the probability of forgetting (P(F)) remains zero @badrinath2021pybkt. 
+
+Many versions have followed the original BKT proposal @corbett1994knowledge including individualized variants discussing individualization per skill and individualization per student of all four BKT parameters. The individualized BKT model resulted in a better correlation between actual and expected accuracy across student results than the non-individualized BKT model @vsaric2024twenty. 
+
+The individualized models could significantly improve the accuracy of predicting the student success. An interesting finding was that adding student-specific probability of learning parameter proved more beneficial for the model accuracy than adding student-specific probability of prior knowledge @yudelson2013individualized.
+
+Student characteristics have been used in many enhanced BKT models, making it the most frequent aspect of BKT enhancements @vsaric2024twenty.
+
+## Training and Evaluation Script
 **Script**: `examples/train_bkt.py`
 
 This script computes the mastery state of all skills for each student interaction:
-- **Objective**: Estimate $P(L_t)$ and learned parameters $\{L_0, T, S, G\}$ per skill.
+- **Objective**: Estimate $P(L_t)$ and learned parameters $\{L_0, T, S, G\}$ initial knowledge, learning, slip and guess probabilities per skill.
 - **Inputs**: Reads from `data/{dataset}/train_valid_sequences.csv`.
 - **Outputs**: Saves a trained model as a `.pkl` file and reports RMSE, AUC, and MAE.
 - **Key Function**: `prepare_bkt_data(df)` converts sequence-based data into row-per-interaction format for pyBKT.
