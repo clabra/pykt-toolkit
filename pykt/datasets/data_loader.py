@@ -86,7 +86,10 @@ class KTDataset(Dataset):
         dcur = dict()
         mseqs = self.dori["masks"][index]
         for key in self.dori:
-            if key in ["masks", "smasks", "uids", "uid_to_index", "num_students"]:
+            if key in ["masks", "smasks", "uid_to_index", "num_students"]:
+                continue
+            if key == "uids":
+                dcur["uids"] = self.dori["uids"][index]
                 continue
             if len(self.dori[key]) == 0:
                 dcur[key] = self.dori[key]

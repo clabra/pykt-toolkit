@@ -121,7 +121,14 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                 y = model(cq.long(), cc.long(), r.long())
                 y = y[:, 1:]
             elif model_name in ["akt","idkt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:                                
-                outputs = model(cc.long(), cr.long(), cq.long())
+                if model_name == "idkt":
+                    uids = dcur.get("uids", None)
+                    if uids is not None:
+                        uids = uids.to(device)
+                    outputs = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
+                else:
+                    outputs = model(cc.long(), cr.long(), cq.long())
+                
                 if model_name == "idkt" and len(outputs) == 4:
                     y, im, r, reg_loss = outputs
                 else:
@@ -444,7 +451,18 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
             elif model_name in ["rekt"]:
                 y, h = model(dcurori, qtest=True, train=False)
             elif model_name in ["akt","idkt","extrakt", "folibikt","fluckt","robustkt","lefokt_akt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx"]:
-                y, reg_loss, h = model(cc.long(), cr.long(), cq.long(), True)
+                if model_name == "idkt":
+                    uids = dcurori.get("uids", None)
+                    if uids is not None:
+                        uids = uids.to(device)
+                    outputs = model(cc.long(), cr.long(), cq.long(), uid_data=uids, qtest=True)
+                else:
+                    outputs = model(cc.long(), cr.long(), cq.long(), True)
+                
+                if model_name == "idkt" and len(outputs) == 5:
+                    y, im, rate, reg_loss, h = outputs
+                else:
+                    y, reg_loss, h = outputs
                 y = y[:,1:]
             elif model_name in ["dtransformer", "simakt"]:
                 output, h, *_ = model.predict(cc.long(), cr.long(), cq.long())

@@ -23,6 +23,7 @@
     "emb_type": "qid",
     "final_fc_dim": 512,
     "l2": 1e-05,
+    "lambda_student": 1e-05,
     "lambda_ref": 0.1,
     "lambda_initmastery": 0.1,
     "lambda_rate": 0.1,
@@ -69,6 +70,7 @@
       "emb_type",
       "final_fc_dim",
       "l2",
+      "lambda_student",
       "lambda_ref",
       "lambda_initmastery",
       "lambda_rate",
@@ -82,5 +84,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "7d3d89adaf048b23dd42b85e812e242e"
+  "md5": "f83991284d3a9475567a927b86ee3f78"
 }

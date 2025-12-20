@@ -88,6 +88,8 @@ def parse_args():
                       help="Sequence length")
     parser.add_argument("--l2", type=float, required=True,
                       help="L2 regularization")
+    parser.add_argument("--lambda_student", type=float, default=1e-5,
+                      help="Regularization for student capability parameters")
     
     # Seed
     parser.add_argument("--seed", type=int, default=42,
@@ -164,6 +166,18 @@ def main():
     
     print(f"✓ Loaded datasets (train: {len(train_loader.dataset)}, valid: {len(valid_loader.dataset)}, test: {len(test_dataset)})")
     
+    # Load checkpoint to detect num_students before model init
+    checkpoint_path = args.checkpoint
+    print(f"Loading checkpoint from {checkpoint_path} to detect n_uid...")
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    
+    # Check for student_param in checkpoint
+    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    n_uid = 0
+    if 'student_param.weight' in state_dict:
+        n_uid = state_dict['student_param.weight'].shape[0] - 1
+        print(f"Detected {n_uid} students in checkpoint.")
+
     # Prepare model config
     model_config = {
         'd_model': args.d_model,
@@ -172,21 +186,17 @@ def main():
         'n_blocks': args.n_blocks,
         'dropout': args.dropout,
         'final_fc_dim': args.final_fc_dim,
-        'l2': args.l2
+        'l2': args.l2,
+        'n_uid': n_uid,
+        'lambda_student': args.lambda_student
     }
     
     # Initialize model
     print("Initializing model...")
     model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
     
-    # Load checkpoint
-    print(f"Loading checkpoint from {args.checkpoint}")
-    checkpoint = torch.load(args.checkpoint, map_location='cpu')
-    if 'model_state_dict' in checkpoint:
-        model.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        # Direct state dict (from pykt train_model)
-        model.load_state_dict(checkpoint)
+    # Load state dict
+    model.load_state_dict(state_dict)
     
     # Evaluate
     print("Evaluating on validation set...")

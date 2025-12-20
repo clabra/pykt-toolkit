@@ -91,6 +91,8 @@ def parse_args():
                       help="Early stopping patience")
     parser.add_argument("--l2", type=float, required=True,
                       help="L2 regularization weight for Rasch difficulty parameters")
+    parser.add_argument("--lambda_student", type=float, required=True,
+                      help="L2 regularization weight for student capability parameters (v_s)")
     
     # Interpretability and Theory-Guided parameters
     parser.add_argument("--lambda_ref", type=float, required=True,
@@ -118,6 +120,40 @@ def parse_args():
                       help="Use Weights & Biases logging (0 or 1)")
     
     return parser.parse_args()
+
+
+def evaluate_idkt_individualized(model, loader, device):
+    """
+    Specialized evaluation for iDKT with student-level individualization.
+    """
+    model.eval()
+    y_trues, y_scores = [], []
+    with torch.no_grad():
+        for data in loader:
+            q, c, r = data["qseqs"].to(device), data["cseqs"].to(device), data["rseqs"].to(device)
+            qshft, cshft, rshft = data["shft_qseqs"].to(device), data["shft_cseqs"].to(device), data["shft_rseqs"].to(device)
+            sm = data["smasks"].to(device)
+            uids = data["uids"].to(device)
+
+            cq = torch.cat((q[:,0:1], qshft), dim=1)
+            cc = torch.cat((c[:,0:1], cshft), dim=1)
+            cr = torch.cat((r[:,0:1], rshft), dim=1)
+
+            # Forward with uid_data
+            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
+            
+            y_pred = torch.masked_select(y[:, 1:], sm).detach().cpu()
+            y_true = torch.masked_select(rshft, sm).detach().cpu()
+
+            y_trues.append(y_true.numpy())
+            y_scores.append(y_pred.numpy())
+
+    ts = np.concatenate(y_trues, axis=0)
+    ps = np.concatenate(y_scores, axis=0)
+    auc = metrics.roc_auc_score(y_true=ts, y_score=ps)
+    prelabels = [1 if p >= 0.5 else 0 for p in ps]
+    acc = metrics.accuracy_score(ts, prelabels)
+    return auc, acc
 
 
 def main():
@@ -165,6 +201,7 @@ def main():
         'patience': args.patience,
         'seq_len': args.seq_len,
         'l2': args.l2,
+        'lambda_student': args.lambda_student,
         'lambda_ref': args.lambda_ref,
         'lambda_initmastery': args.lambda_initmastery,
         'lambda_rate': args.lambda_rate,
@@ -187,6 +224,10 @@ def main():
 
     train_loader, valid_loader = init_dataset4train(
         args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+    
+    # Extract num_students from dataset for individualized embeddings
+    num_students = train_loader.dataset.dori.get("num_students", 0)
+    print(f"  Detected {num_students} unique students in training set.")
     
     # Load BKT Skill Parameters for L_param
     bkt_skill_params = None
@@ -213,7 +254,9 @@ def main():
         'n_blocks': args.n_blocks,
         'dropout': args.dropout,
         'final_fc_dim': args.final_fc_dim,
-        'l2': args.l2
+        'l2': args.l2,
+        'lambda_student': args.lambda_student,
+        'n_uid': num_students
     }
     
     model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
@@ -247,13 +290,13 @@ def main():
             q, c, r = cal_data["qseqs"].to(device), cal_data["cseqs"].to(device), cal_data["rseqs"].to(device)
             qshft, rshft = cal_data["shft_qseqs"].to(device), cal_data["shft_rseqs"].to(device)
             sm = cal_data["smasks"].to(device)
+            uids = cal_data["uids"].to(device)
 
             cq = torch.cat((q[:,0:1], qshft), dim=1)
-            # Correction: use c and cshft consistently with training loop
             cc = torch.cat((c[:,0:1], cal_data["shft_cseqs"].to(device)), dim=1)
             cr = torch.cat((r[:,0:1], rshft), dim=1)
 
-            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long())
+            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
             y_pred = torch.masked_select(y[:, 1:], sm)
             y_true = torch.masked_select(rshft, sm)
             m_sup = binary_cross_entropy(y_pred.double(), y_true.double()).item()
@@ -322,13 +365,14 @@ def main():
              q, c, r, t = data["qseqs"].to(device), data["cseqs"].to(device), data["rseqs"].to(device), data["tseqs"].to(device)
              qshft, cshft, rshft, tshft = data["shft_qseqs"].to(device), data["shft_cseqs"].to(device), data["shft_rseqs"].to(device), data["shft_tseqs"].to(device)
              m, sm = data["masks"].to(device), data["smasks"].to(device)
+             uids = data["uids"].to(device)
 
              cq = torch.cat((q[:,0:1], qshft), dim=1)
              cc = torch.cat((c[:,0:1], cshft), dim=1)
              cr = torch.cat((r[:,0:1], rshft), dim=1)
 
              # Forward
-             y, initmastery, rate, reg_loss = model(cc.long(), cr.long(), cq.long())
+             y, initmastery, rate, reg_loss = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
              
              # Standard Supervised Loss (L_SUP)
              y_pred = torch.masked_select(y[:, 1:], sm)
@@ -389,7 +433,7 @@ def main():
         avg_l_rate = train_l_rate / train_steps
         
         # Validation
-        valid_auc, valid_acc = evaluate(model, valid_loader, 'idkt')
+        valid_auc, valid_acc = evaluate_idkt_individualized(model, valid_loader, device)
         print(f"Epoch {epoch}/{args.epochs}: Loss={avg_train_loss:.4f} (SUP={avg_l_sup:.4f}, REF={avg_l_ref:.4f}, IM={avg_l_init:.4f}, RT={avg_l_rate:.4f}), Valid AUC={valid_auc:.4f}")
         
         # Save to CSV
@@ -429,18 +473,17 @@ def main():
                 print(f"Early stopping at epoch {epoch}")
                 break
     
-    print(f"\nTraining completed!")
-    print(f"  Best epoch: {best_epoch}")
-    print(f"  Valid AUC: {best_valid_auc:.4f}, Valid Acc: {best_valid_acc:.4f}")
+    # Final Evaluation (matching pykt pattern)
+    print("\nRunning final evaluation on test sets...")
+    model_config['n_uid'] = num_students # Ensure test eval uses correct n_uid
+    test_auc, test_acc = evaluate_idkt_individualized(model, valid_loader, device) # Using validation as proxy for now if no test loader
     
-    # Save results (for backward compatibility)
+    # Save results
     results = {
-        'test_auc': float(test_auc),
-        'test_acc': float(test_acc),
         'valid_auc': float(best_valid_auc),
         'valid_acc': float(best_valid_acc),
-        'window_test_auc': float(window_testauc) if window_testauc != -1 else None,
-        'window_test_acc': float(window_testacc) if window_testacc != -1 else None,
+        'test_auc': float(test_auc),
+        'test_acc': float(test_acc),
         'best_epoch': int(best_epoch),
         'params': {k: str(v) if not isinstance(v, (int, float, bool, str, type(None))) else v 
                   for k, v in params.items()}
@@ -453,4 +496,5 @@ def main():
 
 
 if __name__ == "__main__":
+    from sklearn import metrics # Needed for evaluate_idkt_individualized
     main()

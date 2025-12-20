@@ -24,6 +24,7 @@ graph TD
             Input_q[["Questions q<br/>[B, L]"]]
             Input_r[["Responses r<br/>[B, L]"]]
             Input_pid[["Problem IDs pid<br/>[B, L]"]]
+            Input_uid[["Student IDs uid<br/>[B]"]]
         end
 
         subgraph "Embedding Layer (Rasch-Enhanced)"
@@ -38,6 +39,7 @@ graph TD
                 Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
                 Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
                 QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
+                Student_Param["student_param (Scalar v_s)<br/>[B, 1]"]
             end
 
             subgraph "Fusion (Rasch Formula)"
@@ -133,14 +135,16 @@ graph TD
 
             subgraph "Out Head 2: Initial Mastery (Decoupled)"
                 Item_Emb["Item Embedding x<br/>[B, L, d]"]
+                Student_Cap["Student Capability v_s<br/>[B, L, 1]"]
                 mlp_layers2["MLP Layers 2"]
-                InitMastery[["Estimated L0<br/>[B, L, 1]"]]
+                InitMastery[["Individualized L0<br/>[B, L, 1]"]]
             end
 
             subgraph "Out Head 3: Learning Rate"
                 Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
+                Student_Vel["Student Velocity v_s<br/>[B, L, 1]"]
                 mlp_layers3["MLP Layers 3"]
-                Rate[["Estimated T<br/>[B, L, 1]"]]
+                Rate[["Individualized T<br/>[B, L, 1]"]]
             end
         end
 
@@ -149,7 +153,8 @@ graph TD
             L_REF["L_ref (Guidance MSE)"]
             L_IM["L_initmastery (L0 Align)"]
             L_RT["L_rate (T Align)"]
-            L_REG["L_rasch (L2 Reg)"]
+            L_REG["L_rasch (L2 Reg u_q)"]
+            L_REG_S["L_student (L2 Reg v_s)"]
             L_TOTAL["L_total"]
         end
 
@@ -159,11 +164,13 @@ graph TD
         Concat --> mlp_layers --> Pred
         
         Final_Q -- "Static Item x" --> Item_Emb
-        Item_Emb --> mlp_layers2 --> InitMastery
+        Student_Param -- "expand to [B,L,1]" --> Student_Cap
+        Item_Emb & Student_Cap --> mlp_layers2 --> InitMastery
         
-        KR_Out -- "Dynamic State x^" --> Concat3
-        Final_Q -- "Static Item x" --> Concat3
-        Concat3 --> mlp_layers3 --> Rate
+        KR_Out -- "x^" --> Concat3
+        Final_Q -- "x" --> Concat3
+        Student_Param -- "v_s" --> Student_Vel
+        Concat3 & Student_Vel --> mlp_layers3 --> Rate
 
         %% Wiring - Loss
         Pred --> L_SUP
@@ -171,7 +178,8 @@ graph TD
         InitMastery -- "vs BKT Prior L0" --> L_IM
         Rate -- "vs BKT Learn Rate T" --> L_RT
         Diff_Param -- "u_q" --> L_REG
-        L_SUP & L_REF & L_IM & L_RT & L_REG --> L_TOTAL
+        Student_Param -- "v_s" --> L_REG_S
+        L_SUP & L_REF & L_IM & L_RT & L_REG & L_REG_S --> L_TOTAL
 
         %% Wiring - Input/Emb
         Input_q --> Q_Emb
@@ -180,6 +188,7 @@ graph TD
 
         %% Rasch Inputs
         Input_pid --> Diff_Param
+        Input_uid --> Student_Param
         Input_q --> Q_Diff_Emb
         Input_r --> QA_Diff_Emb
 
@@ -289,6 +298,14 @@ graph TD
   - Balances modeling individual question differences with avoiding overparameterization
   - Total parameters: (C+2)D + Q instead of QD (where C≪Q and D≫1)
   - Regularized via L₂ penalty: `L_reg = ||uq||²`
+
+- **Informed Individualization** (Advanced iDKT Extension):
+
+  - **Student Capability Embedding**: Learns a student-specific parameter `vs` (Scalar baseline capability and learning velocity trait).
+  - **Individualized Initial Mastery**: `L0,s = f(ct, vs)` where initial knowledge is grounded in both concept difficulty and student baseline.
+  - **Individualized Learning Rate**: `Ts,t = f(ht, xt, vs)` where the learning velocity is modulated by individual aptitude.
+  - **Regularization**: `L_student = λs ||vs||²` ensures that student traits are centered and theoretically grounded.
+  - **Semantic Discovery**: Allows for the extraction of a "Learner Profile" that separates inherent student capability from context-dependent mastery.
 
 - **Knowledge Retriever** (Paper §3.1, §3.2):
 
@@ -1254,5 +1271,33 @@ The transition from global BKT parameters to individualized iDKT parameters enab
 
 This individualized approach would allow iDKT to generate a **Multidimensional Learner Profile** summarizing student capability ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states, providing a more comprehensive view of student progress than classical models.
 
+### 4. Implementation Plan
+
+To realize the "Informed Individualization" framework, we will follow a systematic four-phase implementation:
+
+#### Phase 1: Model Architecture Optimization (`pykt/models/idkt.py`)
+1.  **Add Student Capability Embedding**: Introduce `self.student_param = nn.Embedding(num_students, 1)` to learn the individualized baseline ($v_s$) for each student.
+2.  **Redesign Output Heads**:
+    *   **Baseline Head ($L_0$)**: Modify `out_initmastery` to receive the combination of the item embedding ($x_t$) and student capability ($v_s$).
+    *   **Velocity Head ($T$)**: Incorporate $v_s$ as a feature in the `out_rate` head to modulate learning rate by student-specific traits.
+3.  **Forward Pass Expansion**: Update the `forward()` signature to accept `uid_data` and perform the lookups for $v_s$.
+
+#### Phase 2: Training Pipeline Integration (`examples/train_idkt.py`)
+1.  **Data Flow**: Ensure that `uid` is correctly extracted from the batch (provided by `IDKTDataset`) and passed to the model during training and validation.
+2.  **Regularization Loss**: Implement a new regularization term $L_{reg\_student} = \lambda_{s} \sum v_s^2$ to enforce a Gaussian prior on student capabilities, preventing over-individualization.
+3.  **Dynamic Parameter Initialization**: Adjust the model initialization in `train_idkt.py` to correctly calculate `num_students` from the training dataset.
+
+#### Phase 3: Interpretability & Validation (`examples/eval_idkt_interpretability.py`)
+1.  **Capability Profiling**: Export the learned $v_s$ weights after training to a CSV for external analysis.
+2.  **Correlative Analysis**: 
+    *   Compute the correlation between learned $v_s$ and actual student historical accuracy to validate the "Capability" semantic.
+    *   Evaluate if individualized $L_0$ and $T$ maintain high consistency with BKT skill-level targets while improving AUC.
+
+#### Phase 4: Reproducibility & Documentation
+1.  **Parameter Registry**: Update `configs/parameter_default.json` with the new $\lambda_{s}$ hyperparameter (student L2 regularization).
+2.  **Architecture Diagrams**: Update the Mermaid diagram in `paper/idkt.md` to visualize the $v_s$ data flow and the expanded output heads.
+
+
+### 4. Implementation plan 
 
 

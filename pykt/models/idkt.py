@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from enum import IntEnum
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class Dim(IntEnum):
     batch = 0
@@ -26,7 +26,7 @@ class Dim(IntEnum):
 
 class iDKT(nn.Module):
     def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff=256, 
-            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, emb_type="qid", emb_path="", pretrain_dim=768):
+            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, lambda_student=1e-5, n_uid=0, emb_type="qid", emb_path="", pretrain_dim=768):
         super().__init__()
         """
         iDKT Model - Interpretable Deep Knowledge Tracing
@@ -49,9 +49,14 @@ class iDKT(nn.Module):
         self.emb_type = emb_type
         embed_l = d_model
         if self.n_pid > 0:
-            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # 题目难度
-            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # question emb, 总结了包含当前question（concept）的problems（questions）的变化
-            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # interaction emb, 同上
+            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # Problem difficulty (u_q)
+            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # Difficulty variation across concepts (d_ct)
+            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # Interaction variation (f_ct,rt)
+        
+        self.n_uid = n_uid
+        self.lambda_student = lambda_student
+        if self.n_uid > 0:
+            self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student capability/velocity baseline (v_s)
         
         if emb_type.startswith("qid"):
             # n_question+1 ,d_model
@@ -74,13 +79,14 @@ class iDKT(nn.Module):
         )
         
         # Interpretability Heads: Projecting latent states to BKT-like parameters
+        # Expanded to include student-level individualization (input_dim + 1 for v_s)
         self.out_initmastery = nn.Sequential(
-            nn.Linear(embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(embed_l + (1 if self.n_uid > 0 else 0), final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(256, 1)
         )
         self.out_rate = nn.Sequential(
-            nn.Linear(d_model + embed_l, final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
+            nn.Linear(d_model + embed_l + (1 if self.n_uid > 0 else 0), final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(256, 1)
         )
@@ -102,7 +108,7 @@ class iDKT(nn.Module):
             qa_embed_data = self.qa_embed(target)+q_embed_data
         return q_embed_data, qa_embed_data
 
-    def forward(self, q_data, target, pid_data=None, qtest=False):
+    def forward(self, q_data, target, pid_data=None, uid_data=None, qtest=False):
         emb_type = self.emb_type
         # Batch First
         if emb_type.startswith("qid"):
@@ -138,11 +144,24 @@ class iDKT(nn.Module):
         m = nn.Sigmoid()
         preds = m(output)
         
-        # Latent state projections
-        # Initial Mastery depends only on question/concept embedding (Static grounding)
-        initmastery = m(self.out_initmastery(q_embed_data).squeeze(-1))
-        # Learning rate remains dynamic (Transition depends on interaction history)
-        rate = m(self.out_rate(concat_q).squeeze(-1))
+        # Latent state projections with individualized features
+        if self.n_uid > 0 and uid_data is not None:
+            # uid_data is [BS], unsqueeze and expand to [BS, seqlen, 1]
+            uid_embed_data = self.student_param(uid_data).unsqueeze(1).expand(-1, q_embed_data.shape[1], -1)
+            s_reg_loss = (uid_embed_data ** 2.).sum() * self.lambda_student
+            
+            # Combine concept embedding and student capability for Initial Mastery
+            im_input = torch.cat([q_embed_data, uid_embed_data], dim=-1)
+            initmastery = m(self.out_initmastery(im_input).squeeze(-1))
+            
+            # Combine full latent state and student velocity trait for Learning Rate
+            rate_input = torch.cat([concat_q, uid_embed_data], dim=-1)
+            rate = m(self.out_rate(rate_input).squeeze(-1))
+            
+            c_reg_loss = c_reg_loss + s_reg_loss
+        else:
+            initmastery = m(self.out_initmastery(q_embed_data).squeeze(-1))
+            rate = m(self.out_rate(concat_q).squeeze(-1))
         
         if not qtest:
             return preds, initmastery, rate, c_reg_loss
@@ -243,7 +262,7 @@ class TransformerLayer(nn.Module):
         seqlen, batch_size = query.size(1), query.size(0)
         nopeek_mask = np.triu(
             np.ones((1, 1, seqlen, seqlen)), k=mask).astype('uint8')
-        src_mask = (torch.from_numpy(nopeek_mask) == 0).to(device)
+        src_mask = (torch.from_numpy(nopeek_mask) == 0).to(query.device)
         if mask == 0:  # If 0, zero-padding is needed.
             # Calls block.masked_attn_head.forward() method
             query2 = self.masked_attn_head(
@@ -359,7 +378,7 @@ class MultiHeadAttention(nn.Module):
     def pad_zero(self, scores, bs, dim, zero_pad):
         if zero_pad:
             # # need: torch.Size([64, 1, 200]), scores: torch.Size([64, 200, 200]), v: torch.Size([64, 200, 32])
-            pad_zero = torch.zeros(bs, 1, dim).to(device)
+            pad_zero = torch.zeros(bs, 1, dim).to(scores.device)
             scores = torch.cat([pad_zero, scores[:, 0:-1, :]], dim=1) # 所有v后置一位
         return scores
 
@@ -373,19 +392,19 @@ def attention(q, k, v, d_k, mask, dropout, zero_pad, gamma=None, pdiff=None):
         math.sqrt(d_k)  # BS, 8, seqlen, seqlen
     bs, head, seqlen = scores.size(0), scores.size(1), scores.size(2)
 
-    x1 = torch.arange(seqlen).expand(seqlen, -1).to(device)
+    x1 = torch.arange(seqlen).expand(seqlen, -1).to(q.device)
     x2 = x1.transpose(0, 1).contiguous()
 
     with torch.no_grad():
         scores_ = scores.masked_fill(mask == 0, -1e32)
         scores_ = F.softmax(scores_, dim=-1)  # BS,8,seqlen,seqlen
-        scores_ = scores_ * mask.float().to(device) # 结果和上一步一样
+        scores_ = scores_ * mask.float().to(q.device) # 结果和上一步一样
         distcum_scores = torch.cumsum(scores_, dim=-1)  # bs, 8, sl, sl
         disttotal_scores = torch.sum(
             scores_, dim=-1, keepdim=True)  # bs, 8, sl, 1 全1
         # print(f"distotal_scores: {disttotal_scores}")
         position_effect = torch.abs(
-            x1-x2)[None, None, :, :].type(torch.FloatTensor).to(device)  # 1, 1, seqlen, seqlen 位置差值
+            x1-x2)[None, None, :, :].type(torch.FloatTensor).to(q.device)  # 1, 1, seqlen, seqlen 位置差值
         # bs, 8, sl, sl positive distance
         dist_scores = torch.clamp(
             (disttotal_scores-distcum_scores)*position_effect, min=0.) # score <0 时，设置为0
@@ -408,7 +427,7 @@ def attention(q, k, v, d_k, mask, dropout, zero_pad, gamma=None, pdiff=None):
     # print(f"before zero pad scores: {scores.shape}")
     # print(zero_pad)
     if zero_pad:
-        pad_zero = torch.zeros(bs, head, 1, seqlen).to(device)
+        pad_zero = torch.zeros(bs, head, 1, seqlen).to(q.device)
         scores = torch.cat([pad_zero, scores[:, :, 1:, :]], dim=2) # 第一行score置0
     # print(f"after zero pad scores: {scores}")
     scores = dropout(scores)

@@ -65,7 +65,7 @@ def init_model(model_name, model_config, data_config, emb_type):
     elif model_name == "akt":
         model = AKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     elif model_name == "idkt":
-        model = iDKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
+        model = iDKT(data_config["num_c"], data_config["num_q"], **model_config).to(device)
     elif model_name == "lefokt_akt":
         model = LEFOKT_AKT(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     elif model_name == "extrakt":
