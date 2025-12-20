@@ -24,7 +24,7 @@ graph TD
             Input_q[["Questions q<br/>[B, L]"]]
             Input_r[["Responses r<br/>[B, L]"]]
             Input_pid[["Problem IDs pid<br/>[B, L]"]]
-            Input_uid[["Student IDs uid<br/>[B]"]]
+            Input_uid[["Student IDs uid<br/>[B, L]"]]
         end
 
         subgraph "Embedding Layer (Rasch-Enhanced)"
@@ -39,7 +39,7 @@ graph TD
                 Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
                 Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
                 QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
-                Student_Param["student_param (Scalar v_s)<br/>[B, 1]"]
+                Student_Param["student_param (Scalar v_s)<br/>[B, L, 1]"]
             end
 
             subgraph "Fusion (Rasch Formula)"
@@ -260,6 +260,37 @@ graph TD
 
 </div>
 
+**Embeddings**
+
+To bridge psychometric theory and deep learning, iDKT employs a specialized notation for its Rasch-enhanced embeddings:
+
+*   **$u_q$ (Question Difficulty)**: A learned scalar parameter indexed by the **Problem ID** ($q$). The subscript **`q`** emphasizes that difficulty is modeled at the item level, distinguishing between different questions that may test the same underlying concept.
+*   **$c_{ct}$ (Concept Embedding)**: The base latent representation of the Knowledge Component/Concept ($c$) at time $t$.
+*   **$d_{ct}$ (Question Variation)**: A vector defining the "direction" of difficulty variation for concept $c_t$. The model uses this vector, multiplied by the scalar $u_q$, to change the meaning of the embedding (a point in a n-dimensional space) as it gets harder. 
+*   **$e_{ct,rt}$ (Interaction Base)**: The fundamental representation of an interaction, combining concept $c_t$ and response $r_t$.
+*   **$f_{ct,rt}$ (Interaction Variation)**: A vector defining how the interaction representation shifts based on item difficulty.
+
+**Fusion of Embeddings (Rasch Logic)**
+
+The input layer fuses these components to create individualized representations that bridge psychometric theory with high-dimensional latent spaces:
+
+1.  **Question Embedding ($x_t$)**: $x_t = c_{c_t} + u_q \cdot d_{c_t}$
+    *   **The Concept ($c_{c_t}$)**: The base representation of the skill (the "starting point" in latent space).
+    *   **The Modern 1PL Shift ($u_q \cdot d_{c_t}$)**: While standard IRT shifts probability, iDKT shifts the **meaning** of the question. $d_{ct}$ defines a "difficulty axis" in the $n$-dimensional space, and $u_q$ (scalar distance) moves the embedding along that axis. This allows the model to capture how a concept "evolves" (e.g., from basic arithmetic to word problems) as it gets harder.
+
+2.  **Interaction Embedding ($y_t$)**: $y_t = e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})$
+    This formula combines three logical components into a single history-aware vector:
+    *   **Base Result ($e_{c_t,r_t}$)**: The average meaning of success or failure on concept $c_t$ (Concept + Response lookup).
+    *   **Outcome Intensity ($u_q \cdot f_{c_t,r_t}$)**: Adjusts the "weight" of the result. Failing an easy problem is a stronger signal of low mastery than failing a near-impossible one. This term moves the vector toward "Mastery" or "Gap" clusters based on the specific challenge level ($u_q$).
+    *   **Context Anchor ($u_q \cdot d_{c_t}$)**: This is the most critical innovation for maintaining long-term dependency accuracy. By injecting the exact same variation term used in the question ($x_t$), the model creates a mathematical "entanglement" between the challenge and the result.
+        *   **The Problem it Solves**: In standard models, once a student answers a question, the specific details of that question (was it a word problem? was it abstract?) are often discarded, saving only the "success/failure" on the general concept. This leads to "semantic blurring."
+        *   **The iDKT Solution**: The anchor ensures the interaction embedding ($y_t$) inhabits the same coordinate space as the question ($x_t$). It "tags" the student's success with the item's specific flavor.
+        *   **Pedagogical Example**: 
+            *   Imagine a student solves two "Multiplication" problems. Problem A is a **simple calculation** ($2 \times 2$) while Problem B is a **complex physics word problem** requiring multiplication. 
+            *   In Problem B, $d_{c_t}$ points toward "Physics/Context" and $u_q$ is high. 
+            *   Because $y_t$ includes this anchor, when the student later encounters a "Physics" question, the Attention mechanism can look back and see: *"Ah, this student didn't just 'do multiplication'; they successfully applied it in a Physics context."*
+        *   **Outcome**: This enables the Encoder to perform "High-Resolution Retrieval," distinguishing between a student who excels at the mechanics of a skill versus one who excels at its application under specific conditions.
+    
 **Key Features:**
 
 - **Architecture Size**
@@ -1185,7 +1216,9 @@ The iDKT model implements a multi-objective optimization objective that balances
 
 #### Pareto Visualization (ASSIST2015)
 
+
 ![iDKT Pareto Frontier (ASSIST2015)](pareto_frontier.png)
+
 
 #### Analysis of the Pareto Frontier (ASSIST2015)
 
@@ -1243,7 +1276,7 @@ This will:
 - Generate a summary CSV at `assistant/pareto_metrics_highres.csv`.
 - Create the Pareto curve plot at `assistant/pareto_frontier_highres.png`.
 
-## Next Steps - Individualized Approach
+## Individualized Approach (v0.0.28-iDKT version) 
 
 ### 1. Item-Level Difficulty Calibration (Learned $u_q$)
 The current iDKT architecture already implements a high-resolution estimation of question difficulty through the `difficult_param` embedding ($u_q \in \mathbb{R}^1$). 
@@ -1251,8 +1284,10 @@ The current iDKT architecture already implements a high-resolution estimation of
 - **Regularization**: The model uses L2 regularization ($L_{reg} = \lambda_{l2} \sum u_q^2$) to enforce a Gaussian prior centered at zero. This ensures that the model only attributes high difficulty to an item when student response patterns provide strong evidence for it.
 - **Extraction**: Post-training, these weights can be extracted and ranked to identify which items are statistically "hard" or "easy" within a specific knowledge component. This provides a data-driven alternative to manual item tagging.
 
+This new v0.0.28-iDKT version implementing individualized initial knowledge (L_0) and learning (P_T) is based in applying a similar approach to these BKT parameters, i.e. use embeddings to represent these parameters and learn them from data instead of using the same pre-calculated parameters for all the students. 
+
 ### 2. Transition to Individualized Student Profiling
-Standard BKT models assume that pedagogical parameters like Initial Mastery ($P(L_0)$) and Learning Rate ($T$) are constant for every student within a skill. A major future direction for iDKT is to leverage its Transformer backbone to individualize these parameters.
+Standard BKT models assume that pedagogical parameters like Initial Mastery ($P(L_0)$) and Learning Rate ($T$) are constant for every student within a skill. An interesting direction for iDKT is to leverage its Transformer backbone to individualize these parameters.
 
 #### A. Personalized Student Velocity (Personalized $T$)
 While standard BKT assigns a single $T$ per skill, iDKT can estimate a **Student Velocity** that varies based on individual learning pace:
@@ -1271,33 +1306,47 @@ The transition from global BKT parameters to individualized iDKT parameters enab
 
 This individualized approach would allow iDKT to generate a **Multidimensional Learner Profile** summarizing student capability ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states, providing a more comprehensive view of student progress than classical models.
 
-### 4. Implementation Plan
+### 4. Informed Individualization Implementation
 
-To realize the "Informed Individualization" framework, we will follow a systematic four-phase implementation:
+The "Informed Individualization" framework has been implemented across the model architecture, training pipeline, and evaluation suite. This section details the realized changes:
 
-#### Phase 1: Model Architecture Optimization (`pykt/models/idkt.py`)
-1.  **Add Student Capability Embedding**: Introduce `self.student_param = nn.Embedding(num_students, 1)` to learn the individualized baseline ($v_s$) for each student.
-2.  **Redesign Output Heads**:
-    *   **Baseline Head ($L_0$)**: Modify `out_initmastery` to receive the combination of the item embedding ($x_t$) and student capability ($v_s$).
-    *   **Velocity Head ($T$)**: Incorporate $v_s$ as a feature in the `out_rate` head to modulate learning rate by student-specific traits.
-3.  **Forward Pass Expansion**: Update the `forward()` signature to accept `uid_data` and perform the lookups for $v_s$.
+#### Phase 1: Model Architecture Optimization `pykt/models/idkt.py`
 
-#### Phase 2: Training Pipeline Integration (`examples/train_idkt.py`)
-1.  **Data Flow**: Ensure that `uid` is correctly extracted from the batch (provided by `IDKTDataset`) and passed to the model during training and validation.
-2.  **Regularization Loss**: Implement a new regularization term $L_{reg\_student} = \lambda_{s} \sum v_s^2$ to enforce a Gaussian prior on student capabilities, preventing over-individualization.
-3.  **Dynamic Parameter Initialization**: Adjust the model initialization in `train_idkt.py` to correctly calculate `num_students` from the training dataset.
+We introduced a student-level capability embedding and redesigned the output heads to incorporate individual traits:
 
-#### Phase 3: Interpretability & Validation (`examples/eval_idkt_interpretability.py`)
-1.  **Capability Profiling**: Export the learned $v_s$ weights after training to a CSV for external analysis.
-2.  **Correlative Analysis**: 
-    *   Compute the correlation between learned $v_s$ and actual student historical accuracy to validate the "Capability" semantic.
-    *   Evaluate if individualized $L_0$ and $T$ maintain high consistency with BKT skill-level targets while improving AUC.
+```python
+# 1. Student Capability Embedding (v_s)
+self.student_param = nn.Embedding(self.n_uid + 1, 1)
+
+# 2. Individualized Output Heads (redesigned to accept v_s)
+self.out_initmastery = nn.Sequential(
+    nn.Linear(embed_l + 1, final_fc_dim), ... 
+)
+self.out_rate = nn.Sequential(
+    nn.Linear(d_model + embed_l + 1, final_fc_dim), ...
+)
+```
+
+The forward pass now processes `uid_data` to extract $v_s$ and combine it with concept/latent features for individualized parameter projection.
+
+#### Phase 2: Training Pipeline Integration `examples/train_idkt.py`
+
+The training script was updated to support the individualized flow and enforce theoretical priors via regularization:
+
+- **Student Regularization ($L_{student}$)**: A new Gaussian prior $L_{reg\_student} = \lambda_{s} \sum v_s^2$ ensures that learned student traits are centered.
+- **Dynamic Lambda Calibration**: The "Warm-up Calibration" was extended to handle the individualized heads, ensuring stable signal sharing from epoch 1.
+
+#### Phase 3: Individualized Evaluation `examples/eval_idkt_interpretability.py`
+
+The evaluation suite now quantifies the impact of individualization:
+
+- **Capability Profiling**: Learned $v_s$ traits are exported to analyze their correlation with student historical performance.
+- **Roster Export**: Longitudinal tracking of mastery states for all students and skills is supported via `IDKTRoster` (`roster_idkt.csv`).
 
 #### Phase 4: Reproducibility & Documentation
-1.  **Parameter Registry**: Update `configs/parameter_default.json` with the new $\lambda_{s}$ hyperparameter (student L2 regularization).
-2.  **Architecture Diagrams**: Update the Mermaid diagram in `paper/idkt.md` to visualize the $v_s$ data flow and the expanded output heads.
 
+- **Parameter Registry**: The `lambda_student` hyperparameter was registered in `configs/parameter_default.json`.
+- **Architectural Traceability**: The Mermaid diagram in section 2 was updated to visualize the new individualized data flow and multi-objective loss components.
 
-### 4. Implementation plan 
-
+## Next Steps
 

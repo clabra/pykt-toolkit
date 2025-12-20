@@ -16,6 +16,12 @@ except ImportError:
 def load_bkt_params(model_path):
     """
     Load BKT parameters from a saved pyBKT model.
+
+    Input: model_path (str): Path to the saved pyBKT model.
+    Returns: 
+        params (dict): Dictionary of parameters per skill. 
+        global_params (dict): Dictionary of global parameters.
+        model (Model): The loaded pyBKT model. 
     """
     model = Model()
     model.load(model_path)
@@ -56,6 +62,14 @@ def load_bkt_params(model_path):
 def augment_sequences(df, bkt_params, global_params, model):
     """
     Augment sequences with BKT parameters and mastery trajectories.
+
+    Input: 
+        df (pd.DataFrame): DataFrame containing the sequences to be augmented.
+        bkt_params (dict): Dictionary of skill parameters.
+        global_params (dict): Dictionary of global parameters.
+        model (Model): The loaded pyBKT model.
+    Returns: 
+        df (pd.DataFrame): DataFrame augmented with 2 additional columns for mastery and p(corr) calculated with BKT
     """
     print("Augmenting sequences with BKT data...")
     
