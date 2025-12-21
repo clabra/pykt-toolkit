@@ -104,6 +104,8 @@ class iDKT(nn.Module):
     def load_theory_params(self, bkt_skill_params):
         """
         Initialize l0_base_emb and t_base_emb with pre-calculated BKT parameters.
+        Using Textured Grounding: Embeddings are shifted logits with feature variance
+        to survive LayerNorm blocks.
         """
         if bkt_skill_params is None:
             return
@@ -112,9 +114,6 @@ class iDKT(nn.Module):
         params_dict = bkt_skill_params.get('params', {})
         global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
         
-        # Initialize embeddings in logit space.
-        # This prevents the '0.5 center bias' when passing through sigmoid.
-        # Logit(p) = ln(p / (1-p))
         def to_logit(p, eps=1e-6):
             p = np.clip(p, eps, 1.0 - eps)
             return np.log(p / (1.0 - p))
@@ -122,14 +121,25 @@ class iDKT(nn.Module):
         with torch.no_grad():
             for q_idx in range(self.n_question + 1):
                 s_params = params_dict.get(q_idx, global_params)
-                l0_val = s_params.get('prior', global_params['prior'])
-                t_val = s_params.get('learns', global_params['learns'])
+                l0_p = s_params.get('prior', global_params['prior'])
+                t_p = s_params.get('learns', global_params['learns'])
                 
-                # Copy logit-scaled base to all dimensions of the embedding
-                self.l0_base_emb.weight[q_idx].fill_(to_logit(l0_val))
-                self.t_base_emb.weight[q_idx].fill_(to_logit(t_val))
+                # Textured Grounding: 
+                # Instead of a constant vector, we use a small normal distribution 
+                # centered at the logit. This ensures non-zero variance per-student
+                # so LayerNorm doesn't zero out the features.
+                l0_logit = to_logit(l0_p)
+                t_logit = to_logit(t_p)
                 
-        print(f"  [iDKT] Theory bases initialized in LOGIT space from BKT parameters.")
+                # N(logit, 0.05)
+                self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
+                self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
+            
+            # Initialize axes with smaller scale (0.02) to ensure grounding dominates early
+            nn.init.normal_(self.knowledge_axis_emb.weight, mean=0, std=0.02)
+            nn.init.normal_(self.velocity_axis_emb.weight, mean=0, std=0.02)
+                
+        print(f"  [iDKT] Textured Theory Bases (N(logit, 0.05)) and Relational Axes initialized.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -358,10 +368,6 @@ class MultiHeadAttention(nn.Module):
             pool_size = 3
             self.pooling =  nn.AvgPool1d(pool_size, stride=1, padding=pool_size//2, count_include_pad=False, )
             self.out_proj = nn.Linear(d_model, d_model, bias=bias)
-        elif emb_type.endswith("linear"):
-            # linear
-            self.linear = nn.Linear(d_model, d_model, bias=bias)
-            self.out_proj = nn.Linear(d_model, d_model, bias=bias)
         elif emb_type.startswith("qid"):
             self.d_k = d_feature
             self.h = n_heads
@@ -374,8 +380,7 @@ class MultiHeadAttention(nn.Module):
             self.dropout = nn.Dropout(dropout)
             self.proj_bias = bias
             self.out_proj = nn.Linear(d_model, d_model, bias=bias)
-            self.gammas = nn.Parameter(torch.zeros(n_heads, 1, 1))
-            torch.nn.init.xavier_uniform_(self.gammas)
+            self.gammas = nn.Parameter(torch.zeros(n_heads, 1, 1)) # Constant 0.0 -> Softplus(0) = ln(2)
             self._reset_parameters()
 
 

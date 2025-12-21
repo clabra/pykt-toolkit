@@ -363,10 +363,10 @@ def main():
             if "bkt_p_correct" in cal_data:
                 bkt_p_shft = torch.masked_select(cal_data["bkt_p_correct"].to(device), sm)
                 m_ref = torch.mean((y_pred - bkt_p_shft)**2).item()
-                if m_ref > 0:
+                if m_ref > 1e-12: # Check if MSE is not effectively zero
                     target_ratio = args.lambda_ref
-                    args.lambda_ref = target_ratio * (m_sup / m_ref)
-                    print(f"  ✓ L_ref: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_ref:.6f} (Init MSE: {m_ref:.6f})")
+                    args.lambda_ref = min(target_ratio * (m_sup / (m_ref + 1e-8)), 100.0)
+                    print(f"  ✓ L_ref: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_ref:.6f} (Init MSE: {m_ref:.6e})")
             
             # Calibration for L_param
             if bkt_skill_params is not None:
@@ -382,14 +382,23 @@ def main():
                 m_init = torch.mean((p_initmastery - r_init)**2).item()
                 m_rate = torch.mean((p_rate - r_rate)**2).item()
                 
-                if m_init > 0:
+                if m_init > 1e-12:
                     target_ratio = args.lambda_initmastery
-                    args.lambda_initmastery = target_ratio * (m_sup / m_init)
-                    print(f"  ✓ L_initmastery: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_initmastery:.6f} (Init MSE: {m_init:.6f})")
-                if m_rate > 0:
+                    args.lambda_initmastery = min(target_ratio * (m_sup / (m_init + 1e-8)), 100.0)
+                    print(f"  ✓ L_initmastery: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_initmastery:.6f} (Init MSE: {m_init:.6e})")
+                if m_rate > 1e-12:
                     target_ratio = args.lambda_rate
-                    args.lambda_rate = target_ratio * (m_sup / m_rate)
-                    print(f"  ✓ L_rate: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_rate:.6f} (Init MSE: {m_rate:.6f})")
+                    args.lambda_rate = min(target_ratio * (m_sup / (m_rate + 1e-8)), 100.0)
+                    print(f"  ✓ L_rate: Target Ratio {target_ratio*100:.1f}%, Calibrated Lambda: {args.lambda_rate:.6f} (Init MSE: {m_rate:.6e})")
+                
+                # Log calibrated weights for reproducibility
+                cal_weights = {
+                    "lambda_ref": args.lambda_ref,
+                    "lambda_initmastery": args.lambda_initmastery,
+                    "lambda_rate": args.lambda_rate
+                }
+                with open(os.path.join(args.save_dir, 'calibration.json'), 'w') as f:
+                    json.dump(cal_weights, f, indent=2)
         
         print("Calibrated weights will be used to maintain theory/supervised signal balance.")
         print("="*80 + "\n")

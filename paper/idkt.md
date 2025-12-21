@@ -1663,6 +1663,109 @@ The 3x5 mosaic provides empirical proof of iDKT's **Dynamic Calibration** across
 - **Reaction to Performance Noise:** The "×" markers (incorrect answers) cause visible dips or plateaus in the $P(m)$ curves. iDKT's grounded parameters allow it to be more "skeptical" of students who exhibit inconsistent behavior. For Slower profiles, a single failure often results in a significant "mastery regression" or a prolonged plateau, providing a safer, more conservative estimate of their readiness compared to the often over-optimistic population-level BKT baseline.
 - **Pedagogical Actionability:** Instructional designers can use these subplots to identify "Bottleneck Skills" (where all curves remain low) vs. "Divergent Skills" (where students split clearly into mastery tracks), allowing for more precise targeting of remedial content and adaptive interventions.
 
-## Important Note
+## Important Note: Logit/Probability Scaling Mismatch in Archetype 1 Grounding
 
+### 1. The Issue: Space Alignment Error
+We have identified a fundamental technical artifact in the initial implementation of the iDKT "Archetype 1" grounding mechanism. The model was initializing its **Grounded Theoretical Bases** ($l_0, t_0$) using raw **probability-space values** (e.g., $T=0.10$ and $L_0=0.50$) directly into embedding weights.
+
+**The Logic Error:**
+In the iDKT architecture, these embeddings are processed through a **Sigmoid** function to produce the final interpretable parameters. 
+- **Effect:** Initializing an embedding weight to $0.10$ and passing it through a sigmoid yields $P(m) \approx \sigma(0.10) = 0.52$.
+- **Manifestation:** Instead of starting training centered at the theoretical learning rate ($0.10$), the model was "pre-charged" to a $\approx 50\%$ acquisition rate. This created a persistent **"Optimism Bias"** in the Delta Distributions ($\Delta = t_s - T > 0$).
+
+### 2. Consequences & Scientific Impact
+This mismatch affects the interpretability of all results generated before **December 21, 2025 (20:00 UTC)**:
+- **Pareto Sweep Scaling:** The "Grounding Penalty" was likely over-active, as the model was fighting a coordinate-system mismatch rather than true theoretical divergence.
+- **Interpretability Plots:** The "Delta Distribution" plots for $l_c$ and $t_s$ show a rightward bias that is an artifact of the $0.5$ sigmoid center, rather than purely empirical student behavior.
+- **Mastery Mosaic:** Convergence speeds in the longitudinal plots appear approximately 2x faster than they should be in the initial interactions.
+
+### 3. Remediations Implemented
+We have refactored the structural grounding mechanism in `pykt/models/idkt.py` to ensure mathematical consistency:
+
+#### A. Logit-Grounded Initialization
+Theory bases are now initialized in **Logit Space**, ensuring $\sigma(W_{init}) = P_{theory}$.
+```python
+# Refactored load_theory_params
+def to_logit(p, eps=1e-6):
+    p = np.clip(p, eps, 1.0 - eps)
+    return np.log(p / (1.0 - p))
+
+with torch.no_grad():
+    for q_idx in range(self.n_question + 1):
+        # ... get theoretical values ...
+        self.l0_base_emb.weight[q_idx].fill_(to_logit(l0_val))
+        self.t_base_emb.weight[q_idx].fill_(to_logit(t_val))
+```
+
+#### B. Zero-Centered Individualization
+Ensured that student-level "divergence" parameters start at neutral (zero) so students begin exactly at the population mean.
+```python
+# Refactored reset()
+for p in self.parameters():
+    # Exactly center student-specific scalars (v_s, k_c) at zero
+    if p.size(0) in {self.n_pid+1, self.n_uid+1} and p.shape[-1] == 1:
+        torch.nn.init.constant_(p, 0.)
+```
+
+### 4. Verification & Testing Protocol: The Structural Auditor
+To ensure that future architectural modifications (e.g., adding new embedding heads or changing loss weights) do not re-introduce scaling artifacts, we have implemented a **Dynamic Structural Calibration Auditor** (`examples/auditor_idkt.py`). This tool performs a "Scientific Sanity Check" at Epoch 0 of every experiment series.
+
+**The Auditor performs the following checks:**
+1.  **Dynamic Component Discovery:** Scans the PyTorch module for all attributes related to `bases` ($l_0, t_0$), `axes` ($d_c, d_s$), and `student_params`.
+2.  **Logit-Alignment Audit:** Verifies with $10^{-8}$ precision that the loaded base embeddings match the logit-transformed BKT priors.
+3.  **Neutrality Audit:** Confirms that all student-specific parameters are zero-initialized, ensuring the student starts at the "Theoretical Mean."
+4.  **Scaling Audit:** Checks that Relational Axes ($d_c, d_s$) are initialized with a controlled scale (std $\approx 0.02$) relative to the population anchors. 
+5.  **Functional Alignment:** Executes a mock forward pass and verifies that the interpretable outputs ($P(m), \text{rate}$) are identical to the theoretical BKT parameters at initialization.
+
+### 5. Items Requiring Update
+The following sections in @[paper/idkt.md] must be updated with data from the **Post-Fix Pareto Sweep**:
+1.  **Pareto Frontier Analysis:** Performance ($AUC$) and Grounding ($H1/H2$) metrics in the Sweep Summary Table.
+2.  **Figure 11.1 & 11.2 (Individualization Variance):** All three alternatives (Ribbon, Delta, Ridgeline) must be regenerated.
+3.  **Figure 11.3 (Mastery Mosaic):** The 3x5 grid must be re-rendered to show correctly-scaled acquisition trajectories.
+4.  **Empirical Validation Table:** The summary of $H_1$ to $H_5$ alignment results.
+
+```
+Pending do a Post-Fix Pareto Sweep to regenerate the paper's figures and analysis tables with high scientific fidelity. 
+
+All the data, metrics (AUC, grounding losses), and visualizations currently in @[paper/idkt.md] were generated using a version of the model that had the "Optimism Bias" (the scaling bug). Because that bug caused the model to start at a $50%$ learning rate instead of the intended $10%$, the results and scientific conclusions currently documented are technically incorrect.
+
+What does "Post-Fix Pareto Sweep" involve?
+Re-execution of the Sweep: We need to run the pareto_sweep.sh script again. This will train the model from scratch across multiple $\lambda$ values (e.g., from $\lambda=0$ to $\lambda=1$) using the corrected initialization logic.
+Unbiased Metrics: The new experiments will provide the true trade-off between predictive accuracy ($AUC$) and theoretical alignment ($H_1, H_2$). We expect the grounding losses to be much lower because the model is no longer "fighting" a coordinate system mismatch.
+Regenerating Figures: We will replace the current "biased" images in the paper (the Delta Distributions, Ridgelines, and the Mastery Mosaic) with new ones where the distributions are correctly centered.
+Scientific Accuracy: This ensures that the final paper reports data that is mathematically sound and reproducible, free from implementing artifacts.
+In summary: It is the process of refreshing the entire experimental section of the paper to reflect the corrected and scientifically accurate state of the model.
+```
+
+## Appendix: Scientific Auditing Protocol (`auditor_idkt.py`)
+
+To maintain scientific fidelity as the iDKT architecture evolves, we have established a formal auditing protocol enabled by the `examples/auditor_idkt.py` diagnostic tool. This script ensures that structural grounding is preserved and that no scaling artifacts (like those identified in Dec 2025) are re-introduced.
+
+### 1. What the Auditor Checks
+The auditor uses **Dynamic Component Discovery** via PyTorch module introspection to verify the following scientific invariants:
+
+*   **Logit-Space Alignment:** Confirms that theoretical population bases ($l_0, t_0$) are accurately transformed from probability space into logit embeddings. 
+*   **Neutrality Verification:** Ensures that student-specific individualization parameters ($v_s$) and knowledge gaps ($k_c$) are initialized to exactly zero. This guarantees that all students begin training exactly at the "Theoretical Mean."
+*   **Texture & Visibility Check:** Verifies that grounded embeddings have non-zero feature variance ($\sigma \approx 0.05$). This ensures the grounding signal possesses sufficient rank to survive Transformer **LayerNorm** blocks and remain "visible" to the attention heads.
+*   **Functional Forward Mapping:** Executes a mock forward pass to confirm that the model's interpretable outputs ($initmastery, rate$) are mathematically identical to the BKT theoretical anchors at Epoch 0.
+*   **Calibration Stability Guard:** Simulates the **Warm-up Calibration** logic from `train_idkt.py` to ensure that loss-weight multipliers are safely capped (max=100) even in high-fidelity initialization regimes.
+
+### 2. When to Launch
+The auditor should be executed in the following scenarios:
+1.  **Metric Sentinel:** At the beginning of every major experiment series or Pareto sweep.
+2.  **Architectural Registry:** Immediately after adding new embedding heads, changing loss functions, or modifying the embedding fusion logic.
+3.  **Checkpoint Audit:** To verify the structural health of a saved `best_model.pt` before post-training interpretability analysis.
+
+### 3. How to Launch
+The script is run from within the standard virtual environment. It dynamically adapts to the current model configuration:
+
+```bash
+# Basic Audit (Default Architecture)
+python examples/auditor_idkt.py
+
+# Scaled Audit (Specific n_questions/d_model)
+python examples/auditor_idkt.py --n_q 100 --d 512
+```
+
+A passing report concludes with a **"Scientific Fidelity Verified"** verdict; any failure indicates a scaling mismatch that could compromise the model's interpretability.
 
