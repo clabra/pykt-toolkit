@@ -49,6 +49,7 @@ from pykt.models import evaluate, init_model
 from pykt.datasets import init_dataset4train
 from torch.utils.data import DataLoader
 from pykt.datasets.data_loader import KTDataset
+from pykt.datasets.idkt_dataloader import IDKTDataset
 from pykt.utils import set_seed
 import pickle
 from train_idkt import evaluate_idkt_individualized
@@ -166,7 +167,18 @@ def main():
     
     # Create test loader
     test_file = os.path.join(dpath, dataset_config['test_file'])
-    test_dataset = KTDataset(test_file, dataset_config['input_type'], {-1})
+    
+    if args.theory_guided:
+        test_file_bkt = test_file.replace('.csv', '_bkt.csv')
+        if os.path.exists(test_file_bkt):
+            test_file = test_file_bkt
+            print(f"  Using augmented test file: {test_file}")
+            
+    if args.theory_guided:
+        test_dataset = IDKTDataset(test_file, dataset_config['input_type'], {-1})
+    else:
+        test_dataset = KTDataset(test_file, dataset_config['input_type'], {-1})
+    
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
     
     # Create test window loader if available

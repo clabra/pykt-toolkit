@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.7729451109901733,
+  "valid_acc": 0.7439848556554661,
+  "valid_metrics": {
+    "l_sup": 0.5285679466352144,
+    "l_reg": 0.0011860388864685472,
+    "l_ref": 0.013115290164326629,
+    "l_init": 0.009047391881827667,
+    "l_rate": 0.16436794233055363
+  },
+  "test_auc": 0.7717683837514784,
+  "test_acc": 0.7401419782300047,
+  "test_metrics": {
+    "l_sup": 0.5285679466352144,
+    "l_reg": 0.0011860388864685472,
+    "l_ref": 0.013115290164326629,
+    "l_init": 0.009047391881827667,
+    "l_rate": 0.16436794233055363
+  },
+  "best_epoch": 14,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "assist2009",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20251221_133011_idkt_pareto_v2_l0.60_assist2009_759634",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.2,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 100,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.6,
+    "lambda_initmastery": 0.6,
+    "lambda_rate": 0.6,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

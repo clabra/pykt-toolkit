@@ -171,9 +171,13 @@ class iDKT(nn.Module):
             
         # 2. Individualization Grounding (Archetype 1)
         if self.n_uid > 0 and uid_data is not None:
-            # Student-specific scalars
-            vs = self.student_param(uid_data).unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
-            kc = self.student_gap_param(uid_data).unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            # Student-specific scalar embeddings
+            s_param = self.student_param(uid_data) # [BS, 1]
+            sg_param = self.student_gap_param(uid_data) # [BS, 1]
+            
+            # Expansion for fusion
+            vs = s_param.unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            kc = sg_param.unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
             
             # Skill-specific axes and bases
             dc = self.knowledge_axis_emb(q_data) # [BS, seq, d]
@@ -189,9 +193,9 @@ class iDKT(nn.Module):
             q_embed_data = q_embed_data - lc # x' = x - l_c (Residual Difficulty)
             qa_embed_data = qa_embed_data + ts # y' = y + t_s (Personalized Momentum)
             
-            # Additional Regularization
-            gap_reg = (kc ** 2.).sum()
-            student_reg = (vs ** 2.).sum()
+            # Additional Regularization - Calculate on raw embeddings to avoid seq_len multiplier
+            gap_reg = (sg_param ** 2.).sum()
+            student_reg = (s_param ** 2.).sum()
             s_reg_loss = gap_reg * self.lambda_gap + student_reg * self.lambda_student
             c_reg_loss = c_reg_loss + s_reg_loss
         else:

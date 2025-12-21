@@ -38,14 +38,14 @@ do
     GPU_IDX=$((i % num_gpus))
     GPU_ID=${GPUS[$GPU_IDX]}
     
-    TITLE="pareto_v2_l${LAMBDA}"
-    LOG_FILE="assistant/log_v2_l${LAMBDA}.txt"
-    
+    TITLE="pareto_v2_l${LAMBDA}_${DATASET}"
+    LOG_FILE="assistant/log_v2_l${LAMBDA}_${DATASET}.txt"
     echo "Launching [$((i+1))/${#LAMBDAS[@]}]: lambda_all=$LAMBDA on GPU $GPU_ID"
     
     # nohup + & ensures the process continues if the terminal is closed
-    # We vary ALL three theoretical weights to find the optimal grounding/performance elbow
-    CUDA_VISIBLE_DEVICES=$GPU_ID nohup python examples/run_repro_experiment.py \
+    # We use docker exec to target the pinn-dev container as per GEMINI.md protocol
+    # This ensures the .pykt-env is used even if launched from the host machine
+    nohup docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && CUDA_VISIBLE_DEVICES=$GPU_ID python examples/run_repro_experiment.py \
         --model idkt \
         --dataset $DATASET \
         --fold $FOLD \
@@ -57,7 +57,7 @@ do
         --lambda_rate $LAMBDA \
         --short_title $TITLE \
         --num_gpus 1 \
-        --skip_roster \
+        --skip_roster" \
         > "$LOG_FILE" 2>&1 &
     
     # Small stagger to prevent simultaneous data loading peaks

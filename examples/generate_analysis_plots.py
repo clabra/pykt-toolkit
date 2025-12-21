@@ -62,6 +62,20 @@ def load_metrics_csv(run_dir):
         if old_col in df.columns and new_col not in df.columns:
             df[new_col] = df[old_col]
             
+    # Normalize prefixes for iDKT metrics if present
+    idkt_normalization = {
+        'train_l_sup': 'l_sup',
+        'train_l_ref': 'l_ref',
+        'train_l_init': 'l_init',
+        'train_l_rate': 'l_rate',
+        'l_initmastery': 'l_init' # Backward compatibility
+    }
+    for old_col, tgt_col in idkt_normalization.items():
+        if old_col in df.columns and tgt_col not in df.columns:
+            df[tgt_col] = df[old_col]
+        elif old_col in df.columns:
+             df[tgt_col] = df[old_col] # Ensure target is always present if source is
+            
     # Check for comprehensive metrics format (iKT style)
     required_cols_ikt = [
         'epoch', 'phase', 'val_l1_bce', 'val_auc', 'val_accuracy',
@@ -71,7 +85,7 @@ def load_metrics_csv(run_dir):
     
     # Check for comprehensive metrics format (iDKT style)
     required_cols_idkt = [
-        'epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate'
+        'epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_init', 'l_rate'
     ]
     
     has_ikt = all(col in df.columns for col in required_cols_ikt)
@@ -317,7 +331,8 @@ def plot_idkt_loss_evolution(df, output_path, config):
     
     # Subplot 3: Initial Mastery Alignment (L_IM)
     ax3 = fig.add_subplot(gs[1, 0])
-    ax3.plot(df['epoch'], df['l_initmastery'], 'd-', label='L_IM (MSE)', linewidth=2, markersize=4, color='#8e44ad')
+    # Note: 'l_init' is the unified name for initial mastery alignment
+    ax3.plot(df['epoch'], df['l_init'], 'd-', label='L_IM (MSE)', linewidth=2, markersize=4, color='#8e44ad')
     ax3.set_xlabel('Epoch', fontsize=11)
     ax3.set_ylabel('Loss', fontsize=11)
     ax3.set_title('Initial Mastery Consistency (L_IM)', fontsize=12, fontweight='bold')

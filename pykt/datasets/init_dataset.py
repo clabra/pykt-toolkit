@@ -205,8 +205,14 @@ def init_dataset4train(dataset_name, model_name, data_config, i, batch_size, dif
         curvalid = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i}, diff_level=diff_level)
         curtrain = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i}, diff_level=diff_level)
     elif model_name == "idkt":
-        curvalid = IDKTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i})
-        curtrain = IDKTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i})
+        train_file = data_config["train_valid_file"]
+        train_file_bkt = train_file.replace('.csv', '_bkt.csv')
+        if os.path.exists(os.path.join(data_config["dpath"], train_file_bkt)):
+            train_file = train_file_bkt
+            print(f"  Using augmented training file: {train_file}")
+            
+        curvalid = IDKTDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], {i})
+        curtrain = IDKTDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], all_folds - {i})
     else:
         curvalid = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i})
         curtrain = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i})

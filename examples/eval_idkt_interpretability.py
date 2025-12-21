@@ -24,6 +24,23 @@ from pykt.utils import set_seed
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
+def bkt_step(p_l, y, t, s, g):
+    """
+    Perform a single BKT mastery update step.
+    """
+    # Prediction (probability of correct before interaction)
+    p_c = p_l * (1 - s) + (1 - p_l) * g
+    
+    # Bayesian Update: P(L_t | y_t)
+    if y == 1:
+        p_l_updated = (p_l * (1 - s)) / max(p_c, 1e-10)
+    else:
+        p_l_updated = (p_l * s) / max(1 - p_c, 1e-10)
+    
+    # Transition to next state: P(L_{t+1})
+    p_l_next = p_l_updated + (1 - p_l_updated) * t
+    return np.clip(p_l_next, 0.0, 1.0)
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate iDKT interpretability alignment")
     
@@ -111,6 +128,11 @@ def main():
     all_bkt_initmastery = []
     all_idkt_rate = []
     all_bkt_rate = []
+    
+    # H2: Functional Substitutability
+    all_idkt_induced_mastery = []
+    all_bkt_reference_mastery = []
+    induced_mastery_states = {} # (uid, skill_id) -> current_p_l
     
     # Interaction-level records for heatmap
     param_records = []     # Static Parameters (L0 vs L0)
@@ -213,6 +235,35 @@ def main():
             
             all_idkt_rate.extend(torch.masked_select(idkt_r_batch, sm).cpu().numpy())
             all_bkt_rate.extend(torch.masked_select(ref_rate_batch, sm).cpu().numpy())
+
+            # H2: Calculate Induced Mastery Trajectories
+            for b in range(uids.shape[0]):
+                uid = uids[b].item()
+                student_mask = sm[b]
+                indices = torch.where(student_mask)[0]
+                
+                for idx in indices:
+                    skill_id = int(cshft[b, idx].item())
+                    y_true = int(rshft[b, idx].item())
+                    idkt_l0 = idkt_im_batch[b, idx].item()
+                    idkt_t = idkt_r_batch[b, idx].item()
+                    
+                    # BKT skill params for S/G
+                    params = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])
+                    s_c, g_c = params['slips'], params['guesses']
+                    
+                    # State tracking for induced trajectory
+                    state_key = (uid, skill_id)
+                    if state_key not in induced_mastery_states:
+                        # Initialize with iDKT's projected initial mastery
+                        induced_mastery_states[state_key] = idkt_l0
+                    
+                    current_m = induced_mastery_states[state_key]
+                    all_idkt_induced_mastery.append(current_m)
+                    all_bkt_reference_mastery.append(bkt_im_batch[b, idx].item())
+                    
+                    # Update for next step using BKT formula but iDKT learning rate
+                    induced_mastery_states[state_key] = bkt_step(current_m, y_true, idkt_t, s_c, g_c)
 
             # Export interaction records for heatmap and Rosters
             for b in range(uids.shape[0]):
@@ -337,6 +388,23 @@ def main():
     results.update(calc_metrics("prediction", np.array(all_idkt_p), np.array(all_bkt_p)))
     results.update(calc_metrics("initmastery", np.array(all_idkt_initmastery), np.array(all_bkt_initmastery)))
     results.update(calc_metrics("learning_rate", np.array(all_idkt_rate), np.array(all_bkt_rate)))
+
+    # H2: Functional Substitutability (Induced vs Reference Mastery)
+    print("Calculating Functional Substitutability (H2)...")
+    res_h2 = calc_metrics("h2_functional", np.array(all_idkt_induced_mastery), np.array(all_bkt_reference_mastery))
+    results["h2_functional_alignment"] = res_h2["h2_functional_corr"]
+    
+    # H3: Discriminant Validity (Distinctness of Latent Projections)
+    print("Calculating Discriminant Validity (H3)...")
+    h3_corr, _ = pearsonr(all_idkt_initmastery, all_idkt_rate)
+    results["h3_discriminant_overlap"] = float(h3_corr)
+    
+    if n_uid > 0:
+        # Correlation between raw latent scalars (v_s vs k_c)
+        vs_weights = model.student_param.weight.detach().cpu().numpy()[1:n_uid+1]
+        kc_weights = model.student_gap_param.weight.detach().cpu().numpy()[1:n_uid+1]
+        results["h3_latent_overlap"], _ = pearsonr(vs_weights.flatten(), kc_weights.flatten())
+        results["h3_latent_overlap"] = float(results["h3_latent_overlap"])
 
     print("\nAlignment Results:")
     for k, v in results.items():

@@ -404,7 +404,7 @@ def main():
     
     # Initialize metrics_epoch.csv
     csv_path = os.path.join(args.save_dir, 'metrics_epoch.csv')
-    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate', 'l_rasch', 'l_gap', 'l_student']
+    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc', 'train_l_sup', 'train_l_ref', 'train_l_init', 'train_l_rate', 'train_l_rasch', 'train_l_gap', 'train_l_student']
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=csv_headers)
         writer.writeheader()
@@ -511,13 +511,13 @@ def main():
                 'train_loss': avg_train_loss,
                 'valid_auc': valid_auc,
                 'valid_acc': valid_acc,
-                'l_sup': avg_l_sup,
-                'l_ref': avg_l_ref,
-                'l_initmastery': avg_l_init,
-                'l_rate': avg_l_rate,
-                'l_rasch': avg_l_rasch,
-                'l_gap': avg_l_gap,
-                'l_student': avg_l_student
+                'train_l_sup': avg_l_sup,
+                'train_l_ref': avg_l_ref,
+                'train_l_init': avg_l_init,
+                'train_l_rate': avg_l_rate,
+                'train_l_rasch': avg_l_rasch,
+                'train_l_gap': avg_l_gap,
+                'train_l_student': avg_l_student
             })
             
         # Checkpoint and Early Stopping

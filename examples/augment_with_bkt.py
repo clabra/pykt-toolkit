@@ -139,33 +139,47 @@ def main():
     parser.add_argument('--bkt_model', type=str, default=None, 
                         help='Path to BKT model .pkl file')
     parser.add_argument('--input_file', type=str, default=None,
-                        help='Input CSV file (default: data/{dataset}/train_valid_sequences.csv)')
+                        help='Input CSV file (default: processes both train and test sequences)')
     parser.add_argument('--output_file', type=str, default=None,
-                        help='Output CSV file (default: data/{dataset}/train_valid_sequences_bkt.csv)')
+                        help='Output CSV file (only used if --input_file is specified)')
     
     args = parser.parse_args()
     
     project_root = Path(__file__).parent.parent
-    if args.input_file is None:
-        args.input_file = project_root / 'data' / args.dataset / 'train_valid_sequences.csv'
-    if args.output_file is None:
-        args.output_file = project_root / 'data' / args.dataset / 'train_valid_sequences_bkt.csv'
+    
     if args.bkt_model is None:
         args.bkt_model = project_root / 'data' / args.dataset / 'bkt_mastery_states.pkl'
         
     print(f"Loading BKT model from: {args.bkt_model}")
     bkt_params, global_params, model = load_bkt_params(args.bkt_model)
     
-    print(f"Loading sequences from: {args.input_file}")
-    df = pd.read_csv(args.input_file)
-    
-    df_augmented = augment_sequences(df, bkt_params, global_params, model)
-    
-    print(f"Saving augmented sequences to: {args.output_file}")
-    df_augmented.to_csv(args.output_file, index=False)
+    files_to_process = []
+    if args.input_file:
+        output = args.output_file if args.output_file else str(Path(args.input_file).with_suffix('')) + '_bkt.csv'
+        files_to_process.append((args.input_file, output))
+    else:
+        # Default: Process both standard files
+        train_file = project_root / 'data' / args.dataset / 'train_valid_sequences.csv'
+        test_file = project_root / 'data' / args.dataset / 'test_sequences.csv'
+        
+        if train_file.exists():
+            files_to_process.append((str(train_file), str(train_file.parent / 'train_valid_sequences_bkt.csv')))
+        if test_file.exists():
+            files_to_process.append((str(test_file), str(test_file.parent / 'test_sequences_bkt.csv')))
+
+    if not files_to_process:
+        print("Error: No input files found to process.")
+        sys.exit(1)
+
+    for input_path, output_path in files_to_process:
+        print(f"Processing: {input_path}")
+        df = pd.read_csv(input_path)
+        df_augmented = augment_sequences(df, bkt_params, global_params, model)
+        print(f"Saving to: {output_path}")
+        df_augmented.to_csv(output_path, index=False)
     
     # Save skill-level params separately for the L_param loss
-    params_output = Path(args.output_file).parent / 'bkt_skill_params.pkl'
+    params_output = project_root / 'data' / args.dataset / 'bkt_skill_params.pkl'
     with open(params_output, 'wb') as f:
         pickle.dump({'params': bkt_params, 'global': global_params}, f)
     print(f"Saved skill-level BKT parameters to: {params_output}")
