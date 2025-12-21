@@ -27,235 +27,135 @@ graph TD
             Input_uid[["Student IDs uid<br/>[B, L]"]]
         end
 
-        subgraph "Embedding Layer (Rasch-Enhanced)"
+        subgraph "Embedding Layer (Interpretability-by-Design)"
             direction TB
-
-            subgraph "Base Embeddings"
-                Q_Emb["q_embed (Concept c_ct)<br/>[B, L, d]"]
-                QA_Emb["qa_embed (Interaction e_ct,rt)<br/>[B, L, d]"]
+            subgraph "Theoretical Base (from BKT)"
+                Q_Emb["q_embed (c_ct)"]
+                QA_Emb["qa_embed (e_ct,rt)"]
+                L0_Base["L0_skill (Prior Base)"]
+                T_Base["T_skill (Velocity Base)"]
             end
 
-            subgraph "Rasch Variation Embeddings"
-                Diff_Param["difficult_param (Scalar u_q)<br/>[B, L, 1]"]
-                Q_Diff_Emb["q_embed_diff (Variation d_ct)<br/>[B, L, d]"]
-                QA_Diff_Emb["qa_embed_diff (Variation f_ct,rt)<br/>[B, L, d]"]
-                Student_Param["student_param (Scalar v_s)<br/>[B, L, 1]"]
+            subgraph "Rasch & Learner Variations"
+                Diff_Param["u_q (Difficulty)"]
+                Gap_Param["k_c (Knowledge Gap)"]
+                Vel_Param["v_s (Learning Speed)"]
+                Q_Diff["d_ct (Diff Axis)"]
+                K_Axis["d_c (Knowledge Axis)"]
+                V_Axis["d_s (Velocity Axis)"]
             end
 
-            subgraph "Fusion (Rasch Formula)"
-                Formula_X["x_t = c_ct + u_q · d_ct"]
-                Formula_Y["y_t = e_ct,rt + u_q · (f_ct,rt + d_ct)"]
+            subgraph "Fusion (Archetype 1: Relational Differential)"
+                Formula_L0["l_c = L0_skill + k_c · d_c"]
+                Formula_T["t_s = T_skill + v_s · d_s"]
+                Formula_X["x'_t = (c_ct + u_q · d_ct) - l_c"]
+                Formula_Y["y'_t = (e_ct,rt + u_q · (f_ct,rt + d_ct)) + t_s"]
             end
 
-            Final_Q[["Final Question x<br/>[B, L, d]"]]
-            Final_QA[["Final Interaction y<br/>[B, L, d]"]]
+            Final_Q[["Indiv. Task x'"]]
+            Final_QA[["Indiv. History y'"]]
         end
 
-        subgraph "Encoder: N Blocks"
+        subgraph "Attention Core (Transformer)"
             direction TB
-
-            subgraph "Multi-Head Self-Attention"
+            subgraph "Encoder: N Blocks"
                 direction TB
-                E_Split["Global Projection (Dense) & Split"]
-
-                subgraph "8 Parallel Attention Heads"
+                E_Split["Proj. & Split"]
+                subgraph "Parallel Heads"
                     direction LR
-                    E_H1["Head 1<br/>Attn(Q1,K1,V1)<br/>γ1 (Short-term?)"]
-                    E_H2["Heads 2..7<br/>...<br/>Diverse γ"]
-                    E_H8["Head 8<br/>Attn(Q8,K8,V8)<br/>γ8 (Long-term?)"]
+                    E_H1["H1 (γ1)"]
+                    E_H2["..."]
+                    E_H8["H8 (γ8)"]
                 end
-
-                E_Concat["Concatenate<br/>[B, L, d]"]
-                E_Wo["Linear Output W_o"]
+                E_Concat["Concat"]
+                E_W["Norm & FFN"]
             end
 
-            Enc_Norm1["Layer Norm + Residual"]
-            Enc_FFN["Feed-Forward Network"]
-            Enc_Norm2["Layer Norm + Residual"]
-            Enc_Out[["Encoded Interactions: y^<br/>[B, L, d]"]]
-        end
-
-        subgraph "Decoder (Knowledge Retriever): 2N Blocks"
-            direction TB
-
-            subgraph "Self-Attention (Questions)"
+            subgraph "Knowledge Retriever: 2N Blocks"
                 direction TB
-
-                subgraph "Multi-Head Self-Attention"
+                subgraph "Odd: Self-Attention"
                     direction TB
-                    KR1_Split["Global Projection (Dense) & Split"]
-
-                    subgraph "8 Parallel Heads"
+                    KR1_Split["Proj. & Split"]
+                    subgraph "KR1_Heads [8 Heads]"
                         direction LR
-                        KR1_H1["Head 1<br/>γ1"]
-                        KR1_H2["Heads 2..7"]
-                        KR1_H8["Head 8<br/>γ8"]
+                        KR1_H1["H1 (γ1)"]
+                        KR1_H2["..."]
+                        KR1_H8["H8 (γ8)"]
                     end
-
-                    KR1_Concat["Concatenate"]
-                    KR1_Wo["Linear Output W_o"]
+                    KR1_Concat["Concat"]
                 end
 
-                KR_Norm1["Layer Norm + Residual"]
-            end
-
-            subgraph "Cross-Attention"
-                direction TB
-
-                subgraph "KR2_MHA [Multi-Head Cross-Attention]"
+                subgraph "Even: Cross-Attention"
                     direction TB
-                    KR2_Proj_Q["Linear W_q (from Questions)"]
-                    KR2_Proj_KV["Linear W_k, W_v (from Encoded y^)"]
-
-                    subgraph "KR2_Heads [8 Parallel Heads]"
+                    KR2_Split["Proj. & Split"]
+                    subgraph "KR2_Heads [8 Heads]"
                         direction LR
-                        KR2_H1["Head 1<br/>γ1"]
-                        KR2_H2["Heads 2..7"]
-                        KR2_H8["Head 8<br/>γ8"]
+                        KR2_H1["H1 (γ1)"]
+                        KR2_H2["..."]
+                        KR2_H8["H8 (γ8)"]
                     end
-
-                    KR2_Concat["Concatenate"]
-                    KR2_Wo["Linear Output W_o"]
+                    KR2_Concat["Concat"]
+                    KR2_FFN["Norm & FFN"]
                 end
-
-                KR_Norm2a["Layer Norm + Residual"]
-                KR_FFN["Feed-Forward Network"]
-                KR_Norm2b["Layer Norm + Residual"]
             end
-
-            KR_Out[["Knowledge State: x^<br/>[B, L, d]"]]
         end
 
         subgraph "Output Processing"
-            subgraph "Out Head 1: Performance"
-                Concat["Concat[x^, x]<br/>[B, L, 2d]"]
-                mlp_layers["MLP Layers 1"]
-                Pred[["Predictions p_iDKT<br/>[B, L, 1]"]]
-            end
-
-            subgraph "Out Head 2: Initial Mastery (Decoupled)"
-                Item_Emb["Item Embedding x<br/>[B, L, d]"]
-                Student_Cap["Student Capability v_s<br/>[B, L, 1]"]
-                mlp_layers2["MLP Layers 2"]
-                InitMastery[["Individualized L0<br/>[B, L, 1]"]]
-            end
-
-            subgraph "Out Head 3: Learning Rate"
-                Concat3["Concat[x^, x]<br/>[B, L, 2d]"]
-                Student_Vel["Student Velocity v_s<br/>[B, L, 1]"]
-                mlp_layers3["MLP Layers 3"]
-                Rate[["Individualized T<br/>[B, L, 1]"]]
+            subgraph "Performance Prediction"
+                Concat["Concat[x^, x']"]
+                mlp_layers["MLP Layers"]
+                Pred[["Predictions p_iDKT"]]
             end
         end
 
-        subgraph "Loss Components (Multi-Objective)"
+        subgraph "Loss Components (Structural Grounding)"
             L_SUP["L_sup (Supervised BCE)"]
-            L_REF["L_ref (Guidance MSE)"]
-            L_IM["L_initmastery (L0 Align)"]
-            L_RT["L_rate (T Align)"]
-            L_REG["L_rasch (L2 Reg u_q)"]
-            L_REG_S["L_student (L2 Reg v_s)"]
+            L_REF["L_ref (Reference Alignment)"]
+            L_REG["L_reg (Weight Penalties)"]
             L_TOTAL["L_total"]
         end
 
-        %% Wiring - Output Heads
-        KR_Out -- "Dynamic State x^" --> Concat
-        Final_Q -- "Static Item x" --> Concat
-        Concat --> mlp_layers --> Pred
+        %% Wiring
+        Input_q & Input_r & Input_pid & Input_uid --> Q_Emb
+        Q_Emb & QA_Emb & L0_Base & T_Base --> Formula_X
+        Diff_Param & Gap_Param & Vel_Param --> Formula_X
+        Q_Diff & K_Axis & V_Axis --> Formula_X
         
-        Final_Q -- "Static Item x" --> Item_Emb
-        Student_Param -- "expand to [B,L,1]" --> Student_Cap
-        Item_Emb & Student_Cap --> mlp_layers2 --> InitMastery
-        
-        KR_Out -- "x^" --> Concat3
-        Final_Q -- "x" --> Concat3
-        Student_Param -- "v_s" --> Student_Vel
-        Concat3 & Student_Vel --> mlp_layers3 --> Rate
-
-        %% Wiring - Loss
-        Pred --> L_SUP
-        Pred -- "vs BKT P(correct)" --> L_REF
-        InitMastery -- "vs BKT Prior L0" --> L_IM
-        Rate -- "vs BKT Learn Rate T" --> L_RT
-        Diff_Param -- "u_q" --> L_REG
-        Student_Param -- "v_s" --> L_REG_S
-        L_SUP & L_REF & L_IM & L_RT & L_REG & L_REG_S --> L_TOTAL
-
-        %% Wiring - Input/Emb
-        Input_q --> Q_Emb
-        Input_r --> QA_Emb
-        Input_q --> QA_Emb
-
-        %% Rasch Inputs
-        Input_pid --> Diff_Param
-        Input_uid --> Student_Param
-        Input_q --> Q_Diff_Emb
-        Input_r --> QA_Diff_Emb
-
-        %% Flow to Formulas
-        Q_Emb --> Formula_X
-        Diff_Param --> Formula_X
-        Q_Diff_Emb --> Formula_X
-
-        QA_Emb --> Formula_Y
-        Diff_Param --> Formula_Y
-        Q_Diff_Emb --> Formula_Y
-        QA_Diff_Emb --> Formula_Y
-
-        %% Formula to Final
         Formula_X --> Final_Q
         Formula_Y --> Final_QA
-
-        %% Encoder Wiring
-        Final_QA --> E_Split
-        E_Split --> E_H1 & E_H2 & E_H8
-        E_H1 & E_H2 & E_H8 --> E_Concat
-        E_Concat --> E_Wo
-
-        %% Skip connection around attention
-        Final_QA -.-> Enc_Norm1
-        E_Wo --> Enc_Norm1
-
-        Enc_Norm1 --> Enc_FFN
-        Enc_Norm1 -.-> Enc_Norm2
-        Enc_FFN --> Enc_Norm2
-        Enc_Norm2 --> Enc_Out
-
-        %% Decoder Wiring - Odd (Self Attn)
-        Final_Q --> KR1_Split
-        KR1_Split --> KR1_H1 & KR1_H2 & KR1_H8 --> KR1_Concat --> KR1_Wo
-
-        Final_Q -.-> KR_Norm1
-        KR1_Wo --> KR_Norm1
-
-        %% Decoder Wiring - Even (Cross Attn)
-        KR_Norm1 --> KR2_Proj_Q
-        Enc_Out --> KR2_Proj_KV
-
-        KR2_Proj_Q --> KR2_H1 & KR2_H2 & KR2_H8
-        KR2_Proj_KV --> KR2_H1 & KR2_H2 & KR2_H8
-
-        KR2_H1 & KR2_H2 & KR2_H8 --> KR2_Concat --> KR2_Wo
-
-        KR_Norm1 -.-> KR_Norm2a
-        KR2_Wo --> KR_Norm2a
-
-        KR_Norm2a --> KR_FFN
-        KR_Norm2a -.-> KR_Norm2b
-        KR_FFN --> KR_Norm2b
-        KR_Norm2b --> KR_Out
+        
+        %% Core Wiring
+        Final_QA --> E_Split --> E_H1 & E_H2 & E_H8 --> E_Concat --> E_W
+        
+        Final_Q --> KR1_Split --> KR1_H1 & KR1_H2 & KR1_H8 --> KR1_Concat
+        KR1_Concat --> KR2_Split
+        E_W -- "Encoded Context y^" --> KR2_Split
+        KR2_Split --> KR2_H1 & KR2_H2 & KR2_H8 --> KR2_Concat --> KR2_FFN
+        
+        KR2_FFN -- "Knowledge State x^" --> Concat
+        Final_Q --> Concat
+        Concat --> mlp_layers --> Pred
+        
+        Pred --> L_SUP
+        KR2_FFN -- "Semantic Signal" --> L_REF
+        Formula_L0 & Formula_T -- "Theoretical Target" --> L_REF
+        Diff_Param & Gap_Param & Vel_Param --> L_REG
+        
+        L_SUP & L_REF & L_REG --> L_TOTAL
     end
 
     %% Styling
     classDef plain fill:#fff,stroke:#333,stroke-width:1px;
     classDef emb fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef attn fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef loss fill:#fffde7,stroke:#fbc02d,stroke-width:2px;
     classDef heads fill:#c8e6c9,stroke:#2e7d32,stroke-dasharray: 5 5;
 
-    class Input_q,Input_r,Input_pid plain
+    class Input_q,Input_r,Input_pid,Input_uid plain
     class Final_Q,Final_QA,Enc_Out,KR_Out emb
-    class E_Proj,E_Concat,E_Wo,E_Split,KR1_Split,KR1_Concat,KR1_Wo,KR2_Proj_Q,KR2_Proj_KV,KR2_Concat,KR2_Wo attn
+    class E_Split,E_Concat,E_W,KR1_Split,KR1_Concat,KR2_Split,KR2_Concat,KR2_FFN attn
     class E_H1,E_H2,E_H8,KR1_H1,KR1_H2,KR1_H8,KR2_H1,KR2_H2,KR2_H8 heads
+    class L_SUP,L_REF,L_REG,L_TOTAL loss
 ```
 
 </div>
@@ -264,32 +164,35 @@ graph TD
 
 To bridge psychometric theory and deep learning, iDKT employs a specialized notation for its Rasch-enhanced embeddings:
 
-*   **$u_q$ (Question Difficulty)**: A learned scalar parameter indexed by the **Problem ID** ($q$). The subscript **`q`** emphasizes that difficulty is modeled at the item level, distinguishing between different questions that may test the same underlying concept.
 *   **$c_{ct}$ (Concept Embedding)**: The base latent representation of the Knowledge Component/Concept ($c$) at time $t$.
-*   **$d_{ct}$ (Question Variation)**: A vector defining the "direction" of difficulty variation for concept $c_t$. The model uses this vector, multiplied by the scalar $u_q$, to change the meaning of the embedding (a point in a n-dimensional space) as it gets harder. 
 *   **$e_{ct,rt}$ (Interaction Base)**: The fundamental representation of an interaction, combining concept $c_t$ and response $r_t$.
+*   **$u_q$ (Question Difficulty)**: A learned scalar parameter indexed by the **Problem ID** ($q$).
+*   **$k_c$ (Knowledge Gap)**: A learned student-specific scalar representing the gap in prior knowledge compared to the theoretical baseline.
+*   **$v_s$ (Learning Speed)**: A learned student-specific scalar representing individual learning velocity (multiplier for momentum).
+*   **$d_{ct}$ (Question Variation Axis)**: A vector defining the "direction" of difficulty variation for concept $c_t$.
+*   **$d_c$ (Knowledge Axis)**: A vector defining the semantic direction of prior knowledge variation.
+*   **$d_s$ (Velocity Axis)**: A vector defining the semantic direction of learning momentum variation.
 *   **$f_{ct,rt}$ (Interaction Variation)**: A vector defining how the interaction representation shifts based on item difficulty.
+*   **$l_{c}$ (Initial Knowledge Embedding)**: The grounded embedding representing personalized initial mastery ($l_c = L0_{skill} + k_c \cdot d_c$).
+*   **$t_{s}$ (Learning Embedding)**: The grounded embedding representing personalized learning velocity ($t_s = T_{skill} + v_s \cdot d_s$).
+*   **$x'_t$ (Individualized Question)**: The personalized question embedding, representing the "residual challenge" for a student ($x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$).
+*   **$y'_t$ (Individualized Interaction)**: The personalized interaction embedding, representing the "momentum-grounded" historical record ($y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$).
 
 **Fusion of Embeddings (Rasch Logic)**
 
 The input layer fuses these components to create individualized representations that bridge psychometric theory with high-dimensional latent spaces:
 
-1.  **Question Embedding ($x_t$)**: $x_t = c_{c_t} + u_q \cdot d_{c_t}$
-    *   **The Concept ($c_{c_t}$)**: The base representation of the skill (the "starting point" in latent space).
-    *   **The Modern 1PL Shift ($u_q \cdot d_{c_t}$)**: While standard IRT shifts probability, iDKT shifts the **meaning** of the question. $d_{ct}$ defines a "difficulty axis" in the $n$-dimensional space, and $u_q$ (scalar distance) moves the embedding along that axis. This allows the model to capture how a concept "evolves" (e.g., from basic arithmetic to word problems) as it gets harder.
+1.  **Individualized Question ($x'_t$)**: $x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$
+    *   **Logic**: Subtracts the personalized Initial Knowledge ($l_c$) from the objective item difficulty.
+    *   **Universal Interpretability**: Implements the **Relational Inductive Bias** ($\text{Challenge} - \text{Capability}$). For a student with massive prior knowledge, the "residual difficulty" becomes negligible.
 
-2.  **Interaction Embedding ($y_t$)**: $y_t = e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})$
-    This formula combines three logical components into a single history-aware vector:
-    *   **Base Result ($e_{c_t,r_t}$)**: The average meaning of success or failure on concept $c_t$ (Concept + Response lookup).
-    *   **Outcome Intensity ($u_q \cdot f_{c_t,r_t}$)**: Adjusts the "weight" of the result. Failing an easy problem is a stronger signal of low mastery than failing a near-impossible one. This term moves the vector toward "Mastery" or "Gap" clusters based on the specific challenge level ($u_q$).
-    *   **Context Anchor ($u_q \cdot d_{c_t}$)**: This is the most critical innovation for maintaining long-term dependency accuracy. By injecting the exact same variation term used in the question ($x_t$), the model creates a mathematical "entanglement" between the challenge and the result.
-        *   **The Problem it Solves**: In standard models, once a student answers a question, the specific details of that question (was it a word problem? was it abstract?) are often discarded, saving only the "success/failure" on the general concept. This leads to "semantic blurring."
-        *   **The iDKT Solution**: The anchor ensures the interaction embedding ($y_t$) inhabits the same coordinate space as the question ($x_t$). It "tags" the student's success with the item's specific flavor.
-        *   **Pedagogical Example**: 
-            *   Imagine a student solves two "Multiplication" problems. Problem A is a **simple calculation** ($2 \times 2$) while Problem B is a **complex physics word problem** requiring multiplication. 
-            *   In Problem B, $d_{c_t}$ points toward "Physics/Context" and $u_q$ is high. 
-            *   Because $y_t$ includes this anchor, when the student later encounters a "Physics" question, the Attention mechanism can look back and see: *"Ah, this student didn't just 'do multiplication'; they successfully applied it in a Physics context."*
-        *   **Outcome**: This enables the Encoder to perform "High-Resolution Retrieval," distinguishing between a student who excels at the mechanics of a skill versus one who excels at its application under specific conditions.
+2.  **Individualized Interaction ($y'_t$)**: $y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$
+    *   **Logic**: Adds the personalized Learning Velocity ($t_s$) to the historical interaction record.
+    *   **Universal Interpretability**: Implements **Temporal Momentum Grounding**. Successes from a "fast learner" create a more potent signature in the history, signaling faster mastery acquisition.
+
+3.  **Learner Profile Grounding**:
+    *   **Initial Knowledge ($l_c = L0_{skill} + k_c \cdot d_c$)**: Grounding the starting line in BKT $L0$.
+    *   **Learning Velocity ($t_s = T_{skill} + v_s \cdot d_{s}$)**: Grounding the momentum in BKT $T$.
     
 **Key Features:**
 
@@ -323,29 +226,27 @@ The input layer fuses these components to create individualized representations 
 
   - Questions: `xt = cct + µqt·dct` where cct is concept embedding, µqt is difficulty scalar
   - Interactions: `yt = e(ct,rt) + µqt·f(ct,rt)` where `e(ct,rt) = cct + grt`
-  - Implementation formulas:
-    - `x = q_embed + uq × q_embed_diff`
-    - `y = qa_embed + uq × (qa_embed_diff + q_embed_diff)`
+  - Implementation formulas ($Archetype 1$):
+    - **Individualized Task**: $x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$
+    - **Individualized History**: $y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$
   - Balances modeling individual question differences with avoiding overparameterization
   - Total parameters: (C+2)D + Q instead of QD (where C≪Q and D≫1)
   - Regularized via L₂ penalty: `L_reg = ||uq||²`
 
-- **Informed Individualization** (Advanced iDKT Extension):
-
-  - **Student Capability Embedding**: Learns a student-specific parameter `vs` (Scalar baseline capability and learning velocity trait).
-  - **Individualized Initial Mastery**: `L0,s = f(ct, vs)` where initial knowledge is grounded in both concept difficulty and student baseline.
-  - **Individualized Learning Rate**: `Ts,t = f(ht, xt, vs)` where the learning velocity is modulated by individual aptitude.
-  - **Regularization**: `L_student = λs ||vs||²` ensures that student traits are centered and theoretically grounded.
-  - **Semantic Discovery**: Allows for the extraction of a "Learner Profile" that separates inherent student capability from context-dependent mastery.
+- **Informed Individualization** (Interpretability-by-Design):
+  - **Structural Grounding**: Student-specific traits ($k_c$: Knowledge Gap, $v_s$: Learning Speed) are learned as scalars and fused into the core embeddings.
+  - **Intrinsic Initial Knowledge ($l_c$)**: Personalized starting line grounded in BKT $L0$. 
+  - **Intrinsic Learning Momentum ($t_s$)**: Personalized learning velocity grounded in BKT $T$.
+  - **Relational Inductive Bias**: The model architecture enforces the $(\text{Challenge} - \text{Capability})$ logic directly in the input layer, ensuring that the Transformer's attention is semantically anchored to pedagogical theory.
 
 - **Knowledge Retriever** (Paper §3.1, §3.2):
 
   - Architecture: 2N blocks (default 8) with alternating pattern
-  - **Odd layers**: Self-attention on questions Q=K=V=x (no FFN)
-  - **Even layers**: Cross-attention Q=x (questions), K=V=ˆy (encoded interactions) + FFN
-  - Uses question embeddings for both queries and keys (more effective than SAKT's approach)
-  - Outputs context-aware knowledge state: `ht = fkr(ˆx1,...,ˆxt, ˆy1,...,ˆyt-1)`
-  - First question (t=0) receives zero-padded attention → no historical information available
+  - **Odd layers**: Self-attention on questions Q=K=V=x' (no FFN)
+  - **Even layers**: Cross-attention Q=x' (questions), K=V=ˆy (encoded interactions) + FFN
+  - Uses individualized question embeddings ($x'$) for both queries and keys.
+  - Outputs context-aware knowledge state: $\hat{x}_t = f_{kr}(\hat{x}_1, \dots, \hat{x}_t, \hat{y}_1, \dots, \hat{y}_{t-1})$
+  - First question ($t=0$) receives zero-padded attention → no historical information available
 
 - **Multi-Head Attention** (Paper §3.2):
 
@@ -372,35 +273,20 @@ The input layer fuses these components to create individualized representations 
   - **Diversity**: This diversity allows the iDKT model to simultaneously attend to immediate prerequisites and foundational concepts learned much earlier in the sequence.
 
 - **Response Prediction Model** (Paper §3.3):
-
-  - Input: Concatenates retrieved knowledge ht and current question embedding xt
-  - Architecture: Fully-connected network + sigmoid
-  - Implementation: Linear(2d, 512) → ReLU → Linear(512, 256) → ReLU → Linear(256, 1) → Sigmoid
-  - Loss: Binary cross-entropy `ℓ = Σi Σt -(rit log ˆrit + (1-rit)log(1-ˆrit))`
-  - End-to-end training of all parameters
+  - **Input**: Concatenates retrieved knowledge $\hat{x}_t$ and current individualized question embedding $x'_t$.
+  - **Architecture**: Fully-connected network + sigmoid.
+  - **Implementation**: Linear(2d, 512) → ReLU → Linear(512, 256) → ReLU → Linear(256, 1) → Sigmoid.
+  - **Loss**: Binary cross-entropy $\ell = \sum_i \sum_t -(r_{it} \log \hat{r}_{it} + (1-r_{it})\log(1-\hat{r}_{it}))$.
 
 - **Mask Semantics**:
 
   - `mask=1`: Causal masking in encoders (can see current + past positions)
   - `mask=0`: Strict past-only in Knowledge Retriever (current position masked) + zero-padding for first row
 
-- **Loss**
-
-  - $L_T = L_{BCE} + L_{reg} (Rasch)$
-  - $L_{reg} = L2 * \Sigma_{q} (u_q)^2$
-
-    - $L2$: Hyperparameter controlling regularization strength (default: 1e-5)
-    - For a vector $\mathbf{x} = [x_1, x_2, ..., x_n]$, the L2 norm (or Euclidean norm) is defined as the square root of the sum of the squared vector elements:
-
-    $$ |\mathbf{x}|2 = \sqrt{x_1^2 + x_2^2 + ... + x_n^2} = \sqrt{\sum{i=1}^{n} x_i^2} $$
-
-    - Geometrically, this represents the straight-line distance from the origin $(0,0,...)$ to the point defined by the vector $\mathbf{x}$.
-
-    - This is equivalent to placing a Gaussian Prior (centered at 0) on the difficulty parameters. It tells the model: "Assume all problems are average difficulty (0) unless the data strongly proves otherwise."
-
-- **Output Heads**
-
-  - A projection head is added for each parameter of the reference model (such as initmastery and learning rate in the case of BKT). 
+- **Loss Components** (Structural Grounding):
+  - **Multi-Objective Loss**: $L = L_{SUP} + L_{ref} + L_{reg}$.
+  - **Alignment ($L_{ref}$)**: Projects the model's knowledge state back into the theory space ($L0, T$) to ensure semantic consistency.
+  - **Task-Agnostic Regularization**: Penalizes $u_q, k_c, v_s$ to maintain the "Normal Student/Problem" prior.
 
 ## iDKT Architecture Implementation Analysis
 
@@ -1348,5 +1234,94 @@ The evaluation suite now quantifies the impact of individualization:
 - **Parameter Registry**: The `lambda_student` hyperparameter was registered in `configs/parameter_default.json`.
 - **Architectural Traceability**: The Mermaid diagram in section 2 was updated to visualize the new individualized data flow and multi-objective loss components.
 
-## Next Steps
+## Universal Framework for Interpretability-by-Design
 
+To evolve iDKT from a domain-specific model into a **Universal Framework for Interpretability-by-Design in Transformers**, we suggest reframing the embedding fusion as two general architectural archetypes. In this framework, BKT parameters ($t_s$ and $l_c$) serve merely as an illustrative application of how to ground high-capacity models in low-capacity theory.
+
+### Archetype 1: Relational Differential Fusion (Relational Inductive Bias)
+This archetype assumes that an event is a function of the **interaction between** an entity's internal state and an external task (e.g., student vs. question, or agent vs. environment).
+
+*   **Individualized Task ($x'_t$)**: $x'_t = x_{task} - l_{state}$ (Differential grounding)
+*   **Individualized History ($y'_t$)**: $y'_t = y_{event} + t_{momentum}$ (Temporal grounding)
+
+*   **Pros (Universal Interpretability)**:
+    *   **Reasoning-by-Comparison**: Forces the model to perform "Differential Reasoning" (Baseline vs. Challenge). This is a powerful inductive bias for any field involving skill-matching or diagnostics.
+    *   **High Sensitivity to Outliers**: By subtracting the baseline ($l_{state}$), the Attention mechanism focuses exclusively on the **"Residual Challenge."** This exposes why a high-capability entity fails a simple task, surfacing anomalies in the latent attention weights.
+    *   **Mathematical Parity**: Directly implements the fundamental logic of comparison ($\text{Success} \approx \text{Entity} - \text{Task}$) used in physics, medicine, and psychology.
+*   **Cons (Universal Interpretability)**:
+    *   **Strict Structural Assumption**: Assumes the relationship between entity and task is linear/additive. If the interaction is more complex (e.g., multiplicative), this bias may over-constrain the Transformer.
+    *   **Stability**: Requires rigorous regularization to ensure the "subtraction" doesn't invert the semantic meaning of the latent space.
+
+### Archetype 2: Integrated State Trajectory (Context-Augmented Trajectory)
+This archetype preserves the objective nature of external events and concentrates all internal state variations into a single "history of the entity."
+
+*   **Comprehensive Integrated Event ($y''_t$)**: $y''_t = y_{event} + l_{baseline} + t_{momentum}$
+
+*   **Pros (Universal Interpretability)**:
+    *   **History-State Entanglement**: Ensures that the "memory" of the Transformer is always filtered through the "nature" of the subject. The model cannot "forget" the entity's global traits over long sequences.
+    *   **Architectural Flexibility**: The Task remains objective ($x_t$ is the same for all). This is useful in fields where the environment is immutable or standardized (e.g., sensor data analysis).
+    *   **Self-Contained "Story"**: Creates a high-fidelity longitudinal record that can be analyzed as a single, state-aware stream.
+*   **Cons (Universal Interpretability)**:
+    *   **Semantic Conflation**: The model may struggle to disentangle "what happened" from "who did it." Without specific attention-masking, the traits ($l_c, t_s$) might "wash out" the specific event signals ($y_t$).
+    *   **Implicit Relational Discovery**: Unlike Archetype 1, the model must *learn* to compare the subject with the task through multi-head attention rather than having the relationship hard-coded.
+
+### Strategic Recommendation: The Case for Relational Differential Fusion (Archetype 1)
+
+## Discussion: The Philosophy of Interpretability-by-Design
+
+The proposed transition to **Relational Differential Fusion (Archetype 1)** represents a fundamental shift in the development of deep knowledge tracing models. Rather than treating interpretability as a post-hoc diagnostic task—an attempt to explain what a black-box model has already learned—we propose **Structural Grounding** as a core architectural principle.
+
+### 1. From Predictive Pattern-Matching to Differential Evaluation
+
+Standard Transformers, including current iDKT iterations, primarily function as high-dimensional pattern matchers. While highly accurate, their internal logic is often opportunistic. By hard-coding the relational logic $x'_{t} = x_{task} - l_{state}$, we move from "Predicting" to "Evaluating." 
+
+In this paradigm, success is defined as the relative distance between an entity's capability and a task's inherent challenge. By forcing the latent space to respect this differential identity, the model's Attention mechanism is constrained to perform **Differential Reasoning**. It no longer simply finds patterns; it must decide if the student's accumulated momentum ($t_s$) is sufficient to bridge the specific residual gap of the current item.
+
+### 2. The Residual Gap as a Diagnostic Instrument
+
+One of the primary challenges in deep learning for education is the tendency of models to "smooth over" anomalous student behaviors to improve global AUC. Archetype 1 prevents this via the **Residual Gap**. 
+
+When a student with high perceived competence ($l_c$) fails a mathematically "easy" task, the resulting high-intensity gradient signal—a "Gradient Spike"—acts as an intrinsic diagnostic flag. Because the model is structurally prevented from ignoring the low net difficulty of the task, these anomalies are preserved rather than averaged out. This transforms the model into a sensitive instrument for identifying "false mastery" or unobserved learning gaps that contradict standard pedagogical assumptions.
+
+### 3. Fidelity to Scientific Induction
+
+Archetype 1 aligns deep learning with the long-standing principles of scientific induction found in psychometrics (IRT's $\theta - \beta$ logic) and physics (Force-Friction dynamics). In any domain where an agent interacts with a standardized challenge, the underlying causality is almost always relational.
+
+By adopting this archetype, we demonstrate that high-capacity Transformers and low-capacity pedagogical theories are not in conflict. Instead, the theory serves as the "Skeletal Structure" that provides semantic orientation, while the Transformer provides the "Neural Capacity" to model the non-linear nuances of the data. 
+
+### Conclusion: Intrinsic Interpretability
+
+Through **Relational Differential Fusion**, we achieve **Intrinsic Interpretability**. The model's internal representations are not merely "explainable"—they are formally anchored to the conceptual space of the reference theory. This provides a robust, verifiable framework for educational AI that remains valid across diverse pedagogical contexts and generalizes to any field requiring a rigorous, theoretically-sound bridge between data-driven insights and domain expertise.
+
+## Next Steps: Implementation of Archetype 1 Relational Differential Fusion (Relational Inductive Bias)
+
+To transition iDKT to the **Relational Differential Fusion** archetype, the following implementation steps are required:
+
+### Phase 1: Embedding Layer Expansion (Learner Profile)
+We must expand the `Embedding` layer to explicitly model the components of the Learner Profile ($l_c$ and $t_s$).
+- **Learned Student Scalars**: 
+  - Add `Gap_Param` (Scalar $k_c$) to represent the individual knowledge gap.
+  - Maintain `Vel_Param` (Scalar $v_s$) for learning speed/velocity.
+- **Semantic Variation Axes**: 
+  - Define `K_Axis` (Vector $d_c$) to project the knowledge gap into latent space.
+  - Define `V_Axis` (Vector $d_s$) to project learning speed into latent space.
+- **Theoretical Bases**: 
+  - Initialize the base embeddings using pre-calculated BKT parameters ($L0_{skill}$ and $T_{skill}$).
+
+### Phase 2: Implementation of Differential Fusion Logic
+The core `forward` pass in `pykt/models/idkt.py` must be updated to implement the relational logic as shown in the diagram:
+1.  **Calculate Learner State**:
+    - $l_c = L0_{skill} + (k_c \cdot d_c)$
+    - $t_s = T_{skill} + (v_s \cdot d_s)$
+2.  **Fuse Individualized Task ($x'_t$)**:
+    - $x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$
+3.  **Fuse Individualized History ($y'_t$)**:
+    - $y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$
+
+### Phase 3: Multi-Objective Loss & Regularization
+- **New Regularization**: Add $L_{gap} = \lambda_k \|k_c\|^2$ and $L_{student} = \lambda_v \|v_s\|^2$ to the `L_reg` component.
+- **Refined Alignment**: Update the Guidance Loss ($L_{ref}$) in `examples/train_idkt.py` to ground the latent retriever state in the theoretical targets ($L0$, $T$) via the internal $l_c$ and $t_s$ embeddings.
+
+### Phase 4: Verification & Informed Divergence Analysis
+- **A/B Testing**: Compare the performance (AUC) and interpretability (Correlation) of Archetype 1 against the current baseline.
+- **Divergence Profiling**: Use the "Informed Divergence" metric to identify skills where the theoretical BKT ground truth and the iDKT empirical reality differ most significantly.
