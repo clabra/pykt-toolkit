@@ -97,7 +97,8 @@ class iDKT(nn.Module):
 
     def reset(self):
         for p in self.parameters():
-            if p.size(0) == self.n_pid+1 and self.n_pid > 0:
+            # Zero-center difficulty and student parameters
+            if p.size(0) in {self.n_pid+1, self.n_uid+1} and p.shape[-1] == 1:
                 torch.nn.init.constant_(p, 0.)
 
     def load_theory_params(self, bkt_skill_params):
@@ -111,25 +112,24 @@ class iDKT(nn.Module):
         params_dict = bkt_skill_params.get('params', {})
         global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
         
-        # Create tensors for initialization
-        l0_init = torch.zeros(self.n_question + 1, 1)
-        t_init = torch.zeros(self.n_question + 1, 1)
-        
-        for q_idx in range(self.n_question + 1):
-            s_params = params_dict.get(q_idx, global_params)
-            l0_init[q_idx] = s_params.get('prior', global_params['prior'])
-            t_init[q_idx] = s_params.get('learns', global_params['learns'])
-            
-        # Initialize embeddings: we use the scalar value to shift or as a base?
-        # In Archetype 1, we treat them as bases. For a d-dimensional embedding,
-        # we can initialize it as a constant or with a specific pattern.
-        # Here we'll initialize the entire embedding vector with the scalar value/sqrt(d) 
-        # or just random but centered at the scalar.
-        # For structural grounding, let's use a simple constant initialization across dimensions.
+        # Initialize embeddings in logit space.
+        # This prevents the '0.5 center bias' when passing through sigmoid.
+        # Logit(p) = ln(p / (1-p))
+        def to_logit(p, eps=1e-6):
+            p = np.clip(p, eps, 1.0 - eps)
+            return np.log(p / (1.0 - p))
+
         with torch.no_grad():
-            self.l0_base_emb.weight.data.copy_(l0_init.expand(-1, self.l0_base_emb.weight.shape[1]))
-            self.t_base_emb.weight.data.copy_(t_init.expand(-1, self.t_base_emb.weight.shape[1]))
-        print(f"  [iDKT] Theory bases initialized from BKT parameters.")
+            for q_idx in range(self.n_question + 1):
+                s_params = params_dict.get(q_idx, global_params)
+                l0_val = s_params.get('prior', global_params['prior'])
+                t_val = s_params.get('learns', global_params['learns'])
+                
+                # Copy logit-scaled base to all dimensions of the embedding
+                self.l0_base_emb.weight[q_idx].fill_(to_logit(l0_val))
+                self.t_base_emb.weight[q_idx].fill_(to_logit(t_val))
+                
+        print(f"  [iDKT] Theory bases initialized in LOGIT space from BKT parameters.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct

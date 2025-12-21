@@ -1331,7 +1331,7 @@ Through **Relational Differential Fusion**, we achieve **Intrinsic Interpretabil
 
 The transition of iDKT to the **Relational Differential Fusion** archetype has been successfully implemented according to the following phases:
 
-### Phase 1: Embedding Layer Expansion (Learner Profile) [COMPLETED]
+### Phase 1: Embedding Layer Expansion (Learner Profile) 
 The `Embedding` layer has been expanded to explicitly model the components of the Learner Profile ($l_c$ and $t_s$).
 - **Learned Student Scalars**: 
   - Added `Gap_Param` (Scalar $k_c$) to represent the individual knowledge gap.
@@ -1342,7 +1342,7 @@ The `Embedding` layer has been expanded to explicitly model the components of th
 - **Theoretical Bases**: 
   - Initialized base embeddings using pre-calculated BKT parameters ($L0_{skill}$ and $T_{skill}$) via `load_theory_params`.
 
-### Phase 2: Implementation of Differential Fusion Logic [COMPLETED]
+### Phase 2: Implementation of Differential Fusion Logic 
 The `forward` pass in `pykt/models/idkt.py` was updated to implement the relational logic:
 1.  **Calculate Learner State**:
     - $l_c = L0_{skill} + (k_c \cdot d_c)$
@@ -1352,11 +1352,11 @@ The `forward` pass in `pykt/models/idkt.py` was updated to implement the relatio
 3.  **Fuse Individualized History ($y'_t$)**:
     - $y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$
 
-### Phase 3: Multi-Objective Loss & Regularization [COMPLETED]
+### Phase 3: Multi-Objective Loss & Regularization
 - **New Regularization**: Added $L_{gap} = \lambda_k \|k_c\|^2$ and $L_{student} = \lambda_v \|v_s\|^2$ to the total loss.
 - **Refined Alignment**: Updated the Guidance Loss ($L_{ref}$) and added $L_{init}$, $L_{rate}$ in `examples/train_idkt.py` to ground the model outputs in theoretical targets.
 
-### Phase 4: Verification & Informed Divergence Analysis [COMPLETED]
+### Phase 4: Verification & Informed Divergence Analysis
 - **Convergence Verified**: The model demonstrates stable joint optimization of all loss components.
 - **Protocol Compliance**: Verified via `parameters_audit.py` with 100% adherence to reproducibility standards.
 - **Theoretical Grounding**: A formal proof of construct validity (Convergent/Discriminant) is documented in [theoretical_validity.md](file:///home/conchalabra/projects/dl/pykt-toolkit/paper/theoretical_validity.md).
@@ -1482,12 +1482,13 @@ The following table details the core metrics across the high-resolution sweep ($
 | **1.00** | 0.7478 | 0.9229 | 0.2706 | -0.0331 | Theory-Locked |
 
 ### 9.2 Pareto Plot and Discussion
+<img src="../assistant/idkt_pareto_frontier.png" alt="Pareto Frontier" width="800">
 
-![Pareto Frontier](../assistant/idkt_pareto_frontier.png)
-*Figure 9.1: The iDKT Pareto Frontier (AUC vs. Theoretical Fidelity). The vertical line represents the "Sweet Spot" where theoretical grounding improves both interpretability and predictive accuracy.*
+Figure 9.1: The iDKT Pareto Frontier (AUC vs. Theoretical Fidelity). The vertical line represents the "Sweet Spot" where theoretical grounding improves both interpretability and predictive accuracy.
 
-![Sensitivity Analysis](../assistant/idkt_sensitivity_analysis.png)
-*Figure 9.2: Sensitivity of individual alignment metrics ($H_1$, $H_2$, $H_3$) to the grounding weight $\lambda$. Note the peak in Functional Alignment ($H_2$) at $\lambda \approx 0.3$.*
+<img src="../assistant/idkt_sensitivity_analysis.png" alt="Sensitivity Analysis" width="800">
+
+Figure 9.2: Sensitivity of individual alignment metrics ($H_1$, $H_2$, $H_3$) to the grounding weight $\lambda$. Note the peak in Functional Alignment ($H_2$) at $\lambda \approx 0.3$.
 
 #### 9.2.1 Inductive Bias Bonus
 At low grounding levels ($\lambda \leq 0.15$), iDKT exhibits a "free lunch" phenomenon: it achieves a higher AUC than the unconstrained model while simultaneously increasing mean theoretical alignment by $\sim 4\%$. This empirical result suggests that educational theory (BKT) provides a **relational inductive bias** that regularizes the Transformer against overfitting to interaction noise, leading to more robust student representations.
@@ -1519,10 +1520,149 @@ Beyond global metrics, iDKT achieves high-fidelity alignment at the individual s
 ### 10.1 Per-Skill Parameter Alignment
 The following plots demonstrate the correlation between model-projected parameters and theoretical BKT targets across all skills in the ASSIST2009 dataset.
 
-![Initial Mastery Alignment](../experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708/plots/per_skill_alignment_initmastery.png)
+<img src="../experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708/plots/per_skill_alignment_initmastery.png" alt="Initial Mastery Alignment" width="800">
+
 *Figure 10.1: Correlation between iDKT Initial Mastery projections and BKT priors ($L_0$) for 124 skills.*
 
-![Learning Rate Alignment](../experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708/plots/per_skill_alignment_rate.png)
+<img src="../experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708/plots/per_skill_alignment_rate.png" alt="Learning Rate Alignment" width="800">
+
 *Figure 10.2: Correlation between iDKT Learning Velocity projections and BKT transition rates ($T$) for 124 skills.*
 
 These results confirm that the **Relational Differential Fusion** mechanism successfully inherits the semantic knowledge of the BKT reference model while allowing the Transformer to refine these estimates via individualized residuals.
+
+
+
+### 11. Technical Discussion on Trajectory Analysis
+
+The interpretability of iDKT relies on the ability to inspect both the static pedagogical parameters and the dynamic probability trajectories.
+
+#### 11.1 Inspection of Pedagogical Parameters (L0, T, G, S)
+In iDKT (Archetype 1), we explicitly individualize the **Initial Mastery ($L_0$)** and **Learning Rate ($T$)**. These are accessible via the `traj_initmastery.csv` and `traj_rate.csv` files generated during evaluation. While BKT explicitly models **Guess ($G$)** and **Slip ($S$)** as skill constants, iDKT does not currently individualize them as separate trajectories. Instead, the Transformer's attention core and prediction head absorb the $G/S$ dynamics into the latent knowledge state. The $G/S$ values used for guidance are obtained from the `bkt_skill_params.pkl` reference and remain constant for each skill.
+
+**Storage**:
+- $L_0$ trajectories: `traj_initmastery.csv` (`idkt_im` vs `bkt_im`)
+- $T$ trajectories: `traj_rate.csv` (`idkt_rate` vs `bkt_rate`)
+
+#### 11.2 Semantic Stability of Initial Mastery ($L_0$)
+A key requirement for interpretability is that $L_0$ should represent a student's prior state before new interactions, remaining constant for a specific skill. In the iDKT architecture, $l_c$ is calculated as $l_c = L0_{skill} + k_c \cdot d_c$, where $k_c$ is a learned student scalar and $d_c$ is a skill-specific axis. Because both components are fixed for a given $(student, skill)$ pair, the model respects the theoretical requirement: $L_0$ remains semantically stable across time for a fixed skill. The apparent per-timestep variation in experiment logs is a reflection of the changing context as students navigate different skills ($q_t$); however, for repeated interactions on the same concept, the grounded "starting point" remains constant, acting as a true prior.
+
+#### 11.3 Mastery and Correctness Trajectories
+The primary outputs of iDKT are the **Predicted Correctness ($P(correct)$)** and the **Longitudinal Mastery ($P(m)$)**. 
+- **$P(correct)$**: The prediction trajectory is saved in `traj_predictions.csv` (`p_idkt`). This represents the probability of a correct response at each timestep.
+- **$P(m)$**: In iDKT, mastery is proxied by the model's predicted performance across all skills, stored in `roster_idkt.csv`. Furthermore, we compute an **"induced mastery"** trajectory (Hypothesis $H_2$) by applying the BKT update logic to the student's history using iDKT's individualized learning velocity ($t_s$). This allows for a direct comparison with BKT's hidden state.
+
+#### 11.4 Recommended Visualizations for Scientific Validation
+To demonstrate the practical value of iDKT's structural grounding, we propose the following visualizations/metrics:
+
+1.  **Parameter Individualization Variance (Individualized vs Standard BKT)**:
+    - **Visual**: A scatter plot showing BKT $L_0$ (X-axis) vs iDKT $l_c$ distribution (Y-axis) per skill. Error bars or violins show how iDKT spreads the theoretical $L_0$ to account for individual student knowledge gaps ($k_c$).
+    - **Scientific Value**: Quantifies the "Individualization Gain" – how much information is being captured by student-specific parameters compared to a population-average model.
+2.  **Functional Mastery Alignment Plot**:
+    - **Visual**: A line plot showing $P(m)$ trajectories for BKT vs iDKT (induced) for representative Fast, Average, and Slow learners.
+    - **Scientific Value**: Illustrates "Informed Divergence". It proves whether the model's $v_s$ (velocity) parameter correctly accelerates or decelerates the transitions in mastery state compared to the theoretical baseline.
+3.  **Cross-Model Reliability Metrics**:
+    - **Functional Alignment ($r_{m}$)**: Pearson correlation between $P(m)_{BKT}$ and $P(m)_{iDKT}$.
+    - **Trajectory Concordance ($r_{p}$)**: Correlation between $P(correct)$ trajectories.
+
+
+---
+
+Note: Mastery Estimations and Longitudinal Tracking in iDKT is achieved via the `IDKTRoster`, which maintains the individualized state for all students across all available skills. This enables real-time mastery monitoring and the generation of comparative learning trajectories.
+
+## Plots
+
+**Parameter Individualization Variance**
+
+Scatter-distribution plots showing how iDKT "spreads" the population-average BKT parameters into individualized student clusters.
+
+### iDKT initial mastery ($l_c$) spread compared to the theoretical BKT $L_0$ prior.
+
+**Technical Implementation:**
+1.  **Data Extraction:** Utilizes `traj_initmastery.csv` which contains the individualized initial mastery ($l_c$) for each student-skill interaction alongside the theoretical BKT prior ($L_0$).
+2.  **Aggregation:** Data is grouped by `skill_id` to calculate the mean and standard deviation of the model's projected parameters.
+**Visualization Alternatives:**
+
+| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** | **Option 3: Per-Skill Ridgelines** |
+| :--- | :--- | :--- |
+| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ribbon.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_delta.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ridgeline.png" width="300"> |
+| *Visualizes the global **Individualization Envelope**. Shaded area shows the 5th-95th percentile range.* | *Visualizes the **Magnitude of Personalization** ($\Delta = l_c - L_0$). Shows the density of remedial vs. advanced adjustments.* | *Visualizes the **Distribution Shape** for 8 representative skills. Red dashed lines denote the BKT theoretical prior.* |
+
+**Educational Interpretation:**
+This plot visualizes the model's ability to move from "One-Size-Fits-All" priors to individualized readiness assessments. Standard BKT assigns a single $L_0$ value to every student for a given skill (e.g., assuming all students start with the same probability of mastery). The iDKT model, through its grounded latent space, recognizes that student readiness is actually a distribution. Even for skills with high theoretical priors, some students exhibit significant **Knowledge Gaps ($k_c$)** that lower their effective starting point. By capturing this variance, iDKT allows for **Precise Diagnostic Placement**: identifying students who require remedial support on day one, even for concepts considered "foundational" or "easy" for the general population.
+
+
+### iDKT learning rate spread ($t_s$) compared to the theoretical BKT learning rate ($T$).
+
+**Technical Implementation:**
+1.  **Data Extraction:** Utilizes `traj_rate.csv` which contains the individualized learning velocity ($t_s$) for each student-skill interaction alongside the theoretical BKT learning rate ($T$).
+2.  **Aggregation:** Data is grouped by `skill_id` to calculate the mean and standard deviation of the model's projected learning rates.
+**Visualization Alternatives:**
+
+| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** | **Option 3: Per-Skill Ridgelines** |
+| :--- | :--- | :--- |
+| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ribbon.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_delta.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ridgeline.png" width="300"> |
+| *Visualizes the global **Velocity Envelope** relative to the BKT baseline. Shaded area covers 90% of the population.* | *Visualizes the **Acceleration Bias**. Shows whether the model tends to speed up or slow down student progress relative to theory.* | *Visualizes the **Acceleration Diversity** for representative skills. Red dashed lines denote the fixed BKT learning rate ($T$).* |
+
+**Educational Interpretation:**
+This plot demonstrates the model's transition from "Fixed Velocity" assumptions to "Informed Learning Speeds." While standard BKT assumes all students acquire a specific skill at the same rate ($T$), iDKT's relational axis ($d_s$) and student parameters ($v_s$) reveal a diversity of **Learning Velocities**. Even for difficult skills with low theoretical learning rates, certain students exhibit "faster" acquisition paths. Conversely, some students show slower velocity than the population average, signaling a need for more intensive practice.
+- **Acceleration Bias & "Empirical Optimism":** The Delta Distribution for learning velocity demonstrates a visible rightward shift ($\mu_\Delta > 0$). While iDKT remains tightly grounded to theoretical starting points ($l_c \approx L_0$), it significantly identifies faster learning trajectories than the standard BKT baseline. This suggests that the deep transformer encoder discovers "higher-velocity" paths in the interaction data that classical EM-fitted BKT models typically underestimate.
+- **Dynamic Pacing:** This insight allows for **Dynamic Pacing**: identifying students who are ready to advance earlier than population models suggest, as well as those who require extended duration in a specific learning module.
+
+### Functional Mastery Alignment
+
+A longitudinal line plot illustrating "Informed Divergence"—comparing how iDKT's mastery state evolves differently for fast vs. slow learners compared to the BKT baseline.
+
+**Technical Implementation & Mosaic Analysis:**
+1.  **Challenging Skill Selection:** 15 skills were selected from the ASSIST2009 dataset, prioritizing concepts with the **lowest theoretical BKT priors and learning rates** (Hard skills). This avoids immediate mastery saturation and allows for the visualization of gradual acquisition across all learner profiles.
+2.  **Performance-Based Profile Selection:** For *each* skill independently, we identified three real students representing distinct empirical behaviors:
+    *   **Slower Profile (Red):** Students with high failure counts ("×") and low individualized learning rates ($t_s$).
+    *   **Medium Profile (Yellow):** Students with mixed performance and median $t_s$.
+    *   **Quicker Profile (Green):** Students with high consecutive success counts ("○") and high $t_s$.
+3.  **Real-Data Trajectory Reconstruction:** This mosaic utilizes **actual student interaction histories** to demonstrate how iDKT reacts to behavioral failures vs. successes.
+    *   **iDKT Induced (Solid):** Recursive mastery paths derived for each of the 3 real students using the model's grounded latent projections ($l_c$ and $t_s$) applied to their unique sequence of correct/incorrect answers.
+    *   **BKT Baseline (Dashed):** Comparative induction for the *same students* using standard population-level theoretical parameters ($L_0, T, G, S$).
+
+**Methodology & Pseudocode:**
+The visualization script `examples/plot_mastery_mosaic_real.py` implements a 3x5 grid analyzer using empirical evidence:
+```python
+# 1. Diversity-Aware Skill Sampling
+stats = df_rate.groupby('skill_id')['idkt_rate'].agg(['std', 'mean', 'count'])
+diverse_skills = pick_extremes(stats, n=15) # Picks high-std, low-mean, high-mean sub-samples
+
+for skill_id in diverse_skills:
+    # 2. Extract 3 Real Students (Slower, Medium, Quicker)
+    representatives = get_representatives(skill_id, metric='ts')
+    
+    for student in representatives:
+        # Load real history (y_true)
+        history = get_real_history(student.uid, skill_id)
+        
+        # 3. Grounded vs. Theoretical Induction
+        # Both models process the SAME real interaction sequence
+        idkt_path = reconcile(history, L0=student.lc, T=student.ts, s, g)
+        bkt_path  = reconcile(history, L0=pop.L0,     T=pop.T,      s, g)
+        
+        # Record for comparison
+        record(idkt_path, bkt_path)
+
+# 4. Render 3x5 Grid
+fig, axes = plt.subplots(3, 5)
+for i, ax in enumerate(axes):
+    render_subplot(idkt_vs_bkt_real_histories[i])
+```
+
+<img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/mastery_alignment_mosaic_real.png" alt="Real-Data Mastery Alignment Mosaic" width="1200">
+
+*Figure 11.2: Longitudinal Mastery Acquisition Mosaic (3x5 Diverse Skills). Each subplot shows **Mastery Probability $P(m)$ (y-axis)** over **Cumulative Interaction Steps (x-axis)**. Comparisons show **iDKT (Solid)** vs. **Standard BKT (Dashed)** for three real student profiles per skill: Slower (Red), Medium (Yellow), and Quicker (Green). "○" markers denote correct answers, while "×" markers denote incorrect attempts.*
+
+**Educational Interpretation:**
+The 3x5 mosaic provides empirical proof of iDKT's **Dynamic Calibration** across heterogeneous and challenging learning scenarios.
+- **Mastery Heterogeneity:** By selecting hard skills (low $L_0$ and $T$), the plot reveals students who **fail to reach mastery** within the observed window (primarily Slower/Red profiles). This depth is crucial for identifying "high-friction" concepts where even grounded individualized velocity is not enough to overcome repeated performance failures.
+- **Informed Divergence (iDKT vs. BKT):** Across the mosaic, iDKT's solid lines demonstrate that students sharing the same interaction history (e.g., all correct) acquire mastery at significantly different speeds. While standard BKT (dashed) assumes a uniform learning rate ($T$) for all students on a given skill, iDKT's **Learning Velocity ($t_s$)** enables the model to identify "fast-track" students who reach mastery 2–3x faster than the population average, as well as "stagnating" students who remain below mastery thresholds despite occasional successes.
+- **Initialization Bias Correction ($l_c$ vs. $L_0$):** The plots illustrate that the population-level prior ($L_0$ in BKT) often acts as a rigid bias. iDKT's individualized starting points ($l_c$) allow the model to adjust for "heterogeneous readiness." In several subplots, we observe Slower/Red trajectories starting significantly lower than the BKT dashed line, indicating that the model has successfully detected a "cold-start" knowledge gap that population-average models would overlook.
+- **Reaction to Performance Noise:** The "×" markers (incorrect answers) cause visible dips or plateaus in the $P(m)$ curves. iDKT's grounded parameters allow it to be more "skeptical" of students who exhibit inconsistent behavior. For Slower profiles, a single failure often results in a significant "mastery regression" or a prolonged plateau, providing a safer, more conservative estimate of their readiness compared to the often over-optimistic population-level BKT baseline.
+- **Pedagogical Actionability:** Instructional designers can use these subplots to identify "Bottleneck Skills" (where all curves remain low) vs. "Divergent Skills" (where students split clearly into mastery tracks), allowing for more precise targeting of remedial content and adaptive interventions.
+
+## Important Note
+
+

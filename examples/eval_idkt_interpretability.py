@@ -205,7 +205,7 @@ def main():
             cr_full = torch.cat((r[:,0:1], rshft), dim=1)
             cq_full = torch.cat((q[:,0:1], qshft), dim=1)
             
-            y, initmastery, rate, _, _ = model(cc_full.long(), cr_full.long(), cq_full.long())
+            y, initmastery, rate, _, _ = model(cc_full.long(), cr_full.long(), cq_full.long(), uid_data=uids.to(device))
             
             # Collect aggregated metrics
             all_idkt_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())
