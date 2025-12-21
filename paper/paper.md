@@ -1,20 +1,6 @@
-
 ## Abstract
 
-Deep knowledge tracing models obtaing excelent resuls in terms of predicting student performance but they lack the interpretability that is inherent to other appoaches like bayesian knowledge tracing. We propose iDKT, a novel model that combines the best of both worlds. iDKT is based in a Transformer architecture with interpreatbility-by-design. Rather than treating interpretability as a post-hoc diagnostic task—an attempt to explain what a black-box model has already learned—we propose **Structural Grounding** as a core architectural principle.
+While deep knowledge tracing (DKT) models provide state-of-the-art predictive accuracy, their black-box architectures often limit their utility in real-world educational settings where actionable pedagogical insights are required. We present iDKT, a novel Transformer-based framework that bridges this gap by providing the predictive power of deep learning while achieving intrinsic interpretability. iDKT accomplishes this through *structural grounding*, an architectural principle that anchors deep latent representations to educational constructs defined by established pedagogical models.
 
-We propose a definition of interpretability in relation to a reference model that can be considered as intrinsecally interpretable. Through the architectura design we guide the training process to learn internal representations that are formally anchored to the conceptual space of the reference theory. This provides a interpretable framework that remains valid for diverse reference models and provides a theoretically-sound bridge between data-driven insights and pedagogical interpretations. 
-
-We achieve **Intrinsic Interpretability** through a **Relational Differential Fusion** method where the transformer internal representations are anchored to the conceptual space of the reference theory. 
-
-To move beyond heuristic interpretation, we establish a validation framework based on these formal hypotheses:  
-| ID | Hypothesis | Validation Method |
-| :--- | :--- | :--- |
-| **$H_1$** | **Convergent Validity** | Pearson correlation between latent projections ($l_c, t_s$) and BKT intrinsic parameters. |
-| **$H_2$** | **Predictor Equivalence** | Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. |
-| **$H_3$** | **Discriminant Validity** | Non-collinearity check between Learner Gap ($k_c$) and Learning Speed ($v_s$) to ensure identifiability. |
-
-This framework proves that iDKT’s internal representations ($l_c$, $t_s$, $u_q$) represent the intended educational constructs. 
-
-
+We validated iDKT using Bayesian Knowledge Tracing (BKT), demonstrating that it maintains DKT-level predictive performance while providing more granular, student-specific insights than standard theoretical baselines. Specifically, the model transforms population-level priors into individualized distributions, identifying initial knowledge gaps and detecting diverse learning velocities. This enables educators to move beyond simple performance prediction to implement precise diagnostic placement and dynamic pacing in diverse learning environments. By anchoring internal latent representations to the conceptual space of pedagogical theory, iDKT offers both a robust methodology for evaluating model interpretability and a practical tool for researchers and practitioners to improve educational effectiveness through theory-informed, data-driven personalization.
 
