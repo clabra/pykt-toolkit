@@ -24,6 +24,7 @@
     "final_fc_dim": 512,
     "l2": 1e-05,
     "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
     "lambda_ref": 0.1,
     "lambda_initmastery": 0.1,
     "lambda_rate": 0.1,
@@ -71,6 +72,7 @@
       "final_fc_dim",
       "l2",
       "lambda_student",
+      "lambda_gap",
       "lambda_ref",
       "lambda_initmastery",
       "lambda_rate",
@@ -84,5 +86,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f83991284d3a9475567a927b86ee3f78"
+  "md5": "29c47dbc897d943abafb8b4d9ae79f90"
 }

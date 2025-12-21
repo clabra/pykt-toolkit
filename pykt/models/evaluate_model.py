@@ -129,8 +129,11 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                 else:
                     outputs = model(cc.long(), cr.long(), cq.long())
                 
-                if model_name == "idkt" and len(outputs) == 4:
-                    y, im, r, reg_loss = outputs
+                if model_name == "idkt":
+                    if len(outputs) == 5:
+                        y, im, rate, reg_loss, reg_losses = outputs
+                    else:
+                        y, reg_loss = outputs
                 else:
                     y, reg_loss = outputs
                 y = y[:,1:]
@@ -459,8 +462,14 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                 else:
                     outputs = model(cc.long(), cr.long(), cq.long(), True)
                 
-                if model_name == "idkt" and len(outputs) == 5:
-                    y, im, rate, reg_loss, h = outputs
+                if model_name == "idkt":
+                    if len(outputs) == 6:
+                        y, im, rate, reg_loss, h, reg_losses = outputs
+                    elif len(outputs) == 5: # compatibility if h not returned
+                        y, im, rate, reg_loss, reg_losses = outputs
+                        h = None
+                    else:
+                        y, reg_loss, h = outputs
                 else:
                     y, reg_loss, h = outputs
                 y = y[:,1:]

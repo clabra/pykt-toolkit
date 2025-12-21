@@ -32,6 +32,7 @@ import numpy as np
 import csv
 import pickle
 from datetime import datetime
+from sklearn import metrics
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -93,6 +94,8 @@ def parse_args():
                       help="L2 regularization weight for Rasch difficulty parameters")
     parser.add_argument("--lambda_student", type=float, required=True,
                       help="L2 regularization weight for student capability parameters (v_s)")
+    parser.add_argument("--lambda_gap", type=float, required=True,
+                      help="L2 regularization weight for student knowledge gap parameters (k_c)")
     
     # Interpretability and Theory-Guided parameters
     parser.add_argument("--lambda_ref", type=float, required=True,
@@ -122,38 +125,87 @@ def parse_args():
     return parser.parse_args()
 
 
-def evaluate_idkt_individualized(model, loader, device):
+def evaluate_idkt_individualized(model, loader, device, args=None, bkt_skill_params=None):
     """
     Specialized evaluation for iDKT with student-level individualization.
+    Calculates both performance metrics (AUC, Acc) and grounding losses.
     """
     model.eval()
     y_trues, y_scores = [], []
+    
+    total_l_sup = 0.0
+    total_l_ref = 0.0
+    total_l_init = 0.0
+    total_l_rate = 0.0
+    total_l_reg = 0.0
+    steps = 0
+
     with torch.no_grad():
         for data in loader:
             q, c, r = data["qseqs"].to(device), data["cseqs"].to(device), data["rseqs"].to(device)
             qshft, cshft, rshft = data["shft_qseqs"].to(device), data["shft_cseqs"].to(device), data["shft_rseqs"].to(device)
             sm = data["smasks"].to(device)
-            uids = data["uids"].to(device)
+            uids = data.get("uids", None)
+            if uids is not None:
+                uids = uids.to(device)
 
             cq = torch.cat((q[:,0:1], qshft), dim=1)
             cc = torch.cat((c[:,0:1], cshft), dim=1)
             cr = torch.cat((r[:,0:1], rshft), dim=1)
 
             # Forward with uid_data
-            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
+            y, initmastery, rate, reg_loss, reg_losses_dict = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
             
-            y_pred = torch.masked_select(y[:, 1:], sm).detach().cpu()
-            y_true = torch.masked_select(rshft, sm).detach().cpu()
+            y_pred = torch.masked_select(y[:, 1:], sm).detach()
+            y_true = torch.masked_select(rshft, sm).detach()
 
-            y_trues.append(y_true.numpy())
-            y_scores.append(y_pred.numpy())
+            # 1. Supervised Loss
+            l_sup = binary_cross_entropy(y_pred.double(), y_true.double())
+            total_l_sup += l_sup.item()
+            total_l_reg += reg_loss.item()
+            
+            # 2. Theory components (if possible)
+            if args and args.theory_guided:
+                if "bkt_p_correct" in data:
+                    bkt_p_correct = data["bkt_p_correct"].to(device)
+                    bkt_p_shft = torch.masked_select(bkt_p_correct, sm)
+                    l_ref = torch.mean((y_pred - bkt_p_shft)**2)
+                    total_l_ref += l_ref.item()
+                
+                if bkt_skill_params is not None:
+                    skills_shft = torch.masked_select(cc.long()[:, 1:], sm)
+                    proj_initmastery = torch.masked_select(initmastery[:, 1:], sm)
+                    proj_rate = torch.masked_select(rate[:, 1:], sm)
+                    
+                    ref_initmastery = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['prior'] 
+                                               for s in skills_shft]).to(device)
+                    ref_rate = torch.tensor([bkt_skill_params['params'].get(s.item(), bkt_skill_params['global'])['learns'] 
+                                           for s in skills_shft]).to(device)
+                    
+                    l_initmastery = torch.mean((proj_initmastery - ref_initmastery)**2)
+                    l_rate = torch.mean((proj_rate - ref_rate)**2)
+                    total_l_init += l_initmastery.item()
+                    total_l_rate += l_rate.item()
+
+            y_trues.append(y_true.cpu().numpy())
+            y_scores.append(y_pred.cpu().numpy())
+            steps += 1
 
     ts = np.concatenate(y_trues, axis=0)
     ps = np.concatenate(y_scores, axis=0)
     auc = metrics.roc_auc_score(y_true=ts, y_score=ps)
     prelabels = [1 if p >= 0.5 else 0 for p in ps]
     acc = metrics.accuracy_score(ts, prelabels)
-    return auc, acc
+    
+    avg_metrics = {
+        'l_sup': total_l_sup / steps,
+        'l_reg': total_l_reg / steps,
+        'l_ref': total_l_ref / steps,
+        'l_init': total_l_init / steps,
+        'l_rate': total_l_rate / steps
+    }
+    
+    return auc, acc, avg_metrics
 
 
 def main():
@@ -202,6 +254,7 @@ def main():
         'seq_len': args.seq_len,
         'l2': args.l2,
         'lambda_student': args.lambda_student,
+        'lambda_gap': args.lambda_gap,
         'lambda_ref': args.lambda_ref,
         'lambda_initmastery': args.lambda_initmastery,
         'lambda_rate': args.lambda_rate,
@@ -256,10 +309,15 @@ def main():
         'final_fc_dim': args.final_fc_dim,
         'l2': args.l2,
         'lambda_student': args.lambda_student,
+        'lambda_gap': args.lambda_gap,
         'n_uid': num_students
     }
     
     model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
+    
+    # Initialize theory bases from BKT parameters
+    if args.theory_guided and bkt_skill_params is not None:
+        model.load_theory_params(bkt_skill_params)
     
     # Training
     print(f"Starting training for {args.epochs} epochs...")
@@ -296,7 +354,7 @@ def main():
             cc = torch.cat((c[:,0:1], cal_data["shft_cseqs"].to(device)), dim=1)
             cr = torch.cat((r[:,0:1], rshft), dim=1)
 
-            y, initmastery, rate, _ = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
+            y, initmastery, rate, _, _ = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
             y_pred = torch.masked_select(y[:, 1:], sm)
             y_true = torch.masked_select(rshft, sm)
             m_sup = binary_cross_entropy(y_pred.double(), y_true.double()).item()
@@ -346,7 +404,7 @@ def main():
     
     # Initialize metrics_epoch.csv
     csv_path = os.path.join(args.save_dir, 'metrics_epoch.csv')
-    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate']
+    csv_headers = ['epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_initmastery', 'l_rate', 'l_rasch', 'l_gap', 'l_student']
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=csv_headers)
         writer.writeheader()
@@ -358,6 +416,9 @@ def main():
         train_l_ref = 0.0
         train_l_initmastery = 0.0
         train_l_rate = 0.0
+        train_l_rasch = 0.0
+        train_l_gap = 0.0
+        train_l_student = 0.0
         train_steps = 0
         
         for data in train_loader:
@@ -372,7 +433,7 @@ def main():
              cr = torch.cat((r[:,0:1], rshft), dim=1)
 
              # Forward
-             y, initmastery, rate, reg_loss = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
+             y, initmastery, rate, reg_loss, reg_losses_dict = model(cc.long(), cr.long(), cq.long(), uid_data=uids)
              
              # Standard Supervised Loss (L_SUP)
              y_pred = torch.masked_select(y[:, 1:], sm)
@@ -424,6 +485,9 @@ def main():
              train_l_ref += l_ref_val
              train_l_initmastery += l_init_val
              train_l_rate += l_rate_val
+             train_l_rasch += reg_losses_dict['reg_rasch'].item()
+             train_l_gap += reg_losses_dict['reg_gap'].item()
+             train_l_student += reg_losses_dict['reg_student'].item()
              train_steps += 1
         
         avg_train_loss = train_loss / train_steps
@@ -431,10 +495,13 @@ def main():
         avg_l_ref = train_l_ref / train_steps
         avg_l_init = train_l_initmastery / train_steps
         avg_l_rate = train_l_rate / train_steps
+        avg_l_rasch = train_l_rasch / train_steps
+        avg_l_gap = train_l_gap / train_steps
+        avg_l_student = train_l_student / train_steps
         
         # Validation
-        valid_auc, valid_acc = evaluate_idkt_individualized(model, valid_loader, device)
-        print(f"Epoch {epoch}/{args.epochs}: Loss={avg_train_loss:.4f} (SUP={avg_l_sup:.4f}, REF={avg_l_ref:.4f}, IM={avg_l_init:.4f}, RT={avg_l_rate:.4f}), Valid AUC={valid_auc:.4f}")
+        valid_auc, valid_acc, valid_metrics = evaluate_idkt_individualized(model, valid_loader, device, args, bkt_skill_params)
+        print(f"Epoch {epoch}/{args.epochs}: Loss={avg_train_loss:.4f} (Raw SUP={avg_l_sup:.4f}, REF={avg_l_ref:.4f}, IM={avg_l_init:.4f}, RT={avg_l_rate:.4f}), Gap_L2={avg_l_gap:.4f}, Stu_L2={avg_l_student:.4f}, Valid AUC={valid_auc:.4f}")
         
         # Save to CSV
         with open(csv_path, 'a', newline='') as f:
@@ -447,7 +514,10 @@ def main():
                 'l_sup': avg_l_sup,
                 'l_ref': avg_l_ref,
                 'l_initmastery': avg_l_init,
-                'l_rate': avg_l_rate
+                'l_rate': avg_l_rate,
+                'l_rasch': avg_l_rasch,
+                'l_gap': avg_l_gap,
+                'l_student': avg_l_student
             })
             
         # Checkpoint and Early Stopping
@@ -464,8 +534,8 @@ def main():
             # Save validation metrics
             metrics_valid_path = os.path.join(args.save_dir, 'metrics_valid.csv')
             with open(metrics_valid_path, 'w') as f:
-                f.write('split,auc,acc\n')
-                f.write(f'validation,{valid_auc:.6f},{valid_acc:.6f}\n')
+                f.write('split,auc,acc,l_sup,l_ref,l_init,l_rate,l_reg\n')
+                f.write(f"validation,{valid_auc:.6f},{valid_acc:.6f},{valid_metrics['l_sup']:.6f},{valid_metrics['l_ref']:.6f},{valid_metrics['l_init']:.6f},{valid_metrics['l_rate']:.6f},{valid_metrics['l_reg']:.6f}\n")
             print(f"  ✓ Saved validation metrics: {metrics_valid_path}")
         else:
             patience_counter += 1
@@ -474,16 +544,18 @@ def main():
                 break
     
     # Final Evaluation (matching pykt pattern)
-    print("\nRunning final evaluation on test sets...")
+    print("\nRunning final evaluation on sets...")
     model_config['n_uid'] = num_students # Ensure test eval uses correct n_uid
-    test_auc, test_acc = evaluate_idkt_individualized(model, valid_loader, device) # Using validation as proxy for now if no test loader
+    test_auc, test_acc, test_metrics = evaluate_idkt_individualized(model, valid_loader, device, args, bkt_skill_params) # Using validation as proxy for now
     
     # Save results
     results = {
         'valid_auc': float(best_valid_auc),
         'valid_acc': float(best_valid_acc),
+        'valid_metrics': valid_metrics,
         'test_auc': float(test_auc),
         'test_acc': float(test_acc),
+        'test_metrics': test_metrics,
         'best_epoch': int(best_epoch),
         'params': {k: str(v) if not isinstance(v, (int, float, bool, str, type(None))) else v 
                   for k, v in params.items()}

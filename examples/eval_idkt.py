@@ -50,6 +50,8 @@ from pykt.datasets import init_dataset4train
 from torch.utils.data import DataLoader
 from pykt.datasets.data_loader import KTDataset
 from pykt.utils import set_seed
+import pickle
+from train_idkt import evaluate_idkt_individualized
 
 
 def parse_args():
@@ -88,8 +90,18 @@ def parse_args():
                       help="Sequence length")
     parser.add_argument("--l2", type=float, required=True,
                       help="L2 regularization")
-    parser.add_argument("--lambda_student", type=float, default=1e-5,
+    parser.add_argument("--lambda_student", type=float, required=True,
                       help="Regularization for student capability parameters")
+    parser.add_argument("--lambda_gap", type=float, required=True,
+                      help="Regularization for student knowledge gap parameters")
+    parser.add_argument("--lambda_ref", type=float, required=True,
+                      help="Weight for prediction alignment loss")
+    parser.add_argument("--lambda_initmastery", type=float, required=True,
+                      help="Weight for initial mastery consistency loss")
+    parser.add_argument("--lambda_rate", type=float, required=True,
+                      help="Weight for learning rate consistency loss")
+    parser.add_argument("--theory_guided", type=int, default=1,
+                      help="Whether to use theory-guided evaluation metrics")
     
     # Seed
     parser.add_argument("--seed", type=int, default=42,
@@ -120,6 +132,10 @@ def main():
         'batch_size': args.batch_size,
         'seq_len': args.seq_len,
         'l2': args.l2,
+        'lambda_ref': args.lambda_ref,
+        'lambda_initmastery': args.lambda_initmastery,
+        'lambda_rate': args.lambda_rate,
+        'theory_guided': args.theory_guided,
         'use_wandb': 0
     }
     
@@ -166,6 +182,16 @@ def main():
     
     print(f"✓ Loaded datasets (train: {len(train_loader.dataset)}, valid: {len(valid_loader.dataset)}, test: {len(test_dataset)})")
     
+    # Load BKT Skill Parameters for grounding losses (L_init, L_rate)
+    bkt_skill_params = None
+    bkt_params_path = os.path.join(data_config[args.dataset]['dpath'], 'bkt_skill_params.pkl')
+    if os.path.exists(bkt_params_path):
+        with open(bkt_params_path, 'rb') as f:
+            bkt_skill_params = pickle.load(f)
+        print(f"  Loaded BKT skill parameters from: {bkt_params_path}")
+    else:
+        print(f"  WARNING: BKT skill parameters not found at {bkt_params_path}. Grounding losses will be empty.")
+    
     # Load checkpoint to detect num_students before model init
     checkpoint_path = args.checkpoint
     print(f"Loading checkpoint from {checkpoint_path} to detect n_uid...")
@@ -188,7 +214,8 @@ def main():
         'final_fc_dim': args.final_fc_dim,
         'l2': args.l2,
         'n_uid': n_uid,
-        'lambda_student': args.lambda_student
+        'lambda_student': args.lambda_student,
+        'lambda_gap': args.lambda_gap
     }
     
     # Initialize model
@@ -200,34 +227,37 @@ def main():
     
     # Evaluate
     print("Evaluating on validation set...")
-    valid_auc, valid_acc = evaluate(model, valid_loader, 'idkt')
+    valid_auc, valid_acc, valid_metrics = evaluate_idkt_individualized(model, valid_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
     print(f"Valid AUC: {valid_auc:.4f}, Valid Acc: {valid_acc:.4f}")
     
     print("Evaluating on test set...")
-    test_auc, test_acc = evaluate(model, test_loader, 'idkt')
+    test_auc, test_acc, test_metrics = evaluate_idkt_individualized(model, test_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
     print(f"Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
     
     if test_window_loader is not None:
-        window_test_auc, window_test_acc = evaluate(model, test_window_loader, 'idkt')
+        window_test_auc, window_test_acc, window_metrics = evaluate_idkt_individualized(model, test_window_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
         print(f"Window Test AUC: {window_test_auc:.4f}, Window Test Acc: {window_test_acc:.4f}")
     else:
-        window_test_auc, window_test_acc = None, None
+        window_test_auc, window_test_acc, window_metrics = None, None, None
     
     # Save test metrics CSV (matching ikt3 structure)
     metrics_test_path = os.path.join(args.output_dir, 'metrics_test.csv')
     with open(metrics_test_path, 'w') as f:
-        f.write('split,auc,acc\n')
-        f.write(f'test,{test_auc:.6f},{test_acc:.6f}\n')
+        f.write('split,auc,acc,l_sup,l_ref,l_init,l_rate,l_reg\n')
+        f.write(f"test,{test_auc:.6f},{test_acc:.6f},{test_metrics['l_sup']:.6f},{test_metrics['l_ref']:.6f},{test_metrics['l_init']:.6f},{test_metrics['l_rate']:.6f},{test_metrics['l_reg']:.6f}\n")
     print(f"✓ Saved test metrics: {metrics_test_path}")
     
     # Save results
     results = {
         'valid_auc': float(valid_auc),
         'valid_acc': float(valid_acc),
+        'valid_metrics': valid_metrics,
         'test_auc': float(test_auc),
         'test_acc': float(test_acc),
+        'test_metrics': test_metrics,
         'window_test_auc': float(window_test_auc) if window_test_auc else None,
         'window_test_acc': float(window_test_acc) if window_test_acc else None,
+        'window_metrics': window_metrics,
         'checkpoint': args.checkpoint
     }
     

@@ -85,13 +85,23 @@ def main():
     
     _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
 
+    # Detect n_uid from checkpoint
+    print(f"Loading checkpoint from {args.checkpoint} to detect n_uid...")
+    checkpoint = torch.load(args.checkpoint, map_location='cpu')
+    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    n_uid = 0
+    if 'student_param.weight' in state_dict:
+        n_uid = state_dict['student_param.weight'].shape[0] - 1
+        print(f"Detected {n_uid} students in checkpoint.")
+
     # Init Model
     model_config = {
         'd_model': args.d_model, 'd_ff': args.d_ff, 'num_attn_heads': args.n_heads,
-        'n_blocks': args.n_blocks, 'dropout': args.dropout, 'final_fc_dim': args.final_fc_dim, 'l2': args.l2
+        'n_blocks': args.n_blocks, 'dropout': args.dropout, 'final_fc_dim': args.final_fc_dim, 
+        'l2': args.l2, 'n_uid': n_uid
     }
     model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
-    model.load_state_dict(torch.load(args.checkpoint, map_location=device))
+    model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
 
@@ -173,7 +183,7 @@ def main():
             cr_full = torch.cat((r[:,0:1], rshft), dim=1)
             cq_full = torch.cat((q[:,0:1], qshft), dim=1)
             
-            y, initmastery, rate, _ = model(cc_full.long(), cr_full.long(), cq_full.long())
+            y, initmastery, rate, _, _ = model(cc_full.long(), cr_full.long(), cq_full.long())
             
             # Collect aggregated metrics
             all_idkt_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())

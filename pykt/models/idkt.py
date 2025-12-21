@@ -26,7 +26,7 @@ class Dim(IntEnum):
 
 class iDKT(nn.Module):
     def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff=256, 
-            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, lambda_student=1e-5, n_uid=0, emb_type="qid", emb_path="", pretrain_dim=768):
+            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, lambda_student=1e-5, lambda_gap=1e-5, n_uid=0, emb_type="qid", emb_path="", pretrain_dim=768):
         super().__init__()
         """
         iDKT Model - Interpretable Deep Knowledge Tracing
@@ -55,8 +55,18 @@ class iDKT(nn.Module):
         
         self.n_uid = n_uid
         self.lambda_student = lambda_student
+        self.lambda_gap = lambda_gap
         if self.n_uid > 0:
-            self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student capability/velocity baseline (v_s)
+            self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
+            self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
+        
+        # Semantic Axes for Individualization
+        self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Knowledge axis (d_c)
+        self.velocity_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Velocity axis (d_s)
+        
+        # Theoretical Bases (Grounding points from BKT)
+        self.l0_base_emb = nn.Embedding(self.n_question + 1, embed_l) # L0_skill (Prior Base)
+        self.t_base_emb = nn.Embedding(self.n_question + 1, embed_l)  # T_skill (Velocity Base)
         
         if emb_type.startswith("qid"):
             # n_question+1 ,d_model
@@ -78,18 +88,10 @@ class iDKT(nn.Module):
             nn.Linear(256, 1)
         )
         
-        # Interpretability Heads: Projecting latent states to BKT-like parameters
-        # Expanded to include student-level individualization (input_dim + 1 for v_s)
-        self.out_initmastery = nn.Sequential(
-            nn.Linear(embed_l + (1 if self.n_uid > 0 else 0), final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
-            nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
-            nn.Linear(256, 1)
-        )
-        self.out_rate = nn.Sequential(
-            nn.Linear(d_model + embed_l + (1 if self.n_uid > 0 else 0), final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
-            nn.Linear(final_fc_dim, 256), nn.ReLU(), nn.Dropout(self.dropout),
-            nn.Linear(256, 1)
-        )
+        # Interpretability Heads: Removed in favor of structural grounding in input layer
+        # (Keeping the attributes for potential backward compatibility or if needed, but they are no longer used in forward)
+        # self.out_initmastery = ...
+        # self.out_rate = ...
         
         self.reset()
 
@@ -97,6 +99,37 @@ class iDKT(nn.Module):
         for p in self.parameters():
             if p.size(0) == self.n_pid+1 and self.n_pid > 0:
                 torch.nn.init.constant_(p, 0.)
+
+    def load_theory_params(self, bkt_skill_params):
+        """
+        Initialize l0_base_emb and t_base_emb with pre-calculated BKT parameters.
+        """
+        if bkt_skill_params is None:
+            return
+        
+        # Extract params mapping
+        params_dict = bkt_skill_params.get('params', {})
+        global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
+        
+        # Create tensors for initialization
+        l0_init = torch.zeros(self.n_question + 1, 1)
+        t_init = torch.zeros(self.n_question + 1, 1)
+        
+        for q_idx in range(self.n_question + 1):
+            s_params = params_dict.get(q_idx, global_params)
+            l0_init[q_idx] = s_params.get('prior', global_params['prior'])
+            t_init[q_idx] = s_params.get('learns', global_params['learns'])
+            
+        # Initialize embeddings: we use the scalar value to shift or as a base?
+        # In Archetype 1, we treat them as bases. For a d-dimensional embedding,
+        # we can initialize it as a constant or with a specific pattern.
+        # Here we'll initialize the entire embedding vector with the scalar value/sqrt(d) 
+        # or just random but centered at the scalar.
+        # For structural grounding, let's use a simple constant initialization across dimensions.
+        with torch.no_grad():
+            self.l0_base_emb.weight.data.copy_(l0_init.expand(-1, self.l0_base_emb.weight.shape[1]))
+            self.t_base_emb.weight.data.copy_(t_init.expand(-1, self.t_base_emb.weight.shape[1]))
+        print(f"  [iDKT] Theory bases initialized from BKT parameters.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -115,58 +148,83 @@ class iDKT(nn.Module):
             q_embed_data, qa_embed_data = self.base_emb(q_data, target)
 
         pid_embed_data = None
+        c_reg_loss = 0.
+        
+        # 1. Rasch Difficulty Shift (u_q * d_ct)
         if self.n_pid > 0: # have problem id
-            q_embed_diff_data = self.q_embed_diff(q_data)  # d_ct 总结了包含当前question（concept）的problems（questions）的变化
-            pid_embed_data = self.difficult_param(pid_data)  # uq 当前problem的难度
-            q_embed_data = q_embed_data + pid_embed_data * \
-                q_embed_diff_data  # uq *d_ct + c_ct # question encoder
-
-            qa_embed_diff_data = self.qa_embed_diff(
-                target)  # f_(ct,rt) or #h_rt (qt, rt)差异向量
+            q_embed_diff_data = self.q_embed_diff(q_data)  # d_ct
+            pid_embed_data = self.difficult_param(pid_data)  # u_q
+            
+            # Question and Interaction with Rasch base
+            q_embed_data = q_embed_data + pid_embed_data * q_embed_diff_data
+            
+            qa_embed_diff_data = self.qa_embed_diff(target)  # f_(ct,rt)
             if self.separate_qa:
-                qa_embed_data = qa_embed_data + pid_embed_data * \
-                    qa_embed_diff_data  # uq* f_(ct,rt) + e_(ct,rt)
+                qa_embed_data = qa_embed_data + pid_embed_data * qa_embed_diff_data
             else:
-                qa_embed_data = qa_embed_data + pid_embed_data * \
-                    (qa_embed_diff_data+q_embed_diff_data)  # + uq *(h_rt+d_ct) # （q-response emb diff + question emb diff）
-            c_reg_loss = (pid_embed_data ** 2.).sum() * self.l2 # rasch部分loss
+                qa_embed_data = qa_embed_data + pid_embed_data * (qa_embed_diff_data + q_embed_diff_data)
+            
+            rasch_reg = (pid_embed_data ** 2.).sum()
+            c_reg_loss = rasch_reg * self.l2
         else:
-            c_reg_loss = 0.
+            rasch_reg = torch.tensor(0., device=q_data.device)
+            
+        # 2. Individualization Grounding (Archetype 1)
+        if self.n_uid > 0 and uid_data is not None:
+            # Student-specific scalars
+            vs = self.student_param(uid_data).unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            kc = self.student_gap_param(uid_data).unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            
+            # Skill-specific axes and bases
+            dc = self.knowledge_axis_emb(q_data) # [BS, seq, d]
+            ds = self.velocity_axis_emb(q_data) # [BS, seq, d]
+            l0_skill = self.l0_base_emb(q_data)  # [BS, seq, d]
+            t_skill = self.t_base_emb(q_data)   # [BS, seq, d]
+            
+            # Grounded Individual Embeddings
+            lc = l0_skill + kc * dc # Individualized Initial Knowledge
+            ts = t_skill + vs * ds # Individualized Learning Velocity
+            
+            # Relational Differential Fusion
+            q_embed_data = q_embed_data - lc # x' = x - l_c (Residual Difficulty)
+            qa_embed_data = qa_embed_data + ts # y' = y + t_s (Personalized Momentum)
+            
+            # Additional Regularization
+            gap_reg = (kc ** 2.).sum()
+            student_reg = (vs ** 2.).sum()
+            s_reg_loss = gap_reg * self.lambda_gap + student_reg * self.lambda_student
+            c_reg_loss = c_reg_loss + s_reg_loss
+        else:
+            gap_reg = torch.tensor(0., device=q_data.device)
+            student_reg = torch.tensor(0., device=q_data.device)
 
-        # BS.seqlen,d_model
-        # Pass to the decoder
-        # output shape BS,seqlen,d_model or d_model//2
+        reg_losses = {
+            "reg_rasch": rasch_reg,
+            "reg_gap": gap_reg,
+            "reg_student": student_reg
+        }
+
+        # 3. Transformer Core
         d_output = self.model(q_embed_data, qa_embed_data, pid_embed_data)
 
+        # 4. Prediction
         concat_q = torch.cat([d_output, q_embed_data], dim=-1)
         output = self.out(concat_q).squeeze(-1)
         
         m = nn.Sigmoid()
         preds = m(output)
         
-        # Latent state projections with individualized features
-        if self.n_uid > 0 and uid_data is not None:
-            # uid_data is [BS], unsqueeze and expand to [BS, seqlen, 1]
-            uid_embed_data = self.student_param(uid_data).unsqueeze(1).expand(-1, q_embed_data.shape[1], -1)
-            s_reg_loss = (uid_embed_data ** 2.).sum() * self.lambda_student
-            
-            # Combine concept embedding and student capability for Initial Mastery
-            im_input = torch.cat([q_embed_data, uid_embed_data], dim=-1)
-            initmastery = m(self.out_initmastery(im_input).squeeze(-1))
-            
-            # Combine full latent state and student velocity trait for Learning Rate
-            rate_input = torch.cat([concat_q, uid_embed_data], dim=-1)
-            rate = m(self.out_rate(rate_input).squeeze(-1))
-            
-            c_reg_loss = c_reg_loss + s_reg_loss
-        else:
-            initmastery = m(self.out_initmastery(q_embed_data).squeeze(-1))
-            rate = m(self.out_rate(concat_q).squeeze(-1))
+        # Note: In Archetype 1, we still might want to output lc and ts for alignment monitoring,
+        # or rely on the retriever state being grounded in them via loss.
+        # For now, we'll return lc and ts as proxies for initmastery and rate for evaluation compatibility.
+        # We project them to [0, 1] scalars for consistency with existing evaluation scripts.
+        initmastery = m(lc.mean(dim=-1)) if 'lc' in locals() else m(self.l0_base_emb(q_data).mean(dim=-1))
+        rate = m(ts.mean(dim=-1)) if 'ts' in locals() else m(self.t_base_emb(q_data).mean(dim=-1))
         
         if not qtest:
-            return preds, initmastery, rate, c_reg_loss
+            return preds, initmastery, rate, c_reg_loss, reg_losses
         else:
-            return preds, initmastery, rate, c_reg_loss, concat_q
+            return preds, initmastery, rate, c_reg_loss, concat_q, reg_losses
 
 
 class Architecture(nn.Module):
