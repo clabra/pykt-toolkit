@@ -34,7 +34,7 @@ graph TD
                 T_Base["T_skill (Velocity Base)"]
             end
 
-            subgraph "Rasch & Learner Variations"
+            subgraph "Reference Model Parameters"
                 Diff_Param["u_q (Difficulty)"]
                 Gap_Param["k_c (Knowledge Gap)"]
                 Vel_Param["v_s (Learning Speed)"]
@@ -1484,11 +1484,10 @@ The following table details the core metrics across the high-resolution sweep ($
 ### 9.2 Pareto Plot and Discussion
 <img src="../assistant/idkt_pareto_frontier.png" alt="Pareto Frontier" width="800">
 
-Figure 9.1: The iDKT Pareto Frontier (AUC vs. Theoretical Fidelity). The vertical line represents the "Sweet Spot" where theoretical grounding improves both interpretability and predictive accuracy.
+Figure 9.1: The iDKT Pareto Frontier (AUC vs. Theoretical Fidelity). The vertical line represents the "Sweet Spot" where theoretical grounding improves both interpretability and predictive accuracy. 
 
-<img src="../assistant/idkt_sensitivity_analysis.png" alt="Sensitivity Analysis" width="800">
+The Mean Correlation ($r$) on the x-axis is calculated as the unweighted average of three alignment metrics: `prediction_corr` (trajectory alignment), `initmastery_corr` ($H_1$), and `learning_rate_corr` ($H_1$). This metric can be considered a kind of interpretability proxie. 
 
-Figure 9.2: Sensitivity of individual alignment metrics ($H_1$, $H_2$, $H_3$) to the grounding weight $\lambda$. Note the peak in Functional Alignment ($H_2$) at $\lambda \approx 0.3$.
 
 #### 9.2.1 Inductive Bias Bonus
 At low grounding levels ($\lambda \leq 0.15$), iDKT exhibits a "free lunch" phenomenon: it achieves a higher AUC than the unconstrained model while simultaneously increasing mean theoretical alignment by $\sim 4\%$. This empirical result suggests that educational theory (BKT) provides a **relational inductive bias** that regularizes the Transformer against overfitting to interaction noise, leading to more robust student representations.
@@ -1582,10 +1581,10 @@ Scatter-distribution plots showing how iDKT "spreads" the population-average BKT
 2.  **Aggregation:** Data is grouped by `skill_id` to calculate the mean and standard deviation of the model's projected parameters.
 **Visualization Alternatives:**
 
-| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** | **Option 3: Per-Skill Ridgelines** |
-| :--- | :--- | :--- |
-| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ribbon.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_delta.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ridgeline.png" width="300"> |
-| *Visualizes the global **Individualization Envelope**. Shaded area shows the 5th-95th percentile range.* | *Visualizes the **Magnitude of Personalization** ($\Delta = l_c - L_0$). Shows the density of remedial vs. advanced adjustments.* | *Visualizes the **Distribution Shape** for 8 representative skills. Red dashed lines denote the BKT theoretical prior.* |
+| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** |
+| :--- | :--- |
+| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ribbon.png" width="700"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_delta.png" width="700"> |
+| *Visualizes the global **Individualization Envelope**. Shaded area shows the 5th-95th percentile range.* | *Visualizes the **Magnitude of Personalization** ($\Delta = l_c - L_0$). Shows the density of remedial vs. advanced adjustments.* |
 
 **Educational Interpretation:**
 This plot visualizes the model's ability to move from "One-Size-Fits-All" priors to individualized readiness assessments. Standard BKT assigns a single $L_0$ value to every student for a given skill (e.g., assuming all students start with the same probability of mastery). The iDKT model, through its grounded latent space, recognizes that student readiness is actually a distribution. Even for skills with high theoretical priors, some students exhibit significant **Knowledge Gaps ($k_c$)** that lower their effective starting point. By capturing this variance, iDKT allows for **Precise Diagnostic Placement**: identifying students who require remedial support on day one, even for concepts considered "foundational" or "easy" for the general population.
@@ -1598,10 +1597,10 @@ This plot visualizes the model's ability to move from "One-Size-Fits-All" priors
 2.  **Aggregation:** Data is grouped by `skill_id` to calculate the mean and standard deviation of the model's projected learning rates.
 **Visualization Alternatives:**
 
-| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** | **Option 3: Per-Skill Ridgelines** |
-| :--- | :--- | :--- |
-| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ribbon.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_delta.png" width="300"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ridgeline.png" width="300"> |
-| *Visualizes the global **Velocity Envelope** relative to the BKT baseline. Shaded area covers 90% of the population.* | *Visualizes the **Acceleration Bias**. Shows whether the model tends to speed up or slow down student progress relative to theory.* | *Visualizes the **Acceleration Diversity** for representative skills. Red dashed lines denote the fixed BKT learning rate ($T$).* |
+| **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** |
+| :--- | :--- |
+| <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ribbon.png" width="700"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_delta.png" width="700"> |
+| *Visualizes the global **Velocity Envelope** relative to the BKT baseline. Shaded area covers 90% of the population.* | *Visualizes the **Acceleration Bias**. Shows whether the model tends to speed up or slow down student progress relative to theory.* |
 
 **Educational Interpretation:**
 This plot demonstrates the model's transition from "Fixed Velocity" assumptions to "Informed Learning Speeds." While standard BKT assumes all students acquire a specific skill at the same rate ($T$), iDKT's relational axis ($d_s$) and student parameters ($v_s$) reveal a diversity of **Learning Velocities**. Even for difficult skills with low theoretical learning rates, certain students exhibit "faster" acquisition paths. Conversely, some students show slower velocity than the population average, signaling a need for more intensive practice.

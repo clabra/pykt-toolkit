@@ -6,7 +6,17 @@ This project uses pykt-toolkit as a starting point, forked from pykt-toolkit git
 
 The key contributions of the paper will be a new Transformer attention-based model with a good balance between performance (i.e. is competive in terms of AUC with state of the art attention-based models) and interpretability. Our approach higlights interpretability and explanability as key contributions
 
-Reference Documents:
+## Paper Publication
+
+The paper is intended to be published in this [MDPI special issue](https://www.mdpi.com/journal/applsci/special_issues/KODK4051XS) that, ultimately, aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Its target is researchers and practitioners interested in original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts. So, the abstract should highlight the practical outcomes of the approach more than architecture approaches or technical novelties. We should try to answer the question: what can be done with our proposal than can't be done without it?. 
+
+## Paper Abstract
+
+"*While deep knowledge tracing (DKT) models provide state-of-the-art predictive accuracy, their black-box architectures often limit their utility in real-world educational settings where actionable pedagogical insights are required. We present iDKT, a novel Transformer-based framework that bridges this gap by providing the predictive power of deep learning while achieving intrinsic interpretability. iDKT accomplishes this through *structural grounding*, an architectural principle that anchors deep latent representations to educational constructs defined by established pedagogical models.*
+
+*We validated iDKT using Bayesian Knowledge Tracing (BKT), demonstrating that it maintains DKT-level predictive performance while providing more granular, student-specific insights than the standard theoretical baseline. Specifically, the model transforms population-level priors into individualized distributions, identifying initial knowledge gaps and detecting diverse learning velocities. This enables educators to move beyond simple performance prediction to implement precise diagnostic placement and dynamic pacing in diverse learning environments. By anchoring internal latent representations to the conceptual space of pedagogical theory, iDKT offers both a robust methodology for evaluating model interpretability and a practical tool for researchers and practitioners to improve educational effectiveness through theory-informed, data-driven personalization.*"
+
+## Reference Documents
 
 - `papers-pykt` folder contains papers for most of the models included in `pykt/models`
 - `assistant/taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder

@@ -69,6 +69,7 @@ TSMini/
 experiments/**/*.pth
 examples/experiments/**/*.pth
 experiments/**/*.pt
+experiments/**/roster*.csv
 
 data/difficulty/
 data/peer_index/
