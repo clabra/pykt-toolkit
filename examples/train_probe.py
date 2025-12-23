@@ -15,6 +15,12 @@ Methodology:
    - Task B (Control): Train Linear Probe H -> shuffled(p_bkt). Measure R^2_control.
    - Metric: Selectivity = R^2_true - R^2_control.
 
+4. Dataset Specifics (ASSIST2009):
+   - Format: "One Question -> Multiple Concepts".
+   - pyKT Behavior: Trains on expanded Concept sequences (length T_kc) but evaluates on original Question level (length T_q).
+   - Probing Alignment: We implement a "Robust QID-Alignment" that matches the expanded concept embeddings H (one per KC) 
+     with the corresponding single BKT target p_bkt (one per Question) by inferring repeats from Question ID continuity.
+
 Usage:
     python examples/train_probe.py \
         --checkpoint experiments/.../best_model.pt \
@@ -215,8 +221,9 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
         sample_bkt_key = next(iter(bkt_lookup))
         print(f"Sample BKT Key: {sample_bkt_key} (Type: {type(sample_bkt_key)})")
         
-    # 3. Track Consumption Offsets per Student (for Windowing)
-    offsets = {} # uid -> int (number of steps consumed)
+    # 3. Track Consumption Offsets & Last QID per Student
+    offsets = {} # uid -> current BKT index pointer
+    last_qids = {} # uid -> last processed QID to detect inter-chunk repeats
 
     steps_processed = 0
     students_matched = 0
@@ -227,7 +234,6 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
             q = data["qseqs"].long().to(device)
             c = data["cseqs"].long().to(device)
             r = data["rseqs"].long().to(device)
-            t = data["tseqs"].long().to(device) if "tseqs" in data else None
             m = data["masks"].long().to(device)
             sm = data["smasks"].long().to(device)
             
@@ -238,84 +244,74 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                 raise ValueError("DataLoader must return UIDs.")
 
             # Forward pass (concept-based input for iDKT with pid_data=q)
-            # Returns: preds, initmastery, rate, c_reg_loss, concat_q, reg_losses
             preds, _, _, _, concat_q, _ = model(c, r, pid_data=q, qtest=True, uid_data=data["uids"].to(device))
             
             bs, seq_len, dim = concat_q.shape
             
             concat_q_np = concat_q.cpu().numpy()
+            q_np = q.cpu().numpy()
             mask_np = sm.cpu().numpy() # [BS, SeqLen]
             
             for b_idx in range(bs):
                 uid_idx = int(uids_batch[b_idx])
                 
                 # Convert Index -> Raw UID
-                if uid_idx in idx_to_uid:
-                    raw_uid = idx_to_uid[uid_idx]
-                    
-                    # Robust Lookup: Handle String vs Int mismatch between JSON (str) and CSV (int)
-                    if raw_uid not in bkt_lookup:
-                        # Try int conversion
-                        try:
-                            raw_uid_int = int(raw_uid)
-                            if raw_uid_int in bkt_lookup:
-                                raw_uid = raw_uid_int
-                        except:
-                            pass
-                            
-                        # Try str conversion
-                        if raw_uid not in bkt_lookup:
-                            raw_uid_str = str(raw_uid)
-                            if raw_uid_str in bkt_lookup:
-                                raw_uid = raw_uid_str
-                else:
-                    raw_uid = uid_idx # Fallback
+                raw_uid = idx_to_uid.get(uid_idx, uid_idx)
+                
+                # Robust Lookup
+                if raw_uid not in bkt_lookup:
+                    if str(raw_uid) in bkt_lookup: raw_uid = str(raw_uid)
+                    elif int(raw_uid) in bkt_lookup: raw_uid = int(raw_uid)
                 
                 if raw_uid not in bkt_lookup:
                     continue 
                     
                 bkt_full_seq = bkt_lookup[raw_uid]
                 
-                # Identify valid steps in this window
+                # Identify valid steps
                 valid_indices = np.where(mask_np[b_idx] == 1)[0]
-                n_valid = len(valid_indices)
+                if len(valid_indices) == 0: continue
                 
-                if n_valid == 0:
-                    continue
+                # Stateful Alignment Logic
+                if raw_uid not in offsets:
+                    offsets[raw_uid] = -1 # Start before 0
+                    last_qids[raw_uid] = -999 # Sentinel
+                
+                current_bkt_idx = offsets[raw_uid]
+                
+                for t in valid_indices:
+                    qid = q_np[b_idx, t]
                     
-                # State checking
-                current_offset = offsets.get(raw_uid, 0)
-                end_offset = current_offset + n_valid
-                
-                # Check if we go out of bounds of BKT data
-                if end_offset > len(bkt_full_seq):
-                    # Truncate? This implies BKT CSV has fewer steps than Loader
-                    # Or we just take what's available
-                    available = len(bkt_full_seq) - current_offset
-                    if available <= 0:
-                        continue 
-                    n_valid = available
-                    valid_indices = valid_indices[:n_valid]
-                    end_offset = current_offset + n_valid
-                
-                # Extract Aligned Data
-                # Model Embeddings
-                student_embeddings = concat_q_np[b_idx][valid_indices]
-                
-                # Target Values (Windowed Slice)
-                target_window = bkt_full_seq[current_offset : end_offset]
-                
-                # Verify shapes
-                if len(student_embeddings) != len(target_window):
-                    print(f"Shape mismatch error for uid {raw_uid}")
-                    continue
+                    # Infer Repeat Status from QID continuity
+                    # If QID matches the last processed QID for this user, it's a repeat
+                    if qid == last_qids[raw_uid]:
+                        is_repeat = True
+                    else:
+                        is_repeat = False
+                        
+                    last_qids[raw_uid] = qid
                     
-                embeddings_list.append(student_embeddings)
-                targets_list.append(target_window)
+                    if not is_repeat:
+                        # New question -> Advance BKT cursor
+                        current_bkt_idx += 1
+                    
+                    # Boundary Checks
+                    if current_bkt_idx < 0:
+                        current_bkt_idx = 0
+                    
+                    if current_bkt_idx >= len(bkt_full_seq):
+                        break
+                        
+                    # Extract
+                    emb = concat_q_np[b_idx, t]
+                    target = bkt_full_seq[current_bkt_idx]
+                    
+                    embeddings_list.append(emb)
+                    targets_list.append(target)
                 
-                # Update State
-                offsets[raw_uid] = end_offset
-                steps_processed += n_valid
+                # Update state
+                offsets[raw_uid] = current_bkt_idx
+                steps_processed += len(valid_indices)
                 students_matched += 1
             
             if steps_processed > 20000 and "debug" in sys.argv:
@@ -328,7 +324,7 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
     print(f"Extraction complete. Consumed {steps_processed} steps across {students_matched} windows.")
     
     X = np.vstack(embeddings_list)
-    y = np.concatenate(targets_list)
+    y = np.array(targets_list)
     
     return X, y
 
