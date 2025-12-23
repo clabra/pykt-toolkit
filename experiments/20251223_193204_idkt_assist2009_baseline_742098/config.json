@@ -14,6 +14,10 @@
     "bkt_validation": "/home/vscode/.pykt-env/bin/python examples/compute_bkt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098 --dataset assist2009 --output_file bkt_validation.json",
     "idkt_interpretability": "/home/vscode/.pykt-env/bin/python examples/eval_idkt_interpretability.py --checkpoint /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098/best_model.pt --output_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098 --dataset assist2009 --fold 0 --batch_size 64 --d_model 256 --n_heads 8 --n_blocks 4 --d_ff 512 --dropout 0.2 --final_fc_dim 512 --l2 1e-05 --emb_type qid --seq_len 200 --roster_sampling_rate 10 --max_correlation_students 1000",
     "validation_plots": "/home/vscode/.pykt-env/bin/python examples/generate_validation_plots.py --run_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098",
+    "plot_analysis": "/home/vscode/.pykt-env/bin/python examples/generate_analysis_plots.py --run_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098",
+    "plot_param_distribution": "/home/vscode/.pykt-env/bin/python examples/plot_param_distribution.py --run_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098",
+    "plot_mastery_mosaic": "/home/vscode/.pykt-env/bin/python examples/plot_mastery_mosaic_real.py --run_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098",
+    "train_probe": "/home/vscode/.pykt-env/bin/python examples/train_probe.py --checkpoint /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098/best_model.pt --bkt_preds /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098/traj_predictions.csv --dataset assist2009 --output_dir /workspaces/pykt-toolkit/experiments/20251223_193204_idkt_test_742098 --debug",
     "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 742098"
   },
   "experiment": {

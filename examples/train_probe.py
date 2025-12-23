@@ -469,7 +469,6 @@ def main():
     print(f"Data Ready: X shape {X.shape}, y shape {y.shape}")
     
     # 6. Run Experiment
-    # 6. Run Experiment
     results = run_probing_experiment(X, y, args.seed, output_dir=args.output_dir)
     
     print("\n=== Probing Results ===")

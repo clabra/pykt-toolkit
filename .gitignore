@@ -77,3 +77,6 @@ data/peer_index/
 data/**
 
 pyBKT/
+
+!data/assist2009/keyid2idx.json
+!data/assist2015/keyid2idx.json

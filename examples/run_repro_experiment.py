@@ -944,6 +944,9 @@ def main():
                 "bkt_validation": bkt_validation_command,
                 "idkt_interpretability": idkt_interpretability_command,
                 "validation_plots": build_validation_plots_command(experiment_dir_abs),
+                "plot_param_distribution": f"{python_path} examples/plot_param_distribution.py --run_dir {experiment_dir_abs}",
+                "plot_mastery_mosaic": f"{python_path} examples/plot_mastery_mosaic_real.py --run_dir {experiment_dir_abs}",
+                "train_probe": f"{python_path} examples/train_probe.py --checkpoint {experiment_dir_abs}/best_model.pt --bkt_preds {experiment_dir_abs}/traj_predictions.csv --dataset {training_params['dataset']} --output_dir {experiment_dir_abs} --debug",
                 "reproduce": repro_command
             },
             "experiment": {
@@ -1185,6 +1188,25 @@ def main():
                         print("\n✓ Validation plots generated successfully")
                     else:
                         print("\n⚠️  Validation plot generation failed (non-critical)")
+
+                    # Generate Section 10+ interpretability plots for iDKT
+                    print("\n" + "=" * 80)
+                    print("Generating Section 10+ Interpretability Plots...")
+                    print("=" * 80)
+                    
+                    sect10_plots = [
+                        ("Param Distribution", config['commands']['plot_param_distribution']),
+                        ("Mastery Mosaic", config['commands']['plot_mastery_mosaic']),
+                        ("Diagnostic Probing", config['commands']['train_probe'])
+                    ]
+                    
+                    for plot_name, plot_cmd in sect10_plots:
+                        print(f"\n- Generating {plot_name}...")
+                        p_res = subprocess.run(plot_cmd, shell=True)
+                        if p_res.returncode == 0:
+                            print(f"  ✓ {plot_name} generated successfully")
+                        else:
+                            print(f"  ⚠️  {plot_name} generation failed (non-critical)")
                 else:
                     print("\n⚠️  iDKT interpretability evaluation failed (non-critical)")
             
