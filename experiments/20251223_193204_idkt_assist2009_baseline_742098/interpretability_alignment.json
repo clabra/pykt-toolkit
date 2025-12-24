@@ -1,0 +1,11 @@
+{
+  "prediction_mse": 0.06086963042616844,
+  "prediction_corr": 0.5945016156134384,
+  "initmastery_mse": 7.477289182133973e-05,
+  "initmastery_corr": 0.9982046826668002,
+  "learning_rate_mse": 1.4768274922971614e-05,
+  "learning_rate_corr": 0.9994295076544195,
+  "h2_functional_alignment": 0.6915064592541511,
+  "h3_discriminant_overlap": -0.11047256747727723,
+  "h3_latent_overlap": -0.27549867846092113
+}

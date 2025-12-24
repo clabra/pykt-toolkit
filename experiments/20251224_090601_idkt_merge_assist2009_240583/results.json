@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.8523152767765427,
+  "valid_acc": 0.7889635589209655,
+  "valid_metrics": {
+    "l_sup": 0.44983896697239417,
+    "l_reg": 0.0001293346534415226,
+    "l_ref": 0.06783369431893031,
+    "l_init": 3.5005893438790436e-06,
+    "l_rate": 3.948742933637742e-07
+  },
+  "test_auc": 0.8509338685912855,
+  "test_acc": 0.7901940369143398,
+  "test_metrics": {
+    "l_sup": 0.44983896697239417,
+    "l_reg": 0.0001293346534415226,
+    "l_ref": 0.06783369431893031,
+    "l_init": 3.5005893438790436e-06,
+    "l_rate": 3.948742933637742e-07
+  },
+  "best_epoch": 50,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "assist2009",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20251224_090601_idkt_merge_assist2009_240583",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.2,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 200,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.1,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

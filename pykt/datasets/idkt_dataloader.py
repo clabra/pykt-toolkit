@@ -18,10 +18,9 @@ class IDKTDataset(KTDataset):
         df = pd.read_csv(sequence_path)
         df = df[df["fold"].isin(folds)]
         
-        # Create a deterministic UID-to-index mapping
-        # Sort to ensure consistent ordering across runs and folds
-        unique_uids = sorted(df["uid"].unique())
-        uid_to_index = {uid: idx for idx, uid in enumerate(unique_uids)}
+        # No more local UID re-mapping. Use raw UIDs to ensure consistency.
+        # This establishes the "universal coordinate system" requested for synchronization.
+        uid_to_index = {uid: uid for uid in df["uid"].unique()}
         
         interaction_num = 0
         dqtest = {"qidxs": [], "rests":[], "orirow":[]}
@@ -44,7 +43,9 @@ class IDKTDataset(KTDataset):
                 
             dori["rseqs"].append([int(_) for _ in row["responses"].split(",")])
             dori["smasks"].append([int(_) for _ in row["selectmasks"].split(",")])
-            dori["uids"].append(uid_to_index[row["uid"]])
+            
+            # Use raw UID directly
+            dori["uids"].append(row["uid"])
 
             interaction_num += dori["smasks"][-1].count(1)
 
@@ -84,8 +85,7 @@ class IDKTDataset(KTDataset):
             dori["smasks"] = (dori["smasks"][:, 1:] != pad_val)
         
         dori["uid_to_index"] = uid_to_index
-        dori["index_to_uid"] = {idx: uid for uid, idx in uid_to_index.items()}
-        dori["num_students"] = len(unique_uids)
+        dori["num_students"] = len(uid_to_index)
 
         if self.qtest:
             for key in list(dqtest.keys()):

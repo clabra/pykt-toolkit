@@ -76,7 +76,7 @@ def plot_ribbon(df, idkt_col, bkt_col, output_path, title_tag, label_tag):
     plt.step(x, y_bkt, where='mid', color='black', linestyle='--', linewidth=2.5, label=f'Theoretical BKT ({bkt_col})', alpha=0.5, zorder=1)
     
     # 3. Plot iDKT SECOND (Foreground Envelope)
-    plt.fill_between(x, y_low, y_high, alpha=0.4, color='#3498db', label=f'iDKT 90% Individualization Range', zorder=2)
+    plt.fill_between(x, y_low, y_high, alpha=0.4, color='#3498db', label=f'iDKT 5th-95th Percentile Range', zorder=2)
     plt.plot(x, y_median, color='#2980b9', linewidth=1.5, label='iDKT Median', zorder=3)
     
     plt.title(f"Option 1: Quantile Ribbon ({title_tag} Envelope)", fontsize=14)
