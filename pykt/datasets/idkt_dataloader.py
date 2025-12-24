@@ -18,6 +18,8 @@ class IDKTDataset(KTDataset):
         df = pd.read_csv(sequence_path)
         df = df[df["fold"].isin(folds)]
         
+        # Create a deterministic UID-to-index mapping
+        # Sort to ensure consistent ordering across runs and folds
         unique_uids = sorted(df["uid"].unique())
         uid_to_index = {uid: idx for idx, uid in enumerate(unique_uids)}
         
@@ -82,6 +84,7 @@ class IDKTDataset(KTDataset):
             dori["smasks"] = (dori["smasks"][:, 1:] != pad_val)
         
         dori["uid_to_index"] = uid_to_index
+        dori["index_to_uid"] = {idx: uid for uid, idx in uid_to_index.items()}
         dori["num_students"] = len(unique_uids)
 
         if self.qtest:

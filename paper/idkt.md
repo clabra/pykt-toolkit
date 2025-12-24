@@ -1523,9 +1523,27 @@ The following plots demonstrate the correlation between model-projected paramete
 
 *Figure 10.1: Correlation between iDKT Initial Mastery projections and BKT priors ($L_0$) for 124 skills.*
 
+<details>
+<summary>Click to see reproduction command</summary>
+
+```bash
+python examples/generate_analysis_plots.py \
+    --run_dir experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708
+```
+</details>
+
 <img src="../experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708/plots/per_skill_alignment_rate.png" alt="Learning Rate Alignment" width="800">
 
 *Figure 10.2: Correlation between iDKT Learning Velocity projections and BKT transition rates ($T$) for 124 skills.*
+
+<details>
+<summary>Click to see reproduction command</summary>
+
+```bash
+python examples/generate_analysis_plots.py \
+    --run_dir experiments/20251221_101651_idkt_pareto_v2_l0.00_assist2009_213708
+```
+</details>
 
 These results confirm that the **Relational Differential Fusion** mechanism successfully inherits the semantic knowledge of the BKT reference model while allowing the Transformer to refine these estimates via individualized residuals.
 
@@ -1586,6 +1604,15 @@ Scatter-distribution plots showing how iDKT "spreads" the population-average BKT
 | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_ribbon.png" width="700"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_im_alt_delta.png" width="700"> |
 | *Visualizes the global **Individualization Envelope**. Shaded area shows the 5th-95th percentile range.* | *Visualizes the **Magnitude of Personalization** ($\Delta = l_c - L_0$). Shows the density of remedial vs. advanced adjustments.* |
 
+<details>
+<summary>Click to see reproduction command</summary>
+
+```bash
+python examples/plot_param_distribution.py \
+    --run_dir experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009
+```
+</details>
+
 **Educational Interpretation:**
 This plot visualizes the model's ability to move from "One-Size-Fits-All" priors to individualized readiness assessments. Standard BKT assigns a single $L_0$ value to every student for a given skill (e.g., assuming all students start with the same probability of mastery). The iDKT model, through its grounded latent space, recognizes that student readiness is actually a distribution. Even for skills with high theoretical priors, some students exhibit significant **Knowledge Gaps ($k_c$)** that lower their effective starting point. By capturing this variance, iDKT allows for **Precise Diagnostic Placement**: identifying students who require remedial support on day one, even for concepts considered "foundational" or "easy" for the general population.
 
@@ -1601,6 +1628,15 @@ This plot visualizes the model's ability to move from "One-Size-Fits-All" priors
 | :--- | :--- |
 | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_ribbon.png" width="700"> | <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/param_rate_alt_delta.png" width="700"> |
 | *Visualizes the global **Velocity Envelope** relative to the BKT baseline. Shaded area covers 90% of the population.* | *Visualizes the **Acceleration Bias**. Shows whether the model tends to speed up or slow down student progress relative to theory.* |
+
+<details>
+<summary>Click to see reproduction command</summary>
+
+```bash
+python examples/plot_param_distribution.py \
+    --run_dir experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009
+```
+</details>
 
 **Educational Interpretation:**
 This plot demonstrates the model's transition from "Fixed Velocity" assumptions to "Informed Learning Speeds." While standard BKT assumes all students acquire a specific skill at the same rate ($T$), iDKT's relational axis ($d_s$) and student parameters ($v_s$) reveal a diversity of **Learning Velocities**. Even for difficult skills with low theoretical learning rates, certain students exhibit "faster" acquisition paths. Conversely, some students show slower velocity than the population average, signaling a need for more intensive practice.
@@ -1653,6 +1689,15 @@ for i, ax in enumerate(axes):
 <img src="../experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009/plots/mastery_alignment_mosaic_real.png" alt="Real-Data Mastery Alignment Mosaic" width="1200">
 
 *Figure 11.2: Longitudinal Mastery Acquisition Mosaic (3x5 Diverse Skills). Each subplot shows **Mastery Probability $P(m)$ (y-axis)** over **Cumulative Interaction Steps (x-axis)**. Comparisons show **iDKT (Solid)** vs. **Standard BKT (Dashed)** for three real student profiles per skill: Slower (Red), Medium (Yellow), and Quicker (Green). "○" markers denote correct answers, while "×" markers denote incorrect attempts.*
+
+<details>
+<summary>Click to see reproduction command</summary>
+
+```bash
+python examples/plot_mastery_mosaic_real.py \
+    --run_dir experiments/20251221_101701_idkt_pareto_v2_l0.10_assist2009_839009
+```
+</details>
 
 **Educational Interpretation:**
 The 3x5 mosaic provides empirical proof of iDKT's **Dynamic Calibration** across heterogeneous and challenging learning scenarios.

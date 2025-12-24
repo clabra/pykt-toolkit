@@ -1,0 +1,30 @@
+{
+  "valid_auc": 0.8053613035275593,
+  "valid_acc": 0.7630667297681022,
+  "valid_metrics": {
+    "l_sup": 0.4904031442919261,
+    "l_reg": 9.485186029204821e-08,
+    "l_ref": 0.058650788540641464,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "test_auc": 0.7974024094659624,
+  "test_acc": 0.7532146549495994,
+  "test_metrics": {
+    "l_sup": 0.5085249948226783,
+    "l_reg": 8.961125092336412e-08,
+    "l_ref": 0.056720119218031564,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "window_test_auc": 0.7994760787427349,
+  "window_test_acc": 0.7545938104448743,
+  "window_metrics": {
+    "l_sup": 0.4747640540187712,
+    "l_reg": 2.9179618634417854e-07,
+    "l_ref": 0.0,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "checkpoint": "/workspaces/pykt-toolkit/experiments/20251224_012908_idkt_test_fix_109487/best_model.pt"
+}

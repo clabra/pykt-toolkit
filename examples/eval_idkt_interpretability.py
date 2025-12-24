@@ -101,6 +101,10 @@ def main():
     data_config[args.dataset]['train_valid_file'] = orig_file.replace('.csv', '_bkt.csv')
     
     _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+    
+    # Extract index-to-UID mapping for converting dense indices to original UIDs
+    index_to_uid = valid_loader.dataset.dori.get("index_to_uid", {})
+    print(f"Loaded UID mapping for {len(index_to_uid)} students.")
 
     # Detect n_uid from checkpoint
     print(f"Loading checkpoint from {args.checkpoint} to detect n_uid...")
@@ -238,7 +242,8 @@ def main():
 
             # H2: Calculate Induced Mastery Trajectories
             for b in range(uids.shape[0]):
-                uid = uids[b].item()
+                uid_idx = uids[b].item()  # Dense index from DataLoader
+                uid = index_to_uid.get(uid_idx, uid_idx)  # Convert to original UID
                 student_mask = sm[b]
                 indices = torch.where(student_mask)[0]
                 
@@ -267,7 +272,8 @@ def main():
 
             # Export interaction records for heatmap and Rosters
             for b in range(uids.shape[0]):
-                uid = uids[b].item()
+                uid_idx = uids[b].item()  # Dense index from DataLoader
+                uid = index_to_uid.get(uid_idx, uid_idx)  # Convert to original UID
                 if uid not in export_uids_set: continue
 
                 # Handle interaction-by-interaction for roster export

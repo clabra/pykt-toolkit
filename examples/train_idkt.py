@@ -278,7 +278,7 @@ def main():
     train_loader, valid_loader = init_dataset4train(
         args.dataset, 'idkt', data_config, args.fold, args.batch_size)
     
-    # Extract num_students from dataset for individualized embeddings
+    # Extract num_students from dataset (uses dense UID-to-index mapping)
     num_students = train_loader.dataset.dori.get("num_students", 0)
     print(f"  Detected {num_students} unique students in training set.")
     
