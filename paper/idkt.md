@@ -1519,11 +1519,11 @@ Beyond global metrics, iDKT achieves high-fidelity alignment at the individual s
 ### 10.1 Per-Skill Parameter Alignment
 The following plots demonstrate the correlation between model-projected parameters and theoretical BKT targets across all skills in the ASSIST2009 dataset.
 
-<img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/per_skill_alignment_initmastery.png" alt="Initial Mastery Alignment" width="800">
+<img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/per_skill_alignment_initmastery.png" alt="Initial Mastery Alignment" width="800">
 
 *Figure 10.1: Correlation between iDKT Initial Mastery projections and BKT priors ($L_0$) for 124 skills.*
 
-<img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/per_skill_alignment_predictions.png" alt="Accuracy Alignment" width="800">
+<img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/per_skill_alignment_predictions.png" alt="Accuracy Alignment" width="800">
 
 *Figure 10.2: Correlation between iDKT Individualized Accuracy and BKT theoretical Accuracy per Skill.*
 
@@ -1592,7 +1592,7 @@ Scatter-distribution plots showing how iDKT "spreads" the population-average BKT
 
 | **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** |
 | :--- | :--- |
-| <img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/param_im_alt_ribbon.png" width="700"> | <img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/param_im_alt_delta.png" width="700"> |
+| <img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/param_im_alt_ribbon.png" width="700"> | <img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/param_im_alt_delta.png" width="700"> |
 | *Visualizes the global **Individualization Envelope**. Shaded area shows the 5th-95th percentile range.* | *Visualizes the **Magnitude of Personalization** ($\Delta = l_c - L_0$). Shows the density of remedial vs. advanced adjustments.* |
 
 <details>
@@ -1617,7 +1617,7 @@ This plot visualizes the model's ability to move from "One-Size-Fits-All" priors
 
 | **Option 1: Quantile Ribbon** | **Option 2: Delta Distribution** |
 | :--- | :--- |
-| <img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/param_rate_alt_ribbon.png" width="700"> | <img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/param_rate_alt_delta.png" width="700"> |
+| <img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/param_rate_alt_ribbon.png" width="700"> | <img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/param_rate_alt_delta.png" width="700"> |
 | *Visualizes the global **Velocity Envelope** relative to the BKT baseline. Shaded area covers 90% of the population.* | *Visualizes the **Acceleration Bias**. Shows whether the model tends to speed up or slow down student progress relative to theory.* |
 
 <details>
@@ -1677,7 +1677,7 @@ for i, ax in enumerate(axes):
     render_subplot(idkt_vs_bkt_real_histories[i])
 ```
 
-<img src="../experiments/20251223_193204_idkt_assist2009_baseline_742098/plots/mastery_alignment_mosaic_real.png" alt="Real-Data Mastery Alignment Mosaic" width="1200">
+<img src="../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/plots/mastery_alignment_mosaic_real.png" alt="Real-Data Mastery Alignment Mosaic" width="1200">
 
 *Figure 11.2: Longitudinal Mastery Acquisition Mosaic (3x5 Diverse Skills). Each subplot shows **Mastery Probability $P(m)$ (y-axis)** over **Cumulative Interaction Steps (x-axis)**. Comparisons show **iDKT (Solid)** vs. **Standard BKT (Dashed)** for three real student profiles per skill: Slower (Red), Medium (Yellow), and Quicker (Green). "○" markers denote correct answers, while "×" markers denote incorrect attempts.*
 
@@ -1906,7 +1906,7 @@ Despite noise, the PCA projection maintains a visible mastery gradient, distingu
 
 | Correlation Analysis | Latent Manifold Geometry |
 | :---: | :---: |
-| ![Scatter A09](../experiments/20251223_193204_idkt_assist2009_baseline_742098/probe_scatter_true.png) | ![PCA A09](../experiments/20251223_193204_idkt_assist2009_baseline_742098/probe_pca.png) |
+| ![Scatter A09](../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/probe_scatter_true.png) | ![PCA A09](../experiments/20251224_002850_idkt_alignment_assist2009_baseline_792370/probe_pca.png) |
 
 <details>
 <summary>Click to see reproduction command</summary>

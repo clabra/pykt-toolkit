@@ -22,6 +22,7 @@ Initial version: iDKT is identical to AKT baseline.
 
 import os
 import sys
+import pandas as pd
 import argparse
 import json
 import torch
@@ -279,8 +280,12 @@ def main():
         args.dataset, 'idkt', data_config, args.fold, args.batch_size)
     
     # Extract num_students from dataset for individualized embeddings
-    num_students = train_loader.dataset.dori.get("num_students", 0)
-    print(f"  Detected {num_students} unique students in training set.")
+    # We must use the MAX UID across ALL folds to ensure a universal coordinate system.
+    # Otherwise, index-to-student mapping would differ across fold configurations.
+    full_csv_path = os.path.join(data_config[args.dataset]['dpath'], data_config[args.dataset]['train_valid_file'])
+    df_full = pd.read_csv(full_csv_path)
+    num_students = int(df_full['uid'].max() + 1)
+    print(f"  Detected universal student count: {num_students}")
     
     # Load BKT Skill Parameters for L_param
     bkt_skill_params = None

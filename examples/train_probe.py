@@ -28,6 +28,9 @@ Usage:
         --dataset assist2015 \
         --fold 0 \
         --output_dir experiments/.../probing
+
+Note that data/[DATASET]/keyid2idx.json is a bidirectional mapping dictionary that converts between original dataset IDs and zero-based 
+sequential indices used internally by the pykt framework
 """
 
 import os
@@ -137,191 +140,116 @@ def parse_args():
 
 def extract_embeddings_and_targets(model, loader, bkt_df, device):
     """
-    Runs model on loader, extracts embeddings, and aligns with BKT targets.
+    Runs model on loader, extracts embeddings, and aligns with BKT targets using robust signatures.
     """
     model.eval()
     
     embeddings_list = []
     targets_list = []
     
-    # 1. Load BKT Predictions (Full Sequences)
-    # BKT CSV format: student_id, skill_id, y_true, p_idkt, y_idkt, p_bkt, ...
-    print("Indexing BKT predictions...")
-    bkt_lookup = {}
-    grouped = bkt_df.groupby('student_id')
-    for uid, group in grouped:
-        bkt_lookup[uid] = group['p_bkt'].values
-    print(f"Loaded BKT paths for {len(bkt_lookup)} students.")
-
-    # 2. Build Index -> Raw UID Mapping via keyid2idx.json
+    # Build Index -> Raw UID Mapping for current loader
     idx_to_uid = {}
-    try:
-        # Infer path from loader or data_config
-        # loader.dataset.dpath usually points to the processed data folder
-        if hasattr(loader.dataset, 'dpath'):
-            dpath = loader.dataset.dpath
-        else:
-            # Fallback: assume typical pykt structure relative to script/args
-            # We don't have easy access to data_config here inside the function unless passed
-            # But we can try to guess from dataset name if passed?
-            # Better: pass 'dataset_name' to this function.
-            pass
-            
-        # Try to find keyid2idx.json in the dataset folder
-        # We can reach into the dataset object to find the directory
-        if hasattr(loader.dataset, 'input_type'):
-             # Standard KTDataset
-             # Checking common locations
-             # The loader doesn't store the full path easily accessible sometimes
-             pass
-    except Exception:
-        pass
-
-    # Actually, let's load it from the known path if possible or rely on the internal dict if loaded
-    # The previous attempt relied on 'dori' which might be subsetted.
-    # Let's load the JSON directly if we can find it.
-    
-    mapping_loaded = False
-    
-    # Try getting it from the internal dataset dictionary first (fastest)
     try:
         ds = loader.dataset
         if hasattr(ds, 'dataset'): ds = ds.dataset # Handle Subset
         if hasattr(ds, 'dori') and 'uid_to_index' in ds.dori:
-            print("Using dori.uid_to_index for mapping...")
             uid_to_index = ds.dori['uid_to_index']
-            # keys are original IDs (str), values are indices (int)
             idx_to_uid = {v: k for k, v in uid_to_index.items()}
-            mapping_loaded = True
+            print(f"Loaded student ID mapping for {len(idx_to_uid)} students.")
     except Exception as e:
-        print(f"Dori mapping failed: {e}")
-        
-    if not mapping_loaded:
-        # Try loading file from likely location
-        try:
-            # We assume the code is running in project root
-            # We need the dataset name. We'll pass it in or infer.
-            # This function signature change is risky.
-            # Let's try to infer from BKT predictions if they match indices
-            pass
-        except:
-            pass
-            
-    if idx_to_uid:
-        print(f"Built Index->Original ID mapping for {len(idx_to_uid)} students.")
-        # Check sample
-        first_idx = next(iter(idx_to_uid))
-        print(f"Sample: Index {first_idx} -> ID {idx_to_uid[first_idx]}")
-        
-        # Check type of Original ID in BKT Lookup
-        # CSV reading usually infers types (int for 590)
-        # JSON keys are always strings ("590")
-        # We need to handle this type mismatch!
-        
-        sample_bkt_key = next(iter(bkt_lookup))
-        print(f"Sample BKT Key: {sample_bkt_key} (Type: {type(sample_bkt_key)})")
-        
-    # 3. Track Consumption Offsets & Last QID per Student
-    offsets = {} # uid -> current BKT index pointer
-    last_qids = {} # uid -> last processed QID to detect inter-chunk repeats
+        print(f"Dataset UID mapping failed: {e}")
 
+    # 1. Index BKT Predictions with Signatures
+    print("Indexing BKT predictions with signatures...")
+    bkt_indexed = {} # raw_uid -> list of (sig, p_bkt)
+    grouped = bkt_df.groupby('student_id')
+    for uid, group in grouped:
+        sigs = []
+        for _, row in group.iterrows():
+            # Signature: (concept_id, y_true, round_p_idkt)
+            sig = (int(row['skill_id']), int(row['y_true']), round(float(row['p_idkt']), 6))
+            sigs.append((sig, float(row['p_bkt'])))
+        bkt_indexed[uid] = sigs
+    print(f"Loaded BKT paths for {len(bkt_indexed)} students.")
+
+    # 2. Process Loader with Signature Matching
     steps_processed = 0
-    students_matched = 0
+    resync_events = 0
+    total_samples = 0
+    match_count = 0
     
     with torch.no_grad():
         for i, data in enumerate(loader):
-            # Unpack inputs
             q = data["qseqs"].long().to(device)
             c = data["cseqs"].long().to(device)
             r = data["rseqs"].long().to(device)
-            m = data["masks"].long().to(device)
             sm = data["smasks"].long().to(device)
+            uids_batch = data["uids"].cpu().numpy().flatten()
             
-            # Extract UIDs (batch indices)
-            if "uids" in data:
-                uids_batch = data["uids"].cpu().numpy().flatten()
-            else:
-                raise ValueError("DataLoader must return UIDs.")
+            # Prepare full sequences for model matching (must match eval_idkt_interpretability)
+            cq_full = torch.cat((q[:, 0:1], data["shft_qseqs"].long().to(device)), dim=1)
+            cc_full = torch.cat((c[:, 0:1], data["shft_cseqs"].long().to(device)), dim=1)
+            cr_full = torch.cat((r[:, 0:1], data["shft_rseqs"].long().to(device)), dim=1)
 
-            # Forward pass (concept-based input for iDKT with pid_data=q)
-            preds, _, _, _, concat_q, _ = model(c, r, pid_data=q, qtest=True, uid_data=data["uids"].to(device))
+            # Forward pass
+            # y[i] is prediction for interaction i (which is cc_full[i])
+            # So y[1+t] is prediction for cshft[t]
+            preds, _, _, _, concat_q, _ = model(cc_full, cr_full, pid_data=cq_full, qtest=True, uid_data=data["uids"].to(device))
             
             bs, seq_len, dim = concat_q.shape
-            
             concat_q_np = concat_q.cpu().numpy()
-            q_np = q.cpu().numpy()
-            mask_np = sm.cpu().numpy() # [BS, SeqLen]
-            
+            preds_np = preds.cpu().numpy()
+            mask_np = sm.cpu().numpy() 
+            # Extraction for signatures
+            cshft_np = data["shft_cseqs"].cpu().numpy()
+            rshft_np = data["shft_rseqs"].cpu().numpy()
+
             for b_idx in range(bs):
                 uid_idx = int(uids_batch[b_idx])
-                
-                # Convert Index -> Raw UID
                 raw_uid = idx_to_uid.get(uid_idx, uid_idx)
                 
-                # Robust Lookup
-                if raw_uid not in bkt_lookup:
-                    if str(raw_uid) in bkt_lookup: raw_uid = str(raw_uid)
-                    elif int(raw_uid) in bkt_lookup: raw_uid = int(raw_uid)
+                if raw_uid not in bkt_indexed:
+                    continue
                 
-                if raw_uid not in bkt_lookup:
-                    continue 
-                    
-                bkt_full_seq = bkt_lookup[raw_uid]
-                
-                # Identify valid steps
+                student_sigs = bkt_indexed[raw_uid]
                 valid_indices = np.where(mask_np[b_idx] == 1)[0]
-                if len(valid_indices) == 0: continue
-                
-                # Stateful Alignment Logic
-                if raw_uid not in offsets:
-                    offsets[raw_uid] = -1 # Start before 0
-                    last_qids[raw_uid] = -999 # Sentinel
-                
-                current_bkt_idx = offsets[raw_uid]
                 
                 for t in valid_indices:
-                    qid = q_np[b_idx, t]
+                    # Model signature for interaction at step t in shft arrays
+                    skill_id = int(cshft_np[b_idx, t])
+                    y_true = int(rshft_np[b_idx, t])
+                    p_idkt = round(float(preds_np[b_idx, 1+t]), 6) # Correctly shifted
+                    model_sig = (skill_id, y_true, p_idkt)
                     
-                    # Infer Repeat Status from QID continuity
-                    # If QID matches the last processed QID for this user, it's a repeat
-                    if qid == last_qids[raw_uid]:
-                        is_repeat = True
-                    else:
-                        is_repeat = False
-                        
-                    last_qids[raw_uid] = qid
+                    found = False
+                    for b_sig, p_bkt in student_sigs:
+                        if model_sig == b_sig:
+                            # Success: Use the correctly shifted latent state and prediction
+                            embeddings_list.append(concat_q_np[b_idx, 1+t])
+                            targets_list.append(p_bkt)
+                            found = True
+                            match_count += 1
+                            break
                     
-                    if not is_repeat:
-                        # New question -> Advance BKT cursor
-                        current_bkt_idx += 1
+                    if not found:
+                        resync_events += 1
+                        if resync_events <= 3:
+                            print(f"  [DEBUG] No match for student {raw_uid}, sig {model_sig}")
+                            print(f"  [DEBUG] Sample BKT sigs: {student_sigs[:2]}")
                     
-                    # Boundary Checks
-                    if current_bkt_idx < 0:
-                        current_bkt_idx = 0
-                    
-                    if current_bkt_idx >= len(bkt_full_seq):
-                        break
-                        
-                    # Extract
-                    emb = concat_q_np[b_idx, t]
-                    target = bkt_full_seq[current_bkt_idx]
-                    
-                    embeddings_list.append(emb)
-                    targets_list.append(target)
+                    total_samples += 1
                 
-                # Update state
-                offsets[raw_uid] = current_bkt_idx
                 steps_processed += len(valid_indices)
-                students_matched += 1
             
             if steps_processed > 20000 and "debug" in sys.argv:
                 break
                 
     if not embeddings_list:
-        print("No embeddings extracted.")
+        print("No embeddings matched.")
         return None, None
         
-    print(f"Extraction complete. Consumed {steps_processed} steps across {students_matched} windows.")
+    fidelity = match_count / max(1, total_samples)
+    print(f"Extraction complete. Matched {match_count}/{total_samples} samples ({fidelity:.1%} fidelity).")
     
     X = np.vstack(embeddings_list)
     y = np.array(targets_list)
@@ -415,8 +343,14 @@ def main():
 
     # 2. Load Dataset (Validation Set)
     print(f"Loading validation set for {args.dataset}, fold {args.fold}...")
-    # We need the loader that corresponds to the BKT predictions.
-    # Usually we validate on the VALIDATION split.
+    
+    # Ensure we use augmented BKT file for consistency with interpretability outputs
+    orig_file = data_config[args.dataset]['train_valid_file']
+    bkt_file = orig_file.replace('.csv', '_bkt.csv')
+    if os.path.exists(os.path.join(data_config[args.dataset]['dpath'], bkt_file)):
+        data_config[args.dataset]['train_valid_file'] = bkt_file
+        print(f"  Using augmented training file: {bkt_file}")
+
     train_loader, valid_loader = init_dataset4train(
         args.dataset, 'idkt', data_config, args.fold, args.batch_size)
     

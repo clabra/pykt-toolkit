@@ -27,7 +27,7 @@ The paper is intended to be published in this [MDPI special issue](https://www.m
 
 - `/data`: Processed datasets ready for training
 - `/data_original`: Raw datasets (do not modify)
-- `data/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `keyid2idx.json`, a dictionary mapping original dataset IDs and zero-based sequential indices used internally by the pykt models.
+- `data/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `data/[DATASET]/keyid2idx.json`, a bidirectional mapping dictionary that converts between original dataset IDs and zero-based sequential indices used internally by the pykt framework.
 
 ## Environment Setup
 

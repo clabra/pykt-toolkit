@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Evaluation script for iDKT interpretability (alignment with BKT reference model).
+
+Note that data/[DATASET]/keyid2idx.json is a bidirectional mapping dictionary that converts between original dataset IDs and zero-based 
+sequential indices used internally by the pykt framework
 """
 
 import os
@@ -101,6 +104,13 @@ def main():
     data_config[args.dataset]['train_valid_file'] = orig_file.replace('.csv', '_bkt.csv')
     
     _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+    
+    # Build Index -> Raw UID Mapping
+    ds = valid_loader.dataset
+    if hasattr(ds, 'dataset'): ds = ds.dataset # Handle Subset
+    uid_to_index = ds.dori['uid_to_index']
+    idx_to_uid = {v: k for k, v in uid_to_index.items()}
+    print(f"Loaded student ID mapping for {len(idx_to_uid)} students.")
 
     # Detect n_uid from checkpoint
     print(f"Loading checkpoint from {args.checkpoint} to detect n_uid...")
@@ -204,16 +214,14 @@ def main():
             cc_full = torch.cat((c[:,0:1], cshft), dim=1)
             cr_full = torch.cat((r[:,0:1], rshft), dim=1)
             cq_full = torch.cat((q[:,0:1], qshft), dim=1)
-            
-            y, initmastery, rate, _, _ = model(cc_full.long(), cr_full.long(), cq_full.long(), uid_data=uids.to(device))
+            # Forward with uid_data
+            y, idkt_im_batch, idkt_r_batch, _, concat_q, reg_losses_dict = model(cc_full.long(), cr_full.long(), cq_full.long(), uid_data=uids.to(device), qtest=True)
             
             # Collect aggregated metrics
+            # y[:, 1:] corresponds to shifted concepts cshft
             all_idkt_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())
             all_bkt_p.extend(torch.masked_select(bkt_p_batch, sm).cpu().numpy())
             
-            idkt_im_batch = initmastery[:, 1:]
-            idkt_r_batch = rate[:, 1:]
-
             # Static BKT Priors for Initial Mastery alignment
             bkt_im_static_batch = torch.zeros_like(cshft).float().to(device)
             for b in range(cshft.shape[0]):
@@ -222,7 +230,8 @@ def main():
                     if skill_id != -1:
                         bkt_im_static_batch[b, s] = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])['prior']
 
-            all_idkt_initmastery.extend(torch.masked_select(idkt_im_batch, sm).cpu().numpy())
+            # Use shifted idkt results for masked select
+            all_idkt_initmastery.extend(torch.masked_select(idkt_im_batch[:, 1:], sm).cpu().numpy())
             all_bkt_initmastery.extend(torch.masked_select(bkt_im_static_batch, sm).cpu().numpy())
             
             # Reference rates
@@ -233,119 +242,110 @@ def main():
                     if skill_id != -1:
                         ref_rate_batch[b, s] = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])['learns']
             
-            all_idkt_rate.extend(torch.masked_select(idkt_r_batch, sm).cpu().numpy())
+            all_idkt_rate.extend(torch.masked_select(idkt_r_batch[:, 1:], sm).cpu().numpy())
             all_bkt_rate.extend(torch.masked_select(ref_rate_batch, sm).cpu().numpy())
 
             # H2: Calculate Induced Mastery Trajectories
             for b in range(uids.shape[0]):
-                uid = uids[b].item()
+                uid_idx = uids[b].item()
+                raw_uid = idx_to_uid.get(uid_idx, uid_idx) # Get raw student ID (identity mapping now)
                 student_mask = sm[b]
                 indices = torch.where(student_mask)[0]
                 
                 for idx in indices:
                     skill_id = int(cshft[b, idx].item())
                     y_true = int(rshft[b, idx].item())
-                    idkt_l0 = idkt_im_batch[b, idx].item()
-                    idkt_t = idkt_r_batch[b, idx].item()
-                    
-                    # BKT skill params for S/G
-                    params = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])
-                    s_c, g_c = params['slips'], params['guesses']
-                    
-                    # State tracking for induced trajectory
-                    state_key = (uid, skill_id)
-                    if state_key not in induced_mastery_states:
-                        # Initialize with iDKT's projected initial mastery
-                        induced_mastery_states[state_key] = idkt_l0
-                    
-                    current_m = induced_mastery_states[state_key]
-                    all_idkt_induced_mastery.append(current_m)
-                    all_bkt_reference_mastery.append(bkt_im_batch[b, idx].item())
-                    
-                    # Update for next step using BKT formula but iDKT learning rate
-                    induced_mastery_states[state_key] = bkt_step(current_m, y_true, idkt_t, s_c, g_c)
+                    idkt_l0 = idkt_im_batch[b, 1+idx].item()
+                    idkt_t = idkt_r_batch[b, 1+idx].item()
 
-            # Export interaction records for heatmap and Rosters
+                    # Update rosters if student is tracked
+                    if int(raw_uid) in export_uids_set:
+                        # BKT skill params for S/G
+                        params = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])
+                        s_c, g_c = params['slips'], params['guesses']
+                        
+                        # State tracking for induced trajectory
+                        state_key = (raw_uid, skill_id)
+                        if state_key not in induced_mastery_states:
+                            # Initialize with iDKT's projected initial mastery
+                            induced_mastery_states[state_key] = idkt_l0
+                        
+                        current_m = induced_mastery_states[state_key]
+                        all_idkt_induced_mastery.append(current_m)
+                        all_bkt_reference_mastery.append(bkt_im_batch[b, idx].item())
+                        
+                        # Update for next step using BKT formula but iDKT learning rate
+                        induced_mastery_states[state_key] = bkt_step(current_m, y_true, idkt_t, s_c, g_c)
+
+            # Export interaction records and Rosters
             for b in range(uids.shape[0]):
-                uid = uids[b].item()
-                if uid not in export_uids_set: continue
-
-                # Handle interaction-by-interaction for roster export
+                uid_idx = uids[b].item()
+                raw_uid = idx_to_uid.get(uid_idx, uid_idx)
+                
                 student_mask = sm[b]
                 indices = torch.where(student_mask)[0]
                 
-                # ROSTER EXPORT OPTIMIZATION
-                if not args.skip_roster:
+                # 1. Interaction Records (FOR ALL STUDENTS)
+                for idx in indices:
+                    # Parameter Alignment
+                    param_records.append({
+                        'student_id': raw_uid,
+                        'skill_id': cshft[b, idx].item(),
+                        'idkt_im': idkt_im_batch[b, 1+idx].item(),
+                        'bkt_im': bkt_im_static_batch[b, idx].item(),
+                    })
+                    # Trajectory Alignment
+                    traj_records.append({
+                        'student_id': raw_uid,
+                        'skill_id': cshft[b, idx].item(),
+                        'y_true': int(rshft[b, idx].item()),
+                        'p_idkt': y[b, 1+idx].item(),
+                        'y_idkt': 1 if y[b, 1+idx].item() > 0.5 else 0,
+                        'p_bkt': bkt_p_batch[b, idx].item(),
+                        'y_bkt': 1 if bkt_p_batch[b, idx].item() > 0.5 else 0,
+                    })
+                    # Rate Alignment
+                    rate_records.append({
+                        'student_id': raw_uid,
+                        'skill_id': cshft[b, idx].item(),
+                        'idkt_rate': idkt_r_batch[b, 1+idx].item(),
+                        'bkt_rate': ref_rate_batch[b, idx].item(),
+                    })
+
+                # 2. Roster Export (ONLY FOR TRACKED STUDENTS)
+                if int(raw_uid) in export_uids_set and not args.skip_roster:
                     sampling_rate = args.roster_sampling_rate
-                    # 1. Sequential BKT Updates and Sampling
+                    # Sequential updates for tracking state
                     for step_idx, idx in enumerate(indices):
                         skill_id = int(cshft[b, idx].item())
                         correct = int(rshft[b, idx].item())
                         
-                        idkt_roster.update_state(skill_id, uid, correct)
-                        bkt_roster.update_state(str(skill_id), uid, correct)
+                        idkt_roster.update_state(skill_id, raw_uid, correct)
+                        bkt_roster.update_state(str(skill_id), raw_uid, correct)
                         
-                        # Log BKT mastery only if sampling or it's the last step
                         if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
-                            bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), uid) for s in all_skills}
+                            bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), raw_uid) for s in all_skills}
                             roster_bkt_records.append({
-                                'student_id': uid,
+                                'student_id': raw_uid,
                                 'step': step_idx + 1,
                                 'skill_id': skill_id,
                                 'correct': correct,
                                 **bkt_mastery
                             })
 
-                    # 2. Vectorized iDKT Mastery Retrieval
-                    idkt_matrix = idkt_roster.get_mastery_matrix(uid) # [T, N]
+                    idkt_matrix = idkt_roster.get_mastery_matrix(raw_uid)
                     if idkt_matrix is not None:
                         for step_idx, idx in enumerate(indices):
                             if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
                                 step_mastery = idkt_matrix[step_idx]
                                 idkt_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
                                 roster_idkt_records.append({
-                                    'student_id': uid,
+                                    'student_id': raw_uid,
                                     'step': step_idx + 1,
                                     'skill_id': int(cshft[b, idx].item()),
                                     'correct': int(rshft[b, idx].item()),
                                     **idkt_mastery_formatted
                                 })
-                else:
-                    # If skipping roster, we still need to update iDKT state for internal consistency 
-                    # (though here it's only needed for the roster itself which we're skipping)
-                    pass
-                
-                # Get indices where mask is true for this student
-                student_mask = sm[b]
-                indices = torch.where(student_mask)[0]
-                
-                for idx in indices:
-                    # 1. Parameter Alignment (Static vs Static) - FOR THE GREEN PLOT
-                    param_records.append({
-                        'student_id': uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'idkt_im': idkt_im_batch[b, idx].item(), # static projection
-                        'bkt_im': bkt_im_static_batch[b, idx].item(), # static prior
-                    })
-
-                    # 2. Trajectory Alignment (Dynamic vs Dynamic) - THE GUIDANCE PLOT
-                    traj_records.append({
-                        'student_id': uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'y_true': int(rshft[b, idx].item()), # Ground truth label
-                        'p_idkt': y[b, idx+1].item(), # iDKT prediction
-                        'y_idkt': 1 if y[b, idx+1].item() > 0.5 else 0, # Binary iDKT
-                        'p_bkt': bkt_p_batch[b, idx].item(), # BKT prediction (aligned via sm)
-                        'y_bkt': 1 if bkt_p_batch[b, idx].item() > 0.5 else 0, # Binary BKT
-                    })
-
-                    # 3. Rate Alignment (Dynamic vs Static)
-                    rate_records.append({
-                        'student_id': uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'idkt_rate': idkt_r_batch[b, idx].item(), # iDKT rate
-                        'bkt_rate': ref_rate_batch[b, idx].item(), # BKT rate
-                    })
 
     # Save Record Files
     if param_records:
