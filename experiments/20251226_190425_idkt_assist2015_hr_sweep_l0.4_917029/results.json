@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.7085381812331794,
+  "valid_acc": 0.7460121266387021,
+  "valid_metrics": {
+    "l_sup": 0.5191418890480988,
+    "l_reg": 1.5309004998109267e-06,
+    "l_ref": 0.006358427613289381,
+    "l_init": 0.01520214749237693,
+    "l_rate": 0.050027435929380144
+  },
+  "test_auc": 0.7082456510869324,
+  "test_acc": 0.7465571441084585,
+  "test_metrics": {
+    "l_sup": 0.5191418890480988,
+    "l_reg": 1.5309004998109267e-06,
+    "l_ref": 0.006358427613289381,
+    "l_init": 0.01520214749237693,
+    "l_rate": 0.050027435929380144
+  },
+  "best_epoch": 15,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20251226_190425_idkt_assist2015_hr_sweep_l0.4_917029",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.2,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 100,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.4,
+    "lambda_initmastery": 0.4,
+    "lambda_rate": 0.4,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

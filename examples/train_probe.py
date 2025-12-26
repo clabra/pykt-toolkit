@@ -141,11 +141,13 @@ def parse_args():
 def extract_embeddings_and_targets(model, loader, bkt_df, device):
     """
     Runs model on loader, extracts embeddings, and aligns with BKT targets using robust signatures.
+    Returns: (X, y, skills)
     """
     model.eval()
     
     embeddings_list = []
     targets_list = []
+    skills_list = []
     
     # Build Index -> Raw UID Mapping for current loader
     idx_to_uid = {}
@@ -227,6 +229,7 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                             # Success: Use the correctly shifted latent state and prediction
                             embeddings_list.append(concat_q_np[b_idx, 1+t])
                             targets_list.append(p_bkt)
+                            skills_list.append(skill_id)
                             found = True
                             match_count += 1
                             break
@@ -253,8 +256,9 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
     
     X = np.vstack(embeddings_list)
     y = np.array(targets_list)
+    skills = np.array(skills_list)
     
-    return X, y
+    return X, y, skills
 
 def run_probing_experiment(X, y, seed, output_dir=None):
     """
@@ -316,6 +320,53 @@ def run_probing_experiment(X, y, seed, output_dir=None):
         "pearson_control": pearson_control,
         "selectivity_r2": r2_true - r2_control
     }
+
+def run_per_skill_probing(X, y, skills, seed):
+    """
+    Computes probing metrics for EACH skill individually.
+    """
+    unique_skills = np.unique(skills)
+    per_skill_results = {}
+    
+    print(f"Running per-skill probing for {len(unique_skills)} skills...")
+    
+    for sid in unique_skills:
+        skill_mask = (skills == sid)
+        if np.sum(skill_mask) < 20: # Min samples for a meaningful probe
+            continue
+            
+        X_s = X[skill_mask]
+        y_s = y[skill_mask]
+        
+        # Split 80/20
+        indices = np.arange(len(X_s))
+        np.random.seed(seed)
+        np.random.shuffle(indices)
+        split_idx = int(0.8 * len(X_s))
+        if split_idx == 0: continue
+        
+        X_train, X_test = X_s[indices[:split_idx]], X_s[indices[split_idx:]]
+        y_train, y_test = y_s[indices[:split_idx]], y_s[indices[split_idx:]]
+        
+        if len(y_test) < 5 or len(np.unique(y_train)) < 2:
+             continue
+
+        probe = LinearRegression()
+        probe.fit(X_train, y_train)
+        y_pred = probe.predict(X_test)
+        
+        try:
+            r2 = r2_score(y_test, y_pred)
+            corr, _ = pearsonr(y_test, y_pred)
+            per_skill_results[int(sid)] = {
+                "r2": float(r2),
+                "pearson": float(corr),
+                "count": int(np.sum(skill_mask))
+            }
+        except:
+            continue
+            
+    return per_skill_results
 
 def main():
     args = parse_args()
@@ -394,7 +445,7 @@ def main():
     
     # 5. Extract & Align
     print("Starting Extraction Phase...")
-    X, y = extract_embeddings_and_targets(model, valid_loader, bkt_df, device)
+    X, y, skills = extract_embeddings_and_targets(model, valid_loader, bkt_df, device)
     
     if X is None:
         print("Error: No aligned data found. Check BKT file vs Dataset UIDs.")
@@ -419,7 +470,14 @@ def main():
     out_path = os.path.join(args.output_dir, 'probe_results.json')
     with open(out_path, 'w') as f:
         json.dump(results, f, indent=2)
-    print(f"Saved results to {out_path}")
+    print(f"Saved global results to {out_path}")
+    
+    # 8. Per-Skill Probing
+    per_skill_results = run_per_skill_probing(X, y, skills, args.seed)
+    ps_path = os.path.join(args.output_dir, 'probe_per_skill_results.json')
+    with open(ps_path, 'w') as f:
+        json.dump(per_skill_results, f, indent=2)
+    print(f"Saved per-skill results to {ps_path}")
 
 if __name__ == "__main__":
     main()

@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
+from scipy.stats import pearsonr
 import pickle
 
 # Add project root to path
@@ -613,6 +614,59 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
     print(f"✓ Saved: {output_path}")
     plt.close()
 
+def plot_per_skill_bar_chart(df_agg, metric_col, output_path, title, ylabel, color='#2980b9'):
+    """
+    Generic bar chart for per-skill metrics, ranked.
+    """
+    if df_agg is None or df_agg.empty:
+        return
+        
+    df_sorted = df_agg.sort_values(metric_col, ascending=False)
+    
+    plt.figure(figsize=(15, 6))
+    bars = plt.bar(range(len(df_sorted)), df_sorted[metric_col], color=color, alpha=0.8, edgecolor='black', linewidth=0.5)
+    
+    # Label top and bottom 5 skills if many
+    num_skills = len(df_sorted)
+    if num_skills > 60:
+        plt.xticks([]) # Hide x labels if too many
+        plt.xlabel('Skills (Ranked)', fontsize=12)
+    else:
+        plt.xticks(range(num_skills), df_sorted.index, rotation=90, fontsize=8)
+        plt.xlabel('Skill ID', fontsize=12)
+        
+    plt.ylabel(ylabel, fontsize=12)
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.grid(True, axis='y', alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    print(f"✓ Saved Bar Chart: {output_path}")
+    plt.close()
+
+def plot_per_skill_probing_bars(run_dir, output_path):
+    """Plot probing results if they exist."""
+    ps_path = os.path.join(run_dir, 'probe_per_skill_results.json')
+    if not os.path.exists(ps_path):
+         # Try looking in subdirectory 'probing'
+         ps_path = os.path.join(run_dir, 'probing', 'probe_per_skill_results.json')
+         
+    if not os.path.exists(ps_path):
+        print(f"⚠️  Probing per-skill results not found at {ps_path}, skipping plot")
+        return
+        
+    with open(ps_path, 'r') as f:
+        data = json.load(f)
+    
+    df = pd.DataFrame.from_dict(data, orient='index')
+    if df.empty: return
+    
+    df.index.name = 'skill_id'
+    
+    plot_per_skill_bar_chart(df, 'pearson', output_path, 
+                            "Per-Skill Latent Grounding (Probing Pearson r)", 
+                            "Diagnostic Pearson Correlation", color='#27ae60')
+
 
 def main():
     parser = argparse.ArgumentParser(description='Generate comprehensive analysis plots for iKT experiments')
@@ -626,6 +680,11 @@ def main():
                        help='Max slip rate allowed for a skill to be included (default: 0.3)')
     parser.add_argument('--bkt_params_path', type=str,
                        help='Path to bkt_skill_params.pkl')
+    # New Plot Type Flags
+    parser.add_argument('--plot_heatmap', type=int, default=1, help='Generate Student x Skill Heatmaps')
+    parser.add_argument('--plot_correlation', type=int, default=1, help='Generate Per-Skill Correlation Bar Charts')
+    parser.add_argument('--plot_variance', type=int, default=1, help='Generate Per-Skill Individualization Variance Bar Charts')
+    parser.add_argument('--plot_probing', type=int, default=1, help='Generate Per-Skill Probing Bar Charts')
     
     args = parser.parse_args()
     
@@ -711,10 +770,50 @@ def main():
                     'trajectory': 'predictions',
                     'rate': 'rate'
                 }
-                plot_filename = f'per_skill_alignment_{plot_name_map.get(split, split)}{suffix}.png'
-                print(f"   Generating {plot_filename}...")
-                plot_per_skill_alignment(df_split, os.path.join(plots_dir, plot_filename), config)
-            
+                base_name = plot_name_map.get(split, split)
+                
+                # 1. Heatmaps
+                if args.plot_heatmap:
+                    plot_filename = f'per_skill_alignment_{base_name}{suffix}.png'
+                    print(f"   Generating Heatmap: {plot_filename}...")
+                    plot_per_skill_alignment(df_split, os.path.join(plots_dir, plot_filename), config)
+                
+                # Identify columns for bars
+                new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+                mi_col, rasch_col = None, None
+                for c1, c2 in new_pairs:
+                    if c1 in df_split.columns and c2 in df_split.columns:
+                        mi_col, rasch_col = c1, c2; break
+                
+                if mi_col:
+                    # 2. Correlation Bar Charts
+                    if args.plot_correlation:
+                        corr_agg = df_split.groupby('skill_id').apply(
+                            lambda x: pearsonr(x[mi_col], x[rasch_col])[0] if len(x) > 5 and len(np.unique(x[rasch_col])) > 1 else np.nan
+                        )
+                        corr_agg = corr_agg.dropna()
+                        if not corr_agg.empty:
+                            plot_filename = f'per_skill_correlation_{base_name}{suffix}.png'
+                            plot_per_skill_bar_chart(corr_agg.to_frame('r'), 'r', 
+                                                    os.path.join(plots_dir, plot_filename),
+                                                    f"Structural Fidelity: {base_name.replace('_',' ').title()} Alignment",
+                                                    "Pearson Correlation (r)", color='#2980b9')
+                                                    
+                    # 3. Individualization Variance Bar Charts
+                    if args.plot_variance:
+                        var_agg = df_split.groupby('skill_id')[mi_col].std()
+                        var_agg = var_agg.dropna()
+                        if not var_agg.empty:
+                            plot_filename = f'per_skill_variance_{base_name}{suffix}.png'
+                            plot_per_skill_bar_chart(var_agg.to_frame('std'), 'std',
+                                                    os.path.join(plots_dir, plot_filename),
+                                                    f"Individualization Volume: {base_name.replace('_',' ').title()} Nuance",
+                                                    "Standard Deviation (σ)", color='#f39c12')
+                
+            # 4. Probing Bar Chart
+            if args.plot_probing:
+                print("   Generating Probing Alignment Bar Chart...")
+                plot_per_skill_probing_bars(args.run_dir, os.path.join(plots_dir, 'per_skill_probing_r.png'))
         else:
             print("⚠️  Limited data available - generating basic plots only")
             

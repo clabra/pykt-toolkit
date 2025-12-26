@@ -144,13 +144,14 @@ def main():
     parser.add_argument("--exp_root", default="experiments")
     parser.add_argument("--pattern", default="*idkt_pareto_v2*")
     parser.add_argument("--output", default="assistant/pareto_results.csv")
+    parser.add_argument("--plot_dir", default="assistant")
     args = parser.parse_args()
     
     df = collect_results(args.exp_root, args.pattern)
     if not df.empty:
         df.to_csv(args.output, index=False)
         print(f"✓ Saved results CSV to {args.output}")
-        plot_pareto(df)
+        plot_pareto(df, output_dir=args.plot_dir)
     else:
         print("No matching results found.")
 
