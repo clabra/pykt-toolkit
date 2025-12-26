@@ -194,7 +194,7 @@ graph TD
 
 </div>
 
-**Embeddings**
+### Embeddings
 
 To bridge psychometric theory and deep learning, iDKT employs a specialized notation for its Rasch-enhanced embeddings:
 
@@ -212,7 +212,7 @@ To bridge psychometric theory and deep learning, iDKT employs a specialized nota
 *   **$x'_t$ (Individualized Question)**: The personalized question embedding, representing the "residual challenge" for a student ($x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$).
 *   **$y'_t$ (Individualized Interaction)**: The personalized interaction embedding, representing the "momentum-grounded" historical record ($y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$).
 
-**Fusion of Embeddings (Rasch Logic)**
+### Fusion of Embeddings (Rasch Logic)
 
 The input layer fuses these components to create individualized representations that bridge psychometric theory with high-dimensional latent spaces:
 
@@ -227,8 +227,48 @@ The input layer fuses these components to create individualized representations 
 3.  **Learner Profile Grounding**:
     *   **Initial Knowledge ($l_c = L0_{skill} + k_c \cdot d_c$)**: Grounding the starting line in BKT $L0$.
     *   **Learning Velocity ($t_s = T_{skill} + v_s \cdot d_{s}$)**: Grounding the momentum in BKT $T$.
-    
-**Key Features:**
+
+
+### Parameter Loss Functions
+
+#### $\mathcal{L}_{\text{par}}$ 
+
+This kind of loss component is designed to align a parameter estimated by the iDKT model with a parameter defined by the reference mdoel, 
+
+We define this loss functions for the learning rate (individual velocity) and init mastery parameters postulated by the BKT model. 
+
+The alignment is maintained through a three-stage structural grounding process. Let's see them for the case of the rate ($T$) parameter:
+
+**1. Generation of the Individualized Velocity Embedding ($t_s$)**
+The model constructs a high-dimensional representation of personalized learning speed by fusing theoretical priors with student-specific traits:
+$$t_s = T_{\text{skill}} + v_s \cdot d_s$$
+*   **$T_{\text{skill}}$**: Base embedding initialized via *Textured Grounding* (i.e. addition of a small amount of texture or random noise) around the logit of the BKT skill-level $T$.
+*   **$v_s$**: A learned student-specific scalar representing individual learning speed (multiplier).
+*   **$d_s$**: The **Velocity Axis**, a learnable vector defining the semantic direction of learning momentum.
+
+Note: The logit (the mathematical inverse of the sigmoid function) is used to map a probability $p$ (which is restricted to the $[0, 1]$ range) to a real-valued number in the $(-\infty, \infty)$ range. Neural networks operate most effectively in an unconstrained space. By initializing embeddings in logit space (instead of raw probability space), the model can use standard gradient descent to shift values up or down without worrying about "hitting a wall" at $0$ or $1$.
+
+**2. Projection to Scalar Space**
+The $d_{\text{model}}$ features of $t_s$ are projected back into the scalar probability space $[0, 1]$ without using additional learned parameters, preserving the interpretability of the latent space:
+
+*   **Dimensionality Reduction**: Collapse the features into a single scalar "collective logit":
+    ```python
+    # From pykt/models/idkt.py
+    rate_logit = ts.mean(dim=-1)
+    ```
+*   **Probability Mapping**: Map the logit back to the probability range $[0, 1]$ using a sigmoid activation:
+    ```python
+    # From pykt/models/idkt.py
+    rate_t = torch.sigmoid(rate_logit)
+    ```
+
+**3. Theoretical Grounding (MSE Loss)**
+The final loss is calculated by comparing this dynamic, individualized **rate** value against the static BKT $T$ parameter for the corresponding skill:
+$$\mathcal{L}_{\text{rate}} = \text{MSE}(\text{rate}_{\text{iDKT}}, T_{\text{BKT}})$$
+
+This mechanism ensures that the Transformer's internal representations for "learning momentum" are directly anchored to pedagogical primitives while allowing for individual student-level variation.
+
+### Key Features
 
 - **Architecture Size**
 
@@ -870,81 +910,6 @@ In the baseline run, the initial magnitudes were $L_{SUP} \approx 0.54$ and $L_{
   **Next Steps**: 
   - Ensure that any future theoretical parameters designated as "static" (e.g., skill-difficulty or item-bias) follow a similar decoupled projection path.
   - Investigate if dynamic parameters like "Learning Rate" ($L_{RT}$) benefit from similar architectural constraints that bound them to specific segments of the interaction history.
-
-## Current Status
-
-### Experiment 873039 (Baseline)
-
-Experiment `873039` represents the current state-of-the-art for our iDKT implementation, incorporating the **Structural Decoupling** of Initial Mastery.
-
-**Parameters:**
-- `dataset`: assist2015 (`fold=0`)
-- `lambda_ref`: 0.1
-- `lambda_initmastery`: 0.1
-- `lambda_rate`: 0.1
-- `theory_guided`: 1
-- `calibrate`: 1
-- `d_model`: 256
-- `n_heads`: 8
-- `n_blocks`: 4
-- `d_ff`: 512
-- `batch_size`: 64
-- `learning_rate`: 0.0001
-- `l2`: 1e-05
-- `seq_len`: 200
-- `emb_type`: qid
-
-#### 1. Prediction Performance
-In terms of pure predictive power, iDKT maintains high performance consistent with complex attention-based models:
-- **Test AUC**: **0.7236**
-- **Test Accuracy**: **0.7490**
-- **Inference**: The model remains a competitive predictor, showing that the introduction of interpretability constraints does not "cripple" the model's ability to learn from data.
-
-#### 2. Interpretability Status (Theoretical Alignment)
-Following the criteria defined in ["Theoretical Alignment Approach"](#theoretical-alignment-approach), we assess the model as follows:
-
-- **Condition 1: Parameters as Projections**: **PASSED**. 
-  - All three BKT-equivalent parameters (Predictions, Initial Mastery $L_0$, and Learning Rate $T$) are explicitly modeled as projections from the iDKT latent space via dedicated MLP heads.
-
-- **Condition 2: High Correlation**: **PASSED (Theoretical Parameters)** / **HELD (Predictions)**.
-  - **Initial Mastery ($L_{IM}$)**: **r = 0.9997**. The model perfectly internalizes the static BKT prior.
-  - **Learning Rate ($L_{RT}$)**: **r = 0.9997**. The model's dynamic transitions are perfectly aligned with BKT's static transition rate.
-  - **Prediction Alignment ($L_{ref}$)**: **r = 0.6623**. While significantly correlated, the model does not perfectly replicate BKT's predictions. This is an **intentional design feature**: iDKT uses the BKT signal for guidance but leverages its Transformer architecture to discover more complex learning patterns, leading to higher AUC than a pure BKT model.
-
-#### 3. Visual Alignment Verification (Heatmaps)
-We resolved the visual discrepancy where heatmaps appeared predominantly red despite high correlations. By splitting the analysis into static and dynamic streams, we observe:
-- **Parameter Alignment (`per_skill_alignment_static.png`)**: Predominantly **green**, confirming that iDKT $L_0$ projections are locally consistent with BKT priors for specific student-skill combinations.
-- **Trajectory Alignment (`per_skill_alignment_trajectory.png`)**: Shows the anticipated "guidance" behavior, where iDKT predictions track BKT estimates but retain the flexibility to optimize for higher AUC.
-
-#### 4. Theoretical Contributions
-This research introduces a robust framework for **Interpretability-by-Design** in Knowledge Tracing:
-1.  **Formal Semantic Grounding**: We define interpretability as the ability of a deep learning model to express theoretical parameters (from models like BKT or IRT) as formal, high-correlation projections of its latent space.
-2.  **Structural Guidance**: We demonstrate that semantic alignment requires architectural consistency. By decoupling static parameters (Initial Mastery) from dynamic states, we achieved near-perfect alignment (**r=0.99**) without sacrificing predictive performance.
-3.  **Measurement Rigor**: We propose a two-tier evaluation of interpretability: **Static Alignment** (parameter consistency) and **Dynamic Guidance** (trajectory tracking), providing a more nuanced understanding than simple black-box "explanation" techniques.
-
-#### 5. Practical Educational Utility
-The iDKT model offers distinct advantages for educational practitioners and system designers:
-
--   **High-Fidelity Skill Diagnostics**: 
-    Educators can trust iDKT's **Initial Mastery** and **Learning Rate** estimates as "Theory-Anchored Benchmarks." Because these are 99% correlated with BKT theory, they can be used for reliable student placement and pacing in adaptive systems, even though they are computed with the higher precision of a Transformer.
--   **Adaptive Remediation via "Model-Theory Divergence"**: 
-    The areas where iDKT deviates from BKT (e.g., the "orange" cells in trajectory plots) are not errors; they are **insight opportunities**. These points represent students whose learning behavior contradicts standardized pedagogical assumptions (e.g., overcoming high guess biases or struggling despite high priors). Practitioners can use these flags to trigger human intervention for "atypical" learning paths.
--   **Explainable Predictive Pacing**: 
-    By grounding the Learning Rate ($T$), iDKT can predict not only *if* a student will succeed but *how fast* they are likely to reach mastery on a given skill path, providing a theoretically-sound basis for long-term curriculum planning.
-
-```
-Key Paper Contributions:
-
-- Interpretability-by-Design Framework: We now define interpretability not just as "post-hoc explanation," but as Formal Semantic Grounding. Your proposal provides a sound way to measure success through the high correlation of latent projections with theoretical BKT parameters.
-- Structural Guidance (The Hybrid Advantage): We demonstrate that by Structurally Decoupling static priors (Initial Mastery) from dynamic history, iDKT achieves near-perfect identity with theory (r=0.99) without losing the Transformer's predictive power (AUC 0.72 > BKT).
-- Residual Accuracy as a Feature: We argue that the "Orange" results in trajectory plots (the divergence from BKT) are a novel contribution. They show iDKT successfully correcting reference model biases (like high guess rates), proving it is a more "honest" learner than pure BKT.
-
-Practical Utility for Practitioners:
-
-- Theory-Anchored Skill Diagnostics: Reliable benchmarks for student placement.
-- Model-Theory Divergence Flags: Automated identification of students with "atypical" learning paths for teacher intervention.
-- Predictive Pacing: Theoretically-sound forecasts of time-to-mastery.
-```
 
 ## Conclusion and Future Work
 Experiment `873039` proves that model performance and pedagogical interpretability are **not a zero-sum game**. Through structural decoupling and multi-objective optimization, iDKT achieves the predictive accuracy of SOTA Transformers while remaining semantically grounded in Bayesian Knowledge Tracing theory. 
@@ -1839,10 +1804,36 @@ To rigorously validate that iDKT's interpretable design actually encodes the int
 
 We selected this methodology as the current state-of-the-art for analyzing deep learning representations, supported by rigorous standards in recent NLP and Interpretability literature.
 
-1.  **Diagnostic Probing (Extraction)**: Following **Alain & Bengio (2016)**, we define that a representation *encodes* a concept if a simple linear classifier can predict that concept from the frozen embeddings with high accuracy. This directly tests the "recoverability" of BKT parameters from iDKT's latent space.
-2.  **Selectivity (The Rigor)**: High correlation alone is insufficient for high-capacity models, which can memorize arbitrary patterns. To prove structural alignment, we adopted the **Control Task** protocol of **Hewitt & Liang (2019)**, effectively the "gold standard" for probing rigor. We measure *Selectivity*: the difference in performance between predicting the true target vs. a random control target.
-    *   *Reference*: **Belinkov, Y. (2022).** *Probing Classifiers: Promises, Pitfalls, and Prospects.* Computational Linguistics. (Reviewing the necessity of control tasks).
-    *   *Reference*: **Khosravi, H., et al. (2022).** *Explainable Artificial Intelligence in Education.* (Framing post-hoc validation of deep models against interpretable baselines).
+1.  **Diagnostic Probing (Extraction)**: Following @alain2018understanding, we define that a representation *encodes* a concept if a simple linear classifier can predict that concept from the frozen embeddings with high accuracy. This directly tests the "recoverability" of BKT parameters from iDKT's latent space.
+2.  **Selectivity (The Rigor)**: High correlation alone is insufficient for high-capacity models, which can memorize arbitrary patterns. To prove structural alignment, we adopted the **Control Task** protocol of @hewitt2019designing, effectively the "gold standard" for probing rigor. We measure *Selectivity*: the difference in performance between predicting the true target vs. a random control target.
+    *   *Reference*: @belinkov2022probing *Probing Classifiers: Promises, Pitfalls, and Prospects.* Computational Linguistics. (Reviewing the necessity of control tasks).
+    *   *Reference*: @khosravi2022 (Framing post-hoc validation of deep models against interpretable baselines).
+        *   See: *3.5. Pitfalls and how to avoid them*: 
+          While there are many benefits in increasing the explainability of 
+          educational AI systems, there are also challenges and pitfalls that need 
+          to be considered. This section describes some of the key pitfalls as well as 
+          pointing out potential solutions and principles for avoiding them. 
+          Needless use of complex models. A common misjudgment is to use 
+          over-complex models in cases where the use of an interpretable model 
+          would have delivered a comparable or even superior performance. As an 
+          example, in the context of student modelling and knowledge tracing, 
+          Gervet, Koedinger, Schneider, Mitchell et al. (2020) report that logistic 
+          regression outperforms deep learning models on datasets of moderate 
+          size or containing a very large number of interactions per student. 
+          Therefore, designers should start with simple interpretable models and 
+          increase complexity in a step-wise manner where performance in both 
+          accuracy and interpretability are measured and compared (Molnar et al., 
+          2020). Nevertheless, in some cases more complex models would 
+          significantly outperform interpretable models. To follow the same 
+          example, Gervet et al. (2020) report that the use of deep knowledge 
+          tracing approaches outperform more interpretable approaches on 
+          datasets of large size or where precise temporal information matters 
+          most. **In these cases, one approach would be to complement the complex 
+          model with interpretable models for explainability**. As an example, 
+          Ghosh, Heffernan, and Lan (2020) propose a learner model which cou
+          ples complex attention-based neural network models with a series of 
+          novel, interpretable model components inspired by cognitive and psy
+          chometric models for explainability.
 
 **Advantages**: This approach allows us to utilize the full predictive power of the Deep Transformer (iDKT) while mathematically proving its internal alignment with the theoretically grounded BKT model, bridging the gap between "Black Box" performance and "White Box" interpretability.
 
@@ -1962,3 +1953,240 @@ The results for ASSIST2009 present a nuanced but scientifically significant vali
 
 
 3.  **Concept-Level vs. Question-Level Granularity**: As noted in standard comparisons (e.g., *pyKT* benchmarks), ASSIST2009 contains questions mapped to multiple Knowledge Concepts (KCs). While standard performance evaluation aggregates predictions to the **Question Level**, our diagnostic probing operates at the **KC Level** (aligning the hidden state $h_t$ for a specific concept with that concept's BKT mastery). This granular internal validation is more rigorous for structural analysis but naturally yields lower raw $R^2$ than aggregated metrics, as it exposes the model's raw uncertainty for every individual skill component before any ensemble averaging.
+
+
+
+### Previous Baseline: Experiment 873039 (ASSIST2015)
+
+**Note:** This experiment predates the individualization bug and may need revalidation.
+
+**Parameters:**
+- `dataset`: assist2015 (`fold=0`)
+- `lambda_ref`: 0.1
+- `lambda_initmastery`: 0.1
+- `lambda_rate`: 0.1
+- `theory_guided`: 1
+- `calibrate`: 1
+- `d_model`: 256
+- `n_heads`: 8
+- `n_blocks`: 4
+- `d_ff`: 512
+- `batch_size`: 64
+- `learning_rate`: 0.0001
+- `l2`: 1e-05
+- `seq_len`: 200
+- `emb_type`: qid
+
+#### 1. Prediction Performance
+In terms of pure predictive power, iDKT maintains high performance consistent with complex attention-based models:
+- **Test AUC**: **0.7236**
+- **Test Accuracy**: **0.7490**
+- **Inference**: The model remains a competitive predictor, showing that the introduction of interpretability constraints does not "cripple" the model's ability to learn from data.
+
+#### 2. Interpretability Status (Theoretical Alignment)
+Following the criteria defined in ["Theoretical Alignment Approach"](#theoretical-alignment-approach), we assess the model as follows:
+
+- **Condition 1: Parameters as Projections**: **PASSED**. 
+  - All three BKT-equivalent parameters (Predictions, Initial Mastery $L_0$, and Learning Rate $T$) are explicitly modeled as projections from the iDKT latent space via dedicated MLP heads.
+
+- **Condition 2: High Correlation**: **PASSED (Theoretical Parameters)** / **HELD (Predictions)**.
+  - **Initial Mastery ($L_{IM}$)**: **r = 0.9997**. The model perfectly internalizes the static BKT prior.
+  - **Learning Rate ($L_{RT}$)**: **r = 0.9997**. The model's dynamic transitions are perfectly aligned with BKT's static transition rate.
+  - **Prediction Alignment ($L_{ref}$)**: **r = 0.6623**. While significantly correlated, the model does not perfectly replicate BKT's predictions. This is an **intentional design feature**: iDKT uses the BKT signal for guidance but leverages its Transformer architecture to discover more complex learning patterns, leading to higher AUC than a pure BKT model.
+
+#### 3. Visual Alignment Verification (Heatmaps)
+We resolved the visual discrepancy where heatmaps appeared predominantly red despite high correlations. By splitting the analysis into static and dynamic streams, we observe:
+- **Parameter Alignment (`per_skill_alignment_static.png`)**: Predominantly **green**, confirming that iDKT $L_0$ projections are locally consistent with BKT priors for specific student-skill combinations.
+- **Trajectory Alignment (`per_skill_alignment_trajectory.png`)**: Shows the anticipated "guidance" behavior, where iDKT predictions track BKT estimates but retain the flexibility to optimize for higher AUC.
+
+#### 4. Theoretical Contributions
+This research introduces a robust framework for **Interpretability-by-Design** in Knowledge Tracing:
+1.  **Formal Semantic Grounding**: We define interpretability as the ability of a deep learning model to express theoretical parameters (from models like BKT or IRT) as formal, high-correlation projections of its latent space.
+2.  **Structural Guidance**: We demonstrate that semantic alignment requires architectural consistency. By decoupling static parameters (Initial Mastery) from dynamic states, we achieved near-perfect alignment (**r=0.99**) without sacrificing predictive performance.
+3.  **Measurement Rigor**: We propose a two-tier evaluation of interpretability: **Static Alignment** (parameter consistency) and **Dynamic Guidance** (trajectory tracking), providing a more nuanced understanding than simple black-box "explanation" techniques.
+
+#### 5. Practical Educational Utility
+The iDKT model offers distinct advantages for educational practitioners and system designers:
+
+-   **High-Fidelity Skill Diagnostics**: 
+    Educators can trust iDKT's **Initial Mastery** and **Learning Rate** estimates as "Theory-Anchored Benchmarks." Because these are 99% correlated with BKT theory, they can be used for reliable student placement and pacing in adaptive systems, even though they are computed with the higher precision of a Transformer.
+-   **Adaptive Remediation via "Model-Theory Divergence"**: 
+    The areas where iDKT deviates from BKT (e.g., the "orange" cells in trajectory plots) are not errors; they are **insight opportunities**. These points represent students whose learning behavior contradicts standardized pedagogical assumptions (e.g., overcoming high guess biases or struggling despite high priors). Practitioners can use these flags to trigger human intervention for "atypical" learning paths.
+-   **Explainable Predictive Pacing**: 
+    By grounding the Learning Rate ($T$), iDKT can predict not only *if* a student will succeed but *how fast* they are likely to reach mastery on a given skill path, providing a theoretically-sound basis for long-term curriculum planning.
+
+```
+Key Paper Contributions:
+
+- Interpretability-by-Design Framework: We now define interpretability not just as "post-hoc explanation," but as Formal Semantic Grounding. Your proposal provides a sound way to measure success through the high correlation of latent projections with theoretical BKT parameters.
+- Structural Guidance (The Hybrid Advantage): We demonstrate that by Structurally Decoupling static priors (Initial Mastery) from dynamic history, iDKT achieves near-perfect identity with theory (r=0.99) without losing the Transformer's predictive power (AUC 0.72 > BKT).
+- Residual Accuracy as a Feature: We argue that the "Orange" results in trajectory plots (the divergence from BKT) are a novel contribution. They show iDKT successfully correcting reference model biases (like high guess rates), proving it is a more "honest" learner than pure BKT.
+
+Practical Utility for Practitioners:
+
+- Theory-Anchored Skill Diagnostics: Reliable benchmarks for student placement.
+- Model-Theory Divergence Flags: Automated identification of students with "atypical" learning paths for teacher intervention.
+- Predictive Pacing: Theoretically-sound forecasts of time-to-mastery.
+```
+
+
+## Current Status
+
+### Critical Bug Identified and Fixed: Individualization Variance Issue (Dec 24, 2024)
+
+#### Problem Discovery
+
+Recent experiments revealed a critical bug preventing student-level individualization in iDKT outputs. While the model appeared to train successfully and achieved competitive AUC scores, the interpretability outputs (initial mastery and learning rate trajectories) showed **zero variance** across students within each skill, effectively collapsing to population-level BKT values.
+
+**Symptoms:**
+- Per-skill standard deviation: ~0.0001 (should be ~0.007-0.010)
+- Perfect correlation with BKT (r=1.0000, should be ~0.97-0.98)
+- Mean absolute difference from BKT: ~0.0002 (should be ~0.06-0.40)
+- Student parameters in model had variance (std=0.016) but outputs showed none
+
+#### Debugging Process
+
+**Initial Hypotheses Tested:**
+
+1. **UID Mapping Issue** ✅ FIXED
+   - **Problem:** After merge from v0.0.27, UID mapping changed from dense (0,1,2,...) to sparse (raw UIDs: 5,11,13,...)
+   - **Impact:** Caused CUDA embedding errors and inefficient memory usage
+   - **Fix:** Restored dense, deterministic UID-to-index mapping with sorted unique UIDs
+   - **Files modified:**
+     - `pykt/datasets/idkt_dataloader.py`: Lines 20-25 (dense mapping), Line 50 (use mapped index)
+     - `examples/train_idkt.py`: Lines 282-284 (use dataset's num_students)
+
+2. **Cached Data Contamination** ✅ RESOLVED
+   - **Problem:** `.pkl` cache files contained old sparse UID mappings
+   - **Solution:** Deleted `data/assist2009/train_valid_sequences_bkt.csv_*.pkl` files
+   - **Verification:** New cache correctly uses dense indices (0-616 for fold 0)
+
+3. **Insufficient Training Epochs** ❌ NOT THE CAUSE
+   - **Test:** Trained for 200 epochs (experiment 497065)
+   - **Result:** Student parameters still had minimal variance (std=0.016 vs 0.975 in working experiment)
+   - **Conclusion:** Training duration was not the issue
+
+4. **Output Calculation Bug** ✅ **ROOT CAUSE IDENTIFIED**
+   - **Location:** `pykt/models/idkt.py`, lines 240-241
+   - **Bug:** Used population embeddings (`l0_skill`, `t_skill`) instead of individualized embeddings (`lc`, `ts`)
+   
+   **Buggy Code:**
+   ```python
+   # WRONG: Using population + scalar shift
+   initmastery = m(l0_skill.mean(dim=-1) + kc.squeeze(-1))
+   rate = m(t_skill.mean(dim=-1) + vs.squeeze(-1))
+   ```
+   
+   **Fixed Code:**
+   ```python
+   # CORRECT: Using fully individualized embeddings
+   initmastery = m(lc.mean(dim=-1))
+   rate = m(ts.mean(dim=-1))
+   ```
+   
+   **Explanation:** The model correctly computed individualized embeddings using the structural grounding formula `lc = l0_skill + kc * dc` and `ts = t_skill + vs * ds`, but the output layer was incorrectly using the population-level embeddings (`l0_skill`, `t_skill`) and only adding a scalar student shift. This destroyed all the rich individualization that was embedded in the `lc` and `ts` tensors. 
+
+   Note that the mean(dim=-1) operation acts on the feature dimension (the 256 latent factors). Every student in the batch still has their own unique value. The operation is simply collapsing a 256-dimensional "vector of knowledge" into a 1-dimensional "scalar of knowledge" for that specific student.
+
+#### Comparison with Working Experiment
+
+**Experiment 839009 (GOOD - Has Variance):**
+- **Date:** Dec 21, 2024
+- **Epochs:** 100
+- **Code Version:** Before bug introduction (used `lc` and `ts` correctly)
+- **Results:**
+  - Per-skill std (init mastery): 0.0073
+  - Per-skill std (learning rate): 0.0098
+  - Student param std in model: 0.975
+  - Correlation with BKT: 0.9725 (init), 0.9050 (rate)
+
+**Experiment 497065 (BAD - No Variance):**
+- **Date:** Dec 24, 2024
+- **Epochs:** 200
+- **Code Version:** With bug (used `l0_skill` and `t_skill` incorrectly)
+- **Results:**
+  - Per-skill std (init mastery): 0.0004
+  - Per-skill std (learning rate): 0.0004
+  - Student param std in model: 0.016
+  - Correlation with BKT: 1.0000 (perfect - indicating no individualization)
+
+
+**Parameter Comparison:**
+Both experiments used identical training parameters:
+- `lambda_student=1e-05`
+- `lambda_gap=1e-05`
+- `lambda_ref=0.1`
+- `lambda_initmastery=0.1`
+- `lambda_rate=0.1`
+- Architecture: d_model=256, n_heads=8, n_blocks=4, d_ff=512
+
+**Git History Analysis:**
+The bug was introduced through a branch merge:
+1. **v0.0.28-iDKT-embeddings** (commits `7dee870`, `7f7538e`, `b5e81c0`) - ✅ **CORRECT CODE**
+   - Used: `initmastery = m(lc.mean(dim=-1))`
+   - Experiment 839009 was run from this branch
+2. **v0.0.27-iDKT** (commit `688c2e1`, Dec 23, 2024) - ❌ **BUG INTRODUCED**
+   - Changed to: `initmastery = m(l0_skill.mean(dim=-1) + kc.squeeze(-1))`
+   - Commit message: "feat: probe failing in last experiment"
+   - Incorrectly attempted to "fix" variance by using population embeddings
+3. **v0.0.29-iDKT-embeddings** (current) - ❌ **BUG PROPAGATED**
+   - Merged v0.0.27-iDKT into v0.0.28-iDKT-embeddings
+   - Brought the buggy code into the main development branch
+   - Experiment 497065 was run from this buggy version
+
+**Key Insight:** The identical parameters but vastly different results confirm that the bug in the output calculation (not training parameters or architecture) was the root cause.
+
+#### Current Status (Post-Fix)
+
+**Fix Applied:** Dec 24, 2024
+- **File:** `pykt/models/idkt.py`, lines 235-245
+- **Change:** Modified `forward()` method to use individualized embeddings (`lc`, `ts`) instead of population embeddings (`l0_skill`, `t_skill`)
+- **Status:** Code fix verified and committed
+
+**Verification Results (Experiment 563068):**
+- **Status:** **FUNCTIONAL SUCCESS / QUALITATIVE FAILURE**. 
+- **Finding:** The code fix is working (variance is non-zero, $r < 1.0$), but student-level individualization is being suppressed by the loss function. Per-skill standard deviation dropped from 0.007 (baseline) to 0.00002.
+- **Root Cause (The "Theory Trap"):** Identified a fundamental conflict between **Textured Grounding** and **Warm-up Calibration**. Because we initialize the model already aligned to BKT (Initial MSE $\approx 10^{-7}$), the calibrator boosts the theory weights ($\lambda$) to 100.0 (the cap). This extreme weight locks the model at the theoretical mean and destroys the gradient signal for individualized student traits ($v_s, k_c$).
+
+#### Architectural Paths Analysis
+
+We analyzed two strategies to resolve this "Identity Trap":
+
+1.  **Path 1 (Grounded Refinement):** Retain *Textured Grounding*, but **disable `--calibrate`** and use fixed empirical weights (e.g., $\lambda \approx 0.1$). This allows the model to start at the theory center but gives student-specific traits the gradient "freedom" to specialize. 
+2.  **Path 2 (Autonomous Discovery):** Revert to random initialization and retain `--calibrate`. This forces the model to discover theory from scratch, which is scientifically rigorous but risks convergence stability and loses the benefits of skill-specific priors.
+
+**Recommendation:** Proceed with **Path 1**. Modern "Informed Deep Learning" favors structured injection of knowledge. Removing the aggressive calibration pass restores the balance necessary for student-level nuance while maintaining theoretical anchors.
+
+#### Next Steps
+
+1. **Immediate (Priority 1):**
+   - Launch full training experiment (100-200 epochs) using **Path 1** (Fixed Code, Grounded Init, No Calibration).
+   - Target metrics:
+     - Per-skill std > 0.005 for both init mastery and learning rate
+     - Correlation with BKT: 0.95-0.98
+     - Student param std in model: > 0.5
+
+2. **Validation (Priority 2):**
+   - Compare new experiment results with experiment 839009 baseline
+   - Verify variance ratios are comparable (within 0.5x-2.0x range)
+   - Confirm interpretability plots show proper individualization
+
+3. **Documentation (Priority 3):**
+   - Update all experiment documentation with corrected results
+   - Document the bug and fix in implementation notes
+   - Add regression test to prevent similar bugs in future
+
+4. **Paper Integration (Priority 4):**
+   - Once validated, regenerate all interpretability plots
+   - Update results section with corrected variance metrics
+   - Emphasize the importance of proper individualization in the methodology
+
+#### Lessons Learned
+
+1. **Semantic Consistency:** When using structural grounding formulas, ensure outputs use the grounded embeddings, not intermediate population-level representations
+2. **Variance as a Diagnostic:** Zero variance in individualized outputs is a red flag indicating the model is not actually using student-specific parameters
+3. **Code Evolution Risks:** Merges and refactoring can introduce subtle bugs that break interpretability without affecting predictive performance
+4. **Testing Importance:** Need automated tests to verify individualization variance is within expected ranges
+
+
+

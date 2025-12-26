@@ -232,13 +232,13 @@ class iDKT(nn.Module):
         # or rely on the retriever state being grounded in them via loss.
         # For now, we'll return lc and ts as proxies for initmastery and rate for evaluation compatibility.
         # We project them to [0, 1] scalars for consistency with existing evaluation scripts.
-        # CRITICAL FIX: Since semantic axes (dc, ds) are zero-centered, using mean() on the fused vector
-        # washes out the student-specific variance. We instead use the population mean logit + student scalar
-        # to ensure the reported scalars for plots correctly reflect individualization.
-        if 'lc' in locals() and 'kc' in locals():
-            # Use population logit + student-specific shift
-            initmastery = m(l0_skill.mean(dim=-1) + kc.squeeze(-1))
-            rate = m(t_skill.mean(dim=-1) + vs.squeeze(-1))
+        # CRITICAL FIX: Use the fully individualized embeddings (lc, ts) that were computed
+        # with the structural grounding formula: lc = l0_skill + kc * dc, ts = t_skill + vs * ds
+        # These already contain the student-specific individualization.
+        if 'lc' in locals() and 'ts' in locals():
+            # Use the individualized embeddings directly
+            initmastery = m(lc.mean(dim=-1))
+            rate = m(ts.mean(dim=-1))
         else:
             # Fallback for no student data (use population defaults)
             initmastery = m(self.l0_base_emb(q_data).mean(dim=-1))
