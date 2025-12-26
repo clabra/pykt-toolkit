@@ -108,6 +108,7 @@ def parse_args():
     parser.add_argument("--theory_guided", type=int, required=True,
                       help="Enable theory-guided loss components (0 or 1)")
     parser.add_argument("--calibrate", type=int, required=True, help="Run initial forward pass to recalibrate lambda weights")
+    parser.add_argument("--grounded_init", type=int, required=True, help="Initialize theory-guided embeddings from BKT parameters (0 or 1)")
     
     # BKT Filtering parameters (tracked in parameter_default.json)
     parser.add_argument("--bkt_filter", action='store_true',
@@ -120,7 +121,7 @@ def parse_args():
     # Output
     parser.add_argument("--save_dir", type=str, default="saved_model/idkt",
                       help="Directory to save model checkpoints")
-    parser.add_argument("--use_wandb", type=int, default=0,
+    parser.add_argument("--use_wandb", type=int, required=True,
                       help="Use Weights & Biases logging (0 or 1)")
     
     return parser.parse_args()
@@ -316,9 +317,12 @@ def main():
     
     model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
     
-    # Initialize theory bases from BKT parameters
-    if args.theory_guided and bkt_skill_params is not None:
+    # Initialize theory bases from BKT parameters (Grounded Init)
+    if args.theory_guided and bkt_skill_params is not None and args.grounded_init == 1:
+        print("  ✓ Performing Grounded Initialization (Textured Grounding)...")
         model.load_theory_params(bkt_skill_params)
+    elif args.theory_guided and args.grounded_init == 0:
+        print("  ✓ Skipping Grounded Initialization (Autonomous Discovery Mode)")
     
     # Training
     print(f"Starting training for {args.epochs} epochs...")

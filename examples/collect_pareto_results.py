@@ -21,6 +21,7 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
         config_path = os.path.join(run_dir, "config.json")
         eval_path = os.path.join(run_dir, "eval_results.json")
         align_path = os.path.join(run_dir, "interpretability_alignment.json")
+        probe_path = os.path.join(run_dir, "probe_results.json")
         
         if not (os.path.exists(config_path) and os.path.exists(eval_path)):
             continue
@@ -47,7 +48,17 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
                 'dir': os.path.basename(run_dir)
             }
             
-            # Interpretability metrics if available
+            # Probing metrics (Modern Fidelity)
+            if os.path.exists(probe_path):
+                with open(probe_path, 'r') as f:
+                    probe = json.load(f)
+                row['probe_pearson'] = probe.get('pearson_true', None)
+                row['probe_selectivity'] = probe.get('selectivity_r2', None)
+            else:
+                row['probe_pearson'] = None
+                row['probe_selectivity'] = None
+
+            # interpretability_alignment metrics (Legacy/Raw Fidelity)
             if os.path.exists(align_path):
                 with open(align_path, 'r') as f:
                     align = json.load(f)
@@ -57,11 +68,15 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
                 row['h2_functional'] = align.get('h2_functional_alignment', 0.0)
                 row['h3_discriminant'] = align.get('h3_discriminant_overlap', 0.0)
                 row['h3_latent'] = align.get('h3_latent_overlap', 0.0)
-                row['mean_corr'] = (row['pred_corr'] + row['init_corr'] + row['rate_corr']) / 3.0
+                row['raw_mean_corr'] = (row['pred_corr'] + row['init_corr'] + row['rate_corr']) / 3.0
             else:
-                row['pred_corr'] = row['init_corr'] = row['rate_corr'] = row['mean_corr'] = None
+                row['pred_corr'] = row['init_corr'] = row['rate_corr'] = row['raw_mean_corr'] = None
                 row['h2_functional'] = row['h3_discriminant'] = row['h3_latent'] = None
                 
+            # Unified Fidelity Metric for Plotting
+            # Prefer Probing Alignment (Latent Fidelity) over Raw Scalar Correlation
+            row['fidelity'] = row['probe_pearson'] if row['probe_pearson'] is not None else row['raw_mean_corr']
+            
             results.append(row)
         except Exception as e:
             print(f"Error processing {run_dir}: {e}")
@@ -82,32 +97,39 @@ def plot_pareto(df, output_dir="assistant"):
     # 1. Performance vs Interpretability Pareto Frontier
     plt.figure(figsize=(10, 7))
     
-    # Filter for completed alignment data
-    plot_df = df.dropna(subset=['mean_corr'])
+    # filter for metrics that have some form of fidelity measurement
+    plot_df = df.dropna(subset=['fidelity'])
     
     if plot_df.empty:
-        print("No alignment data found for Pareto plot. Generating AUC vs Lambda only.")
+        print("No alignment data (Probe or Raw) found for Pareto plot. Generating AUC vs Lambda only.")
     else:
-        scatter = plt.scatter(plot_df['mean_corr'], plot_df['test_auc'], 
-                             c=plot_df['lambda'], cmap='viridis', s=100, edgecolors='black')
+        scatter = plt.scatter(plot_df['fidelity'], plot_df['test_auc'], 
+                             c=plot_df['lambda'], cmap='viridis', s=100, edgecolors='black', zorder=3)
         plt.colorbar(scatter, label='Grounding Strength (λ)')
-        plt.xlabel('Theoretic Fidelity (Mean Correlation with BKT)', fontsize=12)
+        plt.xlabel('Theoretic Fidelity (Probing Alignment $r$)', fontsize=12)
         plt.ylabel('Predictive Performance (Test AUC)', fontsize=12)
         plt.title('iDKT Pareto Frontier: Performance vs. Interpretability', fontsize=14, fontweight='bold')
         
         # Annotate points with lambda
         for idx, row in plot_df.iterrows():
-            plt.annotate(f"λ={row['lambda']:.2f}", (row['mean_corr'], row['test_auc']), 
+            plt.annotate(f"λ={row['lambda']:.2f}", (row['fidelity'], row['test_auc']), 
                         xytext=(5, 5), textcoords='offset points', fontsize=8)
                         
+        # Highlight Fidelity Plateau at λ=0.3
+        plateau_x = plot_df[plot_df['lambda'] == 0.3]['fidelity'].values
+        if len(plateau_x) > 0:
+            plt.axvline(x=plateau_x[0], color='red', linestyle='--', alpha=0.5, label='Fidelity Saturation')
+            plt.text(plateau_x[0] - 0.005, plt.ylim()[0] + 0.01, 'Theory Saturation Point (λ=0.3)', 
+                     color='red', rotation=90, verticalalignment='bottom', fontsize=9, fontweight='bold')
+
         plt.savefig(os.path.join(output_dir, "idkt_pareto_frontier.png"), dpi=300, bbox_inches='tight')
-        print(f"✓ Saved Pareto plot to {output_dir}/idkt_pareto_frontier.png")
+        print(f"✓ Saved Pareto plot with Plateau highlight to {output_dir}/idkt_pareto_frontier.png")
 
     # 2. Performance & Fidelity vs Lambda Trend
     plt.figure(figsize=(10, 6))
     plt.plot(df['lambda'], df['test_auc'], 'o-', label='Test AUC', color='tab:blue', linewidth=2)
-    if 'mean_corr' in df.columns and not df['mean_corr'].isnull().all():
-        plt.plot(df['lambda'], df['mean_corr'], 's--', label='Mean Fidelity', color='tab:green', linewidth=2)
+    if not df['fidelity'].isnull().all():
+        plt.plot(df['lambda'], df['fidelity'], 's--', label='Probing Fidelity ($r$)', color='tab:green', linewidth=2)
         
     plt.xlabel('Grounding Weight (λ)', fontsize=12)
     plt.ylabel('Metric Value', fontsize=12)

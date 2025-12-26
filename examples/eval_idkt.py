@@ -103,6 +103,8 @@ def parse_args():
                       help="Weight for learning rate consistency loss")
     parser.add_argument("--theory_guided", type=int, default=1,
                       help="Whether to use theory-guided evaluation metrics")
+    parser.add_argument("--grounded_init", type=int, required=True,
+                      help="Initialize theory-guided embeddings from BKT parameters (0 or 1)")
     
     # Seed
     parser.add_argument("--seed", type=int, default=42,
@@ -137,6 +139,7 @@ def main():
         'lambda_initmastery': args.lambda_initmastery,
         'lambda_rate': args.lambda_rate,
         'theory_guided': args.theory_guided,
+        'grounded_init': args.grounded_init,
         'use_wandb': 0
     }
     

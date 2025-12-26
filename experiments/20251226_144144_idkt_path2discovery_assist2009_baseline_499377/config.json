@@ -1,0 +1,132 @@
+{
+  "input": {
+    "short_title": "path2_autonomous_discovery",
+    "dataset": "assist2009",
+    "epochs": 100,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "calibrate": 1,
+    "grounded_init": 0
+  },
+  "commands": {
+    "run_repro_original": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --short_title path2_autonomous_discovery --dataset assist2009 --short_title path2_autonomous_discovery --epochs 100 --lambda_initmastery 0.1 --lambda_rate 0.1 --calibrate 1 --grounded_init 0",
+    "train_explicit": "/home/vscode/.pykt-env/bin/python examples/train_idkt.py --batch_size 64 --bkt_guess_threshold 0.3 --bkt_slip_threshold 0.3 --calibrate 1 --d_ff 512 --d_model 256 --dataset assist2009 --dropout 0.2 --emb_type qid --epochs 100 --final_fc_dim 512 --fold 0 --gradient_clip 1.0 --grounded_init 0 --l2 1e-05 --lambda_gap 1e-05 --lambda_initmastery 0.1 --lambda_rate 0.1 --lambda_ref 0.1 --lambda_student 1e-05 --learning_rate 0.0001 --n_blocks 4 --n_heads 8 --optimizer Adam --patience 10 --seed 42 --seq_len 200 --theory_guided 1 --use_wandb 0 --weight_decay 0.0 --save_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "eval_explicit": "/home/vscode/.pykt-env/bin/python examples/eval_idkt.py --checkpoint /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377/best_model.pt --output_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --d_model 256 --n_heads 8 --n_blocks 4 --d_ff 512 --dropout 0.2 --final_fc_dim 512 --l2 1e-05 --emb_type qid --seq_len 200 --lambda_student 1e-05 --lambda_gap 1e-05 --lambda_ref 0.1 --lambda_initmastery 0.1 --lambda_rate 0.1 --grounded_init 0 --theory_guided 1 --dataset assist2009 --fold 0 --batch_size 64",
+    "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --num_students 15 --split test",
+    "head_agreement": "/home/vscode/.pykt-env/bin/python examples/compute_head_agreement.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --update_csv",
+    "difficulty_fidelity": "/home/vscode/.pykt-env/bin/python examples/compute_irt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --dataset assist2009 --update_csv",
+    "bkt_correlation": "/home/vscode/.pykt-env/bin/python examples/compute_bkt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --dataset assist2009 --max_students 1000 --output_file bkt_validation_final.json --update_csv",
+    "bkt_validation": "/home/vscode/.pykt-env/bin/python examples/compute_bkt_correlation.py --experiment_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --dataset assist2009 --output_file bkt_validation.json",
+    "idkt_interpretability": "/home/vscode/.pykt-env/bin/python examples/eval_idkt_interpretability.py --checkpoint /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377/best_model.pt --output_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --dataset assist2009 --fold 0 --batch_size 64 --d_model 256 --n_heads 8 --n_blocks 4 --d_ff 512 --dropout 0.2 --final_fc_dim 512 --l2 1e-05 --emb_type qid --seq_len 200 --roster_sampling_rate 10 --max_correlation_students 1000",
+    "analysis_plots": "/home/vscode/.pykt-env/bin/python examples/generate_analysis_plots.py --run_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "validation_plots": "/home/vscode/.pykt-env/bin/python examples/generate_validation_plots.py --run_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "plot_param_distribution": "/home/vscode/.pykt-env/bin/python examples/plot_param_distribution.py --run_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "plot_mastery_mosaic": "/home/vscode/.pykt-env/bin/python examples/plot_mastery_mosaic_real.py --run_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "train_probe": "/home/vscode/.pykt-env/bin/python examples/train_probe.py --checkpoint /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377/best_model.pt --bkt_preds /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377/traj_predictions.csv --dataset assist2009 --output_dir /workspaces/pykt-toolkit/experiments/20251226_144144_idkt_path2_autonomous_discovery_499377 --debug",
+    "reproduce": "/home/vscode/.pykt-env/bin/python examples/run_repro_experiment.py --repro_experiment_id 499377"
+  },
+  "experiment": {
+    "id": "20251226_144144_idkt_path2_autonomous_discovery_499377",
+    "short_title": "path2_autonomous_discovery",
+    "experiment_id": "499377",
+    "created": "20251226_144144"
+  },
+  "seeds": {
+    "primary": 42,
+    "all": [
+      42
+    ]
+  },
+  "defaults": {
+    "model": "idkt",
+    "dataset": "assist2015",
+    "fold": 0,
+    "seed": 42,
+    "short_title": "test",
+    "train_script": "examples/train_idkt.py",
+    "eval_script": "examples/eval_idkt.py",
+    "epochs": 200,
+    "patience": 10,
+    "batch_size": 64,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "seq_len": 200,
+    "d_model": 256,
+    "n_heads": 8,
+    "n_blocks": 4,
+    "d_ff": 512,
+    "dropout": 0.2,
+    "emb_type": "qid",
+    "final_fc_dim": 512,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.1,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "grounded_init": 1,
+    "max_correlation_students": 1000,
+    "bkt_filter": false,
+    "bkt_guess_threshold": 0.3,
+    "bkt_slip_threshold": 0.3,
+    "use_wandb": 0
+  },
+  "overrides": {
+    "dataset": "assist2009",
+    "short_title": "path2_autonomous_discovery",
+    "epochs": 100,
+    "grounded_init": 0
+  },
+  "types": {
+    "launcher": [
+      "short_title",
+      "train_script",
+      "eval_script",
+      "model",
+      "max_correlation_students"
+    ],
+    "data": [
+      "dataset",
+      "fold"
+    ],
+    "runtime": [
+      "seed",
+      "epochs",
+      "batch_size",
+      "learning_rate",
+      "weight_decay",
+      "optimizer",
+      "gradient_clip",
+      "patience",
+      "calibrate",
+      "bkt_filter",
+      "bkt_guess_threshold",
+      "bkt_slip_threshold"
+    ],
+    "model_config": [
+      "seq_len",
+      "d_model",
+      "n_heads",
+      "n_blocks",
+      "d_ff",
+      "dropout",
+      "emb_type",
+      "final_fc_dim",
+      "l2",
+      "lambda_student",
+      "lambda_gap",
+      "lambda_ref",
+      "lambda_initmastery",
+      "lambda_rate",
+      "theory_guided"
+    ]
+  },
+  "md5": "2d9726cfbdc72f4e257509772f29cdd8",
+  "reference": {
+    "parameter_default_json": "configs/parameter_default.json"
+  }
+}

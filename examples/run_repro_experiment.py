@@ -217,7 +217,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
         'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
         'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
-        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold'
+        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb'
     }
     
     # Determine which parameters to pass based on training script
@@ -363,7 +363,7 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
                 cmd_parts.append(f"--reference_targets_path {reference_targets_path}")
         # idkt needs architecture parameters
         elif model == 'idkt':
-            idkt_arch_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 'emb_type', 'seq_len', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate']
+            idkt_arch_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 'emb_type', 'seq_len', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'grounded_init', 'theory_guided']
             for param in idkt_arch_params:
                 if param in params:
                     cmd_parts.append(f"--{param} {params[param]}")

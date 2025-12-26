@@ -26,14 +26,16 @@
     "lambda_student": 1e-05,
     "lambda_gap": 1e-05,
     "lambda_ref": 0.1,
-    "lambda_initmastery": 0.005,
-    "lambda_rate": 0.005,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
     "theory_guided": 1,
-    "calibrate": 0,
+    "calibrate": 1,
+    "grounded_init": 0,
     "max_correlation_students": 1000,
     "bkt_filter": false,
     "bkt_guess_threshold": 0.3,
-    "bkt_slip_threshold": 0.3
+    "bkt_slip_threshold": 0.3,
+    "use_wandb": 0
   },
   "types": {
     "launcher": [
@@ -86,5 +88,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "17cca6b335423441dd074928678556b0"
+  "md5": "afdb9bbd951d88c709b6c913c2ce4ee5"
 }
