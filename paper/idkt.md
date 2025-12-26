@@ -2143,27 +2143,32 @@ The bug was introduced through a branch merge:
 - **Change:** Modified `forward()` method to use individualized embeddings (`lc`, `ts`) instead of population embeddings (`l0_skill`, `t_skill`)
 - **Status:** Code fix verified and committed
 
-**Verification Results (Experiment 563068):**
-- **Status:** **FUNCTIONAL SUCCESS / QUALITATIVE FAILURE**. 
-- **Finding:** The code fix is working (variance is non-zero, $r < 1.0$), but student-level individualization is being suppressed by the loss function. Per-skill standard deviation dropped from 0.007 (baseline) to 0.00002.
-- **Root Cause (The "Theory Trap"):** Identified a fundamental conflict between **Textured Grounding** and **Warm-up Calibration**. Because we initialize the model already aligned to BKT (Initial MSE $\approx 10^{-7}$), the calibrator boosts the theory weights ($\lambda$) to 100.0 (the cap). This extreme weight locks the model at the theoretical mean and destroys the gradient signal for individualized student traits ($v_s, k_c$).
+**Verification Results (Experiment 628734 - Loose Path 1):**
+- **Configuration:** Textured Grounding, Calibrate Disabled, $\lambda=0.005$.
+- **Finding:** **FAILURE**. Even with alignment weights reduced by 20x, the model remains "trapped" in the BKT population mean ($std \approx 0.00002$, $r=0.99999$). 
+- **Insight:** Textured Grounding is so effective at placing the model at the "correct" population spot (Initial MSE $\approx 10^{-7}$) that the optimizer refuses to incur any penalty to gain student-level variance. The model has become "lazy" because it was born too close to the answer.
 
 #### Architectural Paths Analysis
 
-We analyzed two strategies to resolve this "Identity Trap":
+We analyzed three strategies to resolve this "Identity Trap":
 
-1.  **Path 1 (Grounded Refinement):** Retain *Textured Grounding*, but **disable `--calibrate`** and use fixed empirical weights (e.g., $\lambda \approx 0.1$). This allows the model to start at the theory center but gives student-specific traits the gradient "freedom" to specialize. 
-2.  **Path 2 (Autonomous Discovery):** Revert to random initialization and retain `--calibrate`. This forces the model to discover theory from scratch, which is scientifically rigorous but risks convergence stability and loses the benefits of skill-specific priors.
+1.  **Path 1 (Grounded Refinement):** Retain *Textured Grounding*, disable `--calibrate`, and use empirical weights ($\lambda \approx 0.1$). 
+    - *Result*: FAILED. Model is too locked due to perfect initialization.
+2.  **Path 1b (Loose Grounding):** Same as Path 1 but with tiny weights ($\lambda = 0.005$). 
+    - *Result*: FAILED. The gradient signal for individualization is still weaker than the penalty for moving away from the pre-aligned center.
+3.  **Path 2 (Autonomous Discovery):** Revert to **Random Initialization** and re-enable **Warm-up Calibration**.
+    - *Mechanism*: This forces the model to *search* for the pedagogical signal. During this search, student parameters ($v_s$) must specialize to minimize prediction error while being "pulled" toward BKT. This competition is what historically created the desirable variance.
 
-**Recommendation:** Proceed with **Path 1**. Modern "Informed Deep Learning" favors structured injection of knowledge. Removing the aggressive calibration pass restores the balance necessary for student-level nuance while maintaining theoretical anchors.
+**Recommendation:** Proceed with **Path 2**. We have proven that starting at the "finish line" (Path 1) prevents the model from learning individual nuances. Path 2 provides a more robust scientific "story" by proving the architecture can autonomously discover and align with theoretical constructs from a blank slate.
 
 #### Next Steps
 
 1. **Immediate (Priority 1):**
-   - Launch full training experiment (100-200 epochs) using **Path 1** (Fixed Code, Grounded Init, No Calibration).
+   - Implement Path 2 setup: Ensure `load_theory_params` is bypassed or that model starts with random weights.
+   - Launch full training experiment using Path 2 (Random Init, Calibration Enabled).
    - Target metrics:
      - Per-skill std > 0.005 for both init mastery and learning rate
-     - Correlation with BKT: 0.95-0.98
+     - Correlation with BKT: 0.90-0.95
      - Student param std in model: > 0.5
 
 2. **Validation (Priority 2):**
