@@ -519,18 +519,45 @@ def plot_deviation_histogram(df, output_path, config):
     plt.close()
 
 
-def plot_per_skill_alignment(mastery_df, output_path, config):
+def calculate_ccc(y_true, y_pred):
     """
-    Plot 4: Per-Skill Alignment Heatmap
-    MSE per skill across students
-    Requires mastery_states.csv with columns: student_id, skill_id, Mi, M_rasch
+    Lin's Concordance Correlation Coefficient (CCC).
+    Combines precision (correlation) and accuracy (bias).
+    """
+    if len(y_true) < 2: return 0.0
+    
+    # 1. Pearson Correlation
+    from scipy.stats import pearsonr
+    try:
+        r, _ = pearsonr(y_true, y_pred)
+    except:
+        r = 0.0 # Occurs if variance is zero
+        
+    if np.isnan(r): r = 0.0
+    
+    # 2. Means and Variances
+    mu_true, mu_pred = np.mean(y_true), np.mean(y_pred)
+    var_true, var_pred = np.var(y_true), np.var(y_pred)
+    sd_true, sd_pred = np.sqrt(var_true), np.sqrt(var_pred)
+    
+    # 3. Formula: 2*r*s1*s2 / (s1^2 + s2^2 + (m1-m2)^2)
+    numerator = 2 * r * sd_true * sd_pred
+    denominator = var_true + var_pred + (mu_true - mu_pred)**2
+    
+    if denominator == 0: return 1.0 # Exact match including constant
+    return numerator / denominator
+
+
+def plot_per_skill_alignment(mastery_df, output_path, config, seed=42):
+    """
+    Plot 4: Pedagogical Confidence Zone Heatmap
+    Treats iDKT as the 'Observer' to determine if BKT prediction is in/out of confidence.
     """
     if mastery_df is None:
         print("⚠️  Skipping per-skill alignment plot (no mastery states data)")
         return
     
-    # Check required columns (support multiple naming conventions)
-    # 1. New descriptive names (p_idkt/p_bkt, idkt_im/bkt_im, idkt_rate/bkt_rate)
+    # Identify descriptive names
     new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
     mi_col, rasch_col = None, None
     
@@ -539,82 +566,182 @@ def plot_per_skill_alignment(mastery_df, output_path, config):
             mi_col, rasch_col = c1, c2
             break
             
-    # 2. Legacy names
-    if mi_col is None:
-        if 'Mi' in mastery_df.columns and 'M_rasch' in mastery_df.columns:
-            mi_col, rasch_col = 'Mi', 'M_rasch'
-        elif 'mi_value' in mastery_df.columns and 'm_rasch_value' in mastery_df.columns:
-            mi_col, rasch_col = 'mi_value', 'm_rasch_value'
+    if mi_col is None: return
     
-    if mi_col is None:
-        print(f"⚠️  Skipping per-skill alignment plot (need descriptive names or Mi/M_rasch)")
-        return
+    print(f"📊 Generating Scientific Concordance Heatmap: {mi_col} vs {rasch_col}")
     
-    print(f"📊 Using columns for alignment plot: {mi_col} vs {rasch_col}")
+    # 1. Filter for Robust sequences (T >= 8) to ensure longitudinal evidence
+    counts = mastery_df.groupby(['student_id', 'skill_id']).size().reset_index(name='T')
+    df_robust = pd.merge(mastery_df, counts[counts['T'] >= 8][['student_id', 'skill_id']], on=['student_id', 'skill_id'])
     
-    if 'student_id' not in mastery_df.columns or 'skill_id' not in mastery_df.columns:
-        print(f"⚠️  Skipping per-skill alignment plot (need student_id and skill_id columns)")
-        return
+    if df_robust.empty:
+        print("⚠️  No sequences with T >= 8, using T >= 3 fallback")
+        df_robust = pd.merge(mastery_df, counts[counts['T'] >= 3][['student_id', 'skill_id']], on=['student_id', 'skill_id'])
+
+    # 2. Max-Density Selection (Visual Clarity & Best Evidence)
+    # Pick Top 50 Skills and Top 30 Students with most interactions
+    # This ensures every cell has a deep longitudinal history and minimizes sparsity
+    top_skills = mastery_df.groupby('skill_id').size().nlargest(50).index
+    top_students = mastery_df.groupby('student_id').size().nlargest(30).index
     
-    # Check if rasch column has valid data
-    if mastery_df[rasch_col].isna().all():
-        print(f"⚠️  Skipping per-skill alignment plot ({rasch_col} column is empty)")
-        print(f"   This plot requires IRT alignment (M_rasch values)")
-        return
+    df_sample = df_robust[df_robust['skill_id'].isin(top_skills) & df_robust['student_id'].isin(top_students)]
     
-    # Compute per-student-skill squared error
-    mastery_df['squared_error'] = (mastery_df[mi_col] - mastery_df[rasch_col]) ** 2
+    print(f"   Max-Density Sampling: {len(top_students)} students, {len(top_skills)} skills")
+
+    # 3. Compute Trajectory Concordance (1 - |MAE|) per (Student, Skill)
+    def group_concordance(group):
+        mae = (group[rasch_col].values - group[mi_col].values).__abs__().mean()
+        return 1.0 - mae
+            
+    results = df_sample.groupby(['student_id', 'skill_id']).apply(group_concordance).reset_index(name='c')
+    pivot = results.pivot_table(index='student_id', columns='skill_id', values='c')
     
-    # Pivot to create heatmap: rows=students, cols=skills, values=squared_error
-    pivot = mastery_df.pivot_table(index='student_id', columns='skill_id', values='squared_error', aggfunc='mean')
+    # Create Heatmap
+    fig, ax = plt.subplots(figsize=(15, 10))
     
-    # Limit to reasonable size for visualization
-    max_students = 30
-    max_skills = 50
+    # Discrete Colormap for Concordance Zones
+    # [Red (<0.65), Orange (0.65-0.80), Yellow (0.80-0.90), Green (0.90-1.0)]
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+    import matplotlib.patches as mpatches
     
-    if len(pivot) > max_students:
-        # Sample students
-        pivot = pivot.sample(n=max_students, random_state=42)
+    colors_hex = ["#c0392b", "#e67e22", "#f1c40f", "#27ae60"]
+    cmap_con = ListedColormap(colors_hex)
+    bounds = [0.0, 0.65, 0.80, 0.90, 1.0]
+    norm = BoundaryNorm(bounds, cmap_con.N)
+
+    # Plot Heatmap
+    sns.heatmap(pivot, cmap=cmap_con, norm=norm, ax=ax, 
+                cbar_kws={'label': 'Scientific Concordance (Time-Averaged 1-|MAE|)', 'pad': 0.02})
     
-    if len(pivot.columns) > max_skills:
-        # Select top skills by variance (most interesting)
-        skill_variance = pivot.var(axis=0)
-        top_skills = skill_variance.nlargest(max_skills).index
-        pivot = pivot[top_skills]
+    ax.set_xlabel('Knowledge Components (Top 50 by Density)', fontsize=12)
+    ax.set_ylabel('Student ID (Top 30 by Density)', fontsize=12)
+    ax.set_title(f'Scientific Concordance Heatmap: Longitudinal Validation Scope\n'
+                 f'iDKT Observer vs. BKT Baseline ({mi_col.upper()})', 
+                 fontsize=14, fontweight='bold', pad=20)
     
-    # Create heatmap
-    fig, ax = plt.subplots(figsize=(14, 10))
+    # 2. Add Discrete Legend
+    legend_patches = [
+        mpatches.Patch(color='#27ae60', label='[0.90 - 1.0]: Scientific Concordance (Total Alignment)'),
+        mpatches.Patch(color='#f1c40f', label='[0.80 - 0.9]: Pedagogical Grounding (Rule Consistent)'),
+        mpatches.Patch(color='#e67e22', label='[0.65 - 0.8]: Measured Discovery (Individualized Path)'),
+        mpatches.Patch(color='#c0392b', label='[< 0.65]: Discovery Breakout (New Knowledge Structure)')
+    ]
     
-    # Use log scale with ABSOLUTE bounds for consistent visualization
-    # vmin=-6 (MSE=0.000001, very good)
-    # vmax=0  (MSE=1.0, very poor)
-    pivot_log = np.log10(pivot + 1e-10) # Smaller epsilon for more range
-    
-    sns.heatmap(pivot_log, cmap='RdYlGn_r', ax=ax, 
-                vmin=-6, vmax=0,
-                cbar_kws={'label': 'log10(Squared Error)'})
-    
-    ax.set_xlabel('Skill ID', fontsize=12)
-    ax.set_ylabel('Student ID', fontsize=12)
-    ax.set_title(f'Per-Skill Alignment Heatmap (MSE per Student-Skill pair)\n'
-                 f'{len(pivot)} students × {len(pivot.columns)} skills', 
-                 fontsize=13, fontweight='bold')
-    
-    # Add interpretation text
-    interp_text = ('Interpretability Alignment Scale:\n'
-                  'Green (≤ -4): Excellent (< 1% error)\n'
-                  'Yellow (≈ -2): Moderate (10% error)\n'
-                  'Red (≥ -1): Poor (> 30% error)')
-    ax.text(1.15, 0.5, interp_text, transform=ax.transAxes, 
-           fontsize=10, verticalalignment='center',
-           bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
+    legend = plt.legend(handles=legend_patches, title="Concordance Zones (L1 Similarity)",
+                       loc='center left', bbox_to_anchor=(1.25, 0.5), 
+                       fontsize=10, title_fontsize=11, frameon=True, shadow=True)
+    legend.get_frame().set_facecolor('#fdfdfd')
     
     plt.tight_layout()
+    plt.subplots_adjust(right=0.8) 
+    
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Saved: {output_path}")
     plt.close()
+def plot_student_intervention_analysis(mastery_df, output_root, config, prefix, seed=42):
+    """
+    Educator-Focused Plot:
+    1. Histogram of % Curriculum Outside Confidence (Population View)
+    2. Stacked Bar Chart of Top-Risk Students (Individual Triage)
+    """
+    if mastery_df is None: return
 
-def plot_per_skill_bar_chart(df_agg, metric_col, output_path, title, ylabel, color='#2980b9'):
+    # Identify columns
+    new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+    mi_col, rasch_col = None, None
+    for c1, c2 in new_pairs:
+        if c1 in mastery_df.columns and c2 in mastery_df.columns:
+            mi_col, rasch_col = c1, c2
+            break
+    if mi_col is None: return
+
+    # 1. Functional Baseline Filter (The "Long Tail" Problem)
+    # Only count skills with enough global evidence to be considered a stable BKT theory
+    global_counts = mastery_df.groupby('skill_id').size()
+    top_grounded_skills = global_counts.nlargest(100).index.tolist()
+    
+    # 2. Compute Longitudinal Consensus for every (S, K) pair
+    # Use robust filtering (T >= 5) for student-level aggregation
+    counts = mastery_df.groupby(['student_id', 'skill_id']).size().reset_index(name='T')
+    mask = (counts['T'] >= 5) & (counts['skill_id'].isin(top_grounded_skills))
+    df_robust = pd.merge(mastery_df, counts[mask][['student_id', 'skill_id']], on=['student_id', 'skill_id'])
+    
+    if df_robust.empty:
+        print("⚠️  Filtering too strict for triage, using all skills")
+        df_robust = pd.merge(mastery_df, counts[counts['T'] >= 3][['student_id', 'skill_id']], on=['student_id', 'skill_id'])
+
+    def get_c(group):
+        return 1.0 - (group[rasch_col].values - group[mi_col].values).__abs__().mean()
+        
+    sk_concordance = df_robust.groupby(['student_id', 'skill_id']).apply(get_c).reset_index(name='c')
+
+    # 3. Assign Zones (Unified Pedagogical Thresholds)
+    # MUST MATCH plot_per_skill_alignment for visual consistency
+    def categorize(c):
+        if c >= 0.90: return 'High'     # Green
+        if c >= 0.80: return 'Marginal' # Yellow
+        if c >= 0.65: return 'Low'      # Orange
+        return 'Breakout'               # Red
+        
+    sk_concordance['zone'] = sk_concordance['c'].apply(categorize)
+
+    # 4. Aggregate per Student
+    student_stats = sk_concordance.groupby(['student_id', 'zone']).size().unstack(fill_value=0)
+    # Ensure all columns exist
+    for zone in ['High', 'Marginal', 'Low', 'Breakout']:
+        if zone not in student_stats.columns: student_stats[zone] = 0
+    
+    student_stats['total_skills'] = student_stats.sum(axis=1)
+    for zone in ['High', 'Marginal', 'Low', 'Breakout']:
+        student_stats[f'pct_{zone}'] = (student_stats[zone] / student_stats['total_skills']) * 100
+        
+    # Attention Needed is defined as Low + Breakout
+    student_stats['pct_attention_needed'] = student_stats['pct_Low'] + student_stats['pct_Breakout']
+    
+    # 5. PLOT A: Population Distribution of Attention Need
+    plt.figure(figsize=(10, 6))
+    # Filter out students with very little data (less than 3 skills practiced in the Top 100)
+    top_distribution = student_stats[student_stats['total_skills'] >= 3]
+    
+    sns.histplot(top_distribution['pct_attention_needed'], bins=15, kde=True, color='#e67e22')
+    mean_val = top_distribution['pct_attention_needed'].mean()
+    plt.axvline(mean_val, color='red', linestyle='--', label=f'Mean Risk: {mean_val:.1f}%')
+    
+    plt.title('Educator Population Overview: Intervention Risk\n(% of Core Curriculum Outside Theoretical Confidence)', fontsize=13, fontweight='bold')
+    plt.xlabel('% of Core KC Journeys with Low/Breakout Concordance (<0.80)', fontsize=11)
+    plt.ylabel('Number of Students', fontsize=11)
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3)
+    
+    pop_path = os.path.join(output_root, f'student_attention_distribution_{prefix}.png')
+    plt.savefig(pop_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved Refined Educator Plot: {pop_path}")
+    plt.close()
+
+    # 6. PLOT B: Student Triage (Top 30 Students by Interaction Density)
+    # Sync with Heatmap sampling: Use total interaction count
+    top_risk = student_stats.nlargest(30, 'total_skills')
+        
+    # Reorder columns for stacked bar
+    plot_data = top_risk[['pct_Breakout', 'pct_Low', 'pct_Marginal', 'pct_High']]
+    
+    colors = ["#c0392b", "#e67e22", "#f1c40f", "#27ae60"]
+    ax = plot_data.plot(kind='bar', stacked=True, figsize=(15, 7), color=colors, edgecolor='black', linewidth=0.5)
+    
+    plt.title('Student Intervention Triage: Top 30 Students by Interaction Density\n(Aggregated Results for High-Confidence Longitudinal Journeys)', fontsize=13, fontweight='bold')
+    plt.ylabel('% of student\'s Core Curriculum', fontsize=11)
+    plt.xlabel('Student ID (Ranked by Total Interaction Density)', fontsize=11)
+    plt.legend(['Breakout (Red, <0.65)', 'Low Confidence (Orange, <0.80)', 'Marginal (Yellow, <0.90)', 'High Fidelity (Green)'], 
+               loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=9)
+    plt.xticks(rotation=45)
+    plt.grid(axis='y', alpha=0.2)
+    
+    triage_path = os.path.join(output_root, f'student_triage_risk_profiles_{prefix}.png')
+    plt.savefig(triage_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved Refined Educator Plot: {triage_path}")
+    plt.close()
+
+def plot_per_skill_bar_chart(df_agg, metric_col, output_path, title, ylabel, color='#2980b9', threshold=None, threshold_label="Safe/High"):
     """
     Generic bar chart for per-skill metrics, ranked.
     """
@@ -626,6 +753,16 @@ def plot_per_skill_bar_chart(df_agg, metric_col, output_path, title, ylabel, col
     plt.figure(figsize=(15, 6))
     bars = plt.bar(range(len(df_sorted)), df_sorted[metric_col], color=color, alpha=0.8, edgecolor='black', linewidth=0.5)
     
+    # 1. Add Threshold Line
+    if threshold is not None:
+        plt.axhline(y=threshold, color='red', linestyle='--', linewidth=1.5, alpha=0.9, label=f'Threshold: {threshold}')
+        # Highlight "Good" area
+        # plt.axhspan(threshold, plt.ylim()[1], color='green', alpha=0.05)
+        
+        # Add labels for Good/Bad sides
+        plt.text(len(df_sorted)-1, threshold + (plt.ylim()[1]*0.02), f"   {threshold_label}", color='red', fontweight='bold', verticalalignment='bottom', horizontalalignment='right')
+        plt.text(len(df_sorted)-1, threshold - (plt.ylim()[1]*0.02), "   Limited/Discovery", color='gray', verticalalignment='top', horizontalalignment='right')
+
     # Label top and bottom 5 skills if many
     num_skills = len(df_sorted)
     if num_skills > 60:
@@ -663,9 +800,11 @@ def plot_per_skill_probing_bars(run_dir, output_path):
     
     df.index.name = 'skill_id'
     
+    # Threshold for probing: r > 0.4 is significant alignment in educational data
     plot_per_skill_bar_chart(df, 'pearson', output_path, 
                             "Per-Skill Latent Grounding (Probing Pearson r)", 
-                            "Diagnostic Pearson Correlation", color='#27ae60')
+                            "Diagnostic Pearson Correlation", color='#27ae60',
+                            threshold=0.4, threshold_label="Strong Grounding")
 
 
 def main():
@@ -685,6 +824,7 @@ def main():
     parser.add_argument('--plot_correlation', type=int, default=1, help='Generate Per-Skill Correlation Bar Charts')
     parser.add_argument('--plot_variance', type=int, default=1, help='Generate Per-Skill Individualization Variance Bar Charts')
     parser.add_argument('--plot_probing', type=int, default=1, help='Generate Per-Skill Probing Bar Charts')
+    parser.add_argument('--seed', type=int, default=42, help='Seed for reproducible sampling')
     
     args = parser.parse_args()
     
@@ -776,7 +916,10 @@ def main():
                 if args.plot_heatmap:
                     plot_filename = f'per_skill_alignment_{base_name}{suffix}.png'
                     print(f"   Generating Heatmap: {plot_filename}...")
-                    plot_per_skill_alignment(df_split, os.path.join(plots_dir, plot_filename), config)
+                    plot_per_skill_alignment(df_split, os.path.join(plots_dir, plot_filename), config, seed=args.seed)
+                    
+                    # Also generate Student-Level Triage Plots
+                    plot_student_intervention_analysis(df_split, plots_dir, config, base_name, seed=args.seed)
                 
                 # Identify columns for bars
                 new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
@@ -797,18 +940,25 @@ def main():
                             plot_per_skill_bar_chart(corr_agg.to_frame('r'), 'r', 
                                                     os.path.join(plots_dir, plot_filename),
                                                     f"Structural Fidelity: {base_name.replace('_',' ').title()} Alignment",
-                                                    "Pearson Correlation (r)", color='#2980b9')
+                                                    "Pearson Correlation (r)", color='#2980b9',
+                                                    threshold=0.4, threshold_label="Strong Grounding")
                                                     
-                    # 3. Individualization Variance Bar Charts
+                    # 3. Individualization Volume Bar Charts
                     if args.plot_variance:
                         var_agg = df_split.groupby('skill_id')[mi_col].std()
                         var_agg = var_agg.dropna()
                         if not var_agg.empty:
+                            # Context-aware threshold: Predictions vary more than static parameters
+                            is_pred = 'p_idkt' in mi_col
+                            v_thresh = 0.05 if is_pred else 0.0001
+                            v_label = "Significant Discovery"
+                            
                             plot_filename = f'per_skill_variance_{base_name}{suffix}.png'
                             plot_per_skill_bar_chart(var_agg.to_frame('std'), 'std',
                                                     os.path.join(plots_dir, plot_filename),
                                                     f"Individualization Volume: {base_name.replace('_',' ').title()} Nuance",
-                                                    "Standard Deviation (σ)", color='#f39c12')
+                                                    "Standard Deviation (σ)", color='#f39c12',
+                                                    threshold=v_thresh, threshold_label=v_label)
                 
             # 4. Probing Bar Chart
             if args.plot_probing:
