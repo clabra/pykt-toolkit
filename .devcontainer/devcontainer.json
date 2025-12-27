@@ -55,7 +55,8 @@
                 "googlecloudtools.cloudcode",
                 "google.geminicodeassist",
                 "ms-python.vscode-python-envs",
-                "Anthropic.claude-code"
+                "Anthropic.claude-code",
+                "James-Yu.latex-workshop"
             ]
         },
         "settings": {

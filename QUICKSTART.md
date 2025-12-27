@@ -240,6 +240,46 @@ If you use VS Code, you can also open this project using the DevContainer config
 2. Press `F1` and select "Dev Containers: Reopen in Container"
 3. VS Code will automatically build and connect to the container
 
+## Latex Installation and Setup
+
+To work with Latex it's recommended to include a LaTeX environment based on the LaTeX Workshop extension and TeX Live running inside the project's Docker container. 
+
+### Building Latex Documents
+
+There are three ways to compile the LaTeX documents:
+
+1. **Integrated Dev Container (Recommended)**:
+   - Ensure the following packages are installed in the `Dockerfile`:
+     ```bash
+     RUN apt-get update && apt-get install -y --no-install-recommends \
+       texlive-latex-extra \
+       texlive-fonts-recommended \
+       texlive-bibtex-extra \
+       texlive-science \
+       texlive-publishers \
+       latexmk \
+       ghostscript
+     ```
+   - If working in VS Code, install the **LaTeX Workshop** extension. It provides "Build on Save" support, and you can also use the "Build LaTeX Project" button or `Ctrl+Alt+B` to build the document directly within the containerized environment.
+
+2. **Convenience Script (Host-to-Container)**:
+   - You can trigger the containerized `latexmk` from your host terminal using a script (e.g., `paper/compile.sh`):
+
+     ```bash
+     #!/bin/bash
+     docker exec -w /workspaces/pykt-toolkit/paper/latex [CONTAINER_NAME] latexmk -pdf paper.tex
+     ```
+   - This allows you to generate the PDF without opening the container, provided the container is running.
+
+3. **Host-Bridge Shims (IDE Integration from Host)**:
+   - We have installed shims in `~/.local/bin/` on the host machine (`latexmk`, `pdflatex`, `bibtex`, etc.).
+   - These shims automatically redirect host-based IDE commands (like the "Build" button) to the container.
+   - **Note**: Ensure `~/.local/bin` is in your host `$PATH` and reload the IDE window if you encounter `ENOENT` errors when trying to build your latex document.
+
+### Technical Details
+
+- **Base Image**: The environment is built into the `.devcontainer/Dockerfile`.
+- **Path Translation**: Host shims automatically translate absolute paths (e.g., `/home/username/...` to `/workspaces/...`) to maintain compatibility between host and container filesystems.
 ## Next Steps
 
 - Review the documentation in `docs/` for detailed model information

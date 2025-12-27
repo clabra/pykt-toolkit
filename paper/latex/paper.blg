@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99d (TeX Live 2019/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: paper.aux
+The style file: Definitions/mdpi.bst
+Database file #1: biblio.bib
+Warning--I didn't find a database entry for "piech2015deep"
+Warning--I didn't find a database entry for "vaswani2017attention"
+Warning--I didn't find a database entry for "zhang2017dynamic"
+Warning--I didn't find a database entry for "ghosh2020context"
+You've used 10 entries,
+            2887 wiz_defined-function locations,
+            612 strings with 5965 characters,
+and the built_in function-call counts, 4248 in all, are:
+= -- 345
+> -- 330
+< -- 7
++ -- 142
+- -- 89
+* -- 324
+:= -- 661
+add.period$ -- 28
+call.type$ -- 10
+change.case$ -- 10
+chr.to.int$ -- 10
+cite$ -- 10
+duplicate$ -- 189
+empty$ -- 305
+format.name$ -- 115
+if$ -- 903
+int.to.chr$ -- 1
+int.to.str$ -- 10
+missing$ -- 7
+newline$ -- 50
+num.names$ -- 30
+pop$ -- 121
+preamble$ -- 0
+purify$ -- 10
+quote$ -- 0
+skip$ -- 160
+stack$ -- 0
+substring$ -- 118
+swap$ -- 48
+text.length$ -- 2
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 70
+warning$ -- 0
+while$ -- 28
+width$ -- 0
+write$ -- 115
+(There were 4 warnings)

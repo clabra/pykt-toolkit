@@ -29,7 +29,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     lsof \
     sudo \
-    poppler-utils
+    poppler-utils \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    texlive-bibtex-extra \
+    texlive-science \
+    texlive-publishers \
+    latexmk \
+    ghostscript
+
+# Latex
+# If eventually a specific package is missing, it's possible add texlive-full (though note it is several gigabytes in size):
+#RUN apt-get install -y texlive-full
 
 # Download and install the corporate CA certificate
 RUN curl -O https://nexus.roqs.basf.net/repository/cdn/ca/BASF_internal_and_public_ca_bundle.crt --insecure && \

@@ -1,0 +1,66 @@
+\begin{thebibliography}{999}
+
+\bibitem[Corbett and Anderson(1994)]{corbett1994knowledge}
+Corbett, A.T.; Anderson, J.R.
+\newblock Knowledge tracing: Modeling the acquisition of procedural knowledge.
+\newblock {\em User modeling and user-adapted interaction} {\bf 1994}, {\em
+  4},~253--278.
+
+\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
+  Gordon]{yudelson2013individualized}
+Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
+\newblock Individualized bayesian knowledge tracing models.
+\newblock In Proceedings of the International conference on artificial
+  intelligence in education. Springer,  2013, pp. 171--180.
+
+\bibitem[Bai et~al.(2024)]{bai2024survey}
+Bai, X.;  et~al.
+\newblock A Survey of Explainable Knowledge Tracing,  2024.
+
+\bibitem[Fantozzi et~al.(2024)]{fantozzi2024explainability}
+Fantozzi, M.;  et~al.
+\newblock The Explainability of Transformers - Current Status and Directions.
+\newblock {\em arXiv preprint arXiv:2401.09202} {\bf 2024}.
+
+\bibitem[Di~Marino et~al.(2025)]{di2025ante}
+Di~Marino, S.;  et~al.
+\newblock Ante-Hoc Methods for Interpretable Deep Models: A Survey,  2025.
+
+\bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
+  Ganguly, Shekhar, Samatova, and Kumar]{karpatne2017theory}
+Karpatne, A.; Atluri, G.; Faghmous, J.; Steinbach, M.; Banerjee, A.; Ganguly,
+  A.; Shekhar, S.; Samatova, N.; Kumar, V.
+\newblock Theory-guided Data Science: A New Paradigm for Scientific Discovery
+  from Data.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2017},
+  {\em 29},~2318--2331.
+
+\bibitem[Willard et~al.(2022)Willard, Jia, Xu, Steinbach, and
+  Kumar]{willard2022integrating}
+Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
+\newblock Integrating Physics-Based Modeling With Machine Learning: A Survey,
+  2022.
+
+\bibitem[Lee et~al.(2021)Lee, Park, Kim, Choi, and Kim]{lee2021consistency}
+Lee, U.; Park, Y.; Kim, Y.; Choi, S.; Kim, H.
+\newblock Consistency and monotonicity regularization for neural knowledge
+  tracing.
+\newblock {\em arXiv preprint arXiv:2106.06965} {\bf 2021}.
+
+\bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
+  Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
+  Bauck-hage, and Schuecker]{vonrueden2021informed}
+Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
+  Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
+\newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
+  Knowledge into Learning Systems.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
+  p. 1–1.
+
+\bibitem[Gong et~al.(2025)]{gong2025tgel}
+Gong, Y.;  et~al.
+\newblock TGEL-transformer: Fusing educational theories with deep learning for
+  interpretable student performance prediction.
+\newblock {\em Expert Systems with Applications} {\bf 2025}.
+
+\end{thebibliography}
