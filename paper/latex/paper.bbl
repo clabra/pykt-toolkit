@@ -6,12 +6,33 @@ Corbett, A.T.; Anderson, J.R.
 \newblock {\em User modeling and user-adapted interaction} {\bf 1994}, {\em
   4},~253--278.
 
-\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
-  Gordon]{yudelson2013individualized}
-Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
-\newblock Individualized bayesian knowledge tracing models.
-\newblock In Proceedings of the International conference on artificial
-  intelligence in education. Springer,  2013, pp. 171--180.
+\bibitem[Šarić Grgić et~al.(2022)Šarić Grgić, Grubišić, and
+  Gašpar]{twenty_five_years_of_bkt}
+Šarić Grgić, I.; Grubišić, A.; Gašpar, A.
+\newblock Twenty-five years of Bayesian knowledge tracing: a systematic review,
+   2022.
+
+\bibitem[Piech et~al.(2015)Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and
+  Sohl-Dickstein]{piech2015deep}
+Piech, C.; Bassen, J.; Huang, J.; Ganguli, S.; Sahami, M.; Guibas, L.J.;
+  Sohl-Dickstein, J.
+\newblock Deep knowledge tracing.
+\newblock {\em Advances in neural information processing systems} {\bf 2015},
+  {\em 28}.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
+  Kaiser, and Polosukhin]{vaswani2017attention}
+Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
+  Kaiser, {\L}.; Polosukhin, I.
+\newblock Attention is all you need.
+\newblock {\em Advances in neural information processing systems} {\bf 2017},
+  {\em 30}.
+
+\bibitem[Abdelrahman et~al.(2023)Abdelrahman, Wang, and
+  Nunes]{abdelrahman2023knowledge}
+Abdelrahman, G.; Wang, Q.; Nunes, B.
+\newblock Knowledge tracing: A survey.
+\newblock {\em ACM Computing Surveys} {\bf 2023}, {\em 55},~1--37.
 
 \bibitem[Bai et~al.(2024)]{bai2024survey}
 Bai, X.;  et~al.
@@ -40,12 +61,6 @@ Karpatne, A.; Atluri, G.; Faghmous, J.; Steinbach, M.; Banerjee, A.; Ganguly,
 Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
 \newblock Integrating Physics-Based Modeling With Machine Learning: A Survey,
   2022.
-
-\bibitem[Lee et~al.(2021)Lee, Park, Kim, Choi, and Kim]{lee2021consistency}
-Lee, U.; Park, Y.; Kim, Y.; Choi, S.; Kim, H.
-\newblock Consistency and monotonicity regularization for neural knowledge
-  tracing.
-\newblock {\em arXiv preprint arXiv:2106.06965} {\bf 2021}.
 
 \bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
   Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,

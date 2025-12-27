@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Deep learning models for knowledge tracing aim to predict learner performance over time, but most existing approaches emphasize predictive accuracy at the cost of interpretability. We present **iDKT** (Interpretable Deep Knowledge Tracing), a novel framework that achieves **interpretability-by-design** through structural grounding of latent states in classical pedagogical theory. By using **Relational Differential Fusion (RDF)**, iDKT individualizes student mastery estimates by shifting skill-specific bases derived from Bayesian Knowledge Tracing (BKT).
+Deep learning models for knowledge tracing aim to predict learner performance over time, but most existing approaches emphasize predictive accuracy at the cost of interpretability. We present **iDKT** (Interpretable Deep Knowledge Tracing), a novel framework that achieves **interpretability-by-design** through Representational Grounding of latent states in classical pedagogical theory. By using **Relational Differential Fusion (RDF)**, iDKT individualizes student mastery estimates by shifting skill-specific bases derived from Bayesian Knowledge Tracing (BKT).
 
 Our results on benchmark datasets (ASSIST2009, ASSIST2015) demonstrate that iDKT achieves near-perfect alignment with theoretical parameters ($>0.98$ correlation) while maintaining competitive predictive performance, with less than 1.5% decrease in AUC compared to non-grounded baselines. These results suggest that high-fidelity grounding is a viable path toward transparent and trustworthy educational AI.
 
@@ -119,7 +119,7 @@ Where $L0_{skill}$ and $T_{skill}$ are anchored in BKT priors, and $k_c, v_s$ ar
 
 ### Loss Function
 
-We use a multi-objective loss function to enforce structural grounding:
+We use a multi-objective loss function to enforce Representational Grounding:
 
 $L_{\text{total}} = L_{\text{SUP}} + \lambda_{\text{ref}} L_{\text{ref}} + \sum_{i} \lambda_{\text{p},i} L_{\text{param},i} + \lambda_{reg} L_{reg}$
 

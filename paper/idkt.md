@@ -111,7 +111,7 @@ graph TD
             end
         end
 
-        subgraph "Loss Components (Structural Grounding)"
+        subgraph "Loss Components (Representational Grounding)"
             direction TB
             L_SUP["L_sup: BCE(p, r)<br/>(Performance)"]
             L_REF["L_ref: MSE(p, p_BKT)<br/>(Alignment)"]
@@ -237,7 +237,7 @@ This kind of loss component is designed to align a parameter estimated by the iD
 
 We define this loss functions for the learning rate (individual velocity) and init mastery parameters postulated by the BKT model. 
 
-The alignment is maintained through a three-stage structural grounding process. Let's see them for the case of the rate ($T$) parameter:
+The alignment is maintained through a three-stage Representational Grounding process. Let's see them for the case of the rate ($T$) parameter:
 
 **1. Generation of the Individualized Velocity Embedding ($t_s$)**
 The model constructs a high-dimensional representation of personalized learning speed by fusing theoretical priors with student-specific traits:
@@ -308,7 +308,7 @@ This mechanism ensures that the Transformer's internal representations for "lear
   - Regularized via L₂ penalty: `L_reg = ||uq||²`
 
 - **Informed Individualization** (Interpretability-by-Design):
-  - **Structural Grounding**: Student-specific traits ($k_c$: Knowledge Gap, $v_s$: Learning Speed) are learned as scalars and fused into the core embeddings.
+  - **Representational Grounding**: Student-specific traits ($k_c$: Knowledge Gap, $v_s$: Learning Speed) are learned as scalars and fused into the core embeddings.
   - **Intrinsic Initial Knowledge ($l_c$)**: Personalized starting line grounded in BKT $L0$. 
   - **Intrinsic Learning Momentum ($t_s$)**: Personalized learning velocity grounded in BKT $T$.
   - **Relational Inductive Bias**: The model architecture enforces the $(\text{Challenge} - \text{Capability})$ logic directly in the input layer, ensuring that the Transformer's attention is semantically anchored to pedagogical theory.
@@ -357,7 +357,7 @@ This mechanism ensures that the Transformer's internal representations for "lear
   - `mask=1`: Causal masking in encoders (can see current + past positions)
   - `mask=0`: Strict past-only in Knowledge Retriever (current position masked) + zero-padding for first row
 
-- **Loss Components** (Structural Grounding):
+- **Loss Components** (Representational Grounding):
   - **Multi-Objective Loss**: $L = L_{SUP} + L_{ref} + L_{reg}$.
   - **Alignment ($L_{ref}$)**: Projects the model's knowledge state back into the theory space ($L0, T$) to ensure semantic consistency.
   - **Task-Agnostic Regularization**: Penalizes $u_q, k_c, v_s$ to maintain the "Normal Student/Problem" prior.
@@ -1103,7 +1103,7 @@ The iDKT model implements a multi-objective optimization objective that balances
 | **0.80** | 0.6785 | 0.9308 | 0.1436 | -0.2124 | Diminishing Returns |
 | **1.00** | 0.6724 | 0.9357 | 0.1438 | -0.2132 | Theory-Locked |
 
-> **Figure Note (ASSIST2015 Titration):** Similar to ASSIST2009, we observe a clear "Interpretability Sweet Spot" at $\lambda=0.10$, where the model retains over **99.7% of its base accuracy** while internalizing the core of the BKT theory. The consistency of the $H_2$ peak at $\lambda=0.30$ across datasets confirms that structural grounding follows a universal multi-objective frontier.
+> **Figure Note (ASSIST2015 Titration):** Similar to ASSIST2009, we observe a clear "Interpretability Sweet Spot" at $\lambda=0.10$, where the model retains over **99.7% of its base accuracy** while internalizing the core of the BKT theory. The consistency of the $H_2$ peak at $\lambda=0.30$ across datasets confirms that Representational Grounding follows a universal multi-objective frontier.
 
 ### Titration Results (ASSIST2009 - 10-Point Sweep)
 
@@ -1282,7 +1282,7 @@ This archetype preserves the objective nature of external events and concentrate
 
 ## Discussion: The Philosophy of Interpretability-by-Design
 
-The proposed transition to **Relational Differential Fusion (Archetype 1)** represents a fundamental shift in the development of deep knowledge tracing models. Rather than treating interpretability as a post-hoc diagnostic task—an attempt to explain what a black-box model has already learned—we propose **Structural Grounding** as a core architectural principle.
+The proposed transition to **Relational Differential Fusion (Archetype 1)** represents a fundamental shift in the development of deep knowledge tracing models. Rather than treating interpretability as a post-hoc diagnostic task—an attempt to explain what a black-box model has already learned—we propose **Representational Grounding** as a core architectural principle.
 
 ### 1. From Predictive Pattern-Matching to Differential Evaluation
 
@@ -1358,7 +1358,7 @@ $$\mathcal{L}_{total} = L_{sup} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init
 *   **Role**: Anchors the Transformer's output to established probabilistic theories of learning.
 
 ### 5.3 Parameter Consistency Losses ($L_{init}, L_{rate}$)
-These ensure structural grounding of the individualization parameters:
+These ensure Representational Grounding of the individualization parameters:
 *   **Initial Mastery ($L_{init}$)**: MSE between projected model state and BKT `prior`:
     $$L_{init} = \frac{1}{N} \sum (\text{proj\_init} - L0_{BKT})^2$$
 *   **Learning Velocity ($L_{rate}$)**: MSE between projected model state and BKT `learns`:
@@ -1493,7 +1493,7 @@ To rigorously determine the "best" grounding strength, we employ the **Maximum D
 
 The elbow analysis confirms that $\lambda \approx 0.10$ represents the mathematically optimal trade-off point. At this juncture, the model has captured over **93.5% of the recoverable theoretical signal** (relative to the peak at $\lambda=0.7$) while retaining over **99.2% of its maximum predictive capacity**. Choosing a $\lambda$ beyond this point leads to rapid decay in predictive accuracy with negligible or negative gains in theoretical fidelity.
 
-## 10. Fine-Grained Structural Grounding
+## 10. Fine-Grained Representational Grounding
 
 Beyond global metrics, iDKT achieves high-fidelity alignment at the individual skill and student levels. This "Fine-Grained Grounding" is the key to actionable pedagogical explanations.
 
@@ -1561,12 +1561,12 @@ The use of Time-Averaged L1 consensus as the basis for Pedagogical Confidence pr
 **A. ASSIST2009 Confidence Heatmap**
 | Student x Skill Alignment Scope | Educational Interpretation |
 | :---: | :--- |
-| ![A09 Consensus](../experiments/20251226_144144_idkt_path2discovery_assist2009_baseline_499377/plots/per_skill_alignment_predictions.png) | **Validated Efficiency:** The dominance of 🟩/🟨 cells proves that for the majority of the curriculum, BKT remains a reliable diagnostic prior. **Max-Density Selection:** By focusing on the *Top 50 Skills* and *Top 30 Students* ranked by interaction frequency, we prove that the model's structural grounding is strongest exactly where student evidence is most abundant. |
+| ![A09 Consensus](../experiments/20251226_144144_idkt_path2discovery_assist2009_baseline_499377/plots/per_skill_alignment_predictions.png) | **Validated Efficiency:** The dominance of 🟩/🟨 cells proves that for the majority of the curriculum, BKT remains a reliable diagnostic prior. **Max-Density Selection:** By focusing on the *Top 50 Skills* and *Top 30 Students* ranked by interaction frequency, we prove that the model's Representational Grounding is strongest exactly where student evidence is most abundant. |
 
 **B. ASSIST2015 Confidence Heatmap**
 | Student x Skill Alignment Scope | Educational Interpretation |
 | :---: | :--- |
-| ![A15 Consensus](../experiments/20251226_154332_idkt_path2discovery_assist2015_baseline_584960/plots/per_skill_alignment_predictions.png) | **High Theory Reliability:** The near-total 🟩 manifold indicates that BKT predictions are highly confident for this dataset. **Evidence Saturation:** The dense green manifold demonstrates that for the most active learners in ASSIST2015, the structural grounding mechanism achieves near-perfect alignment with pedagogical theory. |
+| ![A15 Consensus](../experiments/20251226_154332_idkt_path2discovery_assist2015_baseline_584960/plots/per_skill_alignment_predictions.png) | **High Theory Reliability:** The near-total 🟩 manifold indicates that BKT predictions are highly confident for this dataset. **Evidence Saturation:** The dense green manifold demonstrates that for the most active learners in ASSIST2015, the Representational Grounding mechanism achieves near-perfect alignment with pedagogical theory. |
 
 **Pedagogical Confidence Legend (TG-CI):**
 *   🟩 **[0.9 - 1.0] High Confidence**: The theory is a reliable predictor for this student.
@@ -1641,7 +1641,7 @@ The primary outputs of iDKT are the **Predicted Correctness ($P(correct)$)** and
 - **$P(m)$**: In iDKT, mastery is proxied by the model's predicted performance across all skills, stored in `roster_idkt.csv`. Furthermore, we compute an **"induced mastery"** trajectory (Hypothesis $H_2$) by applying the BKT update logic to the student's history using iDKT's individualized learning velocity ($t_s$). This allows for a direct comparison with BKT's hidden state.
 
 #### 11.4 Recommended Visualizations for Scientific Validation
-To demonstrate the practical value of iDKT's structural grounding, we propose the following visualizations/metrics:
+To demonstrate the practical value of iDKT's Representational Grounding, we propose the following visualizations/metrics:
 
 1.  **Parameter Individualization Variance (Individualized vs Standard BKT)**:
     - **Visual**: A scatter plot showing BKT $L_0$ (X-axis) vs iDKT $l_c$ distribution (Y-axis) per skill. Error bars or violins show how iDKT spreads the theoretical $L_0$ to account for individual student knowledge gaps ($k_c$).
@@ -1815,7 +1815,7 @@ This mismatch affects the interpretability of all results generated before **Dec
 - **Mastery Mosaic:** Convergence speeds in the longitudinal plots appear approximately 2x faster than they should be in the initial interactions.
 
 ### 3. Remediations Implemented
-We have refactored the structural grounding mechanism in `pykt/models/idkt.py` to ensure mathematical consistency:
+We have refactored the Representational Grounding mechanism in `pykt/models/idkt.py` to ensure mathematical consistency:
 
 #### A. Logit-Grounded Initialization
 Theory bases are now initialized in **Logit Space**, ensuring $\sigma(W_{init}) = P_{theory}$.
@@ -1874,7 +1874,7 @@ In summary: It is the process of refreshing the entire experimental section of t
 
 ## Appendix: Scientific Auditing Protocol (`auditor_idkt.py`)
 
-To maintain scientific fidelity as the iDKT architecture evolves, we have established a formal auditing protocol enabled by the `examples/auditor_idkt.py` diagnostic tool. This script ensures that structural grounding is preserved and that no scaling artifacts (like those identified in Dec 2025) are re-introduced.
+To maintain scientific fidelity as the iDKT architecture evolves, we have established a formal auditing protocol enabled by the `examples/auditor_idkt.py` diagnostic tool. This script ensures that Representational Grounding is preserved and that no scaling artifacts (like those identified in Dec 2025) are re-introduced.
 
 ### 1. What the Auditor Checks
 The auditor uses **Dynamic Component Discovery** via PyTorch module introspection to verify the following scientific invariants:
@@ -2195,7 +2195,7 @@ Recent experiments revealed a critical bug preventing student-level individualiz
    rate = m(ts.mean(dim=-1))
    ```
    
-   **Explanation:** The model correctly computed individualized embeddings using the structural grounding formula `lc = l0_skill + kc * dc` and `ts = t_skill + vs * ds`, but the output layer was incorrectly using the population-level embeddings (`l0_skill`, `t_skill`) and only adding a scalar student shift. This destroyed all the rich individualization that was embedded in the `lc` and `ts` tensors. 
+   **Explanation:** The model correctly computed individualized embeddings using the Representational Grounding formula `lc = l0_skill + kc * dc` and `ts = t_skill + vs * ds`, but the output layer was incorrectly using the population-level embeddings (`l0_skill`, `t_skill`) and only adding a scalar student shift. This destroyed all the rich individualization that was embedded in the `lc` and `ts` tensors. 
 
    Note that the mean(dim=-1) operation acts on the feature dimension (the 256 latent factors). Every student in the batch still has their own unique value. The operation is simply collapsing a 256-dimensional "vector of knowledge" into a 1-dimensional "scalar of knowledge" for that specific student.
 
@@ -2302,17 +2302,17 @@ We have consolidated on **Path 2 (Autonomous Discovery)**. While "Textured Groun
 
 #### Lessons Learned
 
-1. **Semantic Consistency:** When using structural grounding formulas, ensure outputs use the grounded embeddings, not intermediate population-level representations
+1. **Semantic Consistency:** When using Representational Grounding formulas, ensure outputs use the grounded embeddings, not intermediate population-level representations
 2. **Variance as a Diagnostic:** Zero variance in individualized outputs is a red flag indicating the model is not actually using student-specific parameters
 3. **Code Evolution Risks:** Merges and refactoring can introduce subtle bugs that break interpretability without affecting predictive performance
 4. **Testing Importance:** Need automated tests to verify individualization variance is within expected ranges
 
 ## Research Questions
 
-This study aims to evaluate the effectiveness of structural grounding in bridging the gap between deep learning and educational theory. We formulate two primary research questions to guide our experimental validation:
+This study aims to evaluate the effectiveness of Representational Grounding in bridging the gap between deep learning and educational theory. We formulate two primary research questions to guide our experimental validation:
 
 **Research Question 1: The Granularity Hypothesis (Individualization)**
-*Does the structural grounding framework allow a deep knowledge tracing model to recover individualized values for latent factors that align with the semantic constructs of a theoretically-grounded reference model, thereby transforming population-level theoretical averages into high-granularity learner diagnostics?*
+*Does the Representational Grounding framework allow a deep knowledge tracing model to recover individualized values for latent factors that align with the semantic constructs of a theoretically-grounded reference model, thereby transforming population-level theoretical averages into high-granularity learner diagnostics?*
 
 We hypothesize that, when anchored to a theoretical reference model, iDKT can successfully estimate the individualized variance of parameters postulated by that theory. This enables the model to recover student-specific latent factors that are traditionally obscured within the fixed population-level values of simpler models. 
 
@@ -2321,7 +2321,7 @@ We empirically evaluate this hypothesis using Bayesian Knowledge Tracing (BKT) a
 **Research Question 2: The Fidelity-Performance Paradox (Trade-off)**
 *To what extent can deep knowledge tracing models be constrained by theoretical alignment before the grounding begins to suppress the discovery of complex behavioral patterns, and is there a Pareto optimal region where theoretical explainability can be achieved without sacrificing predictive capacity?*
 
-We hypothesize that there exists a Pareto-optimal "sweet spot" where theoretical grounding can be enforced without compelling a significant degradation in predictive accuracy. Specifically, we posit that by modulating the strength of the structural grounding, we can identify a "Fidelity-Performance Frontier" where the model remains consistent with pedagogical rules while leveraging its Transformer capacity to capture complex nuances—such as student-specific pacing and behavioral noise—that the reference theory might otherwise overlook. 
+We hypothesize that there exists a Pareto-optimal "sweet spot" where theoretical grounding can be enforced without compelling a significant degradation in predictive accuracy. Specifically, we posit that by modulating the strength of the Representational Grounding, we can identify a "Fidelity-Performance Frontier" where the model remains consistent with pedagogical rules while leveraging its Transformer capacity to capture complex nuances—such as student-specific pacing and behavioral noise—that the reference theory might otherwise overlook. 
 
 We empirically evaluate this hypothesis through a systematic titration sweep across the grounding weights $\lambda \in [0, 0.5]$, performing a multi-objective analysis that maps predictive AUC against diagnostic probing alignment to identify the optimal regularization regime.
 
@@ -2344,9 +2344,9 @@ The results from **Experiment 499377 (ASSIST2009)** and **Experiment 584960 (ASS
 
 ## Formal Contributions
 
-The core contribution of this work is the development and validation of **iDKT**, a framework that demonstrates how structural grounding can resolve the tension between deep learning performance and educational interpretability. We claim the following original contributions supported by our experimental findings:
+The core contribution of this work is the development and validation of **iDKT**, a framework that demonstrates how Representational Grounding can resolve the tension between deep learning performance and educational interpretability. We claim the following original contributions supported by our experimental findings:
 
-#### 1. Neural-Symbolic Structural Grounding (Interpretable-by-Design)
+#### 1. Neural-Symbolic Representational Grounding (Interpretable-by-Design)
 We propose an architectural paradigm that embeds pedagogical constructs—specifically initial mastery ($l_c$) and learning velocity ($t_s$)—directly into the input stream of a Transformer. Unlike *post-hoc* explainability methods that rely on superficial visualizations of attention weights, iDKT is **intrinsically interpretable** because its latent space is structurally anchored to established educational theory. This ensures that the model’s internal reasoning remains scientifically plausible and pedagogically valid.
 
 #### 2. A Formal Methodology for Quantifying Latent Interpretability

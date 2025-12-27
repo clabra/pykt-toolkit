@@ -11,7 +11,7 @@ Alternative Titles
 
 3) Individualized Diagnostic Placement and Dynamic Pacing: An Interpretable-by-design Transformer-Based Knowledge Tracing Approach
 
-4) Bridging Transformers Predictive Power and Pedagogical Theory: A Novel Structurally Grounded Approach for Interpretable Deep Knowledge Tracing
+4) Bridging Transformers Predictive Power and Pedagogical Theory: A Novel Representational Grounding Approach for Interpretable Deep Knowledge Tracing
 ```
 
 **Keywords:** knowledge tracing; deep learning; interpretability; Bayesian Knowledge Tracing; educational data mining; personalized learning.
@@ -26,7 +26,7 @@ A single paragraph of about 200 words maximum. For research articles, abstracts 
 ```
 
 
-While deep knowledge tracing models provide high predictive accuracy, their black-box nature limits the extraction of actionable pedagogical insights. This study introduces iDKT, an interpretable-by-design Transformer model that utilizes *structural grounding* to align deep latent representations with educational constructs defined by intrinsically interpretable models. We introduce a formal validation framework to verify the alignment of iDKT's internal representations and, using Bayesian Knowledge Tracing (BKT) as a reference, evaluate it across multiple educational datasets. Results demonstrate that iDKT maintains state-of-the-art predictive performance while yielding additional interpretable insights at a significantly higher granularity than population-level baselines. Specifically, iDKT identifies student-level initial knowledge and learning velocities, providing mastery estimations that are more sensitive to the nuances of individual behavioral patterns than standard BKT predictions. By anchoring deep learning to semantic concepts defined by the reference model, iDKT enables precise diagnostic placement and dynamic pacing in adaptive learning environments. This work offers both a robust methodology for evaluating the interpretability of Transformer-based models and a practical tool for improving educational effectiveness through data-driven personalization.
+While deep knowledge tracing models provide high predictive accuracy, their black-box nature limits the extraction of actionable pedagogical insights. This study introduces iDKT, an interpretable-by-design Transformer model that utilizes *Representational Grounding* to align deep latent representations with educational constructs defined by intrinsically interpretable models. We introduce a formal validation framework to verify the alignment of iDKT's internal representations and, using Bayesian Knowledge Tracing (BKT) as a reference, evaluate it across multiple educational datasets. Results demonstrate that iDKT maintains state-of-the-art predictive performance while yielding additional interpretable insights at a significantly higher granularity than population-level baselines. Specifically, iDKT identifies student-level initial knowledge and learning velocities, providing mastery estimations that are more sensitive to the nuances of individual behavioral patterns than standard BKT predictions. By anchoring deep learning to semantic concepts defined by the reference model, iDKT enables precise diagnostic placement and dynamic pacing in adaptive learning environments. This work offers both a robust methodology for evaluating the interpretability of Transformer-based models and a practical tool for improving educational effectiveness through data-driven personalization.
 
 ```
  How to Use this Template 19
@@ -57,9 +57,9 @@ Current efforts to bridge this gap typically rely on *post-hoc* explainability m
 
 To address this challenge, we propose a shift towards **Interpretability-by-Design**, inspired by the emerging paradigm of Theory-Guided Data Science (TGDS) [@karpatne2017theory; @willard2022integrating]. TGDS posits that scientific consistency should be an architectural constraint rather than an afterthought. By integrating extensive domain knowledge—in this case, pedagogical theory—deep learning models can be constrained to learn representations that are both scientifically plausible and highly predictive.
 
-In this work, we introduce **iDKT** (Interpretable Deep Knowledge Tracing), a novel Transformer-based framework that achieves intrinsic interpretability through **Structural Grounding**. Unlike previous approaches that use theory only for regularization [@lee2021consistency], iDKT anchors its deep latent representations directly to the conceptual space of Bayesian Knowledge Tracing. This allows the model to leverage the representational power of Transformers to capture complex learning dynamics while ensuring that its internal states ($l_c, t_s$) remain formally equivalent to established educational parameters. 
+In this work, we introduce **iDKT** (Interpretable Deep Knowledge Tracing), a novel Transformer-based framework that achieves intrinsic interpretability through **Representational Grounding**. Unlike previous approaches that use theory only for regularization [@lee2021consistency], iDKT anchors its deep latent representations directly to the conceptual space of Bayesian Knowledge Tracing. This allows the model to leverage the representational power of Transformers to capture complex learning dynamics while ensuring that its internal states ($l_c, t_s$) remain formally equivalent to established educational parameters. 
 
-Our contributions are fourfold: (1) We propose a method for **Neural-Symbolic Structural Grounding** that anchors Transformer latent spaces to a pedagogically valid manifold; (2) We introduce a formal methodology for **quantifying latent interpretability** using Diagnostic Probing, providing an objective standard for measuring the alignment between deep models and theoretical constructs; (3) We demonstrate that this framework "unlocks" high-granularity, student-specific insights—such as individualized knowledge gaps and learning velocities—that population-level baselines overlook; and (4) We empirically map the **Fidelity-Performance Frontier**, identifying a Pareto-optimal "Sweet Spot" where theoretical grounding improves both interpretability and model robustness without sacrificing predictive accuracy.
+Our contributions are fourfold: (1) We propose a method for **Neural-Symbolic Representational Grounding** that anchors Transformer latent spaces to a pedagogically valid manifold; (2) We introduce a formal methodology for **quantifying latent interpretability** using Diagnostic Probing, providing an objective standard for measuring the alignment between deep models and theoretical constructs; (3) We demonstrate that this framework "unlocks" high-granularity, student-specific insights—such as individualized knowledge gaps and learning velocities—that population-level baselines overlook; and (4) We empirically map the **Fidelity-Performance Frontier**, identifying a Pareto-optimal "Sweet Spot" where theoretical grounding improves both interpretability and model robustness without sacrificing predictive accuracy.
 
 ## Related Work
 
@@ -207,10 +207,10 @@ This differs from prior work by treating interpretability as a design principle,
 The iDKT framework is implemented using the `pykt-toolkit` library on top of PyTorch. All experiments were conducted in a reproducible Docker environment (image: `pinn-dev`). The complete source code, along with the configuration files for reproducibility (`config.json`), is available in the supplementary materials.
 
 ### 2.1. Research Questions
-This study aims to evaluate the effectiveness of structural grounding in bridging the gap between deep learning and educational theory. We formulate two primary research questions to guide our experimental validation:
+This study aims to evaluate the effectiveness of Representational Grounding in bridging the gap between deep learning and educational theory. We formulate two primary research questions to guide our experimental validation:
 
 **Research Question 1: The Granularity Hypothesis (Individualization)**
-*Does the structural grounding framework allow a deep knowledge tracing model to decompose performance into student-specific parameters that align with the semantic constructs of a theoretically-grounded reference model, thereby transforming population-level theoretical averages into high-granularity learner diagnostics?*
+*Does the Representational Grounding framework allow a deep knowledge tracing model to decompose performance into student-specific parameters that align with the semantic constructs of a theoretically-grounded reference model, thereby transforming population-level theoretical averages into high-granularity learner diagnostics?*
 We hypothesize that deep learning can "unlock" the individual variance—specifically learning velocities ($v_s$) and initial knowledge levels ($k_c$)—that is typically hidden within the fixed parameters of simpler, intrinsically interpretable models. We demonstrate this using Bayesian Knowledge Tracing (BKT) as the reference model.
 
 **Research Question 2: The Fidelity-Performance Paradox (Trade-off)**
@@ -219,7 +219,7 @@ We investigate the "cost" of interpretability, seeking a "sweet spot" where the 
 
 ### 2.2. The iDKT Model Architecture
 
-iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based model designed to bridge the gap between predictive power and pedagogical interpretability. It builds upon the Attentive Knowledge Tracing (AKT) architecture [@ghosh2020context] but introduces a novel input layer based on Structural Grounding.
+iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based model designed to bridge the gap between predictive power and pedagogical interpretability. It builds upon the Attentive Knowledge Tracing (AKT) architecture [@ghosh2020context] but introduces a novel input layer based on Representational Grounding.
 
 The core architecture consists of three main components:
 1.  **Context-Aware Encoder ($N=4$ blocks)**: Processes the sequence of exercises and questions to generate contextualized question embeddings.
@@ -228,7 +228,7 @@ The core architecture consists of three main components:
 
 Key hyperparameters include a model dimension $d_{model}=256$, $H=8$ attention heads, and a dropout rate of 0.1, optimized via Adam (`lr=1e-3`).
 
-### 2.2. Structural Grounding Embeddings
+### 2.2. Representational Grounding Embeddings
 
 To achieve interpretability-by-design, iDKT replaces standard learned embeddings with "Textured Grounding" embeddings. These are formally anchored to the conceptual space of Bayesian Knowledge Tracing (BKT) [@corbett1994knowledge], ensuring that the latent representations carry semantic meaning. We employ a modified Rasch model logic to individualize these representations:
 
@@ -268,7 +268,7 @@ We evaluated iDKT on the **ASSISTments 2009-2010 (Skill Builder)** dataset, a st
 
 ## 3. Results
 
-### 3.1. Construct Validity and Structural Grounding
+### 3.1. Construct Validity and Representational Grounding
 
 To verify that iDKT's internal representations genuinely reflect educational constructs rather than arbitrary latent features, we evaluated the model against three psychometric hypotheses ($H_1$--$H_3$). Table 1 summarizes the alignment metrics across different grounding strengths ($\lambda$).
 
@@ -281,7 +281,7 @@ To verify that iDKT's internal representations genuinely reflect educational con
 | 0.30 | 0.7984 | 0.9691 | 0.3192 | -0.0330 |
 | 0.50 | 0.7740 | 0.9884 | 0.2828 | -0.0331 |
 
-We observe consistent **Convergent Validity ($H_1$)**, with the correlation between the model's projected initial mastery ($l_c$) and the theoretical prior ($L_0$) remaining above $0.96$ throughout the sweep. This confirms that the Structural Grounding mechanism successfully anchors the deep latent space to the reference theory. Furthermore, the **Discriminant Validity ($H_3$)** remains stable at $r \approx -0.03$, proving that the model successfully disentangles "Student Knowledge Gap" ($k_c$) from "Student Learning Velocity" ($v_s$) as distinct, non-redundant traits.
+We observe consistent **Convergent Validity ($H_1$)**, with the correlation between the model's projected initial mastery ($l_c$) and the theoretical prior ($L_0$) remaining above $0.96$ throughout the sweep. This confirms that the Representational Grounding mechanism successfully anchors the deep latent space to the reference theory. Furthermore, the **Discriminant Validity ($H_3$)** remains stable at $r \approx -0.03$, proving that the model successfully disentangles "Student Knowledge Gap" ($k_c$) from "Student Learning Velocity" ($v_s$) as distinct, non-redundant traits.
 
 ### 3.2. The Pareto Efficiency of Theory-Guided Learning
 
@@ -321,7 +321,7 @@ This transparency transforms the model from a predictive oracle into a diagnosti
 
 ## 5. Conclusions
 
-In this work, we introduced iDKT, a novel framework that reconciles the predictive power of Transformers with the interpretability of Bayesian Knowledge Tracing. Through Structural Grounding, we demonstrated that it is possible to enforce semantic validiy on deep latent representations without sacrificing performance.
+In this work, we introduced iDKT, a novel framework that reconciles the predictive power of Transformers with the interpretability of Bayesian Knowledge Tracing. Through Representational Grounding, we demonstrated that it is possible to enforce semantic validiy on deep latent representations without sacrificing performance.
 
 Our key contributions are:
 1.  **Methodological**: A Neural-Symbolic architecture that embeds the "Challenge vs. Ability" logic of psychometrics directly into the Transformer's input stream.

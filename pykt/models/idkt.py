@@ -88,7 +88,7 @@ class iDKT(nn.Module):
             nn.Linear(256, 1)
         )
         
-        # Interpretability Heads: Removed in favor of structural grounding in input layer
+        # Interpretability Heads: Removed in favor of Representational Grounding in input layer
         # (Keeping the attributes for potential backward compatibility or if needed, but they are no longer used in forward)
         # self.out_initmastery = ...
         # self.out_rate = ...
@@ -233,7 +233,7 @@ class iDKT(nn.Module):
         # For now, we'll return lc and ts as proxies for initmastery and rate for evaluation compatibility.
         # We project them to [0, 1] scalars for consistency with existing evaluation scripts.
         # CRITICAL FIX: Use the fully individualized embeddings (lc, ts) that were computed
-        # with the structural grounding formula: lc = l0_skill + kc * dc, ts = t_skill + vs * ds
+        # with the Representational Grounding formula: lc = l0_skill + kc * dc, ts = t_skill + vs * ds
         # These already contain the student-specific individualization.
         if 'lc' in locals() and 'ts' in locals():
             # Use the individualized embeddings directly

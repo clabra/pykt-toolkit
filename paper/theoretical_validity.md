@@ -25,7 +25,7 @@ To prove the validity of these mappings, we propose the following hypotheses:
 
 ### H2: Predictor Equivalence (Behavioral Alignment)
 *   **Statement**: The iDKT parameters ($l_c, t_s$) are **functionally substitutable**; when plugged into the reference BKT equations, they reconstruct a mastery trajectory that is highly consistent with the reference model's behavior.
-*   **Support**: This follows the **Structural Grounding** principle: for a parameter to represent a construct, it must not only correlate with it (H1) but also fulfill its causal/functional role in the reference theory's equations.
+*   **Support**: This follows the **Representational Grounding** principle: for a parameter to represent a construct, it must not only correlate with it (H1) but also fulfill its causal/functional role in the reference theory's equations.
 *   **Methodology**: Calculate $\hat{y}_{induced,t} = \text{BKT}(l_{c,idkt}, t_{s,idkt}, s_{bkt}, g_{bkt})$ and measure its correlation with BKT baseline outputs.
 *   **Demonstration**: Functional alignment correlation $> 0.60$.
 

@@ -81,7 +81,7 @@
 
 %=================================================================
 % Full title of the paper (Capitalized)
-\Title{Beyond Black-Box Deep Knowledge Tracing: Structurally Grounded Transformers for Pedagogical Interpretability}
+\Title{Beyond Black-Box Deep Knowledge Tracing: Transformers with Representational Grounding for Pedagogical Interpretability}
 
 
 % Author Orchid ID: enter ID or remove command
@@ -118,10 +118,10 @@ $^{2}$ \quad Affiliation 2; e-mail@e-mail.com}
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e. \\) 
-\abstract{While deep knowledge tracing models provide high predictive accuracy, their black-box nature limits the extraction of actionable pedagogical insights. This study introduces iDKT, an interpretable-by-design Transformer model that utilizes \textit{structural grounding} to align deep latent representations with educational constructs defined by intrinsically interpretable models. We introduce a formal validation framework to verify the alignment of iDKT's internal representations and, using Bayesian Knowledge Tracing (BKT) as a reference, evaluate the model across multiple educational datasets. Results demonstrate that iDKT maintains state-of-the-art predictive performance while yielding additional interpretable insights at a significantly higher granularity than those provided by the reference model. Specifically, iDKT identifies student-level initial knowledge and learning velocities, providing mastery estimates that are more sensitive to the nuances of individual behavioral patterns than those produced by standard BKT. These individualized insights enable precise diagnostic placement and dynamic pacing, allowing adaptive learning environments to tailor instruction to each student's unique learning profile with enhanced precision. This work offers both a robust methodology for evaluating the interpretability of Transformer-based models and a practical tool for improving educational effectiveness through data-driven personalization.} 
+\abstract{This study introduces iDKT, an interpretable-by-design Transformer model that utilizes \textit{Representational Grounding} to align deep latent representations with educational constructs, leveraging the high accuracy of deep knowledge tracing models while addressing their inherent lack of interpretability. We introduce a formal validation framework to verify the alignment of iDKT's internal representations and, using Bayesian Knowledge Tracing (BKT) as a reference, evaluate the model across multiple educational datasets. Results demonstrate that iDKT maintains state-of-the-art predictive performance while yielding additional interpretable insights at a significantly higher granularity than those provided by the reference model. Specifically, iDKT identifies student-level initial knowledge and learning velocities, providing mastery estimates that are more sensitive to the nuances of individual behavioral patterns than those produced by standard BKT. These individualized insights enable precise diagnostic placement and dynamic pacing, allowing adaptive learning environments to tailor instruction to each student's unique learning profile with enhanced precision. This work offers both a robust methodology for evaluating the interpretability of Transformer-based models and a practical tool for improving educational effectiveness through data-driven personalization.} 
 
 % Keywords
-\keyword{deep knowledge tracing; transformer; interpretability; Bayesian Knowledge Tracing; educational data mining; personalized learning} 
+\keyword{deep knowledge tracing; transformer; interpretability; Bayesian Knowledge Tracing; educational data analysis; personalized learning} 
 
 % The fields PACS, MSC, and JEL may be left empty or commented out if not applicable
 %\PACS{J0101}
@@ -176,33 +176,46 @@ $^{2}$ \quad Affiliation 2; e-mail@e-mail.com}
 
 \section{Introduction}
 
-Knowledge Tracing (KT) is a fundamental task in the fields of Artificial Intelligence in Education, Intelligent Tutoring Systems (ITS) and Massive Open Online Courses (MOOCs). Its primary objective is to model a student's dynamic knowledge state over time based on their history of interactions with learning materials, enabling systems to predict future performance and personalized instruction. As educational environments become increasingly diverse and digital, the ability to accurately track and interpret student mastery has become a critical requirement for scalable, effective education. 
+Knowledge Tracing \citep{corbett1994knowledge} is a fundamental task in the fields of Artificial Intelligence in Education, Intelligent Tutoring Systems and Massive Open Online Courses. Its primary objective is to model a student's dynamic knowledge state over time based on their history of interactions with learning materials, enabling systems to predict future performance and provide personalized instruction. As educational environments become increasingly diverse and digital, the ability to accurately track and interpret student mastery has become a critical requirement for scalable, effective education. 
 
-Historically, the field has been dominated by two distinct paradigms. The first, exemplified by Bayesian Knowledge Tracing (BKT) and its variants \citep{corbett1994knowledge, yudelson2013individualized}, relies on probabilistic graphical models that explicitly represent latent knowledge states. BKT is intrinsically interpretable: its parameters (e.g., probability of learning, initial knowledge, slipping, guessing) map directly to pedagogical constructs, allowing educators to diagnose student difficulties and trust the model's decisions. However, its simplicity often limits its predictive power, struggling to capture the complex, non-linear dependencies inherent in real-world learning trajectories \citep{piech2015deep}. 
+Historically, the field has been dominated by two distinct paradigms. The first, exemplified by Bayesian Knowledge Tracing (BKT) and its variants \citep{twenty_five_years_of_bkt}, relies on probabilistic graphical models that explicitly represent knowledge states. BKT models are intrinsically interpretable, being based on parameters such as initial knowledge, learning rate, or slipping and guessing probabilities that map directly to pedagogical constructs, allowing educators to understand how they work and trust their decisions. However, this interpretability comes at the cost of a simplicity that often limits its predictive power, making them struggle to capture the complex, non-linear dependencies existent in educational datasets. 
 
-The second paradigm emerged with the advent of Deep Knowledge Tracing (DKT) \citep{piech2015deep}, which utilizes Recurrent Neural Networks (RNNs) and later Transformers \citep{vaswani2017attention} to model student interactions as complex sequential data. Models such as DKT, DKVMN \citep{zhang2017dynamic}, and AKT \citep{ghosh2020context} have achieved state-of-the-art predictive performance, significantly outperforming classical approaches by capturing latent long-term dependencies. Yet, this predictive power has come at a significant cost: interpretability. Deep learning models are notoriously opaque "black boxes," where the learned representations are distributed across high-dimensional latent spaces that bear no direct correspondence to educational theory. This lack of transparency creates a trust gap for practitioners, who cannot easily discern why a model predicts a student has failed or succeeded, nor can they derive actionable pedagogical insights from the model's internal weights \citep{bai2024survey}. 
+The second paradigm emerged with the advent of Deep Knowledge Tracing (DKT) \citep{piech2015deep}, which uses different variants of deep learning techniques from the initial Recurrent Neural Networks to current Transformers \citep{vaswani2017attention} to model student interactions. These models have achieved state-of-the-art predictive performance, significantly outperforming classical approaches by leveraging the high capacity of deep learning models that allows them to learn complex patterns \citep{abdelrahman2023knowledge}. Yet, this predictive power has come at a significant cost: interpretability. Deep learning models are notoriously opaque "black boxes," where the learned representations are distributed across high-dimensional latent spaces that bear no direct correspondence to constructs with a clear semantic meaning. This lack of transparency creates a trust gap for practitioners, who cannot easily discern why a model predicts a student has failed or succeeded, nor can they derive actionable pedagogical insights from the model's internal weights \citep{bai2024survey}. 
 
-Current efforts to bridge this gap typically rely on post-hoc explainability methods, such as visualization of attention weights or perturbation analysis \citep{fantozzi2024explainability, di2025ante}. While valuable for debugging, these techniques often provide only a superficial view of the model's decision-making process and do not guarantee that the learned representations align with valid educational constructs. 
+Current efforts to bridge this gap typically rely on post-hoc explainability methods, such as visualization of attention weights or perturbation analysis \citep{fantozzi2024explainability, di2025ante}. While valuable for debugging, these techniques often provide only a superficial view of the model's decision-making process and do not guarantee that the learned representations align with meaningful constructs. Moreover, their application and interpretation require technical deep learning expertise, limiting their accessibility to practitioners without this specialized knowledge. 
 
-To address this challenge, we propose a shift towards Interpretability-by-Design, inspired by the emerging paradigm of Theory-Guided Data Science (TGDS) \citep{karpatne2017theory, willard2022integrating}. TGDS posits that scientific consistency should be an architectural constraint rather than an afterthought. By integrating extensive domain knowledge—in this case, pedagogical theory—deep learning models can be constrained to learn representations that are both scientifically plausible and highly predictive. 
+To address these limitations, we propose a shift towards interpretability-by-design, inspired by the emerging paradigm of Theory-Guided Data Science (TGDS) \citep{karpatne2017theory}. In TGDS, maintaining consistency with theoretical postulates is an architectural constraint rather than an afterthought. By integrating extensive domain knowledge, TGDS-based models can be constrained to learn representations that are both theoretically plausible and highly predictive. While this approach has been applied mostly to science—and specifically to physics \citep{willard2022integrating}—we adapt it here to the educational domain.
 
-In this work, we introduce iDKT (Interpretable Deep Knowledge Tracing), a novel Transformer-based model that achieves intrinsic interpretability through Structural Grounding. Unlike previous approaches that use theory only for regularization \citep{lee2021consistency}, iDKT is designed to anchor its latent representations directly to the conceptual space of a reference model. This allows to leverage the power of Transformers to capture complex learning dynamics while ensuring that its internal states remain formally equivalent to established educational parameters. 
+Standard TGDS implementations typically rely on auxiliary loss functions to incorporate formal knowledge expressed as rules, algebraic constraints, or differential equations \citep{vonrueden2021informed}. We propose a novel approach called \textit{Representational Grounding} that, in contrast, utilizes auxiliary losses operating on projections of the Transformer's embeddings. This mechanism enables the model to learn representations that are consistent with semantically meaningful constructs.
 
-Our contributions are threefold: (1) We propose a method for Structural Grounding that forces a Transformer to maintain internal states anchored in semantically meaningful constructs; (2) We validate iDKT against BKT, demonstrating that it captures granular, student-specific insights—such as individualized knowledge gaps and diverse learning velocities—that classical models overlook; and (3) We show that this approach enables actionable educational interventions, such as Precise Diagnostic Placement and Dynamic Pacing, without sacrificing the predictive accuracy characteristic of state-of-the-art deep learning.  
+The major contributions of this work are as follows:
+\begin{itemize}
+    \item Proposal of Representational Grounding, a novel method that overcomes the black-box nature of Transformers by providing interpretability-by-design.
+    \item Introduction of a formal validation framework to quantify interpretability via representational alignment, enabling a systematic characterization of the trade-off between reference fidelity and predictive performance.
+    \item Application of Representational Grounding to the development of iDKT, a new type of knowledge tracing models that leverage the high accuracy inherent in deep learning while achieving pedagogical interpretability.
+    \item Empirical demonstration of iDKT benefits by showing how it captures granular, student-specific insights—such as individualized initial knowledge and learning velocities—that are beyond the capabilities of simpler models such as BKT.
+\end{itemize}
 
-\subsection{Deep Knowledge Tracing}
-\subsection{Individualized Bayesian Knowledge Tracing}
-\subsubsection{Parameters of the Vanilla Model}
-\subsubsection{Individualized Bayesian Knowledge Tracing}
-\subsection{Theory-Guided Data Science}
+
+The remainder of this paper is structured as follows. Section~\ref{sec_related} reviews the current state of deep knowledge tracing and interpretability. Section~\ref{sec_method} describes the proposed iDKT architecture and the Representational Grounding framework. Section~\ref{sec_results} presents the experimental validation and answers the research questions. Finally, Section~\ref{sec_conclusions} provides the concluding remarks.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Methodology}
+\section{Related Work} \label{sec_related}
+\subsection{Deep Knowledge Tracing}
+\subsection{Deep Learning Interpretability}
+\subsection{Theory-Guided Data Science}
+\subsection{Individualized Bayesian Knowledge Tracing}
+\subsubsection{Parameters of the Vanilla Model}
+\subsubsection{Parameters Individualization}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methodology} \label{sec_method}
 
 \subsection{The iDKT model}
 
- iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based model designed to bridge the gap between predictive power and pedagogical interpretability. It builds upon the attention mechanisms of an encoder-decoder architecture \citep{vaswani2017attention} introducing a novel input layer based on structural grounding. The core architecture consists of three main components: 
+ iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based model designed to bridge the gap between predictive power and pedagogical interpretability. It builds upon the attention mechanisms of an encoder-decoder architecture \citep{vaswani2017attention} introducing a novel input layer based on Representational Grounding. The core architecture consists of three main components: 
 
 \begin{itemize}
 \item	Context-Aware Encoder: Processes the sequence of exercises and questions to generate contextualized question embeddings. 
@@ -250,7 +263,7 @@ Our contributions are threefold: (1) We propose a method for Structural Groundin
     \node [label, below=0.2cm of insights] {Dynamic Pacing};
 \end{tikzpicture}
 
-\subsection{Structural Grounding Embeddings}
+\subsection{The Embeddings}
 To achieve interpretability-by-design, iDKT replaces standard learned
 embeddings with ``Textured Grounding'' embeddings. These are formally
 anchored to the conceptual space of Bayesian Knowledge Tracing (BKT)
@@ -276,6 +289,9 @@ BKT learn probability (\(T\)): \[ t_s = T_{skill} + v_s \cdot d_s \]
 Here, \(v_s\) represents the student's ``Learning Velocity,'' allowing
 the model to distinguish between fast and slow learners dynamically.
 \end{itemize}
+
+\subsection{The Probing Method}
+
 
 \subsection{Loss Functions and Training Objective}
 The model is trained using a multi-objective loss function that balances
@@ -304,8 +320,29 @@ predictive accuracy with theoretical alignment. The total loss
   from the norm.
 \end{itemize}
 
+\subsection{Interpretability Measure}
+
+\subsection{The Tradeoff Interpretability vs Prediction Accuracy}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Results}
+\section{Results} \label{sec_results}
+
+\subsection{Research Questions and Hypotheses}
+
+The experimental validation of iDKT is guided by the following research questions:
+
+\paragraph{RQ1: Interpretability via Representational Grounding}
+Does the proposed Representational Grounding framework effectively bridge the semantic gap between deep latent representations and pedagogical constructs? Specifically, can a Transformer based on this framework achieve a high degree of Convergent Validity (numerical alignment) and Predictor Equivalence (behavioral alignment) with respect to a theoretical reference model?
+\textit{Hypothesis:} By anchoring the Transformer's latent space to the conceptual primitives of a reference model, it is possible to learn internal states that preserve their functional roles and align with theoretical parameters.
+
+\paragraph{RQ2: Accuracy--Interpretability Trade-Off}
+To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive accuracy?
+\textit{Hypothesis:} There exists an optimal grounding weight $\lambda$ that balances theoretical fidelity and predictive performance, forming a Pareto frontier.
+
+\paragraph{RQ3: Granularity of Individualization}
+Does our proposed framework allow a Transformer-based model to recover latent factors with higher granularity than population-level baselines?
+\textit{Hypothesis:} iDKT can successfully estimate student-specific traits (initial knowledge and learning velocity) that are traditionally masked by fixed averages in simpler models like BKT.
+
 
 \subsection{Validation Metrics}
 
@@ -343,7 +380,7 @@ Alignment)}\label{h2-predictor-equivalence-behavioral-alignment}
   BKT equations, they reconstruct a mastery trajectory that is highly
   consistent with the reference model's behavior.
 \item
-  \textbf{Support}: This follows the \textbf{Structural Grounding}
+  \textbf{Support}: This follows the \textbf{Representational Grounding}
   principle: for a parameter to represent a construct, it must not only
   correlate with it (H1) but also fulfill its causal/functional role in
   the reference theory's equations.
@@ -404,7 +441,7 @@ different grounding strengths (\(\lambda\)).
 We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the
 correlation between the model's projected initial mastery (\(l_c\)) and
 the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the
-sweep. This confirms that the Structural Grounding mechanism
+sweep. This confirms that the Representational Grounding mechanism
 successfully anchors the deep latent space to the reference theory.
 Furthermore, the \textbf{Discriminant Validity (\(M_3\))} remains stable
 at \(r \approx -0.03\), proving that the model successfully disentangles
@@ -630,7 +667,7 @@ The text continues here.
 Authors should discuss the results and how they can be interpreted from the perspective of previous studies and of the working hypotheses. The findings and their implications should be discussed in the broadest context possible. Future research directions may also be highlighted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Conclusions}
+\section{Conclusions} \label{sec_conclusions}
 
 This section is not mandatory, but can be added to the manuscript if the discussion is unusually long or complex.
 
