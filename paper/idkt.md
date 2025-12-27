@@ -27,27 +27,35 @@ graph TD
 
         subgraph "Embedding Layer (Interpretability-by-Design)"
             direction TB
-            subgraph "Theoretical Base (from BKT)"
-                Q_Emb["q_embed (c_ct)"]
-                QA_Emb["qa_embed (e_ct,rt)"]
-                L0_Base["L0_skill (Prior Base)"]
-                T_Base["T_skill (Velocity Base)"]
-            end
-
-            subgraph "Reference Model Parameters"
-                Diff_Param["u_q (Difficulty)"]
-                Gap_Param["k_c (Knowledge Gap)"]
-                Vel_Param["v_s (Learning Speed)"]
-                Q_Diff["d_ct (Diff Axis)"]
-                K_Axis["d_c (Knowledge Axis)"]
-                V_Axis["d_s (Velocity Axis)"]
-            end
-
-            subgraph "Fusion (Archetype 1: Relational Differential)"
+            
+            subgraph X_Group ["Task Grounding Path (x')"]
+                direction TB
+                Base_Q["q_embed (c_ct)"]
+                L0_Base["l0_base_emb (Prior Base)"]
+                Gap_Param["k_c (Gap Scalar)"]
+                K_Axis["knowledge_axis_emb (d_c)"]
                 Formula_L0["l_c = L0_skill + k_c · d_c"]
+            end
+
+            subgraph Shared_Group ["Shared Rasch Logic"]
+                direction LR
+                Diff_Param["u_q (Diff Scalar)"]
+                Q_Diff["q_embed_diff (d_ct)"]
+            end
+
+            subgraph Y_Group ["History Grounding Path (y')"]
+                direction TB
+                Base_QA["qa_embed (e_ct,rt)"]
+                QA_Diff["qa_embed_diff (f_ct,rt)"]
+                T_Base["t_base_emb (Velocity Base)"]
+                Vel_Param["v_s (Velocity Scalar)"]
+                V_Axis["velocity_axis_emb (d_s)"]
                 Formula_T["t_s = T_skill + v_s · d_s"]
-                Formula_X["x'_t = (c_ct + u_q · d_ct) - l_c"]
-                Formula_Y["y'_t = (e_ct,rt + u_q · (f_ct,rt + d_ct)) + t_s"]
+            end
+
+            subgraph Fusion ["Relational Differential Fusion"]
+                Sum_X((+))
+                Sum_Y((+))
             end
 
             Final_Q[["Indiv. Task x'"]]
@@ -130,13 +138,19 @@ graph TD
         end
 
         %% Wiring
-        Input_q & Input_r & Input_pid & Input_uid --> Q_Emb
-        Q_Emb & QA_Emb & L0_Base & T_Base --> Formula_X
-        Diff_Param & Gap_Param & Vel_Param --> Formula_X
-        Q_Diff & K_Axis & V_Axis --> Formula_X
+        Input_q --> Base_Q & Q_Diff & L0_Base & T_Base & K_Axis & V_Axis
+        Input_pid --> Diff_Param
+        Input_uid --> Gap_Param & Vel_Param
+        Input_r --> Base_QA & QA_Diff
         
-        Formula_X --> Final_Q
-        Formula_Y --> Final_QA
+        L0_Base & Gap_Param & K_Axis --> Formula_L0
+        T_Base & Vel_Param & V_Axis --> Formula_T
+        
+        Base_Q & Diff_Param & Q_Diff & Formula_L0 --> Sum_X
+        Base_QA & Diff_Param & QA_Diff & Q_Diff & Formula_T --> Sum_Y
+        
+        Sum_X -- "x'" --> Final_Q
+        Sum_Y -- "y'" --> Final_QA
         
         %% Core Wiring
         Final_QA --> E_Split --> E_H1 & E_H2 & E_H8 --> E_Concat --> E_W
@@ -182,14 +196,16 @@ graph TD
     classDef loss fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
     classDef heads fill:#c8e6c9,stroke:#2e7d32,stroke-dasharray: 5 5;
     classDef ref fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 2 2;
+    classDef plus fill:#fff,stroke:#333,stroke-width:2px,font-size:20px;
 
     class Input_q,Input_r,Input_pid,Input_uid plain
-    class Final_Q,Final_QA,Enc_Out,KR_Out emb
-    class E_Split,E_Concat,E_W,KR1_Split,KR1_Concat,KR2_Split,KR2_Concat,KR2_FFN attn
-    class E_H1,E_H2,E_H8,KR1_H1,KR1_H2,KR1_H8,KR2_H1,KR2_H2,KR2_H8 heads
+    class Final_Q,Final_QA,E_W,KR2_FFN emb
+    class E_Split,E_Concat,KR1_Split,KR1_Concat,KR2_Split,KR2_Concat attn
+    class E_H1,E_H8,KR1_H1,KR1_H8,KR2_H1,KR2_H8 heads
     class Concat,mlp_layers,Pred pred
     class L_SUP,L_REF,L_INIT,L_RATE,L_RASCH,L_GAP,L_STUDENT,L_TOTAL loss
     class BKT_P,BKT_L0,BKT_T ref
+    class Sum_X,Sum_Y plus
 ```
 
 </div>
