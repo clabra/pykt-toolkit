@@ -213,15 +213,81 @@ The remainder of this paper is structured as follows. Section~\ref{sec_related} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methodology} \label{sec_method}
 
-\subsection{The iDKT model}
+\subsection{Architecture Overview} \label{sec_arch}
 
- iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based model designed to bridge the gap between predictive power and pedagogical interpretability. It builds upon the attention mechanisms of an encoder-decoder architecture \citep{vaswani2017attention} introducing a novel input layer based on Representational Grounding. The core architecture consists of three main components: 
+iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based architecture designed to bridge the gap between the high predictive capacity of deep learning and the intrinsic interpretability of simpler models such as Bayesian Knowledge Tracing (BKT). Unlike standard black-box models, iDKT utilizes a novel mechanism called Representational Grounding to anchor its latent representations to the conceptual space of a interpretable model choosen as reference. 
 
+The core architecture, illustrated in Figure~\ref{fig_arch}, consists of these components:
+\begin{enumerate}
+    \item \textbf{Input Stage}: Receives tuples of $(q_t, c_t, r_t, uid_t, pid_t)$, mapping raw IDs to their respective theoretical and learned components.
+    \item \textbf{Embeddings Stage}: Processes IDs through the Representational Grounding layer to generate individualized task ($x'_t$) and interaction ($y'_t$) embeddings.
+    \item \textbf{Encoder Stage}: A context-aware Transformer encoder that extracts local and global patterns from the sequence of past individualized interactions $y'_{1:t-1}$.
+    \item \textbf{Decoder Stage}: The Knowledge Retriever, which uses cross-attention between the current task $x'_t$ and the encoded context to estimate the context-aware knowledge state $\hat{x}_t$.
+    \item \textbf{Attention Heads}: Multi-scale monotonic heads that apply distance-based decay parameters $\gamma_h$ to control the model's temporal resolution.
+    \item \textbf{Output Stage}: A 3-layer MLP that yields the final performance prediction $p_{iDKT}$ and monitoring proxies for mastery alignment.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    % [Insert iDKT Architecture Diagram here]
+    \caption{The iDKT System Architecture. The model integrates a theoretical BKT prior into its embedding layer through Representational Grounding, followed by a Transformer-based attention core for performance prediction.\label{fig_arch}}
+\end{figure}
+
+\subsection{Representational Grounding and Embeddings} \label{sec_emb}
+
+To achieve interpretability-by-design, iDKT replaces standard learned embeddings with what we term \textit{Grounded Embeddings}. We adopt a relational differential logic (Archetype 1) where latent factors are formally decomposed into population-level bases and student-specific deviations.
+
+\subsubsection{Theoretical Foundations}
+The model defines a set of population-level primitives that serve as the "ground truth" coordinate system for the latent space:
 \begin{itemize}
-\item	Context-Aware Encoder: Processes the sequence of exercises and questions to generate contextualized question embeddings. 
-\item	Decoder: A structure that retrieves relevant historical interactions using an attention mechanism. The multi-head attention employs distinct, learnable decay rates for each head to capture short-term and long-term dynamics, ensuring a comprehensive view of the student's learning trajectory. 
-\item	Prediction Head: A multi-layer perceptron (MLP) that combines the multi-head output with the current question embedding to predict the probability of a correct response. 
+    \item \textbf{Concept Base ($c_{c_t}$)}: The static vector representation of concept $c_t$, capturing its semantic identity within the curriculum.
+    \item \textbf{Interaction Base ($e_{c_t,r_t}$)}: A combined representation of concept $c_t$ and the binary outcome $r_t$ (correct/incorrect).
+    \item \textbf{Instructional Prior ($L0_{skill}$)}: A skill-specific embedding anchored to the theoretical BKT initial mastery parameter $L0$. 
+    \item \textbf{Learning Velocity Base ($T_{skill}$)}: A skill-specific embedding anchored to the BKT transition probability $T$.
 \end{itemize}
+
+\subsubsection{Individualization via Rasch Logic}
+To capture student-level and item-level heterogeneity, iDKT introduces three learnable scalars that modulate the theoretical bases:
+\begin{itemize}
+    \item $u_q$ (\textbf{Problem Difficulty}): A scalar corresponding to the problem ID ($q$), representing its relative challenge compared to others of the same skill.
+    \item $k_c$ (\textbf{Knowledge Gap}): A student-specific scalar ($uid$) identifying deviations from the skill's instructional prior.
+    \item $v_s$ (\textbf{Learning Speed}): A student-specific scalar identifying individual acquisition momentum.
+\end{itemize}
+
+These scalars operate along dedicated \textbf{variation axes}, which are unit vectors defining the semantic direction of adjustment in $d$-dimensional space:
+\begin{itemize}
+    \item $d_{c_t}$ (\textbf{Question Variation Axis}): Defines how problem difficulty $u_q$ shifts the challenge of concept $c_t$.
+    \item $f_{c_t,r_t}$ (\textbf{Interaction Variation Axis}): Defines how item difficulty $u_q$ affects the representation of the interaction history.
+    \item $d_c$ (\textbf{Knowledge Axis}): Defines the dimension of prior knowledge variance.
+    \item $d_s$ (\textbf{Velocity Axis}): Defines the dimension of learning velocity variance.
+\end{itemize}
+\begin{equation}
+    l_c = L0_{skill} + k_c \cdot d_c \quad \text{(Personalized Initial Knowledge)}
+\end{equation}
+\begin{equation}
+    t_s = T_{skill} + v_s \cdot d_s \quad \text{(Personalized Learning Velocity)}
+\end{equation}
+
+\subsubsection{Fusion Layer}
+The final input to the Transformer core consists of the \textit{Individualized Task} ($x'_t$) and the \textit{Individualized Interaction History} ($y'_t$):
+\begin{equation}
+    x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c
+\end{equation}
+\begin{equation}
+    y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s
+\end{equation}
+
+This formulation implements what we term \textbf{Relational Differential Fusion} (Archetype 1). By hard-coding the subtraction for current tasks and addition for history, we enforce a \textit{Relational Inductive Bias} ($\text{Challenge} - \text{Capability}$). This ensures that the attention mechanism operates on semantically anchored residuals—specifically, the "Residual Challenge" for current tasks—rather than opaque latent features. This transformation from predictive pattern-matching to differential evaluation allows the model to act as a sensitive diagnostic instrument: when a student with high perceived competence fails a mathematically "easy" task, the resulting gradient spike identifies a clear pedagogical anomaly that would be averaged out in black-box models.
+
+\subsection{Multi-Scale Monotonic Attention} \label{sec_attn}
+
+The iDKT model employs a monotonic attention mechanism to prioritize relevant historical interactions. The attention score $s_{t,\tau}$ between the current task at time $t$ and a past interaction at time $\tau$ is modulated by an exponential temporal decay:
+\begin{equation}
+    s_{t,\tau} = \frac{q_t^\top k_\tau}{\sqrt{D_k}} \cdot \exp(-\theta \cdot d(t, \tau))
+\end{equation}
+where $\theta > 0$ is a learnable decay rate and $d(t, \tau)$ is a context-aware distance measure. 
+
+Crucially, iDKT utilizes \textbf{Multi-Head Attention} where each head $h$ possesses a unique decay parameter $\gamma_h$. This allows the model to simultaneously track dynamics at multiple scales: heads with large $\gamma$ focus on short-term mastery acquisition (recent repetitions), while heads with small $\gamma$ monitor long-term concept retention and foundational knowledge.
 
 \begin{figure}[H]
 %\isPreprints{\centering}{} % Only used for preprints
@@ -263,66 +329,86 @@ The remainder of this paper is structured as follows. Section~\ref{sec_related} 
     \node [label, below=0.2cm of insights] {Dynamic Pacing};
 \end{tikzpicture}
 
-\subsection{The Embeddings}
-To achieve interpretability-by-design, iDKT replaces standard learned
-embeddings with ``Textured Grounding'' embeddings. These are formally
-anchored to the conceptual space of Bayesian Knowledge Tracing (BKT)
-\citep{corbett1994knowledge}, ensuring that the latent representations
-carry semantic meaning. We employ a modified Rasch model logic to
-individualize these representations:
+\subsection{The Knowledge Retriever} \label{sec_retriever}
 
+The knowledge retriever consists of $2N$ stacked transformer blocks with an alternating layer pattern:
 \begin{itemize}
-\item \textbf{Individualized Question (\(x'_t\))}: The standard question
-embedding is replaced by a residual representation:
-\[ x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c \] where \(c_{c_t}\) is
-the concept embedding, \(u_q\) is a learned scalar for item difficulty,
-and \(d_{c_t}\) is a variation axis. Crucially, \(l_c\) is the
-\textbf{individualized initial mastery}, grounded in the BKT prior
-(\(L0\)), defined as: \[ l_c = L0_{skill} + k_c \cdot d_c \] Here,
-\(k_c\) is a learned student-specific scalar representing their
-``Knowledge Gap'' relative to the population mean.
-\item \textbf{Individualized Interaction (\(y'_t\))}: The interaction history
-is similarly grounded by adding learning momentum:
-\[ y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s \]
-where \(t_s\) is the \textbf{individualized learn rate}, grounded in the
-BKT learn probability (\(T\)): \[ t_s = T_{skill} + v_s \cdot d_s \]
-Here, \(v_s\) represents the student's ``Learning Velocity,'' allowing
-the model to distinguish between fast and slow learners dynamically.
+    \item \textbf{Odd Layers}: Perform causal self-attention on the individualized question sequence ($x'$).
+    \item \textbf{Even Layers}: Perform cross-attention between the question sequence (queries) and the encoded interaction history $\hat{y}$ (keys and values).
+\end{itemize}
+This dual-stream approach allows the model to differentiate between the structure of the curriculum (questions) and the student's actual performance history, outputting a context-aware knowledge state $\hat{x}_t$ that reflects both current intent and historical context.
+
+\subsection{The Probing Method} \label{sec_probing}
+
+To rigorously validate that iDKT’s latent representations encode the intended pedagogical constructs, we employ \textbf{Diagnostic Probing Classifiers} with \textbf{Control Tasks}. This methodology, established in deep learning interpretability literature \citep{alain2018understanding, belinkov2022probing}, consists of three phases:
+
+\begin{enumerate}
+    \item \textbf{Extraction}: We freeze the pre-trained iDKT model and extract the hidden state vectors $h_t$ for every step in the student journey.
+    \item \textbf{True Probing Task}: We train a simple linear regressor $f(h) \to P_{BKT}(L_t)$ to reconstruct the reference BKT mastery probabilities from the iDKT embeddings. High $R^2$ or Pearson correlation indicates that the construct is linearly recoverable.
+    \item \textbf{Control Task (Selectivity)}: Following \citet{hewitt2019designing}, we train an identical probe on a random permutation of the targets. The \textit{Selectivity} is defined as the performance gap between the true and control tasks. A high positive gap mathematically proves that the model's hidden space is structurally organized around pedagogical principles rather than merely memorizing arbitrary patterns.
+\end{enumerate}
+
+
+\subsection{Multi-Objective Training} \label{sec_objective}
+
+The model is trained using a theoretically-anchored total loss $\mathcal{L}_{total}$, ensuring that the high-capacity Transformer remains aligned with pedagogical principles:
+\begin{equation}
+    \mathcal{L}_{total} = L_{SUP} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init} + \lambda_{rate} L_{rate} + L_{reg}
+\end{equation}
+
+\subsubsection{Supervised Performance ($L_{SUP}$)}
+Primary task modeling uses Binary Cross-Entropy (BCE) between predictions $\hat{y}_t$ and responses $r_t$:
+\begin{equation}
+    L_{SUP} = -\frac{1}{N} \sum (r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t))
+\end{equation}
+
+\subsubsection{Theory-Guided Alignment ($L_{ref}, L_{init}, L_{rate}$)}
+Consistency with the BKT reference is enforced through three alignment objectives:
+\begin{itemize}
+    \item \textbf{Prediction Alignment ($L_{ref}$)}: Mean Squared Error (MSE) between iDKT and BKT performance probabilities: $L_{ref} = \text{MSE}(\hat{y}, p_{BKT})$.
+    \item \textbf{Initial Mastery Grounding ($L_{init}$)}: MSE between $l_{c,proj}$ and BKT prior $L0_{BKT}$: $L_{init} = \text{MSE}(l_{c,proj}, L0_{BKT})$.
+    \item \textbf{Learning velocity Grounding ($L_{rate}$)}: MSE between $t_{s,proj}$ and BKT learn rate $T_{BKT}$: $L_{rate} = \text{MSE}(t_{s,proj}, T_{BKT})$.
 \end{itemize}
 
-\subsection{The Probing Method}
+\subsubsection{Structural Regularization ($L_{reg}$)}
+To preserve the "Normal Student" prior and prevent overfitting, we apply multi-level $L_2$ regularization:
+\begin{equation}
+    L_{reg} = \lambda_{\text{rasch}} \|u_q\|^2 + \lambda_{\text{gap}} \|k_c\|^2 + \lambda_{\text{vel}} \|v_s\|^2
+\end{equation}
+This term constrains the degrees of freedom utilized for student and item individualization, ensuring that learned traits do not invert the semantic meaning of the latent space.
 
+\subsection{Response Prediction} \label{sec_prediction}
 
-\subsection{Loss Functions and Training Objective}
-The model is trained using a multi-objective loss function that balances
-predictive accuracy with theoretical alignment. The total loss
-\(L_{total}\) is a weighted sum of three components:
+The context-aware knowledge state $\hat{x}_t$ from the retriever is concatenated with the current individualized task representation $x'_t$ to form the input to the prediction head. This head is implemented as a multi-layer perceptron (MLP) with the following structure:
+\begin{enumerate}
+    \item Dense layer: $[2 \cdot d_{model} \to 512]$ with ReLU activation.
+    \item Dense layer: $[512 \to 256]$ with ReLU activation.
+    \item Output layer: $[256 \to 1]$ with a Sigmoid activation function to estimate $\hat{y}_t \in [0, 1]$.
+\end{enumerate}
 
-\[ L_{total} = L_{SUP} + \lambda_{ref} L_{ref} + L_{reg} \]
+\subsection{Formal Validation Framework} \label{sec_validation}
 
-\begin{itemize}
-\item
-  \textbf{Supervised Prediction Loss (\(L_{SUP}\))}: The standard Binary
-  Cross-Entropy (BCE) loss between the predicted probability
-  \(\hat{p}_{it}\) and the actual student response \(r_{it}\).
-\item
-  \textbf{Theoretical Alignment Loss (\(L_{ref}\))}: Enforces
-  consistency with the reference theory (BKT). It includes Mean Squared
-  Error (MSE) terms penalizing deviations between the model's projected
-  parameters (e.g., \(l_c, t_s\)) and the corresponding BKT theoretical
-  values. This ensures that the learned representations remain
-  semantically valid.
-  \[ L_{ref} = \text{MSE}(l_c, L0_{BKT}) + \text{MSE}(t_s, T_{BKT}) \]
-\item
-  \textbf{Regularization Loss (\(L_{reg}\))}: A task-agnostic
-  regularization on the student-specific scalars (\(u_q, k_c, v_s\)) to
-  prevent overfitting and ensure they represent meaningful deviations
-  from the norm.
-\end{itemize}
+To verify that iDKT’s internal representations ($l_c, t_s, u_q$) reflect educational constructs throughout training, we establish a formal framework across five psychometric hypotheses:
 
-\subsection{Interpretability Measure}
+\begin{enumerate}
+    \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_s$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
+    \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
+    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition momentum.
+    \item \textbf{$H_4$: Mastery Monotonicity}: Trajectory analysis to verify that the grounded latent space respects the non-forgetting behavior inherent in BKT.
+    \item \textbf{$H_5$: Parameter Recovery}: Ability of the architecture to recover known student and item parameters from synthetic BKT-generated datasets.
+\end{enumerate}
 
-\subsection{The Tradeoff Interpretability vs Prediction Accuracy}
+\subsection{Pedagogical Confidence} \label{sec_confidence}
+
+Beyond raw performance, we define the \textbf{Pedagogical Confidence} ($C$) as a metric for longitudinal agreement between the observer (iDKT) and the theoretical prior (BKT). For a student $s$ and skill $k$, the confidence is the time-averaged concordance over $T$ interactions:
+\begin{equation}
+    C_{s,k} = \frac{1}{T} \sum_{t=1}^{T} \left( 1 - |\hat{p}_{iDKT}(s,k,t) - p_{BKT}(s,k,t)| \right)
+\end{equation}
+Values of $C \ge 0.90$ indicate "Diagnostic Consensus," where the deep learning model validates the theoretical baseline. Conversely, low confidence identify "Discovery Breakouts"—localized regions where student behavior fundamentally diverges from standard pedagogical rules, necessitating more complex modeling.
+
+\subsection{The Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
+
+A key contribution of this work is the systematic exploration of the trade-off between predictive accuracy and theoretical fidelity. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the "Inductive Bias Bonus"—points where theoretical grounding acts as a beneficial regularizer that improves generalization—and the point of "Over-Constraint," where excessive adherence to the reference model begins to degrade predictive power.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results} \label{sec_results}
@@ -344,83 +430,11 @@ Does our proposed framework allow a Transformer-based model to recover latent fa
 \textit{Hypothesis:} iDKT can successfully estimate student-specific traits (initial knowledge and learning velocity) that are traditionally masked by fixed averages in simpler models like BKT.
 
 
-\subsection{Validation Metrics}
+\subsection{Validation Results}
 
-To verify that iDKT's internal representations genuinely reflect
-educational constructs rather than arbitrary latent features, we
-evaluated the model against three validation metrics
-(\(H_1\)--\(H_3\)). 
+To evaluate the proposed iDKT model, we conducted a series of experiments across multiple educational datasets. Table 1 summarizes the alignment metrics across different grounding strengths (\(\lambda\)).
 
-\subsubsection{M1: Convergent Validity (Numerical
-Alignment)}\label{h1-convergent-validity-numerical-alignment}
-
-\begin{itemize}
-
-\item
-  \textbf{Statement}: The model's latent projections (\(l_c, t_s\))
-  exhibit a high Pearson correlation (\(r > 0.90\)) with the intrinsic
-  parameters of the reference BKT model.
-\item
-  \textbf{Support}: Drawing on the \textbf{Informed Machine Learning}
-  paradigm \citep{vonrueden2021informed} and the \textbf{TGEL-Transformer}
-  framework \citep{gong2025tgel}, which emphasize numerical alignment
-  between neural components and theoretical rules.
-\item
-  \textbf{Demonstration}: Alignment metrics (\texttt{initmastery\_corr},
-  \texttt{learning\_rate\_corr}) calculated on the test set.
-\end{itemize}
-
-\subsubsection{M2: Predictor Equivalence (Behavioral
-Alignment)}\label{h2-predictor-equivalence-behavioral-alignment}
-
-\begin{itemize}
-\item
-  \textbf{Statement}: The iDKT parameters (\(l_c, t_s\)) are
-  \textbf{functionally substitutable}; when plugged into the reference
-  BKT equations, they reconstruct a mastery trajectory that is highly
-  consistent with the reference model's behavior.
-\item
-  \textbf{Support}: This follows the \textbf{Representational Grounding}
-  principle: for a parameter to represent a construct, it must not only
-  correlate with it (H1) but also fulfill its causal/functional role in
-  the reference theory's equations.
-\item
-  \textbf{Methodology}: Calculate
-  \(\hat{y}_{induced,t} = \text{BKT}(l_{c,idkt}, t_{s,idkt}, s_{bkt}, g_{bkt})\)
-  and measure its correlation with BKT baseline outputs.
-\item
-  \textbf{Demonstration}: Functional alignment correlation \(> 0.60\).
-\end{itemize}
-
-\subsubsection{M3: Discriminant Validity (Construct
-Distinctness)}\label{h3-discriminant-validity-construct-distinctness}
-
-\begin{itemize}
-
-\item
-  \textbf{Statement}: The student-specific knowledge gap (\(k_c\)) and
-  learning velocity (\(v_s\)) capture \textbf{non-redundant} dimensions
-  of variance, proving they represent distinct pedagogical features even
-  if they exhibit natural positive correlation.
-\item
-  \textbf{Support}: In psychometrics, discriminant validity does not
-  imply zero correlation (empirical independence), but rather that the
-  two constructs are not \textbf{perfectly collinear}. If
-  \(r(k_c, v_s) \approx 1.0\), the model would suffer from an
-  \textbf{identifiability problem}, where it couldn't distinguish if a
-  correct response is due to ``knowing more'' or ``learning faster.''
-\item
-  \textbf{Demonstration}: Correlation analysis showing
-  \(r(k_c, v_s) < 0.85\), ensuring that each parameter provides a unique
-  contribution to the marginalized accuracy. This allows for the
-  identification of ``high-velocity/low-prior'' students (under-prepared
-  but fast learners) vs.~``low-velocity/high-prior'' students
-  (well-prepared but struggling with new acquisition).
-\end{itemize}
-
-
-Table 1 summarizes the alignment metrics across
-different grounding strengths (\(\lambda\)).
+We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the correlation between the model's projected initial mastery (\(l_c\)) and the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the sweep (see Table~\ref{tab1}).
 
 \begin{table}[H] 
 %\small % Change table font size
@@ -438,228 +452,30 @@ different grounding strengths (\(\lambda\)).
 \end{tabularx}
 \end{table}
 
-We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the
-correlation between the model's projected initial mastery (\(l_c\)) and
-the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the
-sweep. This confirms that the Representational Grounding mechanism
-successfully anchors the deep latent space to the reference theory.
-Furthermore, the \textbf{Discriminant Validity (\(M_3\))} remains stable
-at \(r \approx -0.03\), proving that the model successfully disentangles
-``Student Knowledge Gap'' (\(k_c\)) from ``Student Learning Velocity''
-(\(v_s\)) as distinct, non-redundant traits.
+We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the correlation between the model's projected initial mastery (\(l_c\)) and the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the sweep. This confirms that the Representational Grounding mechanism successfully anchors the deep latent space to the reference theory. Furthermore, the \textbf{Discriminant Validity (\(M_3\))} remains stable at \(r \approx -0.03\), proving that the model successfully disentangles ``Student Knowledge Gap'' (\(k_c\)) from ``Student Learning Velocity'' (\(v_s\)) as distinct, non-redundant traits.
 
-\subsection{3.2. Pareto Curve}\label{pareto-curve}
+\subsection{Pareto Curve Analysis} \label{sec_pareto}
 
-Our analysis reveals a non-linear trade-off between predictive accuracy
-and theoretical fidelity. Contrary to the common assumption that
-interpretability imposes a performance penalty, we identified an
-\textbf{``Inductive Bias Bonus''} at moderate grounding levels
-(\(\lambda \approx 0.10\)).
+Our analysis reveals a non-linear trade-off between predictive accuracy and theoretical fidelity. Contrary to the common assumption that interpretability imposes a performance penalty, we identified an \textbf{``Inductive Bias Bonus''} at moderate grounding levels (\(\lambda \approx 0.10\)).
 
-As shown in Table 1, the model with \(\lambda=0.10\) achieves a Test AUC
-of \textbf{0.8322}, slightly outperforming the unconstrained baseline
-(0.8317). This suggests that the BKT-based regularization acts as a
-beneficial inductive bias, preventing the Transformer from overfitting
-to noise in sparse interaction histories. However, excessive grounding
-(\(\lambda > 0.30\)) leads to a sharp decline in predictive performance
-as the model becomes over-constrained by the simplicity of the reference
-theory.
+As shown in Table~\ref{tab1}, the model with \(\lambda=0.10\) achieves a Test AUC of \textbf{0.8322}, slightly outperforming the unconstrained baseline (0.8317). This suggests that the BKT-based regularization acts as a beneficial inductive bias, preventing the Transformer from overfitting to noise in sparse interaction histories. However, excessive grounding (\(\lambda > 0.30\)) leads to a sharp decline in predictive performance as the model becomes over-constrained by the simplicity of the reference theory.
 
-\subsubsection{3.3. Granularity of
-Individualization}\label{granularity-of-individualization}
+\subsection{Granularity of Individualization} \label{sec_granularity}
 
-While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all
-students for a given skill, iDKT captures a rich distribution of
-\textbf{Individualized Learning Velocities} (\(t_s\)).
+While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all students for a given skill, iDKT captures a rich distribution of \textbf{Individualized Learning Velocities} (\(t_s\)). Figure~\ref{fig_placeholder1} illustrates this ``Delta Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies ``fast-track'' learning trajectories that classical population-level models underestimate. This granularity allows for \textbf{Precise Diagnostic Placement}, distinguishing between students who lack initial knowledge (\textit{low} \(l_c\)) versus those who suffer from slow acquisition momentum (\textit{low} \(t_s\)).
 
-\textbf{Figure 1} (see supplementary materials) illustrates this ``Delta
-Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed
-variance, indicating that for many skills, the Deep Learning model
-identifies ``fast-track'' learning trajectories that classical
-population-level models underestimate. This granularity allows for
-\textbf{Precise Diagnostic Placement}, distinguishing between students
-who lack initial knowledge (\(low \ l_c\)) versus those who suffer from
-slow acquisition momentum (\(low \ t_s\)).
+\subsection{Longitudinal Mastery Dynamics} \label{sec_longitudinal}
 
-\subsubsection{3.4. Longitudinal Mastery
-Dynamics}\label{longitudinal-mastery-dynamics}
-
-The practical impact of these individualized parameters is evident in
-the \textbf{Mastery Mosaic} analysis. When simulating the mastery
-acquisition of ``Fast'' vs.~``Slow'' learners on the same sequence of
-correct responses: * \textbf{Standard BKT} predicts identical mastery
-curves for both students. * \textbf{iDKT} projects distinct
-trajectories, where ``Fast'' learners reach the 95\% mastery threshold
-significantly earlier (fewer interactions) than ``Slow'' learners.
-
-This ``Informed Divergence'' validates that iDKT does not merely mimic
-BKT labels but leverages its transformer core to dynamically adjust the
-\textbf{Velocity of Mastery} based on the student's historical profile,
-enabling truly adaptive pacing in intelligent tutoring scenarios.
-
-
-\section{Results 2}
-
-This section may be divided by subheadings. It should provide a concise and precise description of the experimental results, their interpretation as well as the experimental conclusions that can be drawn.
-\subsection{Subsection}
-\subsubsection{Subsubsection}
-
-Bulleted lists look like this:
+The practical impact of these individualized parameters is evident in the mastery analysis. When simulating the mastery acquisition of ``Fast'' vs. ``Slow'' learners on the same sequence of correct responses:
 \begin{itemize}
-\item	First bullet;
-\item	Second bullet;
-\item	Third bullet.
+    \item \textbf{Standard BKT} predicts identical mastery curves for both students.
+    \item \textbf{iDKT} projects distinct trajectories, where ``Fast'' learners reach the 95\% mastery threshold significantly earlier (fewer interactions) than ``Slow'' learners.
 \end{itemize}
 
-Numbered lists can be added as follows:
-\begin{enumerate}
-\item	First item; 
-\item	Second item;
-\item	Third item.
-\end{enumerate}
+This ``Informed Divergence'' validates that iDKT does not merely mimic BKT labels but leverages its transformer core to dynamically adjust the \textbf{Velocity of Mastery} based on the student's historical profile, enabling truly adaptive pacing in intelligent tutoring scenarios.
 
-The text continues here.
 
-\subsection{Figures, Tables and Schemes}
 
-All figures and tables should be cited in the main text as Figure~\ref{fig1}, Table~\ref{tab1}, etc.
-
-\begin{figure}[H]
-%\isPreprints{\centering}{} % Only used for preprints
-\includegraphics[width=4.0 cm]{Definitions/logo-mdpi}
-\caption{This is a figure. Schemes follow the same formatting.\label{fig_placeholder2}}
-\end{figure}   
-\unskip
-
-\begin{table}[H] 
-%\small % Change table font size
-\caption{This is a table caption. Tables should be placed in the main text near to the first time they are~cited.\label{tab_template}}
-%\isPreprints{\centering}{} % Only used for preprints
-\begin{tabularx}{\textwidth}{CCC}
-\toprule
-\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}\\
-\midrule
-Entry 1		& Data			& Data\\
-Entry 2		& Data			& Data \textsuperscript{1}\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The text continues here (Figure~\ref{fig2} and Table~\ref{tab2}).
-
-% Example of a figure that spans the whole page width and with subfigures. The same concept works for tables, too.
-\begin{figure}[H]
-%\isPreprints{}{% This command is only used for ``preprints''.
-\begin{adjustwidth}{-\extralength}{0cm}
-\centering
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\hfill
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}\\
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\hfill
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\isPreprints{}{% This command is only used for ``preprints''.
-\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\caption{This is a wide figure. Schemes follow the same formatting. If there are multiple panels, they should be listed as: (\textbf{a}) Description of what is contained in the first panel. (\textbf{b}) Description of what is contained in the second panel. (\textbf{c}) Description of what is contained in the third panel. (\textbf{d}) Description of what is contained in the fourth panel. Figures should be placed in the main text near to the first time they are cited. A caption on a single line should be centered.\label{fig2}}
-\end{figure} 
-
-\begin{table}[H]
-\caption{This is a wide table.\label{tab2}}
-%\isPreprints{\centering}{% This command is only used for ``preprints''.
-	\begin{adjustwidth}{-\extralength}{0cm}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%\isPreprints{\begin{tabularx}{\textwidth}{CCCC}}{% This command is only used for ``preprints''.
-		\begin{tabularx}{\fulllength}{CCCC}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-			\toprule
-			\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}     & \textbf{Title 4}\\
-			\midrule
-\multirow[m]{3}{*}{Entry 1 *}	& Data			& Data			& Data\\
-			  	                   & Data			& Data			& Data\\
-			             	      & Data			& Data			& Data\\
-                   \midrule
-\multirow[m]{3}{*}{Entry 2}    & Data			& Data			& Data\\
-			  	                  & Data			& Data			& Data\\
-			             	     & Data			& Data			& Data\\
-			\bottomrule
-		\end{tabularx}
-%		\isPreprints{}{% This command is only used for ``preprints''.
-	\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-	\noindent{\footnotesize{* Tables may have a footer.}}
-\end{table}
-
-%\begin{listing}[H]
-%\caption{Title of the listing}
-%\rule{\columnwidth}{1pt}
-%\raggedright Text of the listing. In font size footnotesize, small, or normalsize. Preferred format: left aligned and single spaced. Preferred border format: top border line and bottom border line.
-%\rule{\columnwidth}{1pt}
-%\end{listing}
-
-Text.
-
-Text.
-
-\subsection{Formatting of Mathematical Components}
-
-This is the example 1 of equation:
-\begin{linenomath}
-\begin{equation}
-a = 1,
-\end{equation}
-\end{linenomath}
-the text following an equation need not be a new paragraph. Please punctuate equations as regular text.
-%% If the documentclass option "submit" is chosen, please insert a blank line before and after any math environment (equation and eqnarray environments). This ensures correct linenumbering. The blank line should be removed when the documentclass option is changed to "accept" because the text following an equation should not be a new paragraph.
-
-This is the example 2 of equation:
-%\isPreprints{}{% This command is only used for ``preprints''.
-\begin{adjustwidth}{-\extralength}{0cm}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\begin{equation}
-a = b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z
-\end{equation}
-%\isPreprints{}{% This command is only used for ``preprints''.
-\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-
-%% Example of a page in landscape format (with table and table footnote).
-%\startlandscape
-%\begin{table}[H] %% Table in wide page
-%%\isPreprints{\centering}{} % This command is only used for ``preprints''.
-%\caption{This is a very wide table.\label{tab3}}
-%	\begin{tabularx}{\textwidth}{CCCC}
-%		\toprule
-%		\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}	& \textbf{Title 4}\\
-%		\midrule
-%		Entry 1		& Data			& Data			& This cell has some longer content that runs over two lines.\\
-%		Entry 2		& Data			& Data			& Data\textsuperscript{1}\\
-%		\bottomrule
-%	\end{tabularx}
-%%\isPreprints{}{% This command is only used for ``preprints''.
-%	\begin{adjustwidth}{+\extralength}{0cm}
-%%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%		\noindent\footnotesize{\textsuperscript{1} This is a table footnote.}
-%%\isPreprints{}{% This command is only used for ``preprints''.
-%	\end{adjustwidth}
-%%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%\end{table}
-%\finishlandscape
-
-Please punctuate equations as regular text. Theorem-type environments (including propositions, lemmas, corollaries etc.) can be formatted as follows:
-%% Example of a theorem:
-\begin{Theorem}
-Example text of a theorem.
-\end{Theorem}
-
-The text continues here. Proofs must be formatted as follows:
-
-%% Example of a proof:
-\begin{proof}[Proof of Theorem 1]
-Text of the proof. Note that the phrase ``of Theorem 1'' is optional if it is clear which theorem is being referred to.
-\end{proof}
-The text continues here.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}\label{sec_discussion}
