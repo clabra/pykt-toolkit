@@ -395,8 +395,8 @@ graph BT
             BKT_Targets("BKT predictions <br/>p_bkt")
             IDs("Concepts, questions, responses")
             GroundTruth("Ground Truth <br/>r ∈ {0,1}")
-            BKT_l0("BKT l0")
-            BKT_T("BKT T")
+            BKT_l0("BKT parameter <br/>l0")
+            BKT_T("BKT parameter <br/>T")
         end
 
         %% Embeddings Stage
@@ -422,9 +422,9 @@ graph BT
         %% Core Transformer Stage
         subgraph Transformer_Core [Transformer Core]
             style Transformer_Core fill:#fff,stroke:#000,stroke-width:1px;
-            Encoders["History Encoding"]
-            Encoders_Task["Nx Encoders"]
-            Decoders["Cross-Attention"]
+            Encoders["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
+            Encoders_Task["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
+            Decoders["Multi-Head <br/>Cross-Attention"]
             LatentState["Proficiency Context"]
 
             YT --> Encoders
@@ -434,12 +434,6 @@ graph BT
             Decoders --> LatentState
         end
 
-        %% Alignment Output Stage
-        subgraph Probe_Stage [Alignment Output]
-            style Probe_Stage fill:#fff,stroke:#000,stroke-width:1px;
-            Probe_Proj["Probe Projection"]
-        end
-
         %% Prediction Stage
         subgraph Output_Stage [Output]
             style Output_Stage fill:#fff,stroke:#000,stroke-width:1px;
@@ -447,7 +441,6 @@ graph BT
             Pred["iDKT Prediction <br/>p_idkt"]
 
             LatentState --> MLP
-            LatentState --> Probe_Proj
             MLP --> Pred
         end
 
@@ -456,18 +449,24 @@ graph BT
             style Loss_Stage fill:#fff,stroke:#000,stroke-width:1px;
             Loss_Ref(["Alignment Loss <br/>L_ref"])
             Loss_sup(["Prediction Loss <br/>L_sup"])
+            Loss_init(["Parameter Loss <br/>L_init"])
+            Loss_rate(["Parameter Loss <br/>L_rate"])
 
-            Probe_Proj --> Loss_Ref
+            Pred --> Loss_Ref
             BKT_Targets --> Loss_Ref
             Pred --> Loss_sup
             GroundTruth --> Loss_sup
+            LC_Offset --> Loss_init
+            BKT_l0 --> Loss_init
+            TS_Aug --> Loss_rate
+            BKT_T --> Loss_rate
         end
     end
 
     %% Apply Style to Nodes
     class IDs,GroundTruth,BKT_Targets,BKT_l0,BKT_T,CQ_Embed,Hist_Embed,LC_Offset,TS_Aug,XT,YT whiteNode;
-    class Encoders,Encoders_Task,Decoders,LatentState,Probe_Proj,MLP,Pred whiteNode;
-    class Loss_Ref,Loss_sup whiteNode;
+    class Encoders,Encoders_Task,Decoders,LatentState,MLP,Pred whiteNode;
+    class Loss_Ref,Loss_sup,Loss_init,Loss_rate whiteNode;
 ```
 
 
