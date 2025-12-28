@@ -218,31 +218,31 @@ To bridge psychometric theory and deep learning, iDKT employs a specialized nota
 *   **$e_{ct,rt}$ (Interaction Base)**: The fundamental representation of an interaction, combining concept $c_t$ and response $r_t$.
 *   **$u_q$ (Question Difficulty)**: A learned scalar parameter indexed by the **Problem ID** ($q$).
 *   **$k_c$ (Knowledge Gap)**: A learned student-specific scalar representing the gap in prior knowledge compared to the theoretical baseline.
-*   **$v_s$ (Learning Speed)**: A learned student-specific scalar representing individual learning velocity (multiplier for momentum).
+*   **$v_s$ (Learning Speed)**: A learned student-specific scalar representing individual learning velocity (multiplier for acquisition evidence).
 *   **$d_{ct}$ (Question Variation Axis)**: A vector defining the "direction" of difficulty variation for concept $c_t$.
 *   **$d_c$ (Knowledge Axis)**: A vector defining the semantic direction of prior knowledge variation.
-*   **$d_s$ (Velocity Axis)**: A vector defining the semantic direction of learning momentum variation.
+*   **$d_s$ (Velocity Axis)**: A vector defining the semantic direction of learning evidence variation.
 *   **$f_{ct,rt}$ (Interaction Variation)**: A vector defining how the interaction representation shifts based on item difficulty.
 *   **$l_{c}$ (Initial Knowledge Embedding)**: The grounded embedding representing personalized initial mastery ($l_c = L0_{skill} + k_c \cdot d_c$).
 *   **$t_{s}$ (Learning Embedding)**: The grounded embedding representing personalized learning velocity ($t_s = T_{skill} + v_s \cdot d_s$).
-*   **$x'_t$ (Individualized Question)**: The personalized question embedding, representing the "residual challenge" for a student ($x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$).
-*   **$y'_t$ (Individualized Interaction)**: The personalized interaction embedding, representing the "momentum-grounded" historical record ($y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$).
+*   **$x'_t$ (Individualized Question)**: The personalized question embedding, representing the "residual gap" for a student ($x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$).
+*   **$y'_t$ (Individualized Interaction)**: The personalized interaction embedding, representing the "evidence-augmented" historical record ($y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$).
 
 ### Fusion of Embeddings (Rasch Logic)
 
 The input layer fuses these components to create individualized representations that bridge psychometric theory with high-dimensional latent spaces:
 
 1.  **Individualized Question ($x'_t$)**: $x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c$
-    *   **Logic**: Subtracts the personalized Initial Knowledge ($l_c$) from the objective item difficulty.
-    *   **Universal Interpretability**: Implements the **Relational Inductive Bias** ($\text{Challenge} - \text{Capability}$). For a student with massive prior knowledge, the "residual difficulty" becomes negligible.
+    *   **Logic**: Subtracts the personalized prior proficiency ($l_c$) from the objective item difficulty.
+    *   **Universal Interpretability**: Implements the **Relational Inductive Bias** ($\text{Transition Gap} = \text{Difficulty} - \text{Proficiency}$). Under this logic, objective difficulty is offset by the subject's baseline, ensuring that task demands are relative to individual proficiency.
 
 2.  **Individualized Interaction ($y'_t$)**: $y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s$
     *   **Logic**: Adds the personalized Learning Velocity ($t_s$) to the historical interaction record.
-    *   **Universal Interpretability**: Implements **Temporal Momentum Grounding**. Successes from a "fast learner" create a more potent signature in the history, signaling faster mastery acquisition.
+    *   **Universal Interpretability**: Implements **Temporal Evidence Grounding**. Successes from a "fast learner" create a more potent signature in the history, signaling faster mastery acquisition.
 
 3.  **Learner Profile Grounding**:
     *   **Initial Knowledge ($l_c = L0_{skill} + k_c \cdot d_c$)**: Grounding the starting line in BKT $L0$.
-    *   **Learning Velocity ($t_s = T_{skill} + v_s \cdot d_{s}$)**: Grounding the momentum in BKT $T$.
+    *   **Learning Velocity ($t_s = T_{skill} + v_s \cdot d_{s}$)**: Grounding the learning signal in BKT $T$.
 
 
 ### Parameter Loss Functions
@@ -260,7 +260,7 @@ The model constructs a high-dimensional representation of personalized learning 
 $$t_s = T_{\text{skill}} + v_s \cdot d_s$$
 *   **$T_{\text{skill}}$**: Base embedding initialized via *Textured Grounding* (i.e. addition of a small amount of texture or random noise) around the logit of the BKT skill-level $T$.
 *   **$v_s$**: A learned student-specific scalar representing individual learning speed (multiplier).
-*   **$d_s$**: The **Velocity Axis**, a learnable vector defining the semantic direction of learning momentum.
+*   **$d_s$**: The **Velocity Axis**, a learnable vector defining the semantic direction of learning evidence.
 
 Note: The logit (the mathematical inverse of the sigmoid function) is used to map a probability $p$ (which is restricted to the $[0, 1]$ range) to a real-valued number in the $(-\infty, \infty)$ range. Neural networks operate most effectively in an unconstrained space. By initializing embeddings in logit space (instead of raw probability space), the model can use standard gradient descent to shift values up or down without worrying about "hitting a wall" at $0$ or $1$.
 
@@ -282,7 +282,7 @@ The $d_{\text{model}}$ features of $t_s$ are projected back into the scalar prob
 The final loss is calculated by comparing this dynamic, individualized **rate** value against the static BKT $T$ parameter for the corresponding skill:
 $$\mathcal{L}_{\text{rate}} = \text{MSE}(\text{rate}_{\text{iDKT}}, T_{\text{BKT}})$$
 
-This mechanism ensures that the Transformer's internal representations for "learning momentum" are directly anchored to pedagogical primitives while allowing for individual student-level variation.
+This mechanism ensures that the Transformer's internal representations for "learning evidence" are directly anchored to pedagogical primitives while allowing for individual student-level variation.
 
 ### Key Features
 
@@ -326,8 +326,8 @@ This mechanism ensures that the Transformer's internal representations for "lear
 - **Informed Individualization** (Interpretability-by-Design):
   - **Representational Grounding**: Student-specific traits ($k_c$: Knowledge Gap, $v_s$: Learning Speed) are learned as scalars and fused into the core embeddings.
   - **Intrinsic Initial Knowledge ($l_c$)**: Personalized starting line grounded in BKT $L0$. 
-  - **Intrinsic Learning Momentum ($t_s$)**: Personalized learning velocity grounded in BKT $T$.
-  - **Relational Inductive Bias**: The model architecture enforces the $(\text{Challenge} - \text{Capability})$ logic directly in the input layer, ensuring that the Transformer's attention is semantically anchored to pedagogical theory.
+  - **Intrinsic Learning Evidence ($t_s$)**: Personalized learning velocity grounded in BKT $T$.
+  - **Relational Inductive Bias**: The model architecture enforces the $(\text{Difficulty} - \text{Proficiency})$ logic directly in the input layer, ensuring that the Transformer's attention is semantically anchored to pedagogical theory.
 
 - **Knowledge Retriever** (Paper §3.1, §3.2):
 
@@ -1210,7 +1210,7 @@ While standard BKT assigns a single $T$ per skill, iDKT can estimate a **Student
 - **Benefit**: This distinguishes between "fast" and "slow" learners. Educators can identify students with low velocity (learning plateaus) who may require different instructional interventions, regardless of their current mastery levels.
 
 #### B. Individualized Initial Knowledge (Personalized $P(L_0)$)
-Standard BKT assumes all students start at the same $P(L_0)$ when they first encounter a skill. We propose individualizing this using a **Student Capability Baseline** ($v_s$):
+Standard BKT assumes all students start at the same $P(L_0)$ when they first encounter a skill. We propose individualizing this using a **Student Proficiency Baseline** ($v_s$):
 - **Mechanism**: A learnable embedding `student_param` ($v_s \in \mathbb{R}^1$) can be associated with each user ID. The initial mastery projection would then be calculated as: $L_{0}^{(s,c)} = \text{Sigmoid}(\text{Proj}(c) + v_s)$.
 - **Benefit**: This allows the model to account for unobserved prior knowledge. It prevents the model from misjudging a student's inherent ability simply because they have not yet practiced a specific topic on the platform.
 
@@ -1219,7 +1219,7 @@ The transition from global BKT parameters to individualized iDKT parameters enab
 - **BKT**: Per-Skill $P(L_0)$ and $T$ (Shared by all students).
 - **iDKT (Current & Proposed)**: Per-Student $P(L_0)$ (Personalized baseline) and Per-Student/Per-Step $T$ (Dynamic learning velocity).
 
-This individualized approach would allow iDKT to generate a **Multidimensional Learner Profile** summarizing student capability ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states, providing a more comprehensive view of student progress than classical models.
+This individualized approach would allow iDKT to generate a **Multidimensional Learner Profile** summarizing student proficiency ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states, providing a more comprehensive view of student progress than classical models.
 
 ### 4. Informed Individualization Implementation
 
@@ -1227,10 +1227,10 @@ The "Informed Individualization" framework has been implemented across the model
 
 #### Phase 1: Model Architecture Optimization `pykt/models/idkt.py`
 
-We introduced a student-level capability embedding and redesigned the output heads to incorporate individual traits:
+We introduced a student-level proficiency embedding and redesigned the output heads to incorporate individual traits:
 
 ```python
-# 1. Student Capability Embedding (v_s)
+# 1. Student Proficiency Embedding (v_s)
 self.student_param = nn.Embedding(self.n_uid + 1, 1)
 
 # 2. Individualized Output Heads (redesigned to accept v_s)
@@ -1255,7 +1255,7 @@ The training script was updated to support the individualized flow and enforce t
 
 The evaluation suite now quantifies the impact of individualization:
 
-- **Capability Profiling**: Learned $v_s$ traits are exported to analyze their correlation with student historical performance.
+- **Proficiency Profiling**: Learned $v_s$ traits are exported to analyze their correlation with student historical performance.
 - **Roster Export**: Longitudinal tracking of mastery states for all students and skills is supported via `IDKTRoster` (`roster_idkt.csv`).
 
 #### Phase 4: Reproducibility & Documentation
@@ -1271,11 +1271,11 @@ To evolve iDKT from a domain-specific model into a **Universal Framework for Int
 This archetype assumes that an event is a function of the **interaction between** an entity's internal state and an external task (e.g., student vs. question, or agent vs. environment).
 
 *   **Individualized Task ($x'_t$)**: $x'_t = x_{task} - l_{state}$ (Differential grounding)
-*   **Individualized History ($y'_t$)**: $y'_t = y_{event} + t_{momentum}$ (Temporal grounding)
+*   **Individualized History ($y'_t$)**: $y'_t = y_{event} + t_{evidence}$ (Temporal grounding)
 
 *   **Pros (Universal Interpretability)**:
-    *   **Reasoning-by-Comparison**: Forces the model to perform "Differential Reasoning" (Baseline vs. Challenge). This is a powerful inductive bias for any field involving skill-matching or diagnostics.
-    *   **High Sensitivity to Outliers**: By subtracting the baseline ($l_{state}$), the Attention mechanism focuses exclusively on the **"Residual Challenge."** This exposes why a high-capability entity fails a simple task, surfacing anomalies in the latent attention weights.
+    *   **Reasoning-by-Comparison**: Forces the model to perform "Differential Reasoning" (Baseline vs. Demand). This is a powerful inductive bias for any field involving skill-matching or diagnostics.
+    *   **High Sensitivity to Outliers**: By subtracting the baseline ($l_{state}$), the Attention mechanism focuses exclusively on the **"Residual Gap."** This exposes why a high-proficiency entity fails a simple task, surfacing anomalies in the latent attention weights.
     *   **Mathematical Parity**: Directly implements the fundamental logic of comparison ($\text{Success} \approx \text{Entity} - \text{Task}$) used in physics, medicine, and psychology.
 *   **Cons (Universal Interpretability)**:
     *   **Strict Structural Assumption**: Assumes the relationship between entity and task is linear/additive. If the interaction is more complex (e.g., multiplicative), this bias may over-constrain the Transformer.
@@ -1284,7 +1284,7 @@ This archetype assumes that an event is a function of the **interaction between*
 ### Archetype 2: Integrated State Trajectory (Context-Augmented Trajectory)
 This archetype preserves the objective nature of external events and concentrates all internal state variations into a single "history of the entity."
 
-*   **Comprehensive Integrated Event ($y''_t$)**: $y''_t = y_{event} + l_{baseline} + t_{momentum}$
+*   **Comprehensive Integrated Event ($y''_t$)**: $y''_t = y_{event} + l_{baseline} + t_{evidence}$
 
 *   **Pros (Universal Interpretability)**:
     *   **History-State Entanglement**: Ensures that the "memory" of the Transformer is always filtered through the "nature" of the subject. The model cannot "forget" the entity's global traits over long sequences.
@@ -1304,7 +1304,7 @@ The proposed transition to **Relational Differential Fusion (Archetype 1)** repr
 
 Standard Transformers, including current iDKT iterations, primarily function as high-dimensional pattern matchers. While highly accurate, their internal logic is often opportunistic. By hard-coding the relational logic $x'_{t} = x_{task} - l_{state}$, we move from "Predicting" to "Evaluating." 
 
-In this paradigm, success is defined as the relative distance between an entity's capability and a task's inherent challenge. By forcing the latent space to respect this differential identity, the model's Attention mechanism is constrained to perform **Differential Reasoning**. It no longer simply finds patterns; it must decide if the student's accumulated momentum ($t_s$) is sufficient to bridge the specific residual gap of the current item.
+In this paradigm, success is defined as the relative distance between an entity's proficiency and a task's inherent difficulty. By forcing the latent space to respect this differential identity, the model's Attention mechanism is constrained to perform **Differential Reasoning**. It no longer simply finds patterns; it must decide if the subject's augmented evidence ($t_s$) is sufficient to bridge the specific residual gap of the current item.
 
 ### 2. The Residual Gap as a Diagnostic Instrument
 
@@ -1314,7 +1314,7 @@ When a student with high perceived competence ($l_c$) fails a mathematically "ea
 
 ### 3. Fidelity to Scientific Induction
 
-Archetype 1 aligns deep learning with the long-standing principles of scientific induction found in psychometrics (IRT's $\theta - \beta$ logic) and physics (Force-Friction dynamics). In any domain where an agent interacts with a standardized challenge, the underlying causality is almost always relational.
+Archetype 1 aligns deep learning with the long-standing principles of scientific induction found in psychometrics (IRT's $\theta - \beta$ logic) and physics (Force-Friction dynamics). In any domain where an agent interacts with a standardized task, the underlying causality is almost always relational.
 
 By adopting this archetype, we demonstrate that high-capacity Transformers and low-capacity pedagogical theories are not in conflict. Instead, the theory serves as the "Skeletal Structure" that provides semantic orientation, while the Transformer provides the "Neural Capacity" to model the non-linear nuances of the data. 
 
@@ -2117,7 +2117,7 @@ Following the criteria defined in ["Theoretical Alignment Approach"](#theoretica
 
 - **Condition 2: Strong Theoretical Alignment**: **PASSED**.
   - **Initial Mastery Alignment ($L_{init}$)**: **r = 0.9217**. The model recovers the initial knowledge distribution through soft semantic grounding.
-  - **Learning Rate Alignment ($L_{rate}$)**: **r = 0.8801**. The dynamic learning momentum is highly consistent with BKT transitions.
+  - **Learning Rate Alignment ($L_{rate}$)**: **r = 0.8801**. The dynamic learning evidence is highly consistent with BKT transitions.
   - **Diagnostic Probing Fidelity**: **r = 0.8046**. The internal latent space structurally encodes mastery status with high precision.
   - **Prediction Alignment ($L_{ref}$)**: **r = 0.6421**. The model leverages its Transformer architecture to discover complex patterns, yielding superior stability over pure BKT while respecting theoretical bounds.
 

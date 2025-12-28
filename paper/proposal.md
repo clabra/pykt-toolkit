@@ -111,11 +111,11 @@ Here L1 and L2 encode the above two constraints, respectively, and ˆy is the pr
 
 ### Relational Differential Fusion (Archetype 1)
 
-The core innovation of iDKT is the **Relational Differential Fusion (RDF)** layer, which bridges psychometric theory and deep learning. We define individualized student embeddings as:
-- **Individualized Initial Mastery ($l_c$):** $l_c = L0_{skill} + k_c \cdot d_c$
-- **Individualized Learning Velocity ($t_s$):** $t_s = T_{skill} + v_s \cdot d_s$
+The core innovation of iDKT is the **Relational Differential Fusion (RDF)** layer, which bridges psychometric theory and deep learning. We define individualized subject embeddings as:
+- **Individualized Initial Proficiency ($l_c$):** $l_c = L0_{skill} + k_c \cdot d_c$
+- **Individualized Transition Velocity ($t_s$):** $t_s = T_{skill} + v_s \cdot d_s$
 
-Where $L0_{skill}$ and $T_{skill}$ are anchored in BKT priors, and $k_c, v_s$ are learnable student-specific scalars. This implements the **Relational Inductive Bias** ($\text{Challenge} - \text{Capability}$), ensuring that the Transformer's attention is semantically anchored.
+Where $L0_{skill}$ and $T_{skill}$ are anchored in BKT priors, and $k_c, v_s$ are learnable student-specific scalars. This implements the **Relational Inductive Bias** ($\text{Transition Gap} = \text{Difficulty} - \text{Proficiency}$), ensuring that the Transformer's attention is semantically anchored.
 
 ### Loss Function
 
@@ -127,7 +127,7 @@ Where:
 - $L_{\text{SUP}}$: Standard Binary Cross-Entropy (BCE) for correctness prediction.
 - $L_{\text{ref}}$: Mean Squared Error (MSE) between iDKT and BKT correctness predictions.
 - $L_{\text{param}}$: MSE between model latent projections and theoretical BKT parameters ($L0, T$).
-- $L_{reg}$: L2 penalty on difficulty ($u_q$) and student-specific parameters ($v_s, k_c$).
+- $L_{reg}$: L2 penalty on difficulty ($u_q$) and subject-specific parameters ($v_s, k_c$).
 
 **Key Advantages**:
 - **High-Fidelity Alignment**: Achieving $>0.98$ correlation between model states and theory ensures that the "hidden knowledge evolution" is no longer hidden but semantically verifiable.

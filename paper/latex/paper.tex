@@ -215,21 +215,26 @@ The remainder of this paper is structured as follows. Section~\ref{sec_related} 
 
 In standard educational datasets such as ASSIST2009 and ASSIST2015, student interactions are recorded at the level of specific questions, each of which is associated with one or more underlying pedagogical concepts. This structure establishes a natural hierarchy: a concept represents an abstract skill (e.g., "Pythagorean Theorem") whose learning is operationalized through a diverse set of questions. While all questions belonging to a concept share the same semantic core, they differ in their specific manifestations—most notably in their intrinsic difficulty or complexity. Therefore, an effective representation must capture both the shared identity of the concept and the unique deviation of the specific question.
 
-In Transformer-based models we can operationalize this principle representing the tasks as embedding vectors: 
+In Transformer-based models \citep{vaswani2017attention} we can operationalize this principle representing the tasks as embedding vectors: 
 
-$$x' = c + u \cdot d$$
+\begin{equation}
+    x' = c + u \cdot d \quad \text{(Task)}
+\end{equation}
 
-In this formulation, $c$ acts as the \textit{Concept Anchor}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of "increasing challenge". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode arbitrary embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: a base \textit{concept identity} and a \textit{difficulty shift}. 
+
+In this formulation, $c$ acts as the \textit{Concept Anchor}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of the "transition gap". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode arbitrary embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: a base \textit{concept identity} and a \textit{difficulty shift}. 
 
 In a similar way, we can operationalize the interactions between questions and students as embedding vectors: 
 
-$$y' = e + u \cdot (f + d)$$
+\begin{equation}
+    y' = e + u \cdot (f + d) \quad \text{(Interaction History)}
+\end{equation}
 
 Here $e$ represents the \textit{Interaction Base}, which is a combined representation of concept c and the binary outcome r (correct/incorrect), while $f$ represents the \textit{Interaction Variation Axis}, which is similar to the Question Variation Axis ($d_c$) but is specific to the interaction between a question and a student. The inclusion of $d_c$ in the interaction shift ensures that the difficulty vectors are consistent across both questions ($x'$) and interactions ($y'$).
 
 Extending this rationale, we can enrich the $x'$ embeddings by integrating additional components with explicit semantic significance. Specifically, by adopting Bayesian Knowledge Tracing (BKT) as a reference model, we can incorporate vectors corresponding to its core theoretical parameters—Initial Knowledge ($L_0$) and Learning Rate ($T$)—thereby grounding the deep representation in established pedagogical constructs. 
 
-Previously, to get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
+To get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
 
 \begin{equation}
     l_c = L_{0} + k_c \cdot d_c \quad \text{(Personalized Initial Knowledge)}
@@ -240,7 +245,7 @@ Previously, to get individualized values for these parameters, we decompose them
 
 where $L_{0}$ and $T$ are the population-level means, $k_c$ and $v_s$ are the population-level standard deviations, and $d_c$ and $d_s$ are the student-specific deviations.
 
-The final input to the encoder and decoder components of the Transformer consists of: 
+We include these vectors to get the final input embedding for the encoder and decoder components of the Transformer: 
 \begin{equation}
     x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c \quad \text{(Individualized Task)}
 \end{equation}
@@ -248,11 +253,12 @@ The final input to the encoder and decoder components of the Transformer consist
     y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s \quad \text{(Individualized Interaction History)}
 \end{equation}
 
-The rationale for using difference for tasks ($x'$) and sum for history ($y'$) is rooted in their distinct semantic roles:
-\begin{itemize}
-    \item Individualized Task represents the "Challenge": $x' = \text{Difficulty} - \text{Capability}$ codifies the \textit{Net Challenge} for this specific student. If a student is very capable (i.e. has a high $l_c$), the effective difficulty of the task should be lower. The model asks: "How much difficulty remains after accounting for the student's ability?" This constitutes a kind of relational logic where difficulty is relative to the student.
-    \item Interaction History represents the "Evidence": $y' = \text{Interaction} + \text{Velocity}$ codifies the \textit{Accumulated Momentum} or evidence. A correct answer from a fast learner (i.e. with a high $t_s$) provides more signal than one from a slow learner. The history encoder accumulates these evidences, adding the student's learning speed to the signal because high velocity implies faster mastery acquisition. It asks: "What is the total learning value derived from this interaction given the student's speed?"
+where $c_{c_t}$ represents the concept embedding, $u_q$ the question-specific shift, $d_c$ the difficulty shift, $d_s$ the student-specific shift, $e_{c_t,r_t}$ the interaction base, $f_{c_t,r_t}$ the interaction variation axis, $l_c$ the personalized initial knowledge, and $t_s$ the personalized learning rate.
 
+The rationale for using difference for the individualized task ($x'$) and sum for the interaction history ($y'$) is due to their distinct semantic roles:
+\begin{itemize}
+    \item $x'$ represents the $\textit{Transition Gap}$: $\textit {Difficulty} - \textit{Proficiency}$. Under this relational logic, objective task difficulty is offset by prior proficiency, ensuring that task demands are defined relative to the subject's baseline. This formulation captures the difference between the task requirements and the current state, representing the residual gap after accounting for latent proficiency.
+    \item $y'$ represents the $\textit{Acquisition Gain}$: $\textit{Interaction} + \textit{Velocity}$. The history encoder accumulates evidence from interactions, applying a consistent relational logic where the signal value is augmented by the transition velocity, ensuring that interaction outcomes are defined relative to the subject's pace. Under this formulation, the total value encompasses not only the interaction outcome but also the velocity of progress through the state trajectory, as this acquisition gain serves as a robust indicator of future performance. This approach, therefore, captures the individualized transition by augmenting observed performance with the transition velocity, thus reflecting distinct acquisition rates.
 \end{itemize}
 
 \subsection{Architecture Overview} \label{sec_arch}
@@ -377,7 +383,7 @@ To verify that iDKT’s internal representations ($l_c, t_s, u_q$) reflect educa
 \begin{enumerate}
     \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_s$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
     \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
-    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition momentum.
+    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
     \item \textbf{$H_4$: Mastery Monotonicity}: Trajectory analysis to verify that the grounded latent space respects the non-forgetting behavior inherent in BKT.
     \item \textbf{$H_5$: Parameter Recovery}: Ability of the architecture to recover known student and item parameters from synthetic BKT-generated datasets.
 \end{enumerate}
@@ -446,7 +452,7 @@ As shown in Table~\ref{tab1}, the model with \(\lambda=0.10\) achieves a Test AU
 
 \subsection{Granularity of Individualization} \label{sec_granularity}
 
-While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all students for a given skill, iDKT captures a rich distribution of \textbf{Individualized Learning Velocities} (\(t_s\)). Figure~\ref{fig_placeholder1} illustrates this ``Delta Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies ``fast-track'' learning trajectories that classical population-level models underestimate. This granularity allows for \textbf{Precise Diagnostic Placement}, distinguishing between students who lack initial knowledge (\textit{low} \(l_c\)) versus those who suffer from slow acquisition momentum (\textit{low} \(t_s\)).
+While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all students for a given skill, iDKT captures a rich distribution of \textbf{Individualized Learning Velocities} (\(t_s\)). Figure~\ref{fig_placeholder1} illustrates this ``Delta Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies ``fast-track'' learning trajectories that classical population-level models underestimate. This granularity allows for \textbf{Precise Diagnostic Placement}, distinguishing between students who lack initial knowledge (\textit{low} \(l_c\)) versus those who suffer from slow acquisition pace (\textit{low} \(t_s\)).
 
 \subsection{Longitudinal Mastery Dynamics} \label{sec_longitudinal}
 

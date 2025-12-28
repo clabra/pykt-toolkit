@@ -235,16 +235,16 @@ To achieve interpretability-by-design, iDKT replaces standard learned embeddings
 **Individualized Question ($x'_t$)**:
 The standard question embedding is replaced by a residual representation:
 $$ x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c $$
-where $c_{c_t}$ is the concept embedding, $u_q$ is a learned scalar for item difficulty, and $d_{c_t}$ is a variation axis. Crucially, $l_c$ is the **individualized initial mastery**, grounded in the BKT prior ($L0$), defined as:
+where $c_{c_t}$ is the concept embedding, $u_q$ is a learned scalar for item difficulty, and $d_{c_t}$ is a variation axis. Crucially, $l_c$ is the **individualized initial proficiency**, grounded in the BKT prior ($L0$), defined as:
 $$ l_c = L0_{skill} + k_c \cdot d_c $$
-Here, $k_c$ is a learned student-specific scalar representing their "Knowledge Gap" relative to the population mean.
+where $k_c$ represents a subject-specific scalar. Under this relational logic, objective task difficulty is offset by the subject's prior proficiency, ensuring that task demands are relative to the individual baseline. This implements the **Relational Inductive Bias** ($\text{Transition Gap} = \text{Difficulty} - \text{Proficiency}$).
 
 **Individualized Interaction ($y'_t$)**:
-The interaction history is similarly grounded by adding learning momentum:
+The interaction history is similarly grounded by adding individualized learning evidence:
 $$ y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s $$
 where $t_s$ is the **individualized learn rate**, grounded in the BKT learn probability ($T$):
 $$ t_s = T_{skill} + v_s \cdot d_s $$
-Here, $v_s$ represents the student's "Learning Velocity," allowing the model to distinguish between fast and slow learners dynamically.
+Here, $v_s$ represents the student's "Learning Velocity," allowing the model to distinguish between fast and slow learners dynamically using **Augmented Evidence**.
 
 ### 2.3. Loss Functions and Training Objective
 
@@ -293,7 +293,7 @@ As shown in Table 1, the model with $\lambda=0.10$ achieves a Test AUC of **0.83
 
 While standard BKT assigns a fixed "Learning Rate" ($T$) to all students for a given skill, iDKT captures a rich distribution of **Individualized Learning Velocities** ($t_s$).
 
-**Figure 1** (see supplementary materials) illustrates this "Delta Distribution" ($\Delta = t_s - T$). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies "fast-track" learning trajectories that classical population-level models underestimate. This granularity allows for **precise diagnostic placement**, distinguishing between students who lack initial knowledge ($low \ l_c$) versus those who suffer from slow acquisition momentum ($low \ t_s$).
+**Figure 1** (see supplementary materials) illustrates this "Delta Distribution" ($\Delta = t_s - T$). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies "fast-track" learning trajectories that classical population-level models underestimate. This granularity allows for **precise diagnostic placement**, distinguishing between students who lack initial knowledge ($low \ l_c$) versus those who suffer from slow acquisition pace ($low \ t_s$).
 
 ### 3.4. Longitudinal Mastery Dynamics
 
@@ -311,12 +311,12 @@ This "Informed Divergence" validates that iDKT does not merely mimic BKT labels 
 The results presented above challenge the prevailing dichotomy in educational AI that views interpretability and performance as conflicting objectives. By adopting an **Interpretability-by-Design** approach, iDKT demonstrates that grounding a Deep Learning model in pedagogical theory can actually enhance its robustness.
 
 ### 4.1. The "Free Lunch" of Inductive Bias
-The observation that moderate grounding ($\lambda \approx 0.10$) improves AUC suggests that BKT—despite its simplicity—provides a valuable **Relational Inductive Bias**. It forces the Transformer to "reason" about the gap between student capability and item difficulty ($x' = \text{Challenge} - \text{Ability}$) rather than simply memorizing sequence patterns. This constrains the search space of the optimization, guiding it towards more generalizable solutions.
+The observation that moderate grounding ($\lambda \approx 0.10$) improves AUC suggests that BKT—despite its simplicity—provides a valuable **Relational Inductive Bias**. It forces the Transformer to "reason" about the gap between subject proficiency and task difficulty ($x' = \text{Transition Gap} = \text{Difficulty} - \text{Proficiency}$) rather than simply memorizing sequence patterns. This constrains the search space of the optimization, guiding it towards more generalizable solutions.
 
 ### 4.2. Bridging the Trust Gap
 For practitioners, the "Black Box" nature of standard DKT models has been a barrier to adoption. iDKT resolves this by providing **Intrinsic Transparency**. When the model predicts a high probability of failure, educators need not trust an opaque vector; they can inspect the grounded components:
-*   Is the projected Initial Mastery ($l_c$) low? $\rightarrow$ **Remediation needed.**
-*   Is the projected Learning Velocity ($t_s$) low? $\rightarrow$ **Pacing adjustment needed.**
+*   Is the projected Initial Proficiency ($l_c$) low? $\rightarrow$ **Remediation needed.**
+*   Is the projected Transition Velocity ($t_s$) low? $\rightarrow$ **Pacing adjustment needed.**
 This transparency transforms the model from a predictive oracle into a diagnostic instrument.
 
 ## 5. Conclusions
@@ -324,7 +324,7 @@ This transparency transforms the model from a predictive oracle into a diagnosti
 In this work, we introduced iDKT, a novel framework that reconciles the predictive power of Transformers with the interpretability of Bayesian Knowledge Tracing. Through Representational Grounding, we demonstrated that it is possible to enforce semantic validiy on deep latent representations without sacrificing performance.
 
 Our key contributions are:
-1.  **Methodological**: A Neural-Symbolic architecture that embeds the "Challenge vs. Ability" logic of psychometrics directly into the Transformer's input stream.
+1.  **Methodological**: A Neural-Symbolic architecture that embeds the "Transition Gap" logic of psychometrics directly into the Transformer's input stream.
 2.  **Empirical**: Evidence of an "Interpretability Sweet Spot" where theoretical regularization acts as a performance enhancer.
 3.  **Practical**: The ability to extract granular, student-specific profiles (Knowledge Gaps and Learning Velocities) that classical population-level models overlook.
 
