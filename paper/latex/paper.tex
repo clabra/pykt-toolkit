@@ -7,7 +7,6 @@
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, fit, backgrounds}
-\usepackage{svg}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -276,7 +275,7 @@ The core architecture, illustrated in Figure~\ref{fig_arch}, has these main comp
     \item \textbf{Output Stage}: A multi-layer perceptron (MLP) that yields the final performance prediction $p_{iDKT}$
 \end{itemize}
 
-    \item \textbf{Attention Heads}: Multiple self-attention and cross-attention heads that apply distance-based decay parameters $\gamma_h$ to control the model's temporal resolution
+
 
 \begin{figure}[H]
     \centering
@@ -325,11 +324,6 @@ The core architecture, illustrated in Figure~\ref{fig_arch}, has these main comp
     \caption{The iDKT System Architecture. The model integrates a theoretical BKT prior into its embedding layer through Representational Grounding, followed by a Transformer-based attention core for performance prediction.\label{fig_arch}}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \makebox[\linewidth][c]{\includegraphics[width=1.1\linewidth]{img/idkt_arch.png}}
-    \caption{The iDKT Architecture.\label{fig_idkt_arch}}
-\end{figure}
 
 \subsection{Multi-Objective Training} \label{sec_objective}
 
