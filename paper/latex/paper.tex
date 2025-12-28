@@ -211,7 +211,27 @@ The remainder of this paper is structured as follows. Section~\ref{sec_related} 
 \subsubsection{Parameters Individualization}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Methodology} \label{sec_method}
+
+\section{iDKT Model} \label{sec_arch}
+
+We propose an Interpretable Deep Knowledge Tracing (iDKT) model with a Transformer-based architecture designed to bridge the gap between the high predictive capacity of deep learning and the intrinsic interpretability of simpler models such as Bayesian Knowledge Tracing (BKT). Unlike standard black-box models, iDKT utilizes a novel mechanism called Representational Grounding to anchor its latent representations to the conceptual space of a interpretable model choosen as reference. 
+
+The core architecture of iDKT, as illustrated in Figure~\ref{idkt_arch}, extends the standard Transformer framework \citep{vaswani2017attention} by incorporating specialized components for Representational Grounding, primarily integrated within the embedding layers and the multi-objective loss pipeline.\begin{enumerate}
+    \item \textbf{Input Data}: This stage handles the ingestion of student interactions (concepts, questions, and binary responses $r \in \{0,1\}$). Crucially, it also loads values from the BKT reference model, including performance predictions ($p_{BKT}$) and per-skill parameters such as initial mastery ($l_0$) and learning transition rates ($T$), which serve as grounding targets for the model.
+    \item \textbf{Embeddings}: Task and history information are projected into a continuous embedding space. We then apply the individualization transformations described in Section~\ref{sec_embeddings} where base embeddings are augmented by student-specific parameters: a Proficiency Offset ($lc$) and a Velocity Augmentation ($ts$). This produces the Transition Gap (individualized task representation $x'$) and the Transition Gain (individualized interaction history $y'$), effectively defining the difficulty of a task relative to the student's baseline proficiency.
+    \item \textbf{Transformer Core}: The model employs a dual-encoder architecture followed by a cross-attention decoder. One encoder processing the individualized interaction history ($y'_{1:t-1}$) to capture global student behavior, while a task encoder processes the current individualized task ($x'_t$). The decoder uses multi-head cross-attention to synthesize these streams into a latent Proficiency Context, representing the student's current specialized knowledge state for the target task.
+    \item \textbf{Output Stage}: The latent Proficiency Context is passed through a multi-layer perceptron (MLP) that maps the deep representations to the final output space. The final output is the iDKT prediction ($p_{iDKT}$), representing the probability that the student will respond correctly to the current task.
+    \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{SUP}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and velocity parameters to their BKT-derived theoretical counterparts.
+\end{enumerate}
+
+\begin{figure}[!tbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{img/idkt_arch.png}
+    \caption{The iDKT Architecture. The diagram illustrates the five functional stages: (1) Input Data ingestion including BKT targets, (2) Individualized Embeddings, (3) the Transformer Core, (4) the MLP-based Output, and (5) the Loss Functions for representational grounding.\label{idkt_arch}}
+\end{figure}
+
+
+\section{Embeddings} \label{sec_embeddings}
 
 In standard educational datasets, such as ASSISTments 2009, ASSISTments 2015, Algebra 2005, and others \citep{liu2022pykt}, student interactions are recorded at the level of specific questions or tasks, each of which is associated with one or more underlying concepts or knowledge components. This structure reflects the fact that proficiency in a concept (e.g., the Pythagorean Theorem) is acquired through interactions with a diverse range of tasks. While all tasks involving a concept share the same semantic core, they differ in their specific manifestations—most notably in their intrinsic difficulty or complexity. Therefore, an effective representation must capture both the shared identity of the concept and the unique deviation of the specific task.
 
@@ -261,75 +281,7 @@ The rationale for using difference for the individualized task ($x'$) and sum fo
     \item $y'$ represents the $\textit{Transition Gain}$: $\textit{Interaction} + \textit{Velocity}$. The history encoder accumulates evidence from interactions, applying a consistent relational logic where the signal value is augmented by latent velocity, ensuring that interaction outcomes are defined relative to the subject's pace. Under this formulation, the total value encompasses not only the interaction outcome but also the rate of progress through the state trajectory, as this incremental gain serves as a robust indicator of future performance. This approach, therefore, captures latent progression by augmenting observed outcomes with transition velocity, thereby reflecting individualized acquisition rates.
 \end{itemize}
 
-\subsection{Architecture Overview} \label{sec_arch}
-
-iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based architecture designed to bridge the gap between the high predictive capacity of deep learning and the intrinsic interpretability of simpler models such as Bayesian Knowledge Tracing (BKT). Unlike standard black-box models, iDKT utilizes a novel mechanism called Representational Grounding to anchor its latent representations to the conceptual space of a interpretable model choosen as reference. 
-
-The core architecture, illustrated in Figure~\ref{fig_arch}, has these main components:
-\begin{itemize}
-    \item \textbf{Input Stage}: Loads the required information from the dataset
-    \item \textbf{Embeddings Stage}: Processes input data to generate individualized task ($x'_t$) and interaction ($y'_t$) embeddings
-    \item \textbf{Encoder Stage}: Context-aware Transformer encoders that extract local and global patterns from the sequence of past individualized interactions $y'_{1:t-1}$
-    \item \textbf{Decoder Stage}: Transformer decoders that use cross-attention between the current task $x'_t$ and the encoded context to estimate the context-aware knowledge state $\hat{x}_t$
-
-    \item \textbf{Output Stage}: A multi-layer perceptron (MLP) that yields the final performance prediction $p_{iDKT}$
-\end{itemize}
-
-
-\begin{figure}[H]
-    \centering
-    \begin{tikzpicture}[
-        scale=0.75, transform shape,
-        node distance=0.8cm and 1.5cm,
-        box/.style={draw, rounded corners, minimum height=1cm, minimum width=2cm, align=center, fill=white, font=\small},
-        group/.style={draw, dashed, inner sep=0.4cm, label={above:\textbf{#1}}},
-        arrow/.style={-Latex, thick}
-    ]
-
-    % Input Stage
-    \node[box, fill=gray!10] (input) {Input Stage\\$(q_t, c_t, r_t, uid_t, pid_t)$};
-
-    % Embeddings Stage
-    \node[box, right=of input, fill=blue!10] (embed) {Embeddings Stage\\$x'_t, y'_t$};
-    
-    % Encoder Stage (below Embeddings)
-    \node[box, below=1.5cm of embed, fill=green!10] (encoder) {Encoder Stage\\Context $y'_{1:t-1}$};
-    
-    % Decoder Stage (right of Encoder)
-    \node[box, right=of encoder, fill=orange!10] (decoder) {Decoder Stage\\Retriever $\hat{x}_t$};
-    
-    % Output Stage (right of Decoder)
-    \node[box, right=of decoder, fill=red!10] (output) {Output Stage\\Prediction $p_{iDKT}$};
-
-    % Attention Heads (Visual Connection)
-    \node[box, above=1cm of decoder, fill=yellow!10, minimum width=2cm] (attn) {Multi-scale\\Attention ($\gamma_h$)};
-
-    % Connections
-    \draw[arrow] (input) -- (embed);
-    \draw[arrow] (embed) -- node[midway, right, font=\footnotesize] {History} (encoder);
-    \draw[arrow] (embed) -| node[midway, above, font=\footnotesize, pos=0.1] {Current Task} (decoder);
-    \draw[arrow] (encoder) -- node[midway, above, font=\footnotesize] {Context} (decoder);
-    \draw[arrow] (decoder) -- (output);
-    \draw[arrow, dashed] (attn) -- (decoder);
-    \draw[arrow, dashed] (attn) -| (encoder);
-
-    % Background Groups (Logic)
-    \begin{scope}[on background layer]
-        \node[fit=(input)(embed), group=Preprocessing, fill=gray!5] {};
-        \node[fit=(encoder)(decoder)(attn), group=Transformer Core, fill=gray!5] {};
-    \end{scope}
-
-    \end{tikzpicture}
-    \caption{The iDKT System Architecture. The model integrates a theoretical BKT prior into its embedding layer through Representational Grounding, followed by a Transformer-based attention core for performance prediction.\label{fig_arch}}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \makebox[\linewidth][c]{\includegraphics[width=1.1\linewidth]{img/idkt_arch.png}}
-    \caption{The iDKT Architecture.\label{fig_idkt_arch}}
-\end{figure}
-
-\subsection{Multi-Objective Training} \label{sec_objective}
+\section{Loss Functions} \label{sec_loss}
 
 The model is trained using a complex, theoretically-anchored loss function designed to ensure that its high-capacity Transformer backbone remains aligned with pedagogical principles. The total loss $\mathcal{L}_{total}$ is a weighted sum:
 \begin{equation}
@@ -407,7 +359,7 @@ Values of $C \ge 0.90$ indicate "Diagnostic Consensus," where the deep learning 
 A key contribution of this work is the systematic exploration of the trade-off between predictive accuracy and theoretical fidelity. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the "Inductive Bias Bonus"—points where theoretical grounding acts as a beneficial regularizer that improves generalization—and the point of "Over-Constraint," where excessive adherence to the reference model begins to degrade predictive power.
 
 
-\section{Results} \label{sec_results}
+\section{Experimental Validation} \label{sec_experiment}
 
 \subsection{Research Questions and Hypotheses}
 
@@ -426,7 +378,8 @@ Does our proposed framework allow a Transformer-based model to recover latent fa
 \textit{Hypothesis:} iDKT can successfully estimate student-specific traits (initial knowledge and learning velocity) that are traditionally masked by fixed averages in simpler models like BKT.
 
 
-\subsection{Validation Results}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}\label{sec_results}
 
 To evaluate the proposed iDKT model, we conducted a series of experiments across multiple educational datasets. Table 1 summarizes the alignment metrics across different grounding strengths (\(\lambda\)).
 
@@ -469,8 +422,6 @@ The practical impact of these individualized parameters is evident in the master
 \end{itemize}
 
 This ``Informed Divergence'' validates that iDKT does not merely mimic BKT labels but leverages its transformer core to dynamically adjust the \textbf{Velocity of Mastery} based on the student's historical profile, enabling truly adaptive pacing in intelligent tutoring scenarios.
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
