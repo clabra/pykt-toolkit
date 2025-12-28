@@ -378,6 +378,117 @@ This mechanism ensures that the Transformer's internal representations for "lear
   - **Alignment ($L_{ref}$)**: Projects the model's knowledge state back into the theory space ($L0, T$) to ensure semantic consistency.
   - **Task-Agnostic Regularization**: Penalizes $u_q, k_c, v_s$ to maintain the "Normal Student/Problem" prior.
 
+
+## Simplified iDKT Architecture Diagram
+
+```mermaid
+graph BT
+    classDef whiteNode fill:#fff,stroke:#000,stroke-width:1px;
+
+    subgraph Root [" "]
+        direction BT
+        style Root fill:#fff,stroke:#000,stroke-width:2px;
+
+        %% Input Stage (Bottom)
+        subgraph Input_Data [Input]
+            style Input_Data fill:#fff,stroke:#000,stroke-width:1px;
+            BKT_Targets("BKT predictions <br/>p_bkt")
+            IDs("Concepts, questions, responses")
+            GroundTruth("Ground Truth <br/>r ∈ {0,1}")
+            BKT_l0("BKT l0")
+            BKT_T("BKT T")
+        end
+
+        %% Embeddings Stage
+        subgraph Individualization [Embeddings]
+            style Individualization fill:#fff,stroke:#000,stroke-width:1px;
+            CQ_Embed["Task Embeddings <br/>x'"]
+            Hist_Embed["History Embeddings <br/>y'"]
+            LC_Offset["Proficiency Offset <br/>lc"]
+            TS_Aug["Velocity Augmentation <br/>ts"]
+            XT["Transition Gap <br/>Individualized x'"]
+            YT["Transition Gain <br/>Individualized y'"]
+
+            IDs --> CQ_Embed
+            IDs --> Hist_Embed
+            BKT_l0 --> LC_Offset
+            BKT_T --> TS_Aug
+            LC_Offset --> XT
+            CQ_Embed --> XT
+            TS_Aug --> YT
+            Hist_Embed --> YT
+        end
+
+        %% Core Transformer Stage
+        subgraph Transformer_Core [Transformer Core]
+            style Transformer_Core fill:#fff,stroke:#000,stroke-width:1px;
+            Encoders["History Encoding"]
+            Encoders_Task["Nx Encoders"]
+            Decoders["Cross-Attention"]
+            LatentState["Proficiency Context"]
+
+            YT --> Encoders
+            XT --> Encoders_Task
+            Encoders_Task --> Decoders
+            Encoders --> Decoders
+            Decoders --> LatentState
+        end
+
+        %% Alignment Output Stage
+        subgraph Probe_Stage [Alignment Output]
+            style Probe_Stage fill:#fff,stroke:#000,stroke-width:1px;
+            Probe_Proj["Probe Projection"]
+        end
+
+        %% Prediction Stage
+        subgraph Output_Stage [Output]
+            style Output_Stage fill:#fff,stroke:#000,stroke-width:1px;
+            MLP["MLP"]
+            Pred["iDKT Prediction <br/>p_idkt"]
+
+            LatentState --> MLP
+            LatentState --> Probe_Proj
+            MLP --> Pred
+        end
+
+        %% Loss Stage (Top)
+        subgraph Loss_Stage [Loss Functions]
+            style Loss_Stage fill:#fff,stroke:#000,stroke-width:1px;
+            Loss_Ref(["Alignment Loss <br/>L_ref"])
+            Loss_sup(["Prediction Loss <br/>L_sup"])
+
+            Probe_Proj --> Loss_Ref
+            BKT_Targets --> Loss_Ref
+            Pred --> Loss_sup
+            GroundTruth --> Loss_sup
+        end
+    end
+
+    %% Apply Style to Nodes
+    class IDs,GroundTruth,BKT_Targets,BKT_l0,BKT_T,CQ_Embed,Hist_Embed,LC_Offset,TS_Aug,XT,YT whiteNode;
+    class Encoders,Encoders_Task,Decoders,LatentState,Probe_Proj,MLP,Pred whiteNode;
+    class Loss_Ref,Loss_sup whiteNode;
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## iDKT Architecture Implementation Analysis
 
 ### Attention Mechanism Implementation Details
