@@ -72,10 +72,20 @@ Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
 \newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
   p. 1–1.
 
-\bibitem[Gong et~al.(2025)]{gong2025tgel}
-Gong, Y.;  et~al.
-\newblock TGEL-transformer: Fusing educational theories with deep learning for
-  interpretable student performance prediction.
-\newblock {\em Expert Systems with Applications} {\bf 2025}.
+\bibitem[Alain and Bengio(2018)]{alain2018understanding}
+Alain, G.; Bengio, Y.
+\newblock Understanding intermediate layers using linear classifier probes,
+  2018.
+\newblock {\em URL https://arxiv. org/abs/1610.01644} {\bf 2018}.
+
+\bibitem[Belinkov(2022)]{belinkov2022probing}
+Belinkov, Y.
+\newblock Probing classifiers: Promises, shortcomings, and advances.
+\newblock {\em Computational Linguistics} {\bf 2022}, {\em 48},~207--219.
+
+\bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
+Hewitt, J.; Liang, P.
+\newblock Designing and interpreting probes with control tasks.
+\newblock {\em arXiv preprint arXiv:1909.03368} {\bf 2019}.
 
 \end{thebibliography}

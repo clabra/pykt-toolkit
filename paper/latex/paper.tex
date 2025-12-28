@@ -6,7 +6,7 @@
 \documentclass[journal,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
-\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, fit, backgrounds}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -213,182 +213,109 @@ The remainder of this paper is structured as follows. Section~\ref{sec_related} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methodology} \label{sec_method}
 
+In standard educational datasets such as ASSIST2009 and ASSIST2015, student interactions are recorded at the level of specific questions, each of which is associated with one or more underlying pedagogical concepts. This structure establishes a natural hierarchy: a concept represents an abstract skill (e.g., "Pythagorean Theorem") whose learning is operationalized through a diverse set of questions. While all questions belonging to a concept share the same semantic core, they differ in their specific manifestations—most notably in their intrinsic difficulty or complexity. Therefore, an effective representation must capture both the shared identity of the concept and the unique deviation of the specific question.
+
+In Transformer-based models we can operationalize this principle representing the tasks as embedding vectors: 
+
+$$x' = c + u \cdot d$$
+
+In this formulation, $c$ acts as the \textit{Concept Anchor}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of "increasing challenge". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode arbitrary embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: a base \textit{concept identity} and a \textit{difficulty shift}. 
+
+In a similar way, we can operationalize the interactions between questions and students as embedding vectors: 
+
+$$y' = e + u \cdot (f + d)$$
+
+Here $e$ represents the \textit{Interaction Base}, which is a combined representation of concept c and the binary outcome r (correct/incorrect), while $f$ represents the \textit{Interaction Variation Axis}, which is similar to the Question Variation Axis ($d_c$) but is specific to the interaction between a question and a student. The inclusion of $d_c$ in the interaction shift ensures that the difficulty vectors are consistent across both questions ($x'$) and interactions ($y'$).
+
+Extending this rationale, we can enrich the $x'$ embeddings by integrating additional components with explicit semantic significance. Specifically, by adopting Bayesian Knowledge Tracing (BKT) as a reference model, we can incorporate vectors corresponding to its core theoretical parameters—Initial Knowledge ($L_0$) and Learning Rate ($T$)—thereby grounding the deep representation in established pedagogical constructs. 
+
+Previously, to get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
+
+\begin{equation}
+    l_c = L_{0} + k_c \cdot d_c \quad \text{(Personalized Initial Knowledge)}
+\end{equation}
+\begin{equation}
+    t_s = T + v_s \cdot d_s \quad \text{(Personalized Learning Velocity)}
+\end{equation}
+
+where $L_{0}$ and $T$ are the population-level means, $k_c$ and $v_s$ are the population-level standard deviations, and $d_c$ and $d_s$ are the student-specific deviations.
+
+The final input to the encoder and decoder components of the Transformer consists of: 
+\begin{equation}
+    x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c \quad \text{(Individualized Task)}
+\end{equation}
+\begin{equation}
+    y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s \quad \text{(Individualized Interaction History)}
+\end{equation}
+
+The rationale for using difference for tasks ($x'$) and sum for history ($y'$) is rooted in their distinct semantic roles:
+\begin{itemize}
+    \item Individualized Task represents the "Challenge": $x' = \text{Difficulty} - \text{Capability}$ codifies the \textit{Net Challenge} for this specific student. If a student is very capable (i.e. has a high $l_c$), the effective difficulty of the task should be lower. The model asks: "How much difficulty remains after accounting for the student's ability?" This constitutes a kind of relational logic where difficulty is relative to the student.
+    \item Interaction History represents the "Evidence": $y' = \text{Interaction} + \text{Velocity}$ codifies the \textit{Accumulated Momentum} or evidence. A correct answer from a fast learner (i.e. with a high $t_s$) provides more signal than one from a slow learner. The history encoder accumulates these evidences, adding the student's learning speed to the signal because high velocity implies faster mastery acquisition. It asks: "What is the total learning value derived from this interaction given the student's speed?"
+
+\end{itemize}
+
 \subsection{Architecture Overview} \label{sec_arch}
 
 iDKT (Interpretable Deep Knowledge Tracing) is a Transformer-based architecture designed to bridge the gap between the high predictive capacity of deep learning and the intrinsic interpretability of simpler models such as Bayesian Knowledge Tracing (BKT). Unlike standard black-box models, iDKT utilizes a novel mechanism called Representational Grounding to anchor its latent representations to the conceptual space of a interpretable model choosen as reference. 
 
-The core architecture, illustrated in Figure~\ref{fig_arch}, consists of these components:
-\begin{enumerate}
-    \item \textbf{Input Stage}: Receives tuples of $(q_t, c_t, r_t, uid_t, pid_t)$, mapping raw IDs to their respective theoretical and learned components.
-    \item \textbf{Embeddings Stage}: Processes IDs through the Representational Grounding layer to generate individualized task ($x'_t$) and interaction ($y'_t$) embeddings.
-    \item \textbf{Encoder Stage}: A context-aware Transformer encoder that extracts local and global patterns from the sequence of past individualized interactions $y'_{1:t-1}$.
-    \item \textbf{Decoder Stage}: The Knowledge Retriever, which uses cross-attention between the current task $x'_t$ and the encoded context to estimate the context-aware knowledge state $\hat{x}_t$.
-    \item \textbf{Attention Heads}: Multi-scale monotonic heads that apply distance-based decay parameters $\gamma_h$ to control the model's temporal resolution.
-    \item \textbf{Output Stage}: A 3-layer MLP that yields the final performance prediction $p_{iDKT}$ and monitoring proxies for mastery alignment.
-\end{enumerate}
+The core architecture, illustrated in Figure~\ref{fig_arch}, has these main components:
+\begin{itemize}
+    \item \textbf{Input Stage}: Loads the required information from the dataset
+    \item \textbf{Embeddings Stage}: Processes input data to generate individualized task ($x'_t$) and interaction ($y'_t$) embeddings
+    \item \textbf{Encoder Stage}: Context-aware Transformer encoders that extract local and global patterns from the sequence of past individualized interactions $y'_{1:t-1}$
+    \item \textbf{Decoder Stage}: Transformer decoders that use cross-attention between the current task $x'_t$ and the encoded context to estimate the context-aware knowledge state $\hat{x}_t$
+    \item \textbf{Attention Heads}: Multiple self-attention and cross-attention heads that apply distance-based decay parameters $\gamma_h$ to control the model's temporal resolution
+    \item \textbf{Output Stage}: A multi-layer perceptron (MLP) that yields the final performance prediction $p_{iDKT}$
+\end{itemize}
 
 \begin{figure}[H]
     \centering
-    % [Insert iDKT Architecture Diagram here]
+    \begin{tikzpicture}[
+        scale=0.75, transform shape,
+        node distance=0.8cm and 1.5cm,
+        box/.style={draw, rounded corners, minimum height=1cm, minimum width=2cm, align=center, fill=white, font=\small},
+        group/.style={draw, dashed, inner sep=0.4cm, label={above:\textbf{#1}}},
+        arrow/.style={-Latex, thick}
+    ]
+
+    % Input Stage
+    \node[box, fill=gray!10] (input) {Input Stage\\$(q_t, c_t, r_t, uid_t, pid_t)$};
+
+    % Embeddings Stage
+    \node[box, right=of input, fill=blue!10] (embed) {Embeddings Stage\\$x'_t, y'_t$};
+    
+    % Encoder Stage (below Embeddings)
+    \node[box, below=1.5cm of embed, fill=green!10] (encoder) {Encoder Stage\\Context $y'_{1:t-1}$};
+    
+    % Decoder Stage (right of Encoder)
+    \node[box, right=of encoder, fill=orange!10] (decoder) {Decoder Stage\\Retriever $\hat{x}_t$};
+    
+    % Output Stage (right of Decoder)
+    \node[box, right=of decoder, fill=red!10] (output) {Output Stage\\Prediction $p_{iDKT}$};
+
+    % Attention Heads (Visual Connection)
+    \node[box, above=1cm of decoder, fill=yellow!10, minimum width=2cm] (attn) {Multi-scale\\Attention ($\gamma_h$)};
+
+    % Connections
+    \draw[arrow] (input) -- (embed);
+    \draw[arrow] (embed) -- node[midway, right, font=\footnotesize] {History} (encoder);
+    \draw[arrow] (embed) -| node[midway, above, font=\footnotesize, pos=0.1] {Current Task} (decoder);
+    \draw[arrow] (encoder) -- node[midway, above, font=\footnotesize] {Context} (decoder);
+    \draw[arrow] (decoder) -- (output);
+    \draw[arrow, dashed] (attn) -- (decoder);
+    \draw[arrow, dashed] (attn) -| (encoder);
+
+    % Background Groups (Logic)
+    \begin{scope}[on background layer]
+        \node[fit=(input)(embed), group=Preprocessing, fill=gray!5] {};
+        \node[fit=(encoder)(decoder)(attn), group=Transformer Core, fill=gray!5] {};
+    \end{scope}
+
+    \end{tikzpicture}
     \caption{The iDKT System Architecture. The model integrates a theoretical BKT prior into its embedding layer through Representational Grounding, followed by a Transformer-based attention core for performance prediction.\label{fig_arch}}
 \end{figure}
 
-\subsection{Representational Grounding and Embeddings} \label{sec_emb}
-
-To achieve interpretability-by-design, iDKT replaces standard learned embeddings with what we term \textit{Grounded Embeddings}. We adopt a relational differential logic (Archetype 1) where latent factors are formally decomposed into population-level bases and student-specific deviations.
-
-\subsubsection{Theoretical Foundations}
-The model defines a set of population-level primitives that serve as the "ground truth" coordinate system for the latent space:
-\begin{itemize}
-    \item \textbf{Concept Base ($c_{c_t}$)}: The static vector representation of concept $c_t$, capturing its semantic identity within the curriculum.
-    \item \textbf{Interaction Base ($e_{c_t,r_t}$)}: A combined representation of concept $c_t$ and the binary outcome $r_t$ (correct/incorrect).
-    \item \textbf{Instructional Prior ($L0_{skill}$)}: A skill-specific embedding anchored to the theoretical BKT initial mastery parameter $L0$. 
-    \item \textbf{Learning Velocity Base ($T_{skill}$)}: A skill-specific embedding anchored to the BKT transition probability $T$.
-\end{itemize}
-
-\subsubsection{Individualization via Rasch Logic}
-To capture student-level and item-level heterogeneity, iDKT introduces three learnable scalars that modulate the theoretical bases:
-\begin{itemize}
-    \item $u_q$ (\textbf{Problem Difficulty}): A scalar corresponding to the problem ID ($q$), representing its relative challenge compared to others of the same skill.
-    \item $k_c$ (\textbf{Knowledge Gap}): A student-specific scalar ($uid$) identifying deviations from the skill's instructional prior.
-    \item $v_s$ (\textbf{Learning Speed}): A student-specific scalar identifying individual acquisition momentum.
-\end{itemize}
-
-These scalars operate along dedicated \textbf{variation axes}, which are unit vectors defining the semantic direction of adjustment in $d$-dimensional space:
-\begin{itemize}
-    \item $d_{c_t}$ (\textbf{Question Variation Axis}): Defines how problem difficulty $u_q$ shifts the challenge of concept $c_t$.
-    \item $f_{c_t,r_t}$ (\textbf{Interaction Variation Axis}): Defines how item difficulty $u_q$ affects the representation of the interaction history.
-    \item $d_c$ (\textbf{Knowledge Axis}): Defines the dimension of prior knowledge variance.
-    \item $d_s$ (\textbf{Velocity Axis}): Defines the dimension of learning velocity variance.
-\end{itemize}
-\begin{equation}
-    l_c = L0_{skill} + k_c \cdot d_c \quad \text{(Personalized Initial Knowledge)}
-\end{equation}
-\begin{equation}
-    t_s = T_{skill} + v_s \cdot d_s \quad \text{(Personalized Learning Velocity)}
-\end{equation}
-
-\subsubsection{Fusion Layer}
-The final input to the Transformer core consists of the \textit{Individualized Task} ($x'_t$) and the \textit{Individualized Interaction History} ($y'_t$):
-\begin{equation}
-    x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c
-\end{equation}
-\begin{equation}
-    y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s
-\end{equation}
-
-This formulation implements what we term \textbf{Relational Differential Fusion} (Archetype 1). By hard-coding the subtraction for current tasks and addition for history, we enforce a \textit{Relational Inductive Bias} ($\text{Challenge} - \text{Capability}$). This ensures that the attention mechanism operates on semantically anchored residuals—specifically, the "Residual Challenge" for current tasks—rather than opaque latent features. This transformation from predictive pattern-matching to differential evaluation allows the model to act as a sensitive diagnostic instrument: when a student with high perceived competence fails a mathematically "easy" task, the resulting gradient spike identifies a clear pedagogical anomaly that would be averaged out in black-box models.
-
-\subsection{Individualized Student Profiling} \label{sec_profiling}
-
-Standard BKT models assume that pedagogical parameters like Initial Mastery ($P(L_0)$) and Learning Rate ($T$) are constant for every student within a skill. iDKT leverages its Transformer backbone to individualize these parameters, generating a \textbf{Multidimensional Learner Profile} that summarizes student capability ($v_s$) and learning efficiency ($T_s$) alongside traditional mastery states.
-
-\subsubsection{Personalized Student Velocity ($T_s$)}
-While standard BKT assigns a single $T$ per skill, iDKT estimates a \textbf{Student Velocity} that varies based on individual learning pace:
-\begin{itemize}
-    \item \textbf{Concept}: Instead of a global $T_{skill}$, we implement a velocity component that receives latent student history.
-    \item \textbf{Benefit}: This distinguishes between "fast" and "slow" learners. Educators can identify students with low velocity (learning plateaus) who may require different instructional interventions, regardless of their current mastery levels.
-\end{itemize}
-
-\subsubsection{Individualized Initial Knowledge ($P(L_0)$)}
-Standard BKT assumes all students start at the same $P(L_0)$ when they first encounter a skill. We individualize this using a \textbf{Student Capability Baseline} ($v_s$) and \textbf{Knowledge Gap} ($k_c$):
-\begin{itemize}
-    \item \textbf{Mechanism}: A learnable embedding `student\_param` ($v_s \in \mathbb{R}^1$) is associated with each user ID. The initial mastery projection is calculated as: $L_{0}^{(s,c)} = \text{Sigmoid}(\text{Proj}(c) + v_s)$.
-    \item \textbf{Benefit}: This allows the model to account for unobserved prior knowledge preventing misjudgment of a student's inherent ability simply because they have not yet practiced a specific topic on the platform.
-\end{itemize}
-
-\subsection{Informed Individualization Framework} \label{sec_framework}
-
-The "Informed Individualization" framework has been implemented across the model architecture, training pipeline, and evaluation suite in four distinct phases:
-
-\paragraph{Phase 1: Model Architecture Optimization}
-We introduced a student-level capability embedding and redesigned the output heads to incorporate individual traits. The forward pass now processes `uid\_data` to extract $v_s$ and combine it with concept/latent features for individualized parameter projection.
-
-\paragraph{Phase 2: Training Pipeline Integration}
-The training script supports the individualized flow and enforces theoretical priors via regularization:
-\begin{itemize}
-    \item \textbf{Student Regularization ($L_{student}$)}: A new Gaussian prior $L_{reg\_student} = \lambda_{s} \sum v_s^2$ ensures that learned student traits are centered.
-    \item \textbf{Dynamic Lambda Calibration}: The "Warm-up Calibration" handles the individualized heads, ensuring stable signal sharing from epoch 1.
-\end{itemize}
-
-\paragraph{Phase 3: Individualized Evaluation}
-The evaluation suite quantifies the impact of individualization:
-\begin{itemize}
-    \item \textbf{Capability Profiling}: Learned $v_s$ traits are exported to analyze their correlation with student historical performance.
-    \item \textbf{Roster Export}: Longitudinal tracking of mastery states for all students and skills is supported via `IDKTRoster`.
-\end{itemize}
-
-\paragraph{Phase 4: Reproducibility \& Documentation}
-Parameters are registered in `configs/parameter\_default.json` and architectural changes are tracked via comprehensive documentation updates.
-
-\subsection{Multi-Scale Monotonic Attention} \label{sec_attn}
-
-The iDKT model employs a monotonic attention mechanism to prioritize relevant historical interactions. The attention score $s_{t,\tau}$ between the current task at time $t$ and a past interaction at time $\tau$ is modulated by an exponential temporal decay:
-\begin{equation}
-    s_{t,\tau} = \frac{q_t^\top k_\tau}{\sqrt{D_k}} \cdot \exp(-\theta \cdot d(t, \tau))
-\end{equation}
-where $\theta > 0$ is a learnable decay rate and $d(t, \tau)$ is a context-aware distance measure. 
-
-Crucially, iDKT utilizes \textbf{Multi-Head Attention} where each head $h$ possesses a unique decay parameter $\gamma_h$. This allows the model to simultaneously track dynamics at multiple scales: heads with large $\gamma$ focus on short-term mastery acquisition (recent repetitions), while heads with small $\gamma$ monitor long-term concept retention and foundational knowledge.
-
-\begin{figure}[H]
-%\isPreprints{\centering}{} % Only used for preprints
-\includegraphics[width=4.0 cm]{Definitions/logo-mdpi}
-\caption{This is a figure. Schemes follow the same formatting.\label{fig_placeholder1}}
-\end{figure}   
-\unskip
-
-\begin{tikzpicture}[
-    node distance=1.5cm and 2cm,
-    block/.style={rectangle, draw, minimum width=3cm, minimum height=1cm, align=center, line width=0.8pt, rounded corners=2pt},
-    theory/.style={rectangle, draw, dashed, fill=gray!5, minimum width=3cm, minimum height=1cm, align=center},
-    hub/.style={diamond, draw, fill=blue!5, aspect=2, minimum width=3cm, align=center},
-    arrow/.style={-Stealth, line width=0.8pt},
-    label/.style={font=\small\itshape}
-]
-    % Input Nodes
-    \node (history) [block] {Student History};
-    \node (task) [block, below=of history] {Current Task};
-    
-    % Theory Node
-    \node (bkt) [theory, right=of history] {Pedagogical Prior\\(BKT Reference)};
-    % Grounding Hub (The "Decision" or Fusion Point)
-    \node (grounding) [hub, right=1cm of $(history)!0.5!(task)$] {Structural\\Grounding};
-    % Engine
-    \node (transformer) [block, fill=green!5, right=of grounding] {Transformer Core\\(Multi-scale Attention)};
-    % Output Split
-    \node (accuracy) [block, right=of transformer, yshift=0.7cm, fill=orange!5] {Predictive Accuracy};
-    \node (insights) [block, right=of transformer, yshift=-0.7cm, fill=orange!5] {Pedagogical Insights};
-    % Connections
-    \draw [arrow] (history) -- (grounding);
-    \draw [arrow] (task) -- (grounding);
-    \draw [arrow, dashed] (bkt) -- (grounding) node[midway, above, label] {Grounded};
-    \draw [arrow] (grounding) -- (transformer);
-    \draw [arrow] (transformer.east) -- (accuracy.west);
-    \draw [arrow] (transformer.east) -- (insights.west);
-    % Legend or Labels
-    \node [label, below=0.2cm of accuracy] {Diagnostic Placement};
-    \node [label, below=0.2cm of insights] {Dynamic Pacing};
-\end{tikzpicture}
-
-\subsection{The Knowledge Retriever} \label{sec_retriever}
-
-The knowledge retriever consists of $2N$ stacked transformer blocks with an alternating layer pattern:
-\begin{itemize}
-    \item \textbf{Odd Layers}: Perform causal self-attention on the individualized question sequence ($x'$).
-    \item \textbf{Even Layers}: Perform cross-attention between the question sequence (queries) and the encoded interaction history $\hat{y}$ (keys and values).
-\end{itemize}
-This dual-stream approach allows the model to differentiate between the structure of the curriculum (questions) and the student's actual performance history, outputting a context-aware knowledge state $\hat{x}_t$ that reflects both current intent and historical context.
-
-\subsection{The Probing Method} \label{sec_probing}
-
-To rigorously validate that iDKT’s latent representations encode the intended pedagogical constructs, we employ \textbf{Diagnostic Probing Classifiers} with \textbf{Control Tasks}. This methodology, established in deep learning interpretability literature \citep{alain2018understanding, belinkov2022probing}, consists of three phases:
-
-\begin{enumerate}
-    \item \textbf{Extraction}: We freeze the pre-trained iDKT model and extract the hidden state vectors $h_t$ for every step in the student journey.
-    \item \textbf{True Probing Task}: We train a simple linear regressor $f(h) \to P_{BKT}(L_t)$ to reconstruct the reference BKT mastery probabilities from the iDKT embeddings. High $R^2$ or Pearson correlation indicates that the construct is linearly recoverable.
-    \item \textbf{Control Task (Selectivity)}: Following \citet{hewitt2019designing}, we train an identical probe on a random permutation of the targets. The \textit{Selectivity} is defined as the performance gap between the true and control tasks. A high positive gap mathematically proves that the model's hidden space is structurally organized around pedagogical principles rather than merely memorizing arbitrary patterns.
-\end{enumerate}
 
 \subsection{Multi-Objective Training} \label{sec_objective}
 
@@ -430,14 +357,18 @@ This term constrains the degrees of freedom utilized for student and item indivi
 \paragraph{Metric Reconciliation}
 In the experimental logs, the breakdown metrics (e.g., $l_{sup}, l_{ref}, l_{init}$) represent \textbf{raw values} (unweighted MSE/BCE). The `train\_loss` metric represents the \textbf{weighted total} ($\mathcal{L}_{total}$), allowing for direct inspection of convergence scales while maintaining symbolic consistency with the combined optimization objective.
 
-\subsection{Response Prediction} \label{sec_prediction}
+\subsection{The Probing Method} \label{sec_probing}
 
-The context-aware knowledge state $\hat{x}_t$ from the retriever is concatenated with the current individualized task representation $x'_t$ to form the input to the prediction head. This head is implemented as a multi-layer perceptron (MLP) with the following structure:
+To rigorously validate that iDKT’s latent representations encode the intended pedagogical constructs, we employ \textbf{Diagnostic Probing Classifiers} with \textbf{Control Tasks}. This methodology, established in deep learning interpretability literature \citep{alain2018understanding, belinkov2022probing}, consists of three phases:
+
 \begin{enumerate}
-    \item Dense layer: $[2 \cdot d_{model} \to 512]$ with ReLU activation.
-    \item Dense layer: $[512 \to 256]$ with ReLU activation.
-    \item Output layer: $[256 \to 1]$ with a Sigmoid activation function to estimate $\hat{y}_t \in [0, 1]$.
+    \item \textbf{Extraction}: We freeze the pre-trained iDKT model and extract the hidden state vectors $h_t$ for every step in the student journey.
+    \item \textbf{True Probing Task}: We train a simple linear regressor $f(h) \to P_{BKT}(L_t)$ to reconstruct the reference BKT mastery probabilities from the iDKT embeddings. High $R^2$ or Pearson correlation indicates that the construct is linearly recoverable.
+    \item \textbf{Control Task (Selectivity)}: Following \citet{hewitt2019designing}, we train an identical probe on a random permutation of the targets. The \textit{Selectivity} is defined as the performance gap between the true and control tasks. A high positive gap mathematically proves that the model's hidden space is structurally organized around pedagogical principles rather than merely memorizing arbitrary patterns.
 \end{enumerate}
+
+
+
 
 \subsection{Formal Validation Framework} \label{sec_validation}
 
