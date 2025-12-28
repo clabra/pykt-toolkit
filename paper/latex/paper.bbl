@@ -72,6 +72,13 @@ Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
 \newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
   p. 1–1.
 
+\bibitem[Liu et~al.(2022)Liu, Liu, Chen, Huang, Tang, and Luo]{liu2022pykt}
+Liu, Z.; Liu, Q.; Chen, J.; Huang, S.; Tang, J.; Luo, W.
+\newblock pyKT: a python library to benchmark deep learning based knowledge
+  tracing models.
+\newblock {\em Advances in Neural Information Processing Systems} {\bf 2022},
+  {\em 35},~18542--18555.
+
 \bibitem[Alain and Bengio(2018)]{alain2018understanding}
 Alain, G.; Bengio, Y.
 \newblock Understanding intermediate layers using linear classifier probes,
