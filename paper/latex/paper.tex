@@ -314,7 +314,29 @@ where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge 
 \section{Results} \label{sec_experiment}
 
 \subsection{Experimental Setup}
+
+\subsection{Experimental Setup}
+
+The experiments were conducted using the \texttt{pykt-toolkit} framework implemented in PyTorch. For training, we used standard 5-fold cross-validation with an 80/20 train/test split. The model was trained using the Adam optimizer with a learning rate of $1e-4$, a batch size of 64, and a dropout rate of 0.2 to prevent overfitting. The maximum number of epochs was set to 200, with an early stopping mechanism (patience=10) to terminate training if validation performance plateaued.
+
+The Transformer architecture was configured with an embedding dimension ($d_{model}$) of 256, 8 attention heads, and 4 encoder/decoder blocks. The feed-forward dimension ($d_{ff}$) was set to 512. Regularization penalties for individualization parameters ($L_2$ on $u_q$, $k_s$, $v_s$) were all set to $1e-5$. For reproducibility, all experiments were seeded (seed=42) and executed on NVIDIA A100 GPU infrastructure. Predictive performance was evaluated using Area Under the ROC Curve (AUC) and Accuracy (ACC), while interpretability was assessed using the metrics defined in Section \ref{sec_validation}.
+
 \subsection{Datasets}
+
+We did the evaluation of iDKT with these 5 widely used datasets: 
+
+• ASSISTments2009: A dataset consisting of math exercises, collected from the free online
+tutoring ASSISTments platform in 2009-2010. Is one of the most widely used and has been the standard benchmark for many years \citep{feng2009addressing}.
+
+• ASSISTments2015: This dataset was collected from the ASSISTments platform in the year of 2015. It has the largest number of students among the other ASSISTments datasets\citep{feng2009addressing}.
+
+• Algebra2005: A dataset from the KDD Cup 2010 EDM Challenge containing questions from the Carnegie Learning Algebra system deployed 2005-2006\citep{stamper2010algebra}.
+
+• Bridge2006: A dataset from the KDD Cup 2010 EDM Challenge with the Carnegie Learning Bridge to Algebra system, deployed 2006-2007\citep{stamper2010bridge}.
+
+• NIPS34: A dataset collected from the Eedi platform \citep{wang2020instructions} containing answers to multiple-choice diagnostic math questions for the Tasks 3 \& 4 at the NeurIPS 2020 Education Challenge. 
+
+
 \subsection{Models}
 \subsection{Research Questions}
 
