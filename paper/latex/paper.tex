@@ -223,7 +223,7 @@ The core architecture of iDKT, as illustrated in Figure~\ref{idkt_arch}, extends
     \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{sup}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and rate parameters to their BKT-derived theoretical counterparts.
 \end{enumerate}
 
-\begin{figure}[!tbp]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=1.0\textwidth]{img/idkt_arch.png}
     \caption{The iDKT Architecture. The diagram illustrates the five functional stages: (1) Input Data ingestion including BKT targets, (2) Individualized Embeddings, (3) the Transformer Core, (4) the MLP-based Output, and (5) the Loss Functions for representational grounding.\label{idkt_arch}}
@@ -339,7 +339,7 @@ tutoring ASSISTments platform in 2009-2010. It is one of the most widely used an
 To evaluate the predictive performance of the iDKT model, we used the Area Under the Curve (AUC) and the Classification Accuracy (ACC) of the models on the test set with the 5 datasets described in Section \ref{sec_dataset}. The results are shown in the Table \ref{tab_performance}.
 
 
-\begin{table}[H] 
+\begin{table}[htbp] 
 %\small % Change table font size
 \caption{Predictive Performance of the iDKT model across 5 datasets.\label{tab_performance}}
 %\isPreprints{\centering}{} % Only used for preprints
@@ -390,7 +390,7 @@ where $\bar{l}_c$ and $\bar{t}_c$ denote the mean across the feature dimension o
 
 Table \ref{tab_interpretability} shows interpretability metrics for the unconstrained iDKT model ($\lambda_{ref}=0$).
 
-\begin{table}[H]
+\begin{table}[htbp]
 \caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{ref}=0$). \label{tab_interpretability}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccccc}
@@ -408,7 +408,7 @@ NIPS34 & 0.2070 & Poor & -0.0425 & Negl. & 0.1722 & Poor \\
 
 Upon enabling Representational Grounding ($\lambda_{ref}=0.10$), we observe a significant restoration of semantic alignment, as detailed in Table \ref{tab_interpretability_grounded}.
 
-\begin{table}[H]
+\begin{table}[htbp]
 \caption{Interpretability Alignment Metrics for grounded iDKT ($\lambda_{ref}=0.1$). \label{tab_interpretability_grounded}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccccc}
@@ -436,7 +436,7 @@ A key contribution of this paper is the systematic exploration of the trade-off 
 
 Tables \ref{tab_pareto_as2009} and \ref{tab_pareto_as2015} summarize the performance and alignment results for the ASSISTments 2009 and 2015 datasets across a systematic sweep of the grounding weight $\lambda_{ref}$ (Equation 7). To construct the Pareto frontier, we utilize the \textit{Composite Alignment} $\bar{H}$ as the primary metric for interpretability, defined as the arithmetic mean of the semantic ($H_1$) and behavioral ($H_2$) values.
 
-\begin{table}[H]
+\begin{table}[htbp]
 \caption{Pareto Sweep results for ASSISTments 2009. \label{tab_pareto_as2009}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
@@ -453,7 +453,7 @@ Tables \ref{tab_pareto_as2009} and \ref{tab_pareto_as2015} summarize the perform
 \end{tabularx}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[htbp]
 \caption{Pareto Sweep results for ASSISTments 2015. \label{tab_pareto_as2015}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
@@ -472,47 +472,70 @@ Tables \ref{tab_pareto_as2009} and \ref{tab_pareto_as2015} summarize the perform
 
 The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2009} and \ref{fig_pareto_as2015}. We observe that theoretical guidance serves as a powerful regularizer; even a small weight ($\lambda=0.10$) causes a massive leap in interpretability with minimal impact on accuracy. However, excessive grounding leads to a ``Theory-Locked'' state or even ``Theoretical Collapse'' in denser datasets like AS2009, where the model can no longer reconcile complex behavioral patterns with simple pedagogical assumptions.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{img/pareto_as2009.png}
 \caption{iDKT Pareto Frontier for ASSISTments 2009. \label{fig_pareto_as2009}}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{img/pareto_as2015.png}
 \caption{iDKT Pareto Frontier for ASSISTments 2015. \label{fig_pareto_as2015}}
 \end{figure}
 
 \subsection{Higher Granularity (RQ3)} \label{sec_gran_results}
-The primary value of iDKT lies in its ability to transform population-level theoretical averages into high-granularity learner diagnostics. While standard BKT assumes that every student shares a fixed ``Initial Mastery'' ($L_0$) and ``Learning Rate'' ($T$) for a given skill, iDKT decomposes these into individualized traits.
-\subsubsection{Delta Distribution}
-To statistically quantify this granularity, we can analyze the ``Delta Distribution'' ($\Delta = t_s - T$) for the Learning Velocity across all skills. In both ASSISTments sets, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a high increase in resolution compared to the BKT baseline, where $\sigma \approx 0$. The right-skewed tail in the distributions identifies a sub-population of ``Fast Learners'' whose true acquisition pace is systematically underestimated by classical models.
 
-Figure \ref{fig_volume} visualizes these densities for both datasets. The centering of the distributions near zero confirms that the model remains effectively anchored to the theoretical priors established by Representational Grounding. However, the substantial width of the curves—the \textit{Individualization Volume}—quantifies the pedagogical information that is lost when using population-level averages. This variance allows the system to distinguish between students who are naturally faster than the prior and those who require more reinforcement to reach mastery.
+The primary value of iDKT lies in its ability to transform population-level theoretical averages into high-granularity learner diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles.
+
+\subsubsection{Delta Distribution} To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = t_s - T$), representing the student-specific deviation from the theoretical learning rate across all skills. In both ASSISTments datasets, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a substantial increase in diagnostic resolution compared to the BKT baseline, where $\sigma = 0$. The right-skewed tail in the distributions identifies a sub-population of fast learners whose true acquisition pace is systematically underestimated by classical models.
+
+Figure \ref{fig_delta} visualizes the delta distributions for both datasets. The width of the curves quantifies the pedagogical information that is lost when using population-level averages. This variance allows the system to distinguish between students who are faster than suggested by theoretical priors and those who require additional practice to reach mastery.
+
 \begin{figure}[htbp]
 \centering
 \begin{minipage}{0.48\textwidth}
     \centering
     \includegraphics[width=\textwidth]{img/volume_as2009.png}
-    \caption*{ (a) ASSISTments 2009 delta distribution}
+    \caption*{ (a) ASSISTments 2009}
 \end{minipage}
 \hfill
 \begin{minipage}{0.48\textwidth}
     \centering
     \includegraphics[width=\textwidth]{img/volume_as2015.png}
-    \caption*{ (b) ASSISTments 2015 delta distribution}
+    \caption*{ (b) ASSISTments 2015}
 \end{minipage}
-\caption{Distribution of student learning velocity deviations from the theoretical baseline. \label{fig_delta}}
-\end{figure}
-\subsubsection{Longitudinal Mastery Dynamics} \label{sec_longitudinal}
-As shown in Figure \ref{fig_mosaics}, iDKT allows estimating distinct trajectories where ``Fast'' learners reach mastery thresholds significantly earlier than their peers, even when their initial interaction outcomes are similar. This proves that iDKT does not merely mimic BKT but leverages its deep learning capacity to dynamically adjust the velocity of mastery based on the learner's historical profile, enabling truly adaptive pacing.
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{img/mosaic_as2009.png}
-\caption{Mastery Alignment Mosaic for ASSISTments 2009. Solid lines represent individualized iDKT trajectories while dashed lines show the population BKT prior. \label{fig_mosaics}}
+\caption{Delta distributions showing student learning rate deviations from the baseline. \label{fig_delta}}
 \end{figure}
 
+\subsubsection{Individualized Adaptive Pacing} \label{sec_longitudinal}
+As shown in Figure \ref{fig_mosaics}, iDKT allows estimating distinct trajectories where fast learners reach mastery thresholds significantly earlier than their peers, even when their initial interaction outcomes are similar. This proves that iDKT does not merely mimic BKT but leverages its deep learning capacity to dynamically adjust the velocity of mastery based on the learner's historical profile, enabling truly adaptive pacing.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.0\textwidth]{img/mosaic_as2009.png}
+\caption{Mastery alignment across different skills in ASSISTments 2009. Solid lines illustrate individualized iDKT trajectories for students categorized by high (green), medium (yellow), and low (red) learning rates, while dashed lines represent the population-level BKT priors. \label{fig_mosaics}}
+\end{figure}
+
+\subsubsection{Mastery Estimations Confidence} \label{sec_confidence}
+
+Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. A significant practical application is evaluating the reliability of predictions made by intrinsically interpretable models, such as BKT. By comparing BKT mastery estimations with those from iDKT, we can derive a measure of pedagogical confidence in the theoretical baseline. This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the concordance between BKT and iDKT mastery predictions across the sub-population of the most frequent skills and students for both datasets. The ASSISTments 2015 results demonstrate high levels of agreement, whereas the ASSISTments 2009 data reveals more divergence, where iDKT uncovers individualized patterns beyond the theoretical prior. Such visualizations provide actionable pedagogical insights that complement traditional baseline diagnostics.
+
+The high density of high-correlation cells demonstrates that Representational Grounding successfully anchors iDKT's performance estimates across the majority of the curriculum, particularly where student evidence is most abundant.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{1\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2015.png}
+    \end{minipage}
+    \vspace{10pt}
+    \begin{minipage}{1\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2009.png}
+    \end{minipage}
+    \caption{ASSISTments 2015 (top) and 2009 (bottom) heatmaps of per-skill prediction alignment. \label{fig_heatmaps}}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusions}\label{sec_conclusions}

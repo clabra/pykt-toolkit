@@ -611,7 +611,7 @@ def plot_per_skill_alignment(mastery_df, output_path, config, seed=42):
 
     # Plot Heatmap
     sns.heatmap(pivot, cmap=cmap_con, norm=norm, ax=ax, 
-                cbar_kws={'label': 'Scientific Concordance (Time-Averaged 1-|MAE|)', 'pad': 0.02})
+                cbar_kws={'label': 'Student Error', 'pad': 0.08})
     
     ax.set_xlabel('Knowledge Components (Top 50 by Density)', fontsize=12)
     ax.set_ylabel('Student ID (Top 30 by Density)', fontsize=12)
@@ -627,8 +627,8 @@ def plot_per_skill_alignment(mastery_df, output_path, config, seed=42):
         mpatches.Patch(color='#c0392b', label='[< 0.65]: Discovery Breakout (New Knowledge Structure)')
     ]
     
-    legend = plt.legend(handles=legend_patches, title="Concordance Zones (L1 Similarity)",
-                       loc='center left', bbox_to_anchor=(1.25, 0.5), 
+    legend = plt.legend(handles=legend_patches, title="Interpretability Alignment Scale",
+                       loc='center left', bbox_to_anchor=(1.35, 0.5), 
                        fontsize=10, title_fontsize=11, frameon=True, shadow=True)
     legend.get_frame().set_facecolor('#fdfdfd')
     
