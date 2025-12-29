@@ -8,6 +8,8 @@ def load_nips_data(primary_data_path,meta_data_dir,task_name):
     """The data downloaded from https://competitions.codalab.org/competitions/25449 
     The document can be downloaded from https://arxiv.org/abs/2007.12061.
 
+    Data downloaded from https://www.eedischool.com/projects/neurips-education-challenge (12th December 2025)
+
     Args:
         primary_data_path (_type_): premary data path
         meta_data_dir (_type_): metadata dir

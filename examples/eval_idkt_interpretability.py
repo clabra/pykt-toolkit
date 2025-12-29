@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--dataset", type=str, required=True)
     parser.add_argument("--fold", type=int, required=True)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=8)
     
     # Architecture
     parser.add_argument("--d_model", type=int, default=256)
@@ -90,7 +90,20 @@ def main():
                 data_config[ds]['dpath'] = os.path.abspath(os.path.join(project_root, dpath))
 
     # Load BKT parameters
-    bkt_params_path = os.path.join(data_config[args.dataset]['dpath'], 'bkt_skill_params.pkl')
+    dpath = data_config[args.dataset]['dpath']
+    bkt_params_path = os.path.join(dpath, 'bkt_skill_params.pkl')
+    
+    # Robust path resolution for BKT parameters (handle nips_task34/train_data structure)
+    if not os.path.exists(bkt_params_path):
+        if '/train_data' in dpath:
+            dataset_root = dpath.replace('/train_data', '')
+            alt_path = os.path.join(dataset_root, 'bkt_skill_params.pkl')
+            if os.path.exists(alt_path):
+                bkt_params_path = alt_path
+    
+    if not os.path.exists(bkt_params_path):
+        raise FileNotFoundError(f"Could not find BKT parameters at {bkt_params_path}. Ensure train_bkt.py has been run.")
+
     with open(bkt_params_path, 'rb') as f:
         bkt_skill_params = pickle.load(f)
 
@@ -199,6 +212,7 @@ def main():
     idkt_roster = IDKTRoster(export_uids, all_skills, model, device=device)
 
     print("Running inference for interpretability alignment...")
+    torch.cuda.empty_cache()
     with torch.no_grad():
         for data in valid_loader:
             q, c, r = data["qseqs"].to(device), data["cseqs"].to(device), data["rseqs"].to(device)

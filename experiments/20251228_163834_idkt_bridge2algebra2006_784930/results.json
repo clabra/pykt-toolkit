@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.8132821622431592,
+  "valid_acc": 0.8504368109024546,
+  "valid_metrics": {
+    "l_sup": 0.3674927669803814,
+    "l_reg": 0.00023944079384818906,
+    "l_ref": 0.043045876237253346,
+    "l_init": 0.0436959012736113,
+    "l_rate": 0.15755427775531658
+  },
+  "test_auc": 0.8077908512272125,
+  "test_acc": 0.8485074277651192,
+  "test_metrics": {
+    "l_sup": 0.3674927669803814,
+    "l_reg": 0.00023944079384818906,
+    "l_ref": 0.043045876237253346,
+    "l_init": 0.0436959012736113,
+    "l_rate": 0.15755427775531658
+  },
+  "best_epoch": 18,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "bridge2algebra2006",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20251228_163834_idkt_bridge2algebra2006_784930",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.2,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 200,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.1,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

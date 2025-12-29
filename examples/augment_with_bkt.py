@@ -147,8 +147,29 @@ def main():
     
     project_root = Path(__file__).parent.parent
     
+    # Load data config to get the correct dpath for each dataset
+    import json
+    config_path = project_root / 'configs' / 'data_config.json'
+    with open(config_path, 'r') as f:
+        data_config = json.load(f)
+    
+    if args.dataset not in data_config:
+        raise ValueError(f"Dataset '{args.dataset}' not found in data_config.json")
+    
+    dataset_config = data_config[args.dataset]
+    dpath = dataset_config['dpath']
+    
+    # Convert relative path to absolute
+    if dpath.startswith('../'):
+        dpath = str(project_root / dpath[3:])
+    
+    # BKT model path: always in dataset root (not train_data subdirectory)
     if args.bkt_model is None:
-        args.bkt_model = project_root / 'data' / args.dataset / 'bkt_mastery_states.pkl'
+        if '/train_data' in str(dpath):
+            dataset_root = Path(str(dpath).replace('/train_data', ''))
+        else:
+            dataset_root = Path(dpath)
+        args.bkt_model = dataset_root / 'bkt_mastery_states.pkl'
         
     print(f"Loading BKT model from: {args.bkt_model}")
     bkt_params, global_params, model = load_bkt_params(args.bkt_model)
@@ -158,9 +179,9 @@ def main():
         output = args.output_file if args.output_file else str(Path(args.input_file).with_suffix('')) + '_bkt.csv'
         files_to_process.append((args.input_file, output))
     else:
-        # Default: Process both standard files
-        train_file = project_root / 'data' / args.dataset / 'train_valid_sequences.csv'
-        test_file = project_root / 'data' / args.dataset / 'test_sequences.csv'
+        # Default: Process both standard files from the dpath location
+        train_file = Path(dpath) / 'train_valid_sequences.csv'
+        test_file = Path(dpath) / 'test_sequences.csv'
         
         if train_file.exists():
             files_to_process.append((str(train_file), str(train_file.parent / 'train_valid_sequences_bkt.csv')))
@@ -179,7 +200,12 @@ def main():
         df_augmented.to_csv(output_path, index=False)
     
     # Save skill-level params separately for the L_param loss
-    params_output = project_root / 'data' / args.dataset / 'bkt_skill_params.pkl'
+    # Save to dataset root, not train_data subdirectory
+    if '/train_data' in str(dpath):
+        dataset_root = Path(str(dpath).replace('/train_data', ''))
+    else:
+        dataset_root = Path(dpath)
+    params_output = dataset_root / 'bkt_skill_params.pkl'
     with open(params_output, 'wb') as f:
         pickle.dump({'params': bkt_params, 'global': global_params}, f)
     print(f"Saved skill-level BKT parameters to: {params_output}")

@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.9276435408325359,
+  "valid_acc": 0.8711880887268307,
+  "valid_metrics": {
+    "l_sup": 0.3393005701462028,
+    "l_reg": 0.00019012987728014456,
+    "l_ref": 0.1366668843797275,
+    "l_init": 0.04948532330004397,
+    "l_rate": 0.22596259832324836
+  },
+  "test_auc": 0.9206510669514953,
+  "test_acc": 0.8686478274080827,
+  "test_metrics": {
+    "l_sup": 0.3393005701462028,
+    "l_reg": 0.00019012987728014456,
+    "l_ref": 0.1366668843797275,
+    "l_init": 0.04948532330004397,
+    "l_rate": 0.22596259832324836
+  },
+  "best_epoch": 21,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "algebra2005",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20251228_221629_idkt_algebra2005-lambda00_525526",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.2,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 200,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.0,
+    "lambda_initmastery": 0.0,
+    "lambda_rate": 0.0,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

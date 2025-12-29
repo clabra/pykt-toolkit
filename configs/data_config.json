@@ -299,8 +299,8 @@
         "min_seq_len": 3,
         "maxlen": 200,
         "emb_path": "",
-        "train_valid_original_file": "train_valid.csv",
-        "train_valid_file": "train_valid_sequences.csv",
+        "train_valid_original_file": "train_data/train_valid.csv",
+        "train_valid_file": "train_data/train_valid_sequences.csv",
         "folds": [
             0,
             1,
@@ -308,16 +308,16 @@
             3,
             4
         ],
-        "test_original_file": "test.csv",
-        "test_file": "test_sequences.csv",
-        "test_window_file": "test_window_sequences.csv",
-        "test_question_file": "test_question_sequences.csv",
-        "test_question_window_file": "test_question_window_sequences.csv",
-        "train_valid_original_file_quelevel": "train_valid_quelevel.csv",
-        "train_valid_file_quelevel": "train_valid_sequences_quelevel.csv",
-        "test_file_quelevel": "test_sequences_quelevel.csv",
-        "test_window_file_quelevel": "test_window_sequences_quelevel.csv",
-        "test_original_file_quelevel": "test_quelevel.csv"
+        "test_original_file": "train_data/test.csv",
+        "test_file": "train_data/test_sequences.csv",
+        "test_window_file": "train_data/test_window_sequences.csv",
+        "test_question_file": "train_data/test_question_sequences.csv",
+        "test_question_window_file": "train_data/test_question_window_sequences.csv",
+        "train_valid_original_file_quelevel": "train_data/train_valid_quelevel.csv",
+        "train_valid_file_quelevel": "train_data/train_valid_sequences_quelevel.csv",
+        "test_file_quelevel": "train_data/test_sequences_quelevel.csv",
+        "test_window_file_quelevel": "train_data/test_window_sequences_quelevel.csv",
+        "test_original_file_quelevel": "train_data/test_quelevel.csv"
     },
     "poj": {
         "dpath": "../data/poj",

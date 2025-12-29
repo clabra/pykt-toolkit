@@ -124,6 +124,10 @@ def parse_args():
     parser.add_argument("--use_wandb", type=int, required=True,
                       help="Use Weights & Biases logging (0 or 1)")
     
+    # Doc strings from config (ignored but needed for parser)
+    parser.add_argument("--_doc_grounding", type=str, required=True, help="Documentation for grounding logic")
+    parser.add_argument("--_doc_regularization", type=str, required=True, help="Documentation for regularization logic")
+    
     return parser.parse_args()
 
 
@@ -293,8 +297,8 @@ def main():
                 bkt_skill_params = pickle.load(f)
             print(f"  Loaded BKT skill parameters from: {bkt_params_path}")
         else:
-            print(f"  WARNING: BKT skill parameters not found at {bkt_params_path}. L_param will be disabled.")
-            args.theory_guided = 0
+            raise FileNotFoundError(f"CRITICAL: BKT skill parameters not found at {bkt_params_path}. "
+                                   f"Theory-guided training requires these parameters. No fallbacks allowed.")
     
     # Initialize model
     print(f"Initializing iDKT model...")

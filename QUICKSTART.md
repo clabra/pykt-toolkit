@@ -280,6 +280,90 @@ There are three ways to compile the LaTeX documents:
 
 - **Base Image**: The environment is built into the `.devcontainer/Dockerfile`.
 - **Path Translation**: Host shims automatically translate absolute paths (e.g., `/home/username/...` to `/workspaces/...`) to maintain compatibility between host and container filesystems.
+## Additional Preprocessing for iDKT Model
+
+The **iDKT (Interpretable Deep Knowledge Tracing)** model requires additional preprocessing steps to augment datasets with BKT (Bayesian Knowledge Tracing) parameters. This enables the model to ground its deep learning representations in classical psychometric theory.
+
+### Prerequisites
+
+Ensure `pyBKT` is installed:
+
+```bash
+pip install pyBKT
+```
+
+### Step 1: Train BKT Model
+
+For each dataset you want to use with iDKT, first train a BKT model to learn skill-level parameters (prior knowledge, learning rate, slip, guess):
+
+```bash
+python examples/train_bkt.py --dataset <dataset_name>
+```
+
+**Example:**
+```bash
+python examples/train_bkt.py --dataset algebra2005
+python examples/train_bkt.py --dataset bridge2algebra2006
+python examples/train_bkt.py --dataset nips_task34
+```
+
+This creates:
+- `data/<dataset>/bkt_mastery_states.pkl` - Trained BKT model
+
+### Step 2: Augment Sequences with BKT Data
+
+After training the BKT model, augment the sequence files with BKT-derived mastery trajectories and correctness predictions:
+
+```bash
+python examples/augment_with_bkt.py --dataset <dataset_name>
+```
+
+**Example:**
+```bash
+python examples/augment_with_bkt.py --dataset algebra2005
+python examples/augment_with_bkt.py --dataset bridge2algebra2006
+python examples/augment_with_bkt.py --dataset nips_task34
+```
+
+This creates:
+- `data/<dataset>/train_valid_sequences_bkt.csv` - Augmented training sequences
+- `data/<dataset>/test_sequences_bkt.csv` - Augmented test sequences
+- `data/<dataset>/bkt_skill_params.pkl` - Skill-level BKT parameters
+
+### What Gets Added
+
+The augmentation process adds two columns to each sequence:
+- **`bkt_mastery`**: P(Learned) trajectory - the probability that the student has mastered each skill at each timestep
+- **`bkt_p_correct`**: Predicted probability of correctness based on BKT parameters
+
+These values serve as grounding targets for iDKT's interpretability-by-design approach, allowing the model to align its internal representations with established psychometric theory.
+
+### Verification
+
+After preprocessing, verify the files exist:
+
+```bash
+ls -lh data/<dataset>/*bkt*
+```
+
+You should see:
+```
+bkt_mastery_states.pkl
+bkt_skill_params.pkl
+train_valid_sequences_bkt.csv
+test_sequences_bkt.csv
+```
+
+### Training iDKT
+
+Once preprocessing is complete, you can train iDKT models using the standard training workflow:
+
+```bash
+python examples/run_repro_experiment.py --dataset <dataset_name>
+```
+
+The training script will automatically use the `*_bkt.csv` files when available.
+
 ## Next Steps
 
 - Review the documentation in `docs/` for detailed model information

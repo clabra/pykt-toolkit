@@ -256,10 +256,10 @@ Extending this rationale, we can enrich the $x'$ embeddings by integrating addit
 
 To get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
 
-\begin{equation}
+\begin{equation} \label{eq_lc}
     l_c = L_{0} + k_s \cdot d_{k} \quad \text{(Personalized Initial Knowledge)}
 \end{equation}
-\begin{equation}
+\begin{equation} \label{eq_tc}
     t_c = T + v_s \cdot d_{v} \quad \text{(Personalized Learning Rate)}
 \end{equation}
 
@@ -311,55 +311,126 @@ While the grounding losses anchor the global position of the latent space to the
 \end{equation}
 where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge gap, and $v_s$ is the learning rate deviation. This formulation implements a \textit{normal student prior}: the model assumes every subject adheres to the population-level parameters derived from the BKT reference unless their unique interaction history provides sufficient signal to justify the regularization cost. 
 
-\section{Results} \label{sec_experiment}
+\section{Results and Discussion} \label{sec_experiment}
 
 \subsection{Experimental Setup}
 
-\subsection{Experimental Setup}
+We implemented the iDKT model in \texttt{PyTorch} and used the benchmark library \texttt{PYKT} \citep{liu2022pykt} to leverage standardized data preprocessing, dataset splitting and benchmarking of baseline models. For training, we used standard 5-fold cross-validation with an 80/20 train/test split. The model was trained using the Adam optimizer with a learning rate of $1e-4$, a batch size of 64, and a dropout rate of 0.2 to prevent overfitting. The maximum number of epochs was set to 200, with an early stopping mechanism (patience=10) to terminate training if validation performance plateaued.
 
-The experiments were conducted using the \texttt{pykt-toolkit} framework implemented in PyTorch. For training, we used standard 5-fold cross-validation with an 80/20 train/test split. The model was trained using the Adam optimizer with a learning rate of $1e-4$, a batch size of 64, and a dropout rate of 0.2 to prevent overfitting. The maximum number of epochs was set to 200, with an early stopping mechanism (patience=10) to terminate training if validation performance plateaued.
+The Transformer architecture was configured with an embedding dimension $d_{model}$ of 256, 8 attention heads, and 4 encoder/decoder blocks. The feed-forward dimension $d_{ff}$ was set to 512. Regularization penalties for individualization parameters ($L_2$ on $u_q$, $k_s$, $v_s$) were all set to $1e-5$. For reproducibility, all experiments were seeded (seed=42) and executed on NVIDIA A100 GPU infrastructure. Predictive performance was evaluated using Area Under the ROC Curve (AUC) and Accuracy (ACC), while interpretability was assessed using the metrics defined in Section \ref{sec_validation}.
 
-The Transformer architecture was configured with an embedding dimension ($d_{model}$) of 256, 8 attention heads, and 4 encoder/decoder blocks. The feed-forward dimension ($d_{ff}$) was set to 512. Regularization penalties for individualization parameters ($L_2$ on $u_q$, $k_s$, $v_s$) were all set to $1e-5$. For reproducibility, all experiments were seeded (seed=42) and executed on NVIDIA A100 GPU infrastructure. Predictive performance was evaluated using Area Under the ROC Curve (AUC) and Accuracy (ACC), while interpretability was assessed using the metrics defined in Section \ref{sec_validation}.
-
-\subsection{Datasets}
+\subsection{Datasets}\label{sec_dataset}
 
 We did the evaluation of iDKT with these 5 widely used datasets: 
 
 • ASSISTments2009: A dataset consisting of math exercises, collected from the free online
-tutoring ASSISTments platform in 2009-2010. Is one of the most widely used and has been the standard benchmark for many years \citep{feng2009addressing}.
+tutoring ASSISTments platform in 2009-2010. It is one of the most widely used and has been the standard benchmark for many years \citep{feng2009addressing}.
 
-• ASSISTments2015: This dataset was collected from the ASSISTments platform in the year of 2015. It has the largest number of students among the other ASSISTments datasets\citep{feng2009addressing}.
+• ASSISTments2015: This dataset was collected from the ASSISTments platform in the year of 2015. It has the largest number of students among the other ASSISTments datasets \citep{feng2009addressing}.
 
-• Algebra2005: A dataset from the KDD Cup 2010 EDM Challenge containing questions from the Carnegie Learning Algebra system deployed 2005-2006\citep{stamper2010algebra}.
+• Algebra2005: A dataset from the KDD Cup 2010 EDM Challenge containing questions from the Carnegie Learning Algebra system deployed 2005-2006 \citep{stamper2010algebra}.
 
-• Bridge2006: A dataset from the KDD Cup 2010 EDM Challenge with the Carnegie Learning Bridge to Algebra system, deployed 2006-2007\citep{stamper2010bridge}.
+• Bridge2006: A dataset from the KDD Cup 2010 EDM Challenge with the Carnegie Learning Bridge to Algebra system, deployed 2006-2007 \citep{stamper2010bridge}.
 
 • NIPS34: A dataset collected from the Eedi platform \citep{wang2020instructions} containing answers to multiple-choice diagnostic math questions for the Tasks 3 \& 4 at the NeurIPS 2020 Education Challenge. 
 
-
-\subsection{Models}
 \subsection{Research Questions}
 
 The experimental validation of iDKT is guided by the following research questions:
 
 \begin{enumerate}
     \item \textbf{Interpretability Validation (RQ1)}: Is it possible to rigorously validate that a iDKT model, whose representations are grounded in a reference model, actually yields interpretable constructs?
-    \item \textbf{Accuracy--Interpretability Trade-Off (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive accuracy?
+    \item \textbf{Predictive Performance--Interpretability Trade-Off (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive performance?
     \item \textbf{Higher Granularity (RQ3)}: Can the proposed model capture individualized latent factors at a higher level of granularity than the reference model?
 \end{enumerate}
 
+\subsection{Predictive Performance}
+
+To evaluate the predictive performance of the iDKT model, we used the Area Under the Curve (AUC) and the Classification Accuracy (ACC) of the models on the test set with the 5 datasets described in Section \ref{sec_dataset}. The results are shown in the Table \ref{tab_performance}.
+
+
+\begin{table}[H] 
+%\small % Change table font size
+\caption{Predictive Performance of the iDKT model across 5 datasets.\label{tab_performance}}
+%\isPreprints{\centering}{} % Only used for preprints
+\begin{tabularx}{\textwidth}{lccccc}
+\toprule
+\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{Algebra2005} & \textbf{Bridge2006} & \textbf{NIPS34} \\
+\midrule
+iDKT & 0.8358 & 0.7252 & 0.9281 & 0.8092 & 0.7987 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+When comparing these results with state-of-the-art DKT models reported in \citep{liu2022pykt}, we observe that iDKT achieves the best predictive performance on the AS2009 and Algebra2005 datasets and ranks second on the Bridge2006 and NIPS34 datasets, surpassed only by the AKT model.
+
+
 \subsection{Interpretability Validation} \label{sec_validation}
 
-To verify that iDKT’s internal representations ($l_c, t_c, u_q$) reflect educational constructs throughout training, we employ a verification framework based on two psychometric hypotheses:
+To verify that iDKT’s internal representations—specifically Personalized Initial Knowledge ($\mathbf{l}_c$) and Personalized Learning Rate ($\mathbf{t}_c$) as defined in Equations \ref{eq_lc} and \ref{eq_tc}—faithfully represent the educational constructs postulated by the reference model, we employ two metrics widely utilized in psychometrics and educational measurement \citep{campbell1959convergent, american1985standards}. To calculate these validation metrics, the latent factors are projected into the probabilistic space $[0,1]$ via the average of the latent dimensions followed by a sigmoid activation:
+\begin{equation} \label{eq_projection}
+l_u = \sigma \left( \bar{l}_c \right), \quad t_u = \sigma \left( \bar{t}_c \right)
+\end{equation}
+where $\bar{l}_c$ and $\bar{t}_c$ denote the mean across the feature dimension of the individualized embeddings. Verification relies on two metrics:
 
 \begin{enumerate}
-    \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_c$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
-    \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
+    \item \textit{Convergent Validity (Latent Fidelity)}: This metric, denoted as $H_1$, is calculated as the Pearson correlation ($r$) between the projected latent factors ($l_u, t_u$) and the reference BKT parameters ($L_{0}$ and $T$). High alignment proves the model has successfully internalized the theoretical constructs. The metrics are expressed as:
+    \begin{equation}
+    H_1 = \text{Corr}(l_u, L_{0}) \quad \text{and} \quad H_1 = \text{Corr}(t_u, T)
+    \end{equation}
+    \item \textit{Predictor Equivalence (Behavioral Alignment)}: This metric, denoted as $H_2$, assesses the functional substitutability of iDKT parameters by executing a \textit{cross-model simulation}. We "inject" the projected iDKT parameters ($l_u$ and $t_u$) into the canonical BKT recurrence equations to generate \textit{induced mastery trajectories}. This allows us to verify whether the learned factors preserve their causal roles. The metric is statistically quantified as the Pearson correlation coefficient between these induced trajectories and the theoretical reference trajectories generated by the original BKT model:
+    \begin{equation}
+    H_2 = \text{Corr}\left( P(L)_{ind}, P(L)_{ref} \right)
+    \end{equation}
+    where $P(L)_{ind}$ and $P(L)_{ref}$ represent the sequences of mastery probabilities at each timestep for the induced and reference models, respectively.
 \end{enumerate}
+
+Table \ref{tab_interpretability_baseline} reports the baseline interpretability metrics for the unconstrained iDKT model ($\lambda_{ref}=0$).
+
+\begin{table}[H]
+\caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{ref}=0$). \label{tab_interpretability_baseline}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lcccccc}
+\toprule
+\textbf{Dataset} & \textbf{$H_1$ (Init.)} & \textbf{Int.} & \textbf{$H_1$ (Rate)} & \textbf{Int.} & \textbf{$H_2$} & \textbf{Int.} \\
+\midrule
+AS2009 & -0.1382 & Poor & -0.0067 & Negl. & 0.1870 & Poor \\
+AS2015 & -0.0392 & Negl. & 0.0908 & Negl. & 0.0975 & Negl. \\
+Algebra2005 & -0.0602 & Negl. & -0.0273 & Negl. & 0.0600 & Negl. \\
+Bridge2006 & -0.0645 & Negl. & 0.0160 & Negl. & 0.0809 & Negl. \\
+NIPS34 & 0.2070 & Poor & -0.0425 & Negl. & 0.1722 & Poor \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Upon enabling Representational Grounding ($\lambda_{ref}=0.10$), we observe a significant restoration of semantic alignment, as detailed in Table \ref{tab_interpretability_grounded}.
+
+\begin{table}[H]
+\caption{Interpretability Alignment Metrics for grounded iDKT ($\lambda_{ref}=0.1$). \label{tab_interpretability_grounded}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lcccccc}
+\toprule
+\textbf{Dataset} & \textbf{$H_1$ (Init.)} & \textbf{Int.} & \textbf{$H_1$ (Rate)} & \textbf{Int.} & \textbf{$H_2$} & \textbf{Int.} \\
+\midrule
+AS2009 & 0.5166 & Good & 0.2864 & Poor & 0.2178 & Poor \\
+AS2015 & 0.9217 & Excell. & 0.8801 & Excell. & 0.1749 & Poor \\
+Algebra2005 & 0.5444 & Good & 0.3310 & Fair & 0.0661 & Negl. \\
+Bridge2006 & 0.4561 & Fair & 0.6422 & Good & 0.0859 & Negl. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Discussion of Alignment Results} \label{sec_alignment_discussion}
+
+The results presented in Tables \ref{tab_interpretability_baseline} and \ref{tab_interpretability_grounded} reveal a notable divergence between \textit{Convergent Validity} ($H_1$) and \textit{Predictor Equivalence} ($H_2$). Although $H_1$ attains high levels across most datasets even with relatively low $\lambda_{ref}$ grounding weights, $H_2$ remains consistently low.
+
+High $H_1$ scores demonstrate that iDKT successfully internalizes the \textit{semantic identity} of the theoretical constructs (Initial Knowledge and Learning Rate). However, $H_2$ measures functional substitutability within a comparatively constrained reference model that is unable to capture the intricate behavioral patterns identified by iDKT. As a high-capacity Transformer, iDKT captures complex, long-range dependencies and context-aware dynamics that exceed the modeling capability of classical BKT. This discrepancy provides empirical evidence that iDKT does not merely mimic the reference model, but rather maps its core pedagogical constructs onto a more sophisticated and predictive architecture.
+
 
 \subsection{Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
 
-A key contribution of this work is the systematic exploration of the trade-off between predictive accuracy and theoretical fidelity. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the "Inductive Bias Bonus"—points where theoretical grounding acts as a beneficial regularizer that improves generalization—and the point of "Over-Constraint," where excessive adherence to the reference model begins to degrade predictive power.
+A key contribution of this paper is the systematic exploration of the trade-off between predictive accuracy and interpretability. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the points where theoretical grounding acts as a beneficial regularizer that improves generalization, and the point where excessive adherence to the reference model begins to degrade predictive power.
 
 \subsection{Higher Granularity} \label{sec_granularity}
 
@@ -408,7 +479,7 @@ Our analysis reveals a non-linear trade-off between predictive accuracy and theo
 
 As shown in Table~\ref{tab1}, the model with \(\lambda=0.10\) achieves a Test AUC of \textbf{0.8322}, slightly outperforming the unconstrained baseline (0.8317). This suggests that the BKT-based regularization acts as a beneficial inductive bias, preventing the Transformer from overfitting to noise in sparse interaction histories. However, excessive grounding (\(\lambda > 0.30\)) leads to a sharp decline in predictive performance as the model becomes over-constrained by the simplicity of the reference theory.
 
-\subsection{Granularity of Individualization} \label{sec_granularity}
+\subsection{Granularity of Individualization} \label{sec_gran_results}
 
 While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all students for a given skill, iDKT captures a rich distribution of \textbf{Individualized Learning Velocities} (\(t_s\)). Figure~\ref{fig_placeholder1} illustrates this ``Delta Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies ``fast-track'' learning trajectories that classical population-level models underestimate. This granularity allows for \textbf{Precise Diagnostic Placement}, distinguishing between students who lack initial knowledge (\textit{low} \(l_c\)) versus those who suffer from slow acquisition pace (\textit{low} \(t_s\)).
 

@@ -217,7 +217,8 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
         'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
         'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
-        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb'
+        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
+        '_doc_grounding', '_doc_regularization'
     }
     
     # Determine which parameters to pass based on training script
@@ -251,7 +252,13 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             # String "None" should be passed as "null" for consistency
             cmd_parts.append(f"--{key} null")
         else:
-            cmd_parts.append(f"--{key} {value}")
+            # Quote string values if they contain spaces or special characters
+            val_str = str(value)
+            if isinstance(value, str):
+                # Ensure the value is properly quoted for shell execution
+                cmd_parts.append(f"--{key} '{val_str}'")
+            else:
+                cmd_parts.append(f"--{key} {val_str}")
     
     # Add save_dir for models that support it (idkt)
     if experiment_dir and 'train_idkt.py' in train_script:
@@ -714,10 +721,11 @@ def main():
             print("LAUNCHING EVALUATION")
             print("=" * 80 + "\n")
             
-            eval_command_explicit = original_config['commands']['eval_explicit']
-            # Update experiment dir for reproduction folder
-            eval_command_explicit = eval_command_explicit.replace(f"--experiment_dir {original_folder}", f"--experiment_dir {repro_folder}")
-            eval_command_full = f"EXPERIMENT_DIR={repro_folder} {eval_command_explicit}"
+            eval_command_explicit = config['commands']['eval_explicit']
+            # Update experiment dir for reproduction folder (use absolute paths for robust replacement)
+            original_dir_abs = str(original_folder.absolute())
+            eval_command_explicit = eval_command_explicit.replace(original_dir_abs, repro_dir_abs)
+            eval_command_full = f"EXPERIMENT_DIR={repro_dir_abs} {eval_command_explicit}"
             
             eval_result = subprocess.run(eval_command_full, shell=True)
             
@@ -910,7 +918,7 @@ def main():
             f"--output_dir {experiment_dir_abs} "
             f"--dataset {training_params['dataset']} "
             f"--fold {training_params['fold']} "
-            f"--batch_size {training_params['batch_size']} "
+            f"--batch_size 8 "
             f"--d_model {training_params['d_model']} "
             f"--n_heads {training_params['n_heads']} "
             f"--n_blocks {training_params['n_blocks']} "

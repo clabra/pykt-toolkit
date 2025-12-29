@@ -35,7 +35,9 @@
     "bkt_filter": false,
     "bkt_guess_threshold": 0.3,
     "bkt_slip_threshold": 0.3,
-    "use_wandb": 0
+    "use_wandb": 0,
+    "_doc_grounding": "lambda_ref, lambda_initmastery, lambda_rate control Representational Grounding strength. theory_guided, calibrate, grounded_init control model behavior.",
+    "_doc_regularization": "l2 (u_q), lambda_gap (k_s), and lambda_student (v_s) control the parsimony of individualization (L_reg)."
   },
   "types": {
     "launcher": [
@@ -88,5 +90,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "afdb9bbd951d88c709b6c913c2ce4ee5"
+  "md5": "7808930603fa2a5f8bead05e66eb5539"
 }

@@ -1,0 +1,30 @@
+{
+  "valid_auc": 0.7900539478962438,
+  "valid_acc": 0.7203110937982726,
+  "valid_metrics": {
+    "l_sup": 0.54975318857889,
+    "l_reg": 0.0006586775549900873,
+    "l_ref": 0.0538539532572031,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "test_auc": 0.7986710394199771,
+  "test_acc": 0.7270373935363434,
+  "test_metrics": {
+    "l_sup": 0.5385800264912076,
+    "l_reg": 0.00066981261700456,
+    "l_ref": 0.055047043695532046,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "window_test_auc": 0.8010118881967583,
+  "window_test_acc": 0.7288972720730936,
+  "window_metrics": {
+    "l_sup": 0.5315660429035662,
+    "l_reg": 0.0008781959922322311,
+    "l_ref": 0.0,
+    "l_init": 0.0,
+    "l_rate": 0.0
+  },
+  "checkpoint": "/workspaces/pykt-toolkit/experiments/20251228_222024_idkt_nips-lambda00_942877/best_model.pt"
+}

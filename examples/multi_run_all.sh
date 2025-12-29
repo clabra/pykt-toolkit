@@ -1,5 +1,5 @@
 #-----------------
-#The script can lanuch multi models for one dataset.
+# Create wnadb sweep for multiple models and datasets
 #You can run `sh multi_run_all.sh {dataset} {models} {task_name} {log_name}> result.txt`, all the commnds for start agents will write to result.txt. project_name = $task_name-$dataset
 #For example:
 #sh multi_run_all.sh "assist2009,algebra2005,bridge2algebra2006,nips_task34" "idkt" idkt_metrics idkt_metrics_log> out_idkt_metrics.txt

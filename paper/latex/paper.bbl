@@ -64,7 +64,7 @@ Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
 
 \bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
   Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
-  Bauck-hage, and Schuecker]{vonrueden2021informed}
+  Bauckhage, and Schuecker]{vonrueden2021informed}
 Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
   Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
 \newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
@@ -78,5 +78,47 @@ Liu, Z.; Liu, Q.; Chen, J.; Huang, S.; Tang, J.; Luo, W.
   tracing models.
 \newblock {\em Advances in Neural Information Processing Systems} {\bf 2022},
   {\em 35},~18542--18555.
+
+\bibitem[Feng et~al.(2009)Feng, Heffernan, and Koedinger]{feng2009addressing}
+Feng, M.; Heffernan, N.; Koedinger, K.
+\newblock Addressing the assessment challenge with an online system that tutors
+  as it assesses.
+\newblock {\em User modeling and user-adapted interaction} {\bf 2009}, {\em
+  19},~243--266.
+
+\bibitem[Stamper et~al.(2010{\natexlab{a}})Stamper, Niculescu-Mizil, Ritter,
+  Gordon, and Koedinger]{stamper2010algebra}
+Stamper, J.; Niculescu-Mizil, A.; Ritter, S.; Gordon, G.; Koedinger, K.
+\newblock Algebra I 2005-2006.
+\newblock {\em Development data sets from KDD Cup} {\bf 2010}.
+
+\bibitem[Stamper et~al.(2010{\natexlab{b}})Stamper, Niculescu-Mizil, Ritter,
+  Gordon, and Koedinger]{stamper2010bridge}
+Stamper, J.; Niculescu-Mizil, A.; Ritter, S.; Gordon, G.; Koedinger, K.
+\newblock Bridge to algebra 2006-2007.
+\newblock {\em Development data sets from KDD Cup} {\bf 2010}.
+
+\bibitem[Wang et~al.(2020)Wang, Lamb, Saveliev, Cameron, Zaykov,
+  Hern{\'a}ndez-Lobato, Turner, Baraniuk, Barton, Jones,
+  et~al.]{wang2020instructions}
+Wang, Z.; Lamb, A.; Saveliev, E.; Cameron, P.; Zaykov, Y.;
+  Hern{\'a}ndez-Lobato, J.M.; Turner, R.E.; Baraniuk, R.G.; Barton, C.; Jones,
+  S.P.;  et~al.
+\newblock Instructions and guide for diagnostic questions: The neurips 2020
+  education challenge.
+\newblock {\em arXiv preprint arXiv:2007.12061} {\bf 2020}.
+
+\bibitem[Campbell and Fiske(1959)]{campbell1959convergent}
+Campbell, D.T.; Fiske, D.W.
+\newblock Convergent and discriminant validation by the multitrait-multimethod
+  matrix.
+\newblock {\em Psychological bulletin} {\bf 1959}, {\em 56},~81.
+
+\bibitem[Association et~al.(1985)Association, Association, on~Measurement~in
+  Education, et~al.]{american1985standards}
+Association, A.E.R.; Association, A.P.; on~Measurement~in Education, N.C.;
+  et~al.
+\newblock Standards for educational and psychological testing.
+\newblock {\em (No Title)} {\bf 1985}.
 
 \end{thebibliography}

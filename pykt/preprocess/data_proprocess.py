@@ -44,7 +44,9 @@ def process_raw_data(dataset_name,dname2paths):
     elif dataset_name != "nips_task34":#default case
         read_data_from_csv(readf, writef)
     else:
-        metap = os.path.join(dname, "metadata")
+        # For nips_task34, metadata is at dataset root, not in train_data subdirectory
+        dataset_root = os.path.dirname(dname)  # Go up from train_data to nips_task34
+        metap = os.path.join(dataset_root, "metadata")
         read_data_from_csv(readf, metap, "task_3_4", writef)
      
     return dname,writef

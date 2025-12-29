@@ -98,12 +98,7 @@ when you change any parameter default value (the reference values are in paper/p
 ## Models architecture and implementation
 
 - `assistant/newmodel.md`: points to the doc containing the description of current version of the model being developed and tested
-- `paper/proposal.md`: description of the approach we are proposing as a base for the model and paper experiments
-- `paper/models.md`: a summary with the models we explored previously, issues, changes and evolution
-- `paper/implementation.md`: implementation details. A kind of history with details related to different implementations. If you don't find information about some detail in the rest of documents in the `paper` folder, look here.
-- `paper/rasch.md`: IRT model theory and principles
 - `paper/bkt.md`: Bayesian Knowledge Tracing (BKT) theory and principles
-- `paper/theory_informed_dl.md`: Informed Deep Learning, theory and principles about how to use theoretical models to inform a deep learning model.
 
 ## Instructions
 
@@ -127,8 +122,9 @@ When you are updating the paper or documentation (Writer Agent):
 
 - Use the academic "we" instead of "you".
 - Maintain a tone suitable for a PhD-level audience.
-- Use/create info in `paper` folder for knowledge about our approach (paper and proposed models), and experiment results.
-- Use papers in `bibliography` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `bibliography/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file.
+- The paper master is the `paper/latex/paper.tex` file, in Latex format.
+- The folder `paper/` contains also other auxiliar files for the paper, such as the bibliography file `paper/latex/biblio.bib` and `paper/idkt.md` containing a detailed description of our approach, including the idkt model implemented in `pykt/models/idkt.py`, scripts to run experiments in `pykt/examples` and results of the experiments in `experiments` folder. **Most of the information in the latex paper is based on teh info in this file**.
+- Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper/latex/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.
 
 #### 📊 For Experiments & Reproducibility
 
@@ -136,6 +132,7 @@ When you are running experiments (Experiment Agent):
 
 - Follow `assistant/quickstart.pdf` guidelines.
 - Ensure all default parameters are in `configs/parameter_default.json`.
+- Use `configs/data_config.json` for datasets path and configuration.
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
 
 ## Copyright and License

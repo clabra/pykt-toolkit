@@ -109,9 +109,33 @@ def main():
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
     
-    data_path = project_root / 'data' / args.dataset / 'train_valid_sequences.csv'
+    # Load data config to get the correct dpath for each dataset
+    import json
+    config_path = project_root / 'configs' / 'data_config.json'
+    with open(config_path, 'r') as f:
+        data_config = json.load(f)
+    
+    if args.dataset not in data_config:
+        raise ValueError(f"Dataset '{args.dataset}' not found in data_config.json")
+    
+    dataset_config = data_config[args.dataset]
+    dpath = dataset_config['dpath']
+    
+    # Convert relative path to absolute
+    if dpath.startswith('../'):
+        dpath = str(project_root / dpath[3:])
+    
+    data_path = Path(dpath) / 'train_valid_sequences.csv'
+    
+    # Output path: save BKT model to the dataset root (not train_data subdirectory)
+    # For nips_task34, this means saving to data/nips_task34/ not data/nips_task34/train_data/
     if args.output_path is None:
-        output_path = project_root / 'data' / args.dataset / 'bkt_mastery_states.pkl'
+        # Extract dataset root from dpath (handle cases like nips_task34/train_data)
+        if '/train_data' in str(dpath):
+            dataset_root = Path(str(dpath).replace('/train_data', ''))
+        else:
+            dataset_root = Path(dpath)
+        output_path = dataset_root / 'bkt_mastery_states.pkl'
     else:
         output_path = Path(args.output_path)
     
@@ -177,6 +201,12 @@ def main():
             'slips': params_df.loc[(skill, 'slips', 'default'), 'value'],
             'guesses': params_df.loc[(skill, 'guesses', 'default'), 'value'],
         }
+
+    # Save extracted parameters for easier loading in evaluation scripts
+    params_output_path = output_path.parent / 'bkt_skill_params.pkl'
+    with open(params_output_path, 'wb') as f:
+        pickle.dump({'params': params, 'global': model.coef_}, f)
+    print(f"Extracted skill parameters saved to: {params_output_path}")
 
     # Predict on all skills on the training data.
     # This returns a Pandas DataFrame.
