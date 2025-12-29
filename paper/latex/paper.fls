@@ -578,13 +578,10 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplri8r.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7y.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7t.vf
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/fplmr.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr10.tfm
-INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
-INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
-INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplri8t.vf
+INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
+INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
+INPUT /workspaces/pykt-toolkit/paper/latex/img/idkt_mastery_866.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/volume_as2015.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/volume_as2015.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/volume_as2015.png

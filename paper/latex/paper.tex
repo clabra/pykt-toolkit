@@ -443,8 +443,9 @@ Tables \ref{tab_pareto_as2015} and \ref{tab_pareto_as2009} summarize the perform
 
 The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009}. We observe that theoretical guidance serves as a powerful regularizer; even a small weight ($\lambda=0.10$) causes a massive leap in interpretability with minimal impact on accuracy. However, excessive grounding leads to a collapse in denser datasets like AS2009, where the model can no longer reconcile complex behavioral patterns with simple pedagogical assumptions.
 
-\begin{table}[htbp]
-\caption{Pareto Sweep results for ASSISTments 2015. \label{tab_pareto_as2015}}
+\begin{figure}[htbp]
+\centering
+\captionof{table}{Pareto Sweep results for ASSISTments 2015. \label{tab_pareto_as2015}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
 \toprule
@@ -458,22 +459,21 @@ The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} an
 1.0 & 0.6724 & 0.5519 & Theory-Locked \\
 \bottomrule
 \end{tabularx}
-\end{table}
 
+\vspace{10em}
 
-\begin{figure}[htbp]
-\centering
 \includegraphics[width=1.0\textwidth]{img/pareto_as2015.png}
 \caption{iDKT Pareto Frontier for ASSISTments 2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda \approx 0.2$, followed by a drift at higher weights where performance is traded without gaining interpretability. \label{fig_pareto_as2015}}
 \end{figure}
 
 
-\begin{table}[htbp]
-\caption{Pareto Sweep results for ASSISTments 2009. \label{tab_pareto_as2009}}
+\begin{figure}[htbp]
+\centering
+\captionof{table}{Pareto Sweep results for ASSISTments 2009. \label{tab_pareto_as2009}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
 \toprule
-\textbf{$\lambda_{ref}$} & \textbf{Test AUC} & \textbf{Composite $\bar{I}$} & \textbf{Interpretation} \\
+\textbf{$\lambda_{ref}$} & \textbf{Performance (AUC)} & \textbf{Interpretability (I)} & \textbf{Interpretation} \\
 \midrule
 0.0 (Baseline) & 0.8358 & 0.0140 & Black Box \\
 0.1 (Sweet Spot) & 0.8290 & 0.3402 & Accurate \& Balanced \\
@@ -483,11 +483,9 @@ The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} an
 1.0 & 0.7456 & 0.0378 & Theoretical Collapse \\
 \bottomrule
 \end{tabularx}
-\end{table}
 
+\vspace{10em}
 
-\begin{figure}[htbp]
-\centering
 \includegraphics[width=1.0\textwidth]{img/pareto_as2009.png}
 \caption{iDKT Pareto Frontier for ASSISTments 2009. The curve shows a non-monotonic relationship where interpretability peaks at $\lambda \approx 0.3$, followed by a \textit{grounding collapse} as the model fails to reconcile excessive constraints. \label{fig_pareto_as2009}}
 \end{figure}

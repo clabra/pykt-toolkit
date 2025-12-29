@@ -104,10 +104,10 @@ def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png")
         
         scatter = plt.scatter(plot_df['fidelity'], plot_df['test_auc'], 
                              c=plot_df['lambda'], cmap='viridis', s=100, edgecolors='black', zorder=3)
-        plt.colorbar(scatter, label='Grounding Strength (λ)')
-        plt.xlabel('Composite Alignment $\\bar{H}$', fontsize=12)
-        plt.ylabel('Predictive Performance (Test AUC)', fontsize=12)
-        plt.title('iDKT Pareto Frontier: Performance vs. Interpretability', fontsize=14, fontweight='bold')
+        plt.colorbar(scatter, label='Grounding Strength ($\lambda_{ref}$)')
+        plt.xlabel('Interpretability (I)', fontsize=12)
+        plt.ylabel('Performance (AUC)', fontsize=12)
+        plt.title('iDKT Pareto Frontier', fontsize=14, fontweight='bold')
         
         # Annotate points with lambda
         for idx, row in plot_df.iterrows():
