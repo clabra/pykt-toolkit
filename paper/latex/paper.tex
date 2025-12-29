@@ -193,7 +193,7 @@ The major contributions of this work are as follows:
     \item Proposal of Representational Grounding, a novel method that overcomes the black-box nature of Transformers by providing interpretability-by-design.
     \item Introduction of a formal validation framework to quantify interpretability via representational alignment, enabling a systematic characterization of the trade-off between reference fidelity and predictive performance.
     \item Application of Representational Grounding to the development of iDKT, a new type of knowledge tracing models that leverage the high accuracy inherent in deep learning while achieving pedagogical interpretability.
-    \item Empirical demonstration of iDKT benefits by showing how it captures granular, student-specific insights—such as individualized initial knowledge and learning velocities—that are beyond the capabilities of simpler models such as BKT.
+    \item Empirical demonstration of iDKT benefits by showing how it captures granular, student-specific insights—such as individualized initial knowledge and learning rates—that are beyond the capabilities of simpler models such as BKT.
 \end{itemize}
 
 
@@ -218,10 +218,10 @@ We propose an Interpretable Deep Knowledge Tracing (iDKT) model with a Transform
 
 The core architecture of iDKT, as illustrated in Figure~\ref{idkt_arch}, extends the standard Transformer framework \citep{vaswani2017attention} by incorporating specialized components for Representational Grounding, primarily integrated within the embedding layers and the multi-objective loss pipeline.\begin{enumerate}
     \item \textbf{Input Data}: This stage handles the ingestion of student interactions (concepts, questions, and binary responses $r \in \{0,1\}$). Crucially, it also loads values from the BKT reference model, including performance predictions ($p_{BKT}$) and per-skill parameters such as initial mastery ($l_0$) and learning transition rates ($T$), which serve as grounding targets for the model.
-    \item \textbf{Embeddings}: Task and history information are projected into a continuous embedding space. We then apply the individualization transformations described in Section~\ref{sec_embeddings} where base embeddings are augmented by student-specific parameters: a Proficiency Offset ($lc$) and a Velocity Augmentation ($ts$). This produces the Transition Gap (individualized task representation $x'$) and the Transition Gain (individualized interaction history $y'$), effectively defining the difficulty of a task relative to the student's baseline proficiency.
+    \item \textbf{Embeddings}: Task and history information are projected into a continuous embedding space. We then apply the individualization transformations described in Section~\ref{sec_embeddings} where base embeddings are augmented by student-specific parameters: a Proficiency Offset ($lc$) and a Rate Augmentation ($tc$). This produces the Transition Gap (individualized task representation $x'$) and the Transition Gain (individualized interaction history $y'$), effectively defining the difficulty of a task relative to the student's baseline proficiency.
     \item \textbf{Transformer Core}: The model employs a dual-encoder architecture followed by a cross-attention decoder. One encoder processing the individualized interaction history ($y'_{1:t-1}$) to capture global student behavior, while a task encoder processes the current individualized task ($x'_t$). The decoder uses multi-head cross-attention to synthesize these streams into a latent Proficiency Context, representing the student's current specialized knowledge state for the target task.
     \item \textbf{Output Stage}: The latent Proficiency Context is passed through a multi-layer perceptron (MLP) that maps the deep representations to the final output space. The final output is the iDKT prediction ($p_{iDKT}$), representing the probability that the student will respond correctly to the current task.
-    \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{sup}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and velocity parameters to their BKT-derived theoretical counterparts.
+    \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{sup}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and rate parameters to their BKT-derived theoretical counterparts.
 \end{enumerate}
 
 \begin{figure}[!tbp]
@@ -260,25 +260,26 @@ To get individualized values for these parameters, we decompose them into popula
     l_c = L_{0} + k_s \cdot d_{k} \quad \text{(Personalized Initial Knowledge)}
 \end{equation}
 \begin{equation}
-    t_s = T + v_s \cdot d_{v} \quad \text{(Personalized Learning Velocity)}
+    t_c = T + v_s \cdot d_{v} \quad \text{(Personalized Learning Rate)}
 \end{equation}
 
-where $L_{0}$ and $T$ are the population-level base embeddings, $d_{k}$ and $d_{v}$ are the learnable variation axes vectors (similar to the difficulty axis $d$), and $k_s$ and $v_s$ are the scalar student-specific deviations learned for each individual.
+
+where $l_c$ is the personalized initial knowledge for concept, $t_c$ is the personalized learning rate for concept, $L_{0}$ and $T$ are the population-level base embeddings, $d_{k}$ and $d_{v}$ are the learnable variation axes vectors (similar to the difficulty axis $d$), and $k_s$ and $v_s$ are the scalar student-specific deviations learned for each individual.
 
 We include these vectors to get the final input embedding for the encoder and decoder components of the Transformer: 
 \begin{equation}
-    x'_t = (c_{c_t} + u_q \cdot d_{c_t}) - l_c \quad \text{(Individualized Task)}
+    x' = (c + u \cdot d) - l_c \quad \text{(Individualized Task)}
 \end{equation}
 \begin{equation}
-    y'_t = (e_{c_t,r_t} + u_q \cdot (f_{c_t,r_t} + d_{c_t})) + t_s \quad \text{(Individualized Interaction History)}
+    y' = (e + u \cdot (f + d)) + t_c \quad \text{(Individualized Interaction History)}
 \end{equation}
 
-where $c_{c_t}$ represents the concept embedding, $u_q$ the question-specific shift, $d_c$ the difficulty shift, $d_s$ the student-specific shift, $e_{c_t,r_t}$ the interaction base, $f_{c_t,r_t}$ the interaction variation axis, $l_c$ the personalized initial knowledge, and $t_s$ the personalized learning rate.
+where $c$ represents the concept embedding, $u$ the question-specific difficulty shift, $d$ the task variation axis, $e$ the interaction base, $f$ the interaction variation axis, $l_c$ the personalized initial knowledge, and $t_c$ the personalized learning rate.
 
 The rationale for using difference for the individualized task ($x'$) and sum for the interaction history ($y'$) is due to their distinct semantic roles:
 \begin{itemize}
     \item $x'$ represents the $\textit{Transition Gap}$: $\textit {Difficulty} - \textit{Proficiency}$. Under this relational logic, objective task difficulty is offset by prior proficiency, ensuring that task demands are defined relative to the subject's baseline. This formulation captures the difference between the task requirements and the current state, representing the residual gap after accounting for latent proficiency.
-    \item $y'$ represents the $\textit{Transition Gain}$: $\textit{Interaction} + \textit{Velocity}$. The history encoder accumulates evidence from interactions, applying a consistent relational logic where the signal value is augmented by latent velocity, ensuring that interaction outcomes are defined relative to the subject's pace. Under this formulation, the total value encompasses not only the interaction outcome but also the rate of progress through the state trajectory, as this incremental gain serves as a robust indicator of future performance. This approach, therefore, captures latent progression by augmenting observed outcomes with transition velocity, thereby reflecting individualized acquisition rates.
+    \item $y'$ represents the $\textit{Transition Gain}$: $\textit{Interaction} + \textit{Rate}$. The history encoder accumulates evidence from interactions, applying a consistent relational logic where the signal value is augmented by latent rate, ensuring that interaction outcomes are defined relative to the subject's pace. Under this formulation, the total value encompasses not only the interaction outcome but also the rate of progress through the state trajectory, as this incremental gain serves as a robust indicator of future performance. This approach, therefore, captures latent progression by augmenting observed outcomes with transition rate, thereby reflecting individualized acquisition rates.
 \end{itemize}
 
 \section{Loss Functions} \label{sec_loss}
@@ -295,20 +296,20 @@ The primary objective $L_{sup}$ uses standard Binary Cross-Entropy (BCE) between
 \end{equation}
 
 \subsection{Representational Grounding}
-The grounding losses ($L_{ref}, L_{init}, L_{rate}$) use Mean Squared Error (MSE) to anchor deep representations to BKT-derived values. Specifically, $L_{ref}$ forces behavioral predictions to stay close to the theoretical baseline, while $L_{init}$ and $L_{rate}$ ground the individualized parameters $l_c$ and $t_s$ in meaningful educational starting points and acquisition paces, respectively. Instead of arbitrary latent weights, the model's internal states are projected through a sigmoid activation $\sigma(\cdot)$ and compared directly to the reference values:
+The grounding losses ($L_{ref}, L_{init}, L_{rate}$) use Mean Squared Error (MSE) to anchor deep representations to BKT-derived values. Specifically, $L_{ref}$ forces behavioral predictions to stay close to the theoretical baseline, while $L_{init}$ and $L_{rate}$ ground the individualized parameters $l_c$ and $t_c$ in meaningful educational starting points and acquisition paces, respectively. Instead of arbitrary latent weights, the model's internal states are projected through a sigmoid activation $\sigma(\cdot)$ and compared directly to the reference values:
 \begin{align}
     L_{ref} &= \text{MSE}(\hat{y}, p_{BKT}) \\
     L_{init} &= \text{MSE}(\sigma(\bar{l}_c), L0_{BKT}) \\
-    L_{rate} &= \text{MSE}(\sigma(\bar{t}_s), T_{BKT})
+    L_{rate} &= \text{MSE}(\sigma(\bar{t}_c), T_{BKT})
 \end{align}
-where $\bar{l}_c$ and $\bar{t}_s$ are the average across the feature dimension of the individualized embeddings for proficiency and velocity, respectively. This formulation forces the deep representation to be not only predictive but also semantically consistent with the reference constructs.
+where $\bar{l}_c$ and $\bar{t}_c$ are the average across the feature dimension of the individualized embeddings for proficiency and rate, respectively. This formulation forces the deep representation to be not only predictive but also semantically consistent with the reference constructs.
 
 \subsection{Inductive Bias Regularization ($L_{reg}$)}
 While the grounding losses anchor the global position of the latent space to the BKT parameter estimations, $L_{reg}$ ensures that student-level individualization is \textit{parsimonious}. This loss acts directly on the individualization parameters ($u_q, k_s, v_s$) to ensure that the model only deviates from the theoretical prior when functionally necessary. We apply distinct $L_2$ penalties to the scalar parameters governing variation:
 \begin{equation}
     L_{reg} = \lambda_{\text{u}} \sum_{q \in Q} u_q^2 + \lambda_{\text{k}} \sum_{s \in S} k_s^2 + \lambda_{\text{v}} \sum_{s \in S} v_s^2
 \end{equation}
-where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge gap, and $v_s$ is the learning velocity deviation. This formulation implements a \textit{normal student prior}: the model assumes every subject adheres to the population-level parameters derived from the BKT reference unless their unique interaction history provides sufficient signal to justify the regularization cost. 
+where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge gap, and $v_s$ is the learning rate deviation. This formulation implements a \textit{normal student prior}: the model assumes every subject adheres to the population-level parameters derived from the BKT reference unless their unique interaction history provides sufficient signal to justify the regularization cost. 
 
 
 
@@ -337,12 +338,12 @@ To rigorously validate that iDKT’s latent representations encode the intended 
 
 \subsection{Interpretability Validation} \label{sec_validation}
 
-To verify that iDKT’s internal representations ($l_c, t_s, u_q$) reflect educational constructs throughout training, we establish a formal framework across five psychometric hypotheses:
+To verify that iDKT’s internal representations ($l_c, t_c, u_q$) reflect educational constructs throughout training, we establish a formal framework across five psychometric hypotheses:
 
 \begin{enumerate}
-    \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_s$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
+    \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_c$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
     \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
-    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_s$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
+    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_s$) and Learning Rate ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
     \item \textbf{$H_4$: Mastery Monotonicity}: Trajectory analysis to verify that the grounded latent space respects the non-forgetting behavior inherent in BKT.
     \item \textbf{$H_5$: Parameter Recovery}: Ability of the architecture to recover known student and item parameters from synthetic BKT-generated datasets.
 \end{enumerate}
