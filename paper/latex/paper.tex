@@ -197,19 +197,18 @@ The major contributions of this work are as follows:
 \end{itemize}
 
 
-The remainder of this paper is structured as follows. Section~\ref{sec_related} reviews the current state of deep knowledge tracing and interpretability. Section~\ref{sec_method} describes the proposed iDKT architecture and the Representational Grounding framework. Section~\ref{sec_results} presents the experimental validation and answers the research questions. Finally, Section~\ref{sec_discussion} discusses the results and their implications.
+The remainder of this paper is structured as follows. Section~\ref{sec_related} reviews related work on knowledge tracing, deep learning interpretability, and theory-guided data science. Section~\ref{sec_arch} describes the proposed iDKT architecture and the \textit{Representational Grounding} framework. Sections~\ref{sec_embeddings} and \ref{sec_loss} detail the individualized embedding mechanism and the multi-objective loss system, respectively. Section~\ref{sec_experiment} presents the results of the experimental validation, interpretability results, and the analysis of individualization granularity. Finally, Section~\ref{sec_conclusions} concludes the paper.
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Related Work} \label{sec_related}
 \subsection{Deep Knowledge Tracing}
+\subsection{Bayesian Knowledge Tracing}
+\subsubsection{Parameters of the Standard Model}
+\subsubsection{Individualization}
 \subsection{Deep Learning Interpretability}
 \subsection{Theory-Guided Data Science}
-\subsection{Individualized Bayesian Knowledge Tracing}
-\subsubsection{Parameters of the Vanilla Model}
-\subsubsection{Parameters Individualization}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{iDKT Model} \label{sec_arch}
@@ -334,15 +333,6 @@ tutoring ASSISTments platform in 2009-2010. It is one of the most widely used an
 
 • NIPS34: A dataset collected from the Eedi platform \citep{wang2020instructions} containing answers to multiple-choice diagnostic math questions for the Tasks 3 \& 4 at the NeurIPS 2020 Education Challenge. 
 
-\subsection{Research Questions}
-
-The experimental validation of iDKT is guided by the following research questions:
-
-\begin{enumerate}
-    \item \textbf{Interpretability Validation (RQ1)}: Is it possible to rigorously validate that a iDKT model, whose representations are grounded in a reference model, actually yields interpretable constructs?
-    \item \textbf{Predictive Performance--Interpretability Trade-Off (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive performance?
-    \item \textbf{Higher Granularity (RQ3)}: Can the proposed model capture individualized latent factors at a higher level of granularity than the reference model?
-\end{enumerate}
 
 \subsection{Predictive Performance}
 
@@ -366,7 +356,19 @@ iDKT & 0.8358 & 0.7252 & 0.9281 & 0.8092 & 0.7987 \\
 When comparing these results with state-of-the-art DKT models reported in \citep{liu2022pykt}, we observe that iDKT achieves the best predictive performance on the AS2009 and Algebra2005 datasets and ranks second on the Bridge2006 and NIPS34 datasets, surpassed only by the AKT model.
 
 
-\subsection{Interpretability Validation} \label{sec_validation}
+\subsection{Research Questions}
+
+The experimental validation of iDKT is guided by the following research questions:
+
+\begin{enumerate}
+    \item \textbf{Interpretability Validation (RQ1)}: Is it possible to rigorously validate that a iDKT model, whose representations are grounded in a reference model, actually yields interpretable constructs?
+    \item \textbf{Predictive Performance--Interpretability Trade-Off (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive performance?
+    \item \textbf{Higher Granularity (RQ3)}: Can the proposed model capture individualized latent factors at a higher level of granularity than the reference model?
+\end{enumerate}
+
+\subsection{Interpretability Validation (RQ1)} \label{sec_validation}
+
+\subsubsection{Alignment Metrics} 
 
 To verify that iDKT’s internal representations—specifically Personalized Initial Knowledge ($\mathbf{l}_c$) and Personalized Learning Rate ($\mathbf{t}_c$) as defined in Equations \ref{eq_lc} and \ref{eq_tc}—faithfully represent the educational constructs postulated by the reference model, we employ two metrics widely utilized in psychometrics and educational measurement \citep{campbell1959convergent, american1985standards}. To calculate these validation metrics, the latent factors are projected into the probabilistic space $[0,1]$ via the average of the latent dimensions followed by a sigmoid activation:
 \begin{equation} \label{eq_projection}
@@ -386,10 +388,10 @@ where $\bar{l}_c$ and $\bar{t}_c$ denote the mean across the feature dimension o
     where $P(L)_{ind}$ and $P(L)_{ref}$ represent the sequences of mastery probabilities at each timestep for the induced and reference models, respectively.
 \end{enumerate}
 
-Table \ref{tab_interpretability_baseline} reports the baseline interpretability metrics for the unconstrained iDKT model ($\lambda_{ref}=0$).
+Table \ref{tab_interpretability} shows interpretability metrics for the unconstrained iDKT model ($\lambda_{ref}=0$).
 
 \begin{table}[H]
-\caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{ref}=0$). \label{tab_interpretability_baseline}}
+\caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{ref}=0$). \label{tab_interpretability}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccccc}
 \toprule
@@ -421,93 +423,106 @@ Bridge2006 & 0.4561 & Fair & 0.6422 & Good & 0.0859 & Negl. \\
 \end{tabularx}
 \end{table}
 
-\subsection{Discussion of Alignment Results} \label{sec_alignment_discussion}
+\subsubsection{Discussion of Alignment Results} \label{sec_alignment_discussion}
 
 The results presented in Tables \ref{tab_interpretability_baseline} and \ref{tab_interpretability_grounded} reveal a notable divergence between \textit{Convergent Validity} ($H_1$) and \textit{Predictor Equivalence} ($H_2$). Although $H_1$ attains high levels across most datasets even with relatively low $\lambda_{ref}$ grounding weights, $H_2$ remains consistently low.
 
 High $H_1$ scores demonstrate that iDKT successfully internalizes the \textit{semantic identity} of the theoretical constructs (Initial Knowledge and Learning Rate). However, $H_2$ measures functional substitutability within a comparatively constrained reference model that is unable to capture the intricate behavioral patterns identified by iDKT. As a high-capacity Transformer, iDKT captures complex, long-range dependencies and context-aware dynamics that exceed the modeling capability of classical BKT. This discrepancy provides empirical evidence that iDKT does not merely mimic the reference model, but rather maps its core pedagogical constructs onto a more sophisticated and predictive architecture.
 
 
-\subsection{Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
+\subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
 
-A key contribution of this paper is the systematic exploration of the trade-off between predictive accuracy and interpretability. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the points where theoretical grounding acts as a beneficial regularizer that improves generalization, and the point where excessive adherence to the reference model begins to degrade predictive power.
+A key contribution of this paper is the systematic exploration of the trade-off between predictive accuracy and interpretability. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. 
 
-\subsection{Higher Granularity} \label{sec_granularity}
+Tables \ref{tab_pareto_as2009} and \ref{tab_pareto_as2015} summarize the performance and alignment results for the ASSISTments 2009 and 2015 datasets across a systematic sweep of the grounding weight $\lambda_{ref}$ (Equation 7). To construct the Pareto frontier, we utilize the \textit{Composite Alignment} $\bar{H}$ as the primary metric for interpretability, defined as the arithmetic mean of the semantic ($H_1$) and behavioral ($H_2$) values.
 
-To address RQ3, we introduce a metric termed \textit{Individualization Volume}, defined as the variance ($\sigma^2$) of the student-specific latent parameters ($l_c, t_c$) across the population for each skill. In the reference BKT model, these parameters are fixed per skill, implying a population variance of zero ($\sigma \approx 0$). Therefore, the ability of iDKT to capture granularity is verified by measuring the magnitude of dispersion in its learned parameter distributions. A significant non-zero variance indicates that the model has successfully identified valid student-specific traits—such as variable learning rates—that are obscured by the population-level averaging of the baseline model. We visualize this by plotting the standard deviation profiles for all knowledge components in the curriculum.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Plots}\label{sec_plots}
-We utilize four key visualizations to support our findings:
-\begin{enumerate}
-    \item \textbf{Confidence Heatmaps} (\textit{per\_skill\_alignment\_predictions.png}): Support \textbf{RQ1}. A grid of students vs. skills showing regions of agreement (Green) and divergence (Red) between iDKT and BKT, validating that individualization is localized and grounded.
-    \item \textbf{Mastery Plot Mosaics} (\textit{mosaic\_top\_students.png}): Supports \textbf{RQ3}. Longitudinal tracking of probability trajectories for individual students. Deviations from the monotonic BKT curve demonstrate the model's granular responsiveness to specific interaction histories.
-    \item \textbf{Pareto Frontier} (\textit{idkt\_pareto\_frontier.png}): Supports \textbf{RQ2}. A scatter plot of Predictive Accuracy (AUC) vs. Theoretical Fidelity ($r$) across varying $\lambda$ weights, identifying the optimal trade-off point.
-    \item \textbf{Correlation Plots} (\textit{per\_skill\_correlation\_predictions.png}): Supports \textbf{RQ1}. Bar charts of parameter correlation per skill, statistically quantifying the degree of semantic alignment ($H_1$).
-\end{enumerate}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Results}\label{sec_results}
-
-To evaluate the proposed iDKT model, we conducted a series of experiments across multiple educational datasets. Table 1 summarizes the alignment metrics across different grounding strengths (\(\lambda\)).
-
-We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the correlation between the model's projected initial mastery (\(l_c\)) and the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the sweep (see Table~\ref{tab1}).
-
-\begin{table}[H] 
-%\small % Change table font size
-\caption{Construct Validity and Performance across the Grounding Spectrum.\label{tab1}}
-%\isPreprints{\centering}{} % Only used for preprints
-\begin{tabularx}{\textwidth}{lcccc}
+\begin{table}[H]
+\caption{Pareto Sweep results for ASSISTments 2009. \label{tab_pareto_as2009}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lccc}
 \toprule
-\textbf{Grounding Strength ($\lambda$)} & \textbf{Test AUC} & \textbf{$M_1$} & \textbf{$M_2$} & \textbf{$M_3$} \\
+\textbf{$\lambda_{ref}$} & \textbf{Test AUC} & \textbf{Composite $\bar{H}$} & \textbf{Interpretation} \\
 \midrule
-0.00 (Baseline) & 0.8317 & 0.9993 & 0.2652 & -0.0325 \\
-\textbf{0.10} & \textbf{0.8322} & \textbf{0.9838} & \textbf{0.2949} & \textbf{-0.0330} \\
-0.30 & 0.7984 & 0.9691 & 0.3192 & -0.0330 \\
-0.50 & 0.7740 & 0.9884 & 0.2828 & -0.0331 \\
+0.0 (Baseline) & 0.8358 & 0.0140 & Black Box \\
+0.1 (Sweet Spot) & 0.8290 & 0.3402 & Accurate \& Balanced \\
+0.2 & 0.8096 & 0.3986 & Theory-Dominant \\
+0.3 & 0.7917 & 0.4131 & Peak Alignment \\
+0.5 & 0.7686 & 0.1866 & Saturated \\
+1.0 & 0.7456 & 0.0378 & Theoretical Collapse \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-We observe consistent \textbf{Convergent Validity (\(M_1\))}, with the correlation between the model's projected initial mastery (\(l_c\)) and the theoretical prior (\(L_0\)) remaining above \(0.96\) throughout the sweep. This confirms that the Representational Grounding mechanism successfully anchors the deep latent space to the reference theory. Furthermore, the \textbf{Discriminant Validity (\(M_3\))} remains stable at \(r \approx -0.03\), proving that the model successfully disentangles ``Student Knowledge Gap'' (\(k_c\)) from ``Student Learning Velocity'' (\(v_s\)) as distinct, non-redundant traits.
+\begin{table}[H]
+\caption{Pareto Sweep results for ASSISTments 2015. \label{tab_pareto_as2015}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lccc}
+\toprule
+\textbf{$\lambda_{ref}$} & \textbf{Test AUC} & \textbf{Composite $\bar{H}$} & \textbf{Interpretation} \\
+\midrule
+0.0 (Baseline) & 0.7252 & 0.0497 & Black Box \\
+0.1 (Sweet Spot) & 0.7233 & 0.6589 & 99.7\% AUC Retained \\
+0.2 & 0.7169 & 0.6709 & Peak Alignment \\
+0.3 & 0.7093 & 0.6639 & Saturated \\
+0.5 & 0.6942 & 0.6362 & Saturated \\
+1.0 & 0.6724 & 0.5519 & Theory-Locked \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\subsection{Pareto Curve Analysis} \label{sec_pareto}
+The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2009} and \ref{fig_pareto_as2015}. We observe that theoretical guidance serves as a powerful regularizer; even a small weight ($\lambda=0.10$) causes a massive leap in interpretability with minimal impact on accuracy. However, excessive grounding leads to a ``Theory-Locked'' state or even ``Theoretical Collapse'' in denser datasets like AS2009, where the model can no longer reconcile complex behavioral patterns with simple pedagogical assumptions.
 
-Our analysis reveals a non-linear trade-off between predictive accuracy and theoretical fidelity. Contrary to the common assumption that interpretability imposes a performance penalty, we identified an \textbf{``Inductive Bias Bonus''} at moderate grounding levels (\(\lambda \approx 0.10\)).
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{img/pareto_as2009.png}
+\caption{iDKT Pareto Frontier for ASSISTments 2009. \label{fig_pareto_as2009}}
+\end{figure}
 
-As shown in Table~\ref{tab1}, the model with \(\lambda=0.10\) achieves a Test AUC of \textbf{0.8322}, slightly outperforming the unconstrained baseline (0.8317). This suggests that the BKT-based regularization acts as a beneficial inductive bias, preventing the Transformer from overfitting to noise in sparse interaction histories. However, excessive grounding (\(\lambda > 0.30\)) leads to a sharp decline in predictive performance as the model becomes over-constrained by the simplicity of the reference theory.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{img/pareto_as2015.png}
+\caption{iDKT Pareto Frontier for ASSISTments 2015. \label{fig_pareto_as2015}}
+\end{figure}
 
-\subsection{Granularity of Individualization} \label{sec_gran_results}
+\subsection{Higher Granularity (RQ3)} \label{sec_gran_results}
+The primary value of iDKT lies in its ability to transform population-level theoretical averages into high-granularity learner diagnostics. While standard BKT assumes that every student shares a fixed ``Initial Mastery'' ($L_0$) and ``Learning Rate'' ($T$) for a given skill, iDKT decomposes these into individualized traits.
+\subsubsection{Delta Distribution}
+To statistically quantify this granularity, we can analyze the ``Delta Distribution'' ($\Delta = t_s - T$) for the Learning Velocity across all skills. In both ASSISTments sets, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a high increase in resolution compared to the BKT baseline, where $\sigma \approx 0$. The right-skewed tail in the distributions identifies a sub-population of ``Fast Learners'' whose true acquisition pace is systematically underestimated by classical models.
 
-While standard BKT assigns a fixed ``Learning Rate'' (\(T\)) to all students for a given skill, iDKT captures a rich distribution of \textbf{Individualized Learning Velocities} (\(t_s\)). Figure~\ref{fig_placeholder1} illustrates this ``Delta Distribution'' (\(\Delta = t_s - T\)). We observe a visible right-skewed variance, indicating that for many skills, the Deep Learning model identifies ``fast-track'' learning trajectories that classical population-level models underestimate. This granularity allows for \textbf{Precise Diagnostic Placement}, distinguishing between students who lack initial knowledge (\textit{low} \(l_c\)) versus those who suffer from slow acquisition pace (\textit{low} \(t_s\)).
+Figure \ref{fig_volume} visualizes these densities for both datasets. The centering of the distributions near zero confirms that the model remains effectively anchored to the theoretical priors established by Representational Grounding. However, the substantial width of the curves—the \textit{Individualization Volume}—quantifies the pedagogical information that is lost when using population-level averages. This variance allows the system to distinguish between students who are naturally faster than the prior and those who require more reinforcement to reach mastery.
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{img/volume_as2009.png}
+    \caption*{ (a) ASSISTments 2009 delta distribution}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{img/volume_as2015.png}
+    \caption*{ (b) ASSISTments 2015 delta distribution}
+\end{minipage}
+\caption{Distribution of student learning velocity deviations from the theoretical baseline. \label{fig_delta}}
+\end{figure}
+\subsubsection{Longitudinal Mastery Dynamics} \label{sec_longitudinal}
+As shown in Figure \ref{fig_mosaics}, iDKT allows estimating distinct trajectories where ``Fast'' learners reach mastery thresholds significantly earlier than their peers, even when their initial interaction outcomes are similar. This proves that iDKT does not merely mimic BKT but leverages its deep learning capacity to dynamically adjust the velocity of mastery based on the learner's historical profile, enabling truly adaptive pacing.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{img/mosaic_as2009.png}
+\caption{Mastery Alignment Mosaic for ASSISTments 2009. Solid lines represent individualized iDKT trajectories while dashed lines show the population BKT prior. \label{fig_mosaics}}
+\end{figure}
 
-\subsection{Longitudinal Mastery Dynamics} \label{sec_longitudinal}
-
-The practical impact of these individualized parameters is evident in the mastery analysis. When simulating the mastery acquisition of ``Fast'' vs. ``Slow'' learners on the same sequence of correct responses:
-\begin{itemize}
-    \item \textbf{Standard BKT} predicts identical mastery curves for both students.
-    \item \textbf{iDKT} projects distinct trajectories, where ``Fast'' learners reach the 95\% mastery threshold significantly earlier (fewer interactions) than ``Slow'' learners.
-\end{itemize}
-
-This ``Informed Divergence'' validates that iDKT does not merely mimic BKT labels but leverages its transformer core to dynamically adjust the \textbf{Velocity of Mastery} based on the student's historical profile, enabling truly adaptive pacing in intelligent tutoring scenarios.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discussion}\label{sec_discussion}
-
-Authors should discuss the results and how they can be interpreted from the perspective of previous studies and of the working hypotheses. The findings and their implications should be discussed in the broadest context possible. Future research directions may also be highlighted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusions}\label{sec_conclusions}
 
-This section is not mandatory, but can be added to the manuscript if the discussion is unusually long or complex.
+This work has introduced iDKT, a Transformer-based Knowledge Tracing model that bridges the gap between the high predictive capacity of deep learning and the intrinsic interpretability of models such as BKT, which utilize constructs with clear semantic meanings. By utilizing Representational Grounding, we have demonstrated that it is possible to anchor deep latent representations to semantically meaningful constructs without sacrificing state-of-the-art performance.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Patents}
+Our experimental results successfully address the research questions. First, we proved that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($H_1$). Second, we formalized a methodology for measuring the trade-off between predictive performance and interpretability, enabling the identification of the ``Interpretability Sweet Spot'' where significant alignment is achieved with minimal loss in predictive AUC. Finally, we demonstrated that iDKT provides a high increase in diagnostic granularity compared to population-level baselines by identifying individualized learning velocities that enable truly adaptive pacing.
 
-This section is not mandatory, but may be added if there are patents resulting from the work reported in this manuscript.
+The primary contribution of this research is twofold: a robust methodology for evaluating the internal interpretability of Transformer-based models in education, and a practical architecture that transforms ``black-box'' predictors into interpretable tools for knowledge tracing. By grounding deep learning in established educational concepts, iDKT offers a path toward AI-driven personalization that is both highly accurate and pedagogically actionable, providing a foundation for next-generation intelligent tutoring systems.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \vspace{6pt} 
@@ -540,76 +555,13 @@ This section is not mandatory, but may be added if there are patents resulting f
 %}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\authorcontributions{For research articles with several authors, a short paragraph specifying their individual contributions must be provided. The following statements should be used ``Conceptualization, X.X. and Y.Y.; methodology, X.X.; software, X.X.; validation, X.X., Y.Y. and Z.Z.; formal analysis, X.X.; investigation, X.X.; resources, X.X.; data curation, X.X.; writing---original draft preparation, X.X.; writing---review and editing, X.X.; visualization, X.X.; supervision, X.X.; project administration, X.X.; funding acquisition, Y.Y. All authors have read and agreed to the published version of the manuscript.'', please turn to the  \href{http://img.mdpi.org/data/contributor-role-instruction.pdf}{CRediT taxonomy} for the term explanation. Authorship must be limited to those who have contributed substantially to the work~reported.}
+\authorcontributions{Conceptualization, C. L.; methodology, C. L. and O. C. S.; software, C. L.; validation, C. L. and O. C. S.; formal analysis, C. L.; investigation, C. L.; resources, C. L. and O. C. S.; data curation, C. L.; writing---original draft preparation, C. L.; writing---review and editing, C. L. and O. C. S.; visualization, C. L.; supervision, O. C. S.; project administration, O. C. S.; funding acquisition, O. C. S. All authors have read and agreed to the published version of the manuscript.}
 
-\funding{Please add: ``This research received no external funding'' or ``This research was funded by NAME OF FUNDER grant number XXX.'' and  and ``The APC was funded by XXX''. Check carefully that the details given are accurate and use the standard spelling of funding agency names at \url{https://search.crossref.org/funding}, any errors may affect your future funding.}
+\funding{This research received no external funding.}
 
-\institutionalreview{In this section, you should add the Institutional Review Board Statement and approval number, if relevant to your study. You might choose to exclude this statement if the study did not require ethical approval. Please note that the Editorial Office might ask you for further information. Please add “The study was conducted in accordance with the Declaration of Helsinki, and approved by the Institutional Review Board (or Ethics Committee) of NAME OF INSTITUTE (protocol code XXX and date of approval).” for studies involving humans. OR “The animal study protocol was approved by the Institutional Review Board (or Ethics Committee) of NAME OF INSTITUTE (protocol code XXX and date of approval).” for studies involving animals. OR “Ethical review and approval were waived for this study due to REASON (please provide a detailed justification).” OR “Not applicable” for studies not involving humans or animals.}
+\dataavailability{The datasets used in this paper can be downloaded through the links provided in https://pykt-toolkit.readthedocs.io/en/latest/datasets.html.}
 
-\informedconsent{Any research article describing a study involving humans should contain this statement. Please add ``Informed consent was obtained from all subjects involved in the study.'' OR ``Patient consent was waived due to REASON (please provide a detailed justification).'' OR ``Not applicable'' for studies not involving humans. You might also choose to exclude this statement if the study did not involve humans.
-
-Written informed consent for publication must be obtained from participating patients who can be identified (including by the patients themselves). Please state ``Written informed consent has been obtained from the patient(s) to publish this paper'' if applicable.}
-
-\dataavailability{We encourage all authors of articles published in MDPI journals to share their research data. In this section, please provide details regarding where data supporting reported results can be found, including links to publicly archived datasets analyzed or generated during the study. Where no new data were created, or where data is unavailable due to privacy or ethical restrictions, a statement is still required. Suggested Data Availability Statements are available in section ``MDPI Research Data Policies'' at \url{https://www.mdpi.com/ethics}.} 
-
-%\durcstatement{Current research is limited to the [please insert a specific academic field, e.g., XXX], which is beneficial [share benefits and/or primary use] and does not pose a threat to public health or national security. Authors acknowledge the dual-use potential of the research involving xxx and confirm that all necessary precautions have been taken to prevent potential misuse. As an ethical responsibility, authors strictly adhere to relevant national and international laws about DURC. Authors advocate for responsible deployment, ethical considerations, regulatory compliance, and transparent reporting to mitigate misuse risks and foster beneficial outcomes.}
-
-% Only for journal Nursing Reports
-%\publicinvolvement{Please describe how the public (patients, consumers, carers) were involved in the research. Consider reporting against the GRIPP2 (Guidance for Reporting Involvement of Patients and the Public) checklist. If the public were not involved in any aspect of the research add: ``No public involvement in any aspect of this research''.}
-%
-%% Only for journal Nursing Reports
-%\guidelinesstandards{Please add a statement indicating which reporting guideline was used when drafting the report. For example, ``This manuscript was drafted against the XXX (the full name of reporting guidelines and citation) for XXX (type of research) research''. A complete list of reporting guidelines can be accessed via the equator network: \url{https://www.equator-network.org/}.}
-%
-%% Only for journal Nursing Reports
-%\useofartificialintelligence{Please describe in detail any and all uses of artificial intelligence (AI) or AI-assisted tools used in the preparation of the manuscript. This may include, but is not limited to, language translation, language editing and grammar, or generating text. Alternatively, please state that “AI or AI-assisted tools were not used in drafting any aspect of this manuscript”.}
-
-\acknowledgments{In this section you can acknowledge any support given which is not covered by the author contribution or funding sections. This may include administrative and technical support, or donations in kind (e.g., materials used for experiments). Where GenAI has been used for purposes such as generating text, data, or graphics, or for study design, data collection, analysis, or interpretation of data, please add “During the preparation of this manuscript/study, the author(s) used [tool name, version information] for the purposes of [description of use]. The authors have reviewed and edited the output and take full responsibility for the content of this publication.”}
-
-\conflictsofinterest{Declare conflicts of interest or state ``The authors declare no conflicts of interest.'' Authors must identify and declare any personal circumstances or interest that may be perceived as inappropriately influencing the representation or interpretation of reported research results. Any role of the funders in the design of the study; in the collection, analyses or interpretation of data; in the writing of the manuscript; or in the decision to publish the results must be declared in this section. If there is no role, please state ``The funders had no role in the design of the study; in the collection, analyses, or interpretation of data; in the writing of the manuscript; or in the decision to publish the results''.} 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Optional
-
-%% Only for journal Encyclopedia
-%\entrylink{The Link to this entry published on the encyclopedia platform.}
-
-\abbreviations{Abbreviations}{
-The following abbreviations are used in this manuscript:
-\\
-
-\noindent 
-\begin{tabular}{@{}ll}
-MDPI & Multidisciplinary Digital Publishing Institute\\
-DOAJ & Directory of open access journals\\
-TLA & Three letter acronym\\
-LD & Linear dichroism
-\end{tabular}
-}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Optional
-\appendixtitles{no} % Leave argument "no" if all appendix headings stay EMPTY (then no dot is printed after "Appendix A"). If the appendix sections contain a heading then change the argument to "yes".
-\appendixstart
-\appendix
-\section[\appendixname~\thesection]{}
-\subsection[\appendixname~\thesubsection]{}
-The appendix is an optional section that can contain details and data supplemental to the main text---for example, explanations of experimental details that would disrupt the flow of the main text but nonetheless remain crucial to understanding and reproducing the research shown; figures of replicates for experiments of which representative data are shown in the main text can be added here if brief, or as Supplementary Data. Mathematical proofs of results not central to the paper can be added as an appendix.
-
-\begin{table}[H] 
-\caption{This is a table caption.\label{tab5}}
-%\newcolumntype{C}{>{\centering\arraybackslash}X}
-\begin{tabularx}{\textwidth}{CCC}
-\toprule
-\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}\\
-\midrule
-Entry 1		& Data			& Data\\
-Entry 2		& Data			& Data\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section[\appendixname~\thesection]{}
-All appendix sections must be cited in the main text. In the appendices, Figures, Tables, etc. should be labeled, starting with ``A''---e.g., Figure A1, Figure A2, etc.
+\conflictsofinterest{The authors declare no conflicts of interest.} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\isPreprints{}{% This command is only used for ``preprints''.

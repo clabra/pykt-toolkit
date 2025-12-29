@@ -58,25 +58,18 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
                 row['probe_pearson'] = None
                 row['probe_selectivity'] = None
 
-            # interpretability_alignment metrics (Legacy/Raw Fidelity)
+            # interpretability_alignment metrics (H1 and H2)
             if os.path.exists(align_path):
                 with open(align_path, 'r') as f:
                     align = json.load(f)
-                row['pred_corr'] = align.get('prediction_corr', 0.0)
                 row['init_corr'] = align.get('initmastery_corr', 0.0)
                 row['rate_corr'] = align.get('learning_rate_corr', 0.0)
                 row['h2_functional'] = align.get('h2_functional_alignment', 0.0)
-                row['h3_discriminant'] = align.get('h3_discriminant_overlap', 0.0)
-                row['h3_latent'] = align.get('h3_latent_overlap', 0.0)
-                row['raw_mean_corr'] = (row['pred_corr'] + row['init_corr'] + row['rate_corr']) / 3.0
+                # Composite Metric: Mean of H1_init, H1_rate, and H2
+                row['fidelity'] = (row['init_corr'] + row['rate_corr'] + row['h2_functional']) / 3.0
             else:
-                row['pred_corr'] = row['init_corr'] = row['rate_corr'] = row['raw_mean_corr'] = None
-                row['h2_functional'] = row['h3_discriminant'] = row['h3_latent'] = None
+                row['init_corr'] = row['rate_corr'] = row['h2_functional'] = row['fidelity'] = None
                 
-            # Unified Fidelity Metric for Plotting
-            # Prefer Probing Alignment (Latent Fidelity) over Raw Scalar Correlation
-            row['fidelity'] = row['probe_pearson'] if row['probe_pearson'] is not None else row['raw_mean_corr']
-            
             results.append(row)
         except Exception as e:
             print(f"Error processing {run_dir}: {e}")
@@ -101,12 +94,12 @@ def plot_pareto(df, output_dir="assistant"):
     plot_df = df.dropna(subset=['fidelity'])
     
     if plot_df.empty:
-        print("No alignment data (Probe or Raw) found for Pareto plot. Generating AUC vs Lambda only.")
+        print("No alignment data found for Pareto plot. Generating AUC vs Lambda only.")
     else:
         scatter = plt.scatter(plot_df['fidelity'], plot_df['test_auc'], 
                              c=plot_df['lambda'], cmap='viridis', s=100, edgecolors='black', zorder=3)
         plt.colorbar(scatter, label='Grounding Strength (λ)')
-        plt.xlabel('Theoretic Fidelity (Probing Alignment $r$)', fontsize=12)
+        plt.xlabel('Composite Alignment $\\bar{H}$', fontsize=12)
         plt.ylabel('Predictive Performance (Test AUC)', fontsize=12)
         plt.title('iDKT Pareto Frontier: Performance vs. Interpretability', fontsize=14, fontweight='bold')
         
@@ -123,17 +116,21 @@ def plot_pareto(df, output_dir="assistant"):
                      color='red', rotation=90, verticalalignment='bottom', fontsize=9, fontweight='bold')
 
         plt.savefig(os.path.join(output_dir, "idkt_pareto_frontier.png"), dpi=300, bbox_inches='tight')
-        print(f"✓ Saved Pareto plot with Plateau highlight to {output_dir}/idkt_pareto_frontier.png")
+        print(f"✓ Saved Pareto plot to {output_dir}/idkt_pareto_frontier.png")
 
     # 2. Performance & Fidelity vs Lambda Trend
     plt.figure(figsize=(10, 6))
     plt.plot(df['lambda'], df['test_auc'], 'o-', label='Test AUC', color='tab:blue', linewidth=2)
     if not df['fidelity'].isnull().all():
-        plt.plot(df['lambda'], df['fidelity'], 's--', label='Probing Fidelity ($r$)', color='tab:green', linewidth=2)
+        plt.plot(df['lambda'], df['fidelity'], 's--', label='Composite Alignment $\\bar{H}$', color='tab:green', linewidth=2)
         
     plt.xlabel('Grounding Weight (λ)', fontsize=12)
     plt.ylabel('Metric Value', fontsize=12)
     plt.title('iDKT Sensitivity Analysis: AUC and Fidelity vs λ', fontsize=14, fontweight='bold')
+    plt.legend()
+    plt.ylim(0, 1.05)
+    plt.savefig(os.path.join(output_dir, "idkt_sensitivity_analysis.png"), dpi=300, bbox_inches='tight')
+    print(f"✓ Saved Sensitivity plot to {output_dir}/idkt_sensitivity_analysis.png")
     plt.legend()
     plt.ylim(0, 1.05)
     plt.savefig(os.path.join(output_dir, "idkt_sensitivity_analysis.png"), dpi=300, bbox_inches='tight')
