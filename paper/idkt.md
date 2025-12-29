@@ -382,15 +382,59 @@ This mechanism ensures that the Transformer's internal representations for "lear
 ## Simplified iDKT Architecture Diagram
 
 ```mermaid
-graph BT
-    classDef whiteNode fill:#fff,stroke:#000,stroke-width:1px;
+flowchart BT
+    classDef whiteNode fill:#fff,stroke:#000,stroke-width:1px,font-size:28px;
+    classDef titleNode fill:none,stroke:none,font-weight:bold,font-size:24px;
 
     subgraph Root [" "]
         direction BT
         style Root fill:#fff,stroke:#000,stroke-width:2px;
 
+        %% Titles
+        Loss_Title["5. Loss Functions"]:::titleNode
+        Output_Title["4. Output Stage"]:::titleNode
+        Transformer_Title["3. Transformer Core"]:::titleNode
+        Embed_Title["2. Embeddings"]:::titleNode
+        Input_Title["1. Input Data"]:::titleNode
+
+        %% Loss Stage (Top)
+        subgraph Loss_Stage [" "]
+            style Loss_Stage fill:#fff,stroke:#000,stroke-width:1px;
+            Loss_Ref(["Alignment Loss <br/>L_ref"])
+            Loss_sup(["Prediction Loss <br/>L_sup"])
+            Loss_init(["Parameter Loss <br/>L_init"])
+            Loss_rate(["Parameter Loss <br/>L_rate"])
+        end
+
+        %% Prediction Stage
+        subgraph Output_Stage [" "]
+            style Output_Stage fill:#fff,stroke:#000,stroke-width:1px;
+            MLP["MLP"]
+            Pred["iDKT Prediction <br/>p_idkt"]
+        end
+
+        %% Core Transformer Stage
+        subgraph Transformer_Core [" "]
+            style Transformer_Core fill:#fff,stroke:#000,stroke-width:1px;
+            Encoders["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
+            Encoders_Task["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
+            Decoders["Multi-Head <br/>Cross-Attention"]
+            LatentState["Proficiency Context"]
+        end
+
+        %% Embeddings Stage
+        subgraph Individualization [" "]
+            style Individualization fill:#fff,stroke:#000,stroke-width:1px;
+            CQ_Embed["Task Embeddings <br/>x'"]
+            Hist_Embed["History Embeddings <br/>y'"]
+            LC_Offset["Proficiency Offset <br/>lc"]
+            TS_Aug["Velocity Augmentation <br/>ts"]
+            XT["Transition Gap <br/>Individualized x'"]
+            YT["Transition Gain <br/>Individualized y'"]
+        end
+
         %% Input Stage (Bottom)
-        subgraph Input_Data [Input]
+        subgraph Input_Data [" "]
             style Input_Data fill:#fff,stroke:#000,stroke-width:1px;
             BKT_Targets("BKT predictions <br/>p_bkt")
             IDs("Concepts, questions, responses")
@@ -399,74 +443,56 @@ graph BT
             BKT_T("BKT parameter <br/>T")
         end
 
-        %% Embeddings Stage
-        subgraph Individualization [Embeddings]
-            style Individualization fill:#fff,stroke:#000,stroke-width:1px;
-            CQ_Embed["Task Embeddings <br/>x'"]
-            Hist_Embed["History Embeddings <br/>y'"]
-            LC_Offset["Proficiency Offset <br/>lc"]
-            TS_Aug["Velocity Augmentation <br/>ts"]
-            XT["Transition Gap <br/>Individualized x'"]
-            YT["Transition Gain <br/>Individualized y'"]
+        %% Position Titles (Closer via ~~~)
+        Input_Data ~~~ Input_Title
+        Individualization ~~~ Embed_Title
+        Transformer_Core ~~~ Transformer_Title
+        Output_Stage ~~~ Output_Title
+        Loss_Stage ~~~ Loss_Title
 
-            IDs --> CQ_Embed
-            IDs --> Hist_Embed
-            BKT_l0 --> LC_Offset
-            BKT_T --> TS_Aug
-            LC_Offset --> XT
-            CQ_Embed --> XT
-            TS_Aug --> YT
-            Hist_Embed --> YT
-        end
+        %% --- Internal Connections ---
+        LatentState --> MLP
+        MLP --> Pred
+        
+        Encoders_Task --> Decoders
+        Encoders --> Decoders
+        Decoders --> LatentState
 
-        %% Core Transformer Stage
-        subgraph Transformer_Core [Transformer Core]
-            style Transformer_Core fill:#fff,stroke:#000,stroke-width:1px;
-            Encoders["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
-            Encoders_Task["Nx Encoders <br/> Multi-Head <br/>Self-Attention"]
-            Decoders["Multi-Head <br/>Cross-Attention"]
-            LatentState["Proficiency Context"]
+        %% --- Cross-Stage Connections ---
+        %% Input -> Embeddings
+        IDs --> CQ_Embed
+        IDs --> Hist_Embed
+        BKT_l0 --> LC_Offset
+        BKT_T --> TS_Aug
 
-            YT --> Encoders
-            XT --> Encoders_Task
-            Encoders_Task --> Decoders
-            Encoders --> Decoders
-            Decoders --> LatentState
-        end
+        %% Embeddings -> Core
+        LC_Offset --> XT
+        CQ_Embed --> XT
+        TS_Aug --> YT
+        Hist_Embed --> YT
+        YT --> Encoders
+        XT --> Encoders_Task
 
-        %% Prediction Stage
-        subgraph Output_Stage [Output]
-            style Output_Stage fill:#fff,stroke:#000,stroke-width:1px;
-            MLP["MLP"]
-            Pred["iDKT Prediction <br/>p_idkt"]
+        %% Output -> Loss
+        Pred --> Loss_Ref
+        BKT_Targets --> Loss_Ref
+        Pred --> Loss_sup
+        GroundTruth --> Loss_sup
 
-            LatentState --> MLP
-            MLP --> Pred
-        end
-
-        %% Loss Stage (Top)
-        subgraph Loss_Stage [Loss Functions]
-            style Loss_Stage fill:#fff,stroke:#000,stroke-width:1px;
-            Loss_Ref(["Alignment Loss <br/>L_ref"])
-            Loss_sup(["Prediction Loss <br/>L_sup"])
-            Loss_init(["Parameter Loss <br/>L_init"])
-            Loss_rate(["Parameter Loss <br/>L_rate"])
-
-            Pred --> Loss_Ref
-            BKT_Targets --> Loss_Ref
-            Pred --> Loss_sup
-            GroundTruth --> Loss_sup
-            LC_Offset --> Loss_init
-            BKT_l0 --> Loss_init
-            TS_Aug --> Loss_rate
-            BKT_T --> Loss_rate
-        end
+        %% Embeddings -> Loss
+        LC_Offset --> Loss_init
+        BKT_l0 --> Loss_init
+        TS_Aug --> Loss_rate
+        BKT_T --> Loss_rate
     end
 
     %% Apply Style to Nodes
     class IDs,GroundTruth,BKT_Targets,BKT_l0,BKT_T,CQ_Embed,Hist_Embed,LC_Offset,TS_Aug,XT,YT whiteNode;
     class Encoders,Encoders_Task,Decoders,LatentState,MLP,Pred whiteNode;
     class Loss_Ref,Loss_sup,Loss_init,Loss_rate whiteNode;
+    
+    %% Connection Styling
+    linkStyle default stroke-width:2px,stroke:black
 ```
 
 

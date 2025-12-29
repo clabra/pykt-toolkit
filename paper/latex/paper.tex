@@ -311,10 +311,11 @@ While the grounding losses anchor the global position of the latent space to the
 \end{equation}
 where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge gap, and $v_s$ is the learning rate deviation. This formulation implements a \textit{normal student prior}: the model assumes every subject adheres to the population-level parameters derived from the BKT reference unless their unique interaction history provides sufficient signal to justify the regularization cost. 
 
+\section{Results} \label{sec_experiment}
 
-
-\section{Experimental Validation} \label{sec_experiment}
-
+\subsection{Experimental Setup}
+\subsection{Datasets}
+\subsection{Models}
 \subsection{Research Questions}
 
 The experimental validation of iDKT is guided by the following research questions:
@@ -325,40 +326,33 @@ The experimental validation of iDKT is guided by the following research question
     \item \textbf{Higher Granularity (RQ3)}: Can the proposed model capture individualized latent factors at a higher level of granularity than the reference model?
 \end{enumerate}
 
-\subsection{The Probing Method} \label{sec_probing}
-
-To rigorously validate that iDKT’s latent representations encode the intended pedagogical constructs, we employ \textbf{Diagnostic Probing Classifiers} with \textbf{Control Tasks}. This methodology, established in deep learning interpretability literature \citep{alain2018understanding, belinkov2022probing}, consists of three phases:
-
-\begin{enumerate}
-    \item \textbf{Extraction}: We freeze the pre-trained iDKT model and extract the hidden state vectors $h_t$ for every step in the student journey.
-    \item \textbf{True Probing Task}: We train a simple linear regressor $f(h) \to P_{BKT}(L_t)$ to reconstruct the reference BKT mastery probabilities from the iDKT embeddings. High $R^2$ or Pearson correlation indicates that the construct is linearly recoverable.
-    \item \textbf{Control Task (Selectivity)}: Following \citet{hewitt2019designing}, we train an identical probe on a random permutation of the targets. The \textit{Selectivity} is defined as the performance gap between the true and control tasks. A high positive gap mathematically proves that the model's hidden space is structurally organized around pedagogical principles rather than merely memorizing arbitrary patterns.
-\end{enumerate}
-
-
 \subsection{Interpretability Validation} \label{sec_validation}
 
-To verify that iDKT’s internal representations ($l_c, t_c, u_q$) reflect educational constructs throughout training, we establish a formal framework across five psychometric hypotheses:
+To verify that iDKT’s internal representations ($l_c, t_c, u_q$) reflect educational constructs throughout training, we employ a verification framework based on two psychometric hypotheses:
 
 \begin{enumerate}
     \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_c$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
     \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
-    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_s$) and Learning Rate ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
-    \item \textbf{$H_4$: Mastery Monotonicity}: Trajectory analysis to verify that the grounded latent space respects the non-forgetting behavior inherent in BKT.
-    \item \textbf{$H_5$: Parameter Recovery}: Ability of the architecture to recover known student and item parameters from synthetic BKT-generated datasets.
 \end{enumerate}
 
-\subsection{Pedagogical Confidence} \label{sec_confidence}
-
-Beyond raw performance, we define the \textbf{Pedagogical Confidence} ($C$) as a metric for longitudinal agreement between the observer (iDKT) and the theoretical prior (BKT). For a student $s$ and skill $k$, the confidence is the time-averaged concordance over $T$ interactions:
-\begin{equation}
-    C_{s,k} = \frac{1}{T} \sum_{t=1}^{T} \left( 1 - |\hat{p}_{iDKT}(s,k,t) - p_{BKT}(s,k,t)| \right)
-\end{equation}
-Values of $C \ge 0.90$ indicate "Diagnostic Consensus," where the deep learning model validates the theoretical baseline. Conversely, low confidence identify "Discovery Breakouts"—localized regions where student behavior fundamentally diverges from standard pedagogical rules, necessitating more complex modeling.
-
-\subsection{The Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
+\subsection{Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
 
 A key contribution of this work is the systematic exploration of the trade-off between predictive accuracy and theoretical fidelity. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the "Inductive Bias Bonus"—points where theoretical grounding acts as a beneficial regularizer that improves generalization—and the point of "Over-Constraint," where excessive adherence to the reference model begins to degrade predictive power.
+
+\subsection{Higher Granularity} \label{sec_granularity}
+
+To address RQ3, we introduce a metric termed \textit{Individualization Volume}, defined as the variance ($\sigma^2$) of the student-specific latent parameters ($l_c, t_c$) across the population for each skill. In the reference BKT model, these parameters are fixed per skill, implying a population variance of zero ($\sigma \approx 0$). Therefore, the ability of iDKT to capture granularity is verified by measuring the magnitude of dispersion in its learned parameter distributions. A significant non-zero variance indicates that the model has successfully identified valid student-specific traits—such as variable learning rates—that are obscured by the population-level averaging of the baseline model. We visualize this by plotting the standard deviation profiles for all knowledge components in the curriculum.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Plots}\label{sec_plots}
+We utilize four key visualizations to support our findings:
+\begin{enumerate}
+    \item \textbf{Confidence Heatmaps} (\textit{per\_skill\_alignment\_predictions.png}): Support \textbf{RQ1}. A grid of students vs. skills showing regions of agreement (Green) and divergence (Red) between iDKT and BKT, validating that individualization is localized and grounded.
+    \item \textbf{Mastery Plot Mosaics} (\textit{mosaic\_top\_students.png}): Supports \textbf{RQ3}. Longitudinal tracking of probability trajectories for individual students. Deviations from the monotonic BKT curve demonstrate the model's granular responsiveness to specific interaction histories.
+    \item \textbf{Pareto Frontier} (\textit{idkt\_pareto\_frontier.png}): Supports \textbf{RQ2}. A scatter plot of Predictive Accuracy (AUC) vs. Theoretical Fidelity ($r$) across varying $\lambda$ weights, identifying the optimal trade-off point.
+    \item \textbf{Correlation Plots} (\textit{per\_skill\_correlation\_predictions.png}): Supports \textbf{RQ1}. Bar charts of parameter correlation per skill, statistically quantifying the degree of semantic alignment ($H_1$).
+\end{enumerate}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -551,7 +545,7 @@ All appendix sections must be cited in the main text. In the appendices, Figures
 % % Reference 1
 % \bibitem[Author1(year)]{ref-journal}
 % Author~1, T. The title of the cited article. {\em Journal Abbreviation} {\bf 2008}, {\em 10}, 142--149.
-... (truncated for chunk)
+% ... (truncated for chunk)
 
 % % Chicago format (Used for journal: arts, genealogy, histories, humanities, jintelligence, laws, literature, religions, risks, socsci)
 % \isChicagoStyle{%
