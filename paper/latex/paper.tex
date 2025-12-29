@@ -85,26 +85,26 @@
 
 
 % Author Orchid ID: enter ID or remove command
-\newcommand{\orcidauthorA}{0000-0000-0000-000X} % Add \orcidA{} behind the author's name
-%\newcommand{\orcidauthorB}{0000-0000-0000-000X} % Add \orcidB{} behind the author's name
+\newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
+\newcommand{\orcidauthorB}{0000-0002-9281-4209} % Add \orcidB{} behind the author's name
 
 % Authors, for the paper (add full first names)
-\Author{Firstname Lastname $^{1}$\orcidA{}, Firstname Lastname $^{2}$ and Firstname Lastname $^{2,}$*}
+\Author{Concha Labra $^{1}$*\orcidA{}, Olga C. Santos $^{2}$}
 
 %\longauthorlist{yes}
 
 % MDPI internal command: Authors, for metadata in PDF
-\AuthorNames{Firstname Lastname, Firstname Lastname and Firstname Lastname}
+\AuthorNames{Concha Labra, Olga C. Santos}
 
 %\longauthorlist{yes}
 
 % Affiliations / Addresses (Add [1] after \address if there is only one affiliation.)
 \address{%
-$^{1}$ \quad Affiliation 1; e-mail@e-mail.com\\
-$^{2}$ \quad Affiliation 2; e-mail@e-mail.com}
+$^{1}$ \quad Universidad Nacional de Educación a Distancia: Madrid, Madrid, ES; clabra@dia.uned.es\\
+$^{2}$ \quad Universidad Nacional de Educación a Distancia: Madrid, Madrid, ES; ocsantos@dia.uned.es}
 
 % Contact information of the corresponding author
-\corres{Correspondence: e-mail@e-mail.com; Tel.: (optional; include country code; if there are multiple corresponding authors, add author initials) +xx-xxxx-xxx-xxxx (F.L.)}
+\corres{Author to whom correspondence should be addressed.}
 
 % Current address and/or shared authorship
 %\firstnote{Current address: Affiliation.}  
@@ -221,7 +221,7 @@ The core architecture of iDKT, as illustrated in Figure~\ref{idkt_arch}, extends
     \item \textbf{Embeddings}: Task and history information are projected into a continuous embedding space. We then apply the individualization transformations described in Section~\ref{sec_embeddings} where base embeddings are augmented by student-specific parameters: a Proficiency Offset ($lc$) and a Velocity Augmentation ($ts$). This produces the Transition Gap (individualized task representation $x'$) and the Transition Gain (individualized interaction history $y'$), effectively defining the difficulty of a task relative to the student's baseline proficiency.
     \item \textbf{Transformer Core}: The model employs a dual-encoder architecture followed by a cross-attention decoder. One encoder processing the individualized interaction history ($y'_{1:t-1}$) to capture global student behavior, while a task encoder processes the current individualized task ($x'_t$). The decoder uses multi-head cross-attention to synthesize these streams into a latent Proficiency Context, representing the student's current specialized knowledge state for the target task.
     \item \textbf{Output Stage}: The latent Proficiency Context is passed through a multi-layer perceptron (MLP) that maps the deep representations to the final output space. The final output is the iDKT prediction ($p_{iDKT}$), representing the probability that the student will respond correctly to the current task.
-    \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{SUP}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and velocity parameters to their BKT-derived theoretical counterparts.
+    \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{sup}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and velocity parameters to their BKT-derived theoretical counterparts.
 \end{enumerate}
 
 \begin{figure}[!tbp]
@@ -257,13 +257,13 @@ Extending this rationale, we can enrich the $x'$ embeddings by integrating addit
 To get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
 
 \begin{equation}
-    l_c = L_{0} + k_c \cdot d_c \quad \text{(Personalized Initial Knowledge)}
+    l_c = L_{0} + k_s \cdot d_{k} \quad \text{(Personalized Initial Knowledge)}
 \end{equation}
 \begin{equation}
-    t_s = T + v_s \cdot d_s \quad \text{(Personalized Learning Velocity)}
+    t_s = T + v_s \cdot d_{v} \quad \text{(Personalized Learning Velocity)}
 \end{equation}
 
-where $L_{0}$ and $T$ are the population-level means, $k_c$ and $v_s$ are the population-level standard deviations, and $d_c$ and $d_s$ are the student-specific deviations.
+where $L_{0}$ and $T$ are the population-level base embeddings, $d_{k}$ and $d_{v}$ are the learnable variation axes vectors (similar to the difficulty axis $d$), and $k_s$ and $v_s$ are the scalar student-specific deviations learned for each individual.
 
 We include these vectors to get the final input embedding for the encoder and decoder components of the Transformer: 
 \begin{equation}
@@ -283,43 +283,46 @@ The rationale for using difference for the individualized task ($x'$) and sum fo
 
 \section{Loss Functions} \label{sec_loss}
 
-The model is trained using a complex, theoretically-anchored loss function designed to ensure that its high-capacity Transformer backbone remains aligned with pedagogical principles. The total loss $\mathcal{L}_{total}$ is a weighted sum:
+The model is trained using a multi-objective loss function designed to ensure that the high-capacity Transformer remains aligned with pedagogical principles through Representational Grounding. The total loss $\mathcal{L}_{total}$ is defined as a weighted sum of different loss components described in detail below. 
 \begin{equation}
-    \mathcal{L}_{total} = L_{SUP} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init} + \lambda_{rate} L_{rate} + L_{reg}
-\end{equation}
-where:
-\begin{itemize}
-    \item $L_{SUP}$ is the supervised learning loss (Binary Cross-Entropy for prediction of correctness).
-    \item $L_{ref}$ is the Representational Grounding loss, ensuring alignment with the reference model's mastery estimates.
-    \item $L_{init}$ is the auxiliary loss for grounding the initial knowledge parameter.
-    \item $L_{rate}$ is the auxiliary loss for grounding the learning rate parameter.
-    \item $L_{reg}$ is the regularization loss.
-\end{itemize}
-The $\lambda$ coefficients are hyperparameters that control the strength of each grounding term.
-
-\subsubsection{Supervised Performance ($L_{SUP}$)}
-Primary task modeling uses Binary Cross-Entropy (BCE) between predictions $\hat{y}_t$ and responses $r_t$:
-\begin{equation}
-    L_{SUP} = -\frac{1}{N} \sum (r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t))
+    \mathcal{L}_{total} = L_{sup} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init} + \lambda_{rate} L_{rate} + L_{reg}
 \end{equation}
 
-\subsubsection{Theory-Guided Alignment ($L_{ref}, L_{init}, L_{rate}$)}
-Consistency with the BKT reference is enforced through three alignment objectives:
-\begin{itemize}
-    \item \textbf{Prediction Alignment ($L_{ref}$)}: Mean Squared Error (MSE) between iDKT and BKT performance probabilities: $L_{ref} = \text{MSE}(\hat{y}, p_{BKT})$.
-    \item \textbf{Initial Mastery Grounding ($L_{init}$)}: MSE between $l_{c,proj}$ and BKT prior $L0_{BKT}$: $L_{init} = \text{MSE}(l_{c,proj}, L0_{BKT})$.
-    \item \textbf{Learning velocity Grounding ($L_{rate}$)}: MSE between $t_{s,proj}$ and BKT learn rate $T_{BKT}$: $L_{rate} = \text{MSE}(t_{s,proj}, T_{BKT})$.
-\end{itemize}
-
-\subsubsection{Structural Regularization ($L_{reg}$)}
-To preserve the "Normal Student" prior and prevent overfitting, we apply multi-level $L_2$ regularization:
+\subsection{Supervised Alignment ($L_{sup}$)}
+The primary objective $L_{sup}$ uses standard Binary Cross-Entropy (BCE) between the iDKT performance predictions $\hat{y}_t$ and the observed ground truth outcomes $r_t \in \{0, 1\}$. This loss ensures predictive accuracy by minimizing the deviance from observed student behavior:
 \begin{equation}
-    L_{reg} = \lambda_{\text{rasch}} \|u_q\|^2 + \lambda_{\text{gap}} \|k_c\|^2 + \lambda_{\text{vel}} \|v_s\|^2
+    L_{sup} = -\frac{1}{N} \sum_{t=1}^N [r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t)]
 \end{equation}
-This term constrains the degrees of freedom utilized for student and item individualization, ensuring that learned traits do not invert the semantic meaning of the latent space.
 
-\paragraph{Metric Reconciliation}
-In the experimental logs, the breakdown metrics (e.g., $l_{sup}, l_{ref}, l_{init}$) represent \textbf{raw values} (unweighted MSE/BCE). The `train\_loss` metric represents the \textbf{weighted total} ($\mathcal{L}_{total}$), allowing for direct inspection of convergence scales while maintaining symbolic consistency with the combined optimization objective.
+\subsection{Representational Grounding}
+The grounding losses ($L_{ref}, L_{init}, L_{rate}$) use Mean Squared Error (MSE) to anchor deep representations to BKT-derived values. Specifically, $L_{ref}$ forces behavioral predictions to stay close to the theoretical baseline, while $L_{init}$ and $L_{rate}$ ground the individualized parameters $l_c$ and $t_s$ in meaningful educational starting points and acquisition paces, respectively. Instead of arbitrary latent weights, the model's internal states are projected through a sigmoid activation $\sigma(\cdot)$ and compared directly to the reference values:
+\begin{align}
+    L_{ref} &= \text{MSE}(\hat{y}, p_{BKT}) \\
+    L_{init} &= \text{MSE}(\sigma(\bar{l}_c), L0_{BKT}) \\
+    L_{rate} &= \text{MSE}(\sigma(\bar{t}_s), T_{BKT})
+\end{align}
+where $\bar{l}_c$ and $\bar{t}_s$ are the average across the feature dimension of the individualized embeddings for proficiency and velocity, respectively. This formulation forces the deep representation to be not only predictive but also semantically consistent with the reference constructs.
+
+\subsection{Inductive Bias Regularization ($L_{reg}$)}
+While the grounding losses anchor the global position of the latent space to the BKT parameter estimations, $L_{reg}$ ensures that student-level individualization is \textit{parsimonious}. This loss acts directly on the individualization parameters ($u_q, k_s, v_s$) to ensure that the model only deviates from the theoretical prior when functionally necessary. We apply distinct $L_2$ penalties to the scalar parameters governing variation:
+\begin{equation}
+    L_{reg} = \lambda_{\text{u}} \sum_{q \in Q} u_q^2 + \lambda_{\text{k}} \sum_{s \in S} k_s^2 + \lambda_{\text{v}} \sum_{s \in S} v_s^2
+\end{equation}
+where $u_q$ represents item difficulty, $k_s$ is the student-specific knowledge gap, and $v_s$ is the learning velocity deviation. This formulation implements a \textit{normal student prior}: the model assumes every subject adheres to the population-level parameters derived from the BKT reference unless their unique interaction history provides sufficient signal to justify the regularization cost. 
+
+
+
+\section{Experimental Validation} \label{sec_experiment}
+
+\subsection{Research Questions}
+
+The experimental validation of iDKT is guided by the following research questions:
+
+\begin{enumerate}
+    \item \textbf{Interpretability Validation (RQ1)}: Is it possible to rigorously validate that a iDKT model, whose representations are grounded in a reference model, actually yields interpretable constructs?
+    \item \textbf{Accuracy--Interpretability Trade-Off (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive accuracy?
+    \item \textbf{Higher Granularity (RQ3)}: Can the proposed model capture individualized latent factors at a higher level of granularity than the reference model?
+\end{enumerate}
 
 \subsection{The Probing Method} \label{sec_probing}
 
@@ -332,16 +335,14 @@ To rigorously validate that iDKT’s latent representations encode the intended 
 \end{enumerate}
 
 
-
-
-\subsection{Formal Validation Framework} \label{sec_validation}
+\subsection{Interpretability Validation} \label{sec_validation}
 
 To verify that iDKT’s internal representations ($l_c, t_s, u_q$) reflect educational constructs throughout training, we establish a formal framework across five psychometric hypotheses:
 
 \begin{enumerate}
     \item \textbf{$H_1$: Convergent Validity (Latent Fidelity)}: Pearson correlation between latent projections ($l_c, t_s$) and reference BKT parameters. High alignment proves the model has internalized the theoretical constructs.
     \item \textbf{$H_2$: Predictor Equivalence (Behavioral Alignment)}: Functional substitutability of iDKT parameters into canonical BKT mastery recurrence equations. This ensures factors preserve their causal roles defined by theory.
-    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
+    \item \textbf{$H_3$: Discriminant Validity (Construct Distinctness)}: Verifies that Knowledge Gap ($k_s$) and Learning Velocity ($v_s$) are not perfectly collinear, proving the model can distinguish between prior knowledge and acquisition pace.
     \item \textbf{$H_4$: Mastery Monotonicity}: Trajectory analysis to verify that the grounded latent space respects the non-forgetting behavior inherent in BKT.
     \item \textbf{$H_5$: Parameter Recovery}: Ability of the architecture to recover known student and item parameters from synthetic BKT-generated datasets.
 \end{enumerate}
@@ -357,25 +358,6 @@ Values of $C \ge 0.90$ indicate "Diagnostic Consensus," where the deep learning 
 \subsection{The Accuracy--Interpretability Trade-Off} \label{sec_tradeoff}
 
 A key contribution of this work is the systematic exploration of the trade-off between predictive accuracy and theoretical fidelity. By modulating the grounding weight $\lambda_{ref}$ in Equation 7, we identify the Pareto frontier of the model. This allows us to determine the "Inductive Bias Bonus"—points where theoretical grounding acts as a beneficial regularizer that improves generalization—and the point of "Over-Constraint," where excessive adherence to the reference model begins to degrade predictive power.
-
-
-\section{Experimental Validation} \label{sec_experiment}
-
-\subsection{Research Questions and Hypotheses}
-
-The experimental validation of iDKT is guided by the following research questions:
-
-\paragraph{RQ1: Interpretability via Representational Grounding}
-Does the proposed Representational Grounding framework effectively bridge the semantic gap between deep latent representations and pedagogical constructs? Specifically, can a Transformer based on this framework achieve a high degree of Convergent Validity (numerical alignment) and Predictor Equivalence (behavioral alignment) with respect to a theoretical reference model?
-\textit{Hypothesis:} By anchoring the Transformer's latent space to the conceptual primitives of a reference model, it is possible to learn internal states that preserve their functional roles and align with theoretical parameters.
-
-\paragraph{RQ2: Accuracy--Interpretability Trade-Off}
-To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive accuracy?
-\textit{Hypothesis:} There exists an optimal grounding weight $\lambda$ that balances theoretical fidelity and predictive performance, forming a Pareto frontier.
-
-\paragraph{RQ3: Granularity of Individualization}
-Does our proposed framework allow a Transformer-based model to recover latent factors with higher granularity than population-level baselines?
-\textit{Hypothesis:} iDKT can successfully estimate student-specific traits (initial knowledge and learning velocity) that are traditionally masked by fixed averages in simpler models like BKT.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
