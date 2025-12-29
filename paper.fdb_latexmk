@@ -1,0 +1,12 @@
+# Fdb version 3
+["pdflatex"] 1767038066 "paper/latex/paper.tex" "paper.pdf" "paper" 1767038066
+  "/etc/texmf/web2c/texmf.cnf" 1766826484 475 c0e671620eb5563b2130f56340a5fde8 ""
+  "/usr/share/texlive/texmf-dist/web2c/texmf.cnf" 1581979058 38841 ce3692aa899bb693b90b87eaa5d4d84e ""
+  "/usr/share/texmf/web2c/texmf.cnf" 1581979058 38841 ce3692aa899bb693b90b87eaa5d4d84e ""
+  "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1766826500 4877423 437a1a75fc525326c628674933c3203a ""
+  "Definitions/mdpi.cls" 0 -1 0 ""
+  "paper.aux" 1767038066 8 a94a2480d3289e625eea47cd1b285758 ""
+  "paper/latex/paper.tex" 1767038061 61618 fd484b82d70424318bbbcf94d2018daa ""
+  (generated)
+  "paper.pdf"
+  "paper.log"

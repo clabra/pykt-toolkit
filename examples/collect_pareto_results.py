@@ -79,7 +79,7 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
         df = df.sort_values('lambda').reset_index(drop=True)
     return df
 
-def plot_pareto(df, output_dir="assistant"):
+def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png"):
     if df.empty:
         print("No results to plot.")
         return
@@ -96,6 +96,12 @@ def plot_pareto(df, output_dir="assistant"):
     if plot_df.empty:
         print("No alignment data found for Pareto plot. Generating AUC vs Lambda only.")
     else:
+        # Sort values by lambda to ensure the line follows the parameter sweep order
+        plot_df = plot_df.sort_values('lambda')
+        
+        # Add a connecting line (straight lines)
+        plt.plot(plot_df['fidelity'], plot_df['test_auc'], 'k-', alpha=0.3, linewidth=1.5, zorder=2, label='Pareto Trend')
+        
         scatter = plt.scatter(plot_df['fidelity'], plot_df['test_auc'], 
                              c=plot_df['lambda'], cmap='viridis', s=100, edgecolors='black', zorder=3)
         plt.colorbar(scatter, label='Grounding Strength (λ)')
@@ -115,8 +121,8 @@ def plot_pareto(df, output_dir="assistant"):
             plt.text(plateau_x[0] - 0.005, plt.ylim()[0] + 0.01, 'Theory Saturation Point (λ=0.3)', 
                      color='red', rotation=90, verticalalignment='bottom', fontsize=9, fontweight='bold')
 
-        plt.savefig(os.path.join(output_dir, "idkt_pareto_frontier.png"), dpi=300, bbox_inches='tight')
-        print(f"✓ Saved Pareto plot to {output_dir}/idkt_pareto_frontier.png")
+        plt.savefig(os.path.join(output_dir, filename), dpi=300, bbox_inches='tight')
+        print(f"✓ Saved Pareto plot to {output_dir}/{filename}")
 
     # 2. Performance & Fidelity vs Lambda Trend
     plt.figure(figsize=(10, 6))
@@ -142,13 +148,14 @@ def main():
     parser.add_argument("--pattern", default="*idkt_pareto_v2*")
     parser.add_argument("--output", default="assistant/pareto_results.csv")
     parser.add_argument("--plot_dir", default="assistant")
+    parser.add_argument("--filename", default="idkt_pareto_frontier.png")
     args = parser.parse_args()
     
     df = collect_results(args.exp_root, args.pattern)
     if not df.empty:
         df.to_csv(args.output, index=False)
         print(f"✓ Saved results CSV to {args.output}")
-        plot_pareto(df, output_dir=args.plot_dir)
+        plot_pareto(df, output_dir=args.plot_dir, filename=args.filename)
     else:
         print("No matching results found.")
 
