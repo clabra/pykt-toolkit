@@ -355,9 +355,9 @@ To evaluate the predictive performance of the iDKT model, we used the Area Under
 %\isPreprints{\centering}{} % Only used for preprints
 \begin{tabularx}{\textwidth}{lccccc}
 \toprule
-\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{Algebra2005} & \textbf{Bridge2006} & \textbf{NIPS34} \\
+\textbf{Model} & \textbf{AS2009\_S} & \textbf{AS2015} & \textbf{Algebra2005} & \textbf{Bridge2006} & \textbf{NIPS34} \\
 \midrule
-iDKT & 0.8358 & 0.7252 & 0.9281 & 0.8092 & 0.7987 \\
+iDKT & 0.8255 & 0.7252 & 0.9281 & 0.8092 & 0.7987 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -415,7 +415,7 @@ Upon enabling Representational Grounding ($\lambda_{ref}=0.10$), we observe a si
 \toprule
 \textbf{Dataset} & \textbf{$I_1$ (Init.)} & \textbf{Int.} & \textbf{$I_1$ (Rate)} & \textbf{Int.} & \textbf{$I_2$} & \textbf{Int.} \\
 \midrule
-AS2009 & 0.5166 & Good & 0.2864 & Poor & 0.2178 & Poor \\
+AS2009\_S & 0.5409 & Good & 0.3131 & Fair & 0.6250 & Excell. \\
 AS2015 & 0.9217 & Excell. & 0.8801 & Excell. & 0.1749 & Poor \\
 Algebra2005 & 0.5444 & Good & 0.3310 & Fair & 0.0661 & Negl. \\
 Bridge2006 & 0.4561 & Fair & 0.6422 & Good & 0.0859 & Negl. \\
@@ -515,14 +515,22 @@ To statistically quantify this granularity, we analyze the \textit{delta distrib
 
 Figure \ref{fig_delta} visualizes the delta distributions for both datasets. The width of the curves quantifies the pedagogical information that is lost when using population-level averages. This variance allows the system to distinguish between students who are faster than suggested by theoretical priors and those who require additional practice to reach mastery.
 
+\subsubsection{High-Granularity Trajectory Analysis} \label{sec_mosaic_analysis}
+
+To provide definitive visual evidence for RQ3, we generated a Mastery Alignment Mosaic (Figure~\ref{fig_mosaic}) displaying individualized trajectories for three learning archetypes (Fast, Median, Slow) across 15 skills. For rigorous validation, we utilized the ``Set S Isolation'' strategy, restricting the analysis to students with continuous interaction histories ($\le 200$ steps) and recalibrating the BKT reference exclusively on this population.
+
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=1.0\textwidth]{img/volume_as2015.png}\\
-{\small (b) ASSISTments 2015}
-\includegraphics[width=1.0\textwidth]{img/volume_as2009.png}\\
-{\small (a) ASSISTments 2009}\\[10pt]
-\caption{Delta distributions showing student learning rate deviations from the baseline. \label{fig_delta}}
+\includegraphics[width=1.0\textwidth]{img/mastery_alignment_mosaic_real.png}
+\caption{Mastery Trajectory Alignment Mosaic for AS2009\_S. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \label{fig_mosaic}}
 \end{figure}
+
+The qualitative analysis of these trajectories reveals three significant pedagogical insights:
+\begin{enumerate}
+    \item \textbf{Dynamic Diagnostic Placement}: Even when BKT is forced to start at the population prior ($L_0$), iDKT starting points ($t=1$) vary per student. This demonstrates that iDKT leverages cross-skill behavioral transfers to perform individualized placement before the first interaction with a new skill.
+    \item \textbf{Trajectory Crossovers}: We observe instances where students starting with lower initial mastery overtake peers due to a higher identified learning velocity ($t_s$). This confirms iDKT's ability to model individualized acquisition rates beyond population-level curves.
+    \item \textbf{Diagnostic Resilience}: iDKT displays superior stability compared to BKT baselines. While isolated failures cause sharp drops in BKT dashed lines, iDKT solid lines for high-velocity learners remain stable, correctly identifying temporary slips vs.\ fundamental knowledge loss.
+\end{enumerate}
 
 \subsubsection{Confidence} \label{sec_confidence}
 

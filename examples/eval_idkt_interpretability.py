@@ -248,28 +248,24 @@ def main():
             all_idkt_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())
             all_bkt_p.extend(torch.masked_select(bkt_p_batch, sm).cpu().numpy())
             
-            # Static BKT Priors for Initial Mastery alignment
-            bkt_im_static_batch = torch.zeros_like(cshft).float().to(device)
-            for b in range(cshft.shape[0]):
-                for s in range(cshft.shape[1]):
-                    skill_id = cshft[b, s].item()
+            # Prepare full-sequence references (including index 0)
+            bkt_im_static_full = torch.zeros_like(cc_full).float().to(device)
+            ref_rate_full = torch.zeros_like(cc_full).float().to(device)
+            for b in range(cc_full.shape[0]):
+                for s in range(cc_full.shape[1]):
+                    skill_id = cc_full[b, s].item()
                     if skill_id != -1:
-                        bkt_im_static_batch[b, s] = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])['prior']
+                        params = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])
+                        bkt_im_static_full[b, s] = params['prior']
+                        ref_rate_full[b, s] = params['learns']
 
             # Use shifted idkt results for masked select
             all_idkt_initmastery.extend(torch.masked_select(idkt_im_batch[:, 1:], sm).cpu().numpy())
-            all_bkt_initmastery.extend(torch.masked_select(bkt_im_static_batch, sm).cpu().numpy())
-            
-            # Reference rates
-            ref_rate_batch = torch.zeros_like(cshft).float().to(device)
-            for b in range(cshft.shape[0]):
-                for s in range(cshft.shape[1]):
-                    skill_id = cshft[b, s].item()
-                    if skill_id != -1:
-                        ref_rate_batch[b, s] = bkt_skill_params['params'].get(skill_id, bkt_skill_params['global'])['learns']
+            # For correlation metrics, keep only shifted indices [1:] to maintain standard benchmark
+            all_bkt_initmastery.extend(torch.masked_select(bkt_im_static_full[:, 1:], sm).cpu().numpy())
             
             all_idkt_rate.extend(torch.masked_select(idkt_r_batch[:, 1:], sm).cpu().numpy())
-            all_bkt_rate.extend(torch.masked_select(ref_rate_batch, sm).cpu().numpy())
+            all_bkt_rate.extend(torch.masked_select(ref_rate_full[:, 1:], sm).cpu().numpy())
 
             # H2: Calculate Induced Mastery Trajectories
             for b in range(uids.shape[0]):
@@ -312,30 +308,34 @@ def main():
                 indices = torch.where(student_mask)[0]
                 
                 # 1. Interaction Records (FOR ALL STUDENTS)
-                for idx in indices:
+                # For plots, we include index 0 to ensure trajectories start at the prior
+                full_seq_mask = cc_full[b] != -1
+                full_indices = torch.where(full_seq_mask)[0]
+                
+                for idx in full_indices:
                     # Parameter Alignment
                     param_records.append({
                         'student_id': raw_uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'idkt_im': idkt_im_batch[b, 1+idx].item(),
-                        'bkt_im': bkt_im_static_batch[b, idx].item(),
+                        'skill_id': cc_full[b, idx].item(),
+                        'idkt_im': idkt_im_batch[b, idx].item(),
+                        'bkt_im': bkt_im_static_full[b, idx].item(),
                     })
                     # Trajectory Alignment
                     traj_records.append({
                         'student_id': raw_uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'y_true': int(rshft[b, idx].item()),
-                        'p_idkt': y[b, 1+idx].item(),
-                        'y_idkt': 1 if y[b, 1+idx].item() > 0.5 else 0,
-                        'p_bkt': bkt_p_batch[b, idx].item(),
-                        'y_bkt': 1 if bkt_p_batch[b, idx].item() > 0.5 else 0,
+                        'skill_id': cc_full[b, idx].item(),
+                        'y_true': int(cr_full[b, idx].item()),
+                        'p_idkt': y[b, idx].item(),
+                        'y_idkt': 1 if y[b, idx].item() > 0.5 else 0,
+                        'p_bkt': bkt_p_batch[b, idx].item() if idx < bkt_p_batch.shape[1] else -1.0,
+                        'y_bkt': 1 if (idx < bkt_p_batch.shape[1] and bkt_p_batch[b, idx].item() > 0.5) else 0,
                     })
                     # Rate Alignment
                     rate_records.append({
                         'student_id': raw_uid,
-                        'skill_id': cshft[b, idx].item(),
-                        'idkt_rate': idkt_r_batch[b, 1+idx].item(),
-                        'bkt_rate': ref_rate_batch[b, idx].item(),
+                        'skill_id': cc_full[b, idx].item(),
+                        'idkt_rate': idkt_r_batch[b, idx].item(),
+                        'bkt_rate': ref_rate_full[b, idx].item(),
                     })
 
                 # 2. Roster Export (ONLY FOR TRACKED STUDENTS)

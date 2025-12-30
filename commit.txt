@@ -1,0 +1,7 @@
+feat: implement Set S Isolation to resolve BKT Windowing Artifact
+- Added examples/create_set_s.py: Generic script to create artifact-free dataset partitions for students with total history ≤ 200.
+- Resolved BKT Windowing Artifact: Documented and fixed the row-level state reset bug by implementing a "Clean-Room" environment (assist2009_S).
+- Recursive BKT Recalibration: Re-trained BKT baseline exclusively on the Set-S population to ensure mathematically unbiased grounding targets.
+- Fixed Plot Alignment: Modified interpretability evaluation to explicitly log Interaction 0, ensuring consistent dashed BKT baselines for all skill plots.
+- Visualization Depth: Updated Mosaic Plot logic to prioritize students with >10 interactions, enabling visualization of trajectory crossovers and diagnostic resilience.
+- Scientific Validation: Integrated final Set S metrics into LaTeX; achieved major leap in Predictor Equivalence (I2: 0.22 → 0.625) and Semantic Disentanglement (H3: 0.017).

@@ -2568,3 +2568,34 @@ To verify the fix, we compared the post-fix experiment with the preceding bugged
 2.  **Accuracy-Interpretability Synergy**: Contrary to the assumption that increased constraints degrade performance, the fix resulted in a significant **+0.012 AUC boost**. This indicates that by correctly grounding the individualization parameters, the Transformer was able to more effectively leverage student-specific behavioral patterns to improve its predictions.
 3.  **Enhanced Latent Fidelity**: The massive leap in $I_1$ (from 0.51 to 0.77) confirms that the model is no longer "blind" to student parameters during representational grounding. The latent space is now geometrically aligned with the theoretical construct of initial mastery at both the population and individual levels.
 
+## Bug 2025/12/30: BKT Windowing Artifact
+
+### Root Cause: Row-Level State Isolation
+A fundamental data artifact was discovered in the `augment_with_bkt.py` script that affects students with long interaction histories ($L > 200$). The script processes the `_sequences.csv` files, which were pre-partitioned into non-overlapping windows of length $m=200$ by the `pykt/preprocess/split_datasets.py` utility.
+
+Because the augmentation script initializes its internal Bayesian state (`student_mastery = {}`) at the beginning of every CSV row, it fails to carry over mastery beliefs between windows for the same student. Consequently:
+1.  **Window 1 (interactions 1-200)**: BKT starts correctly at the population prior $L_0$.
+2.  **Window 2 (interactions 201-400)**: BKT erroneously **resets to the prior $L_0$**, treating a matured student as a complete beginner.
+
+### Impact on iDKT Grounding
+This "Forgetful BKT" artifact introduces semantic noise into the Representational Grounding process ($L_{initmastery}$ and $L_{rate}$). The iDKT model—which possesses longitudinal memory via self-attention—is forced to align its latent diagnostic $l_c$ with a target that periodically "jumps" back to the population mean. This artifact was visually confirmed in early mosaic plots where BKT dashed lines for the same skill originated from different heights depending on whether the selected window was a "First Appearance" or a "Continuation Window."
+
+### Dataset Taxonomy and Usage
+The `pykt` framework generates several variations of the interaction data from the original `train.csv` and `test.csv` (Full History) files. Understanding these is critical for correctly interpreting evaluation metrics.
+
+| File Suffix | Partitioning Logic | Seq Length | Primary Usage |
+| :--- | :--- | :---: | :--- |
+| `_valid.csv` / `_test.csv` | **Full History** | Full ($L$) | Base storage for generating folds and windowing. |
+| `_sequences.csv` | **Non-overlapping** | Fixed ($m$) | **Primary Training & Evaluation**: Standard input for `train_idkt.py` and `eval_idkt.py`. |
+| `_window_sequences.csv` | **Sliding Windows** | Fixed ($m$) | **Fine-grained Evaluation**: Used to measure AUC/Acc at every interaction step. |
+| `_quelevel.csv` | **Question-Aggregated** | Variable | **Multi-concept Support**: Used for reporting Question-Level metrics. |
+
+### Resolution Strategy: Set S Isolation
+To achieve the most rigorous validation for the iDKT paper while avoiding the complexity of re-engineering the entire PyKT preprocessing pipeline, we adopted a **Set S Isolation** strategy.
+
+We partitioned the test dataset based on the cutoff threshold $m=200$:
+*   **Set S (Short Learners)**: Interactions $\le 200$. In `assist2009`, this represents **703 students (91.3%)**.
+*   **Set L (Long Learners)**: Interactions $> 200$. Represents **67 students (8.7%)**.
+
+By focusing latent validation (Probing $I_3$ and Mosaic Visualizations) on **Set S**, we ensure a deterministic comparison where every student history is 100% continuous and the BKT baseline is guaranteed to be stable and aligned to the true theoretical prior $L_0$.
+

@@ -92,12 +92,20 @@ def main():
     
     # Select Skills
     skill_metrics = []
+    # Pre-calculate counts per student-skill to speed up filtering
+    student_skill_counts = pred.groupby(['skill_id', 'student_id']).size().reset_index(name='count')
+    
     for skill_id in params['skill_id'].unique():
-        s_params = params[params['skill_id'] == skill_id]
-        if len(s_params) < 10: continue
+        # Filter for students who have > 10 interactions for THIS skill
+        long_history_uids = student_skill_counts[(student_skill_counts['skill_id'] == skill_id) & 
+                                                (student_skill_counts['count'] > 10)]['student_id']
         
-        # Empirical Mode Alignment: Find the most common starting p_bkt for this skill
-        skill_preds_subset = pred[pred['skill_id'] == skill_id]
+        if len(long_history_uids) < 5: continue # Ensure we have enough candidates
+        
+        s_params = params[(params['skill_id'] == skill_id) & (params['student_id'].isin(long_history_uids))]
+        
+        # Empirical Mode Alignment (for beginners check)
+        skill_preds_subset = pred[(pred['skill_id'] == skill_id) & (pred['student_id'].isin(long_history_uids))]
         first_bkt_values = skill_preds_subset.groupby('student_id')['p_bkt'].first()
         empirical_prior = first_bkt_values.mode().iloc[0] if not first_bkt_values.empty else 0.5
         
@@ -111,7 +119,9 @@ def main():
         skill_metrics.append(metrics)
     
     df_m = pd.DataFrame(skill_metrics)
-    if df_m.empty: return
+    if df_m.empty: 
+        print("No skills found with students having > 10 interactions.")
+        return
 
     diverse_skills = df_m.sort_values('v_rate', ascending=False).head(15)['skill_id'].tolist()
     
@@ -129,15 +139,16 @@ def main():
         df_perf = skill_preds.groupby('student_id').agg({'y_true': ['mean', 'count'], 'p_bkt': 'first'}).reset_index()
         df_perf.columns = ['student_id', 'accuracy', 'count', 'p_bkt_first']
         
-        # Filter for students aligned to the mode (prior)
+        # Filter for students aligned to the mode (prior) AND having > 10 points
         beginners = df_perf[(df_perf['p_bkt_first'] - t_start).abs() < 1e-4]
-        if len(beginners) >= 3:
-            pool = beginners
-        else:
-            pool = df_perf # Fallback
-            
-        pool = pool[pool['count'] >= 5]
-        if pool.empty: pool = df_perf
+        pool = beginners[beginners['count'] > 10]
+        
+        if len(pool) < 3:
+            # Fallback: Just get any student with > 10 points for this skill
+            pool = df_perf[df_perf['count'] > 10]
+        
+        if pool.empty: # Final fallback if no one has > 10 points (should be rare given skill selection)
+             pool = df_perf.sort_values('count', ascending=False).head(5)
         
         merged = pool.merge(skill_params[['student_id', rate_col, init_col]].drop_duplicates(), on='student_id')
         merged['score_quick'] = 0.5 * merged['accuracy'] + 0.5 * (merged[rate_col] / (merged[rate_col].max() + 1e-6))
