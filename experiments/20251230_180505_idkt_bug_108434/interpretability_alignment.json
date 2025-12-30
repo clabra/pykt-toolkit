@@ -1,11 +1,11 @@
 {
-  "prediction_mse": 0.06146682798862457,
-  "prediction_corr": 0.5773751098070533,
-  "initmastery_mse": 0.03188708424568176,
-  "initmastery_corr": 0.7702915667179377,
-  "learning_rate_mse": 0.13885696232318878,
-  "learning_rate_corr": 0.23937894118700712,
-  "h2_functional_alignment": 0.24670620913991012,
-  "h3_discriminant_overlap": 0.0031421786344262917,
+  "prediction_mse": 0.05999203771352768,
+  "prediction_corr": 0.5681769361670592,
+  "initmastery_mse": 0.032389551401138306,
+  "initmastery_corr": 0.7568084536196632,
+  "learning_rate_mse": 0.14264561235904694,
+  "learning_rate_corr": 0.2088152754012963,
+  "h2_functional_alignment": 0.26564721242606526,
+  "h3_discriminant_overlap": 0.007723837855274406,
   "h3_latent_overlap": 0.2882492818202515
 }

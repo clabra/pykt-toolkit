@@ -23,6 +23,8 @@ from pykt.models.idkt_roster import IDKTRoster
 
 from pykt.models import init_model
 from pykt.datasets import init_dataset4train
+from pykt.datasets.idkt_dataloader import IDKTDataset
+from torch.utils.data import DataLoader
 from pykt.utils import set_seed
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -52,6 +54,7 @@ def parse_args():
     parser.add_argument("--dataset", type=str, required=True)
     parser.add_argument("--fold", type=int, required=True)
     parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--split", type=str, default="valid", choices=["valid", "test"], help="Dataset split to evaluate")
     
     # Architecture
     parser.add_argument("--d_model", type=int, default=256)
@@ -67,6 +70,7 @@ def parse_args():
     parser.add_argument("--roster_sampling_rate", type=int, default=10, help="Sample every N steps for roster export")
     parser.add_argument("--max_correlation_students", type=int, default=1000, help="Limit number of students for correlation export")
     parser.add_argument("--skip_roster", action="store_true", help="Skip expensive roster CSV export")
+    parser.add_argument("--theory_guided", type=int, default=1, help="Use theory-guided augmented columns (default 1)")
     
     return parser.parse_args()
 
@@ -107,16 +111,24 @@ def main():
     with open(bkt_params_path, 'rb') as f:
         bkt_skill_params = pickle.load(f)
 
-    # Load Augmented Test Data
-    # NOTE: We assume evaluate script normally uses test_file, but for interpretability we need BKT columns.
-    # We'll use the train_valid_file_bkt.csv for now as a proxy if test_bkt.csv doesn't exist.
-    # Actually, let's just use the validation loader from init_dataset4train which we know is augmented.
-    
+    # Load Dataset
     dpath = data_config[args.dataset]['dpath']
     orig_file = data_config[args.dataset]['train_valid_file']
-    data_config[args.dataset]['train_valid_file'] = orig_file.replace('.csv', '_bkt.csv')
     
-    _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+    if args.split == "test":
+        test_file = os.path.join(dpath, data_config[args.dataset]['test_file'])
+        if args.theory_guided:
+            test_file = test_file.replace('.csv', '_bkt.csv')
+        print(f"Loading test split: {test_file}")
+        valid_dataset = IDKTDataset(test_file, data_config[args.dataset]['input_type'], {-1})
+        valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+        roster_data_file = test_file
+    else:
+        augmented_train_file = orig_file.replace('.csv', '_bkt.csv')
+        data_config[args.dataset]['train_valid_file'] = augmented_train_file
+        print(f"Loading validation split (fold {args.fold})")
+        _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+        roster_data_file = os.path.join(dpath, augmented_train_file)
     
     # Build Index -> Raw UID Mapping
     ds = valid_loader.dataset
@@ -200,9 +212,9 @@ def main():
         }
     
     # Pre-initialize Rosters with a fixed set of student IDs to avoid KeyError
-    # We load the unique UIDs from the augmented CSV and pick the first N
-    augmented_csv_path = os.path.join(dpath, orig_file.replace('.csv', '_bkt.csv'))
-    df_aug = pd.read_csv(augmented_csv_path)
+    # We load the unique UIDs from the split CSV and pick the first N
+    print(f"Reading student IDs from: {roster_data_file}")
+    df_aug = pd.read_csv(roster_data_file)
     all_uids_in_csv = sorted(df_aug['uid'].unique().tolist())
     export_uids = all_uids_in_csv[:max_export_students]
     export_uids_set = set(export_uids)
@@ -335,7 +347,8 @@ def main():
                         correct = int(rshft[b, idx].item())
                         
                         idkt_roster.update_state(skill_id, raw_uid, correct)
-                        bkt_roster.update_state(str(skill_id), raw_uid, correct)
+                        if str(skill_id) in bkt_model.fit_model:
+                            bkt_roster.update_state(str(skill_id), raw_uid, correct)
                         
                         if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
                             bkt_mastery = {f"S{s}": bkt_roster.get_mastery_prob(str(s), raw_uid) for s in all_skills}
