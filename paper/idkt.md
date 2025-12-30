@@ -2527,3 +2527,44 @@ The following table compares the predictive performance (Test AUC) across variou
 **Observations:**
 - **Reproducibility:** Experiments `742098` and `863874` yielded identical results, confirming the robustness of the training pipeline.
 - **Grounding Impact:** The latest baseline (`499377`) operates at the "Interpretability Sweet Spot" ($\lambda=0.1$), sacrificing a nominal **$0.0068$ AUC points** (compared to the $\lambda=0$ configuration) to ensure high latent fidelity and pedagogical alignment.
+
+
+## Bug 2025/12/30: Individualization Signal Nullification
+
+**Symptom:**
+During the analysis of individualized mastery trajectories, it was observed that student-specific parameters for initial knowledge ($l_c$) and learning velocity ($t_c$) exhibited near-zero variance across different students for the same skill, despite the theoretical grounded model providing distinct population-level priors. While global divergence between BKT and iDKT was captured at the base embedding level, the student-level fine-tuning ($k_s, v_s$) failed to move away from the regularization prior (effectively stuck at zero).
+
+**Root Cause:**
+The issue was identified as a structural disconnect between the high-dimensional embedding space and the scalar projection heads used for Grounding Losses ($L_{init}, L_{rate}$) and logging. In `idkt.py`, the individualized embeddings are projected to scalars using a mean operation:
+$$initmastery = \sigma(\text{mean}(L_0 + k_s \cdot d_k))$$
+$$rate = \sigma(\text{mean}(T + v_s \cdot d_v))$$
+
+The semantic axes ($d_k, d_v$) were initialized with $\text{mean}=0.0$ and $\sigma=0.02$. Consequently, during the `.mean(dim=-1)` projection, the individualization terms ($k_s \cdot \text{mean}(d_k)$ and $v_s \cdot \text{mean}(d_v)$) effectively reduced to zero. This rendered the student-level parameters invisible to the alignment loss, creating a "gradient blind spot" where the model could not optimize student-specific deviations through representational grounding.
+
+**Impact:**
+*   **Alignment Failure:** The model was unable to learn individualized offsets for student capability or knowledge gaps via grounding, as the individualization signal was nullified during scalar projection.
+*   **Diagnostic Granularity Loss:** Mastery trajectories for different students within the same skill were identical, masking the model's capacity for fine-grained individualization.
+
+**Resolution:**
+The axes initialization in `pykt/models/idkt.py` was updated to utilize a **non-zero projection mean** ($\mu=1.0$):
+```python
+nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+```
+This ensures that the scalar projection is linear with respect to the student-specific parameters ($k_s, v_s$), allowing the grounding loss to propagate gradients to the individualization layers and enabling valid scalar-level alignment monitoring.
+
+**Empirical Validation (Experiment 108434):**
+To verify the fix, we compared the post-fix experiment with the preceding bugged baseline (`177339`) for the ASSISTments 2009 dataset ($\lambda=0.1$).
+
+| Metric | Bugged Baseline (177339) | Post-Fix Baseline (108434) | Difference/Gain |
+| :--- | :---: | :---: | :---: |
+| **Predictive Performance (AUC)** | 0.8355 | **0.8476** | **+0.0121** |
+| **Convergent Validity ($I_1$ Init)** | 0.5165 | **0.7702** | **+0.2537** |
+| **Individual Variance (Skill 1)** | $\sim 0.00004$ | **0.0184** | **+46,000%** |
+| **Functional Alignment ($I_2$)** | 0.2177 | 0.2467 | +0.0290 |
+
+**Interpretation of Results:**
+1.  **Restoration of Individualization**: The variance in $l_c$ (initial knowledge) across students for a single skill increased from effectively zero (floating-point noise) to significant pedagogical offsets. Student IDs that previously shared identical values now exhibit unique diagnostics (e.g., student 2055 is now correctly identified as having $+0.024$ higher initial proficiency than the baseline expectation).
+2.  **Accuracy-Interpretability Synergy**: Contrary to the assumption that increased constraints degrade performance, the fix resulted in a significant **+0.012 AUC boost**. This indicates that by correctly grounding the individualization parameters, the Transformer was able to more effectively leverage student-specific behavioral patterns to improve its predictions.
+3.  **Enhanced Latent Fidelity**: The massive leap in $I_1$ (from 0.51 to 0.77) confirms that the model is no longer "blind" to student parameters during representational grounding. The latent space is now geometrically aligned with the theoretical construct of initial mastery at both the population and individual levels.
+

@@ -60,9 +60,11 @@ class iDKT(nn.Module):
             self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
             self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
         
-        # Semantic Axes for Individualization
+        # Semantic Axes for Individualization (Initialized with mean=1.0 for scalar visibility)
         self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Knowledge axis (d_c)
         self.velocity_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Velocity axis (d_s)
+        nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+        nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
         
         # Theoretical Bases (Grounding points from BKT)
         self.l0_base_emb = nn.Embedding(self.n_question + 1, embed_l) # L0_skill (Prior Base)
@@ -135,9 +137,9 @@ class iDKT(nn.Module):
                 self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
                 self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
             
-            # Initialize axes with smaller scale (0.02) to ensure grounding dominates early
-            nn.init.normal_(self.knowledge_axis_emb.weight, mean=0, std=0.02)
-            nn.init.normal_(self.velocity_axis_emb.weight, mean=0, std=0.02)
+            # Initialize axes with mean=1.0 to ensure student parameters are visible through mean() projection
+            nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+            nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
                 
         print(f"  [iDKT] Textured Theory Bases (N(logit, 0.05)) and Relational Axes initialized.")
 
