@@ -492,24 +492,24 @@ The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} an
 
 \subsection{Improvement of Pedagogical Diagnostics (RQ3)} \label{sec_gran_results}
 
-The primary value of iDKT lies in its ability to transform population-level theoretical averages into high-granular contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles.
-
-In the following sections, we analyze how the architectural design of iDKT enables high-granularity diagnostics through three distinct perspectives: the statistical variance of estimated student parameters, the resilience of mastery estimations against behavioral noise, and the enabling of individualized adaptive pacing.
+In the following sections, we analyze how the architectural design of iDKT can be leveraged to improve pedagogical diagnostics 
 
 \subsubsection{Contextualization} \label{sec_longitudinal}
 
-High-granularity enables the estimation of mastery trajectories by leveraging a student's cross-curricular historical context. 
+The capability of iDKT to leverage longitudinal context is illustrated in Figure \ref{fig_mastery_866}, which contrasts its mastery estimations with the BKT baseline for a high-proficiency learner. While BKT leads to excessive volatility---where isolated failures are interpreted as significant knowledge drops---iDKT maintains a stable and resilient diagnostic trajectory. 
 
-This capability is illustrated in Figure \ref{fig_mastery_866}, which contrasts the iDKT and BKT estimations for a high-velocity learner. While the BKT baseline fails to account for the student's broader interaction history---thereby penalizing each individual failure with a significant drop in mastery probability---iDKT maintains a stable and resilient diagnostic trajectory. By leveraging the longitudinal context, iDKT is able to contextualize the failures in a more efficient manner. This inherent capacity of Transformer-based architectures, and iDKT in particular, to encode longitudinal context is a key enabler for supporting individualized learning paths. 
+The core of this advantage lies in the self-attention mechanism, which enables iDKT to encode longitudinal context by dynamically weighting the entire interaction history. Instead of relying solely on the most recent state, iDKT evaluates each interaction in the context of the student's established behavioral patterns. In the scenario shown in Figure \ref{fig_mastery_866}, the model maintains a high mastery estimation despite sporadic failures because the attention weights remain anchored to the student's longitudinal progression. This capacity to distinguish between temporary behavioral noise (e.g., slips) and genuine changes in knowledge state represents a fundamental improvement over classical baselines, supporting robust and individualized diagnostics.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.75\textwidth]{img/idkt_mastery_866.png}
-\caption{Comparison of two mastery trajectories estimated by iDKT and BKT that shows how the iDKT trajectory is more stable and resilient against behavioral noise. \label{fig_mastery_866}} 
+\caption{Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \label{fig_mastery_866}} 
 \end{figure} 
 
 
 \subsubsection{Individualization} 
+
+The primary value of iDKT lies in its ability to transform population-level theoretical averages into high-granular contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles.
 
 To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = t_s - T$), representing the student-specific deviation from the theoretical learning rate across all skills. In both ASSISTments datasets, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a substantial increase in diagnostic resolution compared to the BKT baseline, where $\sigma = 0$. The right-skewed tail in the distributions identifies a sub-population of fast learners whose true acquisition pace is systematically underestimated by classical models.
 
@@ -517,9 +517,9 @@ Figure \ref{fig_delta} visualizes the delta distributions for both datasets. The
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.9\textwidth]{img/volume_as2015.png}\\
+\includegraphics[width=1.0\textwidth]{img/volume_as2015.png}\\
 {\small (b) ASSISTments 2015}
-\includegraphics[width=0.9\textwidth]{img/volume_as2009.png}\\
+\includegraphics[width=1.0\textwidth]{img/volume_as2009.png}\\
 {\small (a) ASSISTments 2009}\\[10pt]
 \caption{Delta distributions showing student learning rate deviations from the baseline. \label{fig_delta}}
 \end{figure}
