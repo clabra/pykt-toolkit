@@ -441,7 +441,7 @@ I = \frac{1}{3} \left( I_{1l} + I_{1t} + I_{2} \right)
 
 Tables \ref{tab_pareto_as2015} and \ref{tab_pareto_as2009} summarize the performance and alignment results for the ASSISTments 2009 and 2015 datasets across a systematic sweep of the grounding weight $\lambda_{ref}$ (Equation \ref{eq_loss}). 
 
-The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009}. We observe that theoretical guidance serves as a powerful regularizer; even a small weight ($\lambda=0.10$) causes a massive leap in interpretability with minimal impact on accuracy. However, excessive grounding leads to a collapse in denser datasets like AS2009, where the model can no longer reconcile complex behavioral patterns with simple pedagogical assumptions.
+Figure \ref{fig_pareto_as2009} illustrates the resulting Pareto frontier for ASSISTments 2009. We observe a distinctive \textit{synergy point} at $\lambda=0.10$, where the inclusion of the pedagogical prior actually improves predictive performance (+0.0048 AUC points) compared to the unconstrained baseline. This indicates that for complex student behavior, the BKT-guided inductive bias serves as a highly effective regularizer. However, as the constraint weight exceeds $\lambda=0.3$, we observe a \textit{grounding collapse}, where the model's capacity to represent behavioral nuances is over-restricted by the theoretical prior, leading to a simultaneous drop in both accuracy and interpretability.
 
 \begin{figure}[htbp]
 \centering
@@ -475,19 +475,19 @@ The resulting Pareto curves are visualized in Figures \ref{fig_pareto_as2015} an
 \toprule
 \textbf{$\lambda_{ref}$} & \textbf{Performance (AUC)} & \textbf{Interpretability (I)} & \textbf{Interpretation} \\
 \midrule
-0.0 (Baseline) & 0.8358 & 0.0140 & Black Box \\
-0.1 (Sweet Spot) & 0.8290 & 0.3402 & Accurate \& Balanced \\
-0.2 & 0.8096 & 0.3986 & Theory-Dominant \\
-0.3 & 0.7917 & 0.4131 & Peak Alignment \\
-0.5 & 0.7686 & 0.1866 & Saturated \\
-1.0 & 0.7456 & 0.0378 & Theoretical Collapse \\
+0.0 (Baseline) & 0.8207 & 0.0293 & Black Box \\
+0.1 (Synergy Spot) & 0.8255 & 0.3846 & Enhanced Performance \\
+0.2 & 0.8110 & 0.4270 & Theory-Informed \\
+0.3 & 0.7963 & 0.4790 & Peak Alignment \\
+0.5 & 0.7760 & 0.4125 & Saturated \\
+1.0 & 0.7501 & 0.0714 & Theoretical Collapse \\
 \bottomrule
 \end{tabularx}
 
 \vspace{10em}
 
 \includegraphics[width=1.0\textwidth]{img/pareto_as2009.png}
-\caption{iDKT Pareto Frontier for ASSISTments 2009. The curve shows a non-monotonic relationship where interpretability peaks at $\lambda \approx 0.3$, followed by a \textit{grounding collapse} as the model fails to reconcile excessive constraints. \label{fig_pareto_as2009}}
+\caption{iDKT Pareto Frontier for ASSISTments 2009. The curve displays a \textit{synergy point} where performance peaks at $\lambda = 0.1$, followed by a \textit{grounding collapse} as excessive constraints over-regularize the latent space. \label{fig_pareto_as2009}}
 \end{figure}
 
 \subsection{Improvement of Pedagogical Diagnostics (RQ3)} \label{sec_gran_results}

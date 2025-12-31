@@ -1,7 +1,7 @@
 {
   "defaults": {
     "model": "idkt",
-    "dataset": "assist2015",
+    "dataset": "assist2009_S",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
@@ -90,5 +90,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "7808930603fa2a5f8bead05e66eb5539"
+  "md5": "f6bd1943a3d9024133c06f83450fe8d0"
 }
