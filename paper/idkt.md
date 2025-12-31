@@ -2599,3 +2599,30 @@ We partitioned the test dataset based on the cutoff threshold $m=200$:
 
 By focusing latent validation (Probing $I_3$ and Mosaic Visualizations) on **Set S**, we ensure a deterministic comparison where every student history is 100% continuous and the BKT baseline is guaranteed to be stable and aligned to the true theoretical prior $L_0$.
 
+## Twin Trajectories: Contextual vs. Markovian Diagnostics
+
+### Objective
+To demonstrate the limitations of purely Markovian models (like BKT) in educational diagnostics and how iDKT leverages longitudinal Transformer attention to capture student-specific latent context. We aim to show that even when two students exhibit **identical behavior** on a specific skill, iDKT can distinguish their mastery based on their unique learning histories.
+
+### Methodology: The "Twin Sequence" Experiment
+We performed a "Twin Hunt" across the test set, identifying pairs of students who share the exact same sequence of correct ($o$) and incorrect ($x$) responses for the same Knowledge Component (Skill). 
+
+1. **BKT (Baseline)**: Being a Markovian model, BKT's mastery estimate depends solely on the current skill's history. For any "Response Twins," BKT is mathematically forced to produce identical trajectories.
+2. **iDKT (Contextual)**: iDKT utilizes the entire student curriculum as context. Even for identical sequences on a specific skill, iDKT can assign different initial proficiencies ($l_c$) and learning velocities ($v_s$) based on global performance patterns.
+
+### Visual Analysis
+The following figure illustrates a spectacular "Twin Divergence" for **Skill 11** in the ASSISTments 2009 dataset.
+
+![Twin Sequence Divergence](latex/img/twin_divergence.png)
+
+**Key Observations:**
+* **Non-Markovian Initialization**: At Step 0, both students have failed twice. BKT assigns them the same low mastery. However, iDKT recognizes that Student 306 ("Struggling Specialist") has some foundational knowledge here despite their poor global track record (16% success), starting them higher.
+* **Velocity Divergence (The Cross-Over)**: Student 1154 ("High-Velocity Generalist") has a much stronger global curriculum history (45% success). Although they start lower on this specific skill, iDKT identifies a high learning velocity ($v_s$). After the first success, their mastery **shoots up vertically**, eventually overtaking Student 306.
+* **Pedagogical Insight**: iDKT distinguishes between a student who "knows the basics but learns slowly" versus a "fast learner who started from scratch." This level of granularity is invisible to BKT.
+
+### Reproducibility
+The visualization can be regenerated using the following command (requires the `traj_predictions.csv` from experiment `20251230_224907_idkt_setS-pure_364494`):
+
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/plot_twin_divergence.py"
+```
