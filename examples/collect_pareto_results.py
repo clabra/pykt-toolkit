@@ -79,7 +79,7 @@ def collect_results(exp_root="experiments", pattern="*idkt_pareto_v2*"):
         df = df.sort_values('lambda').reset_index(drop=True)
     return df
 
-def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png"):
+def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png", saturation_lambda=0.3):
     if df.empty:
         print("No results to plot.")
         return
@@ -114,11 +114,11 @@ def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png")
             plt.annotate(f"λ={row['lambda']:.2f}", (row['fidelity'], row['test_auc']), 
                         xytext=(5, 5), textcoords='offset points', fontsize=8)
                         
-        # Highlight Fidelity Plateau at λ=0.3
-        plateau_x = plot_df[plot_df['lambda'] == 0.3]['fidelity'].values
+        # Highlight Fidelity Plateau at saturation_lambda
+        plateau_x = plot_df[plot_df['lambda'] == saturation_lambda]['fidelity'].values
         if len(plateau_x) > 0:
             plt.axvline(x=plateau_x[0], color='red', linestyle='--', alpha=0.5, label='Fidelity Saturation')
-            plt.text(plateau_x[0] - 0.005, plt.ylim()[0] + 0.01, 'Theory Saturation Point (λ=0.3)', 
+            plt.text(plateau_x[0] - 0.005, plt.ylim()[0] + 0.01, f'Theory Saturation Point (λ={saturation_lambda:.1f})', 
                      color='red', rotation=90, verticalalignment='bottom', fontsize=9, fontweight='bold')
 
         plt.savefig(os.path.join(output_dir, filename), dpi=300, bbox_inches='tight')
@@ -137,10 +137,6 @@ def plot_pareto(df, output_dir="assistant", filename="idkt_pareto_frontier.png")
     plt.ylim(0, 1.05)
     plt.savefig(os.path.join(output_dir, "idkt_sensitivity_analysis.png"), dpi=300, bbox_inches='tight')
     print(f"✓ Saved Sensitivity plot to {output_dir}/idkt_sensitivity_analysis.png")
-    plt.legend()
-    plt.ylim(0, 1.05)
-    plt.savefig(os.path.join(output_dir, "idkt_sensitivity_analysis.png"), dpi=300, bbox_inches='tight')
-    print(f"✓ Saved Sensitivity plot to {output_dir}/idkt_sensitivity_analysis.png")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -149,13 +145,14 @@ def main():
     parser.add_argument("--output", default="assistant/pareto_results.csv")
     parser.add_argument("--plot_dir", default="assistant")
     parser.add_argument("--filename", default="idkt_pareto_frontier.png")
+    parser.add_argument("--saturation_lambda", type=float, default=0.3)
     args = parser.parse_args()
     
     df = collect_results(args.exp_root, args.pattern)
     if not df.empty:
         df.to_csv(args.output, index=False)
         print(f"✓ Saved results CSV to {args.output}")
-        plot_pareto(df, output_dir=args.plot_dir, filename=args.filename)
+        plot_pareto(df, output_dir=args.plot_dir, filename=args.filename, saturation_lambda=args.saturation_lambda)
     else:
         print("No matching results found.")
 
