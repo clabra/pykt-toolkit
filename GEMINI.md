@@ -8,7 +8,28 @@ The key contributions of the paper will be a new Transformer attention-based mod
 
 ## Paper Publication
 
-The paper is intended to be published in this [MDPI special issue](https://www.mdpi.com/journal/applsci/special_issues/KODK4051XS) that, ultimately, aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Its target is researchers and practitioners interested in original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts. So, the abstract should highlight the practical outcomes of the approach more than architecture approaches or technical novelties. We should try to answer the question: what can be done with our proposal than can't be done without it?. 
+The paper is intended to be published in this [MDPI special issue](https://www.mdpi.com/journal/applsci/special_issues/KODK4051XS) that, ultimately, aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Its target is researchers and practitioners interested in original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts. So, the abstract should highlight the practical outcomes of the approach more than architecture approaches or technical novelties. We should try to answer the question: what can be done with our proposal than can't be done without it?.
+
+## MDPI Special Issue Information
+
+Artificial intelligence (AI) and educational data mining (EDM) are profoundly transforming the educational landscape, reshaping the paradigms of teaching and learning. AI applications in education enable the analysis of large datasets, revealing intricate patterns in student behaviour and facilitating the personalisation of learning experiences. The GED, meanwhile, provides detailed information that enables evidence-based decision-making in education. Likewise, the integration of human–computer interaction (HCI) improves the accessibility and personalisation of educational interfaces, making learning tools more intuitive and responsive, and more advanced methods, including predictive modelling and machine learning algorithms, allow educational systems to dynamically adapt to individual needs, fostering a more inclusive and learner-centred approach to education. This Special Issue calls on the academic community to examine how these technologies are driving the development of adaptive learning environments, enabling early identification of student needs and promoting accessibility and equity in education.
+
+Ultimately, this Special Issue aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Researchers and practitioners are invited to contribute original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts.
+
+The scope of the Special Issue includes, but is not limited to, the following topics:
+
+- Artificial intelligence in education;
+- Educational data mining (EDM);
+- Interactive machine learning (IML);
+- Human-in-the-loop machine learning and machine teaching;
+- Educational data mining and learning analytics;
+- Predictive modelling in education;
+- Machine learning for learning analytics;
+- Neural networks in educational AI;
+- Natural language processing (NLP) in education;
+- Intelligent tutoring systems (ITS);
+- AI ethics in education;
+- Inclusion and accessibility in AI tools.
 
 ## Paper Abstract
 
