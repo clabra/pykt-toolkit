@@ -2626,3 +2626,156 @@ The visualization can be regenerated using the following command (requires the `
 ```bash
 docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/plot_twin_divergence.py"
 ```
+
+## Plots
+
+### Probing Plots
+
+#### A. Population-Level Alignment (Statistical Reliability)
+![Pearson Distribution](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/probing_pearson_dist.png)
+
+The distribution of Pearson correlation coefficients ($r$) across all skills in the ASSIST2009 dataset demonstrates the **systemic reliability** of iDKT's grounding. With a median correlation of **0.60** and nearly half the skills exceeding **$r > 0.7$**, the model proves that "Representational Grounding" is a core structural property rather than an isolated phenomenon. The high-performance tail (skills with $r > 0.9$) indicates that for many concepts, iDKT has effectively achieved "Predictor Equivalence" with BKT.
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_probing_report.py"
+```
+
+#### B. Latent Manifold Topology (Global Probing)
+![Global t-SNE](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/probing_tsne.png)
+
+The global t-SNE projection provides a "birds-eye view" of the iDKT internal world. By coloring interactions by their reference BKT Mastery, we observe a continuous **Mastery Gradient**. This visualization reveals that iDKT organizes student states hierarchically:
+*   **Global Clusters**: Are primarily driven by semantic concept similarity (Skill IDs).
+*   **Local Gradients**: Within those clusters, students are arranged along a spectrum from "Unmastered" (Purple) to "Mastered" (Yellow).
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_tsne_probing.py"
+```
+
+#### C. Individualized Learning Trajectories
+![Student Trajectories](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/probing_trajectories.png)
+
+By tracing specific students through the latent manifold, we prove that iDKT captures **Learning Dynamics** geometrically:
+*   **Latent Velocity**: The distance between interaction arrows serves as a proxy for the learning rate. High-performing students (e.g., Student 166, Red) show larger spatial jumps as they "accelerate" toward mastery clusters.
+*   **Path Persistence**: The continuity of the lines demonstrates that the model maintains a temporally consistent representation of the student's journey, rather than treating each interaction as a disjoint event.
+*   **Individualized Stalling**: Low performers (e.g., Student 520, Yellow) remain geographically trapped in unmastered regions, visually documenting their struggle despite a high volume of interactions.
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_student_trajectories.py"
+```
+
+### Bifurcation Plot
+
+![Bifurcation Analysis](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/skill_68_bifurcation_analysis.png)
+
+The bifurcation plot for Skill 68 reveals a sophisticated internal organization of the iDKT latent manifold. We observe two distinct vertical point clouds that demonstrate a clear decoupling of transient interaction outcomes from persistent mastery:
+
+1.  **Horizontal Bifurcation (PC1 - Performance Shock)**: The latent space is split horizontally into two primary "performance clouds." The left cloud consists entirely of interactions resulting in failure ($r=0$), while the right cloud represents successes ($r=1$). This indicates that the first principal component (PC1) captures the immediate "shock" or behavioral feedback from the student's most recent interaction.
+2.  **Vertical Gradient (PC2 - Persistent Mastery)**: Within each independent performance cloud, a high-fidelity mastery gradient is preserved vertically ($r=0.993$). Purple points (low mastery) consistently occupy the lower regions of each cloud, while yellow points (high mastery) occupy the upper regions.
+3.  **Psychometric Significance**: This decoupling is a critical evidence of representational grounding. It proves that iDKT does not treat "performance" (getting a question right) as synonymous with "knowledge" (mastery state). Instead, the model's manifold is structured to handle psychometric noise:
+    *   **Guesses**: Are represented as points in the "Success" cloud (Right) that remain lower on the vertical mastery axis (Purple/Teal).
+    *   **Slips**: Are represented as points in the "Failure" cloud (Left) that remain high on the vertical mastery axis (Yellow/Green).
+
+This structural invariance to transient behavioral shocks allows iDKT to maintain stable and accurate diagnostic placement even in the presence of stochastic student behavior.
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_skill_bifurcation.py"
+```
+
+Interpretation for the paper:
+>The latent structure of iDKT demonstrates a decoupling of transient interaction outcomes from persistent mastery. While the first principal component (PC1) accounts for the immediate binary feedback (success vs. failure), the second principal component (PC2) preserves a high-fidelity mastery gradient ($r=0.993$) that is invariant to these transient shocks. This architecture allowed the model to maintain sensitive diagnostic tracking even in the presence of stochastic student behavior (slips and guesses).
+
+### Students Clustering
+
+Beyond interaction-level predictions, the interpretable parameters of iDKT enable the discovery of population-level student archetypes. We performed clustering analysis using two distinct grounded spaces: **Diagnostic Placement** (Alpha/Beta parameters) and **Curriculum Fingerprints** (Multidimensional Skill Profiles).
+
+#### A. Diagnostic Space: Placement vs. Pacing
+![Placement vs Pacing](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/cluster_placement_pacing.png)
+
+| Cluster | Color | Label | Standing | Diagnostic Context |
+| :--- | :--- | :--- | :--- | :--- |
+| **Cluster 0** | 🔴 Red | **Initial Standing / Consolidating Pacing** | Low $\alpha_s$, Lowest $\beta_s$ | Early stages of acquisition; progress requires significant consolidation. |
+| **Cluster 1** | 🟠 Orange | **Initial Standing / Developing Pacing** | Low $\alpha_s$, Moderate $\beta_s$ | Starting from a low base but showing improved acquisition rates. |
+| **Cluster 2** | 🔵 Blue | **Initial Standing / High-Velocity Growth** | Low $\alpha_s$, High $\beta_s$ | Rapid knowledge acquisition despite a foundational entry point. |
+| **Cluster 3** | 🟢 Green | **Advanced Standing / Sustained Acceleration** | High $\alpha_s$, High $\beta_s$ | Consistent growth starting from a high initial proficiency. |
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_student_clusters.py"
+```
+
+**Paper Interpretation**:
+> "The mapping of iDKT’s individualized parameters into a 2D diagnostic space provides a mathematically grounded framework for automated instructional placement. By decoupling initial standing from current learning velocity, iDKT allows adaptive systems to differentiate between prerequisite foundational needs and the transient pacing of knowledge acquisition."
+
+#### B. Knowledge Space: Curriculum Fingerprints
+![Skill Profile PCA](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/cluster_skill_profiles.png)
+
+This visualization clusters students based on their final latent state across all 123 skills simultaneously. 
+*   **Dimensionality Reduction**: We apply PCA to the final BKT-grounded mastery estimates ($H_T$) for the entire population. The first two principal components (PC1 and PC2) capture **99.4%** of the total variance, providing a near-complete representation of the curriculum's latent structure.
+*   **Interpretation**: The distinct clusters represent groups of students who share specific **Knowledge Gaps**. Instead of being distributed along a single "ability" line, students are differentiated by *which* specific concepts they have mastered, forming discrete pedagogical cohorts.
+
+| Cluster | Color | Label | Signature Characteristics | Relative Proficiency |
+| :--- | :--- | :--- | :--- | :--- |
+| **Cluster 0** | 🔴 Red | **Focus Area: Foundational Concepts** | Gaps in foundational skills such as **Circumference** and **Unit Rate**. | **Emergent** ($-0.40\sigma$) |
+| **Cluster 1** | 🟠 Orange | **Profile: Arithmetic Development** | Proficiency in arithmetic but stabilization in skills like **Volumes of Prisms**. | **Developing** ($-0.13\sigma$) |
+| **Cluster 2** | 🔵 Blue | **Profile: Conceptual & Spatial Reasoning** | Proficient in **Absolute Value**, **Finding Slope**, and **Spatial Geometry**. | **Proficient** ($+0.11\sigma$) |
+| **Cluster 3** | 🟢 Green | **Profile: Advanced Numerical Fluency** | Highest mastery in **Equivalent Fractions**, **Percents**, and **Pattern Analysis**. | **Advanced** ($+0.32\sigma$) |
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_student_clusters.py"
+```
+
+**Paper Interpretation**:
+> "The clustering of multidimensional skill profiles reveals the inherent 'latent topography' of the curriculum. By identifying shared knowledge fingerprints, iDKT enables the design of cohort-specific instructional pathways, where specific pedagogical interventions can be aligned with the collective developmental state of each cluster."
+
+### Curriculum Calibration Heatmap
+
+![Curriculum Heatmap](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/skill_difficulty_heatmap.png)
+
+The Curriculum Calibration Heatmap visualizes the relationship between the model's internal mastery estimations and the empirical difficulty of skills across the population. It provides a "stress test" of iDKT's representational grounding by showing how different student archetypes interact with varying levels of concept complexity.
+
+*   **Horizontal Axis (X)**: Represents **Skill Difficulty Deciles** (0 = Easiest, 9 = Hardest). 
+*   **Skill Selection & Binning**: All skills present in the dataset (123 total) are ranked by their empirical global error rate ($1 - ACC$). They are then partitioned into ten equal-sized groups (deciles), where Decile 0 contains the 12 easiest skills and Decile 9 contains the 12 most challenging.
+*   **Vertical Axis (Y)**: Represents the four **Diagnostic Clusters** (Cluster 0 to Cluster 3) identified in the knowledge space profiling.
+*   **Cell Value (Color)**: Represents the mean latent mastery ($\mathbf{h}_T$) predicted by iDKT for that specific cluster/difficulty intersection.
+
+#### Interpretation & Validity Evidence:
+1.  **Prerequisite Ceilings**: In **Cluster 0** (Initial Standing), we observe a rapid transition from mastery (Green) to nonmastery (Red) as difficulty increases. This visually defines the "Prerequisite Ceiling" for this group, where latent knowledge is strictly limited to the easiest 20% of the curriculum.
+2.  **Emergent Frontiers**: **Clusters 1 and 2** exhibit a gradual color gradient, demonstrating an "Emergent Mastery" frontier. These groups are actively bridging the gap between foundational numeracy and secondary algebraic concepts.
+3.  **Cross-Curricular Proficiency**: **Cluster 3** (Advanced) maintains high mastery levels ($>0.60$) even into the highest difficulty deciles, confirming that the model has identified a high-proficiency latent state that is robust to complex problem sets.
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_curriculum_heatmap.py"
+```
+
+**Paper Interpretation**:
+> "The curriculum calibration heatmap serves as an empirical proof of representational fidelity. It demonstrates that iDKT does not treat all skills as uniform; instead, it has internally mapped a complexity topology where different student cohorts exhibit distinct 'knowledge ceilings' that correlate perfectly with the empirical difficulty of the material."
+
+### Pedagogical Diagnostic Map
+
+![Pedagogical Skill Map](../experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494/probing_plots/pedagogical_skill_map_concise.png)
+
+The Pedagogical Diagnostic Map serves as a high-resolution curriculum guide for educators, providing a $N \times M$ matrix ($N$ clusters $\times M$ skills) of mastery expectations. It enables the translation of deep latent representations into actionable pedagogical interventions.
+
+*   **Vertical Axis (Y)**: Lists selected curriculum skills.
+*   **Skill Selection (Concise Version)**: For legibility in publication, we select the **Extremes of Mastery** across the curriculum ($M=30$). This includes the Top 15 skills with the highest global mean latent mastery (most frequently mastered) and the Bottom 15 skills with the lowest global mean (most frequently unmastered).
+*   **Horizontal Axis (X)**: Displays the four student clusters (Diagnostic Standing).
+*   **Cell Value**: The specific mean latent mastery ($\mathbf{h}_T$) for that skill-cohort intersection.
+
+#### Actionable Utility for Educators:
+1.  **Targeted Remediation**: Educators can identify "Red Zones" in their specific cohort's profile. For example, if **Cluster 0** shows mastery in *Basic Addition* but critical failure in *Absolute Value*, the map provides a precise entry point for intervention.
+2.  **Differentiated Pathways**: The map identifies the "Next Best Skill" for each group. While **Cluster 3** might be ready for *Algebraic Simplification*, the map might suggest that **Cluster 1** first needs to stabilize *Arithmetic Development*.
+3.  **Group-Level Diagnostic Positioning**: By analyzing the entire curriculum footprint, practitioners can move beyond individual student tracking to manage the learning progression of collective latent cohorts.
+
+**Reproduction Command**:
+```bash
+docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/viz_skill_mastery_map.py"
+```
+
+**Paper Interpretation**:
+> "The generated pedagogical map transforms iDKT from a predictive model into a prescriptive diagnostic tool. By projecting high-dimensional latent states into a interpretable skill-by-cohort matrix, it provides educators with a comprehensive 'knowledge blueprint' that supports data-driven differentiation and precision instructional design."

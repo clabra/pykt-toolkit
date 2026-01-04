@@ -141,13 +141,14 @@ def parse_args():
 def extract_embeddings_and_targets(model, loader, bkt_df, device):
     """
     Runs model on loader, extracts embeddings, and aligns with BKT targets using robust signatures.
-    Returns: (X, y, skills)
+    Returns: (X, y, skills, r_true)
     """
     model.eval()
     
     embeddings_list = []
     targets_list = []
     skills_list = []
+    r_true_list = []
     
     # Build Index -> Raw UID Mapping for current loader
     idx_to_uid = {}
@@ -230,6 +231,7 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                             embeddings_list.append(concat_q_np[b_idx, 1+t])
                             targets_list.append(p_bkt)
                             skills_list.append(skill_id)
+                            r_true_list.append(y_true)
                             found = True
                             match_count += 1
                             break
@@ -257,8 +259,9 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
     X = np.vstack(embeddings_list)
     y = np.array(targets_list)
     skills = np.array(skills_list)
+    r_true = np.array(r_true_list)
     
-    return X, y, skills
+    return X, y, skills, r_true
 
 def run_probing_experiment(X, y, seed, output_dir=None):
     """

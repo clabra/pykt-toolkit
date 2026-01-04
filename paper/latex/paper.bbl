@@ -72,6 +72,74 @@ Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
 \newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
   p. 1–1.
 
+\bibitem[Zanellati et~al.(2024)Zanellati, Di~Mitri, Gabbrielli, and
+  Levrini]{zanellati2024hybrid}
+Zanellati, A.; Di~Mitri, D.; Gabbrielli, M.; Levrini, O.
+\newblock Hybrid models for knowledge tracing: A systematic literature review.
+\newblock {\em IEEE Transactions on Learning Technologies} {\bf 2024}, {\em
+  17},~1021--1036.
+
+\bibitem[Pandey and Karypis(2019)]{pandey2019self}
+Pandey, S.; Karypis, G.
+\newblock A self-attentive model for knowledge tracing.
+\newblock {\em arXiv preprint arXiv:1907.06837} {\bf 2019}.
+
+\bibitem[Choi et~al.(2020)Choi, Lee, Cho, Baek, Kim, Cha, Shin, Bae, and
+  Heo]{choi2020towards}
+Choi, Y.; Lee, Y.; Cho, J.; Baek, J.; Kim, B.; Cha, Y.; Shin, D.; Bae, C.; Heo,
+  J.
+\newblock Towards an appropriate query, key, and value computation for
+  knowledge tracing.
+\newblock In Proceedings of the Proceedings of the seventh ACM conference on
+  learning@ scale,  2020, pp. 341--344.
+
+\bibitem[Ghosh et~al.(2020)Ghosh, Heffernan, and Lan]{ghosh2020context}
+Ghosh, A.; Heffernan, N.; Lan, A.S.
+\newblock Context-aware attentive knowledge tracing.
+\newblock In Proceedings of the Proceedings of the 26th ACM SIGKDD
+  international conference on knowledge discovery \& data mining,  2020, pp.
+  2330--2339.
+
+\bibitem[Alain and Bengio(2016)]{alain2016understanding}
+Alain, G.; Bengio, Y.
+\newblock Understanding intermediate layers using linear classifier probes.
+\newblock {\em arXiv preprint arXiv:1610.01644} {\bf 2016}.
+
+\bibitem[Zhao et~al.(2024)Zhao, Chen, Yang, Liu, Deng, Cai, Wang, Yin, and
+  Du]{zhao2024explainability}
+Zhao, H.; Chen, H.; Yang, F.; Liu, N.; Deng, H.; Cai, H.; Wang, S.; Yin, D.;
+  Du, M.
+\newblock Explainability for Large Language Models: A Survey.
+\newblock {\em ACM Transactions on Intelligent Systems and Technology (TIST)}
+  {\bf 2024}, {\em 15},~1--38.
+
+\bibitem[Bartoszcze et~al.(2025)]{bartoszcze2025representation}
+Bartoszcze, L.;  et~al.
+\newblock Representation Engineering for Large-Language Models: Survey and
+  Research Challenges.
+\newblock {\em arXiv preprint arXiv:2502.17601} {\bf 2025}.
+
+\bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
+Hewitt, J.; Liang, P.
+\newblock Designing and Interpreting Probes with Control Tasks.
+\newblock In Proceedings of the Proceedings of the 2019 Conference on Empirical
+  Methods in Natural Language Processing and the 9th International Joint
+  Conference on Natural Language Processing (EMNLP-IJCNLP); Inui, K.; Jiang,
+  J.; Ng, V.; Wan, X., Eds., Hong Kong, China,  2019; pp. 2733--2743.
+\newblock {\url{https://doi.org/10.18653/v1/D19-1275}}.
+
+\bibitem[Belinkov(2022)]{belinkov2022probing}
+Belinkov, Y.
+\newblock Probing classifiers: Promises, shortcomings, and advances.
+\newblock {\em Computational Linguistics} {\bf 2022}, {\em 48},~207--219.
+
+\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
+  Gordon]{yudelson2013individualized}
+Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
+\newblock Individualized bayesian knowledge tracing models.
+\newblock In Proceedings of the International conference on artificial
+  intelligence in education. Springer,  2013, pp. 171--180.
+
 \bibitem[Liu et~al.(2022)Liu, Liu, Chen, Huang, Tang, and Luo]{liu2022pykt}
 Liu, Z.; Liu, Q.; Chen, J.; Huang, S.; Tang, J.; Luo, W.
 \newblock pyKT: a python library to benchmark deep learning based knowledge
