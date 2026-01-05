@@ -2,9 +2,14 @@
 
 This document details the technical implementation and scientific rationale behind the evaluation of the iDKT model. It explains the divergence from standard benchmarking protocols in favor of interpretability-focused metrics and provides a guide for fair comparison.
 
+Note: **KC Level, One-by-one protocol is required** for "Scientific Alignment" with the BKT reference model. Since BKT updates its mastery state after every single interaction (point-to-point), iDKT must follow the same temporal cadence to maintain a valid mapping between latent representations and pedagogical constructs. The current benchmark configuration implements the KC Level, One-by-one protocol, ensuring a fair and mathematically sound comparison between standard DLKT models and iDKT.
+
 ## 1. Evaluation Granularity: Concept-Level vs. Question-Level
 
 In Knowledge Tracing, datasets often contain questions associated with multiple Knowledge Components (KCs). Standard benchmarks (like the original PyKT paper) typically emphasize **Question-Level** performance.
+
+> Although predictions at both question level and KC level are very important and useful for building personalized educational applications, when conducting offline model comparisons, it is recommended that the DLKT models are evaluated on prediction tasks at the question level instead of at the KC level. This is because (1) we only observe student responses on questions and have no ground truth about KCs; (2) a question may be associated with multiple KCs and evaluation results on KC level may overestimate or underestimate the real model performance. (@liu_2023_pykt)
+
 
 ### The iDKT Approach: Pure Concept Evaluation
 iDKT experiments launched via `run_repro_experiment.py` and `eval_idkt.py` utilize **Concept-Level (Skill-Level)** evaluation without fusion.
@@ -16,6 +21,9 @@ iDKT experiments launched via `run_repro_experiment.py` and `eval_idkt.py` utili
 ## 2. Temporal Logic: One-by-One vs. All-in-One
 
 The "All-in-One" approach requires estimating all KCs of a multi-KC question simultaneously using only history *prior* to that question. iDKT instead uses **One-by-One** (or point-to-point) evaluation.
+
+> Predictions of mastery level of KCs within a question should be predicted in an “all-in-one” manner. The “all-in-one” prediction approach requires to simultaneously estimate the mastery level of all the KCs under each specific question. As illustrated in Figure 2, when predicting the outcome of q6 that is associated with both k3 and k4, we should estimate ˆyk3 and ˆyk4 independently at the same time. Surprisingly, this crucial issue is neglected in some existing works, whose open sourced implementations conduct one-by-one evaluation on the expanded KC-response sequence, i.e., predicting ˆykt+1 given all the responses (or labels) of ˆyk1 , ˆyk2 , · · · , ˆykt are known. Unfortunately, this will cause the leakage of the ground truth since consecutive KCs like kt and kt+1 may be associated with the same questions, which is referred to as the label leakage problem. Such dependent predictions will artificially boost prediction performance and empirical analysis on this issue is discussed in Section 4.1 (@liu_2023_pykt)
+
 
 ### The "Grounding Chain" Argument
 iDKT is designed to align with a **BKT Reference Model**. BKT updates its mastery estimation after every single interacton (point-to-point). 

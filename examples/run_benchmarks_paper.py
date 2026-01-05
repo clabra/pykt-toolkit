@@ -63,20 +63,22 @@ from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Models from PyKT paper (Liu et al., 2023)
-#BENCHMARK_MODELS = [
-#    "dkt", "dkt+", "dkt_forget", "kqn", "dkvmn", "atkt", "gkt", "sakt", "saint", "akt"
-#]
 BENCHMARK_MODELS = [
-"akt"
+    "dkt", "dkt+", "dkt_forget", "kqn", "dkvmn", "atkt", "gkt", "sakt", "saint", "akt"
 ]
 
-# 4 'S' datasets (truncated to sequence length 200)
-#BENCHMARK_DATASETS = [
-#    "assist2009_S", "assist2015_S", "bridge2algebra2006_S", "nips_task34_S"
+#BENCHMARK_MODELS = [
+#    "akt"
 #]
+
+# 4 'S' datasets (truncated to sequence length 200)
 BENCHMARK_DATASETS = [
-    "assist2009_S"
+    "assist2009_S", "assist2015_S", "bridge2algebra2006_S", "nips_task34_S"
 ]
+
+#BENCHMARK_DATASETS = [
+#    "assist2009_S"
+#]
 
 
 # Mapping models to training scripts
@@ -95,8 +97,8 @@ MODEL_SCRIPTS = {
 }
 
 # Environment Config
-PROJECT_ROOT = "/workspaces/pykt-toolkit"
-VENV_PYTHON = "/home/vscode/.pykt-env/bin/python3"
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+VENV_PYTHON = sys.executable
 
 def run_cmd(cmd, log_path, env=None, cwd=None):
     """Run a process and direct output to log."""
@@ -106,7 +108,7 @@ def run_cmd(cmd, log_path, env=None, cwd=None):
         process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, start_new_session=True)
         return process.wait()
 
-def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None):
+def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None, dry_run=False):
     """
     Worker that uses run_repro_experiment.py to launch a training task.
     Logs are written directly into the experiment folder.
@@ -149,6 +151,8 @@ def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None
         "--force_id", exp_id,
         "--num_gpus", "1" # Already limited by CUDA_VISIBLE_DEVICES
     ]
+    if dry_run:
+        cmd.append("--dry_run")
 
     if parent_folder:
         cmd.extend(["--parent_folder", parent_folder])
@@ -347,6 +351,7 @@ def main():
     parser = argparse.ArgumentParser(description="Reproducible multi-model benchmark scheduler.")
     parser.add_argument("--mode", choices=["training", "evaluation", "results"], required=True)
     parser.add_argument("--gpus", default="0,1,2,3,4,5", help="6 GPUs to use")
+    parser.add_argument("--dry_run", action="store_true", help="If set, only print commands without executing them.")
     args = parser.parse_args()
 
     gpus = args.gpus.split(",")
@@ -376,7 +381,7 @@ def main():
                         gpu_id = gpus[idx % max_workers]
                         delay = min((idx % max_workers) * 20, 120) # Stagger starts (audit can be heavy)
                         print(f"[QUEUE] {model} on {dataset} fold {fold} (GPU {gpu_id})")
-                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder))
+                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder, args.dry_run))
                         idx += 1
             
             for future in as_completed(futures):

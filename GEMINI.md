@@ -48,7 +48,7 @@ The scope of the Special Issue includes, but is not limited to, the following to
 
 - `/data`: Processed datasets ready for training
 - `/data_original`: Raw datasets (do not modify)
-- `data/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `data/[DATASET]/keyid2idx.json`, a bidirectional mapping dictionary that converts between original dataset IDs and zero-based sequential indices used internally by the pykt framework.
+- `assistant/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `data/[DATASET]/keyid2idx.json`, a bidirectional mapping dictionary that converts between original dataset IDs and zero-based sequential indices used internally by the pykt framework.
 
 ## Environment Setup
 
@@ -88,7 +88,7 @@ when you change any parameter default value (the reference values are in paper/p
 - Do NOT modify files in `/data_original` directory
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
 - DO NOT modify existent models in `pykt/models` (only the new created model/s). The code and scripts for existent models in the pykt framework mustn't be changed. We only want to contribute a new model, without modifing existent ones.
-
+- DO NOT modify scripts in examples such as wandb_train.py, wandb_predict.py or wandb_[model_name]_train.py that are use by pykt framework to train and evaluate models. 
 ## Guidelines
 
 ### pykt Standards
