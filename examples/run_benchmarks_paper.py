@@ -168,7 +168,9 @@ def find_experiment_folder(model, dataset, fold):
     # Pattern: Search PROJECT_ROOT/experiments for folders containing fold_X
     # We use rglob to find nested folders
     base_path = Path(PROJECT_ROOT) / "experiments"
+    print(f"[DEBUG] Searching in {base_path} for fold_{fold}_*")
     matches = list(base_path.rglob(f"fold_{fold}_*"))
+    print(f"[DEBUG] Found {len(matches)} potential fold matches")
     
     # Also check legacy flat structure for backward compatibility
     legacy_matches = list(base_path.glob(f"*_{model}_benchpaper_*"))
@@ -179,19 +181,30 @@ def find_experiment_folder(model, dataset, fold):
     for m in matches:
         config_path = Path(m) / "config.json"
         if config_path.exists():
-            with open(config_path) as f:
-                cfg = json.load(f)
-                # Resolve actual dataset/fold/model from config
-                # Priority: input (user overrides) > defaults (config fallback)
-                cfg_in = cfg.get("input", {})
-                cfg_def = cfg.get("defaults", {})
-                
-                c_data = cfg_in.get("dataset", cfg_def.get("dataset"))
-                c_fold = cfg_in.get("fold", cfg_def.get("fold"))
-                c_model = cfg_in.get("model", cfg_def.get("model"))
+            try:
+                with open(config_path) as f:
+                    cfg = json.load(f)
+            except json.JSONDecodeError:
+                print(f"[WARN] Skipped corrupted config: {config_path}")
+                continue
+            
+            # Resolve actual dataset/fold/model from config
+            # Priority: input (user overrides) > defaults (config fallback)
+            cfg_in = cfg.get("input", {})
+            cfg_def = cfg.get("defaults", {})
+            
+            c_data = cfg_in.get("dataset", cfg_def.get("dataset"))
+            c_fold = cfg_in.get("fold", cfg_def.get("fold"))
+            c_model = cfg_in.get("model", cfg_def.get("model"))
 
-                if c_data == dataset and c_fold == fold and c_model == model:
-                    valid_matches.append((os.path.getmtime(m), m))
+            if c_data == dataset and str(c_fold) == str(fold) and c_model == model:
+                valid_matches.append((os.path.getmtime(m), m))
+            else:
+                # Debug why it failed
+                try: 
+                    print(f"[DEBUG] Skip {m}: Data({c_data}!={dataset}) Fold({c_fold}!={fold}) Model({c_model}!={model})")
+                except:
+                    pass
     
     if not valid_matches:
         return None
@@ -215,6 +228,16 @@ def evaluate_worker(model, dataset, fold, gpu_id):
     if not eval_cmd:
         return (model, dataset, fold, -1, "Eval command missing in config.json")
 
+    # Force use of current sys.executable to ensure correct environment (fix ModuleNotFoundError)
+    if "python" in eval_cmd:
+        # Generic replace of explicit python paths common in docker
+        eval_cmd = eval_cmd.replace("/usr/bin/python3", sys.executable)
+        eval_cmd = eval_cmd.replace("/usr/bin/python", sys.executable)
+        # Also replace bare python3 if it starts with it (after &&)
+        # But safer to just prepend sys.executable if we reconstruct command.
+        # However, eval_cmd is a shell string "cd ... && python ...".
+        # We rely on replacement or we could parse it. Replacement is safer for now.
+    
     # Hardcode evaluation mode for Scientific Alignment (KC-level, no fusion)
     # We modify the command to override fusion if it was set to defaults
     if "wandb_predict" in eval_cmd:
@@ -352,10 +375,18 @@ def main():
     parser.add_argument("--mode", choices=["training", "evaluation", "results"], required=True)
     parser.add_argument("--gpus", default="0,1,2,3,4,5", help="6 GPUs to use")
     parser.add_argument("--dry_run", action="store_true", help="If set, only print commands without executing them.")
+    parser.add_argument("--dataset", type=str, default=None, help="Filter by dataset")
+    parser.add_argument("--model", type=str, default=None, help="Filter by model")
+    parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
     args = parser.parse_args()
 
     gpus = args.gpus.split(",")
     max_workers = len(gpus)
+
+    # Determine execution scope
+    models_to_run = [args.model] if args.model else BENCHMARK_MODELS
+    datasets_to_run = [args.dataset] if args.dataset else BENCHMARK_DATASETS
+    folds_to_run = [args.fold] if args.fold is not None else range(5)
 
     if args.mode == "training":
         # Global timestamp for this benchmark session
@@ -371,13 +402,17 @@ def main():
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             idx = 0
-            for model in BENCHMARK_MODELS:
-                for dataset in BENCHMARK_DATASETS:
+            futures = []
+            idx = 0
+            for model in models_to_run:
+                for dataset in datasets_to_run:
                     # Nested directory: [campaign]/[model]/[dataset]
                     # This ensures all experiments are in one timestamped root
                     group_folder = f"{campaign_folder}/{model}/{dataset}"
                     
-                    for fold in range(5):
+                    group_folder = f"{campaign_folder}/{model}/{dataset}"
+                    
+                    for fold in folds_to_run:
                         gpu_id = gpus[idx % max_workers]
                         delay = min((idx % max_workers) * 20, 120) # Stagger starts (audit can be heavy)
                         print(f"[QUEUE] {model} on {dataset} fold {fold} (GPU {gpu_id})")
@@ -392,9 +427,11 @@ def main():
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             idx = 0
-            for dataset in BENCHMARK_DATASETS:
-                for model in BENCHMARK_MODELS:
-                    for fold in range(5):
+            futures = []
+            idx = 0
+            for dataset in datasets_to_run:
+                for model in models_to_run:
+                    for fold in folds_to_run:
                         gpu_id = gpus[idx % max_workers]
                         futures.append(executor.submit(evaluate_worker, model, dataset, fold, gpu_id))
                         idx += 1
@@ -405,11 +442,14 @@ def main():
         import numpy as np
         print(f"{'Dataset':<22} | {'Model':<12} | {'AUC':<15} | {'ACC':<15} | {'Fold Details'}")
         print("-" * 100)
-        for dataset in BENCHMARK_DATASETS:
-            for model in BENCHMARK_MODELS:
+        print("-" * 100)
+        for dataset in datasets_to_run:
+            for model in models_to_run:
                 metrics = {"auc": [], "acc": []}
                 fold_details = []
-                for fold in range(5):
+                metrics = {"auc": [], "acc": []}
+                fold_details = []
+                for fold in folds_to_run:
                     exp_dir = find_experiment_folder(model, dataset, fold)
                     auc, acc = None, None
                     status = "MISSING"

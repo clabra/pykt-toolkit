@@ -11,8 +11,15 @@ from sklearn.metrics import r2_score
 from scipy.stats import pearsonr
 from sklearn.decomposition import PCA
 
-# --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, default="/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494")
+    return parser.parse_args()
+
+args = parse_args()
+EXP_DIR = args.experiment_dir
 OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

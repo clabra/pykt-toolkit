@@ -1,6 +1,7 @@
 
 import os
 import sys
+import argparse
 import json
 import torch
 import numpy as np
@@ -14,15 +15,8 @@ from sklearn.decomposition import PCA
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from pykt.models import init_model
-from pykt.datasets.init_dataset import init_test_datasets
+from pykt.datasets import init_dataset4train
 from examples.train_probe import extract_embeddings_and_targets
-
-# --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
-CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
-BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
-OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Selected Students for Trajectories (High, Middle, Low performance)
 STUDENT_IDS = [166, 530, 520]
@@ -91,7 +85,26 @@ def plot_trajectories(X_bg, y_bg, student_data, output_path):
     plt.close()
     print(f"Saved trajectory plot to {output_path}")
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="assist2009_S") # Validation set default
+    parser.add_argument("--skill_id", type=int, default=68) # Default for skill-specific plots
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    EXP_DIR = args.experiment_dir
+    CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
+    BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
+    OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Optional parameters for specific scripts
+    SKILL_ID = args.skill_id
+
     # Load config
     config_path = os.path.join(EXP_DIR, "config.json")
     with open(config_path, 'r') as f:
@@ -102,13 +115,18 @@ def main():
     project_root = "/workspaces/pykt-toolkit"
     data_config_path = os.path.join(project_root, 'configs/data_config.json')
     with open(data_config_path, 'r') as f:
-        data_config = json.load(f)[dataset_name]
+        data_config = json.load(f)
     
-    data_config["dataset_name"] = dataset_name
-    data_config['dpath'] = os.path.join(project_root, data_config['dpath'].replace("../", ""))
+    # Fix paths in full config
+    if dataset_name in data_config and 'dpath' in data_config[dataset_name]:
+         data_config[dataset_name]['dpath'] = os.path.join(project_root, data_config[dataset_name]['dpath'].replace("../", ""))
     
     # Init Loader
-    test_loader, _, _, _ = init_test_datasets(data_config, 'idkt', params['batch_size'])
+    # Load fold from config
+    fold = config.get('input', {}).get('fold', 0)
+    # Init Loader (Validation)
+    # Pass full data_config to init_dataset4train
+    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
     
     # Load Model
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')
@@ -120,15 +138,21 @@ def main():
         'n_blocks': params['n_blocks'], 'dropout': params['dropout'], 'final_fc_dim': params['final_fc_dim'],
         'l2': params['l2'], 'n_uid': n_uid
     }
-    model = init_model('idkt', model_config, data_config, params['emb_type'])
+    # Pass dataset specific config to init_model
+    model = init_model('idkt', model_config, data_config[dataset_name], params['emb_type'])
     model.load_state_dict(state_dict)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
     # Extract All for matching
     bkt_df = pd.read_csv(BKT_PREDS)
-    X, y, skills = extract_embeddings_and_targets(model, test_loader, bkt_df, device)
+    # Correct unpacking for 4 values
+    X, y, skills, _ = extract_embeddings_and_targets(model, test_loader, bkt_df, device)
     
+    if X is None:
+        print("Error: No data extracted.")
+        return
+
     # Organize extracted data by student
     # Since we need to preserve sequence order, we can't just group the raw extracted X, y.
     # We should filter by UID from the results.
@@ -213,8 +237,10 @@ def main():
                     p_idkt = round(float(preds_np[b_idx, 1+t]), 6)
                     model_sig = (skill_id, y_true, p_idkt)
                     
+                    # Relaxed match similar to train_probe
+                    found = False
                     for b_sig, p_bkt in student_sigs:
-                        if model_sig == b_sig:
+                        if (model_sig[0] == b_sig[0]) and (model_sig[1] == b_sig[1]) and (abs(model_sig[2] - b_sig[2]) < 0.05):
                             emb = concat_q_np[b_idx, 1+t]
                             if uid in STUDENT_IDS:
                                 student_trajs[uid].append(emb)
@@ -222,14 +248,20 @@ def main():
                             else:
                                 X_bg_list.append(emb)
                                 y_bg_list.append(p_bkt)
+                            found = True
                             break
                             
     # Downsample background
-    X_bg = np.vstack(X_bg_list)
-    y_bg = np.array(y_bg_list)
-    if len(X_bg) > 5000:
-        idx = np.random.choice(len(X_bg), 5000, replace=False)
-        X_bg, y_bg = X_bg[idx], y_bg[idx]
+    if not X_bg_list:
+        print("Warning: No background data collected.")
+        X_bg = np.zeros((0, params['d_model']))
+        y_bg = np.zeros(0)
+    else:
+        X_bg = np.vstack(X_bg_list)
+        y_bg = np.array(y_bg_list)
+        if len(X_bg) > 5000:
+            idx = np.random.choice(len(X_bg), 5000, replace=False)
+            X_bg, y_bg = X_bg[idx], y_bg[idx]
         
     final_student_data = []
     for uid in STUDENT_IDS:

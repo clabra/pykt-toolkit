@@ -1,6 +1,7 @@
 
 import os
 import sys
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,15 +13,32 @@ from sklearn.decomposition import PCA
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
-OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# EXP_DIR moved to argparse
+# OUTPUT_DIR moved to main()
+# os.makedirs moved to main()
 
 # Set style
 sns.set_theme(style="white", context="paper")
 plt.rcParams['font.family'] = 'serif'
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="assist2009_S") # Validation set default
+    parser.add_argument("--skill_id", type=int, default=68) # Default for skill-specific plots
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    EXP_DIR = args.experiment_dir
+    OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Optional parameters for specific scripts
+    SKILL_ID = args.skill_id
+
     print("Loading data for curriculum calibration...")
     df_traj = pd.read_csv(os.path.join(EXP_DIR, "traj_predictions.csv"))
     df_roster = pd.read_csv(os.path.join(EXP_DIR, "roster_idkt.csv"))

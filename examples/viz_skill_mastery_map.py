@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,15 +13,15 @@ from sklearn.decomposition import PCA
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
-OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-ROSTER_PATH = os.path.join(EXP_DIR, "roster_idkt.csv")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 # Set style
 sns.set_theme(style="white", context="paper")
 plt.rcParams['font.family'] = 'serif'
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="assist2009_S")
+    return parser.parse_args()
 
 def get_skill_names():
     """Maps skill indices to names using the mapping files."""
@@ -53,6 +54,12 @@ def get_skill_names():
         return {}
 
 def main():
+    args = parse_args()
+    EXP_DIR = args.experiment_dir
+    OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
+    ROSTER_PATH = os.path.join(EXP_DIR, "roster_idkt.csv")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     print("Loading data for skill-by-cluster map...")
     df_roster = pd.read_csv(ROSTER_PATH)
     idx_to_name = get_skill_names()

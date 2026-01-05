@@ -1,6 +1,7 @@
 
 import os
 import sys
+import argparse
 import json
 import torch
 import numpy as np
@@ -15,14 +16,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from pykt.models import init_model
 from pykt.datasets.init_dataset import init_test_datasets
+from pykt.datasets import init_dataset4train
 from examples.train_probe import extract_embeddings_and_targets
 
 # --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
-CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
-BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
-OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# EXP_DIR moved to argparse
+# Moved to main: CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
+# Moved to main: BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
+# OUTPUT_DIR moved to main()
+# os.makedirs moved to main()
 
 SKILL_ID = 68 
 
@@ -30,7 +32,28 @@ SKILL_ID = 68
 sns.set_theme(style="white", context="paper")
 plt.rcParams['font.family'] = 'serif'
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="assist2009_S") # Validation set default
+    parser.add_argument("--skill_id", type=int, default=68) # Default for skill-specific plots
+    return parser.parse_args()
+
+
 def main():
+    from pykt.utils import set_seed
+    set_seed(42)
+    args = parse_args()
+    EXP_DIR = args.experiment_dir
+    CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
+    BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
+    OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Optional parameters for specific scripts
+    SKILL_ID = args.skill_id
+
     # Load config
     config_path = os.path.join(EXP_DIR, "config.json")
     with open(config_path, 'r') as f:
@@ -47,7 +70,11 @@ def main():
     cur_config["dataset_name"] = dataset_name
     cur_config['dpath'] = os.path.join(project_root, cur_config['dpath'].replace("../", ""))
 
-    test_loader, _, _, _ = init_test_datasets(cur_config, 'idkt', params['batch_size'])
+    # Load fold
+    fold = config.get('input', {}).get('fold', 0)
+    # Init Loader (Validation)
+    from pykt.datasets import init_dataset4train
+    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
     
     # Model Setup
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')

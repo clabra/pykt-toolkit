@@ -1,6 +1,7 @@
 
 import os
 import sys
+import argparse
 import json
 import torch
 import numpy as np
@@ -18,11 +19,11 @@ from pykt.datasets import init_dataset4train
 from examples.train_probe import extract_embeddings_and_targets
 
 # --- Config ---
-EXP_DIR = "/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494"
-CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
-BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
-OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# EXP_DIR moved to argparse
+# Moved to main: CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
+# Moved to main: BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
+# OUTPUT_DIR moved to main()
+# os.makedirs moved to main()
 
 # Set style
 sns.set_theme(style="whitegrid", context="paper")
@@ -71,7 +72,28 @@ def plot_tsne_manifold(X, y, skills, output_path, title="iDKT Latent Space t-SNE
     
     print(f"Saved t-SNE plots to {OUTPUT_DIR}")
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="assist2009_S") # Validation set default
+    parser.add_argument("--skill_id", type=int, default=68) # Default for skill-specific plots
+    return parser.parse_args()
+
+
 def main():
+    from pykt.utils import set_seed
+    set_seed(42)
+    args = parse_args()
+    EXP_DIR = args.experiment_dir
+    CHECKPOINT = os.path.join(EXP_DIR, "best_model.pt")
+    BKT_PREDS = os.path.join(EXP_DIR, "traj_predictions.csv")
+    OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Optional parameters for specific scripts
+    SKILL_ID = args.skill_id
+
     # Load config from experiment
     config_path = os.path.join(EXP_DIR, "config.json")
     with open(config_path, 'r') as f:
@@ -94,7 +116,11 @@ def main():
     from pykt.datasets.init_dataset import init_test_datasets
     cur_config = data_config[dataset_name].copy()
     cur_config["dataset_name"] = dataset_name
-    test_loader, _, _, _ = init_test_datasets(cur_config, 'idkt', params['batch_size'])
+    # Load fold
+    fold = config.get('input', {}).get('fold', 0)
+    # Init Loader (Validation)
+    from pykt.datasets import init_dataset4train
+    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
     loader = test_loader
     
     # Model Setup
@@ -131,10 +157,10 @@ def main():
     
     # Extract
     bkt_df = pd.read_csv(BKT_PREDS)
-    X, y, skills = extract_embeddings_and_targets(model, loader, bkt_df, device)
+    X, y, skills, _ = extract_embeddings_and_targets(model, loader, bkt_df, device)
     
     # Downsample for t-SNE visualization (max 5000 points)
-    if len(X) > 5000:
+    if X is not None and len(X) > 5000:
         idx = np.random.choice(len(X), 5000, replace=False)
         X, y, skills = X[idx], y[idx], skills[idx]
         

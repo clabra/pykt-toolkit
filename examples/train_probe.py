@@ -226,7 +226,8 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                     
                     found = False
                     for b_sig, p_bkt in student_sigs:
-                        if model_sig == b_sig:
+                        # Relaxed match: skill and y_true must match, p_idkt within 0.05 tolerance
+                        if (model_sig[0] == b_sig[0]) and (model_sig[1] == b_sig[1]) and (abs(model_sig[2] - b_sig[2]) < 0.05):
                             # Success: Use the correctly shifted latent state and prediction
                             embeddings_list.append(concat_q_np[b_idx, 1+t])
                             targets_list.append(p_bkt)
@@ -251,7 +252,7 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                 
     if not embeddings_list:
         print("No embeddings matched.")
-        return None, None
+        return None, None, None, None
         
     fidelity = match_count / max(1, total_samples)
     print(f"Extraction complete. Matched {match_count}/{total_samples} samples ({fidelity:.1%} fidelity).")
@@ -448,7 +449,7 @@ def main():
     
     # 5. Extract & Align
     print("Starting Extraction Phase...")
-    X, y, skills = extract_embeddings_and_targets(model, valid_loader, bkt_df, device)
+    X, y, skills, r_true = extract_embeddings_and_targets(model, valid_loader, bkt_df, device)
     
     if X is None:
         print("Error: No aligned data found. Check BKT file vs Dataset UIDs.")

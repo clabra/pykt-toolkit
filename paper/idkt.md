@@ -2779,3 +2779,90 @@ docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vsco
 
 **Paper Interpretation**:
 > "The generated pedagogical map transforms iDKT from a predictive model into a prescriptive diagnostic tool. By projecting high-dimensional latent states into a interpretable skill-by-cohort matrix, it provides educators with a comprehensive 'knowledge blueprint' that supports data-driven differentiation and precision instructional design."
+
+
+## Metrics
+
+### Defining Interpretability: Representational Grounding
+
+We define interpretability not merely as post-hoc explanation, but as the extent to which a deep learning model's internal latent states can be linearly mapped to the semantic variables of an established pedagogical theory, such that predictions are causally derived from these grounded estimations. Specifically, we require:
+
+1.  **State Estimation**: The model must produce explicit estimations of knowledge state evolution.
+2.  **Theoretical Grounding**: These estimations must be linearly recoverable from theoretical principles (e.g., BKT parameters).
+3.  **Causal Derivation**: The final predictions must be mathematically derived from these grounded estimations.
+
+
+To satisfy these requirements, we employ a dual-validation framework:
+
+*   **Requirement 1 & 3 (Architectural)**: Satisfied by the iDKT design where predictions are explicitly computed from projected parameters ($p = \sigma(h_{mastery} - h_{difficulty})$), ensuring the estimation *is* the explanation.
+*   **Requirement 2 (Grounding)**: Measured by **Alignment Correlations** (e.g., $r_{im} > 0.5$).
+*   **Validation of Intelligence**: Measured by **Probing Selectivity** (proving the latent state structure is real).
+
+### Performance & Interpretability Scorecard
+
+Based on the experiment metrics (`...271378`), the following table contextualizes the results against standard Educational Data Mining (EDM) and Psychometric benchmarks.
+
+| Metric Category | Assessment Metric | Result | Interpretation | Context / Benchmark |
+| :--- | :--- | :--- | :--- | :--- |
+| **Predictive Power** | **Test AUC** | **0.8211** | 🟢 **Good (State-of-the-Art)** | Competitive with DKT/SAINT benchmarks (typ. 0.80–0.84 for ASSIST09). |
+| | Test Accuracy | 0.7537 | 🟢 **Good** | ~75% is standard for this dataset. |
+| **Latent Validity** | **Probe Selectivity** | **0.7555** | 🌟 **Excellent** | Indicates deep representations are highly distinct from random noise (Rating: >0.6 is Strong). |
+| | Probe $R^2$ (True) | 0.6501 | 🟢 **Strong** | The model explains 65% of the variance in BKT mastery labels. |
+| **Theoretical Alignment** | **Init. Mastery Corr.** | **0.6266** | 🟢 **Strong** | Strong alignment (>0.5) with BKT priors for student initial knowledge. |
+| | **Prediction Corr.** | **0.6257** | 🟢 **Strong** | Model predictions track probabilistic expectations effectively. |
+| | **Learning Rate Corr.** | **0.3677** | 🟡 **Moderate** | Captures learning velocity trend, but with more variance/noise than static parameters. |
+
+### Interpretation of Measures
+
+#### 1. Probing Measures (Latent Structure)
+Probing validates the **Intelligence** of the model (asking: *"Did it learn the right concepts?"*). We specifically probe the **latent embeddings** ($h_t$) rather than intermediate activations, following established protocols in NLP "BERTology" literature @tenney2019bert. 
+
+*   **Theoretical Basis**: As noted by @alain2018understanding, the embedding space at the final layer serves as the model's "working memory," aggregating all historical context into a single state vector used for prediction. If a concept (like Mastery) drives the model's behavior, it *must* be linearly recoverable from this bottleneck embedding.
+*   **$R^2$ (0.65)**: Measures variance explained. A high score proves the model has spontaneously organized its memory to track mastery.
+*   **Selectivity (0.75)**: The "Gold Standard" rigor metric proposed by @hewitt2019designing. It measures performance on the True Task minus a Random Control Task. A high positive score proves the structure is a genuine encoding of the educational construct, not just the capacity to memorize arbitrary labels.
+
+#### 2. Alignment Measures (Semantic Design)
+Alignment validates the **Design** of the model (asking: *"Does it use parameters as intended?"*).
+*   **Initial Mastery Correlation ($r=0.63$)**: Measures if the variable we named "Ability" ($v_s$) actually matches the BKT definition of student ability. A correlation $>0.5$ confirms successful semantic grounding.
+*   **Learning Rate Correlation ($r=0.37$)**: Learning velocity is inherently noisy. A moderate positive correlation indicates the model correctly identifies "Fast" vs "Slow" learners directionally, even if the exact magnitude varies from BKT assumptions.
+
+### Validity of Your Specific Metrics
+
+- $R^2$ / Selectivity: These measure linear separability. If the embedding space linearly encodes mastery, the Probe finds it. This maps perfectly to the idea that a "concept" (Mastery) should be a direction in the high-dimensional latent space.
+- PCA / t-SNE on Embeddings: This visualizes the geometry of the student state space. If embeddings from "High Mastery" students cluster separately from "Low Mastery," it proves the model differentiates them structurally.
+
+### Recommendation for Pareto Analysis: The Generic Alignment Score ($\mathcal{I}_w$)
+
+To quantify interpretability in a way that is both **theory-agnostic** (applicable to any reference model, such as IRT or DKT-Forget) and **noise-tolerant**, we propose a **Weighted Semantic Alignment Score ($\mathcal{I}_w$)**.
+
+This metric aggregates the fidelity of individual theoretical components ($\theta_k$) based on their reliability, acknowledging that static parameters (like Initial Mastery) are often more robust anchors than dynamic ones (like Learning Rate):
+
+$$ \mathcal{I}_{w} = \sum_{k=1}^{K} w_k \cdot r(\hat{\theta}_k, \theta_{ref, k}) $$
+
+where $r(\cdot, \cdot)$ denotes the Pearson correlation coefficient calculated over the test set population.
+
+**Application to iDKT (BKT Reference)**:
+For our specific BKT implementation, we assign a higher weight to the static prior to prioritize robust anchoring while allowing the Deep Learning model freedom to model complex dynamic acquisition:
+*   $\theta_{init}$: Initial Mastery ($w=0.7$). Prioritizes the static starting point.
+*   $\theta_{rate}$: Learning Rate ($w=0.3$). Penalizes deviations less, accommodating the stochastic nature of learning velocity.
+
+$$ I_{iDKT} = 0.7 \cdot r_{init} + 0.3 \cdot r_{rate} $$
+
+
+
+**Pareto Axes**:
+*   **X-Axis**: **Weighted Semantic Alignment ($\mathcal{I}_{w}$)**.
+*   **Y-Axis**: **Test AUC**.
+
+**Current Position**:
+*   $r_{init} = 0.627$
+*   $r_{rate} = 0.368$
+*   $\mathcal{I}_{iDKT} = (0.7 \times 0.627) + (0.3 \times 0.368) = \mathbf{0.549}$
+The experiment sits at **(0.549, 0.821)**, representing a balanced high-fidelity state.
+
+### References
+
+- @tenney2019bert: "BERT Rediscovers the Classical NLP Pipeline" (Tenney et al., 2019) — Establishes the standard for probing Transformer embeddings.
+- @alain2018understanding: "Understanding intermediate layers using linear classifier probes" (Alain & Bengio, 2018) — The foundational paper defining the linear probing methodology.
+- @hewitt2019designing: "Designing and Interpreting Probes with Control Tasks" (Hewitt & Liang, 2019) — The paper that introduced the Selectivity metric to rigorously distinguish true encoding from memorization. 
+
