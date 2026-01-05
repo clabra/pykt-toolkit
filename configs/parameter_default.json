@@ -19,7 +19,7 @@
     "n_heads": 8,
     "n_blocks": 4,
     "d_ff": 512,
-    "dropout": 0.2,
+    "dropout": 0.3,
     "emb_type": "qid",
     "final_fc_dim": 512,
     "l2": 1e-05,
@@ -90,5 +90,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f6bd1943a3d9024133c06f83450fe8d0"
+  "md5": "c59d9ede1530ed2e1bd0ad25a340b7bc"
 }

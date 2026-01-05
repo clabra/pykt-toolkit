@@ -66,8 +66,11 @@ def main():
     print(f"Creating Set S for {args.dataset} (max_len={args.max_len}) in {dpath}")
 
     # 1. Identify S UIDs
-    s_uids = get_s_uids(dpath, 'train_valid.csv', args.max_len)
-    s_uids |= get_s_uids(dpath, 'test.csv', args.max_len)
+    train_file = data_config[args.dataset].get('train_valid_original_file', 'train_valid.csv')
+    test_file = data_config[args.dataset].get('test_original_file', 'test.csv')
+    
+    s_uids = get_s_uids(dpath, train_file, args.max_len)
+    s_uids |= get_s_uids(dpath, test_file, args.max_len)
     
     if not s_uids:
         print("Error: No S-students found. Check dataset format.")
@@ -77,14 +80,20 @@ def main():
 
     # 2. Filter all relevant sequence variations
     # We look for common patterns used in PyKT
+    train_seq = data_config[args.dataset].get('train_valid_file', 'train_valid_sequences.csv')
+    test_seq = data_config[args.dataset].get('test_file', 'test_sequences.csv')
+    test_win = data_config[args.dataset].get('test_window_file', 'test_window_sequences.csv')
+    train_que = data_config[args.dataset].get('train_valid_original_file_quelevel', 'train_valid_quelevel.csv')
+    test_que = data_config[args.dataset].get('test_original_file_quelevel', 'test_quelevel.csv')
+
     targets = [
-        ('train_valid_sequences.csv', 'train_valid_sequences_S.csv'),
-        ('test_sequences.csv', 'test_sequences_S.csv'),
-        ('train_valid_sequences_bkt.csv', 'train_valid_sequences_S_bkt.csv'),
-        ('test_sequences_bkt.csv', 'test_sequences_S_bkt.csv'),
-        ('test_window_sequences.csv', 'test_window_sequences_S.csv'),
-        ('train_valid_quelevel.csv', 'train_valid_quelevel_S.csv'),
-        ('test_quelevel.csv', 'test_quelevel_S.csv')
+        (train_seq, train_seq.replace('.csv', '_S.csv')),
+        (test_seq, test_seq.replace('.csv', '_S.csv')),
+        (train_seq.replace('.csv', '_bkt.csv'), train_seq.replace('.csv', '_S_bkt.csv')),
+        (test_seq.replace('.csv', '_bkt.csv'), test_seq.replace('.csv', '_S_bkt.csv')),
+        (test_win, test_win.replace('.csv', '_S.csv')),
+        (train_que, train_que.replace('.csv', '_S.csv')),
+        (test_que, test_que.replace('.csv', '_S.csv'))
     ]
     
     for src, dst in targets:

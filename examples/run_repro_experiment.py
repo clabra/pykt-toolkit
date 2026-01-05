@@ -108,15 +108,16 @@ def generate_experiment_id():
     return str(random.randint(100000, 999999))
 
 def find_experiment_folder(experiment_id, base_dir="experiments"):
-    """Find experiment folder containing the given experiment ID."""
+    """Find experiment folder containing the given experiment ID (recursive search)."""
     base_path = Path(base_dir)
     if not base_path.exists():
         return None
     
     # Search for folder containing the experiment_id (excluding _repro folders for original search)
     candidates = []
-    for folder in base_path.iterdir():
-        if folder.is_dir() and experiment_id in folder.name:
+    # Search recursively up to 2 levels (e.g. experiments/campaign/fold_ID)
+    for folder in base_path.rglob(f"*{experiment_id}*"):
+        if folder.is_dir():
             # Prioritize non-repro folders
             if "_repro" not in folder.name:
                 return folder
@@ -125,17 +126,34 @@ def find_experiment_folder(experiment_id, base_dir="experiments"):
     # If only repro folders found, return the first one
     return candidates[0] if candidates else None
 
-def create_experiment_folder(model_name, short_title, experiment_id, is_repro=False):
-    """Create experiment folder with naming convention: YYYYMMDD_HHMMSS_modelname_title_XXXXXX[_repro]"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+def create_experiment_folder(model_name, short_title, experiment_id, is_repro=False, parent_folder=None, fold=None):
+    """
+    Create experiment folder. 
+    If parent_folder is provided, uses nested structure: parent_folder/fold_X_ID/
+    Otherwise uses flat structure: experiments/YYYYMMDD_HHMMSS_model_title_ID/
+    """
+    if parent_folder:
+        folder_parent = Path(parent_folder)
+        folder_parent.mkdir(parents=True, exist_ok=True)
+        
+        subfolder_name = []
+        if fold is not None:
+            subfolder_name.append(f"fold_{fold}")
+        subfolder_name.append(experiment_id)
+        
+        folder_name = "_".join(subfolder_name)
+        if is_repro:
+            folder_name += "_repro"
+        
+        folder_path = folder_parent / folder_name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        folder_name = f"{timestamp}_{model_name}_{short_title}_{experiment_id}"
+        if is_repro:
+            folder_name += "_repro"
+        folder_path = Path("experiments") / folder_name
     
-    folder_name = f"{timestamp}_{model_name}_{short_title}_{experiment_id}"
-    if is_repro:
-        folder_name += "_repro"
-    
-    folder_path = Path("experiments") / folder_name
-    folder_path.mkdir(parents=True, exist_ok=False)
-    
+    folder_path.mkdir(parents=True, exist_ok=True)
     return folder_path
 
 def load_config_from_experiment(experiment_id):
@@ -196,39 +214,82 @@ def build_train_command_from_config(train_script, config_path, experiment_dir):
     return f"EXPERIMENT_DIR={experiment_dir} {python_path} {train_script} --config {config_path}"
 
 def build_explicit_train_command(train_script, params, experiment_dir=None):
-    """Build training command with all parameters explicit."""
     python_path = sys.executable
-    cmd_parts = [python_path, train_script]
+    # Use absolute path for train script to allow changing working directory
+    abs_train_script = os.path.abspath(train_script)
+    cmd_parts = [python_path, abs_train_script]
     
     # Launcher-only parameters (not passed to training script)
     launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
     
-    # Model-specific parameter sets (only pass parameters the training script accepts)
-    ikt3_params = {
-        'dataset', 'fold', 'seed',
-        'reference_targets_path', 'reference_model',
-        'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
-        'seq_len', 'd_model', 'n_heads', 'num_encoder_blocks', 'd_ff', 'dropout', 'emb_type',
-        'lambda_target', 'warmup_epochs', 'c_stability_reg'
-    }
+    # Canonical parameter groups
+    architecture_params = {'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type'}
+    runtime_params = {'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience', 'seed'}
     
-    idkt_params = {
-        'dataset', 'fold', 'seed',
-        'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience',
-        'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type',
-        'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
-        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
-        '_doc_grounding', '_doc_regularization'
+    # Model-specific script-to-parameter mapping
+    MODEL_SCRIPTS = {
+        "dkt": "examples/wandb_dkt_train.py",
+        "dkt+": "examples/wandb_dkt_plus_train.py",
+        "dkt_forget": "examples/wandb_dkt_forget_train.py",
+        "kqn": "examples/wandb_kqn_train.py",
+        "dkvmn": "examples/wandb_dkvmn_train.py",
+        "atkt": "examples/wandb_atkt_train.py",
+        "gkt": "examples/wandb_gkt_train.py",
+        "sakt": "examples/wandb_sakt_train.py",
+        "saint": "examples/wandb_saint_train.py",
+        "saint++": "examples/wandb_saint_plus_plus_train.py",
+        "akt": "examples/wandb_akt_train.py",
+        "idkt": "examples/train_idkt.py",
+        "lpkt": "examples/wandb_lpkt_train.py",
+        "skvmn": "examples/wandb_skvmn_train.py",
+        "deep_irt": "examples/wandb_deep_irt_train.py"
     }
-    
+
+    # Parameter Translation Map (Canonical -> Script Specific)
+    PARAM_MAP = {
+        "d_model": {
+            "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size",
+            "kqn": "emb_size", "dkvmn": "dim_s", "gkt": "hidden_dim",
+            "sakt": "emb_size", "skvmn": "dim_s", "deep_irt": "dim_s"
+        },
+        "n_heads": {
+            "akt": "num_attn_heads", "sakt": "num_attn_heads"
+        },
+        "dataset": {
+            "standard_pykt": "dataset_name"
+        },
+        "model": {
+            "standard_pykt": "model_name"
+        },
+        "epochs": {
+            "standard_pykt": "num_epochs"
+        }
+    }
+
+    model = params.get('model', 'idkt')
+    is_standard_pykt = "wandb_" in train_script
+
     # Determine which parameters to pass based on training script
-    if 'train_ikt3.py' in train_script:
-        allowed_params = ikt3_params
-    elif 'train_idkt.py' in train_script:
-        allowed_params = idkt_params
+    if 'train_idkt.py' in train_script:
+        allowed_params = {
+            'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
+            'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
+            'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
+            'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
+            'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
+            'save_dir', '_doc_grounding', '_doc_regularization'
+        }
+    elif is_standard_pykt:
+        # Minimal set for standard pykt scripts (dataset, fold, seed, lr, dropout, wandb, uuid, save_dir)
+        allowed_params = {'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 'save_dir'}
+        # Plus architecture if supported by that specific script
+        if model in ['akt', 'sakt', 'saint', 'saint++']:
+            allowed_params.update({'d_model', 'n_heads', 'n_blocks', 'd_ff'})
+        elif model in ['dkt', 'dkt+', 'dkvmn', 'kqn', 'gkt', 'skvmn', 'deep_irt']:
+            allowed_params.update({'d_model'})
     else:
-        # For other models, pass all parameters (backward compatibility)
-        allowed_params = None
+        # Default safety: only pass runtime basics
+        allowed_params = {'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'save_dir'}
     
     # Add all parameters explicitly (exclude launcher-only params and model-specific filtering)
     for key, value in sorted(params.items()):
@@ -236,35 +297,51 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             continue
         if allowed_params is not None and key not in allowed_params:
             continue  # Skip parameters not accepted by this training script
+        
+        # Translate key if necessary
+        translated_key = key
+        if key in PARAM_MAP:
+            if model in PARAM_MAP[key]:
+                translated_key = PARAM_MAP[key][model]
+            elif is_standard_pykt and "standard_pykt" in PARAM_MAP[key]:
+                translated_key = PARAM_MAP[key]["standard_pykt"]
+
         if isinstance(value, bool):
             if value:
-                cmd_parts.append(f"--{key}")
+                cmd_parts.append(f"--{translated_key}")
         elif value is None or value == "null":
             # For reproducibility: pass "null" as string literal (required=True compliance)
             # Special case: construct rasch_path dynamically
             if key == "rasch_path" and "dataset" in params:
                 rasch_path = f"data/{params['dataset']}/rasch_targets.pkl"
-                cmd_parts.append(f"--{key} {rasch_path}")
+                cmd_parts.append(f"--{translated_key} {rasch_path}")
             else:
                 # Pass "null" as string to satisfy required=True
-                cmd_parts.append(f"--{key} null")
+                cmd_parts.append(f"--{translated_key} null")
         elif value == "None":
             # String "None" should be passed as "null" for consistency
-            cmd_parts.append(f"--{key} null")
+            cmd_parts.append(f"--{translated_key} null")
         else:
             # Quote string values if they contain spaces or special characters
             val_str = str(value)
             if isinstance(value, str):
                 # Ensure the value is properly quoted for shell execution
-                cmd_parts.append(f"--{key} '{val_str}'")
+                cmd_parts.append(f"--{translated_key} '{val_str}'")
             else:
-                cmd_parts.append(f"--{key} {val_str}")
+                cmd_parts.append(f"--{translated_key} {val_str}")
     
-    # Add save_dir for models that support it (idkt)
-    if experiment_dir and 'train_idkt.py' in train_script:
+    # Add save_dir for all models to ensure they save results into the experiment folder
+    if experiment_dir:
         cmd_parts.append(f"--save_dir {experiment_dir}")
     
-    return " ".join(cmd_parts)
+    command = " ".join(cmd_parts)
+    
+    # Standard PyKT scripts (wandb_*.py) must be run from examples/ 
+    # to find '../configs/'. We prepend 'cd examples &&' to ensure this.
+    if "wandb_" in train_script:
+        command = f"cd examples && {command}"
+        
+    return command
 
 def build_trajectory_command(experiment_folder, num_students=10, min_steps=10):
     """
@@ -341,89 +418,64 @@ def build_validation_plots_command(experiment_folder):
 
 def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
-    Build explicit evaluation command with ALL parameters.
-    Similar to build_explicit_train_command but for evaluation.
-    
-    Model-aware: adjusts parameters based on model type.
+    Build explicit evaluation command.
+    - iDKT: uses examples/eval_idkt.py with full parameters
+    - Baselines: uses examples/wandb_predict.py with simplified interface
     """
     python_path = sys.executable
-    cmd_parts = [python_path, eval_script]
-    
-    # Model-specific checkpoint handling
     model = params['model']
     
-    if model in ['ikt2', 'ikt3', 'idkt']:
-        # ikt2/ikt3/idkt eval scripts use --checkpoint with full path
+    # 1. iDKT (and related custom models) Evaluation
+    if model in ['idkt', 'ikt2', 'ikt3']:
+        cmd_parts = [python_path, eval_script]
+        
+        # Checkpoint and Output
         checkpoint_path = f"{experiment_folder}/best_model.pt"
         cmd_parts.append(f"--checkpoint {checkpoint_path}")
-        # ensure results are written to the experiment folder
         cmd_parts.append(f"--output_dir {experiment_folder}")
         
-        # ikt2/ikt3/idkt eval scripts only need minimal parameters
+        # Base Parameters
         core_eval_params = ['dataset', 'fold', 'batch_size']
-        model_eval_params = []
         
-        # ikt3 needs reference_targets_path
-        if model == 'ikt3':
-            reference_targets_path = params.get('reference_targets_path')
-            if reference_targets_path:
-                cmd_parts.append(f"--reference_targets_path {reference_targets_path}")
-        # idkt needs architecture parameters
-        elif model == 'idkt':
-            idkt_arch_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 'emb_type', 'seq_len', 'lambda_student', 'lambda_gap', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'grounded_init', 'theory_guided']
-            for param in idkt_arch_params:
-                if param in params:
-                    cmd_parts.append(f"--{param} {params[param]}")
+        # Model-Specific Parameters
+        model_params = []
+        if model == 'idkt':
+            model_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 
+                           'emb_type', 'seq_len', 'lambda_student', 'lambda_gap', 'lambda_ref', 
+                           'lambda_initmastery', 'lambda_rate', 'grounded_init', 'theory_guided']
+        elif model == 'ikt3':
+            # Add reference_targets_path if present
+            if params.get('reference_targets_path'):
+                cmd_parts.append(f"--reference_targets_path {params['reference_targets_path']}")
+                
+        # Append parameters
+        all_params = core_eval_params + model_params
+        for key in all_params:
+            if key in params:
+                value = params[key]
+                if isinstance(value, bool):
+                    # Handle boolean flags like --theory_guided 1
+                    cmd_parts.append(f"--{key} {int(value)}")
+                else:
+                    cmd_parts.append(f"--{key} {value}")
+                    
+        return " ".join(cmd_parts)
+
+    # 2. Baseline Models Evaluation (PyKT standard)
     else:
-        # Other models use --run_dir and --ckpt_name
-        cmd_parts.append(f"--run_dir {experiment_folder}")
-        cmd_parts.append(f"--ckpt_name model_best.pth")
+        # Baselines use wandb_predict.py which needs to run from examples/ directory
+        # It reads configuration directly from the experiment folder's config.json
+        predict_script = "wandb_predict.py"
         
-        # Base core parameters (common to all models)
-        core_eval_params = [
-            'dataset', 'fold', 'batch_size',  # data
-            'seq_len', 'd_model', 'n_heads', 'd_ff', 'dropout', 'emb_type',  # base architecture
-        ]
+        cmd_parts = ["cd examples &&", python_path, predict_script]
+        cmd_parts.append(f"--save_dir {experiment_folder}")
+        cmd_parts.append(f"--bz {params['batch_size']}")
+        cmd_parts.append(f"--use_wandb 0")
         
-        # Model-specific architecture parameters
-        model_arch_params = []
-        if model == 'gainakt2exp':
-            model_arch_params = ['num_encoder_blocks']  # gainakt2exp uses num_encoder_blocks
-        elif model == 'idkt':
-            model_arch_params = ['n_blocks', 'final_fc_dim', 'l2']  # idkt uses n_blocks (not num_encoder_blocks)
-        elif model in ['akt', 'akt-']:  # AKT models
-            model_arch_params = ['n_blocks']  # AKT uses n_blocks
-        else:
-            # Default: assume num_encoder_blocks if exists
-            if 'num_encoder_blocks' in params:
-                model_arch_params = ['num_encoder_blocks']
-            elif 'n_blocks' in params:
-                model_arch_params = ['n_blocks']
+        # Hardcode fusion_type to match scientific alignment (no fusion)
+        cmd_parts.append("--fusion_type none")
         
-        # Model-specific loss/training parameters
-        if model == 'gainakt2exp':
-            model_eval_params = ['lambda_bce']  # GainAKT loss configuration
-        elif model == 'ikt':
-            model_eval_params = ['lambda_penalty', 'epsilon', 'phase']  # iKT loss configuration
-        elif model == 'idkt':
-            model_eval_params = []  # idkt has l2 in architecture params already
-        else:
-            model_eval_params = []
-        
-        # Combine all eval params
-        core_eval_params = core_eval_params + model_arch_params
-    
-    eval_params = core_eval_params + model_eval_params
-    
-    for key in eval_params:
-        if key in params:
-            value = params[key]
-            cmd_parts.append(f"--{key} {value}")
-        else:
-            # Should never happen if parameter_default.json is complete
-            raise ValueError(f"Required evaluation parameter '{key}' not found in config (model: {model})")
-    
-    return " ".join(cmd_parts)
+        return " ".join(cmd_parts)
 
 def build_eval_command(eval_script, model_path):
     """Build evaluation command (legacy - for simple eval script)."""
@@ -531,6 +583,10 @@ def main():
                        help='Model name for folder naming (default from config, ignored in reproduction mode)')
     parser.add_argument('--short_title', type=str, default=None,
                        help='Short title for experiment folder (default: from parameter_default.json, ignored in reproduction mode)')
+    parser.add_argument('--parent_folder', type=str, default=None,
+                       help='Optional parent directory to group experiments (relative to project root)')
+    parser.add_argument('--force_id', type=str, default=None,
+                       help='Force a specific 6-digit ID for a new experiment')
     
     # Reproduction mode - single parameter
     parser.add_argument('--repro_experiment_id', type=str,
@@ -798,15 +854,21 @@ def main():
         short_title = args.short_title if args.short_title is not None else default_short_title
         
         # Generate new experiment ID
-        experiment_id = generate_experiment_id()
-        print(f"Generated experiment ID: {experiment_id}")
+        if args.force_id:
+            experiment_id = args.force_id
+            print(f"Using forced experiment ID: {experiment_id}")
+        else:
+            experiment_id = generate_experiment_id()
+            print(f"Generated experiment ID: {experiment_id}")
         
         # Create experiment folder
         experiment_folder = create_experiment_folder(
             model_name=model_name,
             short_title=short_title,
             experiment_id=experiment_id,
-            is_repro=False
+            is_repro=False,
+            parent_folder=args.parent_folder,
+            fold=fold
         )
         print(f"✓ Created experiment folder: {experiment_folder.name}")
         
