@@ -194,41 +194,24 @@ We argue that resolving this tension requires a fundamentally different approach
 
 Guided by this definition, this paper introduces \textbf{iDKT} (Interpretable Deep Knowledge Tracing), a novel Transformer-based architecture that utilizes Representational Grounding to align its deep latent representations with the educational constructs defined by intrinsically interpretable models, such as BKT. Rather than discarding the deep learning advantage, iDKT decomposes its high-dimensional embeddings into a population-level base (derived from theory) and a student-specific deviation (learned from data), thereby achieving state-of-the-art predictive performance while guaranteeing that its internal states remain pedagogically meaningful. To our knowledge, this is the first work to formalize and validate representational alignment as a rigorous metric for Deep Knowledge Tracing.
 
-Our approach can be formally positioned within the taxonomies of Informed Machine Learning proposed by \citet{vonrueden2021informed} and adapted for Knowledge Tracing by \citet{zanellati2024hybrid}. Specifically, iDKT implements distinct integration strategies across all knowledge dimensions. As a \textit{Knowledge Source}, we utilize "Learning Knowledge" derived from pedagogical assumptions and cognitive theories found in BKT. For \textit{Knowledge Representation}, we employ "Simulation Results," where an interpretable reference model functions as a simulator to generate prior probability distributions. Finally, for \textit{Knowledge Integration}, we adopt a multi-faceted strategy: (a) utilizing a "Training Dataset" augmented with BKT outputs, (b) constraining the "Hypothesis Set" through inference biases that favor solutions aligned with the reference theory—inspired by the "Rashomon Set" argument for interpretability \citep{rudin2019stop}—and (c) modifying the "Learning Algorithm" via a physics-guided loss function \citep{willard2022integrating}, which penalizes divergent latent states. This framework corresponds to what \citet{battaglia2018relational} define as a Relational Inductive Bias, enforcing a structural isomorphism between the model’s internal representations and the theoretical constructs they are intended to capture.
+A pervasive misconception in machine learning is the existence of an inherent trade-off between predictive accuracy and model interpretability—a belief that complex "black-box" models are necessary to achieve state-of-the-art performance, while interpretable models must sacrifice accuracy for simplicity. \citet{rudin2019stop} argues that this dichotomy is largely a myth, particularly in domains where data possesses significant structure. This perspective is formalized by the \textit{Rashomon Set} argument \citep{liangstatistical, semenova2019study}, which posits that for many real-world problems, the space of models that achieve reasonably high accuracy (the Rashomon set) is voluminous. Given the size of this set, it is statistically probable that it contains a subset of models that are both highly accurate and intrinsically interpretable.
 
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[
-    node distance=0.5cm and 1.5cm,
-    box/.style={draw, rounded corners, minimum width=3.5cm, minimum height=1.2cm, align=center, font=\small},
-    arrow/.style={-Latex, thick},
-    title/.style={font=\bfseries}
-]
-
-% Nodes
-\node[title] (t1) {Knowledge Source};
-\node[box, below=0.2cm of t1, fill=blue!10] (source) {Learning Knowledge\\(Pedagogical Theory)};
-
-\node[title, right=of t1] (t2) {Representation};
-\node[box, below=0.2cm of t2, fill=green!10] (rep) {Simulation Results\\(BKT Reference)};
-
-\node[title, right=of t2] (t3) {Integration};
-\node[box, below=0.2cm of t3, fill=orange!10] (data) {Training Data\\(Augmentation)};
-\node[box, below=0.3cm of data, fill=orange!10] (hypo) {Hypothesis Set\\(Inductive Bias)};
-\node[box, below=0.3cm of hypo, fill=orange!10] (algo) {Learning Algorithm\\(Physics-Guided Loss)};
-
-% Edges
-\draw[arrow] (source) -- (rep);
-\draw[arrow] (rep) -- (data);
-\draw[arrow] (rep.east) -- ++(0.5,0) |- (hypo.west);
-\draw[arrow] (rep.east) -- ++(0.5,0) |- (algo.west);
-
-\end{tikzpicture}
-\caption{Taxonomy of Informed Machine Learning applied to iDKT. The framework integrates pedagogical theory into the deep learning pipeline through three distinct channels: data augmentation, structural inductive bias, and loss function constraints.}
-\label{fig:iml_taxonomy}
-\end{figure}
+Applying this theoretical framework to Knowledge Tracing, we formulate the hypothesis that the set of high-performing Deep Knowledge Tracing architectures indeed contains solutions that align with pedagogical theory. By imposing specific inductive biases—such as our proposed Representational Grounding—we do not constrain the model's capacity to learn; rather, we navigate the Rashomon set to select a solution that satisfies both predictive optimality and semantic intelligibility. Our work thus aims to explore this frontier, demonstrating that it is possible to recover the rich, pedagogically valid constructs of traditional theory without forfeiting the predictive power of modern deep learning.
 
 
+To effectively navigate the Rashomon set and achieve an optimal trade-off between predictive performance and interpretability, the choice of the reference model is paramount. A grounding mechanism is only as valid as the theoretical constructs it serves to anchor; if the reference model is pedagogically baseless or conceptually incoherent, the resulting deep representations will be equally flawed, regardless of their fidelity to the reference. We therefore require a reference model that is not merely interpretable, but scientifically sound—one whose parameters map unambiguously to well-established cognitive processes.
+
+For this study, we select Bayesian Knowledge Tracing (BKT) as our anchoring theoretical framework. As detailed in Section \ref{sec_related_bkt}, BKT models learning as a hidden Markov process governed by four explicit parameters: Initial Mastery ($P(L_0)$), the probability a student knows a skill *prior* to practice; Learn Rate ($P(T)$), the probability of transitioning from unlearned to learned states after an opportunity; Guess ($P(G)$), the probability of a correct response despite a lack of mastery; and Slip ($P(S)$), the probability of an incorrect response despite mastery. These parameters provide a causal narrative of student performance that is intuitive to educators and aligned with cognitive science principles.
+
+However, standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters ($L_0, T, G, S$) for all students interacting with a given skill. While Individualized BKT (iBKT) approaches exist \citep{yudelson2013individualized}, they face substantial scalability challenges. Modeling student-specific parameters (e.g., a unique $L_0$ and $T$ for every student-skill pair) leads to extreme data sparsity and the "cold-start" problem, where reliable estimates cannot be formed until a student has generated a lengthy interaction history. Theoretical attempts to individualize BKT often result in models that are computationally expensive and difficult to deploy in real-time environments. iDKT aims to transcend these limitations by using deep learning to infer individualized parameter configurations dynamically, effectively "super-resolving" the population-level insights of BKT into student-specific diagnostics without the need for explicit per-student parameter fitting.
+
+Based on the theoretical framework of Representational Grounding and the Rashomon set argument, this study investigates the following three research hypotheses:
+
+\begin{itemize}
+    \item \textbf{Hypothesis 1 (Recoverability)}: It is possible to achieve Theory-Grounded Interpretability in Deep Knowledge Tracing, as defined by our validation framework, by constraining the model's latent space to align with the parameters of a sound reference model like BKT. Specifically, we hypothesize that iDKT's internal states will exhibit high linear recoverability ($R^2 > 0.5$) with BKT parameters.
+    \item \textbf{Hypothesis 2 (Pareto Optimality)}: Theory-Grounded Interpretability does not necessitate a loss of predictive accuracy. We hypothesize that by exploring the trade-off via a multi-objective optimization sweep, we can identify a Pareto frontier where iDKT matches or exceeds the AUC of state-of-the-art DKT models while maintaining high representational alignment, effectively locating an interpretable solution within the Rashomon set.
+    \item \textbf{Hypothesis 3 (Granularity)}: The grounded representations in iDKT are not merely static copies of the reference model but capture student-specific nuances. We hypothesize that the deviations learned by iDKT ($l_c, t_c$) represent valid, granular estimations of student-specific Initial Mastery and Learning Rates, enabling individualized diagnosis and pacing that is more sensitive to behavioral heterogeneity than the population-level reference.
+\end{itemize}
 
 \subsection{Probing Methods}
 
@@ -238,31 +221,12 @@ The state-of-the-art in probing emphasizes the importance of utilizing low-capac
 
 Drawing upon these validation protocols, we demonstrate the theoretical anchoring of iDKT’s internal representations and provide a quantitative measure of its interpretability by evaluating the degree of alignment with educational constructs. 
 
-\subsection{Reference Model: Individualized Bayesian Knowledge Tracing}
 
-Bayesian Knowledge Tracing (BKT) \citep{corbett1994knowledge} models student mastery as a latent variable $L_t \in \{0, 1\}$ that transitions based on learning opportunities. BKT is governed by four parameters that map directly to latent and observed behavior:
-\begin{itemize}
-    \item $P(L_0)$: Initial Mastery — the probability that the student already knows the skill before the first interaction.
-    \item $T$: Transit probability — the probability of learning a skill after an interaction.
-    \item $G$: Guess probability — the probability of a student getting the correct answer despite not having mastered the skill.
-    \item $S$: Slip probability — the probability of a student making a mistake despite having mastered the skill.
-\end{itemize}
 
-The model updates the knowledge state after each observation $r_t$ (correct or incorrect) using the following recurrence relation:
-\begin{equation} \label{eq_bkt_update}
-P(L_t | r_t) = 
-\begin{cases} 
-\frac{P(L_t)(1 - S)}{P(L_t)(1 - S) + (1 - P(L_t))G} & \text{if } r_t = 1 \\
-\frac{P(L_t)S}{P(L_t)S + (1 - P(L_t))(1 - G)} & \text{if } r_t = 0
-\end{cases}
-\end{equation}
 
-The model calculates the mastery probability for the subsequent learning opportunity by applying the transition update: 
-\begin{equation} \label{eq_bkt_next}
-P(L_{t+1}) = P(L_t | r_t) + (1 - P(L_t | r_t))T
-\end{equation}
 
-A fundamental limitation of standard BKT is the assumption of per-skill, population-level parameters, where the same parameter values are assigned to all students for a given knowledge component. Individualized BKT (iBKT) models attempt to address this by incorporating student-specific parameters. According to the taxonomy proposed by \citet{yudelson2013individualized}, individualization typically targets three primary aspects: (i) student-specific prior knowledge ($P(L_0)$), (ii) student-specific learning rates ($T$), or (iii) student-specific performance (guess $G$ and slip $S$). While individualizing performance parameters is less common due to the assumption that they are item-dependent, empirical evidence consistently demonstrates that individualizing prior knowledge and learning rates significantly improves predictive performance compared to population-level models. However, these classical individualized approaches face substantial challenges, including the cold-start problem for new students, parameter sparsity when training separate parameters for every student-skill pair, and a significant increase in computational complexity. 
+
+ 
 
 
 
