@@ -213,22 +213,6 @@ Based on the theoretical framework of Representational Grounding and the Rashomo
     \item \textbf{Hypothesis 3 (Granularity)}: The grounded representations in iDKT are not merely static copies of the reference model but capture student-specific nuances. We hypothesize that the deviations learned by iDKT ($l_c, t_c$) represent valid, granular estimations of student-specific Initial Mastery and Learning Rates, enabling individualized diagnosis and pacing that is more sensitive to behavioral heterogeneity than the population-level reference.
 \end{itemize}
 
-\subsection{Probing Methods}
-
-\textit{Linear classifier probes} \citep{alain2016understanding} have emerged as a robust framework for investigating the information encoded in the intermediate layers of neural networks. Originally introduced to analyze representations in deep vision and language models, probing involves training a simple diagnostic classifier to predict a specific property or construct—such as a student's latent mastery state—from a frozen embedding. The fundamental intuition is that if a construct can be accurately predicted by a simple model, it must be explicitly encoded and accessible within the deep model's representational space. This methodology is particularly relevant in the context of recent surveys on Large Language Models (LLMs) and foundation models, where understanding the internal mechanics and \textit{representation engineering} has become a central research frontier \citep{zhao2024explainability, bartoszcze2025representation}.
-
-The state-of-the-art in probing emphasizes the importance of utilizing low-capacity models, typically linear or logistic regressions, to ensure that the probe is merely extracting existing information rather than learning the task itself through its own parameters. This distinction is critical in our context, where we seek to verify that the deep model has internalized valid constructs of pedagogical theories as part of its internal reasoning process. Recent advances have expanded this methodology to include \textit{structural probes}, which evaluate whether relational properties between concepts are preserved within the latent manifold. A significant challenge in interpreting probe results is the potential for false positives, where a probe achieves high accuracy by exploiting statistical artifacts rather than meaningful structure. To address this, current research highlights the necessity of methodological rigor through the use of \textit{selectivity} metrics and \textit{control tasks} . By comparing the probe's performance on the target construct against its performance on randomized or nonsensical data, researchers can quantify the extent to which the deep model genuinely represents the theory \citep{hewitt2019designing,belinkov2022probing}. 
-
-Drawing upon these validation protocols, we demonstrate the theoretical anchoring of iDKT’s internal representations and provide a quantitative measure of its interpretability by evaluating the degree of alignment with educational constructs. 
-
-
-
-
-
-
- 
-
-
 
 The remainder of this paper is structured as follows. Section~\ref{sec_arch} describes the proposed iDKT architecture and the \textit{Representational Grounding} framework. Sections~\ref{sec_embeddings} and \ref{sec_loss} detail the individualized embedding mechanism and the multi-objective loss system, respectively. Section~\ref{sec_experiment} presents the results of the experimental validation, interpretability results, and the analysis of individualization granularity. Finally, Section~\ref{sec_conclusions} concludes the paper.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
