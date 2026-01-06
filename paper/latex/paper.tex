@@ -194,6 +194,40 @@ We argue that resolving this tension requires a fundamentally different approach
 
 Guided by this definition, this paper introduces \textbf{iDKT} (Interpretable Deep Knowledge Tracing), a novel Transformer-based architecture that utilizes Representational Grounding to align its deep latent representations with the educational constructs defined by intrinsically interpretable models, such as BKT. Rather than discarding the deep learning advantage, iDKT decomposes its high-dimensional embeddings into a population-level base (derived from theory) and a student-specific deviation (learned from data), thereby achieving state-of-the-art predictive performance while guaranteeing that its internal states remain pedagogically meaningful. To our knowledge, this is the first work to formalize and validate representational alignment as a rigorous metric for Deep Knowledge Tracing.
 
+Our approach can be formally positioned within the taxonomies of Informed Machine Learning proposed by \citet{vonrueden2021informed} and adapted for Knowledge Tracing by \citet{zanellati2024hybrid}. Specifically, iDKT implements distinct integration strategies across all knowledge dimensions. As a \textit{Knowledge Source}, we utilize "Learning Knowledge" derived from pedagogical assumptions and cognitive theories found in BKT. For \textit{Knowledge Representation}, we employ "Simulation Results," where an interpretable reference model functions as a simulator to generate prior probability distributions. Finally, for \textit{Knowledge Integration}, we adopt a multi-faceted strategy: (a) utilizing a "Training Dataset" augmented with BKT outputs, (b) constraining the "Hypothesis Set" through inference biases that favor solutions aligned with the reference theory—inspired by the "Rashomon Set" argument for interpretability \citep{rudin2019stop}—and (c) modifying the "Learning Algorithm" via a physics-guided loss function \citep{willard2022integrating}, which penalizes divergent latent states. This framework corresponds to what \citet{battaglia2018relational} define as a Relational Inductive Bias, enforcing a structural isomorphism between the model’s internal representations and the theoretical constructs they are intended to capture.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    node distance=0.5cm and 1.5cm,
+    box/.style={draw, rounded corners, minimum width=3.5cm, minimum height=1.2cm, align=center, font=\small},
+    arrow/.style={-Latex, thick},
+    title/.style={font=\bfseries}
+]
+
+% Nodes
+\node[title] (t1) {Knowledge Source};
+\node[box, below=0.2cm of t1, fill=blue!10] (source) {Learning Knowledge\\(Pedagogical Theory)};
+
+\node[title, right=of t1] (t2) {Representation};
+\node[box, below=0.2cm of t2, fill=green!10] (rep) {Simulation Results\\(BKT Reference)};
+
+\node[title, right=of t2] (t3) {Integration};
+\node[box, below=0.2cm of t3, fill=orange!10] (data) {Training Data\\(Augmentation)};
+\node[box, below=0.3cm of data, fill=orange!10] (hypo) {Hypothesis Set\\(Inductive Bias)};
+\node[box, below=0.3cm of hypo, fill=orange!10] (algo) {Learning Algorithm\\(Physics-Guided Loss)};
+
+% Edges
+\draw[arrow] (source) -- (rep);
+\draw[arrow] (rep) -- (data);
+\draw[arrow] (rep.east) -- ++(0.5,0) |- (hypo.west);
+\draw[arrow] (rep.east) -- ++(0.5,0) |- (algo.west);
+
+\end{tikzpicture}
+\caption{Taxonomy of Informed Machine Learning applied to iDKT. The framework integrates pedagogical theory into the deep learning pipeline through three distinct channels: data augmentation, structural inductive bias, and loss function constraints.}
+\label{fig:iml_taxonomy}
+\end{figure}
+
 
 
 \subsection{Probing Methods}
@@ -204,7 +238,7 @@ The state-of-the-art in probing emphasizes the importance of utilizing low-capac
 
 Drawing upon these validation protocols, we demonstrate the theoretical anchoring of iDKT’s internal representations and provide a quantitative measure of its interpretability by evaluating the degree of alignment with educational constructs. 
 
-\subsection{Individualized Bayesian Knowledge Tracing}
+\subsection{Reference Model: Individualized Bayesian Knowledge Tracing}
 
 Bayesian Knowledge Tracing (BKT) \citep{corbett1994knowledge} models student mastery as a latent variable $L_t \in \{0, 1\}$ that transitions based on learning opportunities. BKT is governed by four parameters that map directly to latent and observed behavior:
 \begin{itemize}
@@ -230,7 +264,7 @@ P(L_{t+1}) = P(L_t | r_t) + (1 - P(L_t | r_t))T
 
 A fundamental limitation of standard BKT is the assumption of per-skill, population-level parameters, where the same parameter values are assigned to all students for a given knowledge component. Individualized BKT (iBKT) models attempt to address this by incorporating student-specific parameters. According to the taxonomy proposed by \citet{yudelson2013individualized}, individualization typically targets three primary aspects: (i) student-specific prior knowledge ($P(L_0)$), (ii) student-specific learning rates ($T$), or (iii) student-specific performance (guess $G$ and slip $S$). While individualizing performance parameters is less common due to the assumption that they are item-dependent, empirical evidence consistently demonstrates that individualizing prior knowledge and learning rates significantly improves predictive performance compared to population-level models. However, these classical individualized approaches face substantial challenges, including the cold-start problem for new students, parameter sparsity when training separate parameters for every student-skill pair, and a significant increase in computational complexity. 
 
-Our proposed iDKT model automates this individualization process by leveraging the high-capacity representational power of Transformers to learn student-specific parameters within a theoretically-grounded latent space. Specifically, iDKT uses \textit{Grounded Embeddings} representations, where individualized parameters such as proficiency ($l_c$) and learning velocity ($t_c$) are decomposed into a population-level base (derived from a static BKT reference) and a student-specific deviation. These deviations are learned by the Transformer from the student's interaction history, allowing the model to generalize across skills and students without requiring explicit, per-individual parameter fitting. By anchoring these representations through specialized multi-objective loss functions—which penalize deviations from the reference BKT parameters—iDKT maintains the diagnostic granularity of individualized models while overcoming the technical hurdles of data sparsity and scalability inherent in classical iBKT implementations.
+
 
 The remainder of this paper is structured as follows. Section~\ref{sec_arch} describes the proposed iDKT architecture and the \textit{Representational Grounding} framework. Sections~\ref{sec_embeddings} and \ref{sec_loss} detail the individualized embedding mechanism and the multi-objective loss system, respectively. Section~\ref{sec_experiment} presents the results of the experimental validation, interpretability results, and the analysis of individualization granularity. Finally, Section~\ref{sec_conclusions} concludes the paper.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
