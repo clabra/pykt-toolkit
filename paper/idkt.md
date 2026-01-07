@@ -190,18 +190,18 @@ graph TD
 
     %% Styling
     classDef plain fill:#fff,stroke:#333,stroke-width:1px;
-    classDef emb fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef attn fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef pred fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-    classDef loss fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-    classDef heads fill:#c8e6c9,stroke:#2e7d32,stroke-dasharray: 5 5;
-    classDef ref fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 2 2;
+    classDef emb fill:#fff,stroke:#0277bd,stroke-width:2px;
+    classDef attn fill:#fff,stroke:#2e7d32,stroke-width:2px;
+    classDef pred fill:#fff,stroke:#333,stroke-width:2px;
+    classDef loss fill:#fff,stroke:#333,stroke-width:2px;
+    classDef heads fill:#fff,stroke:#666,stroke-dasharray: 5 5;
+    classDef ref fill:#fff,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 2 2;
     classDef plus fill:#fff,stroke:#333,stroke-width:2px,font-size:20px;
 
-    class Input_q,Input_r,Input_pid,Input_uid plain
-    class Final_Q,Final_QA,E_W,KR2_FFN emb
+    class Input_q,Input_r,Input_pid,Input_uid,Base_Q,L0_Base,Gap_Param,K_Axis,Formula_L0,Diff_Param,Q_Diff,Base_QA,QA_Diff,T_Base,Vel_Param,V_Axis,Formula_T,E_Split,E_H1,E_H2,E_H8,E_Concat,E_W,KR1_Split,KR1_H1,KR1_H2,KR1_H8,KR1_Concat,KR2_Split,KR2_H1,KR2_H2,KR2_H8,KR2_Concat,KR2_FFN,Concat,mlp_layers,Pred,M_Init,M_Rate plain
+    class Final_Q,Final_QA emb
     class E_Split,E_Concat,KR1_Split,KR1_Concat,KR2_Split,KR2_Concat attn
-    class E_H1,E_H8,KR1_H1,KR1_H8,KR2_H1,KR2_H8 heads
+    class E_H1,E_H2,E_H8,KR1_H1,KR1_H2,KR1_H8,KR2_H1,KR2_H2,KR2_H8 heads
     class Concat,mlp_layers,Pred pred
     class L_SUP,L_REF,L_INIT,L_RATE,L_RASCH,L_GAP,L_STUDENT,L_TOTAL loss
     class BKT_P,BKT_L0,BKT_T ref
@@ -213,59 +213,13 @@ graph TD
 
 ## iDKT Architecture Diagram 2
 
+<div style="width: 700px;">
+
 ```mermaid
-graph TD
-    subgraph Master_Box ["iDKT Simplified Model Architecture"]
-        %% INPUT & REFERENCE LAYER
-        subgraph Top_Layer ["Input & Reference Theory"]
-            direction LR
-            Raw[/Raw Data: q, r, pid, uid/]
-            BKT_Ref[[BKT Reference: L0, T, p_BKT]]
-        end
-
-        %% EMBEDDING / GROUNDING LAYER
-        subgraph Grounding_Layer ["1. Rasch-Grounded Embeddings"]
-            direction TB
-            %% Grounding Components
-            kc_node(("k_c")) 
-            vs_node(("v_s")) 
-            uq_node(("u_q"))
-            
-            %% Combined Parameters
-            lc[Grounded Initial Mastery l_c]
-            ts[Grounded Learning Rate t_s]
-            
-            %% Individualized Vectors
-            x_prime[[Individualized Task x']]
-            y_prime[[Individualized History y']]
-        end
-
-        %% CORE ARCHITECTURE
-        subgraph Core_Layer ["2. Transformer Inference Core"]
-            direction TB
-            Encoder["Encoder Blocks (N)<br/>Contextualize Interaction History"]
-            Decoder["Decoder Blocks (2N)<br/>Retrieve Relevant Knowledge"]
-        end
-
-        %% PROBING VALIDATION (Diagnostic)
-        subgraph Probe_Layer ["Diagnostic Probing"]
-            direction TB
-            Extract["Extract concat_q <br/>(Context-aware representations)"]
-            LP(Linear Probe: Target Task)
-            CP(Control Probe: Shuffled)
-            Select{{Selectivity Metric ΔR²}}
-        end
-
-        %% OUTPUT & OPTIMIZATION
-        subgraph Output_Layer ["3. Output & Optimization"]
-            direction TB
-            Pred[p_iDKT Prediction]
-            Diag[Pedagogical Diagnostics]
-            Loss{{Multi-Objective Loss<br/>L_SUP + L_REF + L_REG}}
-        end
-
-        %% EVALUATION METRICS
-        subgraph Metrics_Layer ["4. Evaluation & Results"]
+graph BT
+    subgraph Master_Box ["iDKT Architecture"]
+        %% LAYER 4: EVALUATION & RESULTS (Top)
+        subgraph Metrics_Layer ["5. Evaluation & Results"]
             direction LR
             subgraph Perf_Metrics ["Performance"]
                 AUC(["AUC-ROC / Accuracy"])
@@ -275,57 +229,107 @@ graph TD
             end
         end
 
-        %% DATA FLOW
+        %% LAYER 3: OUTPUT & OPTIMIZATION
+        subgraph Output_Layer ["4. Output & Optimization"]
+            direction TB
+            Pred[p_iDKT Prediction]
+            Diag[Pedagogical Diagnostics]
+            Loss{{Multi-Objective Loss<br/>L_SUP + L_REF + L_REG}}
+        end
+
+        %% LAYER 2.2: DIAGNOSTIC PROBING
+        subgraph Probe_Layer ["Diagnostic Probing"]
+            direction TB
+            Extract["Extract concat_q <br/>(Context-aware representations)"]
+            LP(Linear Probe: Target Task)
+            CP(Control Probe: Shuffled)
+            Select{{Selectivity Metric ΔR²}}
+        end
+
+        %% LAYER 2.1: TRANSFORMER CORE
+        subgraph Core_Layer ["3. Transformer Core"]
+            direction TB
+            Encoder["Encoder Blocks (N)<br/>Contextualize Interaction History"]
+            Decoder["Decoder Blocks (2N)<br/>Retrieve Relevant Knowledge"]
+        end
+
+        %% LAYER 1: EMBEDDING / GROUNDING
+        subgraph Grounding_Layer ["2. Embeddings"]
+            direction TB
+            %% Individualized Vectors
+            x_prime[[Individualized Task x']]
+            y_prime[[Individualized History y']]
+
+            %% Combined Parameters
+            lc[Grounded Initial Mastery l_c]
+            ts[Grounded Learning Rate t_s]
+
+            %% Grounding Components
+            kc_node(("k_c")) 
+            vs_node(("v_s")) 
+            uq_node(("u_q"))
+        end
+
+        %% LAYER 0: INPUT & REFERENCE (Bottom)
+        subgraph Top_Layer ["1. Input & Reference"]
+            direction LR
+            Raw[/Raw Data: q, r, pid, uid/]
+            BKT_Ref[[BKT Reference: L0, T, p_BKT]]
+        end
+
+        %% DATA FLOW (Bottom to Top)
         Raw --> kc_node & vs_node & uq_node
-        
-        %% BKT Grounding (Dashed)
-        BKT_Ref -. "Theoretical Anchor" .-> lc & ts
-        BKT_Ref -. "Alignment Target" .-> Loss
         
         kc_node --> lc
         vs_node --> ts
+        
         uq_node & lc --> x_prime
         uq_node & ts --> y_prime
         
-        y_prime --> Encoder
-        x_prime  --> Decoder
-        Encoder -- Context y* --> Decoder
+        %% BKT Grounding (Horizontal/Support)
+        BKT_Ref -. "Theoretical Anchor" .-> lc & ts
+        BKT_Ref -. "Alignment Target" .-> Loss
         
-        %% Flow to Output and Probe
+        y_prime --> Encoder
+        x_prime --> Decoder
+        Encoder -- "Context y*" --> Decoder
+        
         Decoder --> Pred & Diag
         Decoder -.-> Extract
         
-        %% Probing Internal Flow
+        %% Probing Flow
         Extract --> LP & CP
         LP & CP --> Select
-        
-        Pred & Diag --> Loss
+        Select --> Interp
         Select -.-> Loss
         
-        %% Flow to Metrics
+        %% Final Metrics Flow
         Pred --> AUC
-        Diag & Select --> Interp
+        Diag --> Interp
+        Pred & Diag --> Loss
     end
 
     %% STYLING
     classDef master fill:#ffffff,stroke:#333,stroke-width:2px,font-size:16px;
-    classDef layer fill:#f8f9fa,stroke:#dee2e6,stroke-width:1px,font-weight:bold;
+    classDef layer fill:#ffffff,stroke:#dee2e6,stroke-width:1px,font-weight:bold;
     classDef block fill:#ffffff,stroke:#4a5568,stroke-width:1.5px;
-    classDef grounding fill:#ebf8ff,stroke:#3182ce,stroke-width:2px;
-    classDef data fill:#f1f5f9,stroke:#475569,stroke-width:1px;
-    classDef probe fill:#fffde7,stroke:#fbc02d,stroke-width:1.5px,stroke-dasharray: 5 5;
-    classDef ref fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1.5px,stroke-dasharray: 3 3;
-    classDef metric fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef grounding fill:#ffffff,stroke:#4a5568,stroke-width:1.5px;
+    classDef data fill:#ffffff,stroke:#4a5568,stroke-width:1.5px;
+    classDef probe fill:#ffffff,stroke:#9e9e9e,stroke-width:1.5px,stroke-dasharray: 5 5;
+    classDef ref fill:#ffffff,stroke:#9e9e9e,stroke-width:1.5px,stroke-dasharray: 3 3;
+    classDef metric fill:#ffffff,stroke:#4a5568,stroke-width:1.5px;
 
     class Master_Box master
-    class Top_Layer,Grounding_Layer,Core_Layer,Output_Layer,Metrics_Layer layer
-    class Encoder,Decoder,Pred,lc,ts block
+    class Top_Layer,Grounding_Layer,Core_Layer,Output_Layer,Metrics_Layer,Perf_Metrics,Interp_Metrics layer
+    class Encoder,Decoder,Pred,Diag,lc,ts,kc_node,vs_node,uq_node block
     class x_prime,y_prime,Loss grounding
     class Raw data
     class Probe_Layer,Extract,LP,CP,Select probe
     class BKT_Ref ref
     class AUC,Interp metric
 ```
+
+</div>
 
 ### Embeddings
 
