@@ -1,0 +1,83 @@
+
+\foreachvector{\draw[arrow] (yS_\i) -- (zSS_\i);}
+% \addontopoffun{v_1}{hmask1}{\scriptsize \hmask}
+% \addlayerfun{hmask}{\scriptsize \hmask}
+\addglobalfunction{yS_1, anchor=west}{hmask}{\hmask = no mask}
+\draw[arrow] (position) |- (hmask.west);
+
+
+
+% Key and valueS
+\node[invisible, above={3*\vertispace + \minheight} of zSS_0, shift={(-0.4cm,0)}] (keySS_0) {};
+\addlayer[key]{keySS}
+\node[invisible, above={3*\vertispace + \minheight} of zSS_0, shift={(.4cm,0)}] (valueSS_0) {};
+\addlayer[value]{valueSS}
+
+\foreachvector{
+    \draw[arrow] (zSS_\i) -- (keySS_\i) \ifnum \i=1 node[midway, left] {\scriptsize key} \fi;
+    \draw[arrow] (zSS_\i) -- (valueSS_\i) \ifnum \i=1 node[midway, right] {\scriptsize value} \fi;}
+
+
+
+\node[invisible, above={.5cm} of keySS_0] (kprimeSS_0) {};
+\addlayer[prime]{kprimeSS}
+
+\node[invisible, above={1.2cm} of valueSS_0] (vprimeSS_0) {};
+\addlayer[prime]{vprimeSS}
+
+\foreachvector{\draw[arrow] (kprimeSS_\i) -- (vprimeSS_\i);}
+
+
+\node[invisible, above={6*\vertispace + 4*\minheight} of zSS_0] (resultSS_0) {};
+\addlayer[value]{resultSS}
+\foreachvector{\draw[arrow] (vprimeSS_\i) -- (resultSS_\myposition);}
+
+
+% \foreachvector{
+%     \node[circle, inner sep=-1pt, draw, above={3*\vertispace + \minheight} of valueS_\i] (resplus_\i){$+$};
+%     \draw[arrow] (valueS_\i) -- (resplus_\i);
+%     \draw[arrow] (y_\i.west) -- ++(-0.6,0) |- (resplus_\i.west);
+% }
+
+
+
+% ySS
+\node[invisible, above={7*\vertispace + \minheight} of resultSS_0] (ySS_0) {};
+\addlayer[3dvect]{ySS}
+
+\foreachvector{
+    % \draw[arrow] (resplus_\i) -- (yS_\i);
+    % \node[circle, inner sep=-1pt, draw, above={3*\vertispace + \minheight} of valueS_\i] (resplus_\i){$+$};
+    % \draw[arrow] (valueS_\i) -- (resplus_\i);
+    % \draw[arrow] (yS_\i.west) -- ++(-0.6,0) |- (resplus_\i.west);
+    \draw[arrow] (resultSS_\i) -- (ySS_\i);
+}
+% \addglobalfunction{valueS_1, anchor=west}{hout}{\hout}
+
+
+\addontopoffun{resultSS_1}{hout_1}{\scriptsize \hout}
+\addlayerfun{hout}{\scriptsize \hout}
+\foreachvector{\draw[arrow, dotted] (yS_\i.west) -- ++(-0.8,0) |- (hout_\i.west);}
+
+
+
+
+
+
+\node[draw, fit={(valueSS_\numnodes) (vprimeSS_\numnodes) (keySS_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
+% , label={[label distance=+5pt]right:{\hpool}}
+% \draw[={Latex[width=2mm,length=2mm]}] (rectpool.east) ++(0.2,0) -- (rectpool);
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};
+
+
+
+
+
+% Attention layer box
+\node[draw, fit={(hmask) (hout_\numnodes) (keySS_1) (valueSS_\numnodes)}, 
+    minimum height=\minheight+2pt, inner sep=6pt, 
+    name=attlayer
+] {};
+
+\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){$\mathcal{A}_2$};
+\draw[={Latex[width=2mm,length=2mm]}] (attlayer.east) --(attlayerlabel);

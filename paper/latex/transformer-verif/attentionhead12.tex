@@ -1,0 +1,80 @@
+% zS
+\node[invisible, right=\decalage of z_0] (zS_0) {};
+\addlayer[3dvect]{zS}
+
+
+\foreachvector{\draw[arrow] (w_\i) -- ++(0,0.9) -- ++(\decalage, 0) -| (zS_\i);}
+
+\node[invisible, above right=-3.5pt and \decalage of w_1, anchor=east] (report) {};
+\addglobalfunction{report, anchor=west}{hmask}{\hmask = past-masking}
+% \draw[arrow] (position) |- (hmask.west);
+
+
+
+% Key and valueS
+\node[invisible, above={3*\vertispace + \minheight} of zS_0, shift={(-0.4cm,0)}] (keyS_0) {};
+\addlayer[key]{keyS}
+\node[invisible, above={3*\vertispace + \minheight} of zS_0, shift={(.4cm,0)}] (valueS_0) {};
+\addlayer[value]{valueS}
+
+\foreachvector{
+    \draw[arrow] (zS_\i) -- (keyS_\i) \ifnum \i=1 node[midway, left] {\scriptsize key} \fi;
+    \draw[arrow] (zS_\i) -- (valueS_\i) \ifnum \i=1 node[midway, right] {\scriptsize value} \fi;}
+
+
+
+\node[invisible, above={.5cm} of keyS_0] (kprimeS_0) {};
+\addlayer[prime]{kprimeS}
+
+\node[invisible, above={1.2cm} of valueS_0] (vprimeS_0) {};
+\addlayer[prime]{vprimeS}
+
+\foreachvector{\draw[arrow] (kprimeS_\i) -- (vprimeS_\i);}
+
+
+\node[invisible, above={6*\vertispace + 4*\minheight} of zS_0] (resultS_0) {};
+\addlayer[value]{resultS}
+\foreachvector{\draw[arrow] (vprimeS_\i) -- (resultS_\myposition);}
+
+
+% \foreachvector{
+%     \node[circle, inner sep=-1pt, draw, above={3*\vertispace + \minheight} of valueS_\i] (resplus_\i){$+$};
+%     \draw[arrow] (valueS_\i) -- (resplus_\i);
+%     \draw[arrow] (y_\i.west) -- ++(-0.6,0) |- (resplus_\i.west);
+% }
+
+
+
+% y_S
+\node[invisible, above left={7*\vertispace + \minheight} and {.5*\decalage} of resultS_0] (yS_0) {};
+\addlayer[3dvect]{yS}
+
+
+
+\node[invisible, above left={0.3*\vertispace} and {0.5*\decalage} of resultS_1, anchor=west] (houtbase) {};
+\addontopoffun{houtbase}{hout_1}{\scriptsize \hout}
+\addlayerfun{hout}{\scriptsize \hout}
+
+
+\draw[arrow] (resultS_\myposition) -- (hout_\myposition);
+\draw[arrow] (result_\myposition) -- (hout_\myposition);
+
+
+
+
+
+\node[draw, fit={(valueS_\numnodes) (vprimeS_\numnodes) (keyS_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};
+
+
+
+
+
+% Attention layer box
+\node[draw, fit={(hmask) (hout_\numnodes) (key_1) (valueS_\numnodes)}, 
+    minimum height=\minheight+2pt, inner sep=6pt, 
+    name=attlayer
+] {};
+
+\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){$\mathcal{A}_1$};
+\draw[={Latex[width=2mm,length=2mm]}] (attlayer.east) --(attlayerlabel);

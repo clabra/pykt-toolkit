@@ -1,0 +1,37 @@
+
+\foreachvector{\draw[arrow] (w_\i) -- (z_\i);}
+\addglobalfunction{w_1, anchor=west}{hmask}{\hmask = future-masking}
+\draw[arrow] (position) |- (hmask.west);
+
+
+
+% Key and value
+\node[invisible, above={3*\vertispace + \minheight} of z_0, shift={(-0.4cm,0)}] (key_0) {};
+\addlayer[key]{key}
+\node[invisible, above={3*\vertispace + \minheight} of z_0, shift={(.4cm,0)}] (value_0) {};
+\addlayer[value]{value}
+
+\foreachvector{
+    \draw[arrow] (z_\i) -- (key_\i) \ifnum \i=1 node[midway, left] {\scriptsize key} \fi;
+    \draw[arrow] (z_\i) -- (value_\i) \ifnum \i=1 node[midway, right] {\scriptsize value} \fi;}
+
+
+
+\node[invisible, above={.5cm} of key_0] (kprime_0) {};
+\addlayer[prime]{kprime}
+
+\node[invisible, above={1.2cm} of value_0] (vprime_0) {};
+\addlayer[prime]{vprime}
+
+\foreachvector{\draw[arrow] (kprime_\i) -- (vprime_\i);}
+
+
+\node[invisible, above={6*\vertispace + 4*\minheight} of z_0] (result_0) {};
+\addlayer[value]{result}
+\foreachvector{\draw[arrow] (vprime_\i) -- (result_\myposition);}
+
+
+\node[draw, fit={(value_\numnodes) (vprime_\numnodes) (key_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
+% , label={[label distance=+5pt]right:{\hpool}}
+% \draw[={Latex[width=2mm,length=2mm]}] (rectpool.east) ++(0.2,0) -- (rectpool);
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};

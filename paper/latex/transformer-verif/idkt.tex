@@ -1,0 +1,174 @@
+\documentclass[tikz, border=10pt]{standalone}
+\usepackage{xstring}
+\usepackage{amsmath}
+\usepackage{datatool} 
+\usepackage{filecontents}
+\usepackage{xparse}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+\usetikzlibrary{decorations.pathreplacing}
+
+
+% Boolean to show dots when dealing with a general architecture
+\newbool{showdots}
+\setbool{showdots}{false}
+
+
+% Boolean to draw boxes around attention heads
+\newbool{showlayers}
+\setbool{showlayers}{false}
+
+
+\begin{document}
+\input{commands_idkt.tex}
+
+
+\newcommand{\Nin}{$y', x'$}
+\newcommand{\fin}{Grounding}
+\newcommand{\gout}{MLP Stage}
+\newcommand{\hout}{$x^*$}
+\newcommand{\hmask}{Causal Mask}
+\newcommand{\hatt}{Self-Attn}
+\newcommand{\hpool}{Cross-Attn}
+\newcommand{\fout}{$p_{iDKT}$}
+
+
+\begin{tikzpicture}[
+    node distance=0.5cm and 0.4cm,
+    invisible/.style={},
+    all/.style={inner sep=0pt, draw},
+    function/.style={all, fill=gray!20, 
+    minimum width=20pt, minimum height=\minheight, align=center},
+    module/.style={all, rounded corners=2mm, fill=gray!20, 
+    minimum width=20pt, minimum height=\minheight, align=center},
+    vect/.style={module, fill=green!20, text width=20pt, minimum width=20pt, minimum height=20pt}, 
+    3dvect/.style={module, fill=green!20, 
+    minimum width=20pt, align=center, text width=20pt, text centered, text depth=2.25*\minheight, anchor=center},
+    natural/.style={module, fill=orange!20},
+    scalar/.style={module, fill=red!20},
+    key/.style={module, fill=red!20},
+    value/.style={module, fill=blue!20},
+    prime/.style={module, fill=yellow!20},
+    nvalue/.style={module, fill=cyan!20},
+    arrow/.style={-stealth},
+]
+
+\def\numnodes{4}
+\def\ndim{3}
+\def\myposition{4}
+
+
+% position
+\inputnode[scalar]{position}{\myposition}
+
+
+% alpha: inputs
+\inputnode[invisible]{alpha_0}{}
+\addlayer{alpha}
+
+
+% w
+\node[invisible, above={\medvertispace + \minheight} of alpha_0] (w_0) {};
+\addlayer[3dvect]{w}
+
+
+% z
+\node[invisible, above={\bigvertispace + \minheight} of w_0] (z_0) {};
+\addlayer[3dvect]{z}
+\node[invisible, right=\decalage of z_0] (zS_0) {};
+\addlayer[3dvect]{zS}
+
+
+% fin
+\foreachvector{\draw[arrow] (alpha_\vidx) -- (w_\vidx);}
+\addontopoffun{alpha_1}{fin_1}{\scriptsize\fin}
+\addlayerfun{fin}{\scriptsize\fin}
+
+
+
+
+\input{attentionhead11_idkt.tex}
+
+
+
+
+% Attention head box
+\ifbool{showlayers}{
+\node[draw, fit={(hmask) (key_1) (vprime_\numnodes)}, 
+    minimum height=\minheight+2pt, inner sep=4pt, 
+    name=atthead, 
+    line width= 0.01mm
+] {};
+\node[above right=0mm and +2mm of atthead.east, anchor=west] (attheadlabel){$\mathcal{H}$};
+\draw[={Latex[width=2mm,length=2mm]}] (atthead.east) -- (attheadlabel);}{}
+
+
+
+
+
+
+
+
+
+
+
+\input{attentionhead12_idkt.tex}
+
+
+
+\foreachvector{\draw[arrow] (hout_\vidx) -- (yS_\vidx);}
+
+
+
+% zSS
+\node[invisible, above={\bigvertispace + \minheight} of yS_0] (zSS_0) {};
+\addlayer[3dvect]{zSS}
+
+
+\input{attentionlayer2_idkt.tex}
+
+
+% v
+\node[invisible, above={\bigvertispace + \minheight} of ySS_0] (v_0) {};
+\addlayer[3dvect]{v}
+
+\foreachvector{\draw[arrow] (ySS_\vidx) -- (v_\vidx);}
+\addontopoffun{ySS_1}{gout_1}{\scriptsize \gout}
+\addlayerfun{gout}{\scriptsize \gout}
+
+
+
+
+
+
+
+
+
+
+% Encoder layer box
+\ifbool{showlayers}{
+\node[draw, fit={(hmask) (key_1) (gout_\numnodes) (value_\numnodes)}, 
+    minimum height=\minheight+2pt, inner sep=8pt,
+    name=enclayer
+] {};
+\node[right=2mm of enclayer.east, anchor=west] (enclayerlabel){$\mathcal{E}$};
+\draw[={Latex[width=2mm,length=2mm]}] (enclayer.east) -- (enclayerlabel);}{}
+
+
+
+% beta: outputs
+\node[invisible, above={\medvertispace + \minheight} of v_0] (beta_0) {};
+\addlayer{beta}
+
+\foreachvector{\draw[arrow] (v_\vidx) -- (beta_\vidx);}
+\addontopoffun{v_1}{fout_1}{\scriptsize \fout}
+\addlayerfun{fout}{\scriptsize \fout}
+
+
+
+\end{tikzpicture}
+
+\end{document}

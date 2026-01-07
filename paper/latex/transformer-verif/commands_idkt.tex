@@ -1,0 +1,137 @@
+% ###############################
+% Some standard space definitions
+% ###############################
+\newcommand{\horispace}{1.4cm}
+\newcommand{\vertispace}{.3cm}
+\newcommand{\medvertispace}{5*\vertispace}
+\newcommand{\bigvertispace}{7*\vertispace}
+\newcommand{\minheight}{18pt}
+\def\decalage{1.6*\numnodes*\horispace}
+% ###############################
+
+% ###############################
+% Load the csv file named 'idkt.csv'
+% ###############################
+\DTLloadrawdb
+  [keys={name,value1,value2,value3,value4}]
+  {data}{idkt.csv}
+% ###############################
+
+% ###############################
+% Some useful commands for layers
+% ###############################
+
+% ###################
+% GENERAL     
+% ###################
+% For each loop
+\NewDocumentCommand{\foreachvector}{O{}m}{
+    \foreach \vidx in {1,...,\numnodes} {
+        #2
+    }
+}
+
+% Display list (a1; a2; ...; a\ndim) as vector
+\NewDocumentCommand{\displaylist}{m}
+ {
+    \foreach \jidx in {1,...,\ndim} {
+        \pgfmathtruncatemacro{\nextj}{\jidx+1} 
+        \pgfmathtruncatemacro{\prevj}{\jidx-1}
+    \ifnum \jidx=\ndim
+        \StrBetween[\prevj,1]{#1}{;}{)}[\coord] \coord
+    \else
+    \StrBetween[1,1]{#1}{(}{;}[\coord]
+        \ifnum \jidx=1
+            \coord\\
+        \else
+            \StrBetween[\prevj,\jidx]{#1}{;}{;}[\coord]\coord\\
+        \fi
+    \fi
+    }
+}
+
+% Some dots when abstracting architecture
+\NewDocumentCommand{\dotscell}{O{}m}{
+    \node[#1, right=\horispace of #2] (dots#2) {$\dots$};
+}
+
+% ###################
+% NODES     
+% ###################
+% Add a node 
+\NewDocumentCommand{\inputnode}{O{}mm}{\node[#1] (#2) {#3};}
+
+% Add a node on top of...
+\NewDocumentCommand{\addontopof}{O{}mmm}{\node[vect, #1, above=\vertispace of #2] (#3) {#4};}
+
+% Add a node on right of ...
+\NewDocumentCommand{\addonrightof}{O{}mmm}{\node[vect, #1, right=\horispace of #2] (#3) {#4};}
+
+% Add a layer of nodes
+\NewDocumentCommand{\addlayer}{O{}m}{
+    \foreach \lidx in {0,...,\numnodes} {
+        \pgfmathtruncatemacro{\nextl}{\lidx+1}
+
+        \ifnum \nextl=\numnodes
+            \ifbool{showdots}{
+                \dotscell{#2_\lidx}
+            }{
+                \DTLgetvalueforkey{\lvalue}{value\nextl}{data}{name}{#2}
+                \addonrightof[#1]{#2_\lidx}{#2_\nextl}{
+                    \IfBeginWith{\lvalue}{(}{\displaylist{\lvalue}}{\lvalue}}
+            }
+        \else
+            \ifnum \lidx=\numnodes
+                \ifbool{showdots}{
+                    \pgfmathtruncatemacro{\prevl}{\lidx-1}
+                    \DTLgetvalueforkey{\lvalue}{value\lidx}{data}{name}{#2}
+                    \addonrightof[#1]{dots#2_\prevl}{#2_\lidx}{
+                        \IfBeginWith{\lvalue}{(}{\displaylist{\lvalue}}{\lvalue}
+                    }
+                }{}
+            \else
+                \DTLgetvalueforkey{\lvalue}{value\nextl}{data}{name}{#2}
+                \addonrightof[#1]{#2_\lidx}{#2_\nextl}{
+                    \IfBeginWith{\lvalue}{(}{\displaylist{\lvalue}}{\lvalue}}
+            \fi
+        \fi
+    }
+}
+
+% ###################
+% FUNCTIONS
+% ###################
+% Add a function on top of ...
+\NewDocumentCommand{\addontopoffun}{O{}mmm}{\node[function, #1, above=\vertispace of #2] (#3) {#4};}
+
+% Add a function on right of ...
+\NewDocumentCommand{\addonrightoffun}{O{}mmm}{\node[function, #1, right=\horispace of #2] (#3) {#4};}
+
+% Add a layer of functions
+\NewDocumentCommand{\addlayerfun}{O{}mm}{
+    \foreach \fidx in {1,...,\numnodes} {
+        \pgfmathtruncatemacro{\nextf}{\fidx+1}
+
+        \ifnum \nextf=\numnodes
+            \ifbool{showdots}{
+                \dotscell[#1]{#2_\fidx}
+            }{
+                \addonrightoffun[#1]{#2_\fidx}{#2_\nextf}{#3}
+            }
+        \else
+            \ifnum \fidx=\numnodes
+                \ifbool{showdots}{
+                    \pgfmathtruncatemacro{\prevf}{\fidx-1}
+                    \addonrightoffun[#1]{dots#2\prevf}{#2_\fidx}{#3}                    
+                }{}
+            \else
+                \addonrightoffun[#1]{#2_\fidx}{#2_\nextf}{#3}
+            \fi
+        \fi
+    }
+}
+
+% Add a global layer function
+\NewDocumentCommand{\addglobalfunction}{O{}mmm}{
+    \node[function, #1, above={3*\vertispace} of #2, minimum width=7.1cm, shift={(-0.35cm,0)}] (#3) {#4};
+}

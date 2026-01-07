@@ -1,0 +1,83 @@
+
+\foreachvector{\draw[arrow] (yS_\vidx) -- (zSS_\vidx);}
+% \addontopoffun{v_1}{hmask1}{\scriptsize \hmask}
+% \addlayerfun{hmask}{\scriptsize \hmask}
+\addglobalfunction{yS_1, anchor=west}{hmask}{\hmask = no mask}
+\draw[arrow] (position) |- (hmask.west);
+
+
+
+% Key and valueS
+\node[invisible, above={3*\vertispace + \minheight} of zSS_0, shift={(-0.4cm,0)}] (keySS_0) {};
+\addlayer[key]{keySS}
+\node[invisible, above={3*\vertispace + \minheight} of zSS_0, shift={(.4cm,0)}] (valueSS_0) {};
+\addlayer[value]{valueSS}
+
+\foreach \vidx in {1,...,\numnodes} {
+    \draw[arrow] (zSS_\vidx) -- (keySS_\vidx) \ifnum \vidx=1 node[midway, left] {\scriptsize key} \fi;
+    \draw[arrow] (zSS_\vidx) -- (valueSS_\vidx) \ifnum \vidx=1 node[midway, right] {\scriptsize value} \fi;}
+
+
+
+\node[invisible, above={.5cm} of keySS_0] (kprimeSS_0) {};
+\addlayer[prime]{kprimeSS}
+
+\node[invisible, above={1.2cm} of valueSS_0] (vprimeSS_0) {};
+\addlayer[prime]{vprimeSS}
+
+\foreachvector{\draw[arrow] (kprimeSS_\vidx) -- (vprimeSS_\vidx);}
+
+
+\node[invisible, above={6*\vertispace + 4*\minheight} of zSS_0] (resultSS_0) {};
+\addlayer[value]{resultSS}
+\foreachvector{\draw[arrow] (vprimeSS_\vidx) -- (resultSS_\myposition);}
+
+
+% \foreachvector{
+%     \node[circle, inner sep=-1pt, draw, above={3*\vertispace + \minheight} of valueS_\vidx] (resplus_\vidx){$+$};
+%     \draw[arrow] (valueS_\vidx) -- (resplus_\vidx);
+%     \draw[arrow] (y_\vidx.west) -- ++(-0.6,0) |- (resplus_\vidx.west);
+% }
+
+
+
+% ySS
+\node[invisible, above={7*\vertispace + \minheight} of resultSS_0] (ySS_0) {};
+\addlayer[3dvect]{ySS}
+
+\foreachvector{
+    % \draw[arrow] (resplus_\vidx) -- (yS_\vidx);
+    % \node[circle, inner sep=-1pt, draw, above={3*\vertispace + \minheight} of valueS_\vidx] (resplus_\vidx){$+$};
+    % \draw[arrow] (valueS_\vidx) -- (resplus_\vidx);
+    % \draw[arrow] (yS_\vidx.west) -- ++(-0.6,0) |- (resplus_\vidx.west);
+    \draw[arrow] (resultSS_\vidx) -- (ySS_\vidx);
+}
+% \addglobalfunction{valueS_1, anchor=west}{hout}{\hout}
+
+
+\addontopoffun{resultSS_1}{hout_1}{\scriptsize \hout}
+\addlayerfun{hout}{\scriptsize \hout}
+\foreachvector{\draw[arrow, dotted] (yS_\vidx.west) -- ++(-0.8,0) |- (hout_\vidx.west);}
+
+
+
+
+
+
+\node[draw, fit={(valueSS_\numnodes) (vprimeSS_\numnodes) (keySS_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
+% , label={[label distance=+5pt]right:{\hpool}}
+% \draw[={Latex[width=2mm,length=2mm]}] (rectpool.east) ++(0.2,0) -- (rectpool);
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};
+
+
+
+
+
+% Attention layer box
+\node[draw, fit={(hmask) (hout_\numnodes) (keySS_1) (valueSS_\numnodes)}, 
+    minimum height=\minheight+2pt, inner sep=6pt, 
+    name=attlayer
+] {};
+
+\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){$\mathcal{A}_2$};
+\draw[={Latex[width=2mm,length=2mm]}] (attlayer.east) --(attlayerlabel);
