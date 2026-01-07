@@ -215,70 +215,70 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Simplified ["iDKT Simplified Architecture"]
-        subgraph Input ["1. Input Data"]
+    subgraph Master_Box ["iDKT Simplified Model Architecture"]
+        %% INPUT LAYER
+        subgraph Input_Layer ["Input Data"]
             direction LR
-            Q["Questions (q)"]
-            R["Responses (r)"]
-            UID["Student IDs (uid)"]
-            PID["Problem IDs (pid)"]
+            Raw[/q, r, pid, uid/]
         end
 
-        subgraph Grounding ["2. Representational Grounding"]
-            direction LR
-            subgraph Params ["Pedagogical Parameters"]
-                direction LR
-                uq["u_q: Difficulty"]
-                kc["k_c: Initial Knowledge"]
-                vs["v_s: Learning Rate"]
-            end
-            x_prime[["Task Embedding x'<br/>(Question + Difficulty)"]]
-            y_prime[["Interaction Embedding y'<br/>(History + Grounding)"]]
+        %% EMBEDDING / GROUNDING LAYER
+        subgraph Grounding_Layer ["1. Rasch-Grounded Embeddings"]
+            direction TB
+            %% Grounding Components
+            kc_node(("k_c")) 
+            vs_node(("v_s")) 
+            uq_node(("u_q"))
+            
+            %% Combined Parameters
+            lc[Grounded Initial Mastery l_c]
+            ts[Grounded Learning Rate t_s]
+            
+            %% Individualized Vectors
+            x_prime[[Individualized Task x']]
+            y_prime[[Individualized History y']]
         end
 
-        subgraph Core ["3. Transformer Inference Core"]
-            Enc["Context Encoder (y')"]
-            Dec["Query Decoder (x'+Context)"]
+        %% CORE ARCHITECTURE
+        subgraph Core_Layer ["2. Transformer Inference Core"]
+            direction TB
+            Encoder["Encoder Blocks (N)<br/>Contextualize Interaction History"]
+            Decoder["Decoder Blocks (2N)<br/>Retrieve Relevant Knowledge"]
         end
 
-        subgraph Output ["4. Pedagogical Diagnostics"]
-            Pred[["Performance Prediction p_iDKT"]]
-            Diag["Grounding Metrics<br/>(Mastery & Progress)"]
+        %% OUTPUT & OPTIMIZATION
+        subgraph Output_Layer ["3. Output & Alignment"]
+            direction TB
+            Pred[p_iDKT Prediction]
+            Diag[Pedagogical Diagnostics]
+            Loss{{Multi-Objective Loss<br/>L_SUP + L_REF + L_REG}}
         end
 
-        subgraph Loss ["5. Theory-Guided Loss Pipeline"]
-            L_Perf["L_sup: Accuracy"]
-            L_Align["L_ref: BKT Alignment"]
-            L_Theory["L_init & L_rate"]
-            L_Reg["L_rasch & L_student"]
-        end
-
-        %% Wiring
-        PID --> uq
-        UID --> kc & vs
-        Q & uq --> x_prime
-        R & kc & vs --> y_prime
-
-        y_prime --> Enc
-        x_prime --> Dec
-        Enc -- "Context y*" --> Dec
-
-        Dec --> Pred & Diag
-
-        %% Loss Connections
-        Pred --> L_Perf & L_Align
-        Diag --> L_Theory
-        Params --> L_Reg
+        %% DATA FLOW
+        Raw --> kc_node & vs_node & uq_node
+        kc_node --> lc
+        vs_node --> ts
+        uq_node & lc --> x_prime
+        uq_node & ts --> y_prime
+        y_prime --> Encoder
+        x_prime  --> Decoder
+        Encoder -- Context y* --> Decoder
+        Decoder --> Pred & Diag
+        Pred & Diag --> Loss
     end
 
-    %% Style
-    classDef contribution fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef standard fill:#e1f5fe,stroke:#0277bd,stroke-width:1px;
-    classDef loss fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
+    %% STYLING
+    classDef master fill:#ffffff,stroke:#333,stroke-width:2px,font-size:16px;
+    classDef layer fill:#f8f9fa,stroke:#dee2e6,stroke-width:1px,font-weight:bold;
+    classDef block fill:#ffffff,stroke:#4a5568,stroke-width:1.5px;
+    classDef grounding fill:#ebf8ff,stroke:#3182ce,stroke-width:2px;
+    classDef data fill:#f7fafc,stroke:#a0aec0,stroke-width:1px;
 
-    class Params,x_prime,y_prime,Diag,L_Theory contribution
-    class Enc,Dec standard
-    class L_Perf,L_Align,L_Reg loss
+    class Master_Box master
+    class Input_Layer,Grounding_Layer,Core_Layer,Output_Layer layer
+    class Encoder,Decoder,Pred,lc,ts block
+    class x_prime,y_prime,Loss grounding
+    class Raw data
 ```
 
 ### Embeddings
