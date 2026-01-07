@@ -210,6 +210,77 @@ graph TD
 
 </div>
 
+
+## iDKT Architecture Diagram 2
+
+```mermaid
+graph TD
+    subgraph Simplified ["iDKT Simplified Architecture"]
+        subgraph Input ["1. Input Data"]
+            direction LR
+            Q["Questions (q)"]
+            R["Responses (r)"]
+            UID["Student IDs (uid)"]
+            PID["Problem IDs (pid)"]
+        end
+
+        subgraph Grounding ["2. Representational Grounding"]
+            direction LR
+            subgraph Params ["Pedagogical Parameters"]
+                direction LR
+                uq["u_q: Difficulty"]
+                kc["k_c: Initial Knowledge"]
+                vs["v_s: Learning Rate"]
+            end
+            x_prime[["Task Embedding x'<br/>(Question + Difficulty)"]]
+            y_prime[["Interaction Embedding y'<br/>(History + Grounding)"]]
+        end
+
+        subgraph Core ["3. Transformer Inference Core"]
+            Enc["Context Encoder (y')"]
+            Dec["Query Decoder (x'+Context)"]
+        end
+
+        subgraph Output ["4. Pedagogical Diagnostics"]
+            Pred[["Performance Prediction p_iDKT"]]
+            Diag["Grounding Metrics<br/>(Mastery & Progress)"]
+        end
+
+        subgraph Loss ["5. Theory-Guided Loss Pipeline"]
+            L_Perf["L_sup: Accuracy"]
+            L_Align["L_ref: BKT Alignment"]
+            L_Theory["L_init & L_rate"]
+            L_Reg["L_rasch & L_student"]
+        end
+
+        %% Wiring
+        PID --> uq
+        UID --> kc & vs
+        Q & uq --> x_prime
+        R & kc & vs --> y_prime
+
+        y_prime --> Enc
+        x_prime --> Dec
+        Enc -- "Context y*" --> Dec
+
+        Dec --> Pred & Diag
+
+        %% Loss Connections
+        Pred --> L_Perf & L_Align
+        Diag --> L_Theory
+        Params --> L_Reg
+    end
+
+    %% Style
+    classDef contribution fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef standard fill:#e1f5fe,stroke:#0277bd,stroke-width:1px;
+    classDef loss fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
+
+    class Params,x_prime,y_prime,Diag,L_Theory contribution
+    class Enc,Dec standard
+    class L_Perf,L_Align,L_Reg loss
+```
+
 ### Embeddings
 
 To bridge psychometric theory and deep learning, iDKT employs a specialized notation for its Rasch-enhanced embeddings:
