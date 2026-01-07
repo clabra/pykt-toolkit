@@ -1,0 +1,113 @@
+\documentclass[border=10pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning, fit, calc, arrows.meta, shapes.geometric}
+
+\begin{document}
+
+\begin{tikzpicture}[
+    node distance=1cm,
+    data/.style={rectangle, draw, fill=blue!5, minimum width=2cm, font=\small},
+    ref_node/.style={rectangle, draw, fill=green!5, align=center, font=\small},
+    stage_box/.style={draw, gray, thick, rounded corners=10pt, dashed},
+    stage_label/.style={font=\bfseries\sffamily, gray!80},
+    grounding/.style={ellipse, draw, fill=purple!10, align=center, font=\small},
+    subblock/.style={rectangle, draw, fill=white, minimum width=2.5cm, font=\footnotesize},
+    attn_sub/.style={rectangle, draw, fill=orange!10, minimum width=2.5cm, minimum height=0.6cm, font=\footnotesize},
+    norm_sub/.style={rectangle, draw, fill=yellow!10, minimum width=2.5cm, font=\tiny},
+    ff_sub/.style={rectangle, draw, fill=cyan!10, minimum width=2.5cm, font=\tiny},
+    output/.style={rectangle, draw, fill=red!5, minimum width=3cm, align=center},
+    loss_node/.style={circle, draw, fill=gray!10, font=\tiny, minimum size=0.8cm},
+    arrow/.style={-Stealth, thick},
+    path_line/.style={thick, gray!70},
+    bridge/.style={thick, gray!70}, % In practice, use a small arc here if truly crossing
+    hub_dot/.style={circle, fill=black, inner sep=1pt}
+]
+
+% Define a simple command for the stacks since \vectorstack isn't standard
+\newcommand{\vectorstack}[4]{
+    \node[subblock, fill=#2, yshift=#4] (#1) {#3};
+    \node[subblock, fill=#2, yshift=#4+0.4cm] (#1_2) {};
+}
+
+% --- LAYER 1: INPUT ---
+\node[data] (I_pid) {Problem IDs $pid$};
+\node[data, right=0.8cm of I_pid] (I_q) {Questions $q$};
+\node[data, right=0.8cm of I_q] (I_r) {Responses $r$};
+\node[data, right=0.8cm of I_r] (I_uid) {Student IDs $uid$};
+\node[ref_node, right=1.2cm of I_uid] (I_bkt) {BKT Reference\\Targets};
+
+\node[stage_box, fit=(I_pid) (I_bkt), inner sep=12pt] (Stage1) {};
+\node[stage_label, anchor=north west] at (Stage1.north west) {1. Input Data};
+
+% --- LAYER 2: EMBEDDINGS ---
+% x' Stack
+\begin{scope}[shift={($(I_q.north)+(0,2.5)$)}]
+    \vectorstack{X_final}{blue!20}{x'}{0.65cm}
+    \vectorstack{X_ground}{blue!10}{l_c}{0cm}
+    \vectorstack{X_base}{blue!5}{c}{-0.8cm}
+    \node at (0, -0.4) {$\ominus$};
+\end{scope}
+
+% y' Stack
+\begin{scope}[shift={($(I_r.north)+(0,2.5)$)}]
+    \vectorstack{Y_final}{orange!20}{y'}{0.65cm}
+    \vectorstack{Y_ground}{orange!10}{t_c}{0cm}
+    \vectorstack{Y_base}{orange!5}{e}{-0.8cm}
+    \node at (0, -0.4) {$\oplus$};
+\end{scope}
+
+\node[grounding, above=3.5cm of I_pid] (G_uq) {Question\\Difficulty ($u_q$)};
+\node[grounding, above=3.5cm of I_uid] (G_st) {Student\\Params ($k_c, v_s$)};
+
+\node[stage_box, fit=(G_uq) (G_st) (X_final_2) (Y_final_2), inner sep=12pt] (Stage2) {};
+\node[stage_label, anchor=north west] at (Stage2.north west) {2. Embeddings};
+
+% --- LAYER 3: CORE ---
+\node[attn_sub, above=4cm of Y_final_2] (E_MHA) {Multi-Head Self-Attn};
+\node[norm_sub, above=0.3cm of E_MHA] (E_AN1) {Add \& Norm};
+\node[ff_sub, above=0.4cm of E_AN1] (E_FFN) {Feed Forward};
+\node[norm_sub, above=0.3cm of E_FFN] (E_AN2) {Add \& Norm};
+\node[stage_box, fit=(E_MHA) (E_AN2), inner sep=5pt] (EncBlock) {};
+
+\node[attn_sub, above=3cm of X_final_2] (D_MHA) {Masked MHA};
+\node[norm_sub, above=0.25cm of D_MHA] (D_AN1) {Add \& Norm};
+\node[attn_sub, above=0.4cm of D_AN1] (D_CA) {Cross-Attn};
+\node[norm_sub, above=0.25cm of D_CA] (D_AN2) {Add \& Norm};
+\node[stage_box, fit=(D_MHA) (D_AN2), inner sep=5pt] (DecBlock) {};
+
+% --- LAYER 4 & 5: OUTPUT & LOSS ---
+\node[output, above=1.5cm of DecBlock] (MLP) {MLP Stage};
+\node[output, above=0.7cm of MLP] (Predict) {iDKT Prediction};
+
+\node[loss_node, above=2cm of Predict, xshift=-2cm] (L_sup) {$L_{sup}$};
+\node[loss_node, right=0.4cm of L_sup] (L_ref) {$L_{ref}$};
+\node[loss_node, right=0.4cm of L_ref] (L_init) {$L_{init}$};
+\node[loss_node, right=0.4cm of L_init] (L_rate) {$L_{rate}$};
+\node[loss_node, right=0.4cm of L_rate] (L_rasch) {$L_{rasch}$};
+\node[loss_node, right=0.4cm of L_rasch] (L_reg) {$L_{reg}$};
+\node[rectangle, draw, fill=orange!10, above=0.8cm of L_init, xshift=1cm, minimum width=4cm] (L_total) {$L_{total} = \sum \lambda_i L_i$};
+
+% --- WIRING ---
+\draw[arrow] (I_pid) -- (G_uq);
+\draw[arrow] (I_q) -- (X_base);
+\draw[arrow] (I_r) -- (Y_base);
+\draw[arrow] (I_uid) -- (G_st);
+
+% Using orthogonal paths to avoid crossings
+\draw[arrow] (G_uq.north) -- ++(0,0.5) -| (X_ground.west);
+\draw[arrow] (G_st.north) -- ++(0,0.5) -| (Y_ground.east);
+
+\draw[arrow] (X_final_2.north) -- (D_MHA.south);
+\draw[arrow] (Y_final_2.north) -- (E_MHA.south);
+
+% Cross attention bridge
+\draw[arrow, blue] (E_AN2.west) -- ++(-0.5,0) |- (D_CA.east);
+
+\draw[arrow] (D_AN2.north) -- (MLP.south);
+\draw[arrow] (MLP) -- (Predict);
+
+\foreach \l in {L_sup, L_ref, L_init, L_rate, L_rasch, L_reg}
+    \draw[arrow] (\l.north) -- (L_total.south -| \l.north);
+
+\end{tikzpicture}
+\end{document}

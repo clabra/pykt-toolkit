@@ -14,11 +14,12 @@
 \definecolor{loss_color}{RGB}{255,245,230}
 \definecolor{bkt_color}{RGB}{240,240,240}
 
+
 \begin{tikzpicture}[
-    node distance=0.8cm and 0.8cm,
+    node distance=0.8cm and 1.2cm,
     stage_box/.style={draw, gray!40, dashed, rounded corners=8pt, line width=0.8pt},
-    stage_label/.style={font=\bfseries\large, gray!60!black, anchor=north west, inner sep=8pt},
-    block/.style={draw, rectangle, rounded corners=3pt, minimum width=2.6cm, minimum height=0.8cm, align=center, fill=white, line width=0.7pt, font=\small},
+    stage_label/.style={font=\bfseries\large, gray!60!black, anchor=north west, inner sep=6pt},
+    block/.style={draw, rectangle, rounded corners=3pt, minimum width=2.4cm, minimum height=0.8cm, align=center, fill=white, line width=0.7pt, font=\small},
     data/.style={block, fill=input_color},
     vector_strip/.style={block, minimum height=0.35cm, rounded corners=1pt,
         path picture={
@@ -42,7 +43,8 @@
     v_cell/.style={draw, rectangle, minimum size=0.65cm, inner sep=0pt, font=\tiny\bfseries, line width=0.4pt},
     math_sign/.style={font=\small\bfseries, gray!70!black},
     invisible/.style={inner sep=0pt, outer sep=0pt},
-    hub_dot/.style={circle, fill=gray!60!black, inner sep=1pt}
+    hub_dot/.style={circle, fill=gray!60!black, inner sep=1pt},
+    gap/.style={preaction={draw, white, line width=3pt, -}}
 ]
 
 \newcommand{\vectorstack}[4]{% #1: name, #2: color, #3: var_prefix, #4: y_offset
@@ -59,183 +61,159 @@
     % ==========================================
     % LAYER 1: Input Data (BOTTOM)
     % ==========================================
-    \node[data] (I_q) {Questions $q$};
-    \node[data, right=of I_q] (I_r) {Responses $r$};
-    \node[data, right=of I_r] (I_pid) {Problem IDs $pid$};
-    \node[data, right=of I_pid] (I_uid) {Student IDs $uid$};
-    \node[ref_node, right=2cm of I_uid] (I_bkt) {BKT Reference\\Targets};
-
-    \node[stage_box, fit=(I_q) (I_bkt), inner sep=12pt] (Stage1) {};
-    \node[stage_label] at (Stage1.north west) {1. Input Data};
+    \node[data] (I_pid) {Problem IDs $pid$};
+    \node[data, right=1.2cm of I_pid] (I_q) {Questions $q$};
+    \node[data, right=1.4cm of I_q] (I_uid) {Student IDs $uid$};
+    \node[data, right=1.4cm of I_uid] (I_r) {Responses $r$};
+    \node[ref_node, right=1.2cm of I_r] (I_bkt) {BKT Reference\\Targets};
+ 
+    \node[stage_box, fit=(I_pid) (I_bkt), inner sep=10pt] (Stage1) {};
+    \node[stage_label, xshift=4pt, yshift=-4pt] at (Stage1.north west) {1. Input Data};
 
     % ==========================================
     % LAYER 2: Embeddings
     % ==========================================
     
-    % Group 1: Transition Gap (x') Stack
-    \begin{scope}[shift={($(I_q)+(-1.25,2.4)$)}]
+    % Difficulty source (Above I_pid)
+    \node[grounding, above=2.4cm of I_pid] (G_uq) {Question\\Difficulty ($u_q$)};
+
+    % Group 1: Transition Gap (x') Stack (Above I_q)
+    \begin{scope}[shift={($(I_q.north)+(-1.27,1.8)$)}]
         \vectorstack{X_final}{grounding_color}{x'}{0.65cm}
         \draw[gray!60, thick] (-0.4, 0.325) -- (2.95, 0.325);
         \vectorstack{X_ground}{grounding_color}{l_c}{0cm}
         \node[math_sign, xshift=1.27cm] at (0, -0.35cm) {$\ominus$};
         \vectorstack{X_base}{emb_color}{c}{-0.8cm}
-        \node[comp_label, above=0.8cm of X_final_2, xshift=0.65cm] {Transition Gap $x'$};
+        \node[comp_label, above=0.7cm of X_final_2, xshift=0.65cm] {Transition Gap $x'$};
     \end{scope}
     
-    % Group 2: Transition Gain (y') Stack
-    \begin{scope}[shift={($(I_r)+(-1.25,2.4)$)}]
+    % Student parameters source (Above I_uid)
+    \node[grounding, above=2.4cm of I_uid] (G_st) {Student\\Params ($k_c, v_s$)};
+
+    % Group 2: Transition Gain (y') Stack (Above I_r)
+    \begin{scope}[shift={($(I_r.north)+(-1.27,1.8)$)}]
         \vectorstack{Y_final}{grounding_color}{y'}{0.55cm}
         \draw[gray!60, thick] (-0.4, 0.325) -- (2.95, 0.325);
         \vectorstack{Y_ground}{grounding_color}{t_c}{0cm}
         \node[math_sign, xshift=1.27cm] at (0, -0.35cm) {$\oplus$};
         \vectorstack{Y_base}{emb_color}{e}{-0.8cm}
-        \node[comp_label, above=0.8cm of Y_final_2, xshift=0.65cm] {Transition Gain $y'$};
+        \node[comp_label, above=0.7cm of Y_final_2, xshift=0.65cm] {Transition Gain $y'$};
     \end{scope}
     
-    \node[grounding, above=3.5cm of I_pid] (G_uq) {Question\\Difficulty ($u_q$)};
-    \node[grounding, above=3.5cm of I_uid] (G_st) {Student\\Params ($k_c, v_s$)};
-
-    % Standardized fit to ensure consistent width across certain stages
-    \node[stage_box, fit=(X_final) (Y_final) (G_st) (X_base) (Y_base), inner sep=12pt] (Stage2) {};
-    \node[stage_label] at (Stage2.north west) {2. Embeddings (Representational Grounding)};
+    \node[stage_box, fit=(G_uq) (Y_final) (G_st), inner sep=12pt] (Stage2) {};
+    \node[stage_label, xshift=4pt, yshift=-4pt] at (Stage2.north west) {2. Embeddings (Representational Grounding)};
 
     % ==========================================
     % LAYER 3: Transformer Core
     % ==========================================
     
     % --- Encoder Stack ---
-    \node[attn_sub, above=3cm of Y_final, xshift=4pt, yshift=4pt] (E_MHA_3) {};
-    \node[attn_sub, above=3cm of Y_final, xshift=2pt, yshift=2pt] (E_MHA_2) {};
-    \node[attn_sub, above=3cm of Y_final] (E_MHA) {Multi-Head\\Self-Attn};
+    \node[attn_sub, above=1.2cm of Y_final, xshift=4pt, yshift=4pt] (E_MHA_3) {};
+    \node[attn_sub, above=1.2cm of Y_final, xshift=2pt, yshift=2pt] (E_MHA_2) {};
+    \node[attn_sub, above=1.2cm of Y_final] (E_MHA) {Multi-Head\\Self-Attn};
     
     \node[norm_sub, above=0.3cm of E_MHA] (E_AN1) {Add \& Norm};
     \node[ff_sub, above=0.4cm of E_AN1] (E_FFN) {Feed Forward};
     \node[norm_sub, above=0.3cm of E_FFN] (E_AN2) {Add \& Norm};
     
-    \node[draw, gray!40, dashed, rounded corners=6pt, fit=(E_MHA_3) (E_AN2), inner sep=10pt] (EncBlock) {};
+    \node[draw, gray!40, dashed, rounded corners=6pt, fit=(E_MHA_3) (E_AN2), inner sep=8pt] (EncBlock) {};
     \node[comp_label, anchor=south] at (EncBlock.north) {Encoder Block ($N\times$)};
 
     % --- Decoder Stack ---
-    \node[attn_sub, above=2.0cm of X_final, xshift=4pt, yshift=4pt] (D_MHA_3) {};
-    \node[attn_sub, above=2.0cm of X_final, xshift=2pt, yshift=2pt] (D_MHA_2) {};
-    \node[attn_sub, above=2.0cm of X_final] (D_MHA) {Masked\\Multi-Head\\Self-Attn};
+    \node[attn_sub, above=1.2cm of X_final, xshift=4pt, yshift=4pt] (D_MHA_3) {};
+    \node[attn_sub, above=1.2cm of X_final, xshift=2pt, yshift=2pt] (D_MHA_2) {};
+    \node[attn_sub, above=1.2cm of X_final] (D_MHA) {Masked Self-Attn};
     
     \node[norm_sub, above=0.25cm of D_MHA] (D_AN1) {Add \& Norm};
     
-    \node[attn_sub, above=0.4cm of D_AN1, xshift=4pt, yshift=4pt] (D_CA_3) {};
-    \node[attn_sub, above=0.4cm of D_AN1, xshift=2pt, yshift=2pt] (D_CA_2) {};
-    \node[attn_sub, above=0.4cm of D_AN1] (D_CA) {Multi-Head\\Cross-Attn};
+    \node[attn_sub, above=0.4cm of D_AN1] (D_CA) {Cross-Attn};
     
     \node[norm_sub, above=0.25cm of D_CA] (D_AN2) {Add \& Norm};
     \node[ff_sub, above=0.35cm of D_AN2] (D_FFN) {Feed Forward};
     \node[norm_sub, above=0.25cm of D_FFN] (D_AN3) {Add \& Norm};
 
-    \node[draw, gray!40, dashed, rounded corners=6pt, fit=(D_MHA_3) (D_AN3), inner sep=8pt] (DecBlock) {};
+    \node[draw, gray!40, dashed, rounded corners=6pt, fit=(D_MHA_3) (D_AN3), inner sep=6pt] (DecBlock) {};
     \node[comp_label, anchor=south] at (DecBlock.north) {Decoder Block ($2N\times$)};
 
     \node[stage_box, fit=(EncBlock) (DecBlock), inner sep=12pt] (Stage3) {};
-    \node[stage_label] at (Stage3.north west) {3. Transformer Core};
+    \node[stage_label, xshift=4pt, yshift=-4pt] at (Stage3.north west) {3. Transformer Core};
 
     % ==========================================
     % LAYER 4: Output Stage
     % ==========================================
-    \node[output, above=1.2cm of DecBlock] (MLP) {MLP Stage\\(Linear Layers)};
-    \node[output, above=0.7cm of MLP] (Predict) {iDKT Prediction\\($p_{iDKT}$)};
+    \node[output, above=0.8cm of DecBlock] (MLP) {MLP Stage};
+    \node[output, above=0.6cm of MLP] (Predict) {iDKT Prediction ($p_{iDKT}$)};
 
-    \node[stage_box, fit=(MLP) (Predict), inner sep=12pt] (Stage4) {};
-    \node[stage_label] at (Stage4.north west) {4. Output Stage};
+    \node[stage_box, fit=(MLP) (Predict), inner sep=10pt] (Stage4) {};
+    \node[stage_label, xshift=4pt, yshift=-4pt] at (Stage4.north west) {4. Output Stage};
 
     % ==========================================
     % LAYER 5: Loss Functions (TOP)
     % ==========================================
-    \node[loss_node, above=1.5cm of Predict] (L_sup) {$L_{sup}$};
+    \node[loss_node, above=1.0cm of Predict] (L_sup) {$L_{sup}$};
     \node[loss_node, right=0.5cm of L_sup] (L_ref) {$L_{ref}$};
-    \node[loss_node, right=0.5cm of L_ref] (L_init) {$L_{init}$};
-    \node[loss_node, right=0.5cm of L_init] (L_rate) {$L_{rate}$};
-    \node[loss_node, right=0.5cm of L_rate] (L_rasch) {$L_{rasch}$};
-    \node[loss_node, right=0.5cm of L_rasch] (L_reg) {$L_{reg}$};
+    \node[loss_node, right=0.4cm of L_ref] (L_init) {$L_{init}$};
+    \node[loss_node, right=0.4cm of L_init] (L_rate) {$L_{rate}$};
+    \node[loss_node, right=0.4cm of L_rate] (L_rasch) {$L_{rasch}$};
+    \node[loss_node, right=0.4cm of L_rasch] (L_reg) {$L_{reg}$};
     
-    \node[loss_node, above=0.6cm of L_init, xshift=1cm, minimum width=6cm, fill=orange!20, font=\bfseries] (L_total) {$L_{total} = \sum \lambda_i L_i$};
+    \node[loss_node, above=0.6cm of L_init, xshift=0.8cm, minimum width=6cm, fill=orange!15, font=\bfseries] (L_total) {$L_{total} = \sum \lambda_i L_i$};
 
-    \node[stage_box, fit=(L_sup) (L_reg) (L_total), inner sep=12pt] (Stage5) {};
-    \node[stage_label] at (Stage5.north west) {5. Loss Functions (Grounding Pipeline)};
+    \node[stage_box, fit=(L_sup) (L_reg) (L_total), inner sep=10pt] (Stage5) {};
+    \node[stage_label, xshift=4pt, yshift=-4pt] at (Stage5.north west) {5. Loss Functions};
+
 
     % ==========================================
-    % WIRING (Vertical Flow UPWARDS)
+    % WIRING SYSTEM (Optimal Path Zero-Crossing)
     % ==========================================
     
-    % --- STAGE 1 to 2 ---
-    \draw[arrow] (I_q) -- (X_base.south);
-    \draw[arrow] (I_r) -- (Y_base.south);
+    % --- STAGE 1 & 2 (Vertical Primary Feeds) ---
     \draw[arrow] (I_pid) -- (G_uq);
+    \draw[arrow] (I_q) -- (X_base.south);
     \draw[arrow] (I_uid) -- (G_st);
+    \draw[arrow] (I_r) -- (Y_base.south);
 
-    % --- PORT-BASED GROUNDING BUS ---
-    % Horizontal channel between Stage 1 and 2 to avoid crossing Interaction components
-    \coordinate (L2_bus) at ($(Stage2.south)+(0, 0.6)$);
-    
-    \draw[path_line] (G_st.south) -- ++(0,-0.6) coordinate (bus_st);
-    \node[hub_dot] at (bus_st) {};
-    \draw[arrow] (bus_st) -| (X_ground.south);
-    \draw[arrow] (bus_st) -| (Y_ground.south);
-    
-    \draw[path_line] (G_uq.south) -- ++(0,-0.4) coordinate (bus_uq);
-    \node[hub_dot] at (bus_uq) {};
-    \draw[arrow] (bus_uq) -| ($(X_ground.south)+(0.4, 0)$);
-    \draw[arrow] (bus_uq) -| ($(Y_ground.south)+(0.4, 0)$);
+    % --- SIDE-GROUNDING (Zero Crossings) ---
+    % G_uq is to the left of X. G_st is between X and Y.
+    \draw[arrow] (G_uq.east) -- (X_ground.west);
+    \draw[arrow] (G_st.west) -- (X_ground.east);
+    \draw[arrow] (G_st.east) -- (Y_ground.west);
 
-    % --- STAGE 2 TO 3 ---
+    % --- CORE FORWARD ---
     \draw[arrow] (X_final.north) -- (D_MHA.south);
     \draw[arrow] (Y_final.north) -- (E_MHA.south);
     
-    \draw[arrow] (E_MHA) -- (E_AN1);
-    \draw[arrow] (E_AN1) -- (E_FFN);
-    \draw[arrow] (E_FFN) -- (E_AN2);
+    % Module Internal
+    \draw[arrow] (E_MHA) -- (E_AN1) -- (E_FFN) -- (E_AN2);
+    \draw[arrow] (D_MHA) -- (D_AN1) -- (D_CA) -- (D_AN2) -- (D_FFN) -- (D_AN3);
+    
+    % Context y* (Around Core Side Logic)
+    \draw[arrow] (E_AN2.west) -- ++(-0.4, 0) |- (D_CA.west) node[midway, left, font=\tiny, xshift=2pt] {Context $y^*$};
 
-    \draw[arrow] (D_MHA) -- (D_AN1);
-    \draw[arrow] (D_AN1) -- (D_CA);
-    \draw[arrow] (D_CA) -- (D_AN2);
-    \draw[arrow] (D_AN2) -- (D_FFN);
-    \draw[arrow] (D_FFN) -- (D_AN3);
+    % --- PREDICTION & LOSS ---
+    \draw[arrow] (D_AN3) -- (MLP) -- (Predict);
     
-    % ULTRA-ORDERED CONTEXT PATH (Outside Block Routing)
-    \draw[arrow] (E_AN2.west) -- ++(-1.1,0) |- (D_CA.west);
+    % Fork to supervisors
+    \coordinate (p_h) at ($(Predict.north)+(0, 0.3)$);
+    \node[hub_dot] at (p_h) {};
+    \draw[arrow] (p_h) -| (L_sup.south);
+    \draw[arrow] (p_h) -| (L_ref.south);
 
-    % --- STAGE 3 TO 4 ---
-    \draw[arrow] (D_AN3) -- (MLP);
-    \draw[arrow] (MLP) -- (Predict);
+    % --- DIRECT HIGHWAYS (Minimum length vertical) ---
+    % Highway: BKT Reference
+    \draw[path_line] (I_bkt.north) -- ++(0, 3.4) coordinate (bh);
+    \node[hub_dot] at (bh) {};
+    \foreach \n in {L_ref, L_init, L_rate}
+        \draw[arrow] (bh) |- (\n.east);
 
-    % --- STAGE 4 TO 5 ---
-    \draw[arrow] (Predict.north) -- ++(0,0.5) coordinate (p_top) -| (L_sup.south);
-    \node[hub_dot] at (p_top) {};
-    \draw[arrow] (p_top) -| (L_ref.south);
+    % Highway: Regularization (Direct sideways)
+    \draw[path_line] (G_st.north) -- ++(0, 0.4) coordinate (sh) -- ++(3.5, 0) |- (L_reg.east);
+    \node[hub_dot] at (sh) {};
     
-    % --- THE INDUSTRIAL BACKBONE (Right Aligned Bus) ---
-    \coordinate (Backbone) at ($(Stage5.east)+(2.2, 0)$);
+    % Highway: Rasch (Direct west)
+    \draw[path_line] (G_uq.west) -- ++(-0.35, 0) |- (L_rasch.west);
     
-    % Data Hub: BKT Reference
-    \draw[path_line] (I_bkt.east) -- (I_bkt.east -| Backbone) coordinate (bkt_col);
-    \foreach \n in {L_ref, L_init, L_rate} {
-        \node[hub_dot] at (bkt_col |- \n.east) (tap_\n) {};
-        \draw[arrow] (tap_\n) -- (\n.east);
-    }
-    \draw[path_line] (bkt_col) -- (tap_L_rate.center);
-    
-    % Param Hub: Regularization
-    \draw[path_line] (G_st.east) -- ++(0.5,0) -- (G_st.east -| Backbone) coordinate (st_col);
-    \node[hub_dot] at (st_col |- L_reg.east) (tap_reg1) {};
-    \node[hub_dot] at (st_col |- L_init.east) (tap_reg2) {}; % Port for grounding data
-    \node[hub_dot] at (st_col |- L_rate.east) (tap_reg3) {}; % Port for grounding data
-    \draw[arrow] (tap_reg1) -- (L_reg.east);
-    
-    \draw[path_line] (G_uq.east) -- ++(0.3,0) -- (G_uq.east -| Backbone) coordinate (uq_col);
-    \node[hub_dot] at (uq_col |- L_rasch.east) (tap_rasch) {};
-    \draw[arrow] (tap_rasch) -- (L_rasch.east);
-    
-    \draw[path_line] (st_col |- G_st.east) -- (tap_reg1.center);
-    \draw[path_line] (uq_col |- G_uq.east) -- (tap_rasch.center);
-    
-    % Master Aggregate
+    % Summation
     \foreach \l in {L_sup, L_ref, L_init, L_rate, L_rasch, L_reg}
         \draw[arrow] (\l.north) -- (L_total.south -| \l.north);
 
