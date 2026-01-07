@@ -6,7 +6,7 @@
 \foreachvector{\draw[arrow] (w_\vidx) -- ++(0,0.9) -- ++(\decalage, 0) -| (zS_\vidx);}
 
 \node[invisible, above right=-3.5pt and \decalage of w_1, anchor=east] (report) {};
-\addglobalfunction{report, anchor=west}{hmask}{\hmask = past-masking}
+\addglobalfunction{report, anchor=west}{hmask}{\hatt}
 % \draw[arrow] (position) |- (hmask.west);
 
 
@@ -64,7 +64,7 @@
 
 
 \node[draw, fit={(valueS_\numnodes) (vprimeS_\numnodes) (keyS_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
-\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hatt};
 
 
 
@@ -76,5 +76,5 @@
     name=attlayer
 ] {};
 
-\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){$\mathcal{A}_1$};
+\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){Decoder Self-Attn};
 \draw[={Latex[width=2mm,length=2mm]}] (attlayer.east) --(attlayerlabel);

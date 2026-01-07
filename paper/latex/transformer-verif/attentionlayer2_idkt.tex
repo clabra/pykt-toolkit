@@ -2,7 +2,7 @@
 \foreachvector{\draw[arrow] (yS_\vidx) -- (zSS_\vidx);}
 % \addontopoffun{v_1}{hmask1}{\scriptsize \hmask}
 % \addlayerfun{hmask}{\scriptsize \hmask}
-\addglobalfunction{yS_1, anchor=west}{hmask}{\hmask = no mask}
+\addglobalfunction{yS_1, anchor=west}{hmask}{\hpool}
 \draw[arrow] (position) |- (hmask.west);
 
 
@@ -79,5 +79,5 @@
     name=attlayer
 ] {};
 
-\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){$\mathcal{A}_2$};
+\node[right=2mm of attlayer.east, anchor=west] (attlayerlabel){Decoder Cross-Attn};
 \draw[={Latex[width=2mm,length=2mm]}] (attlayer.east) --(attlayerlabel);

@@ -19,7 +19,7 @@
 
 % Boolean to draw boxes around attention heads
 \newbool{showlayers}
-\setbool{showlayers}{false}
+\setbool{showlayers}{true}
 
 
 \begin{document}
@@ -36,6 +36,11 @@
 \newcommand{\fout}{$p_{iDKT}$}
 
 
+\definecolor{grounding_color}{RGB}{255,230,230}
+\definecolor{encoder_color}{RGB}{230,240,255}
+\definecolor{decoder_color}{RGB}{230,255,230}
+\definecolor{output_color}{RGB}{255,245,230}
+
 \begin{tikzpicture}[
     node distance=0.5cm and 0.4cm,
     invisible/.style={},
@@ -44,15 +49,15 @@
     minimum width=20pt, minimum height=\minheight, align=center},
     module/.style={all, rounded corners=2mm, fill=gray!20, 
     minimum width=20pt, minimum height=\minheight, align=center},
-    vect/.style={module, fill=green!20, text width=20pt, minimum width=20pt, minimum height=20pt}, 
-    3dvect/.style={module, fill=green!20, 
+    vect/.style={module, fill=decoder_color, text width=20pt, minimum width=20pt, minimum height=20pt}, 
+    3dvect/.style={module, fill=decoder_color, 
     minimum width=20pt, align=center, text width=20pt, text centered, text depth=2.25*\minheight, anchor=center},
-    natural/.style={module, fill=orange!20},
-    scalar/.style={module, fill=red!20},
-    key/.style={module, fill=red!20},
-    value/.style={module, fill=blue!20},
-    prime/.style={module, fill=yellow!20},
-    nvalue/.style={module, fill=cyan!20},
+    natural/.style={module, fill=grounding_color},
+    scalar/.style={module, fill=grounding_color},
+    key/.style={module, fill=encoder_color},
+    value/.style={module, fill=encoder_color},
+    prime/.style={module, fill=output_color},
+    nvalue/.style={module, fill=output_color},
     arrow/.style={-stealth},
 ]
 
@@ -102,7 +107,7 @@
     name=atthead, 
     line width= 0.01mm
 ] {};
-\node[above right=0mm and +2mm of atthead.east, anchor=west] (attheadlabel){$\mathcal{H}$};
+\node[above right=0mm and +2mm of atthead.east, anchor=west] (attheadlabel){Encoder Self-Attn};
 \draw[={Latex[width=2mm,length=2mm]}] (atthead.east) -- (attheadlabel);}{}
 
 
@@ -154,7 +159,7 @@
     minimum height=\minheight+2pt, inner sep=8pt,
     name=enclayer
 ] {};
-\node[right=2mm of enclayer.east, anchor=west] (enclayerlabel){$\mathcal{E}$};
+\node[right=2mm of enclayer.east, anchor=west] (enclayerlabel){Decoder Core};
 \draw[={Latex[width=2mm,length=2mm]}] (enclayer.east) -- (enclayerlabel);}{}
 
 

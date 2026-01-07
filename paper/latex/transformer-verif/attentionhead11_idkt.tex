@@ -1,6 +1,6 @@
 
 \foreachvector{\draw[arrow] (w_\vidx) -- (z_\vidx);}
-\addglobalfunction{w_1, anchor=west}{hmask}{\hmask = future-masking}
+\addglobalfunction{w_1, anchor=west}{hmask}{\hmask}
 \draw[arrow] (position) |- (hmask.west);
 
 
@@ -34,4 +34,4 @@
 \node[draw, fit={(value_\numnodes) (vprime_\numnodes) (key_1)}, minimum height=\minheight+2pt, inner sep=2pt] (rectpool) {};
 % , label={[label distance=+5pt]right:{\hpool}}
 % \draw[={Latex[width=2mm,length=2mm]}] (rectpool.east) ++(0.2,0) -- (rectpool);
-\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hpool};
+\node[function, minimum width=0.6cm, minimum height=0.5cm, inner sep= 2pt, anchor=north west] (inner) at (rectpool.north west) {\scriptsize \hatt};
