@@ -7,6 +7,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, fit, backgrounds}
+\usepackage[T1]{fontenc}\usepackage{tikz}
+\usepackage{amsmath, amsfonts}
+\usetikzlibrary{arrows.meta}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -81,7 +84,7 @@
 
 %=================================================================
 % Full title of the paper (Capitalized)
-\Title{Interpretable Deep Knowledge Tracing via Theory-Grounded Embeddings: Toward Individualized Learning Trajectories}
+\Title{Semantically Aligned Interpretability in Deep Knowledge Tracing via Representation Grounding: Toward Individualized Learning Trajectories}
 
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
@@ -187,7 +190,7 @@ The second category, \textit{ante-hoc} methods, aims for intrinsic interpretabil
 
 Regarding the use of side information, the most cited theory is Item Response Theory \citep{embretson2013item}, that models the probability of a student correctly answering a question given their latent ability and the question's difficulty. It is used by models such as Deep-IRT that uses dynamic key-value memory networks to capture learners’ trajectories, inferring their abilities and item difficulties via neural networks, which are subsequently utilized in IRT to predict answer correctness. TC-MIRT integrates the parameters of a multidimensional item response theory to predict students’ states and generate interpretable parameters in each specific knowledge field. KIKT uses the IRT framework to simulate learners’ performance, LANA uses a IRT variant, the Rasch model, to cluster students’ ability levels, while QIKT uses question-centric representations and an interpretable item response theory layer. Other principles from psychology such as the forgetting curve theory have been used also \cite{zhang2021learning}. While providing insights into controlled scenarios, these approaches may struggle to encapsulate the multifaceted and dynamic nature of learning processes and the efficacy is often constrained by the specificity and scope of the underlying theories \citep{bai2024survey}. Moreover, the mere incorporation of principles from psychology or pedagogy does not guarantee interpretability. As noted by \citet{vonrueden2021informed}, improved interpretability remains a secondary objective in most knowledge integration approaches used in machine learning, often overshadowed by performance optimization.
 
-To address the challenge of achieving practical interpretability without sacrificing general applicability or predictive performance, we propose a new \textit{Semantically Aligned Interpretability (} approach. This approach seeks to bridge the high capacity of deep learning with the semantic advantages of intrinsically interpretable models. To achieve this, we posit that an interpretable model must satisfy the following requirements:
+To address the challenge of achieving practical interpretability without sacrificing general applicability or predictive performance, we propose a new \textit{Semantically Aligned Interpretability} approach. This approach seeks to bridge the high capacity of deep learning with the semantic advantages of intrinsically interpretable models. To achieve this, we posit that an interpretable model must satisfy the following requirements:
 \begin{enumerate}
     \item \textbf{Value Estimations}: The model must produce explicit estimations of values that correspond to concepts used for semantic grounding.
     \item \textbf{Estimations Alignment}: These estimations must be aligned with the values given by a intrinsically interpretable model.
@@ -195,15 +198,15 @@ To address the challenge of achieving practical interpretability without sacrifi
 \end{enumerate}
 
 
-In the following section, we introduce \textbf{iDKT} (Interpretable Deep Knowledge Tracing), a novel Transformer-based architecture designed to satisfy the requirements of Semantically Aligned Interpretability (. Through a representational grounding methodology, iDKT aligns deep latent embeddings with the educational constructs defined by psychometric theory. To validate this approach, we define a rigorous metric for interpretability and analyze the accuracy-interpretability trade-off via a systematic \textit{Pareto frontier} sweep. Our results demonstrate that iDKT achieves high theoretical alignment while preserving over 99\% of the predictive capacity of unconstrained baselines. Remarkably, on the ASSISTment2009 dataset, we observed a synergistic effect where enhancing interpretability actually yielded a +0.012 gain in AUC. These findings provide robust empirical support for the assertion by \citet{rudin2019stop} that the inherent trade-off between predictive accuracy and model interpretability is often a myth, particularly in domains with significant underlying structure. This perspective is further supported by the \textit{Rashomon Set} argument \citep{semenova2019study}, which posits that for many real-world problems, the set of high-performing models is sufficiently large to contain solutions that are both accurate and intrinsically interpretable.
+In the following section, we introduce \textbf{iDKT} (Interpretable Deep Knowledge Tracing), a novel Transformer-based architecture designed to satisfy the requirements of Semantically Aligned Interpretability. Through a representational grounding methodology, iDKT aligns deep latent embeddings with the educational constructs defined by psychometric theory. To validate this approach, we define a rigorous metric for interpretability and analyze the accuracy-interpretability trade-off via a systematic \textit{Pareto frontier} sweep. Our results demonstrate that iDKT achieves high theoretical alignment while preserving over 99\% of the predictive capacity of unconstrained baselines. Remarkably, on the ASSISTment2009 dataset, we observed a synergistic effect where enhancing interpretability actually yielded a +0.012 gain in AUC. These findings provide robust empirical support for the assertion by \citet{rudin2019stop} that the inherent trade-off between predictive accuracy and model interpretability is often a myth, particularly in domains with significant underlying structure. This perspective is further supported by the \textit{Rashomon Set} argument \citep{semenova2019study}, which posits that for many real-world problems, the set of high-performing models is sufficiently large to contain solutions that are both accurate and intrinsically interpretable.
 
 For this study, we selected Bayesian Knowledge Tracing (BKT) as our anchoring theoretical framework. BKT models the learning process as a hidden Markov process governed by four explicit parameters: \textit{Initial Mastery}, the probability a student knows a skill prior to practice; \textit{Learn Rate}, the probability of transitioning from unlearned to learned states after a practice opportunity; \textit{Guess}, the probability of a correct response despite a lack of mastery; and \textit{Slip}, the probability of an incorrect response despite mastery. These parameters provide a causal narrative of student performance that is intuitive to educators and aligned with cognitive science principles. However, standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{Individualized BKT} approaches exist, they are often computationally expensive and struggle with data sparsity \citep{yudelson2013individualized}. iDKT offers a novel way to address individualization by leveraging the capabilities of Transformers to compress student interaction histories into a context vector. This allows the model to infer personalized initial knowledge and learning rates dynamically, transforming population-level BKT insights into high-granularity student diagnostics.
 
 Our analysis in this paper will be focused on three research questions:
 
 \begin{itemize}
-    \item \textbf{Hypothesis 1 (Semantic Alignment)}: Through representational grounding, the internal states of a high-capacity Transformer model can be aligned with pedagogically meaningful constructs. We hypothesize that iDKT will achieve Semantic Alignment by exhibiting high linear recoverability with respect to BKT parameters across diverse educational datasets.
-    \item \textbf{Hypothesis 2 (Performance-Interpretability Trade-off)}: The pursuit of intrinsic interpretability does not imply a significant degradation in predictive performance. We hypothesize that through a systematic Pareto analysis, we can identify configurations that preserve near-optimal accuracy while achieving high semantic alignment. Furthermore, we posit that in certain contexts, the inductive bias introduced by pedagogical grounding can act as a synergistic regularizer, actually enhancing the model's predictive accuracy.
+    \item \textbf{Hypothesis 1 (Semantic Alignment)}: Through representational grounding, the embeddings of a attention-based Transformer model can be aligned with pedagogically meaningful constructs to achieve Semantically Aligned Interpretability. We hypothesize that iDKT can achieve this kind of interpretability by exhibiting high linear recoverability with respect to BKT parameters across diverse educational datasets. Specifically, we posit that BKT constructs can be accurately recovered from iDKT's latent representations using simple linear transformations, which we validate through diagnostic probing with control tasks.
+    \item \textbf{Hypothesis 2 (Performance-Interpretability Trade-off)}: The pursuit of intrinsic interpretability does not imply necessary significant degradation in predictive performance. We can identify configurations that preserve near-optimal accuracy while achieving high semantic alignment. Furthermore, we posit that in certain contexts, the inductive bias introduced by pedagogical grounding can act as a regularizer, actually enhancing the model's predictive accuracy.
     \item \textbf{Hypothesis 3 (Estimations Granularity)}: Beyond mere alignment with a reference model, representational grounding enables the discovery of individualized student patterns. We hypothesize that iDKT provides superior diagnostic granularity by inferring personalized learning rates and initial mastery levels that capture behavioral heterogeneity more effectively than population-level probabilistic models.
 \end{itemize}
 
@@ -218,16 +221,279 @@ We propose an Interpretable Deep Knowledge Tracing (iDKT) model with a Transform
 The core architecture of iDKT, as illustrated in Figure~\ref{idkt_arch}, extends the standard Transformer framework \citep{vaswani2017attention} by incorporating specialized components for Representational Grounding, primarily integrated within the embedding layers and the multi-objective loss pipeline.\begin{enumerate}
     \item \textbf{Input Data}: This stage handles the ingestion of student interactions (concepts, questions, and binary responses $r \in \{0,1\}$). Crucially, it also loads values from the BKT reference model, including performance predictions ($p_{BKT}$) and per-skill parameters such as initial mastery ($l_0$) and learning transition rates ($T$), which serve as grounding targets for the model.
     \item \textbf{Embeddings}: Task and history information are projected into a continuous embedding space. We then apply the individualization transformations described in Section~\ref{sec_embeddings} where base embeddings are augmented by student-specific parameters: a Proficiency Offset ($lc$) and a Rate Augmentation ($tc$). This produces the Transition Gap (individualized task representation $x'$) and the Transition Gain (individualized interaction history $y'$), effectively defining the difficulty of a task relative to the student's baseline proficiency.
-    \item \textbf{Transformer Core}: The model employs a dual-encoder architecture followed by a cross-attention decoder. One encoder processing the individualized interaction history ($y'_{1:t-1}$) to capture global student behavior, while a task encoder processes the current individualized task ($x'_t$). The decoder uses multi-head cross-attention to synthesize these streams into a latent Proficiency Context, representing the student's current specialized knowledge state for the target task.
+    \item \textbf{Transformer Core}: The model employs an Encoder-Decoder Transformer architecture. The encoder (N blocks) processes the individualized interaction history ($y'_{1:t-1}$) through self-attention to capture global student behavior patterns. The decoder (2N blocks) processes the current individualized task ($x'_t$) by alternating between self-attention blocks (processing the question representation) and cross-attention blocks (attending to the encoded interaction history). This cross-attention mechanism synthesizes both streams into a contextualized representation, capturing the student's current specialized knowledge state for the target task.
     \item \textbf{Output Stage}: The latent Proficiency Context is passed through a multi-layer perceptron (MLP) that maps the deep representations to the final output space. The final output is the iDKT prediction ($p_{iDKT}$), representing the probability that the student will respond correctly to the current task.
     \item \textbf{Loss Functions (Grounding Pipeline)}: During training, the architecture is supervised not only by the prediction loss ($L_{sup}$) against ground truth outcomes but also by an alignment pipeline. This includes the Alignment Loss ($L_{ref}$) which penalizes deviations from the BKT prediction, and Parameter Losses ($L_{init}, L_{rate}$) that ground the model's internal proficiency and rate parameters to their BKT-derived theoretical counterparts.
 \end{enumerate}
 
-\begin{figure}[htbp]
+
+
+\begin{tikzpicture}
+\definecolor{emb_color}{RGB}{224,242,252}
+\definecolor{multi_head_attention_color}{RGB}{252,226,187}
+\definecolor{add_norm_color}{RGB}{242,243,193}
+\definecolor{ff_color}{RGB}{194,232,247}
+\definecolor{softmax_color}{RGB}{203,231,207}
+\definecolor{linear_color}{RGB}{220,223,240}
+\definecolor{grounding_color}{RGB}{255,224,224}
+\definecolor{gray_bbox_color}{RGB}{243,243,244}
+
+% Encoder box
+\draw[fill=gray_bbox_color, line width=0.046875cm, rounded corners=0.300000cm] (-0.975000, 6.455000) -- (2.725000, 6.455000) -- (2.725000, 1.305000) -- (-0.975000, 1.305000) -- cycle;
+% Decoder box
+\draw[fill=gray_bbox_color, line width=0.046875cm, rounded corners=0.300000cm] (3.775000, 9.405000) -- (7.475000, 9.405000) -- (7.475000, 1.305000) -- (3.775000, 1.305000) -- cycle;
+
+% Input Embeddings with Grounding (left - y')
+\draw[line width=0.046875cm, fill=grounding_color, rounded corners=0.100000cm] (0.000000, 0.000000) -- (2.500000, 0.000000) -- (2.500000, -0.900000) -- (0.000000, -0.900000) -- cycle;
+\node[text width=2.500000cm, align=center] at (1.250000,-0.450000) {$y'$ History \vspace{-0.05cm} \linebreak $(e + u \cdot f) + t_c$};
+
+% Input Embeddings with Grounding (right - x')
+\draw[line width=0.046875cm, fill=grounding_color, rounded corners=0.100000cm] (4.000000, 0.000000) -- (6.500000, 0.000000) -- (6.500000, -0.900000) -- (4.000000, -0.900000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,-0.450000) {$x'$ Task \vspace{-0.05cm} \linebreak $(c + u \cdot d) - l_c$};
+
+% Encoder - Multi-Head Attention
+\draw[line width=0.046875cm, fill=multi_head_attention_color, rounded corners=0.100000cm] (0.000000, 3.030000) -- (2.500000, 3.030000) -- (2.500000, 2.130000) -- (0.000000, 2.130000) -- cycle;
+\node[text width=2.500000cm, align=center] at (1.250000,2.580000) {Multi-Head \vspace{-0.05cm} \linebreak Self-Attention};
+\draw[line width=0.046875cm, fill=add_norm_color, rounded corners=0.100000cm] (0.000000, 3.680000) -- (2.500000, 3.680000) -- (2.500000, 3.180000) -- (0.000000, 3.180000) -- cycle;
+\node[text width=2.500000cm, align=center] at (1.250000,3.430000) {Add \& Norm};
+\draw[line width=0.046875cm] (1.250000, 3.030000) -- (1.250000, 3.180000);
+
+% Encoder - Feed Forward
+\draw[line width=0.046875cm, fill=ff_color, rounded corners=0.100000cm] (0.000000, 5.580000) -- (2.500000, 5.580000) -- (2.500000, 4.680000) -- (0.000000, 4.680000) -- cycle;
+\node[text width=2.500000cm, align=center] at (1.250000,5.130000) {Feed \vspace{-0.05cm} \linebreak Forward};
+\draw[line width=0.046875cm, fill=add_norm_color, rounded corners=0.100000cm] (0.000000, 6.230000) -- (2.500000, 6.230000) -- (2.500000, 5.730000) -- (0.000000, 5.730000) -- cycle;
+\node[text width=2.500000cm, align=center] at (1.250000,5.980000) {Add \& Norm};
+\draw[line width=0.046875cm] (1.250000, 5.580000) -- (1.250000, 5.730000);
+
+% Decoder - Masked Multi-Head Attention (Self-Attention)
+\draw[line width=0.046875cm, fill=multi_head_attention_color, rounded corners=0.100000cm] (4.000000, 3.430000) -- (6.500000, 3.430000) -- (6.500000, 2.130000) -- (4.000000, 2.130000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,2.780000) {Masked \vspace{-0.05cm} \linebreak Multi-Head \vspace{-0.05cm} \linebreak Self-Attention};
+\draw[line width=0.046875cm, fill=add_norm_color, rounded corners=0.100000cm] (4.000000, 4.080000) -- (6.500000, 4.080000) -- (6.500000, 3.580000) -- (4.000000, 3.580000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,3.830000) {Add \& Norm};
+\draw[line width=0.046875cm] (5.250000, 3.430000) -- (5.250000, 3.580000);
+
+% Decoder - Cross-Attention
+\draw[line width=0.046875cm, fill=multi_head_attention_color, rounded corners=0.100000cm] (4.000000, 5.980000) -- (6.500000, 5.980000) -- (6.500000, 5.080000) -- (4.000000, 5.080000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,5.530000) {Multi-Head \vspace{-0.05cm} \linebreak Cross-Attention};
+\draw[line width=0.046875cm, fill=add_norm_color, rounded corners=0.100000cm] (4.000000, 6.630000) -- (6.500000, 6.630000) -- (6.500000, 6.130000) -- (4.000000, 6.130000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,6.380000) {Add \& Norm};
+\draw[line width=0.046875cm] (5.250000, 5.980000) -- (5.250000, 6.130000);
+
+% Decoder - Feed Forward
+\draw[line width=0.046875cm, fill=ff_color, rounded corners=0.100000cm] (4.000000, 8.530000) -- (6.500000, 8.530000) -- (6.500000, 7.630000) -- (4.000000, 7.630000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,8.080000) {Feed \vspace{-0.05cm} \linebreak Forward};
+\draw[line width=0.046875cm, fill=add_norm_color, rounded corners=0.100000cm] (4.000000, 9.180000) -- (6.500000, 9.180000) -- (6.500000, 8.680000) -- (4.000000, 8.680000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,8.930000) {Add \& Norm};
+\draw[line width=0.046875cm] (5.250000, 8.530000) -- (5.250000, 8.680000);
+
+% Output - concat_q
+\draw[line width=0.046875cm, fill=linear_color, rounded corners=0.100000cm] (4.000000, 10.280000) -- (6.500000, 10.280000) -- (6.500000, 9.780000) -- (4.000000, 9.780000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,10.030000) {concat$_q = [x^, x']$};
+
+% Output - MLP
+\draw[line width=0.046875cm, fill=softmax_color, rounded corners=0.100000cm] (4.000000, 11.380000) -- (6.500000, 11.380000) -- (6.500000, 10.880000) -- (4.000000, 10.880000) -- cycle;
+\node[text width=2.500000cm, align=center] at (5.250000,11.130000) {MLP + Sigmoid};
+
+% Positional Encoding symbols (left)
+\draw[line width=0.046875cm] (1.250000, 0.600000) circle (0.200000);
+\draw[line width=0.046875cm] (1.410000, 0.600000) -- (1.090000, 0.600000);
+\draw[line width=0.046875cm] (1.250000, 0.760000) -- (1.250000, 0.440000);
+\draw[line width=0.046875cm] (0.350000, 0.600000) circle (0.400000);
+\draw[line width=0.046875cm] (-0.030000, 0.600000) -- (-0.014490, 0.629156) -- (0.001020, 0.657833) -- (0.016531, 0.685561) -- (0.032041, 0.711884) -- (0.047551, 0.736369) -- (0.063061, 0.758616) -- (0.078571, 0.778258) -- (0.094082, 0.794973) -- (0.109592, 0.808486) -- (0.125102, 0.818576) -- (0.140612, 0.825077) -- (0.156122, 0.827883) -- (0.171633, 0.826946) -- (0.187143, 0.822284) -- (0.202653, 0.813971) -- (0.218163, 0.802145) -- (0.233673, 0.786999) -- (0.249184, 0.768783) -- (0.264694, 0.747796) -- (0.280204, 0.724382) -- (0.295714, 0.698925) -- (0.311224, 0.671845) -- (0.326735, 0.643584) -- (0.342245, 0.614608) -- (0.357755, 0.585392) -- (0.373265, 0.556416) -- (0.388776, 0.528155) -- (0.404286, 0.501075) -- (0.419796, 0.475618) -- (0.435306, 0.452204) -- (0.450816, 0.431217) -- (0.466327, 0.413001) -- (0.481837, 0.397855) -- (0.497347, 0.386029) -- (0.512857, 0.377716) -- (0.528367, 0.373054) -- (0.543878, 0.372117) -- (0.559388, 0.374923) -- (0.574898, 0.381424) -- (0.590408, 0.391514) -- (0.605918, 0.405027) -- (0.621429, 0.421742) -- (0.636939, 0.441384) -- (0.652449, 0.463631) -- (0.667959, 0.488116) -- (0.683469, 0.514439) -- (0.698980, 0.542167) -- (0.714490, 0.570844) -- (0.730000, 0.600000);
+
+% Positional Encoding symbols (right)
+\draw[line width=0.046875cm] (5.250000, 0.600000) circle (0.200000);
+\draw[line width=0.046875cm] (5.410000, 0.600000) -- (5.090000, 0.600000);
+\draw[line width=0.046875cm] (5.250000, 0.760000) -- (5.250000, 0.440000);
+\draw[line width=0.046875cm] (6.150000, 0.600000) circle (0.400000);
+\draw[line width=0.046875cm] (5.770000, 0.600000) -- (5.785510, 0.629156) -- (5.801020, 0.657833) -- (5.816531, 0.685561) -- (5.832041, 0.711884) -- (5.847551, 0.736369) -- (5.863061, 0.758616) -- (5.878571, 0.778258) -- (5.894082, 0.794973) -- (5.909592, 0.808486) -- (5.925102, 0.818576) -- (5.940612, 0.825077) -- (5.956122, 0.827883) -- (5.971633, 0.826946) -- (5.987143, 0.822284) -- (6.002653, 0.813971) -- (6.018163, 0.802145) -- (6.033673, 0.786999) -- (6.049184, 0.768783) -- (6.064694, 0.747796) -- (6.080204, 0.724382) -- (6.095714, 0.698925) -- (6.111224, 0.671845) -- (6.126735, 0.643584) -- (6.142245, 0.614608) -- (6.157755, 0.585392) -- (6.173265, 0.556416) -- (6.188776, 0.528155) -- (6.204286, 0.501075) -- (6.219796, 0.475618) -- (6.235306, 0.452204) -- (6.250816, 0.431217) -- (6.266327, 0.413001) -- (6.281837, 0.397855) -- (6.297347, 0.386029) -- (6.312857, 0.377716) -- (6.328367, 0.373054) -- (6.343878, 0.372117) -- (6.359388, 0.374923) -- (6.374898, 0.381424) -- (6.390408, 0.391514) -- (6.405918, 0.405027) -- (6.421429, 0.421742) -- (6.436939, 0.441384) -- (6.452449, 0.463631) -- (6.467959, 0.488116) -- (6.483469, 0.514439) -- (6.498980, 0.542167) -- (6.514490, 0.570844) -- (6.530000, 0.600000);
+
+% Vertical arrows
+\draw[line width=0.046875cm, -latex] (1.250000, 3.680000) -- (1.250000, 4.680000);
+\draw[line width=0.046875cm, -latex] (5.250000, 6.630000) -- (5.250000, 7.630000);
+\draw[line width=0.046875cm, -latex] (5.250000, 9.180000) -- (5.250000, 9.780000);
+\draw[line width=0.046875cm, -latex] (5.250000, 10.280000) -- (5.250000, 10.880000);
+\draw[line width=0.046875cm, -latex] (1.250000, 0.000000) -- (1.250000, 0.400000);
+\draw[line width=0.046875cm, -latex] (1.250000, 0.800000) -- (1.250000, 2.130000);
+\draw[line width=0.046875cm, -latex] (5.250000, 0.800000) -- (5.250000, 2.130000);
+\draw[line width=0.046875cm, -latex] (5.250000, 0.000000) -- (5.250000, 0.400000);
+\draw[line width=0.046875cm] (0.750000, 0.600000) -- (1.050000, 0.600000);
+\draw[line width=0.046875cm] (5.450000, 0.600000) -- (5.750000, 0.600000);
+
+% Residual connections
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 4.080000) -- (-0.750000, 4.080000) -- (-0.750000, 5.980000) -- (0.000000, 5.980000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 1.530000) -- (-0.750000, 1.530000) -- (-0.750000, 3.430000) -- (0.000000, 3.430000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 1.530000) -- (7.250000, 1.530000) -- (7.250000, 3.830000) -- (6.500000, 3.830000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 4.480000) -- (7.250000, 4.480000) -- (7.250000, 6.380000) -- (6.500000, 6.380000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 7.030000) -- (7.250000, 7.030000) -- (7.250000, 8.930000) -- (6.500000, 8.930000);
+
+% Multi-head splits
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 1.730000) -- (0.312500, 1.730000) -- (0.312500, 2.130000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 1.730000) -- (2.187500, 1.730000) -- (2.187500, 2.130000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 1.730000) -- (4.312500, 1.730000) -- (4.312500, 2.130000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 1.730000) -- (6.187500, 1.730000) -- (6.187500, 2.130000);
+
+% Cross-attention connections from encoder to decoder
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 6.230000) -- (1.250000, 7.230000) -- (3.250000, 7.230000) -- (3.250000, 4.680000) -- (4.312500, 4.680000) -- (4.312500, 5.080000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (1.250000, 6.230000) -- (1.250000, 7.230000) -- (3.250000, 7.230000) -- (3.250000, 4.680000) -- (5.250000, 4.680000) -- (5.250000, 5.080000);
+\draw[-latex, line width=0.046875cm, rounded corners=0.200000cm] (5.250000, 4.080000) -- (5.250000, 4.680000) -- (6.187500, 4.680000) -- (6.187500, 5.080000);
+
+% Input/Output labels
+\draw[line width=0.046875cm, -latex] (1.250000, -1.500000) -- (1.250000, -0.900000);
+\draw[line width=0.046875cm, -latex] (5.250000, -1.500000) -- (5.250000, -0.900000);
+\draw[line width=0.046875cm, -latex] (5.250000, 11.380000) -- (5.250000, 11.980000);
+\node[text width=2.500000cm, anchor=north, align=center] at (1.250000,-1.500000) {Interaction \vspace{-0.05cm} \linebreak History};
+\node[text width=2.500000cm, anchor=north, align=center] at (5.250000,-1.500000) {Current \vspace{-0.05cm} \linebreak Task};
+\node[text width=2.500000cm, anchor=south, align=center] at (5.250000,11.980000) {$p_{iDKT}$};
+
+% N× labels
+\node[anchor=east] at (-1.175000,3.880000) {$N\times$};
+\node[anchor=west] at (7.675000,5.355000) {$2N\times$};
+
+% Positional Encoding labels
+\node[text width=2.000000cm, anchor=east] at (0.250000,0.600000) {Positional \vspace{-0.05cm} \linebreak Encoding};
+\node[text width=2.000000cm, anchor=west] at (6.750000,0.600000) {Positional \vspace{-0.05cm} \linebreak Encoding};
+\end{tikzpicture}
+
+
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=1.0\textwidth]{img/idkt_arch.png}
-    \caption{The iDKT Architecture. The diagram illustrates the five functional stages: (1) Input Data ingestion including BKT targets, (2) Individualized Embeddings, (3) the Transformer Core, (4) the MLP-based Output, and (5) the Loss Functions for representational grounding.\label{idkt_arch}}
-\end{figure}
+    \resizebox{\textwidth}{!}{
+    \begin{tikzpicture}[
+        node distance=1.0cm and 1.5cm,
+        box/.style={rectangle, draw, thick, minimum width=2.5cm, minimum height=0.8cm, align=center, fill=white},
+        smallbox/.style={rectangle, draw, thick, minimum width=1.8cm, minimum height=0.6cm, align=center, fill=white, font=\small},
+        input/.style={box, fill=blue!10},
+        embed/.style={box, fill=cyan!15},
+        trans/.style={box, fill=green!15},
+        output/.style={box, fill=purple!15},
+        loss/.style={box, fill=orange!15, minimum width=2.0cm},
+        probe/.style={box, fill=yellow!20, dashed, minimum width=2.3cm},
+        ref/.style={smallbox, fill=gray!10, dashed},
+        arrow/.style={->, >=stealth, thick},
+        dasharrow/.style={->, >=stealth, thick, dashed},
+        label/.style={font=\small\bfseries}
+    ]
+    
+    % Input Layer (top row)
+    \node[input] (q) at (0,0) {Questions $q$};
+    \node[input, right=1.2cm of q] (r) {Responses $r$};
+    \node[input, right=1.2cm of r] (pid) {Problem IDs};
+    \node[input, right=1.2cm of pid] (uid) {Student IDs};
+    
+    % BKT Reference Data (slightly below inputs)
+    \node[ref, below=0.4cm of q] (bkt_l0) {BKT $L_0$};
+    \node[ref, below=0.4cm of r] (bkt_t) {BKT $T$};
+    \node[ref, below=0.4cm of pid] (bkt_p) {BKT $p$};
+    
+    % Embedding Layer - Left column (Task Path x')
+    \node[embed, below=1.8cm of q] (c) {$c$ (Concept)};
+    \node[embed, below=1.0cm of c] (x_prime) {$x' = (c + u \cdot d) - l_c$\\{\small Task Embedding}};
+    
+    % Embedding Layer - Center-left (Grounding for x')
+    \node[embed, right=0.8cm of c] (lc) {$l_c = L_0 + k_c \cdot d_c$\\{\small Init. Knowledge}};
+    
+    % Embedding Layer - Center-right (History Path y')
+    \node[embed, right=1.5cm of lc] (e) {$e$ (Interaction)};
+    \node[embed, below=1.0cm of e] (y_prime) {$y' = (e + u \cdot f) + t_c$\\{\small History Embedding}};
+    
+    % Embedding Layer - Right column (Grounding for y')
+    \node[embed, right=0.8cm of e] (tc) {$t_c = T + v_s \cdot d_s$\\{\small Learn. Rate}};
+    
+    % Transformer Core
+    \node[trans, below=1.5cm of x_prime, minimum width=3.2cm] (decoder) {Decoder (2N blocks)\\Self-Attn $\oplus$ Cross-Attn};
+    \node[trans, below=1.5cm of y_prime, minimum width=3.2cm] (encoder) {Encoder (N blocks)\\Self-Attention on $y'$};
+    
+    \node[trans, below=0.7cm of decoder, minimum width=3.2cm] (x_dec) {$x^$ (Decoder Output)};
+    \node[trans, below=0.7cm of encoder, minimum width=3.2cm] (y_enc) {$y^$ (Encoded History)};
+    
+    % Output Processing (center, below transformer)
+    \node[output, below=1.8cm of x_dec, minimum width=4.2cm] (concat) {$\text{concat}_q = [x^, x']$};
+    \node[output, below=0.8cm of concat] (mlp) {MLP\\(512 $\to$ 256 $\to$ 1)};
+    \node[output, below=0.8cm of mlp] (pred) {$p_{iDKT}$};
+    
+    % Monitoring Outputs (far right)
+    \node[output, right=5.5cm of lc, minimum width=2.2cm] (m_init) {$\sigma(\text{mean}(l_c))$\\{\small Init. Mastery}};
+    \node[output, below=0.6cm of m_init, minimum width=2.2cm] (m_rate) {$\sigma(\text{mean}(t_c))$\\{\small Learning Rate}};
+    
+    % Loss Functions (far right, below monitoring)
+    \node[loss, below=1.5cm of m_rate] (l_sup) {$L_{sup}$\\BCE$(p, r)$};
+    \node[loss, below=0.5cm of l_sup] (l_ref) {$L_{ref}$\\MSE$(p, p_{BKT})$};
+    \node[loss, below=0.5cm of l_ref] (l_init) {$L_{init}$\\MSE$(l_c, L_0)$};
+    \node[loss, below=0.5cm of l_init] (l_rate) {$L_{rate}$\\MSE$(t_c, T)$};
+    
+    % Probing Validation (far left)
+    \node[probe, left=4.5cm of concat] (probe_extract) {Extract $\text{concat}_q$\\{\small (qtest=True)}};
+    \node[probe, below=0.6cm of probe_extract] (probe_true) {Linear Probe\\$\to P(L_t)_{BKT}$};
+    \node[probe, below=0.6cm of probe_true] (probe_control) {Control Probe\\$\to$ Shuffled};
+    \node[probe, below=0.6cm of probe_control] (probe_metric) {Selectivity\\$\Delta R^2 > 0.5$};
+    
+    % Arrows - Input to Embeddings
+    \draw[arrow] (q) -- (c);
+    \draw[arrow] (q) -- (e);
+    \draw[arrow] (r) -- (e);
+    \draw[arrow] (pid) -- (c);
+    \draw[arrow] (uid) -- (lc);
+    \draw[arrow] (uid) -- (tc);
+    
+    % BKT Reference to Grounding
+    \draw[dasharrow, gray] (bkt_l0) -- (lc);
+    \draw[dasharrow, gray] (bkt_t) -- (tc);
+    
+    % Embeddings to Task/History
+    \draw[arrow] (c) -- (x_prime);
+    \draw[arrow] (lc) -- (x_prime);
+    \draw[arrow] (e) -- (y_prime);
+    \draw[arrow] (tc) -- (y_prime);
+    
+    % Transformer Flow
+    \draw[arrow] (y_prime) -- (encoder);
+    \draw[arrow] (encoder) -- (y_enc);
+    \draw[arrow] (x_prime) -- (decoder);
+    \draw[arrow] (y_enc.north) -- node[above, font=\small, sloped] {Cross-Attn} (decoder.north);
+    \draw[arrow] (decoder) -- (x_dec);
+    
+    % Output Flow
+    \draw[arrow] (x_dec) -- (concat);
+    \draw[arrow] (x_prime) -- ++(0,-2.5) -| (concat);
+    \draw[arrow] (concat) -- (mlp);
+    \draw[arrow] (mlp) -- (pred);
+    
+    % Monitoring Outputs
+    \draw[arrow] (lc.east) -- ++(0.5,0) |- (m_init.west);
+    \draw[arrow] (tc.east) -- ++(0.5,0) |- (m_rate.west);
+    
+    % Loss Connections
+    \draw[arrow] (pred.south) -- ++(0,-0.5) -| (l_sup.south);
+    \draw[arrow] (pred.south) -- ++(0,-0.5) -| (l_ref.south);
+    \draw[dasharrow, gray] (bkt_p.south) -- ++(0,-0.5) -| (l_ref.north);
+    \draw[arrow] (m_init.south) -- ++(0,-0.3) -| (l_init.north);
+    \draw[arrow] (m_rate.south) -- ++(0,-0.3) -| (l_rate.north);
+    \draw[dasharrow, gray] (bkt_l0.south) -- ++(0,-1.0) -| (l_init.north);
+    \draw[dasharrow, gray] (bkt_t.south) -- ++(0,-1.0) -| (l_rate.north);
+    
+    % Probing Connections
+    \draw[dasharrow] (concat.west) -- (probe_extract.east);
+    \draw[arrow] (probe_extract) -- (probe_true);
+    \draw[arrow] (probe_extract) -- (probe_control);
+    \draw[arrow] (probe_true) -- (probe_metric);
+    \draw[arrow] (probe_control) -- (probe_metric);
+    
+    % Section Labels
+    \node[label, above=0.4cm of q, xshift=4cm] {Input Layer};
+    \node[label, above=0.4cm of c, xshift=3.5cm] {Representational Grounding};
+    \node[label, left=0.4cm of encoder, yshift=1cm] {Transformer};
+    \node[label, above=0.4cm of concat] {Prediction};
+    \node[label, above=0.4cm of m_init, xshift=-0.5cm] {Loss Functions};
+    \node[label, above=0.4cm of probe_extract] {Probing Validation};
+    
+    \end{tikzpicture}
+    }
+    \caption{The iDKT Architecture. The diagram illustrates the complete pipeline: (1) \textbf{Input Layer} with BKT reference data (dashed gray boxes), (2) \textbf{Representational Grounding} where input embeddings incorporate personalized initial knowledge ($l_c$) and learning rate ($t_c$) derived from BKT parameters, (3) \textbf{Encoder-Decoder Transformer} processing interaction history and tasks, (4) \textbf{Prediction} via concatenated representations and MLP, (5) \textbf{Multi-objective Loss Functions} for grounding (orange), and (6) \textbf{Diagnostic Probing Validation} (yellow, dashed) that validates preservation of pedagogical constructs through linear probes with control tasks.}
+    \label{idkt_arch}
+\end{figure*}
+
+
 
 
 \section{Embeddings} \label{sec_embeddings}
@@ -428,6 +694,40 @@ The results presented in Tables \ref{tab_interpretability} and \ref{tab_interpre
 
 High $I_1$ scores demonstrate that iDKT successfully internalizes the \textit{semantic identity} of the theoretical constructs (Initial Knowledge and Learning Rate). However, $I_2$ measures functional substitutability within a comparatively constrained reference model that is unable to capture the intricate behavioral patterns identified by iDKT. As a high-capacity Transformer, iDKT captures complex, long-range dependencies and context-aware dynamics that exceed the modeling capability of classical BKT. This discrepancy provides empirical evidence that iDKT does not merely mimic the reference model, but rather maps its core pedagogical constructs onto a more sophisticated and predictive architecture.
 
+\subsubsection{Latent Structure Validation via Diagnostic Probing}
+
+While the correlation-based metrics $I_1$ and $I_2$ provide evidence of semantic alignment, a critical question remains: do these correlations reflect genuine structural encoding of pedagogical constructs in the model's representations, or could they arise from superficial pattern matching? To address this concern rigorously, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing}, the gold-standard methodology for validating that deep learning representations truly encode specific theoretical constructs.
+
+The probing protocol operates as follows. By design, iDKT's input embeddings incorporate grounded representations of BKT constructs through Equations \ref{eq_lc} and \ref{eq_tc}, where personalized initial knowledge ($l_c$) and learning rate ($t_c$) are explicitly embedded into the task and interaction representations ($x'$ and $y'$) that feed the Transformer. However, the critical question is whether the Transformer core \textit{preserves and utilizes} this pedagogical information during its contextualization process, or whether it discards or distorts these constructs in favor of purely predictive patterns.
+
+To validate this, we extract the representations used for final prediction—specifically, the concatenation of the decoder output with the task embedding. The decoder output is produced through a two-stage process: first, the encoder aggregates all historical interaction context ($y'_{1:t-1}$) into a compressed representation through self-attention; second, the decoder processes the current task ($x'_t$) while attending to this encoded history via cross-attention, producing a task-contextualized representation that integrates both the task-specific information and the relevant historical context. We then train a simple linear classifier (linear regression probe) to predict the BKT mastery probability $P(L_t)$ directly from these task-contextualized representations, without access to any other information. The key insight is that if the Transformer has genuinely preserved and utilized the pedagogical constructs embedded in its inputs ($l_c$ and $t_c$), these constructs should remain linearly recoverable from the final representations used for prediction.
+
+However, high performance on this \textit{true task} alone is insufficient. High-capacity models can memorize arbitrary patterns, potentially achieving spurious correlations. To rigorously distinguish genuine encoding from memorization, we implement a \textit{control task} \citep{hewitt2019designing}: we train an identical probe to predict a randomly shuffled version of the BKT mastery labels. If the model has truly preserved the structural relationship between its representations and mastery, the true task should substantially outperform the control task. We quantify this via the \textit{Selectivity} metric:
+
+\begin{equation} \label{eq_selectivity}
+\text{Selectivity} = R^2_{\text{true}} - R^2_{\text{control}}
+\end{equation}
+
+where $R^2_{\text{true}}$ measures the variance explained when predicting actual BKT mastery, and $R^2_{\text{control}}$ measures the variance explained when predicting shuffled labels. A high positive selectivity score ($\Delta R^2 > 0.5$) provides rigorous evidence that the contextualized representations structurally encode the pedagogical construct, demonstrating that the Transformer has preserved the grounded information from its inputs rather than discarding it during attention-based contextualization.
+
+Table \ref{tab_probing} presents the probing results for the grounded iDKT model ($\lambda_{ref}=0.1$) on two representative datasets.
+
+\begin{table}[htbp]
+\caption{Diagnostic Probing Results for grounded iDKT ($\lambda_{ref}=0.1$). \label{tab_probing}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lcccc}
+\toprule
+\textbf{Dataset} & \textbf{$R^2_{\text{true}}$} & \textbf{$R^2_{\text{control}}$} & \textbf{Selectivity ($\Delta R^2$)} & \textbf{Interpretation} \\
+\midrule
+AS2009\_S & 0.6731 & -0.0139 & \textbf{0.6870} & Robust Structural Encoding \\
+AS2015 & 0.6472 & -0.0043 & \textbf{0.6515} & Strong Alignment \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The results provide compelling validation of iDKT's interpretability. Both datasets exhibit selectivity scores exceeding 0.65, substantially above the threshold for ``strong encoding'' ($\Delta R^2 > 0.5$) established in the interpretability literature \citep{hewitt2019designing}. The near-zero (or slightly negative) control task performance confirms that the model is not simply memorizing arbitrary patterns, but has genuinely organized its post-attention representations around the pedagogical construct of mastery. Critically, these probing results validate that the grounded information embedded in the input layer (via $l_c$ and $t_c$) is preserved through the Transformer's self-attention mechanism and remains structurally encoded in the final contextualized representations. This demonstrates that the representational grounding is not merely a superficial input manipulation, but fundamentally shapes how the model processes and represents student knowledge states.
+
+This dual validation—combining correlation-based semantic alignment ($I_1, I_2$) with rigorous probing selectivity—establishes that iDKT satisfies the requirements of Semantically Aligned Interpretability. The model's representations are both semantically meaningful (aligned with BKT constructs) and structurally genuine (validated via control tasks), providing a robust foundation for pedagogically interpretable predictions.
 
 \subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
 
@@ -564,7 +864,7 @@ This visualization framework provides robust support for personalized longitudin
 
 This work has introduced iDKT, a Transformer-based Knowledge Tracing model that bridges the gap between the high predictive capacity of deep learning and the intrinsic interpretability of models such as BKT, which utilize constructs with clear semantic meanings. By utilizing Representational Grounding, we have demonstrated that it is possible to anchor deep latent representations to semantically meaningful constructs without sacrificing state-of-the-art performance.
 
-Our experimental results successfully address the research questions. First, we proved that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($I_1$). Second, we formalized a methodology for measuring the trade-off between predictive performance and interpretability, enabling the identification of the ``Interpretability Sweet Spot'' where significant alignment is achieved with minimal loss in predictive AUC. Finally, we demonstrated that iDKT provides a high increase in diagnostic granularity compared to population-level baselines by identifying individualized learning velocities that enable truly adaptive pacing.
+Our experimental results successfully address the research questions. First, we proved that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($I_1$) and demonstrating robust structural encoding through diagnostic probing with control tasks (selectivity $\Delta R^2 > 0.65$). This dual validation—combining correlation-based alignment with rigorous probing selectivity—establishes that the semantic alignment reflects genuine structural encoding rather than superficial pattern matching. Second, we formalized a methodology for measuring the trade-off between predictive performance and interpretability, enabling the identification of the ``Interpretability Sweet Spot'' where significant alignment is achieved with minimal loss in predictive AUC. Finally, we demonstrated that iDKT provides a high increase in diagnostic granularity compared to population-level baselines by identifying individualized learning velocities that enable truly adaptive pacing.
 
 The primary contribution of this research is twofold: a robust methodology for evaluating the internal interpretability of Transformer-based models in education, and a practical architecture that transforms ``black-box'' predictors into interpretable tools for knowledge tracing. By grounding deep learning in established educational concepts, iDKT offers a path toward AI-driven personalization that is both highly accurate and pedagogically actionable, providing a foundation for next-generation intelligent tutoring systems.
 
