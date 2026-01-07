@@ -1,260 +1,149 @@
-\documentclass[tikz, border=10pt]{standalone}
+\documentclass[tikz, border=20pt]{standalone}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes, fit, calc}
 
 \begin{document}
+
+\definecolor{input_color}{RGB}{245,245,245}
+\definecolor{emb_color}{RGB}{224,242,252}
+\definecolor{grounding_color}{RGB}{255,224,224}
+\definecolor{attn_color}{RGB}{242,243,193}
+\definecolor{ff_color}{RGB}{194,232,247}
+\definecolor{output_color}{RGB}{220,223,240}
+\definecolor{loss_color}{RGB}{255,245,230}
+\definecolor{bkt_color}{RGB}{240,240,240}
+
 \begin{tikzpicture}[
-    every node/.style={draw, rectangle, minimum width=1.5cm, align=center, font=\small},
-    plain/.style={fill=white, draw=black},
-    emb/.style={fill=cyan!10, draw=cyan!60, thick},
-    attn/.style={fill=green!10, draw=green!60, thick},
-    pred/.style={fill=purple!10, draw=purple!60, thick},
-    loss/.style={fill=orange!10, draw=orange!60, thick},
-    heads/.style={fill=green!5, draw=green!60, dashed},
-    ref/.style={fill=gray!10, draw=gray!60, thick, dashed},
-    plus/.style={fill=white, draw=black, thick, font=\Large, circle, inner sep=2pt, minimum width=0pt},
-    probe/.style={fill=yellow!10, draw=orange, thick},
-    arrow/.style={-{Stealth[scale=1.2]}, thick},
-    label_node/.style={draw=none, fill=none, font=\bfseries}
-    ]
+    node distance=1.2cm and 1.2cm,
+    stage_box/.style={draw, gray!50, dashed, rounded corners=8pt, line width=1pt},
+    stage_label/.style={font=\bfseries\Large, gray!60!black, anchor=south west, inner sep=10pt},
+    block/.style={draw, rectangle, rounded corners=3pt, minimum width=2.4cm, minimum height=1.1cm, align=center, fill=white, line width=0.7pt, font=\small},
+    data/.style={block, fill=input_color},
+    embedding/.style={block, fill=emb_color},
+    grounding/.style={block, fill=grounding_color},
+    core/.style={block, fill=attn_color},
+    output/.style={block, fill=output_color},
+    loss_node/.style={block, fill=loss_color, minimum width=1.8cm},
+    ref_node/.style={block, fill=bkt_color, dashed},
+    arrow/.style={-{Stealth[scale=1.2]}, thick, gray!50!black},
+    path_line/.style={thick, gray!40!black},
+    comp_label/.style={font=\itshape\footnotesize, gray!60!black}
+]
 
     % ==========================================
-    % 1. Input Layer
+    % LAYER 1: Input Data (BOTTOM)
     % ==========================================
-    \begin{scope}[local bounding box=input_box]
-        \node[plain] (Input_q) {Questions $q$ \\ $[B, L]$};
-        \node[plain, below=1.2cm of Input_q] (Input_r) {Responses $r$ \\ $[B, L]$};
-        \node[plain, below=1.2cm of Input_r] (Input_pid) {Problem IDs $pid$ \\ $[B, L]$};
-        \node[plain, below=1.2cm of Input_pid] (Input_uid) {Student IDs $uid$ \\ $[B, L]$};
-    \end{scope}
+    \node[data] (I_q) {Questions $q$};
+    \node[data, right=of I_q] (I_r) {Responses $r$};
+    \node[data, right=of I_r] (I_pid) {Problem IDs $pid$};
+    \node[data, right=of I_pid] (I_uid) {Student IDs $uid$};
+    \node[ref_node, right=2cm of I_uid] (I_bkt) {BKT Reference\\Targets};
 
-    % ==========================================
-    % 2. Embedding Layer (Grounding)
-    % ==========================================
-    \begin{scope}[local bounding box=emb_box]
-        % Task Grounding Path (x')
-        \node[emb, right=3cm of Input_q] (Base_Q) {$q\_embed$ ($c_{ct}$)};
-        \node[emb, below=0.6cm of Base_Q] (L0_Base) {$l0\_base\_emb$ ($L0_{skill}$)};
-        \node[emb, below=0.6cm of L0_Base] (Gap_Param) {$k_c$ (Gap Scalar)};
-        \node[emb, below=0.6cm of Gap_Param] (K_Axis) {$knowledge\_axis\_emb$ ($d_c$)};
-        \node[emb, below=0.8cm of K_Axis] (Formula_L0) {$l_c = L0_{skill} + k_c \cdot d_c$};
-
-        % Shared Rasch Logic
-        \node[emb, right=1.5cm of Base_Q] (Diff_Param) {$u_q$ (Diff Scalar)};
-        \node[emb, below=0.6cm of Diff_Param] (Q_Diff) {$q\_embed\_diff$ ($d_{ct}$)};
-
-        % History Grounding Path (y')
-        \node[emb, right=5cm of Base_Q] (Base_QA) {$qa\_embed$ ($e_{ct,rt}$)};
-        \node[emb, below=0.6cm of Base_QA] (QA_Diff) {$qa\_embed\_diff$ ($f_{ct,rt}$)};
-        \node[emb, below=0.6cm of QA_Diff] (T_Base) {$t\_base\_emb$ ($T_{skill}$)};
-        \node[emb, below=0.6cm of T_Base] (Vel_Param) {$v_s$ (Velocity Scalar)};
-        \node[emb, below=0.6cm of Vel_Param] (V_Axis) {$velocity\_axis\_emb$ ($d_s$)};
-        \node[emb, below=0.8cm of V_Axis] (Formula_T) {$t_s = T_{skill} + v_s \cdot d_s$};
-
-        % Fusion Layer
-        \node[plus, right=0.8cm of Formula_L0] (Sum_X) {+};
-        \node[plus, right=0.8cm of Formula_T] (Sum_Y) {+};
-
-        \node[emb, right=1.2cm of Sum_X] (Final_Q) {Indiv. Task $x'$ \\ $[B, L, d]$};
-        \node[emb, right=1.2cm of Sum_Y] (Final_QA) {Indiv. History $y'$ \\ $[B, L, d]$};
-    \end{scope}
-    
-    \node[label_node, above=0.3cm of emb_box] {Embedding Layer (Representational Grounding)};
-    \draw[dashed, gray] ($(emb_box.north west)+(-0.2,0.2)$ ) rectangle ($(emb_box.south east)+(0.2,-0.2)$ );
+    \node[stage_box, fit=(I_q) (I_bkt), inner sep=20pt] (Stage1) {};
+    \node[stage_label] at (Stage1.south west) {1. Input Data};
 
     % ==========================================
-    % 3. Transformer Core
+    % LAYER 2: Embeddings
     % ==========================================
-    \begin{scope}[local bounding box=core_box]
-        % Encoder
-        \node[attn, below=2cm of Final_QA] (Enc_Desc) {Encoder ($blocks\_1$)\\Self-Attn on $y'$};
-        \node[emb, below=0.6cm of Enc_Desc] (E_Split) {Proj. \& Split};
-        \node[heads, below=0.8cm of E_Split, xshift=-1cm] (E_H1) {H1 ($\gamma_1$)};
-        \node[heads, right=0.2cm of E_H1] (E_H2) {$\dots$};
-        \node[heads, right=0.2cm of E_H2] (E_H8) {H8 ($\gamma_8$)};
-        \node[attn, below=0.8cm of E_H2] (E_Concat) {Concat};
-        \node[attn, below=0.6cm of E_Concat] (E_W) {Norm \& FFN};
+    \node[embedding, above=3.5cm of I_q] (E_q) {Concept\\Embeddings};
+    \node[embedding, above=3.5cm of I_r] (E_qa) {Interaction\\Embeddings};
+    \node[grounding, above=3.5cm of I_pid] (G_uq) {Question\\Difficulty ($u_q$)};
+    \node[grounding, above=3.5cm of I_uid] (G_st) {Student\\Params ($k_c, v_s$)};
 
-        % Decoder
-        \node[attn, left=3.5cm of Enc_Desc] (Dec_Desc) {Decoder ($blocks\_2$)\\Self \& Cross Attn};
-        \node[emb, below=0.6cm of Dec_Desc] (KR1_Split) {Self-Attn (Odd)};
-        \node[heads, below=0.8cm of KR1_Split, xshift=-1cm] (KR1_H1) {H1 ($\gamma_1$)};
-        \node[heads, right=0.2cm of KR1_H1] (KR1_H2) {$\dots$};
-        \node[heads, right=0.2cm of KR1_H2] (KR1_H8) {H8 ($\gamma_8$)};
-        \node[attn, below=0.8cm of KR1_H2] (KR1_Concat) {Concat};
+    \node[grounding, above=1.2cm of E_q] (X_prime) {Transition Gap\\Task $x'$};
+    \node[grounding, above=1.2cm of E_qa] (Y_prime) {Transition Gain\\History $y'$};
 
-        \node[emb, below=1cm of KR1_Concat] (KR2_Split) {Cross-Attn (Even)};
-        \node[heads, below=0.8cm of KR2_Split, xshift=-1cm] (KR2_H1) {H1 ($\gamma_1$)};
-        \node[heads, right=0.2cm of KR2_H1] (KR2_H2) {$\dots$};
-        \node[heads, right=0.2cm of KR2_H2] (KR2_H8) {H8 ($\gamma_8$)};
-        \node[attn, below=0.8cm of KR2_H2] (KR2_Concat) {Concat};
-        \node[attn, below=0.6cm of KR2_Concat] (KR2_FFN) {Norm \& FFN};
-    \end{scope}
-
-    \node[label_node, above=0.3cm of core_box] {Transformer Core (Encoder-Decoder)};
-    \draw[dashed, gray] ($(core_box.north west)+(-0.3,0.3)$ ) rectangle ($(core_box.south east)+(0.3,-0.3)$ );
+    \node[stage_box, fit=(E_q) (G_st) (X_prime) (Y_prime), inner sep=20pt] (Stage2) {};
+    \node[stage_label] at (Stage2.south west) {2. Embeddings (Representational Grounding)};
 
     % ==========================================
-    % 4. Output Processing
+    % LAYER 3: Transformer Core
     % ==========================================
-    \begin{scope}[local bounding box=output_box]
-        \node[pred, below=2cm of KR2_FFN] (Concat) {$concat\_q = [x^*, x']$ \\ $[B, L, 2d]$};
-        \node[pred, below=0.6cm of Concat] (mlp_layers) {MLP Layers\\(512 $\to$ 256 $\to$ 1)};
-        \node[pred, below=0.6cm of mlp_layers] (Pred) {Predictions $p_{iDKT}$ \\ $[B, L]$};
+    \node[core, above=3cm of X_prime] (Decoder) {Decoder\\(2N blocks)};
+    \node[comp_label, below=0.1cm of Decoder] {Self \& Cross-Attn};
 
-        \node[loss, right=1.5cm of Concat] (M_Init) {$initmastery$ \\ $\sigma(mean(l_c))$};
-        \node[loss, below=0.6cm of M_Init] (M_Rate) {$rate$ \\ $\sigma(mean(t_s))$};
-    \end{scope}
+    \node[core, above=3cm of Y_prime] (Encoder) {Encoder\\(N blocks)};
+    \node[comp_label, below=0.1cm of Encoder] {Self-Attn on $y'$};
 
-    % Diagnostic Probing
-    \begin{scope}[local bounding box=probe_box, xshift=8cm]
-        \node[probe, right=6cm of Concat] (Probe_Extract) {Extract $concat\_q$};
-        \node[probe, below=0.6cm of Probe_Extract] (Probe_True) {Linear Probe (True)\\$concat\_q \to P(L_t)_{BKT}$};
-        \node[probe, below=0.6cm of Probe_True] (Probe_Control) {Linear Probe (Ctrl)\\$concat\_q \to Shuffled$};
-        \node[probe, below=0.6cm of Probe_Control] (Probe_Metric) {Selectivity $\Delta R^2$};
-    \end{scope}
-    
-    \node[label_node, above=0.3cm of probe_box] {Diagnostic Probing Validation};
-    \draw[dashed, orange] ($(probe_box.north west)+(-0.2,0.2)$ ) rectangle ($(probe_box.south east)+(0.2,-0.2)$ );
+    \node[stage_box, fit=(Encoder) (Decoder), inner sep=20pt] (Stage3) {};
+    \node[stage_label] at (Stage3.south west) {3. Transformer Core};
 
     % ==========================================
-    % 5. Loss & Reference Data
+    % LAYER 4: Output Stage
     % ==========================================
-    \begin{scope}[local bounding box=loss_box]
-        \node[loss, below=1.5cm of Pred] (L_SUP) {$L_{sup}$ (BCE)};
-        \node[loss, right=0.4cm of L_SUP] (L_REF) {$L_{ref}$ (MSE)};
-        \node[loss, right=0.4cm of L_REF] (L_INIT) {$L_{init}$};
-        \node[loss, right=0.4cm of L_INIT] (L_RATE) {$L_{rate}$};
-        \node[loss, right=0.4cm of L_RATE] (L_RASCH) {$L_{rasch}$};
-        \node[loss, right=0.4cm of L_RASCH] (L_GAP) {$L_{gap}$};
-        \node[loss, right=0.4cm of L_GAP] (L_STUDENT) {$L_{student}$};
-        \node[loss, below=0.8cm of L_RATE, minimum width=4cm] (L_TOTAL) {$L_{total} = \sum \lambda_i L_i$};
-    \end{scope}
+    \node[output, above=3cm of Decoder] (MLP) {MLP Stage\\(Linear Layers)};
+    \node[output, above=1cm of MLP] (Predict) {iDKT Prediction\\($p_{iDKT}$)};
 
-    \begin{scope}[local bounding box=ref_box]
-        \node[ref, left=2.5cm of L_SUP] (BKT_P) {BKT $p_{correct}$};
-        \node[ref, below=0.4cm of BKT_P] (BKT_L0) {BKT $L0$};
-        \node[ref, below=0.4cm of BKT_L0] (BKT_T) {BKT $T$};
-        \node[ref, below=0.4cm of BKT_T] (BKT_Mastery) {BKT $P(L_t)$};
-    \end{scope}
+    \node[stage_box, fit=(MLP) (Predict), inner sep=20pt] (Stage4) {};
+    \node[stage_label] at (Stage4.south west) {4. Output Stage};
 
     % ==========================================
-    % WIRING (Arrows)
+    % LAYER 5: Loss Functions (TOP)
+    % ==========================================
+    \node[loss_node, above=4cm of Predict] (L_sup) {$L_{sup}$};
+    \node[loss_node, right=0.6cm of L_sup] (L_ref) {$L_{ref}$};
+    \node[loss_node, right=0.6cm of L_ref] (L_init) {$L_{init}$};
+    \node[loss_node, right=0.6cm of L_init] (L_rate) {$L_{rate}$};
+    \node[loss_node, right=0.6cm of L_rate] (L_rasch) {$L_{rasch}$};
+    \node[loss_node, right=0.6cm of L_rasch] (L_reg) {$L_{reg}$};
+    
+    \node[loss_node, above=1.2cm of L_init, xshift=1cm, minimum width=6cm, fill=orange!25, font=\bfseries] (L_total) {$L_{total} = \sum \lambda_i L_i$};
+
+    \node[stage_box, fit=(L_sup) (L_reg) (L_total), inner sep=20pt] (Stage5) {};
+    \node[stage_label] at (Stage5.south west) {5. Loss Functions (Grounding Pipeline)};
+
+    % ==========================================
+    % WIRING (Vertical Flow UPWARDS)
     % ==========================================
     
-    % Input to Grounding
-    \draw[arrow] (Input_q.east) -- ++(0.5,0) |- (Base_Q.west);
-    \draw[arrow] (Input_q.east) -- ++(0.5,0) |- (L0_Base.west);
-    \draw[arrow] (Input_q.east) -- ++(0.5,0) |- (T_Base.west);
-    \draw[arrow] (Input_q.east) -- ++(0.5,0) |- (K_Axis.west);
-    \draw[arrow] (Input_q.east) -- ++(0.5,0) |- (V_Axis.west);
-    \draw[arrow] (Input_q.east) -- ++(1.5,0) |- (Q_Diff.west);
-    
-    \draw[arrow] (Input_pid.east) -- ++(1,0) |- (Diff_Param.west);
-    \draw[arrow] (Input_uid.east) -- ++(1,0) |- (Gap_Param.west);
-    \draw[arrow] (Input_uid.east) -- ++(1,0) |- (Vel_Param.west);
-    
-    \draw[arrow] (Input_r.east) -- ++(4,0) |- (Base_QA.west);
-    \draw[arrow] (Input_r.east) -- ++(4,0) |- (QA_Diff.west);
+    % Stage 1 to 2
+    \draw[arrow] (I_q) -- (E_q);
+    \draw[arrow] (I_r) -- (E_qa);
+    \draw[arrow] (I_pid) -- (G_uq);
+    \draw[arrow] (I_uid) -- (G_st);
 
-    % Substantiation Formulas
-    \draw[arrow] (L0_Base) -- (Formula_L0);
-    \draw[arrow] (Gap_Param.east) -| (Formula_L0.160);
-    \draw[arrow] (K_Axis.east) -| (Formula_L0.20);
-    
-    \draw[arrow] (T_Base) -- (Formula_T);
-    \draw[arrow] (Vel_Param.east) -| (Formula_T.160);
-    \draw[arrow] (V_Axis.east) -| (Formula_T.20);
+    % Stage 2 details
+    \draw[arrow] (E_q) -- (X_prime);
+    \draw[arrow] (E_qa) -- (Y_prime);
+    \draw[arrow] (G_uq.west) -- ++(-0.25,0) |- (X_prime.east);
+    \draw[arrow] (G_uq.east) -- ++(0.25,0) |- (Y_prime.west);
+    \draw[arrow] (G_st.west) -- ++(-1.1,0) |- (X_prime.east);
+    \draw[arrow] (G_st.north) -- (Y_prime.south);
 
-    % Rasch Logic Connections
-    \draw[arrow] (Diff_Param) -- (Q_Diff);
+    % Stage 2 to 3
+    \draw[arrow] (X_prime) -- (Decoder);
+    \draw[arrow] (Y_prime) -- (Encoder);
+    
+    % Cross-Attention Path
+    \draw[arrow] (Encoder.west) -- ++(-1,0) |- (Decoder.east) node[midway, left, pos=0.8, font=\scriptsize] {Context $y^*$};
 
-    % Fusion Wiring
-    \draw[arrow] (Formula_L0) -- (Sum_X);
-    \draw[arrow] (Q_Diff.west) -- ++(-0.2,0) |- (Sum_X.160);
-    \draw[arrow] (Base_Q.west) -- ++(-0.4,0) |- (Sum_X.140);
-    \draw[arrow] (Diff_Param.south) |- (Sum_X.east);
-    
-    \draw[arrow] (Formula_T) -- (Sum_Y);
-    \draw[arrow] (Base_QA.east) -- ++(0.4,0) |- (Sum_Y.20);
-    \draw[arrow] (QA_Diff.east) -- ++(0.2,0) |- (Sum_Y.40);
-    \draw[arrow] (Diff_Param.east) -- ++(0.5,0) |- (Sum_Y.0);
+    % Stage 3 to 4
+    \draw[arrow] (Decoder) -- (MLP);
+    \draw[arrow] (MLP) -- (Predict);
 
-    \draw[arrow] (Sum_X) -- (Final_Q);
-    \draw[arrow] (Sum_Y) -- (Final_QA);
-
-    % Transformer Core Wiring
-    \draw[arrow] (Final_QA) |- (Enc_Desc);
-    \draw[arrow] (Enc_Desc) -- (E_Split);
-    \draw[arrow] (E_Split) -- (E_H1);
-    \draw[arrow] (E_Split) -- (E_H2);
-    \draw[arrow] (E_Split) -- (E_H8);
-    \draw[arrow] (E_H1) -- (E_Concat);
-    \draw[arrow] (E_H2) -- (E_Concat);
-    \draw[arrow] (E_H8) -- (E_Concat);
-    \draw[arrow] (E_Concat) -- (E_W);
-
-    \draw[arrow] (Final_Q) |- (Dec_Desc);
-    \draw[arrow] (Dec_Desc) -- (KR1_Split);
-    \draw[arrow] (KR1_Split) -- (KR1_H1);
-    \draw[arrow] (KR1_Split) -- (KR1_H2);
-    \draw[arrow] (KR1_Split) -- (KR1_H8);
-    \draw[arrow] (KR1_H1) -- (KR1_Concat);
-    \draw[arrow] (KR1_H2) -- (KR1_Concat);
-    \draw[arrow] (KR1_H8) -- (KR1_Concat);
-    \draw[arrow] (KR1_Concat) -- (KR2_Split);
+    % Stage 4/1 to 5 (Loss Inputs)
+    \draw[arrow] (Predict) -- (L_sup);
+    \draw[arrow] (Predict) -- (L_ref);
     
-    \draw[arrow] (E_W.west) -- ++(-1,0) |- (KR2_Split.east) node[midway, above, sloped, draw=none, fill=none] {Context $y^*$};
+    % BKT Highway (Far Right - Flowing UP)
+    \draw[path_line] (I_bkt.north) -- ++(0,18) coordinate (bkt_h);
+    \draw[arrow] (bkt_h) -| (L_ref.south);
+    \draw[arrow] (bkt_h) -| (L_init.south);
+    \draw[arrow] (bkt_h) -| (L_rate.south);
     
-    \draw[arrow] (KR2_Split) -- (KR2_H1);
-    \draw[arrow] (KR2_Split) -- (KR2_H2);
-    \draw[arrow] (KR2_Split) -- (KR2_H8);
-    \draw[arrow] (KR2_H1) -- (KR2_Concat);
-    \draw[arrow] (KR2_H2) -- (KR2_Concat);
-    \draw[arrow] (KR2_H8) -- (KR2_Concat);
-    \draw[arrow] (KR2_Concat) -- (KR2_FFN);
-
-    % Output Wiring
-    \draw[arrow] (KR2_FFN) -- (Concat) node[midway, left, draw=none, fill=none] {$x^*$};
-    \draw[arrow] (Final_Q.west) -- ++(-4,0) |- (Concat.170) node[pos=0.2, above, draw=none, fill=none] {$x'$};
-    \draw[arrow] (Concat) -- (mlp_layers);
-    \draw[arrow] (mlp_layers) -- (Pred);
+    % Params Highway (Middle Right - Flowing UP)
+    \draw[path_line] (G_st.north) -- ++(0,11) coordinate (param_h);
+    \draw[arrow] (param_h) -| (L_init.south);
+    \draw[arrow] (param_h) -| (L_rate.south);
+    \draw[arrow] (param_h) -| (L_reg.south);
     
-    \draw[arrow] (Formula_L0.east) -- ++(1,0) |- (M_Init.west);
-    \draw[arrow] (Formula_T.east) -- ++(1,0) |- (M_Rate.west);
-
-    % Probing Wiring
-    \draw[arrow] (Concat.east) -- ++(1,0) |- (Probe_Extract.west) node[pos=0.5, above, draw=none, fill=none] {test\_mode};
-    \draw[arrow] (Probe_Extract) -- (Probe_True);
-    \draw[arrow] (Probe_Extract) -- (Probe_Control);
-    \draw[arrow] (BKT_Mastery.east) -- ++(1,0) |- (Probe_True.west);
-    \draw[arrow] (BKT_Mastery.east) -- ++(1,0) |- (Probe_Control.west);
-    \draw[arrow] (Probe_True) -- (Probe_Metric);
-    \draw[arrow] (Probe_Control) -- (Probe_Metric);
-
-    % Loss Wiring
-    \draw[arrow] (Pred.south) -- (L_SUP.north);
-    \draw[arrow] (Input_r.west) -- ++(-1,0) |- (L_SUP.west);
-    \draw[arrow] (Pred.south) -- (L_REF.north);
-    \draw[arrow] (BKT_P.east) -- (L_REF.west);
+    % Rasch Highway
+    \draw[path_line] (G_uq.north) -- ++(0,11) coordinate (rasch_h);
+    \draw[arrow] (rasch_h) -| (L_rasch.south);
     
-    \draw[arrow] (M_Init.south) -- ++(0,-0.5) -| (L_INIT.north);
-    \draw[arrow] (BKT_L0.east) -- ++(0.5,0) |- (L_INIT.west);
-    
-    \draw[arrow] (M_Rate.south) -- ++(0,-1.5) -| (L_RATE.north);
-    \draw[arrow] (BKT_T.east) -- ++(0.5,0) |- (L_RATE.west);
-    
-    \draw[arrow] (Diff_Param.east) -- ++(1,0) |- (L_RASCH.west);
-    \draw[arrow] (Gap_Param.east) -- ++(0.5,0) |- (L_GAP.west);
-    \draw[arrow] (Vel_Param.east) -- ++(0.5,0) |- (L_STUDENT.west);
-    
-    \draw[arrow] (L_SUP) -- (L_TOTAL);
-    \draw[arrow] (L_REF) -- (L_TOTAL);
-    \draw[arrow] (L_INIT) -- (L_TOTAL);
-    \draw[arrow] (L_RATE) -- (L_TOTAL);
-    \draw[arrow] (L_RASCH) -- (L_TOTAL);
-    \draw[arrow] (L_GAP) -- (L_TOTAL);
-    \draw[arrow] (L_STUDENT) -- (L_TOTAL);
+    % Total Loss Aggregation
+    \foreach \l in {L_sup, L_ref, L_init, L_rate, L_rasch, L_reg}
+        \draw[arrow] (\l.north) -- (L_total.south -| \l.north);
 
 \end{tikzpicture}
 \end{document}
