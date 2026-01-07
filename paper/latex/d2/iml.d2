@@ -1,0 +1,39 @@
+direction: right
+problem: Problem
+data: Data
+prior: Prior Knowledge
+ml: ML Pipeline
+solution: Solution
+rf: Reference Model
+
+problem -> data
+problem -> prior
+data -> ml
+ml -> solution
+prior -> ml
+ml: {
+  td: Training Data
+  hs: Hypothesis Set
+  la: Learning Algorithm
+  fh: Final Hpothesis
+  direction: down
+  td -> hs -> la -> fh
+
+  la: |latex
+    \lim_{h \rightarrow 0 } \frac{f(x+h)-f(x)}{h}
+  |
+
+  la.shape: rectangle
+
+  hs: |md
+    # I can do headers
+    - lists
+    - lists
+
+    And other normal markdown stuff
+  |
+
+  hs.shape: rectangle
+}
+rf -> prior
+
