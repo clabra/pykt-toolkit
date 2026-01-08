@@ -1,5 +1,4 @@
 direction: up
-theme: 200
 
 # Define Classes for visual consistency
 classes: {
@@ -94,16 +93,15 @@ zt: {
   }
 }
 
-# 4. Prediction and Interpretability Heads
-Heads: {
+Outputs: {
   PredictionHead: {
     class: output_head
     label: "Prediction Head (h_pred)\nOut: p_pred"
   }
 
-  InterpretabilityHead: {
+  GroundedReadout: {
     class: output_head
-    label: "Interpretability Head (h_int)\nOut: {p_know, p_rate}"
+    label: "Grounded Read-out\nOut: {p_know, p_rate}"
   }
 }
 
@@ -135,12 +133,12 @@ Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
 Embeddings -> Transformer.Decoder: "x'ₜ"
 
 Transformer.Decoder -> zt
-Embeddings -> Heads.InterpretabilityHead: "Relational Parameters"
-zt -> Heads.PredictionHead
+Embeddings -> Outputs.GroundedReadout: "Relational Parameters"
+zt -> Outputs.PredictionHead
 
 # Loss Connections
-Heads.PredictionHead -> LossPipeline.L_pred
-Heads.InterpretabilityHead -> LossPipeline.L_int
+Outputs.PredictionHead -> LossPipeline.L_pred
+Outputs.GroundedReadout -> LossPipeline.L_int
 InputData -> LossPipeline.L_int: "BKT Grounding Values"
 
 # Probing connects to the internal representation

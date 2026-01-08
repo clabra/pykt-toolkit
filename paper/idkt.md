@@ -106,14 +106,14 @@ graph TD
             end
         end
 
-        subgraph "Output Processing"
-            subgraph "Performance Prediction"
+        subgraph "Output Stage"
+            subgraph "Prediction Head (h_pred)"
                 Concat["Concat[x^, x']"]
                 mlp_layers["MLP Layers"]
                 Pred[["Predictions p_iDKT"]]
             end
             
-            subgraph "Archetype 1 Grounds (Monitoring)"
+            subgraph "Grounded Diagnostic Read-out"
                 M_Init["initmastery (Scalar)"]
                 M_Rate["rate (Scalar)"]
             end
@@ -232,8 +232,8 @@ graph BT
         %% LAYER 3: OUTPUT & OPTIMIZATION
         subgraph Output_Layer ["4. Output & Optimization"]
             direction TB
-            Pred[p_iDKT Prediction]
-            Diag[Pedagogical Diagnostics]
+            Pred[Prediction Head Out: p_iDKT]
+            Diag[Grounded Diagnostic Read-out]
             Loss{{Multi-Objective Loss<br/>L_SUP + L_REF + L_REG}}
         end
 
@@ -294,7 +294,8 @@ graph BT
         x_prime --> Decoder
         Encoder -- "Context y*" --> Decoder
         
-        Decoder --> Pred & Diag
+        Decoder --> Pred
+        lc & ts --> Diag
         Decoder -.-> Extract
         
         %% Probing Flow
