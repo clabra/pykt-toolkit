@@ -562,14 +562,20 @@ In the following sections, we analyze how the architectural design of iDKT can b
 
 \subsubsection{Contextualization} \label{sec_longitudinal}
 
-The capability of iDKT to leverage longitudinal context is illustrated in Figure \ref{fig_mastery_866}, which contrasts its mastery estimations with the BKT baseline for a high-proficiency learner. While BKT leads to excessive volatility---where isolated failures are interpreted as significant knowledge drops---iDKT maintains a stable and resilient diagnostic trajectory. 
+The capability of iDKT to leverage longitudinal context is illustrated in Figure \ref{fig_twin_divergence}, which displays a "Twin Divergence" for a specific skill (Skill 4: Area Circle) in the AS2009 dataset. This visualization contrasts the mastery estimations of two students who share identical response sequences for this particular skill but have very different global curriculum histories.
 
-The core of this advantage lies in the self-attention mechanism, which enables iDKT to encode longitudinal context by dynamically weighting the entire interaction history. Instead of relying solely on the most recent state, iDKT evaluates each interaction in the context of the student's established behavioral patterns. In the scenario shown in Figure \ref{fig_mastery_866}, the model maintains a high mastery estimation despite sporadic failures because the attention weights remain anchored to the student's longitudinal progression. This capacity to distinguish between temporary behavioral noise (e.g., slips) and genuine changes in knowledge state represents a fundamental improvement over classical baselines, supporting robust and individualized diagnostics.
+While a Markovian model like BKT is mathematically forced to assign identical mastery states to both students due to their identical local sequences, iDKT leverages its self-attention mechanism to provide high-resolution contextual diagnostics through two distinct phenomena:
+\begin{itemize}
+    \item \textbf{Non-Markovian Initialization}: At the very first interaction ($t=0$), iDKT already provides divergent estimations. Student 2208 is recognized as having a significantly higher foundational baseline for this concept than Student 167, despite both having the same immediate local history.
+    \item \textbf{Velocity-Driven Cross-Over}: Despite starting from a lower baseline, Student 167 exhibits a steeper learning curve (higher $v_s$). After the first success, their mastery estimation increases rapidly, eventually overtaking Student 2208 at the "Cross-Over Point" (approximately $t=1.5$).
+\end{itemize}
+
+This dual evidence demonstrates that iDKT effectively decouples \textbf{Initial Standing} from \textbf{Learning Velocity}. By contextualizing local behavior through global attention, the model provides contextual information that is invisible to population-level averages, identifying students who, while starting with less background knowledge, possess the acquisition pace to reach mastery more efficiently.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.75\textwidth]{img/idkt_mastery_866.png}
-\caption{Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \label{fig_mastery_866}} 
+\includegraphics[width=1.0\textwidth]{img/twin_divergence.png}
+\caption{Twin Sequence Divergence for Skill 4 in AS2009. Two students with identical response sequences yield divergent pedagogical insights as iDKT contextualizes their local behavior within their global curriculum history, exhibiting both non-Markovian initialization and a learning velocity cross-over. \label{fig_twin_divergence}} 
 \end{figure} 
 
 
