@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7207397145111367,
+    "testacc": 0.6644842443186618,
+    "window_testauc": 0.7207397145111367,
+    "window_testacc": 0.6644842443186618,
+    "short_title": "benchpaper",
+    "dataset": "nips_task34_S",
+    "fold": 0,
+    "model": "dkvmn",
+    "train_script": "examples/wandb_dkvmn_train.py"
+}

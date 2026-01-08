@@ -1,0 +1,11 @@
+{
+    "testauc": 0.6753564707008199,
+    "testacc": 0.6673058485139022,
+    "window_testauc": 0.6753564707008199,
+    "window_testacc": 0.6673058485139022,
+    "short_title": "benchpaper",
+    "dataset": "bridge2algebra2006_S",
+    "fold": 3,
+    "model": "dkvmn",
+    "train_script": "examples/wandb_dkvmn_train.py"
+}

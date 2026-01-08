@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7748168313874174,
+    "testacc": 0.7640951846702926,
+    "window_testauc": 0.7748168313874174,
+    "window_testacc": 0.7640951846702926,
+    "short_title": "benchpaper",
+    "dataset": "assist2015_S",
+    "fold": 2,
+    "model": "atkt",
+    "train_script": "examples/wandb_atkt_train.py"
+}

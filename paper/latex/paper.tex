@@ -595,26 +595,25 @@ To statistically quantify this granularity, we analyze the \textit{delta distrib
 
 \subsubsection{High-Granularity Trajectory Analysis} \label{sec_mosaic_analysis}
 
-To provide additional visual evidence for hypothesis H3, we generated a Mastery Alignment Mosaic (Figure~\ref{fig_mosaic}) displaying individualized trajectories for three learning archetypes (Fast, Median, Slow) across 15 skills. For rigorous validation, we utilized the ``Set S Isolation'' strategy, restricting the analysis to students with continuous interaction histories ($\le 200$ steps) and recalibrating the BKT reference exclusively on this population.
+To provide visual evidence for hypothesis H3, we generated the mosaic showed in  Figure~\ref{fig_mosaic} displaying individualized trajectories for three representative individual students (Fast, Median, Slow) per skill across the 15 most frequent skills in the dataset (including major topics like Circle Graphs, Venn Diagrams, and Linear Equations).
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=1.0\textwidth]{img/mastery_alignment_mosaic_real.png}
-\caption{Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \label{fig_mosaic}}
+\caption{Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Each plot displays three unique students selected as archetypical representatives of Fast, Median, and Slow learning behaviors (non-aggregated). \label{fig_mosaic}}
 \end{figure}
 
 The qualitative analysis of these trajectories reveals three significant pedagogical insights:
 \begin{enumerate}
     \item \textbf{Dynamic Diagnostic Placement}: Even when BKT is forced to start at the population prior ($L_0$), iDKT starting points ($t=1$) vary per student. This demonstrates that iDKT leverages cross-skill behavioral transfers to perform individualized placement before the first interaction with a new skill.
-    \item \textbf{Trajectory Crossovers}: We observe instances where students starting with lower initial mastery overtake peers due to a higher identified learning velocity ($t_s$). This confirms iDKT's ability to model individualized acquisition rates beyond population-level curves.
-    \item \textbf{Diagnostic Resilience}: iDKT displays superior stability compared to BKT baselines. While isolated failures cause sharp drops in BKT dashed lines, iDKT solid lines for high-velocity learners remain stable, correctly identifying temporary slips vs.\ fundamental knowledge loss.
+    \item \textbf{Heterogeneous Learning Velocities}: We observe distinct slope gradients across students, confirming iDKT's ability to model individualized acquisition rates ($t_s$). While BKT applies a fixed learning probability to all students, iDKT identifies that some learners acquire mastery rapidly (steep curves) while others progress more gradually (flatter curves), capturing the full spectrum of behavioral heterogeneity.
 \end{enumerate}
 
 \subsubsection{Archetype-Level Diagnostics} \label{sec_diagnostics}
 
 Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. By projecting high-dimensional latent states into an interpretable skill-by-cohort matrix, iDKT provides educators with a comprehensive ``knowledge blueprint'' that supports data-driven differentiation.
 
-This utility is visualized in Figure~\ref{fig_skill_map}, which displays the mean latent mastery predicted by iDKT for the four student archetypes across 30 curriculum skills. The map reveals distinct "knowledge ceilings" and "learning frontiers" for each group, proving that the granularity discovered by the model translates into actionable insights for targeted instructional design. This result provides the final validation for H3, demonstrating that superior diagnostic granularity enables precision instruction.
+This utility is visualized in Figure~\ref{fig_skill_map}, which displays the mean latent mastery predicted by iDKT for four student clusters across 30 curriculum skills. The map reveals distinct "knowledge ceilings" and "learning frontiers" for each group, proving that the granularity discovered by the model translates into actionable insights for targeted instructional design. This result provides the final validation for H3, demonstrating that superior diagnostic granularity enables precision instruction.
 
 \subsubsection{Pedagogical Confidence} \label{sec_confidence}
 
@@ -626,7 +625,7 @@ A significant practical application of this interpretability is evaluating the r
 \caption{Pedagogical Diagnostic Map for AS2009. The heatmap displays the mean latent mastery predicted by iDKT for the four student archetypes across 30 curriculum skills. This visualization demonstrates the practical utility of iDKT's high-granularity estimations for targeted instructional design. \label{fig_skill_map}}
 \end{figure}
 
-The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is warranted. This result provides the final validation for H3, demonstrating that superior diagnostic granularity directly translates into actionable pedagogical insights.
+The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is advisable. This result provides further validation for H3, demonstrating that superior diagnostic granularity directly translates into actionable pedagogical insights.
 
 \begin{figure}[htbp]
     \centering

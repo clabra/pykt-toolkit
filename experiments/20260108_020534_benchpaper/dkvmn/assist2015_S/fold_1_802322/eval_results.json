@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7166740409894038,
+    "testacc": 0.7534775574579482,
+    "window_testauc": 0.7166740409894038,
+    "window_testacc": 0.7534775574579482,
+    "short_title": "benchpaper",
+    "dataset": "assist2015_S",
+    "fold": 1,
+    "model": "dkvmn",
+    "train_script": "examples/wandb_dkvmn_train.py"
+}
