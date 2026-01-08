@@ -362,6 +362,8 @@ We evaluated iDKT across four widely used educational datasets following the S-p
     \item[Bridge to Algebra 2006 (Bridge2006)]: A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010bridge}.
     \item[NeurIPS 2020 Education Challenge (NIPS34)]: A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
 \end{description}
+
+
 \section{Results and Discussion} \label{sec_results}
 
 \subsection{Predictive Performance}
@@ -369,19 +371,29 @@ We evaluated iDKT across four widely used educational datasets following the S-p
 To evaluate the predictive performance of the iDKT model, we used the Area Under the Curve (AUC) and the Classification Accuracy (ACC) of the models on the test set with the 5 datasets described in Section \ref{sec_dataset}. The results are shown in the Table \ref{tab_performance}.
 
 
-\begin{table}[htbp] 
+\begin{table}[htbp]
 \centering
-\caption{Predictive Performance of the iDKT model across the evaluated datasets (Mean AUC).\label{tab_performance}}
-\begin{tabularx}{\textwidth}{lcccc}
+\caption{Predictive Performance across the evaluated datasets (Mean AUC and Mean ACC).\label{tab_performance}}
+\footnotesize
+\begin{tabularx}{\textwidth}{lcccccccc}
 \toprule
-\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{Bridge2006\_S} & \textbf{NIPS34\_S} \\
+\textbf{Model} & \multicolumn{2}{c}{\textbf{AS2009}} & \multicolumn{2}{c}{\textbf{AS2015}} & \multicolumn{2}{c}{\textbf{Bridge2006}} & \multicolumn{2}{c}{\textbf{NIPS34}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+ & \scriptsize AUC & \scriptsize ACC & \scriptsize AUC & \scriptsize ACC & \scriptsize AUC & \scriptsize ACC & \scriptsize AUC & \scriptsize ACC \\
 \midrule
-iDKT & 0.8240 & 0.7224 & 0.7879 & 0.7501 \\
+iDKT & 0.8240 & 0.7573 & 0.7224 & 0.7520 & 0.7879 & \textbf{0.7565} & 0.7501 & 0.6868 \\
+AKT & 0.8271 & \textbf{0.7620} & 0.7246 & 0.7540 & \textbf{0.7934} & 0.6947 & \textbf{0.7745} & \textbf{0.7081} \\
+ATKT & \textbf{0.8286} & 0.7579 & \textbf{0.7755} & \textbf{0.7637} & 0.6911 & 0.6395 & 0.7391 & 0.6783 \\
+DKT & 0.8208 & 0.7547 & 0.7268 & 0.7536 & 0.6701 & 0.6209 & 0.7354 & 0.6772 \\
+DKT+ & 0.8216 & 0.7570 & 0.7284 & 0.7544 & 0.6693 & 0.6121 & 0.7362 & 0.6781 \\
+DKVMN & 0.8082 & 0.7476 & 0.7174 & 0.7535 & 0.6741 & 0.6522 & 0.7208 & 0.6646 \\
+SAINT & 0.7638 & 0.7207 & 0.7031 & 0.7483 & 0.7340 & 0.7152 & 0.7127 & 0.6563 \\
+SAKT & 0.6955 & 0.6608 & 0.6810 & 0.7405 & 0.5627 & 0.6328 & 0.6686 & 0.6234 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-When comparing these results with state-of-the-art DKT models reported in \citep{liu2022pykt}, we observe that iDKT achieves the best predictive performance on the AS2009 and Algebra2005 datasets and ranks second on the Bridge2006 and NIPS34 datasets, surpassed only by the AKT model.
+When comparing these results with baseline DKT models, we observe that iDKT achieves competitive performance across all datasets, matching or exceeding the predictive capacity of established architectures like DKT and DKVMN. Notably, while high-capacity attention models such as AKT and ATKT maintain a slight lead in AUC on several datasets, iDKT achieves the highest classification accuracy (0.7565) on the Bridge2006 dataset. These results demonstrate that the models' pedagogical grounding does not compromise its ability to capture complex learning dynamics.
 
 \subsection{Interpretability Validation (RQ1)} \label{sec_validation}
 
