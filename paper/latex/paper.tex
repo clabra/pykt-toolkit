@@ -195,7 +195,7 @@ Concerning the integration of side information into ante-hoc methods, Item Respo
 While providing insights into controlled scenarios, these approaches may struggle to encapsulate the multifaceted and dynamic nature of learning processes and the efficacy is often constrained by the specificity and scope of the underlying theories \citep{bai2024survey}. Moreover, the mere incorporation of principles from psychology or pedagogy does not guarantee interpretability. As noted by \citet{vonrueden2021informed}, improved interpretability remains a secondary objective in most knowledge integration approaches used in machine learning, often overshadowed by performance optimization.
 
 
-\subsection{Semantic Interpretability}
+\subsection{Semantic Interpretability} \label{sec:interpretability}
 
 To achieve practical interpretability without compromising general applicability, we propose \textit{Semantic Interpretability}—an approach that integrates the predictive strength of deep learning with the semantic advantages of traditional models. Under this framework, we define three essential criteria for model interpretability:
 
@@ -314,8 +314,8 @@ We can interpret these individualized embeddings as follows:
 
 The optimization of iDKT is governed by a multi-objective loss function designed to ensure that the high-capacity Transformer architecture remains aligned with pedagogical principles. Following established patterns in theory-guided machine learning \citep{karpatne2017theory, willard2020integrating}, we incorporate theoretical constraints as grounding terms in the optimization objective. This approach steers the model to learn latent representations that are both predictive of student outcomes and semantically consistent with established educational constructs. The total loss $\mathcal{L}_{total}$ is defined as a weighted sum of supervised, grounding, and regularization components:
 
-\begin{equation}
-    \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref} \mathcal{L}_{ref} + \lambda_{know} \mathcal{L}_{know} + \lambda_{rate} \mathcal{L}_{rate} + \lambda_{reg} \mathcal{L}_{reg}
+\begin{equation} \label{eq_loss}
+    \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref} \mathcal{L}_{ref} + \sum_{k \in \{know, rate\}} \lambda_k \mathcal{L}_k + \lambda_{reg} \mathcal{L}_{reg}
 \end{equation}
 
 \subsection{Supervised Alignment ($\mathcal{L}_{sup}$)}
@@ -340,17 +340,11 @@ While grounding losses anchor the global structure of the latent space, $\mathca
     \mathcal{L}_{reg} = \lambda_{\text{u}} \sum_{q \in Q} u_q^2 + \lambda_{\text{sep}} (k_s^2 + v_s^2)
 \end{equation}
 where $u_q$ represents item difficulty variance, and $\{k_s, v_s\}$ are the student-specific deviations for proficiency and rate. This structural constraint enforces a conservative interpretation of behavioral nuances, preventing overfitting to noise in sparse student trajectories.
+
+
 \section{Experimental Setup} \label{sec_experiment}
 
-\subsection{Research Questions}
-
 The experimental validation of iDKT is guided by the following research questions:
-
-\begin{enumerate}
-    \item \textbf{Interpretability Validation (RQ1)}: Is it possible to rigorously validate that an iDKT model, whose representations are grounded in a reference model, actually yields interpretable constructs?
-    \item \textbf{Trade-Off between Predictive Performance and Interpretability (RQ2)}: To what extent can deep knowledge tracing models be constrained for interpretability alignment without significantly degrading predictive performance?
-    \item \textbf{Improvement of Pedagogical Diagnostics (RQ3)}: How can the Transformer’s ability to capture longitudinal context be utilized to improve or complement pedagogical diagnostics?
-\end{enumerate}
 
 \subsection{Implementation Details}
 
@@ -360,13 +354,13 @@ The Transformer architecture was configured with an embedding dimension $d_{mode
 
 \subsection{Datasets}\label{sec_dataset}
 
-We evaluated iDKT across four widely used educational datasets followin the S-protocol for sequence length consistency \citep{liu2022pykt}: 
+We evaluated iDKT across four widely used educational datasets following the S-protocol for sequence length consistency \citep{liu2022pykt}: 
 
 \begin{description}
-    \item[ASSISTments 2009 (AS2009\_S)]: A benchmark dataset from the ASSISTments platform (2009-2010), representing a standard for knowledge tracing evaluation \citep{feng2009addressing}.
-    \item[ASSISTments 2015 (AS2015\_S)]: A large-scale release from the same platform with a high volume of student records \citep{feng2009addressing}.
-    \item[Bridge to Algebra 2006 (Bridge2006\_S)]: A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010bridge}.
-    \item[NeurIPS 2020 Education Challenge (NIPS34\_S)]: A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
+    \item[ASSISTments 2009 (AS2009)]: A benchmark dataset from the ASSISTments platform (2009-2010), representing a standard for knowledge tracing evaluation \citep{feng2009addressing}.
+    \item[ASSISTments 2015 (AS2015)]: A large-scale release from the same platform with a high volume of student records \citep{feng2009addressing}.
+    \item[Bridge to Algebra 2006 (Bridge2006)]: A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010bridge}.
+    \item[NeurIPS 2020 Education Challenge (NIPS34)]: A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
 \end{description}
 \section{Results and Discussion} \label{sec_results}
 
@@ -380,7 +374,7 @@ To evaluate the predictive performance of the iDKT model, we used the Area Under
 \caption{Predictive Performance of the iDKT model across the evaluated datasets (Mean AUC).\label{tab_performance}}
 \begin{tabularx}{\textwidth}{lcccc}
 \toprule
-\textbf{Model} & \textbf{AS2009\_S} & \textbf{AS2015\_S} & \textbf{Bridge2006\_S} & \textbf{NIPS34\_S} \\
+\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{Bridge2006\_S} & \textbf{NIPS34\_S} \\
 \midrule
 iDKT & 0.8240 & 0.7224 & 0.7879 & 0.7501 \\
 \bottomrule
@@ -391,14 +385,10 @@ When comparing these results with state-of-the-art DKT models reported in \citep
 
 \subsection{Interpretability Validation (RQ1)} \label{sec_validation}
 
-To verify that iDKT’s internal representations—specifically Personalized Initial Knowledge ($\mathbf{l}_c$) and Personalized Learning Rate ($\mathbf{t}_c$) as defined in Equations \ref{eq_lc} and \ref{eq_tc}—faithfully represent the educational constructs postulated by the reference model, we employ two metrics widely utilized in psychometrics and educational measurement \citep{campbell1959convergent, american1985standards}: 
-
-\subsection{Interpretability Validation (RQ1)} \label{sec_validation}
-
-To address RQ1, we evaluate the representational alignment of iDKT through two rigorous probing metrics that quantify the preservation of pedagogical constructs.
+To verify that iDKT’s internal representations—specifically Personalized Initial Knowledge ($\mathbf{l}_c$) and Personalized Learning Rate ($\mathbf{t}_c$) as defined in Section \ref{sec_embeddings}—faithfully represent the educational constructs postulated by the reference model, we evaluate the representational alignment through three metrics that quantify the preservation and functional utility of pedagogical constructs. 
 
 \begin{enumerate}
-    \item \textit{Convergent Validity (Structural Alignment)}: This metric, denoted as $\mathcal{I}_1$, measures the statistical correspondence between iDKT's latent projections and the reference model's theoretical parameters. We calculate the Pearson correlation between the student-level estimations and the BKT-derived priors for both initial mastery and learning rate. The metrics are expressed as:
+    \item \textit{Convergent Validity (Representational Alignment)}: This metric, denoted as $\mathcal{I}_1$, measures the statistical correspondence between iDKT's latent projections and the reference model's theoretical parameters. We calculate the Pearson correlation between the student-level estimations and the BKT-derived priors for both initial mastery and learning rate. The metrics are expressed as:
     \begin{equation} \label{eq_i1}
     \mathcal{I}_{1l} = \text{Corr}(p_{know}, P(L_{0})) \quad \text{and} \quad \mathcal{I}_{1t} = \text{Corr}(p_{rate}, P(T))
     \end{equation}
@@ -409,52 +399,52 @@ To address RQ1, we evaluate the representational alignment of iDKT through two r
     \end{equation}
 \end{enumerate}
 
-Table \ref{tab_interpretability} summarizes the alignment metrics for the unconstrained iDKT model ($\lambda_{ref}=0$), demonstrating that without explicit grounding, the deep model's latent space remains decoupled from pedagogical constructs.
+Table \ref{tab_interpretability} summarizes the alignment metrics for the unconstrained iDKT model ($\lambda_{\mathcal{I}}=0$), demonstrating that without explicit grounding, the deep model's latent space remains decoupled from pedagogical constructs.
 
 \begin{table}[htbp]
 \centering
-\caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{ref}=0$). \label{tab_interpretability}}
+\caption{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda_{\mathcal{I}}=0$). \label{tab_interpretability}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccccc}
 \toprule
 \textbf{Dataset} & \textbf{$\mathcal{I}_{1l}$} & \textbf{Int.} & \textbf{$\mathcal{I}_{1t}$} & \textbf{Int.} & \textbf{$\mathcal{I}_2$} & \textbf{Int.} \\
 \midrule
-AS2009\_S & -0.1382 & Poor & -0.0067 & Negl. & 0.1870 & Poor \\
-AS2015\_S & -0.0392 & Negl. & 0.0908 & Negl. & 0.0975 & Negl. \\
-Bridge2006\_S & -0.0645 & Negl. & 0.0160 & Negl. & 0.0809 & Negl. \\
-NIPS34\_S & 0.2070 & Poor & -0.0425 & Negl. & 0.1722 & Poor \\
+AS2009 & -0.1382 & Poor & -0.0067 & Negl. & 0.1870 & Poor \\
+AS2015 & -0.0392 & Negl. & 0.0908 & Negl. & 0.0975 & Negl. \\
+Bridge2006 & -0.0645 & Negl. & 0.0160 & Negl. & 0.0809 & Negl. \\
+NIPS34 & 0.2070 & Poor & -0.0425 & Negl. & 0.1722 & Poor \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Enabling Representational Grounding ($\lambda_{ref}=0.10$) leads to a significant restoration of semantic alignment, as evidenced in Table \ref{tab_interpretability_grounded}.
+Enabling Representational Grounding ($\lambda_{\mathcal{I}}=0.10$) leads to a significant restoration of semantic alignment, as evidenced in Table \ref{tab_interpretability_grounded}.
 
 \begin{table}[htbp]
 \centering
-\caption{Interpretability Alignment Metrics for grounded iDKT ($\lambda_{ref}=0.1$). \label{tab_interpretability_grounded}}
+\caption{Interpretability Alignment Metrics for grounded iDKT ($\lambda_{\mathcal{I}}=0.1$). \label{tab_interpretability_grounded}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccccc}
 \toprule
 \textbf{Dataset} & \textbf{$\mathcal{I}_{1l}$} & \textbf{Int.} & \textbf{$\mathcal{I}_{1t}$} & \textbf{Int.} & \textbf{$\mathcal{I}_2$} & \textbf{Int.} \\
 \midrule
-AS2009\_S & 0.5409 & Good & 0.3131 & Fair & 0.6250 & Excell. \\
-AS2015\_S & 0.9217 & Excell. & 0.8801 & Excell. & 0.1749 & Poor \\
-Bridge2006\_S & 0.4561 & Fair & 0.6422 & Good & 0.0859 & Negl. \\
-NIPS34\_S & 0.4912 & Fair & 0.4105 & Fair & 0.2104 & Poor \\
+AS2009 & 0.5409 & Good & 0.3131 & Fair & 0.6250 & Excell. \\
+AS2015 & 0.9217 & Excell. & 0.8801 & Excell. & 0.1749 & Poor \\
+Bridge2006 & 0.4561 & Fair & 0.6422 & Good & 0.0859 & Negl. \\
+NIPS34 & 0.4912 & Fair & 0.4105 & Fair & 0.2104 & Poor \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 
-The results presented in Tables \ref{tab_interpretability} and \ref{tab_interpretability_grounded} reveal a notable divergence between \textit{Convergent Validity} ($\mathcal{I}_1$) and \textit{Predictor Equivalence} ($\mathcal{I}_2$). Although $\mathcal{I}_1$ attains high levels across most datasets even with relatively low $\lambda_{ref}$ grounding weights, $\mathcal{I}_2$ remains consistently low.
+The results presented in Tables \ref{tab_interpretability} and \ref{tab_interpretability_grounded} reveal a notable divergence between \textit{Convergent Validity} ($\mathcal{I}_1$) and \textit{Predictor Equivalence} ($\mathcal{I}_2$). Although $\mathcal{I}_1$ attains high levels across most datasets even with relatively low $\lambda_{\mathcal{I}}$ grounding weights, $\mathcal{I}_2$ remains consistently low.
 
 High $\mathcal{I}_1$ scores demonstrate that iDKT successfully internalizes the \textit{semantic identity} of the theoretical constructs (Initial Knowledge and Learning Rate). However, $\mathcal{I}_2$ measures functional substitutability within a comparatively constrained reference model that is unable to capture the intricate behavioral patterns identified by iDKT. As a high-capacity Transformer, iDKT captures complex, long-range dependencies and context-aware dynamics that exceed the modeling capability of classical BKT. This discrepancy provides empirical evidence that iDKT does not merely mimic the reference model, but rather maps its core pedagogical constructs onto a more sophisticated and predictive architecture.
 
 \subsubsection{Latent Structure Validation via Diagnostic Probing}
 
-While the convergent validity metrics ($\mathcal{I}_1, \mathcal{I}_2$) provide evidence that the model's inputs are successfully grounded, a critical scientific question remains: does this pedagogical signal survive the Transformer's deep processing? High-capacity models can often satisfy input-level constraints while discarding that information in favor of non-interpretable patterns within their deeper layers. To verify the terminal link in our \textit{Chain of Fidelity}, we employ \textit{Diagnostic Probing with Control Tasks} \citep{hewitt2019designing} to validate the \textit{Structural Preservation} of constructs at the point of prediction.
+While the convergent validity metrics ($\mathcal{I}_1, \mathcal{I}_2$) provide evidence that the model's inputs are successfully grounded, a question remains: does this pedagogical signal survive the Transformer's deep processing? To verify this, we employ \textit{Diagnostic Probing with Control Tasks} \citep{hewitt2019designing} to validate the \textit{Structural Encoding} of constructs at the point of prediction.
 
-The probing protocol investigates whether the theoretical constructs injected into the embedding layer (Equations \ref{eq_lc} and \ref{eq_tc}) remain dominant within the final contextualized representations ($z_t$) used for performance prediction. If the information remains linearly recoverable from $z_t$, it proves that the Transformer core has not merely simulated the grounding target but has actively built its predictive logic upon those grounded foundations.
+The probing protocol investigates whether the theoretical constructs injected into the embedding layer (Equations \ref{eq_lc} and \ref{eq_tc}) remain dominant within the final contextualized representations ($z_t$) used for performance prediction. If the information remains linearly recoverable from $z_t$, it proves that the Transformer built its predictive logic upon the grounded foundations.
 
 To validate this, we extract the task-contextualized representations ($z_t$)—the concatenation of the decoder's hidden state and the task embedding—and train a simple linear regression probe to recover the BKT mastery probability $P(L_t)$. However, high performance on this \textit{true task} alone is insufficient, as high-capacity models might memorize arbitrary patterns. To rigorously distinguish genuine encoding from superficial correlation, we implement a \textit{control task} \citep{hewitt2019designing} by training an identical probe to predict a randomly shuffled version of the theoretical labels. We quantify the integrity of the representation via the \textit{Selectivity} metric:
 
@@ -462,48 +452,48 @@ To validate this, we extract the task-contextualized representations ($z_t$)—t
 \text{Selectivity} = R^2_{\text{true}} - R^2_{\text{control}}
 \end{equation}
 
-where $R^2_{\text{true}}$ measures the variance explained when predicting actual BKT mastery, and $R^2_{\text{control}}$ measures the same for the shuffled control. A high positive selectivity score ($\Delta R^2 > 0.5$) provides terminal evidence of structural preservation, confirming that the pedagogical constructs remain the primary informative features through the model's entire reasoning chain.
+where $R^2_{\text{true}}$ measures the variance explained when predicting actual BKT mastery, and $R^2_{\text{control}}$ measures the same for the shuffled control. A high positive selectivity score ($\Delta R^2 > 0.5$) provides terminal evidence of \textit{Structural Encoding}, confirming that the pedagogical constructs remain the primary informative features through the model's entire reasoning chain.
 
-Table \ref{tab_probing} presents the probing results for the grounded iDKT model ($\lambda_{ref}=0.1$) on two representative datasets.
+Table \ref{tab_probing} presents the probing results for the grounded iDKT model ($\lambda_{\mathcal{I}}=0.1$) on two representative datasets.
 
 \begin{table}[htbp]
-\caption{Diagnostic Probing Results for grounded iDKT ($\lambda_{ref}=0.1$). \label{tab_probing}}
+\caption{Diagnostic Probing Results for grounded iDKT ($\lambda_{\mathcal{I}}=0.1$). \label{tab_probing}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lcccc}
 \toprule
 \textbf{Dataset} & \textbf{$R^2_{\text{true}}$} & \textbf{$R^2_{\text{control}}$} & \textbf{Selectivity ($\Delta R^2$)} & \textbf{Interpretation} \\
 \midrule
-AS2009\_S & 0.6731 & -0.0139 & \textbf{0.6870} & Robust Structural Encoding \\
-AS2015 & 0.6472 & -0.0043 & \textbf{0.6515} & Strong Alignment \\
+AS2009 & 0.6731 & -0.0139 & \textbf{0.6870} & Structural Encoding \\
+AS2015 & 0.6472 & -0.0043 & \textbf{0.6515} & Structural Encoding \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The results provide compelling validation of iDKT's interpretability. Both datasets exhibit selectivity scores exceeding 0.65, substantially above the threshold for ``strong encoding'' ($\Delta R^2 > 0.5$) established in the interpretability literature \citep{hewitt2019designing}. The near-zero (or slightly negative) control task performance confirms that the model is not simply memorizing arbitrary patterns, but has genuinely organized its post-attention representations around the pedagogical construct of mastery. Critically, these probing results validate that the grounded information embedded in the input layer (via $l_c$ and $t_c$) is preserved through the Transformer's self-attention mechanism and remains structurally encoded in the final contextualized representations. This demonstrates that the representational grounding is not merely a superficial input manipulation, but fundamentally shapes how the model processes and represents student knowledge states.
+The results provide compelling validation of iDKT's interpretability. Both datasets exhibit selectivity scores exceeding 0.65, substantially above the threshold for ``strong encoding'' ($\Delta R^2 > 0.5$) established in the literature \citep{hewitt2019designing}. The slightly negative control task performance confirms that the model is not simply memorizing arbitrary patterns, but has genuinely organized its post-attention representations around meaningful constructs. Critically, these probing results validate that the grounded information embedded in the input layer (via $l_c$ and $t_c$) is preserved through the Transformer's self-attention mechanism and remains structurally encoded in the final contextualized representations. This demonstrates that the representational grounding fundamentally shapes how the model processes and represents student knowledge states.
 
-This dual validation—combining correlation-based semantic alignment ($\mathcal{I}_1, \mathcal{I}_2$) with rigorous probing selectivity—establishes that iDKT satisfies the requirements of Semantically Aligned Interpretability. The model's representations are both semantically meaningful (aligned with BKT constructs) and structurally genuine (validated via control tasks), providing a robust foundation for pedagogically interpretable predictions.
+This dual validation—combining correlation-based semantic alignment ($\mathcal{I}_1, \mathcal{I}_2$) with rigorous probing selectivity—establishes that iDKT satisfies the requirements of Semantic Interpretability defined in \ref{sec_interpretability}. The model's representations are both semantically meaningful (aligned with BKT constructs) and structurally genuine (validated via control tasks), providing a robust foundation for pedagogically interpretable predictions.
 
 \subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
 
-A common assumption in deep knowledge tracing is that predictive performance and interpretability are opposing goals. To explore this relationship, we construct a \textit{Pareto frontier} by systematically varying the grounding weight $\lambda_{ref}$ in Equation \ref{eq_loss} and evaluating the resulting effects on both accuracy and alignment.
+A common assumption in deep knowledge tracing is that predictive performance and interpretability are opposing goals. To explore this relationship, we construct a \textit{Pareto frontier} by systematically varying the \textit{Alignment Intensity} ($\lambda_{\mathcal{I}}$), a unified hyperparameter that scales the weights of all three interpretability loss components simultaneously: $\lambda_{ref} = \lambda_{know} = \lambda_{rate} = \lambda_{\mathcal{I}}$. By varying $\lambda_{\mathcal{I}} \in [0, 1]$, we map the resulting effects on both accuracy and alignment.
 
-We measure the overall interpretability of the model using a \textit{Composite Alignment} metric ($\bar{\mathcal{I}}$), defined as the arithmetic mean of the structural ($\mathcal{I}_{1l}, \mathcal{I}_{1t}$) and functional ($\mathcal{I}_2$) components:
+We measure the overall interpretability of the model using a \textit{Composite Alignment} metric ($\bar{\mathcal{I}}$), defined as the arithmetic mean of the representational ($\mathcal{I}_{1l}, \mathcal{I}_{1t}$) and functional ($\mathcal{I}_2$) components:
 
 \begin{equation} \label{eq_composite_i}
 \bar{\mathcal{I}} = \frac{1}{3} \left( \mathcal{I}_{1l} + \mathcal{I}_{1t} + \mathcal{I}_{2} \right)
 \end{equation}
 
-Tables \ref{tab_pareto_as2015} and \ref{tab_pareto_as2009} summarize the results for the AS2009\_S and AS2015\_S datasets across the $\lambda_{ref}$ sweep.
+Tables \ref{tab_pareto_as2015} and \ref{tab_pareto_as2009} summarize the results for the AS2009 and AS2015 datasets across the $\lambda_{\mathcal{I}}$ sweep.
 
-Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009} illustrate the resulting frontiers. We observe that Representational Grounding serves as an effective regularizer, although the \textit{Saturation Point}---the weight at which interpretability is maximized without significant loss of fidelity---depends on dataset complexity. For the problem-level AS2009\_S dataset, we observe a synergy point at $\lambda=0.10$ where both metrics improve. Conversely, the concept-level AS2015\_S dataset reaches saturation at lower constraints, retaining 99.9\% of baseline AUC. Beyond these points, a \textit{grounding collapse} occurs, where excessive theoretical constraints force the model to ignore nuanced behavioral signals in favor of rigid theoretical priors.
+Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009} illustrate the resulting frontiers. We observe that Representational Grounding serves as an effective regularizer, although the \textit{Saturation Point}---the weight at which interpretability is maximized without significant loss of fidelity---depends on dataset complexity. For the problem-level AS2009 dataset, we observe a synergy point at $\lambda_{\mathcal{I}}=0.10$ where both metrics improve. Conversely, the concept-level AS2015 dataset reaches saturation at lower constraints, retaining 99.9\% of baseline AUC. Beyond these points, a \textit{grounding collapse} starts, where excessive theoretical constraints force the model to ignore nuanced behavioral signals in favor of rigid theoretical priors.
 
-\begin{figure}[htbp]
+\begin{table}[htbp]
 \centering
-\captionof{table}{Pareto Sweep results for AS2015\_S. \label{tab_pareto_as2015}}
+\caption{Pareto Sweep results for AS2015. \label{tab_pareto_as2015}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
 \toprule
-\textbf{$\lambda_{ref}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
+\textbf{$\lambda_{\mathcal{I}}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
 \midrule
 0.0 (Baseline) & 0.7248 & -0.0012 & Black Box \\
 0.1 (Saturation) & 0.7245 & 0.6673 & 99.9\% AUC Retained \\
@@ -514,21 +504,22 @@ Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009} illustrate the resul
 1.0 & 0.6763 & 0.4828 & Grounding Collapse \\
 \bottomrule
 \end{tabularx}
-
-\vspace{1em}
-
-\includegraphics[width=0.8\textwidth]{img/pareto_as2015.png}
-\caption{iDKT Pareto Frontier for AS2015\_S. The trajectory illustrates a saturation of theoretical alignment at $\lambda \approx 0.1$, reaching maximum interpretability before performance degrades. \label{fig_pareto_as2015}}
-\end{figure}
-
+\end{table}
 
 \begin{figure}[htbp]
 \centering
-\captionof{table}{Pareto Sweep results for AS2009\_S. \label{tab_pareto_as2009}}
+\includegraphics[width=0.8\textwidth]{img/pareto_as2015.png}
+\caption{iDKT Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda_{\mathcal{I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \label{fig_pareto_as2015}}
+\end{figure}
+
+
+\begin{table}[htbp]
+\centering
+\caption{Pareto Sweep results for AS2009. \label{tab_pareto_as2009}}
 \footnotesize
 \begin{tabularx}{\textwidth}{lccc}
 \toprule
-\textbf{$\lambda_{ref}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
+\textbf{$\lambda_{\mathcal{I}}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
 \midrule
 0.0 (Baseline) & 0.8207 & 0.0293 & Black Box \\
 0.1 (Synergy) & 0.8255 & 0.3846 & Accuracy-Interpretability Synergy \\
@@ -539,11 +530,12 @@ Figures \ref{fig_pareto_as2015} and \ref{fig_pareto_as2009} illustrate the resul
 1.0 & 0.7501 & 0.0714 & Grounding Collapse \\
 \bottomrule
 \end{tabularx}
+\end{table}
 
-\vspace{1em}
-
+\begin{figure}[htbp]
+\centering
 \includegraphics[width=0.8\textwidth]{img/pareto_as2009.png}
-\caption{iDKT Pareto Frontier for AS2009\_S. The curve displays an accuracy peak at $\lambda = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \label{fig_pareto_as2009}}
+\caption{iDKT Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda_{\mathcal{I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \label{fig_pareto_as2009}}
 \end{figure}
 
 \subsection{Improvement of Pedagogical Diagnostics (RQ3)} \label{sec_gran_results}
@@ -567,7 +559,7 @@ The core of this advantage lies in the self-attention mechanism, which enables i
 
 The primary contribution of iDKT lies in its ability to transform population-level theoretical averages into high-granularity contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles that capture personal learning velocities.
 
-To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = p_{rate} - P(T)$), representing the student-specific deviation from the theoretical learning rate across all skills. In both datasets, we observe significant non-zero standard deviations ($\sigma \approx 0.019$ for AS2009\_S and $\sigma \approx 0.039$ for AS2015\_S). This represents a substantial increase in diagnostic resolution compared to the baseline BKT, where $\sigma = 0$ by definition. The right-skewed tail in these distributions identifies a sub-population of ``fast learners'' whose acquisition pace is systematically underestimated by classical models. This variance enables the model to distinguish between students who are faster than suggested by theoretical priors and those who require additional practice to reach mastery.
+To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = p_{rate} - P(T)$), representing the student-specific deviation from the theoretical learning rate across all skills. In both datasets, we observe significant non-zero standard deviations ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a substantial increase in diagnostic resolution compared to the baseline BKT, where $\sigma = 0$ by definition. The right-skewed tail in these distributions identifies a sub-population of ``fast learners'' whose acquisition pace is systematically underestimated by classical models. This variance enables the model to distinguish between students who are faster than suggested by theoretical priors and those who require additional practice to reach mastery.
 
 \subsubsection{High-Granularity Trajectory Analysis} \label{sec_mosaic_analysis}
 
@@ -576,7 +568,7 @@ To provide definitive visual evidence for RQ3, we generated a Mastery Alignment 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=1.0\textwidth]{img/mastery_alignment_mosaic_real.png}
-\caption{Mastery Trajectory Alignment Mosaic for AS2009\_S. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \label{fig_mosaic}}
+\caption{Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \label{fig_mosaic}}
 \end{figure}
 
 The qualitative analysis of these trajectories reveals three significant pedagogical insights:
@@ -590,14 +582,14 @@ The qualitative analysis of these trajectories reveals three significant pedagog
 
 Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. A significant practical application is evaluating the reliability of predictions made by intrinsically interpretable models. By comparing BKT mastery estimations with those from iDKT, we can derive a measure of pedagogical confidence in the theoretical baseline. 
 
-This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the concordance between BKT and iDKT mastery predictions across the most frequent skills and students. The AS2015\_S results demonstrate high levels of agreement, whereas the AS2009\_S data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is warranted.
+This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the concordance between BKT and iDKT mastery predictions across the most frequent skills and students. The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is warranted.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2015.png}\\
-    {\small (a) AS2015\_S}\\[10pt]
+    {\small (a) AS2015}\\[10pt]
     \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2009.png}\\
-    {\small (b) AS2009\_S}
+    {\small (b) AS2009}
     \caption{Heatmaps of per-skill prediction alignment. \label{fig_heatmaps}}
 \end{figure}
 
@@ -609,9 +601,9 @@ This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the
 
 This work has introduced iDKT, a Transformer-based Knowledge Tracing model that bridges the gap between the high predictive capacity of deep learning and the intrinsic interpretability of specialized pedagogical models. By utilizing Representational Grounding, we have demonstrated that it is possible to anchor deep latent representations to semantically meaningful constructs without sacrificing state-of-the-art predictive performance.
 
-Our experimental results successfully address the proposed research questions. We demonstrated that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($\mathcal{I}_1$) and robust structural encoding validated through diagnostic probing (selectivity $\Delta R^2 > 0.65$). This dual validation establishes that the semantic alignment reflects genuine structural encoding rather than superficial pattern matching. Furthermore, we formalized a methodology for exploring the accuracy--interpretability trade-off, identifying synergistic points where significant alignment is achieved with minimal impact on predictive AUC. Finally, we proved that iDKT provides a substantial increase in diagnostic granularity compared to population-level baselines, identifying individualized learning velocities that enable truly adaptive educational pacing.
+Our experimental results successfully address the proposed research questions. We demonstrated that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($\mathcal{I}_1$) and robust structural encoding validated through diagnostic probing (selectivity $\Delta R^2 > 0.65$). This dual validation establishes that the semantic alignment reflects a genuine internal representation of knowledge states rather than superficial pattern matching. Furthermore, we formalized a methodology for exploring the accuracy--interpretability trade-off, identifying synergistic points where significant alignment is achieved with minimal impact on predictive AUC. Finally, we proved that iDKT provides a substantial increase in diagnostic granularity compared to population-level baselines, identifying individualized learning velocities that enable truly adaptive educational pacing.
 
-The contribution of this research is twofold: a formal validation framework for evaluating the internal interpretability of deep learning models in education, and a practical architecture that transforms complex predictors into actionable pedagogical tools. By grounding deep learning in established domain concepts, iDKT offers a path toward AI-driven personalization that is both highly accurate and pedagogically interpretable, providing a robust foundation for the next generation of intelligent tutoring systems.
+The contribution of this research is twofold: a formal validation framework for evaluating the internal interpretability of deep learning models in education, and a practical architecture that transforms complex predictors into actionable pedagogical tools. By grounding deep learning in established domain concepts, iDKT offers a path toward AI-driven personalization that is both highly accurate and pedagogically interpretable, providing a robust foundation for personalization in intelligent tutoring systems.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

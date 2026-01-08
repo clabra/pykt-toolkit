@@ -55,6 +55,8 @@
 \citation{rudin2019stop}
 \citation{semenova2019study}
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Semantic Interpretability}{3}{subsection.1.2}\protected@file@percent }
+\newlabel{sec:interpretability}{{1.2}{3}{Semantic Interpretability}{subsection.1.2}{}}
+\newlabel{sec:interpretability@cref}{{[subsection][2][1]1.2}{[1][3][]3}}
 \citation{yudelson2013individualized}
 \citation{vaswani2017attention}
 \citation{bai2024survey}
@@ -81,8 +83,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Embeddings}{6}{subsection.2.3}\protected@file@percent }
 \newlabel{sec_embeddings}{{2.3}{6}{Embeddings}{subsection.2.3}{}}
 \newlabel{sec_embeddings@cref}{{[subsection][3][2]2.3}{[1][6][]6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The diagram illustrates the functional layers of the iDKT Architecture: (1) \textit  {Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and theoretical parameters); (2) \textit  {Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit  {Attention Heads}: encoder-decoder transformer synthesizes history and task into a contextualized representation ($z_t$); (4) \textit  {Prediction and Interpretability Heads}: provide performance probabilities ($p_{pred}$) from historical context and grounded pedagogical diagnostics ($p_{know}, p_{rate}$) from representational grounding; (5) \textit  {Loss Functions}: implement a multi-objective pipeline ($\mathcal  {L}_{sup}, \mathcal  {L}_{int}$) to ensure semantic alignment; and (6) \textit  {Diagnostic Probing Validation}: verifies the structural preservation of pedagogical constructs through linear probing of internal representations.\relax }}{7}{figure.caption.2}\protected@file@percent }
-\newlabel{idkt_arch}{{2}{7}{The diagram illustrates the functional layers of the iDKT Architecture: (1) \textit {Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and theoretical parameters); (2) \textit {Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit {Attention Heads}: encoder-decoder transformer synthesizes history and task into a contextualized representation ($z_t$); (4) \textit {Prediction and Interpretability Heads}: provide performance probabilities ($p_{pred}$) from historical context and grounded pedagogical diagnostics ($p_{know}, p_{rate}$) from representational grounding; (5) \textit {Loss Functions}: implement a multi-objective pipeline ($\mathcal {L}_{sup}, \mathcal {L}_{int}$) to ensure semantic alignment; and (6) \textit {Diagnostic Probing Validation}: verifies the structural preservation of pedagogical constructs through linear probing of internal representations.\relax }{figure.caption.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The diagram illustrates the functional layers of the iDKT Architecture: (1) \textit  {Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and theoretical parameters); (2) \textit  {Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit  {Attention Heads}: encoder-decoder transformer synthesizes history and task into a contextualized representation ($z_t$); (4) \textit  {Prediction Head and Grounded Read-out}: provide performance probabilities ($p_{pred}$) from historical context and grounded pedagogical diagnostics ($p_{know}, p_{rate}$) from representational grounding; (5) \textit  {Loss Functions}: implement a multi-objective pipeline ($\mathcal  {L}_{sup}, \mathcal  {L}_{int}$) to ensure semantic alignment; and (6) \textit  {Diagnostic Probing Validation}: verifies the structural preservation of pedagogical constructs through linear probing of internal representations.\relax }}{7}{figure.caption.2}\protected@file@percent }
+\newlabel{idkt_arch}{{2}{7}{The diagram illustrates the functional layers of the iDKT Architecture: (1) \textit {Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and theoretical parameters); (2) \textit {Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit {Attention Heads}: encoder-decoder transformer synthesizes history and task into a contextualized representation ($z_t$); (4) \textit {Prediction Head and Grounded Read-out}: provide performance probabilities ($p_{pred}$) from historical context and grounded pedagogical diagnostics ($p_{know}, p_{rate}$) from representational grounding; (5) \textit {Loss Functions}: implement a multi-objective pipeline ($\mathcal {L}_{sup}, \mathcal {L}_{int}$) to ensure semantic alignment; and (6) \textit {Diagnostic Probing Validation}: verifies the structural preservation of pedagogical constructs through linear probing of internal representations.\relax }{figure.caption.2}{}}
 \newlabel{idkt_arch@cref}{{[figure][2][]2}{[1][6][]7}}
 \citation{karpatne2017theory,willard2020integrating}
 \newlabel{eq_lc}{{3}{8}{Embeddings}{equation.2.3}{}}
@@ -92,6 +94,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Loss Functions}{8}{subsection.2.4}\protected@file@percent }
 \newlabel{sec_loss}{{2.4}{8}{Loss Functions}{subsection.2.4}{}}
 \newlabel{sec_loss@cref}{{[subsection][4][2]2.4}{[1][8][]8}}
+\newlabel{eq_loss}{{7}{8}{Loss Functions}{equation.2.7}{}}
+\newlabel{eq_loss@cref}{{[equation][7][]7}{[1][8][]8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Supervised Alignment ($\mathcal  {L}_{sup}$)}{8}{subsection.2.5}\protected@file@percent }
 \citation{liu2022pykt}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.1}Representational Grounding}{9}{subsubsection.2.5.1}\protected@file@percent }
@@ -99,18 +103,16 @@
 \@writefile{toc}{\contentsline {section}{\numberline {3}Experimental Setup}{9}{section.3}\protected@file@percent }
 \newlabel{sec_experiment}{{3}{9}{Experimental Setup}{section.3}{}}
 \newlabel{sec_experiment@cref}{{[section][3][]3}{[1][9][]9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Research Questions}{9}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Implementation Details}{9}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Implementation Details}{9}{subsection.3.1}\protected@file@percent }
 \citation{liu2022pykt}
 \citation{feng2009addressing}
 \citation{feng2009addressing}
 \citation{stamper2010bridge}
 \citation{wang2020instructions}
 \citation{liu2022pykt}
-\citation{campbell1959convergent,american1985standards}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Datasets}{10}{subsection.3.3}\protected@file@percent }
-\newlabel{sec_dataset}{{3.3}{10}{Datasets}{subsection.3.3}{}}
-\newlabel{sec_dataset@cref}{{[subsection][3][3]3.3}{[1][10][]10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Datasets}{10}{subsection.3.2}\protected@file@percent }
+\newlabel{sec_dataset}{{3.2}{10}{Datasets}{subsection.3.2}{}}
+\newlabel{sec_dataset@cref}{{[subsection][2][3]3.2}{[1][10][]10}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Results and Discussion}{10}{section.4}\protected@file@percent }
 \newlabel{sec_results}{{4}{10}{Results and Discussion}{section.4}{}}
 \newlabel{sec_results@cref}{{[section][4][]4}{[1][10][]10}}
@@ -121,70 +123,67 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Interpretability Validation (RQ1)}{10}{subsection.4.2}\protected@file@percent }
 \newlabel{sec_validation}{{4.2}{10}{Interpretability Validation (RQ1)}{subsection.4.2}{}}
 \newlabel{sec_validation@cref}{{[subsection][2][4]4.2}{[1][10][]10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Interpretability Validation (RQ1)}{10}{subsection.4.3}\protected@file@percent }
-\newlabel{sec_validation}{{4.3}{10}{Interpretability Validation (RQ1)}{subsection.4.3}{}}
-\newlabel{sec_validation@cref}{{[subsection][3][4]4.3}{[1][10][]10}}
 \citation{hewitt2019designing}
 \newlabel{eq_i1}{{13}{11}{Interpretability Validation (RQ1)}{equation.4.13}{}}
-\newlabel{eq_i1@cref}{{[equation][13][]13}{[1][11][]11}}
+\newlabel{eq_i1@cref}{{[equation][13][]13}{[1][10][]11}}
 \newlabel{eq_i2}{{14}{11}{Interpretability Validation (RQ1)}{equation.4.14}{}}
 \newlabel{eq_i2@cref}{{[equation][14][]14}{[1][11][]11}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Interpretability Alignment Metrics for unconstrained iDKT ($\lambda _{ref}=0$). \relax }}{11}{table.caption.4}\protected@file@percent }
-\newlabel{tab_interpretability}{{2}{11}{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda _{ref}=0$). \relax }{table.caption.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Interpretability Alignment Metrics for unconstrained iDKT ($\lambda _{\mathcal  {I}}=0$). \relax }}{11}{table.caption.4}\protected@file@percent }
+\newlabel{tab_interpretability}{{2}{11}{Interpretability Alignment Metrics for unconstrained iDKT ($\lambda _{\mathcal {I}}=0$). \relax }{table.caption.4}{}}
 \newlabel{tab_interpretability@cref}{{[table][2][]2}{[1][11][]11}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Interpretability Alignment Metrics for grounded iDKT ($\lambda _{ref}=0.1$). \relax }}{11}{table.caption.5}\protected@file@percent }
-\newlabel{tab_interpretability_grounded}{{3}{11}{Interpretability Alignment Metrics for grounded iDKT ($\lambda _{ref}=0.1$). \relax }{table.caption.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Interpretability Alignment Metrics for grounded iDKT ($\lambda _{\mathcal  {I}}=0.1$). \relax }}{11}{table.caption.5}\protected@file@percent }
+\newlabel{tab_interpretability_grounded}{{3}{11}{Interpretability Alignment Metrics for grounded iDKT ($\lambda _{\mathcal {I}}=0.1$). \relax }{table.caption.5}{}}
 \newlabel{tab_interpretability_grounded@cref}{{[table][3][]3}{[1][11][]11}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Latent Structure Validation via Diagnostic Probing}{11}{subsubsection.4.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Latent Structure Validation via Diagnostic Probing}{11}{subsubsection.4.2.1}\protected@file@percent }
 \citation{hewitt2019designing}
 \citation{hewitt2019designing}
 \newlabel{eq_selectivity}{{15}{12}{Latent Structure Validation via Diagnostic Probing}{equation.4.15}{}}
 \newlabel{eq_selectivity@cref}{{[equation][15][]15}{[1][12][]12}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Diagnostic Probing Results for grounded iDKT ($\lambda _{ref}=0.1$). \relax }}{12}{table.caption.6}\protected@file@percent }
-\newlabel{tab_probing}{{4}{12}{Diagnostic Probing Results for grounded iDKT ($\lambda _{ref}=0.1$). \relax }{table.caption.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Diagnostic Probing Results for grounded iDKT ($\lambda _{\mathcal  {I}}=0.1$). \relax }}{12}{table.caption.6}\protected@file@percent }
+\newlabel{tab_probing}{{4}{12}{Diagnostic Probing Results for grounded iDKT ($\lambda _{\mathcal {I}}=0.1$). \relax }{table.caption.6}{}}
 \newlabel{tab_probing@cref}{{[table][4][]4}{[1][12][]12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Accuracy--Interpretability Trade-Off (RQ2)}{13}{subsection.4.4}\protected@file@percent }
-\newlabel{sec_tradeoff}{{4.4}{13}{Accuracy--Interpretability Trade-Off (RQ2)}{subsection.4.4}{}}
-\newlabel{sec_tradeoff@cref}{{[subsection][4][4]4.4}{[1][13][]13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Accuracy--Interpretability Trade-Off (RQ2)}{12}{subsection.4.3}\protected@file@percent }
+\newlabel{sec_tradeoff}{{4.3}{12}{Accuracy--Interpretability Trade-Off (RQ2)}{subsection.4.3}{}}
+\newlabel{sec_tradeoff@cref}{{[subsection][3][4]4.3}{[1][12][]12}}
 \newlabel{eq_composite_i}{{16}{13}{Accuracy--Interpretability Trade-Off (RQ2)}{equation.4.16}{}}
 \newlabel{eq_composite_i@cref}{{[equation][16][]16}{[1][13][]13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Improvement of Pedagogical Diagnostics (RQ3)}{13}{subsection.4.5}\protected@file@percent }
-\newlabel{sec_gran_results}{{4.5}{13}{Improvement of Pedagogical Diagnostics (RQ3)}{subsection.4.5}{}}
-\newlabel{sec_gran_results@cref}{{[subsection][5][4]4.5}{[1][13][]13}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Contextualization}{13}{subsubsection.4.5.1}\protected@file@percent }
-\newlabel{sec_longitudinal}{{4.5.1}{13}{Contextualization}{subsubsection.4.5.1}{}}
-\newlabel{sec_longitudinal@cref}{{[subsubsection][1][4,5]4.5.1}{[1][13][]13}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Pareto Sweep results for AS2015\_S. \relax }}{14}{figure.caption.7}\protected@file@percent }
-\newlabel{tab_pareto_as2015}{{5}{14}{Pareto Sweep results for AS2015\_S. \relax }{figure.caption.7}{}}
-\newlabel{tab_pareto_as2015@cref}{{[table][5][]5}{[1][13][]14}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces iDKT Pareto Frontier for AS2015\_S. The trajectory illustrates a saturation of theoretical alignment at $\lambda \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }}{14}{figure.caption.7}\protected@file@percent }
-\newlabel{fig_pareto_as2015}{{6}{14}{iDKT Pareto Frontier for AS2015\_S. The trajectory illustrates a saturation of theoretical alignment at $\lambda \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }{figure.caption.7}{}}
-\newlabel{fig_pareto_as2015@cref}{{[table][6][]6}{[1][13][]14}}
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Pareto Sweep results for AS2009\_S. \relax }}{15}{figure.caption.8}\protected@file@percent }
-\newlabel{tab_pareto_as2009}{{7}{15}{Pareto Sweep results for AS2009\_S. \relax }{figure.caption.8}{}}
-\newlabel{tab_pareto_as2009@cref}{{[table][7][]7}{[1][13][]15}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces iDKT Pareto Frontier for AS2009\_S. The curve displays an accuracy peak at $\lambda = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }}{15}{figure.caption.8}\protected@file@percent }
-\newlabel{fig_pareto_as2009}{{8}{15}{iDKT Pareto Frontier for AS2009\_S. The curve displays an accuracy peak at $\lambda = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }{figure.caption.8}{}}
-\newlabel{fig_pareto_as2009@cref}{{[table][8][]8}{[1][13][]15}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \relax }}{16}{figure.caption.9}\protected@file@percent }
-\newlabel{fig_mastery_866}{{3}{16}{Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \relax }{figure.caption.9}{}}
-\newlabel{fig_mastery_866@cref}{{[figure][3][]3}{[1][16][]16}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Individualization}{16}{subsubsection.4.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.3}High-Granularity Trajectory Analysis}{16}{subsubsection.4.5.3}\protected@file@percent }
-\newlabel{sec_mosaic_analysis}{{4.5.3}{16}{High-Granularity Trajectory Analysis}{subsubsection.4.5.3}{}}
-\newlabel{sec_mosaic_analysis@cref}{{[subsubsection][3][4,5]4.5.3}{[1][16][]16}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Mastery Trajectory Alignment Mosaic for AS2009\_S. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \relax }}{17}{figure.caption.10}\protected@file@percent }
-\newlabel{fig_mosaic}{{4}{17}{Mastery Trajectory Alignment Mosaic for AS2009\_S. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \relax }{figure.caption.10}{}}
-\newlabel{fig_mosaic@cref}{{[figure][4][]4}{[1][16][]17}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.4}Pedagogical Confidence}{17}{subsubsection.4.5.4}\protected@file@percent }
-\newlabel{sec_confidence}{{4.5.4}{17}{Pedagogical Confidence}{subsubsection.4.5.4}{}}
-\newlabel{sec_confidence@cref}{{[subsubsection][4][4,5]4.5.4}{[1][17][]17}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Pareto Sweep results for AS2015. \relax }}{13}{table.caption.7}\protected@file@percent }
+\newlabel{tab_pareto_as2015}{{5}{13}{Pareto Sweep results for AS2015. \relax }{table.caption.7}{}}
+\newlabel{tab_pareto_as2015@cref}{{[table][5][]5}{[1][13][]13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces iDKT Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda _{\mathcal  {I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }}{13}{figure.caption.8}\protected@file@percent }
+\newlabel{fig_pareto_as2015}{{3}{13}{iDKT Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda _{\mathcal {I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }{figure.caption.8}{}}
+\newlabel{fig_pareto_as2015@cref}{{[figure][3][]3}{[1][13][]13}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Pareto Sweep results for AS2009. \relax }}{14}{table.caption.9}\protected@file@percent }
+\newlabel{tab_pareto_as2009}{{6}{14}{Pareto Sweep results for AS2009. \relax }{table.caption.9}{}}
+\newlabel{tab_pareto_as2009@cref}{{[table][6][]6}{[1][13][]14}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces iDKT Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda _{\mathcal  {I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }}{14}{figure.caption.10}\protected@file@percent }
+\newlabel{fig_pareto_as2009}{{4}{14}{iDKT Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda _{\mathcal {I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }{figure.caption.10}{}}
+\newlabel{fig_pareto_as2009@cref}{{[figure][4][]4}{[1][13][]14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Improvement of Pedagogical Diagnostics (RQ3)}{15}{subsection.4.4}\protected@file@percent }
+\newlabel{sec_gran_results}{{4.4}{15}{Improvement of Pedagogical Diagnostics (RQ3)}{subsection.4.4}{}}
+\newlabel{sec_gran_results@cref}{{[subsection][4][4]4.4}{[1][13][]15}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}Contextualization}{15}{subsubsection.4.4.1}\protected@file@percent }
+\newlabel{sec_longitudinal}{{4.4.1}{15}{Contextualization}{subsubsection.4.4.1}{}}
+\newlabel{sec_longitudinal@cref}{{[subsubsection][1][4,4]4.4.1}{[1][15][]15}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \relax }}{15}{figure.caption.11}\protected@file@percent }
+\newlabel{fig_mastery_866}{{5}{15}{Comparison of two mastery trajectories estimated by iDKT and BKT illustrating how iDKT can be more stable and resilient against behavioral noise. \relax }{figure.caption.11}{}}
+\newlabel{fig_mastery_866@cref}{{[figure][5][]5}{[1][15][]15}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}Individualization}{15}{subsubsection.4.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.3}High-Granularity Trajectory Analysis}{16}{subsubsection.4.4.3}\protected@file@percent }
+\newlabel{sec_mosaic_analysis}{{4.4.3}{16}{High-Granularity Trajectory Analysis}{subsubsection.4.4.3}{}}
+\newlabel{sec_mosaic_analysis@cref}{{[subsubsection][3][4,4]4.4.3}{[1][16][]16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \relax }}{16}{figure.caption.12}\protected@file@percent }
+\newlabel{fig_mosaic}{{6}{16}{Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent iDKT individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Trajectories are selected from students with $>10$ interactions per skill. \relax }{figure.caption.12}{}}
+\newlabel{fig_mosaic@cref}{{[figure][6][]6}{[1][16][]16}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.4}Pedagogical Confidence}{16}{subsubsection.4.4.4}\protected@file@percent }
+\newlabel{sec_confidence}{{4.4.4}{16}{Pedagogical Confidence}{subsubsection.4.4.4}{}}
+\newlabel{sec_confidence@cref}{{[subsubsection][4][4,4]4.4.4}{[1][16][]16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Heatmaps of per-skill prediction alignment. \relax }}{17}{figure.caption.13}\protected@file@percent }
+\newlabel{fig_heatmaps}{{7}{17}{Heatmaps of per-skill prediction alignment. \relax }{figure.caption.13}{}}
+\newlabel{fig_heatmaps@cref}{{[figure][7][]7}{[1][17][]17}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Conclusions}{17}{section.5}\protected@file@percent }
 \newlabel{sec_conclusions}{{5}{17}{Conclusions}{section.5}{}}
 \newlabel{sec_conclusions@cref}{{[section][5][]5}{[1][17][]17}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Heatmaps of per-skill prediction alignment. \relax }}{18}{figure.caption.11}\protected@file@percent }
-\newlabel{fig_heatmaps}{{5}{18}{Heatmaps of per-skill prediction alignment. \relax }{figure.caption.11}{}}
-\newlabel{fig_heatmaps@cref}{{[figure][5][]5}{[1][17][]18}}
 \bibdata{biblio}
 \bibcite{corbett1994knowledge}{{1}{1994}{{Corbett and Anderson}}{{}}}
 \bibcite{abdelrahman2023knowledge}{{2}{2023}{{Abdelrahman et~al.}}{{Abdelrahman, Wang, and Nunes}}}
@@ -201,9 +200,9 @@
 \bibcite{ghosh2020context}{{13}{2020}{{Ghosh et~al.}}{{Ghosh, Heffernan, and Lan}}}
 \bibcite{yeung2019deep}{{14}{2019}{{Yeung}}{{}}}
 \bibcite{su2021time}{{15}{2021}{{Su et~al.}}{{Su, Cheng, Luo, Wu, Zhang, Liu, and Wang}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}References}{18}{section.6}\protected@file@percent }
 \bibcite{gan2020knowledge}{{16}{2020}{{Gan et~al.}}{{Gan, Sun, and Sun}}}
 \bibcite{zhou2021lana}{{17}{2021}{{Zhou et~al.}}{{Zhou, Li, Cao, Zhao, Ye, and Lv}}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}References}{19}{section.6}\protected@file@percent }
 \bibcite{chen2023improving}{{18}{2023}{{Chen et~al.}}{{Chen, Liu, Huang, Liu, and Luo}}}
 \bibcite{liu2022ability}{{19}{2022}{{Liu et~al.}}{{Liu, Yu, Li, Liang, Zhang, Shen, and Sun}}}
 \bibcite{sun2024progressive}{{20}{2024}{{Sun et~al.}}{{Sun, Wei, Feng, Yu, Li, and Zou}}}
@@ -221,9 +220,7 @@
 \bibcite{feng2009addressing}{{32}{2009}{{Feng et~al.}}{{Feng, Heffernan, and Koedinger}}}
 \bibcite{stamper2010bridge}{{33}{2010}{{Stamper et~al.}}{{Stamper, Niculescu-Mizil, Ritter, Gordon, and Koedinger}}}
 \bibcite{wang2020instructions}{{34}{2020}{{Wang et~al.}}{{Wang, Lamb, Saveliev, Cameron, Zaykov, Hern{\'a}ndez-Lobato, Turner, Baraniuk, Barton, Jones, et~al.}}}
-\bibcite{campbell1959convergent}{{35}{1959}{{Campbell and Fiske}}{{}}}
-\bibcite{american1985standards}{{36}{1985}{{Association et~al.}}{{Association, Association, on~Measurement~in Education, et~al.}}}
-\bibcite{hewitt2019designing}{{37}{2019}{{Hewitt and Liang}}{{}}}
-\newlabel{LastPage}{{}{20}{}{page.20}{}}
-\xdef\lastpage@lastpage{20}
-\xdef\lastpage@lastpageHy{20}
+\bibcite{hewitt2019designing}{{35}{2019}{{Hewitt and Liang}}{{}}}
+\newlabel{LastPage}{{}{19}{}{page.19}{}}
+\xdef\lastpage@lastpage{19}
+\xdef\lastpage@lastpageHy{19}
