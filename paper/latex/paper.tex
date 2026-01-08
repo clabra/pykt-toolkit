@@ -195,7 +195,7 @@ Concerning the integration of side information into ante-hoc methods, Item Respo
 While providing insights into controlled scenarios, these approaches may struggle to encapsulate the multifaceted and dynamic nature of learning processes and the efficacy is often constrained by the specificity and scope of the underlying theories \citep{bai2024survey}. Moreover, the mere incorporation of principles from psychology or pedagogy does not guarantee interpretability. As noted by \citet{vonrueden2021informed}, improved interpretability remains a secondary objective in most knowledge integration approaches used in machine learning, often overshadowed by performance optimization.
 
 
-\subsection{Semantic Interpretability} \label{sec:interpretability}
+\subsection{Semantic Interpretability} \label{sec_interpretability}
 
 To achieve practical interpretability without compromising general applicability, we propose \textit{Semantic Interpretability}—an approach that integrates the predictive strength of deep learning with the semantic advantages of traditional models. Under this framework, we define three essential criteria for model interpretability:
 
@@ -324,22 +324,28 @@ The primary objective $\mathcal{L}_{sup}$ uses standard Binary Cross-Entropy (BC
     \mathcal{L}_{sup} = -\frac{1}{N} \sum_{t=1}^N [r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t)]
 \end{equation}
 
-\subsubsection{Representational Grounding}
-The grounding losses ($\mathcal{L}_{ref}, \mathcal{L}_{know}, \mathcal{L}_{rate}$) utilize Mean Squared Error (MSE) to anchor deep representations to BKT-derived values. This mechanism ensures that the model's internal states are not arbitrary latent weights but are projected into semantically meaningful pedagogical parameters. Specifically, $\mathcal{L}_{ref}$ forces behavioral predictions ($\hat{y}$) to align with the theoretical baseline ($p_{BKT}$), while $\mathcal{L}_{know}$ and $\mathcal{L}_{rate}$ ground the estimated proficiency ($p_{know}$) and rate ($p_{rate}$) in their respective theoretical counterparts:
+\subsubsection{Interpretability and Grounding Losses}
+To satisfy the criteria for Semantic Interpretability defined in Section \ref{sec_interpretability}, iDKT utilizes a dual grounding mechanism that anchors both the model's internal representations and its external behavior to the reference BKT logic.
 
+\textbf{Representational Grounding ($\mathcal{L}_{know}, \mathcal{L}_{rate}$)}: These losses utilize Mean Squared Error (MSE) to anchor the student-level diagnostic read-outs ($p_{know}, p_{rate}$) directly to the reference model's theoretical parameters. This ensures that the latent shifts introduced in the grounding layer correspond to explicit pedagogical constructs:
 \begin{align}
-    \mathcal{L}_{ref} &= \text{MSE}(\hat{y}, p_{BKT}) \\
     \mathcal{L}_{know} &= \text{MSE}(p_{know}, P(L_0)) \\
     \mathcal{L}_{rate} &= \text{MSE}(p_{rate}, P(T))
 \end{align}
-where $p_{know} = \sigma(\bar{l}_c)$ and $p_{rate} = \sigma(\bar{t}_c)$ are the diagnostic read-outs. These are obtained by calculating the collective logit (the mean across the $d_{model}$ latent embedding dimensions) followed by a sigmoid projection to the $[0, 1]$ interval. This formulation forces the high-dimensional latent representations to be semantically consistent with the theoretical constructs of the reference model. To ensure signal persistence through the model's normalization layers, the base embeddings $\mathbf{l}_0$ and $\mathbf{T}$ are initialized using \textit{Textured Grounding}, where dimensions are populated with small-variance Gaussian noise shifted by the respective theoretical logit.
+where $p_{know} = \sigma(\bar{l}_c)$ and $p_{rate} = \sigma(\bar{t}_c)$ are obtained by calculating the mean across the $d_{model}$ latent embedding dimensions followed by a sigmoid projection. This mechanism ensures that iDKT does not learn arbitrary weights but instead "internalizes" the semantic identity of the theoretical constructs.
 
-\subsection{Inductive Bias Regularization ($\mathcal{L}_{reg}$)}
+\textbf{Behavioral Alignment ($\mathcal{L}_{ref}$)}: In addition to internal grounding, iDKT enforces a behavioral constraint on final predictions. $\mathcal{L}_{ref}$ minimizes the deviance between the iDKT predictions ($\hat{y}$) and the referece BKT predictions ($p_{BKT}$):
+\begin{equation}
+    \mathcal{L}_{ref} = \text{MSE}(\hat{y}, p_{BKT})
+\end{equation}
+By penalizing behavioral divergence, this alignment loss forces a \textit{fidelity chain} through the model: the Transformer must utilize the grounded internal representations to make final predictions that are consistent with the reference logic. 
+
+\subsection{Regularization Term ($\mathcal{L}_{reg}$)}
 While grounding losses anchor the global structure of the latent space, $\mathcal{L}_{reg}$ ensures that student-level individualization remains \textit{parsimonious}. This loss penalties the deviation from the theoretical prior, implementing a \textit{normal student prior} where the model assumes subjects adhere to population-level BKT parameters unless evidence from their unique interaction history justifies a deviation. We apply $L_2$ penalties to the scalar parameters governing these deviations:
 \begin{equation}
     \mathcal{L}_{reg} = \lambda_{\text{u}} \sum_{q \in Q} u_q^2 + \lambda_{\text{sep}} (k_s^2 + v_s^2)
 \end{equation}
-where $u_q$ represents item difficulty variance, and $\{k_s, v_s\}$ are the student-specific deviations for proficiency and rate. This structural constraint enforces a conservative interpretation of behavioral nuances, preventing overfitting to noise in sparse student trajectories.
+where $u_q$ represents item difficulty variance, and $\{k_s, v_s\}$ are the student-specific deviations for proficiency and rate. This constraint prevents overfitting to noise in sparse student trajectories.
 
 
 \section{Experimental Setup} \label{sec_experiment}
@@ -356,12 +362,12 @@ The Transformer architecture was configured with an embedding dimension $d_{mode
 
 We evaluated iDKT across four widely used educational datasets following the S-protocol for sequence length consistency \citep{liu2022pykt}: 
 
-\begin{description}
-    \item[ASSISTments 2009 (AS2009)]: A benchmark dataset from the ASSISTments platform (2009-2010), representing a standard for knowledge tracing evaluation \citep{feng2009addressing}.
-    \item[ASSISTments 2015 (AS2015)]: A large-scale release from the same platform with a high volume of student records \citep{feng2009addressing}.
-    \item[Bridge to Algebra 2006 (Bridge2006)]: A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010bridge}.
-    \item[NeurIPS 2020 Education Challenge (NIPS34)]: A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
-\end{description}
+\begin{itemize}
+    \item ASSISTments 2009 (AS2009): A benchmark dataset from the ASSISTments platform (2009-2010), representing a standard for knowledge tracing evaluation \citep{feng2009addressing}.
+    \item ASSISTments 2015 (AS2015): A large-scale release from the same platform with a high volume of student records \citep{feng2009addressing}.
+    \item Bridge to Algebra 2006 (Bridge2006): A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010bridge}.
+    \item NeurIPS 2020 Education Challenge (NIPS34): A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
+\end{itemize}
 
 
 \section{Results and Discussion} \label{sec_results}
@@ -393,7 +399,7 @@ SAKT & 0.6955 & 0.6608 & 0.6810 & 0.7405 & 0.5627 & 0.6328 & 0.6686 & 0.6234 \\
 \end{tabularx}
 \end{table}
 
-When comparing these results with baseline DKT models, we observe that iDKT achieves competitive performance across all datasets, matching or exceeding the predictive capacity of established architectures like DKT and DKVMN. Notably, while high-capacity attention models such as AKT and ATKT maintain a slight lead in AUC on several datasets, iDKT achieves the highest classification accuracy (0.7565) on the Bridge2006 dataset. These results demonstrate that the models' pedagogical grounding does not compromise its ability to capture complex learning dynamics.
+When comparing these results with baseline architectures, we observe that iDKT achieves highly competitive performance across all benchmarks. In terms of Mean AUC, iDKT consistently ranks among the top performers, securing the 2nd position on the Bridge2006 and NIPS34 datasets—surpassed only by AKT model—and the 3rd position on AS2009. Notably, in terms of Classification Accuracy (ACC), iDKT outranks all baseline models on the Bridge2006 dataset, achieving the highest value of 0.7565. These results provide empirical evidence that the models' pedagogical grounding does not compromise its predictive integrity, maintaining state-of-the-art performance while providing additional layers of interpretability.
 
 \subsection{Interpretability Validation (RQ1)} \label{sec_validation}
 
@@ -475,15 +481,15 @@ Table \ref{tab_probing} presents the probing results for the grounded iDKT model
 \toprule
 \textbf{Dataset} & \textbf{$R^2_{\text{true}}$} & \textbf{$R^2_{\text{control}}$} & \textbf{Selectivity ($\Delta R^2$)} & \textbf{Interpretation} \\
 \midrule
-AS2009 & 0.6731 & -0.0139 & \textbf{0.6870} & Structural Encoding \\
-AS2015 & 0.6472 & -0.0043 & \textbf{0.6515} & Structural Encoding \\
+AS2009 & 0.6731 & -0.0139 & \textbf{0.6870} & Robust Structural Encoding \\
+AS2015 & 0.6472 & -0.0043 & \textbf{0.6515} & Robust Structural Encoding \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 The results provide compelling validation of iDKT's interpretability. Both datasets exhibit selectivity scores exceeding 0.65, substantially above the threshold for ``strong encoding'' ($\Delta R^2 > 0.5$) established in the literature \citep{hewitt2019designing}. The slightly negative control task performance confirms that the model is not simply memorizing arbitrary patterns, but has genuinely organized its post-attention representations around meaningful constructs. Critically, these probing results validate that the grounded information embedded in the input layer (via $l_c$ and $t_c$) is preserved through the Transformer's self-attention mechanism and remains structurally encoded in the final contextualized representations. This demonstrates that the representational grounding fundamentally shapes how the model processes and represents student knowledge states.
 
-This dual validation—combining correlation-based semantic alignment ($\mathcal{I}_1, \mathcal{I}_2$) with rigorous probing selectivity—establishes that iDKT satisfies the requirements of Semantic Interpretability defined in \ref{sec_interpretability}. The model's representations are both semantically meaningful (aligned with BKT constructs) and structurally genuine (validated via control tasks), providing a robust foundation for pedagogically interpretable predictions.
+This dual validation—combining correlation-based semantic alignment ($\mathcal{I}_1, \mathcal{I}_2$) with rigorous probing selectivity—establishes that iDKT satisfies the requirements of Semantic Interpretability defined in Section \ref{sec_interpretability}. The model's representations are both semantically meaningful (aligned with BKT constructs) and structurally validated via control tasks, providing a robust foundation for pedagogically interpretable predictions.
 
 \subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
 
@@ -613,7 +619,7 @@ This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the
 
 This work has introduced iDKT, a Transformer-based Knowledge Tracing model that bridges the gap between the high predictive capacity of deep learning and the intrinsic interpretability of specialized pedagogical models. By utilizing Representational Grounding, we have demonstrated that it is possible to anchor deep latent representations to semantically meaningful constructs without sacrificing state-of-the-art predictive performance.
 
-Our experimental results successfully address the proposed research questions. We demonstrated that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($\mathcal{I}_1$) and robust structural encoding validated through diagnostic probing (selectivity $\Delta R^2 > 0.65$). This dual validation establishes that the semantic alignment reflects a genuine internal representation of knowledge states rather than superficial pattern matching. Furthermore, we formalized a methodology for exploring the accuracy--interpretability trade-off, identifying synergistic points where significant alignment is achieved with minimal impact on predictive AUC. Finally, we proved that iDKT provides a substantial increase in diagnostic granularity compared to population-level baselines, identifying individualized learning velocities that enable truly adaptive educational pacing.
+Our experimental results successfully address the proposed research questions. We demonstrated that iDKT successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($\mathcal{I}_1$) and Robust Structural Encoding validated through diagnostic probing (selectivity $\Delta R^2 > 0.65$). This dual validation establishes that the semantic alignment reflects a genuine internal representation of knowledge states rather than superficial pattern matching. Furthermore, we formalized a methodology for exploring the accuracy--interpretability trade-off, identifying synergistic points where significant alignment is achieved with minimal impact on predictive AUC. Finally, we proved that iDKT provides a substantial increase in diagnostic granularity compared to population-level baselines, identifying individualized learning velocities that enable truly adaptive educational pacing.
 
 The contribution of this research is twofold: a formal validation framework for evaluating the internal interpretability of deep learning models in education, and a practical architecture that transforms complex predictors into actionable pedagogical tools. By grounding deep learning in established domain concepts, iDKT offers a path toward AI-driven personalization that is both highly accurate and pedagogically interpretable, providing a robust foundation for personalization in intelligent tutoring systems.
 
