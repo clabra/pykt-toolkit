@@ -399,7 +399,7 @@ SAKT & 0.6955 & 0.6608 & 0.6810 & 0.7405 & 0.5627 & 0.6328 & 0.6686 & 0.6234 \\
 \end{tabularx}
 \end{table}
 
-When comparing these results with baseline architectures, we observe that iDKT achieves highly competitive performance across all benchmarks. In terms of Mean AUC, iDKT consistently ranks among the top performers, securing the 2nd position on the Bridge2006 and NIPS34 datasets—surpassed only by AKT model—and the 3rd position on AS2009. Notably, in terms of Classification Accuracy (ACC), iDKT outranks all baseline models on the Bridge2006 dataset, achieving the highest value of 0.7565. These results provide empirical evidence that the models' pedagogical grounding does not compromise its predictive integrity, maintaining state-of-the-art performance while providing additional layers of interpretability.
+When comparing these results with baseline architectures, we observe that iDKT achieves highly competitive performance across all benchmarks. In terms of Mean AUC, iDKT consistently ranks among the top performers, securing the 2nd position on the Bridge2006 and NIPS34 datasets—surpassed only by AKT model—and the 3rd position on AS2009. Notably, in terms of Classification Accuracy (ACC), iDKT outranks all baseline models on the Bridge2006 dataset, achieving the highest value of 0.7565. These results provide empirical evidence that the models' pedagogical grounding does not compromise its predictive integrity, maintaining state-of-the-art performance while providing additional layers of interpretability. Furthermore, to test the hypothesis that interpretability constraints might degrade accuracy, we evaluated an \textit{unconstrained} variant of iDKT (with all grounding loss terms $\lambda_{\text{ref}}, \lambda_{\text{init}}, \lambda_{\text{rate}}$ set to zero). On the primary AS2009 dataset, this unconstrained baseline achieved a Mean AUC of 0.8065, significantly lower than the grounded model's 0.8240. This result suggests that the pedagogical regularization acts as a beneficial inductive bias, guiding the optimization toward more generalizable minima rather than hindering performance.
 
 \subsection{Interpretability Validation (RQ1)} \label{sec_validation}
 
@@ -566,11 +566,11 @@ The capability of iDKT to leverage longitudinal context is illustrated in Figure
 
 While a Markovian model like BKT is mathematically forced to assign identical mastery states to both students due to their identical local sequences, iDKT leverages its self-attention mechanism to provide high-resolution contextual diagnostics through two distinct phenomena:
 \begin{itemize}
-    \item \textbf{Non-Markovian Initialization}: At the very first interaction ($t=0$), iDKT already provides divergent estimations. Student 2208 is recognized as having a significantly higher foundational baseline for this concept than Student 167, despite both having the same immediate local history.
-    \item \textbf{Velocity-Driven Cross-Over}: Despite starting from a lower baseline, Student 167 exhibits a steeper learning curve (higher $v_s$). After the first success, their mastery estimation increases rapidly, eventually overtaking Student 2208 at the "Cross-Over Point" (approximately $t=1.5$).
+    \item \textit{Non-Markovian Initialization}: At the very first interaction ($t=0$), iDKT already provides divergent estimations. Student 2208 is recognized as having a significantly higher foundational baseline for this concept than Student 167, despite both having the same immediate local history.
+    \item \textit{Velocity-Driven Cross-Over}: Despite starting from a lower baseline, Student 167 exhibits a steeper learning curve (higher $v_s$). After the first success, their mastery estimation increases rapidly, eventually overtaking Student 2208 at the "Cross-Over Point" (approximately $t=1.5$).
 \end{itemize}
 
-This dual evidence demonstrates that iDKT effectively decouples \textbf{Initial Standing} from \textbf{Learning Velocity}. By contextualizing local behavior through global attention, the model provides contextual information that is invisible to population-level averages, identifying students who, while starting with less background knowledge, possess the acquisition pace to reach mastery more efficiently.
+This dual evidence demonstrates that iDKT effectively decouples \textit{Initial Standing} from \textit{Learning Velocity}. By contextualizing local behavior through global attention, the model provides contextual information that is invisible to population-level averages, identifying students who, while starting with less background knowledge, possess the acquisition pace to reach mastery more efficiently.
 
 \begin{figure}[htbp]
 \centering
@@ -579,15 +579,23 @@ This dual evidence demonstrates that iDKT effectively decouples \textbf{Initial 
 \end{figure} 
 
 
-\subsubsection{Individualization} 
+\subsubsection{Individualization and Behavioral Heterogeneity} \label{sec_individualization}
 
-The primary contribution of iDKT lies in its ability to transform population-level theoretical averages into high-granularity contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles that capture personal learning velocities.
+The primary contribution of iDKT, and the core of Hypothesis H3, lies in its ability to transform population-level theoretical averages into high-granularity contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, iDKT decomposes these into individualized profiles that capture personal learning velocities.
 
-To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = p_{rate} - P(T)$), representing the student-specific deviation from the theoretical learning rate across all skills. In both datasets, we observe significant non-zero standard deviations ($\sigma \approx 0.019$ for AS2009 and $\sigma \approx 0.039$ for AS2015). This represents a substantial increase in diagnostic resolution compared to the baseline BKT, where $\sigma = 0$ by definition. The right-skewed tail in these distributions identifies a sub-population of ``fast learners'' whose acquisition pace is systematically underestimated by classical models. This variance enables the model to distinguish between students who are faster than suggested by theoretical priors and those who require additional practice to reach mastery.
+As illustrated in Figure \ref{fig_clusters}, iDKT maps the student population into a continuous \textit{diagnostic manifold} defined by two student-specific parameters: the Knowledge Gap ($k_c$, representing placement) and the Learning Velocity ($v_s$, representing pacing). Whereas a population-level model like BKT represents wait-time and acquisition as a single point—the theoretical mean—iDKT discovers a distributed landscape of student behaviors. Through unsupervised clustering, we identify four distinct learning archetypes: \textbf{Initial Standing} (Low $k_c$, Low $v_s$), \textbf{Developing Pacing} (Low $k_c$, Moderate $v_s$), \textbf{High-Velocity Growth} (Low $k_c$, High $v_s$), and \textbf{Advanced Standing} (High $k_c$, High $v_s$). 
+
+To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = p_{rate} - P(T)$), representing the student-specific deviation from the theoretical learning rate across all skills. In AS2009, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$). This represents a fundamental increase in diagnostic resolution compared to the baseline BKT, where $\sigma = 0$ by definition. The presence of this variance confirms H3, proving that iDKT effectively captures the behavioral heterogeneity that classical models treat as a uniform average.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\textwidth]{img/cluster_placement_pacing.png}
+\caption{Discovery of student archetypes in the iDKT diagnostic space. Students are mapped along individualized Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) axes, revealing the behavioral heterogeneity hidden within population-level BKT averages. \label{fig_clusters}}
+\end{figure}
 
 \subsubsection{High-Granularity Trajectory Analysis} \label{sec_mosaic_analysis}
 
-To provide definitive visual evidence for RQ3, we generated a Mastery Alignment Mosaic (Figure~\ref{fig_mosaic}) displaying individualized trajectories for three learning archetypes (Fast, Median, Slow) across 15 skills. For rigorous validation, we utilized the ``Set S Isolation'' strategy, restricting the analysis to students with continuous interaction histories ($\le 200$ steps) and recalibrating the BKT reference exclusively on this population.
+To provide additional visual evidence for hypothesis H3, we generated a Mastery Alignment Mosaic (Figure~\ref{fig_mosaic}) displaying individualized trajectories for three learning archetypes (Fast, Median, Slow) across 15 skills. For rigorous validation, we utilized the ``Set S Isolation'' strategy, restricting the analysis to students with continuous interaction histories ($\le 200$ steps) and recalibrating the BKT reference exclusively on this population.
 
 \begin{figure}[htbp]
 \centering
@@ -602,11 +610,23 @@ The qualitative analysis of these trajectories reveals three significant pedagog
     \item \textbf{Diagnostic Resilience}: iDKT displays superior stability compared to BKT baselines. While isolated failures cause sharp drops in BKT dashed lines, iDKT solid lines for high-velocity learners remain stable, correctly identifying temporary slips vs.\ fundamental knowledge loss.
 \end{enumerate}
 
+\subsubsection{Archetype-Level Diagnostics} \label{sec_diagnostics}
+
+Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. By projecting high-dimensional latent states into an interpretable skill-by-cohort matrix, iDKT provides educators with a comprehensive ``knowledge blueprint'' that supports data-driven differentiation.
+
+This utility is visualized in Figure~\ref{fig_skill_map}, which displays the mean latent mastery predicted by iDKT for the four student archetypes across 30 curriculum skills. The map reveals distinct "knowledge ceilings" and "learning frontiers" for each group, proving that the granularity discovered by the model translates into actionable insights for targeted instructional design. This result provides the final validation for H3, demonstrating that superior diagnostic granularity enables precision instruction.
+
 \subsubsection{Pedagogical Confidence} \label{sec_confidence}
 
-Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. A significant practical application is evaluating the reliability of predictions made by intrinsically interpretable models. By comparing BKT mastery estimations with those from iDKT, we can derive a measure of pedagogical confidence in the theoretical baseline. 
+A significant practical application of this interpretability is evaluating the reliability of model predictions. By comparing BKT mastery estimations with those from iDKT, we can derive a measure of pedagogical confidence in the theoretical baseline. This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the concordance between BKT and iDKT mastery predictions across the most frequent skills and students.
 
-This relationship is visualized in Figure \ref{fig_heatmaps}, which displays the concordance between BKT and iDKT mastery predictions across the most frequent skills and students. The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is warranted.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{img/pedagogical_skill_map_concise.png}
+\caption{Pedagogical Diagnostic Map for AS2009. The heatmap displays the mean latent mastery predicted by iDKT for the four student archetypes across 30 curriculum skills. This visualization demonstrates the practical utility of iDKT's high-granularity estimations for targeted instructional design. \label{fig_skill_map}}
+\end{figure}
+
+The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where iDKT uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is warranted. This result provides the final validation for H3, demonstrating that superior diagnostic granularity directly translates into actionable pedagogical insights.
 
 \begin{figure}[htbp]
     \centering
