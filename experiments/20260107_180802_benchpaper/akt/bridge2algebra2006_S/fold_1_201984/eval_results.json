@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7885737982072794,
+    "testacc": 0.7641418983700863,
+    "window_testauc": 0.7885737982072794,
+    "window_testacc": 0.7641418983700863,
+    "short_title": "benchpaper",
+    "dataset": "bridge2algebra2006_S",
+    "fold": 1,
+    "model": "akt",
+    "train_script": "examples/wandb_akt_train.py"
+}

@@ -111,8 +111,6 @@
     "params": {
         "dropout": 0.3,
         "emb_size": 256,
-        "hidden_dim": 256,
-        "graph_type": "transition",
         "fold": 0,
         "model_name": "gkt",
         "dataset_name": "bridge2algebra2006_S",

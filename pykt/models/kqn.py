@@ -50,11 +50,7 @@ class KQN(nn.Module):
         )
         self.drop_layer = nn.Dropout(dropout)
         self.sigmoid = nn.Sigmoid()
-        # self.loss_fn = nn.BCEWithLogitsLoss(reduction='mean')
-        self.two_eye = torch.eye(2*n_skills)
-        self.eye = torch.eye(n_skills)
-
-    
+        
     def init_hidden(self, batch_size: int):
         weight = next(self.parameters()).data
         if self.rnn_type == 'lstm':
@@ -62,20 +58,16 @@ class KQN(nn.Module):
                     Variable(weight.new(self.n_rnn_layers, batch_size, self.n_rnn_hidden).zero_()))
         else:
             return Variable(weight.new(self.n_rnn_layers, batch_size, self.n_rnn_hidden).zero_())
-    
-    
+
     def forward(self, q, r, qshft, qtest=False):
-        in_data = self.two_eye[r * self.num_c + q]
-        next_skills = self.eye[qshft]
-        # print(f"q: {q.tolist()}, r: {r.tolist()}")
-        # print(f"in_data: {in_data.tolist()}")
-        # import sys
-        # sys.exit()
+        # Use F.one_hot for device-agnostic one-hot encoding
+        in_data = F.one_hot(r * self.num_c + q, num_classes=2 * self.num_c).float()
+        next_skills = F.one_hot(qshft, num_classes=self.num_c).float()
+        
         emb_type = self.emb_type
-        # print(f"in_data: {in_data.shape}")
         if emb_type == "qid":
-            encoded_knowledge = self.encode_knowledge(in_data.to(device)) # (batch_size, max_seq_len, n_hidden)
-        encoded_skills = self.encode_skills(next_skills.to(device)) # (batch_size, max_seq_len, n_hidden)
+            encoded_knowledge = self.encode_knowledge(in_data) # (batch_size, max_seq_len, n_hidden)
+        encoded_skills = self.encode_skills(next_skills) # (batch_size, max_seq_len, n_hidden)
         encoded_knowledge = self.drop_layer(encoded_knowledge)
         
         # query the knowledge state with respect to the encoded skills

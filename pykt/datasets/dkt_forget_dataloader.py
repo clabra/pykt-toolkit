@@ -142,13 +142,14 @@ class DktForgetDataset(Dataset):
         df = df[df["fold"].isin(folds)]
         dqtest = {"qidxs": [], "rests":[], "orirow":[]}
 
-        flag = True
-        for key in ModelConf["dkt_forget"]:
-            if key not in df.columns:
-                print(f"key: {key} not in data: {self.sequence_path}! can not run dkt_forget model!")
-                flag = False
-        assert flag == True
-        
+        if "timestamps" not in df.columns:
+            print(f"[DktForgetDataset] Warning: 'timestamps' column missing in {sequence_path}. Generating dummy timestamps (1 min intervals).")
+            # Generate dummy timestamps: "0,60000,120000,..."
+            def gen_dummy_timestamps(row):
+                count = len(row["responses"].split(","))
+                return ",".join([str(i * 60 * 1000) for i in range(count)])
+            df["timestamps"] = df.apply(gen_dummy_timestamps, axis=1)
+
         for i, row in df.iterrows():
             #use kc_id or question_id as input
             if "concepts" in self.input_type:

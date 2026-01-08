@@ -112,8 +112,6 @@
         "seq_len": 200,
         "n_blocks": 4,
         "dropout": 0.3,
-        "emb_size": 256,
-        "num_attn_heads": 8,
         "fold": 4,
         "model_name": "saint",
         "dataset_name": "bridge2algebra2006_S",

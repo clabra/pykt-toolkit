@@ -1,0 +1,11 @@
+{
+    "testauc": 0.6684634870429975,
+    "testacc": 0.6260243304891442,
+    "window_testauc": 0.6684634870429975,
+    "window_testacc": 0.6260243304891442,
+    "short_title": "benchpaper",
+    "dataset": "nips_task34_S",
+    "fold": 3,
+    "model": "sakt",
+    "train_script": "examples/wandb_sakt_train.py"
+}

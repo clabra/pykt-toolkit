@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7630614967714466,
+    "testacc": 0.7206938004465052,
+    "window_testauc": 0.7630614967714466,
+    "window_testacc": 0.7206938004465052,
+    "short_title": "benchpaper",
+    "dataset": "assist2009_S",
+    "fold": 1,
+    "model": "saint",
+    "train_script": "examples/wandb_saint_train.py"
+}

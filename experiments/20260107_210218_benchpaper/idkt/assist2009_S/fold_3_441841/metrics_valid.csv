@@ -1,0 +1,2 @@
+split,auc,acc,l_sup,l_ref,l_init,l_rate,l_reg
+validation,0.826604,0.759685,0.493131,0.059068,0.030470,0.134081,0.000050

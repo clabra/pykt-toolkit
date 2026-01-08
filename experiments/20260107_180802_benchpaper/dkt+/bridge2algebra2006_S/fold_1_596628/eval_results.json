@@ -1,0 +1,11 @@
+{
+    "testauc": 0.6797146639446234,
+    "testacc": 0.62607861936721,
+    "window_testauc": 0.6797146639446234,
+    "window_testacc": 0.62607861936721,
+    "short_title": "benchpaper",
+    "dataset": "bridge2algebra2006_S",
+    "fold": 1,
+    "model": "dkt+",
+    "train_script": "examples/wandb_dkt_plus_train.py"
+}

@@ -6,45 +6,45 @@ Database file #1: biblio.bib
 Warning--I didn't find a database entry for ""
 Warning--can't use both volume and number fields in vie2019knowledge
 Warning--can't use both volume and number fields in chen2023improving
-You've used 35 entries,
+You've used 37 entries,
             2887 wiz_defined-function locations,
-            755 strings with 11304 characters,
-and the built_in function-call counts, 16169 in all, are:
-= -- 1372
-> -- 1133
+            769 strings with 11960 characters,
+and the built_in function-call counts, 17381 in all, are:
+= -- 1468
+> -- 1242
 < -- 23
-+ -- 493
-- -- 305
-* -- 1292
-:= -- 2433
-add.period$ -- 108
-call.type$ -- 35
-change.case$ -- 35
-chr.to.int$ -- 34
-cite$ -- 37
-duplicate$ -- 745
-empty$ -- 1208
-format.name$ -- 386
-if$ -- 3491
-int.to.chr$ -- 2
-int.to.str$ -- 35
-missing$ -- 34
-newline$ -- 176
-num.names$ -- 107
-pop$ -- 414
++ -- 539
+- -- 335
+* -- 1414
+:= -- 2620
+add.period$ -- 114
+call.type$ -- 37
+change.case$ -- 37
+chr.to.int$ -- 37
+cite$ -- 39
+duplicate$ -- 784
+empty$ -- 1287
+format.name$ -- 420
+if$ -- 3737
+int.to.chr$ -- 1
+int.to.str$ -- 37
+missing$ -- 36
+newline$ -- 186
+num.names$ -- 113
+pop$ -- 438
 preamble$ -- 0
-purify$ -- 35
+purify$ -- 37
 quote$ -- 0
-skip$ -- 575
+skip$ -- 607
 stack$ -- 0
-substring$ -- 640
-swap$ -- 217
+substring$ -- 716
+swap$ -- 224
 text.length$ -- 13
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 242
+type$ -- 256
 warning$ -- 2
-while$ -- 118
+while$ -- 128
 width$ -- 0
-write$ -- 429
+write$ -- 454
 (There were 3 warnings)

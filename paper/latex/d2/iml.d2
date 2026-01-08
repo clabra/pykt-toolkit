@@ -1,39 +1,46 @@
-direction: right
-problem: Problem
+direction:right
+# problem: Problem
 data: Data
 prior: Prior Knowledge
 ml: ML Pipeline
 solution: Solution
 rf: Reference Model
 
-problem -> data
-problem -> prior
+# problem -> data
+# problem -> prior
 data -> ml
 ml -> solution
 prior -> ml
+rf -> prior: simulation
+
+prior: |md
+  ### Prior Knowledge
+  - Parameter Values
+|
+prior.shape: rectangle
+
 ml: {
   td: Training Data
   hs: Hypothesis Set
   la: Learning Algorithm
-  fh: Final Hpothesis
+  fh: Final Hypothesis
   direction: down
   td -> hs -> la -> fh
 
   la: |latex
-    \lim_{h \rightarrow 0 } \frac{f(x+h)-f(x)}{h}
-  |
+    \textit{Learning Algorithm}
 
+    \begin{equation}
+      \mathcal{L}_{total} = L_{sup} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init} + \lambda_{rate} L_{rate} + L_{reg}
+    \end{equation}
+  |
   la.shape: rectangle
 
   hs: |md
-    # I can do headers
-    - lists
-    - lists
-
-    And other normal markdown stuff
+    ### Hypothesis Set
+    - Embeddings
+    - Attention Heads
+    - Parameter Projections
   |
-
   hs.shape: rectangle
 }
-rf -> prior
-

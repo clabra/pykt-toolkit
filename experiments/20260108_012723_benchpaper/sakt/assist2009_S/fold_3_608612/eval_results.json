@@ -1,0 +1,11 @@
+{
+    "testauc": 0.6978682498669571,
+    "testacc": 0.6606216726773141,
+    "window_testauc": 0.6978682498669571,
+    "window_testacc": 0.6606216726773141,
+    "short_title": "benchpaper",
+    "dataset": "assist2009_S",
+    "fold": 3,
+    "model": "sakt",
+    "train_script": "examples/wandb_sakt_train.py"
+}

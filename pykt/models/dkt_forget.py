@@ -40,26 +40,26 @@ class DKTForget(Module):
         return y
 
 
+import torch.nn.functional as F
+
 class CIntegration(Module):
     def __init__(self, num_rgap, num_sgap, num_pcount, emb_dim) -> None:
         super().__init__()
-        self.rgap_eye = torch.eye(num_rgap)
-        self.sgap_eye = torch.eye(num_sgap)
-        self.pcount_eye = torch.eye(num_pcount)
-
+        self.num_rgap = num_rgap
+        self.num_sgap = num_sgap
+        self.num_pcount = num_pcount
         ntotal = num_rgap + num_sgap + num_pcount
         self.cemb = Linear(ntotal, emb_dim, bias=False)
         print(f"num_sgap: {num_sgap}, num_rgap: {num_rgap}, num_pcount: {num_pcount}, ntotal: {ntotal}")
-        # print(f"total: {ntotal}, self.cemb.weight: {self.cemb.weight.shape}")
 
     def forward(self, vt, rgap, sgap, pcount):
-        rgap, sgap, pcount = self.rgap_eye[rgap].to(device), self.sgap_eye[sgap].to(device), self.pcount_eye[pcount].to(device)
-        # print(f"vt: {vt.shape}, rgap: {rgap.shape}, sgap: {sgap.shape}, pcount: {pcount.shape}")
-        ct = torch.cat((rgap, sgap, pcount), -1) # bz * seq_len * num_fea
-        # print(f"ct: {ct.shape}, self.cemb.weight: {self.cemb.weight.shape}")
-        # element-wise mul
+        # Use F.one_hot for device-agnostic encoding
+        rgap_hot = F.one_hot(rgap, num_classes=self.num_rgap).float()
+        sgap_hot = F.one_hot(sgap, num_classes=self.num_sgap).float()
+        pcount_hot = F.one_hot(pcount, num_classes=self.num_pcount).float()
+        
+        ct = torch.cat((rgap_hot, sgap_hot, pcount_hot), -1) # bz * seq_len * num_fea
         Cct = self.cemb(ct) # bz * seq_len * emb
-        # print(f"ct: {ct.shape}, Cct: {Cct.shape}")
         theta = torch.mul(vt, Cct)
         theta = torch.cat((theta, ct), -1)
         return theta

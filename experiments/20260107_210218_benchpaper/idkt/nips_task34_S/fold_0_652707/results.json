@@ -1,0 +1,53 @@
+{
+  "valid_auc": 0.7598756186831596,
+  "valid_acc": 0.6942975521997492,
+  "valid_metrics": {
+    "l_sup": 0.597316148591405,
+    "l_reg": 0.00044233694158416864,
+    "l_ref": 0.02809151851882537,
+    "l_init": 0.024986674448655044,
+    "l_rate": 0.18018376461730498
+  },
+  "test_auc": 0.757051777964689,
+  "test_acc": 0.6864198876955787,
+  "test_metrics": {
+    "l_sup": 0.597316148591405,
+    "l_reg": 0.00044233694158416864,
+    "l_ref": 0.02809151851882537,
+    "l_init": 0.024986674448655044,
+    "l_rate": 0.18018376461730498
+  },
+  "best_epoch": 130,
+  "params": {
+    "model_name": "idkt",
+    "dataset_name": "nips_task34_S",
+    "fold": 0,
+    "seed": 42,
+    "emb_type": "qid",
+    "save_dir": "/workspaces/pykt-toolkit/experiments/20260107_210218_benchpaper/idkt/nips_task34_S/fold_0_652707",
+    "d_model": 256,
+    "d_ff": 512,
+    "num_attn_heads": 8,
+    "n_blocks": 4,
+    "dropout": 0.3,
+    "final_fc_dim": 512,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "num_epochs": 200,
+    "optimizer": "Adam",
+    "gradient_clip": 1.0,
+    "patience": 10,
+    "seq_len": 200,
+    "l2": 1e-05,
+    "lambda_student": 1e-05,
+    "lambda_gap": 1e-05,
+    "lambda_ref": 0.1,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "theory_guided": 1,
+    "calibrate": 1,
+    "use_wandb": 0,
+    "add_uuid": 0
+  }
+}

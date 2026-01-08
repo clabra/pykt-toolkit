@@ -113,7 +113,6 @@
     },
     "params": {
         "d_model": 256,
-        "n_heads": 8,
         "n_blocks": 4,
         "d_ff": 512,
         "dropout": 0.3,

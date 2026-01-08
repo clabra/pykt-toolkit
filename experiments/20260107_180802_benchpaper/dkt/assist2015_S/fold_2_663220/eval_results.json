@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7272398484133832,
+    "testacc": 0.753534466639025,
+    "window_testauc": 0.7272398484133832,
+    "window_testacc": 0.753534466639025,
+    "short_title": "benchpaper",
+    "dataset": "assist2015_S",
+    "fold": 2,
+    "model": "dkt",
+    "train_script": "examples/wandb_dkt_train.py"
+}

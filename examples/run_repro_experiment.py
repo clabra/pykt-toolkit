@@ -250,12 +250,10 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     # Parameter Translation Map (Canonical -> Script Specific)
     PARAM_MAP = {
         "d_model": {
-            "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size",
-            "kqn": "emb_size", "dkvmn": "dim_s", "gkt": "emb_size",
-            "sakt": "emb_size", "skvmn": "dim_s", "deep_irt": "dim_s",
-            "dkvm": "dim_s", "atkt": "skill_dim", "saint": "emb_size", "saint++": "emb_size", "gkt": "hidden_dim",
+            "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size", "sakt": "emb_size",
+            "dkvmn": "dim_s", "atkt": "skill_dim", "saint": "emb_size", "saint++": "emb_size", "gkt": "hidden_dim",
             "kqn": "n_hidden", # KQN uses n_hidden for its main embedding size, which maps from d_model
-            "atkt": "hidden_dim" # ATKT uses hidden_dim for its main embedding size, which maps from d_model
+            "skvmn": "dim_s", "deep_irt": "dim_s"
         },
         "n_heads": {
             "akt": "num_attn_heads", "sakt": "num_attn_heads", 
@@ -289,7 +287,10 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
             'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
             'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
-            'save_dir', '_doc_grounding', '_doc_regularization'
+            'save_dir', '_doc_grounding', '_doc_regularization',
+            'answer_dim', 'beta', 'epsilon', 'graph_type', 'lambda_r', 'lambda_w1', 'lambda_w2', 
+            'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
+            'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size'
         }
     elif is_standard_pykt:
         # Minimal set for all standard pykt scripts
@@ -303,11 +304,11 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         elif model == 'saint' or model == 'saint++':
             allowed_params.update({'d_model', 'n_heads', 'n_blocks'})
         elif model == 'atkt':
-            allowed_params.update({'d_model', 'd_ff', 'answer_dim', 'epsilon', 'beta', 'hidden_dim'})
+            allowed_params.update({'d_model', 'd_ff', 'answer_dim', 'epsilon', 'beta', 'hidden_dim', 'skill_dim', 'attention_dim'})
         elif model == 'dkvmn':
             allowed_params.update({'d_model', 'size_m'})
         elif model == 'gkt':
-            allowed_params.update({'d_model', 'graph_type'})
+            allowed_params.update({'d_model', 'graph_type', 'hidden_dim'})
         elif model in ['dkt', 'skvmn', 'deep_irt']:
             allowed_params.update({'d_model'})
         elif model == 'kqn':
@@ -320,28 +321,44 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         # Default safety: only pass runtime basics
         allowed_params = {'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'save_dir'}
     
-    # Add all parameters explicitly (exclude launcher-only params and model-specific filtering)
+    # Build command parts, ensuring mapped canonical keys (like d_model) take precedence
+    final_params = {}
+    is_canonical = {} # translated_key -> bool
+    
     for key, value in sorted(params.items()):
         if key in launcher_only_params:
             continue
         if allowed_params is not None and key not in allowed_params:
-            continue  # Skip parameters not accepted by this training script
+            continue
         
-        # Translate key if necessary
         translated_key = key
+        mapped = False
         if key in PARAM_MAP:
             if model in PARAM_MAP[key]:
                 translated_key = PARAM_MAP[key][model]
+                mapped = True
             elif is_standard_pykt and "standard_pykt" in PARAM_MAP[key]:
                 translated_key = PARAM_MAP[key]["standard_pykt"]
+                mapped = True
+        
+        # Logic: 
+        # - If key is new, store it.
+        # - If key exists, only overwrite if current 'key' is mapped (canonical) and previous wasn't
+        if translated_key not in final_params:
+            final_params[translated_key] = value
+            is_canonical[translated_key] = mapped
+        elif mapped and not is_canonical[translated_key]:
+            final_params[translated_key] = value
+            is_canonical[translated_key] = True
 
+    for translated_key, value in sorted(final_params.items()):
         if isinstance(value, bool):
             if value:
                 cmd_parts.append(f"--{translated_key}")
         elif value is None or value == "null":
             # For reproducibility: pass "null" as string literal (required=True compliance)
             # Special case: construct rasch_path dynamically
-            if key == "rasch_path" and "dataset" in params:
+            if translated_key == "rasch_path" and "dataset" in params:
                 rasch_path = f"data/{params['dataset']}/rasch_targets.pkl"
                 cmd_parts.append(f"--{translated_key} {rasch_path}")
             else:

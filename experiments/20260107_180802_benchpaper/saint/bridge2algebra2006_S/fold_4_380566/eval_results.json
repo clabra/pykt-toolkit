@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7388234074452136,
+    "testacc": 0.7075743048897412,
+    "window_testauc": 0.7388234074452136,
+    "window_testacc": 0.7075743048897412,
+    "short_title": "benchpaper",
+    "dataset": "bridge2algebra2006_S",
+    "fold": 4,
+    "model": "saint",
+    "train_script": "examples/wandb_saint_train.py"
+}

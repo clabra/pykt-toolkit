@@ -112,8 +112,6 @@
     "params": {
         "seq_len": 200,
         "dropout": 0.3,
-        "emb_size": 256,
-        "num_en": 4,
         "num_attn_heads": 8,
         "fold": 2,
         "model_name": "sakt",

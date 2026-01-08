@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7275349347115548,
+    "testacc": 0.755071014528101,
+    "window_testauc": 0.7275349347115548,
+    "window_testacc": 0.755071014528101,
+    "short_title": "benchpaper",
+    "dataset": "assist2015_S",
+    "fold": 1,
+    "model": "dkt_forget",
+    "train_script": "examples/wandb_dkt_forget_train.py"
+}

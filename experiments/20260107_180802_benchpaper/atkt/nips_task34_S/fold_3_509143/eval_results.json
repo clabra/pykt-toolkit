@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7395018410646934,
+    "testacc": 0.6784447072738025,
+    "window_testauc": 0.7395018410646934,
+    "window_testacc": 0.6784447072738025,
+    "short_title": "benchpaper",
+    "dataset": "nips_task34_S",
+    "fold": 3,
+    "model": "atkt",
+    "train_script": "examples/wandb_atkt_train.py"
+}

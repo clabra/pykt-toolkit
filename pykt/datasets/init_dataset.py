@@ -20,6 +20,8 @@ def init_test_datasets(data_config, model_name, batch_size, diff_level=None, arg
     print(f"model_name is {model_name}, dataset_name is {dataset_name}")
     test_question_loader, test_question_window_loader = None, None
     if model_name in ["dkt_forget", "bakt_time"]:
+        test_question_dataset = None
+        test_question_window_dataset = None
         test_dataset = DktForgetDataset(os.path.join(data_config["dpath"], data_config["test_file"]), data_config["input_type"], {-1})
         test_window_dataset = DktForgetDataset(os.path.join(data_config["dpath"], data_config["test_window_file"]),
                                         data_config["input_type"], {-1})

@@ -112,8 +112,6 @@
         "seq_len": 200,
         "n_blocks": 4,
         "dropout": 0.3,
-        "emb_size": 256,
-        "num_attn_heads": 8,
         "fold": 1,
         "model_name": "saint",
         "dataset_name": "assist2009_S",

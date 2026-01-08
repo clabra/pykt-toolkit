@@ -291,7 +291,7 @@ def model_forward(model, data, rel=None):
     elif model_name in ["atkt", "atktfix"]:
         y, features = model(c.long(), r.long())
         y = (y * one_hot(cshft.long(), model.num_c)).sum(-1)
-        loss = cal_loss(model, [y], r, rshft, sm)
+        loss = cal_loss(model, [y], r, rshft, sm, cshft)
         # at
         features_grad = grad(loss, features, retain_graph=True)
         p_adv = torch.FloatTensor(model.epsilon * _l2_normalize_adv(features_grad[0].data))
@@ -299,7 +299,7 @@ def model_forward(model, data, rel=None):
         pred_res, _ = model(c.long(), r.long(), p_adv)
         # second loss
         pred_res = (pred_res * one_hot(cshft.long(), model.num_c)).sum(-1)
-        adv_loss = cal_loss(model, [pred_res], r, rshft, sm)
+        adv_loss = cal_loss(model, [pred_res], r, rshft, sm, cshft)
         loss = loss + model.beta * adv_loss
     elif model_name == "gkt":
         y = model(cc.long(), cr.long())

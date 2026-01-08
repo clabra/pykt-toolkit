@@ -1,0 +1,148 @@
+direction: up
+theme: 200
+
+# Define Classes for visual consistency
+classes: {
+  input_layer: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  process_layer: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  transformer_core: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  output_head: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  loss_box: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-dash: 5
+      stroke-width: 2
+    }
+  }
+}
+
+# 1. Input Stage
+InputData: {
+  class: input_layer
+  label: |md
+    ### 1. Input Interactions & BKT References
+    - Interactions: {c, q, r}
+    - BKT Ref: p_BKT
+    - Params: P(L₀), P(T), P(G), P(S)
+  |
+}
+
+InputData.shape: rectangle
+
+# 2. Embeddings Stage
+Embeddings: {
+  class: process_layer
+  label: |md
+    ### 2. Individualized Embeddings
+
+    x'ₜ (Current Task)
+
+    y'ₜ (History)
+  |
+}
+
+Embeddings.shape: rectangle
+
+# 3. Attention Heads (Transformer)
+Transformer: {
+  class: transformer_core
+
+  Encoder: {
+    label: "Encoder\n(Self-Attention on y'_{1:t-1})"
+  }
+
+  Decoder: {
+    label: "Decoder\n(Cross-Attention + x'ₜ)"
+  }
+
+  Encoder -> Decoder: "History Context"
+}
+
+# Intermediate Context Vector
+zt: {
+  shape: rectangle
+  label: "zₜ"
+  style: {
+    fill: "#ffffff"
+    stroke-width: 2
+  }
+}
+
+# 4. Prediction and Interpretability Heads
+Heads: {
+  PredictionHead: {
+    class: output_head
+    label: "Prediction Head (h_pred)\nOut: p_pred"
+  }
+
+  InterpretabilityHead: {
+    class: output_head
+    label: "Interpretability Head (h_int)\nOut: {p_know, p_rate}"
+  }
+}
+
+# 5. Multi-objective Loss
+LossPipeline: {
+  class: loss_box
+  label: |md
+    ### 5. Multi-objective Loss
+    L = L_pred + L_int
+  |
+
+  L_pred: "Prediction Loss"
+  L_int: "Interpretability Loss (Grounding)"
+}
+
+# 6. Validation (Diagnostic Probing)
+Probing: {
+  label: "6. Diagnostic Probing Validation"
+  shape: parallelogram
+  style: {
+    stroke-dash: 3
+    fill: "#ffffff"
+  }
+}
+
+# Relationships / Flow
+InputData -> Embeddings
+Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
+Embeddings -> Transformer.Decoder: "x'ₜ"
+
+Transformer.Decoder -> zt
+Embeddings -> Heads.InterpretabilityHead: "Relational Parameters"
+zt -> Heads.PredictionHead
+
+# Loss Connections
+Heads.PredictionHead -> LossPipeline.L_pred
+Heads.InterpretabilityHead -> LossPipeline.L_int
+InputData -> LossPipeline.L_int: "BKT Grounding Values"
+
+# Probing connects to the internal representation
+zt -> Probing: "Linear Probes"
+

@@ -22,42 +22,110 @@ def main(params):
 
     save_dir, batch_size, fusion_type = params["save_dir"], params["bz"], params["fusion_type"].split(",")
 
-    with open(os.path.join(save_dir, "config.json")) as fin:
+    config_path = os.path.join(save_dir, "config.json")
+    with open(config_path) as fin:
         config = json.load(fin)
-        model_config = copy.deepcopy(config["model_config"])
-        for remove_item in ['use_wandb','learning_rate','add_uuid','l2']:
-            if remove_item in model_config:
-                del model_config[remove_item]    
-        trained_params = config["params"]
-        fold = trained_params["fold"]
-        model_name, dataset_name, emb_type = trained_params["model_name"], trained_params["dataset_name"], trained_params["emb_type"]
-        if model_name in ["saint", "sakt", "atdkt", "simakt"]:
-            train_config = config["train_config"]
-            seq_len = train_config["seq_len"]
-            model_config["seq_len"] = seq_len   
+    
+    # If config is "flat" (e.g. from run_repro_experiment.py) and missing sections,
+    # try to find a nested config.json created by the training script.
+    if "model_config" not in config:
+        print(f"[Predict] Config at {save_dir} is missing 'model_config'. Searching for nested config.json...")
+        import glob
+        from pathlib import Path
+        nested_configs = glob.glob(os.path.join(save_dir, "**/config.json"), recursive=True)
+        # Sort by depth (longest path first) to prioritize the training script's config
+        nested_configs.sort(key=len, reverse=True)
+        found_nested = False
+        nested_ckpt_path = save_dir
+        for nc in nested_configs:
+            if os.path.abspath(nc) == os.path.abspath(config_path):
+                continue
+            try:
+                with open(nc) as f:
+                    nested_data = json.load(f)
+                    if "model_config" in nested_data:
+                        print(f"[Predict] Found valid nested config at {nc}")
+                        config = nested_data
+                        found_nested = True
+                        nested_ckpt_path = os.path.dirname(nc)
+                        break
+            except: continue
+        
+        if not found_nested:
+            print("[Predict] Warning: No nested config with 'model_config' found. Attempting to reconstruct from flat params...")
+            # Reconstruct from run_repro_experiment.py structure
+            if "train_config" in config:
+                config["model_config"] = config["train_config"]
+            elif "params" in config:
+                config["model_config"] = config["params"]
+            
+            if "params" in config:
+                 config["params"]["model_name"] = config["params"].get("model", config["params"].get("model_name"))
+                 config["params"]["dataset_name"] = config["params"].get("dataset", config["params"].get("dataset_name"))
+                 config["params"]["emb_type"] = config["params"].get("emb_type", "qid")
+
+    model_config = copy.deepcopy(config["model_config"])
+    for remove_item in ['use_wandb','learning_rate','add_uuid','l2']:
+        if remove_item in model_config:
+            del model_config[remove_item]    
+    trained_params = config["params"]
+    fold = trained_params["fold"]
+    model_name, dataset_name, emb_type = trained_params["model_name"], trained_params["dataset_name"], trained_params["emb_type"]
+    if model_name in ["saint", "sakt", "atdkt", "simakt"]:
+        train_config = config["train_config"]
+        seq_len = train_config["seq_len"]
+        model_config["seq_len"] = seq_len   
 
     with open("../configs/data_config.json") as fin:
         curconfig = copy.deepcopy(json.load(fin))
         data_config = curconfig[dataset_name]
         data_config["dataset_name"] = dataset_name
         if model_name in ["dkt_forget", "bakt_time"]:
-            data_config["num_rgap"] = config["data_config"]["num_rgap"]
-            data_config["num_sgap"] = config["data_config"]["num_sgap"]
-            data_config["num_pcount"] = config["data_config"]["num_pcount"]
+            data_config["num_rgap"] = config.get("data_config", {}).get("num_rgap")
+            data_config["num_sgap"] = config.get("data_config", {}).get("num_sgap")
+            data_config["num_pcount"] = config.get("data_config", {}).get("num_pcount")
         elif model_name == "lpkt":
-            data_config["num_at"] = config["data_config"]["num_at"]
-            data_config["num_it"] = config["data_config"]["num_it"]    
+            data_config["num_at"] = config.get("data_config", {}).get("num_at")
+            data_config["num_it"] = config.get("data_config", {}).get("num_it")
+
     if model_name not in ["dimkt"]:        
         test_loader, test_window_loader, test_question_loader, test_question_window_loader = init_test_datasets(data_config, model_name, batch_size)
     else:
         diff_level = trained_params["difficult_levels"]
         test_loader, test_window_loader, test_question_loader, test_question_window_loader = init_test_datasets(data_config, model_name, batch_size, diff_level=diff_level)
 
+    # Re-verify dynamic fields if they were missing (common in re-sanitized or old configs)
+    if model_name in ["dkt_forget", "bakt_time"] and data_config.get("num_rgap") is None:
+        print("[Predict] Warning: num_rgap missing in config, inferring from test dataset...")
+        data_config["num_rgap"] = test_loader.dataset.max_rgap + 1
+        data_config["num_sgap"] = test_loader.dataset.max_sgap + 1
+        data_config["num_pcount"] = test_loader.dataset.max_pcount + 1
+    elif model_name == "lpkt" and data_config.get("num_at") is None:
+         # For LPKT we'd need to re-generate time2idx, but it's complex here.
+         # Usually it's present or we fail.
+         pass
+
     print(f"Start predicting model: {model_name}, embtype: {emb_type}, save_dir: {save_dir}, dataset_name: {dataset_name}")
     print(f"model_config: {model_config}")
     print(f"data_config: {data_config}")
 
-    model = load_model(model_name, model_config, data_config, emb_type, save_dir)
+    # Determine checkpoint directory
+    ckpt_path = save_dir
+    expected_ckpt = os.path.join(save_dir, emb_type + "_model.ckpt")
+    
+    if not os.path.exists(expected_ckpt):
+        print(f"[Predict] Checkpoint not found at {expected_ckpt}. Searching subdirectories...")
+        import glob
+        ckpt_files = glob.glob(os.path.join(save_dir, "**/" + emb_type + "_model.ckpt"), recursive=True)
+        if ckpt_files:
+            # Pick the one that matches best or is deepest (usually hyperparameter dir)
+            ckpt_files.sort(key=len, reverse=True)
+            ckpt_path = os.path.dirname(ckpt_files[0])
+            print(f"[Predict] Found checkpoint in subdirectory: {ckpt_path}")
+        else:
+            print(f"[Predict] Warning: No {emb_type}_model.ckpt found in {save_dir} or its subdirectories.")
+
+    model = load_model(model_name, model_config, data_config, emb_type, ckpt_path)
 
     save_test_path = os.path.join(save_dir, model.emb_type+"_test_predictions.txt")
 
@@ -118,10 +186,23 @@ def main(params):
     # print(f"question_testauc: {question_testauc}, question_testacc: {question_testacc}, question_window_testauc: {question_window_testauc}, question_window_testacc: {question_window_testacc}")
     
     print(dres)
-    raw_config = json.load(open(os.path.join(save_dir,"config.json")))
-    dres.update(raw_config['params'])
+    config_file = os.path.join(save_dir, "config.json")
+    if os.path.exists(config_file):
+        with open(config_file) as f:
+            raw_config = json.load(f)
+            # Standard PyKT uses 'params', run_repro_experiment uses 'input'
+            if 'params' in raw_config:
+                dres.update(raw_config['params'])
+            elif 'input' in raw_config:
+                dres.update(raw_config['input'])
+    
+    # Structured Results Export: Save to eval_results.json for non-wandb aggregation
+    res_path = os.path.join(save_dir, "eval_results.json")
+    with open(res_path, "w") as fout:
+        json.dump(dres, fout, indent=4)
+    print(f"Results saved to: {res_path}")
 
-    if params['use_wandb'] ==1:
+    if params['use_wandb'] == 1:
         wandb.log(dres)
 
 if __name__ == "__main__":

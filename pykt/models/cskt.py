@@ -4,8 +4,6 @@ from torch.nn.init import xavier_uniform_
 from torch.nn.init import constant_
 import torch.nn.init as init
 import math
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import torch.nn.functional as F
 from enum import IntEnum
 from torch.nn.parameter import Parameter

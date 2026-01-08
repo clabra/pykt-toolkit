@@ -1,0 +1,11 @@
+{
+    "testauc": 0.7126625302325067,
+    "testacc": 0.6565852834333024,
+    "window_testauc": 0.7126625302325067,
+    "window_testacc": 0.6565852834333024,
+    "short_title": "benchpaper",
+    "dataset": "nips_task34_S",
+    "fold": 4,
+    "model": "saint",
+    "train_script": "examples/wandb_saint_train.py"
+}

@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from enum import IntEnum
 import numpy as np
 from einops import rearrange, repeat
-import matplotlib.pyplot as plt
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
