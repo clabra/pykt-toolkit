@@ -255,8 +255,8 @@ The core architecture of iDKT, illustrated in Figure~\ref{idkt_arch}, builds upo
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[height=0.6\textheight, width=\textwidth, keepaspectratio]{img/idkt_arch_d2.png}
-    \caption{The diagram illustrates the layers of the iDKT Architecture: (1) \text{Input Layer} enriched with BKT reference data ($p_{BKT}$ and parameters); (2) \text{Embeddings} layer providing the foundational material through individualized transformations ($x', y'$); (3) \text{Attention Heads} (Encoder-Decoder Transformer) synthesizing interaction history and current task into a contextualized representation ($z_t$); (4) \text{Prediction and Interpretability Heads} providing both performance probabilities ($p_{pred}$) and pedagogical diagnostics ($p_{know}, p_{rate}$); (5) \text{Loss Functions} implementing a multi-objective pipeline ($L_{pred}, L_{int}$) to ensure representational grounding; and (6) \text{Diagnostic Probing Validation} to verify the structural preservation of the pedagogical constructs through linear probes.}
+    \includegraphics[height=0.6\textheight, width=\textwidth, keepaspectratio]{img/arch.png}
+    \caption{The diagram illustrates the layers of the iDKT Architecture: (1) \textit{Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and parameters); (2) \textit{Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit{Attention Heads}: encoder-decoder transformer synthesizes interaction history and current task into a contextualized representation ($z_t$); (4) \textit{Prediction and Interpretability Heads}: provide both performance probabilities ($p_{pred}$) and pedagogical diagnostics ($p_{know}, p_{rate}$); (5) \textit{Loss Functions}: implement a multi-objective pipeline ($L_{pred}, L_{int}$) to ensure representational grounding; and (6) \textit{Diagnostic Probing Validation}: verifies the structural preservation of the pedagogical constructs through linear probes.}
     \label{idkt_arch}
 \end{figure}
 
@@ -265,14 +265,14 @@ The core architecture of iDKT, illustrated in Figure~\ref{idkt_arch}, builds upo
 
 In standard educational datasets, such as ASSISTments 2009, ASSISTments 2015, Algebra 2005, and others \citep{liu2022pykt}, student interactions are recorded at the level of specific questions or tasks, each of which is associated with one or more underlying concepts or knowledge components. This structure reflects the fact that proficiency in a concept (e.g., the Pythagorean Theorem) is acquired through interactions with a diverse range of tasks. While all tasks involving a concept share the same semantic core, they differ in their specific manifestations—most notably in their intrinsic difficulty or complexity. Therefore, an effective representation must capture both the shared identity of the concept and the unique deviation of the specific task.
 
-In Transformer-based models \citep{vaswani2017attention} we can operationalize this principle representing the tasks as embedding vectors: 
+In Transformer-based models we can operationalize this principle representing the tasks as embedding vectors: 
 
 \begin{equation}
     x' = c + u \cdot d \quad \text{(Task)}
 \end{equation}
 
 
-In this formulation, $c$ acts as the \textit{Concept Anchor}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of the "transition gap". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode arbitrary embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: a base \textit{concept identity} and a \textit{difficulty shift}. 
+In this formulation, $c$ acts as the \textit{Concept Base}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of the "transition gap". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode simple embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: the base \textit{concept identity} and the \textit{difficulty shift}. 
 
 In a similar way, we can operationalize the interactions between questions and students as embedding vectors: 
 
@@ -280,7 +280,7 @@ In a similar way, we can operationalize the interactions between questions and s
     y' = e + u \cdot (f + d) \quad \text{(Interaction History)}
 \end{equation}
 
-Here $e$ represents the \textit{Interaction Base}, which is a combined representation of concept c and the binary outcome r (correct/incorrect), while $f$ represents the \textit{Interaction Variation Axis}, which is similar to the Question Variation Axis ($d_c$) but is specific to the interaction between a question and a student. The inclusion of $d_c$ in the interaction shift ensures that the difficulty vectors are consistent across both questions ($x'$) and interactions ($y'$).
+Here $e$ represents the \textit{Interaction Base}, which is a combined representation of concept c and the binary outcome r (correct/incorrect), while $f$ represents the \textit{Interaction Variation Axis}, which is similar to the Question Variation Axis ($d_c$) but is specific to the interaction between a question and a student. The inclusion of $d$ also here ensures that the difficulty vectors are consistent across both questions ($x'$) and interactions ($y'$).
 
 Extending this rationale, we can enrich the $x'$ embeddings by integrating additional components with explicit semantic significance. Specifically, by adopting Bayesian Knowledge Tracing (BKT) as a reference model, we can incorporate vectors corresponding to its core theoretical parameters—Initial Knowledge ($L_0$) and Learning Rate ($T$)—thereby grounding the deep representation in established pedagogical constructs. 
 
@@ -296,7 +296,7 @@ To get individualized values for these parameters, we decompose them into popula
 
 where $l_c$ is the personalized initial knowledge for concept, $t_c$ is the personalized learning rate for concept, $L_{0}$ and $T$ are the population-level base embeddings, $d_{k}$ and $d_{v}$ are the learnable variation axes vectors (similar to the difficulty axis $d$), and $k_s$ and $v_s$ are the scalar student-specific deviations learned for each individual.
 
-We include these vectors to get the final input embedding for the encoder and decoder components of the Transformer: 
+Finally, we include these vectors to get the individualized input embeddings for the encoder and decoder components of the Transformer: 
 \begin{equation}
     x' = (c + u \cdot d) - l_c \quad \text{(Individualized Task)}
 \end{equation}
@@ -304,12 +304,10 @@ We include these vectors to get the final input embedding for the encoder and de
     y' = (e + u \cdot (f + d)) + t_c \quad \text{(Individualized Interaction History)}
 \end{equation}
 
-where $c$ represents the concept embedding, $u$ the question-specific difficulty shift, $d$ the task variation axis, $e$ the interaction base, $f$ the interaction variation axis, $l_c$ the personalized initial knowledge, and $t_c$ the personalized learning rate.
-
-The rationale for using difference for the individualized task ($x'$) and sum for the interaction history ($y'$) is due to their distinct semantic roles:
+We can interpret these individualized embeddings as follows:
 \begin{itemize}
-    \item $x'$ represents the $\textit{Transition Gap}$: $\textit {Difficulty} - \textit{Proficiency}$. Under this relational logic, objective task difficulty is offset by prior proficiency, ensuring that task demands are defined relative to the subject's baseline. This formulation captures the difference between the task requirements and the current state, representing the residual gap after accounting for latent proficiency.
-    \item $y'$ represents the $\textit{Transition Gain}$: $\textit{Interaction} + \textit{Rate}$. The history encoder accumulates evidence from interactions, applying a consistent relational logic where the signal value is augmented by latent rate, ensuring that interaction outcomes are defined relative to the subject's pace. Under this formulation, the total value encompasses not only the interaction outcome but also the rate of progress through the state trajectory, as this incremental gain serves as a robust indicator of future performance. This approach, therefore, captures latent progression by augmenting observed outcomes with transition rate, thereby reflecting individualized acquisition rates.
+    \item \textit{Transition Gap} ($x'$): Represents the individualized difficulty of a task by offsetting objective item difficulty with the student's proficiency ($l_c$). Through this relational lens, task demands are normalized against the individual's baseline, effectively isolating the residual 'gap' that the student must bridge to achieve mastery.
+    \item \textit{Transition Momentum} ($y'$): Captures individualized momentum by modulating observed outcomes with the learning rate ($t_c$). This allows the encoder to process interactions within the context of the student's acquisition rate, enabling the model to differentiate between students who share similar performance histories but different acquisition rates.
 \end{itemize}
 
 \subsection{Loss Functions} \label{sec_loss}
