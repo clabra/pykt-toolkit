@@ -147,6 +147,7 @@ def parse_args():
     parser.add_argument("--attention_dim", type=int, required=True)
     parser.add_argument("--dim_s", type=int, required=True)
     parser.add_argument("--emb_size", type=int, required=True)
+    parser.add_argument("--fusion_type", type=str, required=True)
     
     return parser.parse_args()
 

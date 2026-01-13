@@ -36,7 +36,7 @@ class ParameterAuditor:
     
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.root_dir = Path(__file__).parent.parent
+        self.root_dir = Path(__file__).resolve().parent.parent
         self.checks_passed = []
         self.checks_failed = []
         self.detailed_issues = []  # Store detailed issue descriptions

@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_fc_dim", type=int, default=512)
     parser.add_argument("--l2", type=float, default=1e-5)
     parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--num_epochs", type=int, default=200)
 
     parser.add_argument("--use_wandb", type=int, default=1)
     parser.add_argument("--add_uuid", type=int, default=1)

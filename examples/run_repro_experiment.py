@@ -23,6 +23,27 @@ import random
 from pathlib import Path
 from datetime import datetime
 
+# Model-specific script-to-parameter mapping
+MODEL_SCRIPTS = {
+    "dkt": "examples/wandb_dkt_train.py",
+    "dkt+": "examples/wandb_dkt_plus_train.py",
+    "dkt_forget": "examples/wandb_dkt_forget_train.py",
+    "kqn": "examples/wandb_kqn_train.py",
+    "dkvmn": "examples/wandb_dkvmn_train.py",
+    "atkt": "examples/wandb_atkt_train.py",
+    "atktfix": "examples/wandb_atkt_train.py",
+    "gkt": "examples/wandb_gkt_train.py",
+    "sakt": "examples/wandb_sakt_train.py",
+    "saint": "examples/wandb_saint_train.py",
+    "saint++": "examples/wandb_saint_plus_plus_train.py",
+    "akt": "examples/wandb_akt_train.py",
+    "gtransformer": "examples/wandb_gtransformer_train.py",
+    "idkt": "examples/train_idkt.py",
+    "lpkt": "examples/wandb_lpkt_train.py",
+    "skvmn": "examples/wandb_skvmn_train.py",
+    "deep_irt": "examples/wandb_deep_irt_train.py"
+}
+
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
 def select_gpus(num_gpus=None):
@@ -153,7 +174,7 @@ def create_experiment_folder(model_name, short_title, experiment_id, is_repro=Fa
         folder_name = f"{timestamp}_{model_name}_{short_title}_{experiment_id}"
         if is_repro:
             folder_name += "_repro"
-        folder_path = Path("experiments") / folder_name
+        folder_path = PROJECT_ROOT / "experiments" / folder_name
     
     folder_path.mkdir(parents=True, exist_ok=True)
     return folder_path
@@ -228,39 +249,20 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     architecture_params = {'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type'}
     runtime_params = {'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience', 'seed'}
     
-    # Model-specific script-to-parameter mapping
-    MODEL_SCRIPTS = {
-        "dkt": "examples/wandb_dkt_train.py",
-        "dkt+": "examples/wandb_dkt_plus_train.py",
-        "dkt_forget": "examples/wandb_dkt_forget_train.py",
-        "kqn": "examples/wandb_kqn_train.py",
-        "dkvmn": "examples/wandb_dkvmn_train.py",
-        "atkt": "examples/wandb_atkt_train.py",
-        "gkt": "examples/wandb_gkt_train.py",
-        "sakt": "examples/wandb_sakt_train.py",
-        "saint": "examples/wandb_saint_train.py",
-        "saint++": "examples/wandb_saint_plus_plus_train.py",
-        "akt": "examples/wandb_akt_train.py",
-        "idkt": "examples/train_idkt.py",
-        "lpkt": "examples/wandb_lpkt_train.py",
-        "skvmn": "examples/wandb_skvmn_train.py",
-        "deep_irt": "examples/wandb_deep_irt_train.py"
-    }
-
     # Parameter Translation Map (Canonical -> Script Specific)
     PARAM_MAP = {
         "d_model": {
             "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size", "sakt": "emb_size",
             "dkvmn": "dim_s", "atkt": "skill_dim", "saint": "emb_size", "saint++": "emb_size", "gkt": "hidden_dim",
-            "kqn": "n_hidden", # KQN uses n_hidden for its main embedding size, which maps from d_model
-            "skvmn": "dim_s", "deep_irt": "dim_s"
+            "kqn": "n_hidden", # KQN uses n_hidden for its_main embedding size, which maps from d_model
+            "skvmn": "dim_s", "deep_irt": "dim_s", "akt": "d_model", "gtransformer": "d_model"
         },
         "n_heads": {
-            "akt": "num_attn_heads", "sakt": "num_attn_heads", 
+            "akt": "num_attn_heads", "gtransformer": "num_attn_heads", "sakt": "num_attn_heads", 
             "saint": "num_attn_heads", "saint++": "num_attn_heads"
         },
         "n_blocks": {
-            "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks"
+            "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks", "gtransformer": "n_blocks"
         },
         "d_ff": {
             "atkt": "attention_dim"
@@ -294,10 +296,10 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         }
     elif is_standard_pykt:
         # Minimal set for all standard pykt scripts
-        allowed_params = {'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 'save_dir'}
+        allowed_params = {'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 'save_dir', 'epochs'}
         
         # Architecture if supported by that specific script
-        if model == 'akt':
+        if model == 'akt' or model == 'gtransformer':
             allowed_params.update({'d_model', 'n_heads', 'n_blocks', 'd_ff', 'final_fc_dim', 'l2'})
         elif model == 'sakt':
             allowed_params.update({'d_model', 'n_heads', 'n_blocks'})
@@ -319,7 +321,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             allowed_params.update({'d_model', 'num_rgap', 'num_sgap', 'num_pcount'})
     else:
         # Default safety: only pass runtime basics
-        allowed_params = {'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'save_dir'}
+        allowed_params = {'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'save_dir', 'fusion_type'}
     
     # Build command parts, ensuring mapped canonical keys (like d_model) take precedence
     final_params = {}
@@ -383,14 +385,12 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     command = " ".join(cmd_parts)
     
     # Standard PyKT scripts (wandb_*.py) must be run from examples/ 
-    # to find '../configs/'. We prepend 'cd examples &&' and wrap with surrogate if needed.
+    # to find '../configs/'. We wrap with surrogate if needed.
     if "wandb_" in train_script:
         if model != "idkt":
             surrogate = os.path.join(PROJECT_ROOT, "tmp/pykt_train_surrogate.py")
             # Use env var for target script to avoid CLI parsing issues
-            command = f"PYKT_TARGET_SCRIPT={train_script} {python_path} {surrogate} {' '.join(cmd_parts[2:])}"
-        
-        command = f"cd examples && {command}"
+            command = f"PYKT_TARGET_SCRIPT={abs_train_script} {python_path} {surrogate} {' '.join(cmd_parts[2:])}"
         
     return command
 
@@ -516,15 +516,17 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     else:
         # Baselines use wandb_predict.py which needs to run from examples/ directory
         # It reads configuration directly from the experiment folder's config.json
-        predict_script = "wandb_predict.py"
+        predict_script = os.path.join(os.path.dirname(__file__), "wandb_predict.py")
+        abs_predict_script = os.path.abspath(predict_script)
         
-        cmd_parts = ["cd examples &&", python_path, predict_script]
+        cmd_parts = [python_path, abs_predict_script]
         cmd_parts.append(f"--save_dir {experiment_folder}")
         cmd_parts.append(f"--bz {params['batch_size']}")
         cmd_parts.append(f"--use_wandb 0")
         
-        # Hardcode fusion_type to match scientific alignment (no fusion)
-        cmd_parts.append("--fusion_type none")
+        # Use late_fusion if requested, otherwise default to none for consistency
+        fusion_type = params.get('fusion_type', 'none')
+        cmd_parts.append(f"--fusion_type {fusion_type}")
         
         return " ".join(cmd_parts)
 
@@ -724,6 +726,11 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
     default_eval_script = get_required_param(defaults_config, "defaults", "eval_script")
     
     train_script = args.train_script if args.train_script is not None else default_train_script
+    
+    # Automatically select training script based on model if using default
+    if train_script == default_train_script and model_name in MODEL_SCRIPTS:
+        train_script = MODEL_SCRIPTS[model_name]
+        
     eval_script = default_eval_script
 
     # Create experiment folder
@@ -818,7 +825,8 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         print(f"  [DRY RUN] Would run: {run_cmd}")
         return True, {}
 
-    result = subprocess.run(run_cmd, shell=True)
+    print(f"  Execution CWD: {PROJECT_ROOT / 'examples'}")
+    result = subprocess.run(run_cmd, shell=True, cwd=PROJECT_ROOT / "examples")
     if result.returncode != 0:
         print(f"❌ Training failed for fold {fold}")
         return False, {}
@@ -833,7 +841,7 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
     # which contains config.json.
     
     eval_cmd_full = f"EXPERIMENT_DIR={experiment_dir_abs} {eval_command_explicit}"
-    eval_result = subprocess.run(eval_cmd_full, shell=True)
+    eval_result = subprocess.run(eval_cmd_full, shell=True, cwd=PROJECT_ROOT / "examples")
     
     # 7. Collect Results
     metrics = {}
@@ -872,7 +880,7 @@ def main():
         print()
     
     # First, load defaults to know what parameters are available
-    defaults_path = Path(__file__).parent.parent / "configs" / "parameter_default.json"
+    defaults_path = Path(__file__).resolve().parent.parent / "configs" / "parameter_default.json"
     if not defaults_path.exists():
         print(f"❌ ERROR: Defaults file not found: {defaults_path}")
         sys.exit(1)

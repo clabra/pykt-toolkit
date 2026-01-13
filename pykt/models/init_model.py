@@ -43,6 +43,7 @@ from .robustkt import Robustkt
 # from .gainsakt import GainSAKT
 from .gainakt2 import GainAKT2
 from .gainakt3 import GainAKT3
+from .gtransformer import GTransformer
 #from .gainakt2_enhanced import GainAKT2Enhanced
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -179,6 +180,8 @@ def init_model(model_name, model_config, data_config, emb_type):
     #     enhanced_config = {k: v for k, v in model_config.items() if k not in excluded_params}
     #     model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
     #                            emb_path=data_config["emb_path"]).to(device)
+    elif model_name == "gtransformer":
+        model = GTransformer(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")
         return None

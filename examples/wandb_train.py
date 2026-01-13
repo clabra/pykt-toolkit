@@ -95,11 +95,12 @@ def main(params):
         # del model_config['num_epochs']
         del model_config['weight_decay']
 
-    save_config(train_config, model_config, data_config[dataset_name], params, ckpt_path)
     learning_rate = params["learning_rate"]
     for remove_item in ['use_wandb','learning_rate','add_uuid','l2','batch_size','num_epochs']:
         if remove_item in model_config:
             del model_config[remove_item]
+    
+    save_config(train_config, model_config, data_config[dataset_name], params, ckpt_path)
     if model_name in ["saint","saint++", "sakt", "atdkt", "simplekt","stablekt", "datakt","folibikt"]:
         model_config["seq_len"] = seq_len
         

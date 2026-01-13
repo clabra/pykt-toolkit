@@ -1,6 +1,6 @@
 {
     "assist2015": {
-        "dpath": "../data/assist2015",
+        "dpath": "../data/assist2015/old",
         "num_q": 0,
         "num_c": 100,
         "input_type": [
@@ -86,7 +86,7 @@
         "test_original_file_quelevel": "test_quelevel.csv"
     },
     "assist2009": {
-        "dpath": "../data/assist2009",
+        "dpath": "../data/assist2009/old",
         "num_q": 17737,
         "num_c": 123,
         "input_type": [
