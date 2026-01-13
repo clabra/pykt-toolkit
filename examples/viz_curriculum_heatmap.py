@@ -41,7 +41,7 @@ def main():
 
     print("Loading data for curriculum calibration...")
     df_traj = pd.read_csv(os.path.join(EXP_DIR, "traj_predictions.csv"))
-    df_roster = pd.read_csv(os.path.join(EXP_DIR, "roster_idkt.csv"))
+    df_roster = pd.read_csv(os.path.join(EXP_DIR, "roster_gtransformer.csv"))
 
     # 1. Calculate Skill Difficulty (Global)
     # Difficulty = 1 - Accuracy

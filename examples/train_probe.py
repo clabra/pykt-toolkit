@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Diagnostic Probing Script for iDKT
+Diagnostic Probing Script for GTransformer
 
 This script implements the "Diagnostic Probing with Control Tasks" methodology
 (Hewitt & Liang, 2019; Belinkov, 2022).
 
-Goal: Validate that iDKT embeddings structurally encode BKT parameters (Mastery).
+Goal: Validate that GTransformer embeddings structurally encode BKT parameters (Mastery).
 
 Methodology:
-1. Extraction: Pass validation data through frozen iDKT -> Get embeddings H (concat_q).
+1. Extraction: Pass validation data through frozen GTransformer -> Get embeddings H (concat_q).
 2. Alignment: Match H with pre-computed BKT Mastery predictions (p_bkt).
 3. Selectivity Analysis:
    - Task A (True): Train Linear Probe H -> p_bkt. Measure R^2_true.
@@ -75,7 +75,7 @@ def plot_correlation(y_true, y_pred, output_path, title="Probing Correlation"):
     
     plt.grid(True, alpha=0.3)
     plt.xlabel('True BKT Mastery')
-    plt.ylabel('Probed Prediction (iDKT)')
+    plt.ylabel('Probed Prediction (GTransformer)')
     plt.title(title)
     plt.xlim(0, 1)
     plt.ylim(0, 1)
@@ -112,9 +112,9 @@ def plot_manifold(X, y, output_path, title="Latent Space PCA"):
     print(f"Saved manifold plot to {output_path}")
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train Diagnostic Probes for iDKT")
+    parser = argparse.ArgumentParser(description="Train Diagnostic Probes for GTransformer")
     
-    parser.add_argument("--checkpoint", type=str, required=True, help="Path to iDKT checkpoint")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to GTransformer checkpoint")
     parser.add_argument("--bkt_preds", type=str, required=True, help="Path to BKT predictions CSV (traj_predictions.csv)")
     parser.add_argument("--output_dir", type=str, required=True, help="Output directory for results")
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name")
@@ -169,8 +169,8 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
     for uid, group in grouped:
         sigs = []
         for _, row in group.iterrows():
-            # Signature: (concept_id, y_true, round_p_idkt)
-            sig = (int(row['skill_id']), int(row['y_true']), round(float(row['p_idkt']), 6))
+            # Signature: (concept_id, y_true, round_p_gtransformer)
+            sig = (int(row['skill_id']), int(row['y_true']), round(float(row['p_gtransformer']), 6))
             sigs.append((sig, float(row['p_bkt'])))
         bkt_indexed[uid] = sigs
     print(f"Loaded BKT paths for {len(bkt_indexed)} students.")
@@ -189,7 +189,7 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
             sm = data["smasks"].long().to(device)
             uids_batch = data["uids"].cpu().numpy().flatten()
             
-            # Prepare full sequences for model matching (must match eval_idkt_interpretability)
+            # Prepare full sequences for model matching (must match eval_gtransformer_interpretability)
             cq_full = torch.cat((q[:, 0:1], data["shft_qseqs"].long().to(device)), dim=1)
             cc_full = torch.cat((c[:, 0:1], data["shft_cseqs"].long().to(device)), dim=1)
             cr_full = torch.cat((r[:, 0:1], data["shft_rseqs"].long().to(device)), dim=1)
@@ -221,12 +221,12 @@ def extract_embeddings_and_targets(model, loader, bkt_df, device):
                     # Model signature for interaction at step t in shft arrays
                     skill_id = int(cshft_np[b_idx, t])
                     y_true = int(rshft_np[b_idx, t])
-                    p_idkt = round(float(preds_np[b_idx, 1+t]), 6) # Correctly shifted
-                    model_sig = (skill_id, y_true, p_idkt)
+                    p_gtransformer = round(float(preds_np[b_idx, 1+t]), 6) # Correctly shifted
+                    model_sig = (skill_id, y_true, p_gtransformer)
                     
                     found = False
                     for b_sig, p_bkt in student_sigs:
-                        # Relaxed match: skill and y_true must match, p_idkt within 0.05 tolerance
+                        # Relaxed match: skill and y_true must match, p_gtransformer within 0.05 tolerance
                         if (model_sig[0] == b_sig[0]) and (model_sig[1] == b_sig[1]) and (abs(model_sig[2] - b_sig[2]) < 0.05):
                             # Success: Use the correctly shifted latent state and prediction
                             embeddings_list.append(concat_q_np[b_idx, 1+t])
@@ -297,7 +297,7 @@ def run_probing_experiment(X, y, seed, output_dir=None):
             # Visualize Manifold
             plot_manifold(X_test, y_test, 
                          os.path.join(output_dir, 'probe_pca.png'),
-                         title="iDKT Latent Space (Colored by Mastery)")
+                         title="GTransformer Latent Space (Colored by Mastery)")
         except Exception as e:
             print(f"Plotting failed: {e}")
     
@@ -407,10 +407,10 @@ def main():
         print(f"  Using augmented training file: {bkt_file}")
 
     train_loader, valid_loader = init_dataset4train(
-        args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+        args.dataset, 'gtransformer', data_config, args.fold, args.batch_size)
     
     # 3. Load Model
-    print(f"Loading iDKT model from {args.checkpoint}...")
+    print(f"Loading GTransformer model from {args.checkpoint}...")
     checkpoint = torch.load(args.checkpoint, map_location='cpu')
     model_config = checkpoint.get('model_config', None)
     
@@ -426,18 +426,18 @@ def main():
     if 'student_param.weight' in state_dict:
         model_config['n_uid'] = state_dict['student_param.weight'].shape[0] - 1
     
-    # Filter model_config to only include valid iDKT args to avoid TypeError
-    valid_idkt_keys = {
+    # Filter model_config to only include valid GTransformer args to avoid TypeError
+    valid_gtransformer_keys = {
         'd_model', 'd_ff', 'num_attn_heads', 'n_blocks', 'dropout', 'emb_type', 
         'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 'n_uid', 'kq_same', 
         'separate_qa', 'emb_path', 'pretrain_dim', 'n_pid'
     }
     # Also handle some generic args that might be in config but mapped differently?
-    # Actually, init_model does: iDKT(num_c, num_q, **model_config).
-    # so we just need to keep the kwargs that iDKT accepts.
-    filtered_config = {k: v for k, v in model_config.items() if k in valid_idkt_keys}
+    # Actually, init_model does: GTransformer(num_c, num_q, **model_config).
+    # so we just need to keep the kwargs that GTransformer accepts.
+    filtered_config = {k: v for k, v in model_config.items() if k in valid_gtransformer_keys}
     
-    model = init_model('idkt', filtered_config, data_config[args.dataset], args.emb_type)
+    model = init_model('gtransformer', filtered_config, data_config[args.dataset], args.emb_type)
     model.load_state_dict(state_dict)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -29,7 +29,7 @@ from examples.train_probe import extract_embeddings_and_targets
 sns.set_theme(style="whitegrid", context="paper")
 plt.rcParams['font.family'] = 'serif'
 
-def plot_tsne_manifold(X, y, skills, output_path, title="iDKT Latent Space t-SNE"):
+def plot_tsne_manifold(X, y, skills, output_path, title="GTransformer Latent Space t-SNE"):
     """Generates a t-SNE plot colored by Mastery."""
     print(f"Running t-SNE on {len(X)} samples...")
     
@@ -120,7 +120,7 @@ def main():
     fold = config.get('input', {}).get('fold', 0)
     # Init Loader (Validation)
     from pykt.datasets import init_dataset4train
-    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
+    _, test_loader = init_dataset4train(dataset_name, 'gtransformer', data_config, fold, params['batch_size'])
     loader = test_loader
     
     # Model Setup
@@ -149,7 +149,7 @@ def main():
         'n_uid': n_uid
     }
     
-    model = init_model('idkt', model_config, data_config[dataset_name], params['emb_type'])
+    model = init_model('gtransformer', model_config, data_config[dataset_name], params['emb_type'])
     model.load_state_dict(state_dict)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

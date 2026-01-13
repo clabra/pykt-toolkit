@@ -1,12 +1,12 @@
 {
   "defaults": {
-    "model": "idkt",
+    "model": "gtransformer",
     "dataset": "assist2009_S",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
-    "train_script": "examples/train_idkt.py",
-    "eval_script": "examples/eval_idkt.py",
+    "train_script": "examples/train_gtransformer.py",
+    "eval_script": "examples/eval_gtransformer.py",
     "epochs": 200,
     "patience": 10,
     "batch_size": 64,
@@ -56,7 +56,7 @@
     "attention_dim": 64,
     "dim_s": 256,
     "emb_size": 256,
-    "fusion_type": "none"
+    "fusion_type": "late_fusion"
   },
   "types": {
     "launcher": [
@@ -122,9 +122,9 @@
     ]
   },
   "fixed": {
-    "idkt_baseline": {
-      "value": "Initial version: iDKT = AKT (baseline for interpretability enhancements)",
-      "rationale": "Establish baseline using proven AKT architecture. Future versions will add interpretability features while maintaining performance.",
+    "gtransformer_baseline": {
+      "value": "Initial version: GTransformer = Grounded AKT",
+      "rationale": "Establish baseline using Grounded AKT architecture. This is a contribute model to pykt framework.",
       "validated_by_experiments": []
     }
   },

@@ -120,8 +120,8 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
             elif model_name == "saint":
                 y = model(cq.long(), cc.long(), r.long())
                 y = y[:, 1:]
-            elif model_name in ["akt","idkt","gtransformer","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:                                
-                if model_name == "idkt":
+            elif model_name in ["akt","gtransformer","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:                                
+                if model_name == "gtransformer":
                     uids = dcur.get("uids", None)
                     if uids is not None:
                         uids = uids.to(device)
@@ -129,7 +129,7 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                 else:
                     outputs = model(cc.long(), cr.long(), cq.long())
                 
-                if model_name == "idkt":
+                if model_name == "gtransformer":
                     if len(outputs) == 5:
                         y, im, rate, reg_loss, reg_losses = outputs
                     else:

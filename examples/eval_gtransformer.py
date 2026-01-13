@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Evaluation script for iDKT (Interpretable Deep Knowledge Tracing) model.
+Evaluation script for GTransformer (Grounded Transformer) model.
 
-This script evaluates a trained iDKT model on test data.
+This script evaluates a trained GTransformer model on test data.
 
 CRITICAL ARCHITECTURAL FLAGS (must match training configuration):
     --d_model: Dimension of attention mechanism (default: 256)
@@ -17,9 +17,9 @@ CRITICAL ARCHITECTURAL FLAGS (must match training configuration):
     --seq_len: Maximum sequence length (default: 200)
 
 Usage:
-    python examples/eval_idkt.py \\
-        --checkpoint experiments/YYYYMMDD_HHMMSS_idkt_title_NNNNNN/best_model.pt \\
-        --output_dir experiments/YYYYMMDD_HHMMSS_idkt_title_NNNNNN \\
+    python examples/eval_gtransformer.py \\
+        --checkpoint experiments/YYYYMMDD_HHMMSS_gtransformer_title_NNNNNN/best_model.pt \\
+        --output_dir experiments/YYYYMMDD_HHMMSS_gtransformer_title_NNNNNN \\
         --dataset assist2015 \\
         --fold 0 \\
         --batch_size 32 \\
@@ -49,14 +49,14 @@ from pykt.models import evaluate, init_model
 from pykt.datasets import init_dataset4train
 from torch.utils.data import DataLoader
 from pykt.datasets.data_loader import KTDataset
-from pykt.datasets.idkt_dataloader import IDKTDataset
+from pykt.datasets.gtransformer_loader import GTransformerDataset
 from pykt.utils import set_seed
 import pickle
-from train_idkt import evaluate_idkt_individualized
+from train_gtransformer import evaluate_gtransformer_individualized
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate iDKT model")
+    parser = argparse.ArgumentParser(description="Evaluate GTransformer model")
     
     # Model path (using --checkpoint to match ikt3 convention)
     parser.add_argument("--checkpoint", type=str, required=True,
@@ -121,7 +121,7 @@ def main():
     
     # Prepare parameters
     params = {
-        'model_name': 'idkt',
+        'model_name': 'gtransformer',
         'dataset_name': args.dataset,
         'fold': args.fold,
         'seed': args.seed,
@@ -162,7 +162,7 @@ def main():
     # Load dataset
     print(f"Loading dataset: {args.dataset}, fold: {args.fold}")
     train_loader, valid_loader = init_dataset4train(
-        args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+        args.dataset, 'gtransformer', data_config, args.fold, args.batch_size)
     
     # Load test datasets manually
     dataset_config = data_config[args.dataset]
@@ -172,13 +172,14 @@ def main():
     test_file = os.path.join(dpath, dataset_config['test_file'])
     
     if args.theory_guided:
-        test_file_bkt = test_file.replace('.csv', '_bkt.csv')
-        if os.path.exists(test_file_bkt):
-            test_file = test_file_bkt
-            print(f"  Using augmented test file: {test_file}")
+        if '_bkt.csv' not in test_file:
+            test_file_bkt = test_file.replace('.csv', '_bkt.csv')
+            if os.path.exists(test_file_bkt):
+                test_file = test_file_bkt
+        print(f"  Using augmented test file: {test_file}")
             
     if args.theory_guided:
-        test_dataset = IDKTDataset(test_file, dataset_config['input_type'], {-1})
+        test_dataset = GTransformerDataset(test_file, dataset_config['input_type'], {-1})
     else:
         test_dataset = KTDataset(test_file, dataset_config['input_type'], {-1})
     
@@ -235,22 +236,22 @@ def main():
     
     # Initialize model
     print("Initializing model...")
-    model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
+    model = init_model('gtransformer', model_config, data_config[args.dataset], args.emb_type)
     
     # Load state dict
     model.load_state_dict(state_dict)
     
     # Evaluate
     print("Evaluating on validation set...")
-    valid_auc, valid_acc, valid_metrics = evaluate_idkt_individualized(model, valid_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
+    valid_auc, valid_acc, valid_metrics = evaluate_gtransformer_individualized(model, valid_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
     print(f"Valid AUC: {valid_auc:.4f}, Valid Acc: {valid_acc:.4f}")
     
     print("Evaluating on test set...")
-    test_auc, test_acc, test_metrics = evaluate_idkt_individualized(model, test_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
+    test_auc, test_acc, test_metrics = evaluate_gtransformer_individualized(model, test_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
     print(f"Test AUC: {test_auc:.4f}, Test Acc: {test_acc:.4f}")
     
     if test_window_loader is not None:
-        window_test_auc, window_test_acc, window_metrics = evaluate_idkt_individualized(model, test_window_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
+        window_test_auc, window_test_acc, window_metrics = evaluate_gtransformer_individualized(model, test_window_loader, 'cuda' if torch.cuda.is_available() else 'cpu', args, bkt_skill_params)
         print(f"Window Test AUC: {window_test_auc:.4f}, Window Test Acc: {window_test_acc:.4f}")
     else:
         window_test_auc, window_test_acc, window_metrics = None, None, None

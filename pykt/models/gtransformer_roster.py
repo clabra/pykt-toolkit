@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class IDKTRoster:
+class GTransformerRoster:
     def __init__(self, students, skills, model, device="cpu"):
         """
-        Initializes an iDKT Roster that mirrors pyBKT.models.Roster design.
+        Initializes a GTransformer Roster that mirrors pyBKT.models.Roster design.
         
         Args:
             students (list): List of student IDs.
@@ -41,12 +41,12 @@ class IDKTRoster:
         if not history:
             return None # No history yet
             
-        # Prepare batch for iDKT
+        # Prepare batch for GTransformer
         # History is (q1, r1), (q2, r2), ...
         q_seq = [h[0] for h in history]
         r_seq = [h[1] for h in history]
         
-        # iDKT expects [Batch, Seq]
+        # GTransformer expects [Batch, Seq]
         q_tensor = torch.tensor([q_seq]).long().to(self.device)
         r_tensor = torch.tensor([r_seq]).long().to(self.device)
         
@@ -78,7 +78,7 @@ class IDKTRoster:
             # We want to use this d_output but with DIFFERENT query embeddings.
             
             # Let's just return the whole model output for the next step?
-            # iDKT predicts P(r_{t+1}) given history 1...t and question t+1.
+            # GTransformer predicts P(r_{t+1}) given history 1...t and question t+1.
             # We can query all skills as "question t+1".
             
             # To do it efficiently:
@@ -91,7 +91,7 @@ class IDKTRoster:
             return self.state_cache[uid]
 
     def get_mastery_prob(self, skill_id, student_id):
-        """Returns the mastery prob for a skill (proxied by iDKT prediction)."""
+        """Returns the mastery prob for a skill (proxied by GTransformer prediction)."""
         uid = int(student_id)
         sid = int(skill_id)
         

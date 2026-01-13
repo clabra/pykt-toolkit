@@ -170,7 +170,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     
     checkpoint_path = os.path.join(exp_dir, "best_model.pt")
-    roster_path = os.path.join(exp_dir, "roster_idkt.csv")
+    roster_path = os.path.join(exp_dir, "roster_gtransformer.csv")
     
     cluster_placement_vs_pacing(checkpoint_path, output_dir)
     cluster_skill_profiles(roster_path, output_dir)

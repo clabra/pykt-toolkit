@@ -11,7 +11,7 @@ from .que_data_loader import KTQueDataset
 from pykt.config import que_type_models
 from .dimkt_dataloader import DIMKTDataset
 from .que_data_loader_promptkt import KTQueDataset_promptKT
-from .idkt_dataloader import IDKTDataset
+from .gtransformer_loader import GTransformerDataset
 from .pretrain_utils import get_pretrain_data
 
 
@@ -103,6 +103,14 @@ def init_test_datasets(data_config, model_name, batch_size, diff_level=None, arg
         if "test_question_file" in data_config:
             test_question_dataset = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["test_question_file"]), data_config["input_type"], {-1}, True, diff_level=diff_level)
             test_question_window_dataset = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["test_question_window_file"]), data_config["input_type"], {-1}, True, diff_level=diff_level)
+    elif model_name in ["gtransformer"]:
+        test_dataset = GTransformerDataset(os.path.join(data_config["dpath"], data_config["test_file"]), data_config["input_type"], {-1})
+        test_window_dataset = GTransformerDataset(os.path.join(data_config["dpath"], data_config["test_window_file"]), data_config["input_type"], {-1})
+        test_question_dataset = None
+        test_question_window_dataset = None
+        if "test_question_file" in data_config:
+            test_question_dataset = GTransformerDataset(os.path.join(data_config["dpath"], data_config["test_question_file"]), data_config["input_type"], {-1}, True)
+            test_question_window_dataset = GTransformerDataset(os.path.join(data_config["dpath"], data_config["test_question_window_file"]), data_config["input_type"], {-1}, True)
     else:
         test_dataset = KTDataset(os.path.join(data_config["dpath"], data_config["test_file"]), data_config["input_type"], {-1})
         test_window_dataset = KTDataset(os.path.join(data_config["dpath"], data_config["test_window_file"]), data_config["input_type"], {-1})
@@ -206,15 +214,16 @@ def init_dataset4train(dataset_name, model_name, data_config, i, batch_size, dif
     elif model_name == "dimkt":
         curvalid = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i}, diff_level=diff_level)
         curtrain = DIMKTDataset(data_config["dpath"],os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i}, diff_level=diff_level)
-    elif model_name == "idkt":
+    elif model_name in ["gtransformer"]:
         train_file = data_config["train_valid_file"]
         train_file_bkt = train_file.replace('.csv', '_bkt.csv')
-        if os.path.exists(os.path.join(data_config["dpath"], train_file_bkt)):
+        # Logic to choose augmented file if available, or stay with provided file if it already IS augmented
+        if not train_file.endswith('_bkt.csv') and os.path.exists(os.path.join(data_config["dpath"], train_file_bkt)):
             train_file = train_file_bkt
             print(f"  Using augmented training file: {train_file}")
             
-        curvalid = IDKTDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], {i})
-        curtrain = IDKTDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], all_folds - {i})
+        curvalid = GTransformerDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], {i})
+        curtrain = GTransformerDataset(os.path.join(data_config["dpath"], train_file), data_config["input_type"], all_folds - {i})
     else:
         curvalid = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], {i})
         curtrain = KTDataset(os.path.join(data_config["dpath"], data_config["train_valid_file"]), data_config["input_type"], all_folds - {i})

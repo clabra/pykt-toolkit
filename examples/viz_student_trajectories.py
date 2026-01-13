@@ -76,7 +76,7 @@ def plot_trajectories(X_bg, y_bg, student_data, output_path):
         plt.text(traj_tsne[0, 0], traj_tsne[0, 1], f"Start ({uid})", fontsize=10, fontweight='bold', color=color, zorder=6)
         plt.text(traj_tsne[-1, 0], traj_tsne[-1, 1], f"End", fontsize=10, fontweight='bold', color=color, zorder=6)
 
-    plt.title("Individualized Learning Trajectories in iDKT Latent Space", fontsize=16)
+    plt.title("Individualized Learning Trajectories in GTransformer Latent Space", fontsize=16)
     plt.xlabel("t-SNE dimension 1", fontsize=12)
     plt.ylabel("t-SNE dimension 2", fontsize=12)
     plt.grid(True, alpha=0.2)
@@ -126,7 +126,7 @@ def main():
     fold = config.get('input', {}).get('fold', 0)
     # Init Loader (Validation)
     # Pass full data_config to init_dataset4train
-    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
+    _, test_loader = init_dataset4train(dataset_name, 'gtransformer', data_config, fold, params['batch_size'])
     
     # Load Model
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')
@@ -139,7 +139,7 @@ def main():
         'l2': params['l2'], 'n_uid': n_uid
     }
     # Pass dataset specific config to init_model
-    model = init_model('idkt', model_config, data_config[dataset_name], params['emb_type'])
+    model = init_model('gtransformer', model_config, data_config[dataset_name], params['emb_type'])
     model.load_state_dict(state_dict)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -199,7 +199,7 @@ def main():
     for uid, group in grouped:
         sigs = []
         for _, row in group.iterrows():
-            sig = (int(row['skill_id']), int(row['y_true']), round(float(row['p_idkt']), 6))
+            sig = (int(row['skill_id']), int(row['y_true']), round(float(row['p_gtransformer']), 6))
             sigs.append((sig, float(row['p_bkt'])))
         bkt_indexed[uid] = sigs
 
@@ -234,8 +234,8 @@ def main():
                 for t in valid_indices:
                     skill_id = int(cshft_np[b_idx, t])
                     y_true = int(rshft_np[b_idx, t])
-                    p_idkt = round(float(preds_np[b_idx, 1+t]), 6)
-                    model_sig = (skill_id, y_true, p_idkt)
+                    p_gtransformer = round(float(preds_np[b_idx, 1+t]), 6)
+                    model_sig = (skill_id, y_true, p_gtransformer)
                     
                     # Relaxed match similar to train_probe
                     found = False

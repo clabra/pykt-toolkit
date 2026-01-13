@@ -33,7 +33,7 @@ def load_metrics_csv(run_dir):
     """
     Load metrics CSV. Supports:
     1. legacy iKT: metrics_validation.csv
-    2. modern iDKT: metrics_epoch.csv
+    2. modern GTransformer: metrics_epoch.csv
     """
     # Try multiple possible file names
     possible_files = ['metrics_validation.csv', 'metrics_epoch.csv']
@@ -50,12 +50,12 @@ def load_metrics_csv(run_dir):
     print(f"✓ Loading metrics from: {os.path.basename(csv_path)}")
     df = pd.read_csv(csv_path)
     
-    # Map iDKT names to internal plotting names if necessary
+    # Map GTransformer names to internal plotting names if necessary
     mapping = {
         'valid_auc': 'val_auc',
         'valid_acc': 'val_accuracy',
         'train_loss': 'train_total_loss',
-        # For iDKT, we don't have separate val_total_loss in the same CSV usually, 
+        # For GTransformer, we don't have separate val_total_loss in the same CSV usually, 
         # but we can use train_loss as a proxy or just skip if missing.
     }
     
@@ -63,15 +63,15 @@ def load_metrics_csv(run_dir):
         if old_col in df.columns and new_col not in df.columns:
             df[new_col] = df[old_col]
             
-    # Normalize prefixes for iDKT metrics if present
-    idkt_normalization = {
+    # Normalize prefixes for GTransformer metrics if present
+    gtransformer_normalization = {
         'train_l_sup': 'l_sup',
         'train_l_ref': 'l_ref',
         'train_l_init': 'l_init',
         'train_l_rate': 'l_rate',
         'l_initmastery': 'l_init' # Backward compatibility
     }
-    for old_col, tgt_col in idkt_normalization.items():
+    for old_col, tgt_col in gtransformer_normalization.items():
         if old_col in df.columns and tgt_col not in df.columns:
             df[tgt_col] = df[old_col]
         elif old_col in df.columns:
@@ -84,20 +84,20 @@ def load_metrics_csv(run_dir):
         'val_total_loss', 'train_l1_bce', 'train_l2_mse', 'train_penalty_loss'
     ]
     
-    # Check for comprehensive metrics format (iDKT style)
-    required_cols_idkt = [
+    # Check for comprehensive metrics format (GTransformer style)
+    required_cols_gtransformer = [
         'epoch', 'train_loss', 'valid_auc', 'valid_acc', 'l_sup', 'l_ref', 'l_init', 'l_rate'
     ]
     
     has_ikt = all(col in df.columns for col in required_cols_ikt)
-    has_idkt = all(col in df.columns for col in required_cols_idkt)
+    has_gtransformer = all(col in df.columns for col in required_cols_gtransformer)
     
     if has_ikt:
         print(f"✓ Detected comprehensive iKT metrics format")
         return df, "ikt"
-    elif has_idkt:
-        print(f"✓ Detected comprehensive iDKT metrics format")
-        return df, "idkt"
+    elif has_gtransformer:
+        print(f"✓ Detected comprehensive GTransformer metrics format")
+        return df, "gtransformer"
     else:
         # Check if we have minimal columns for basic plots
         minimal_cols = ['epoch', 'val_auc']
@@ -303,9 +303,9 @@ def plot_ikt_loss_evolution(df, output_path, config):
     print(f"✓ Saved: {output_path}")
     plt.close()
 
-def plot_idkt_loss_evolution(df, output_path, config):
+def plot_gtransformer_loss_evolution(df, output_path, config):
     """
-    Plot Theory-Guided Loss Evolution for iDKT
+    Plot Theory-Guided Loss Evolution for GTransformer
     - L_SUP: Supervised loss
     - L_REF: Prediction alignment loss
     - L_IM: Initial Mastery alignment loss
@@ -347,7 +347,7 @@ def plot_idkt_loss_evolution(df, output_path, config):
     ax4.set_title('Learning Rate Consistency (L_RT)', fontsize=12, fontweight='bold')
     ax4.grid(True, alpha=0.3)
     
-    fig.suptitle('iDKT Theory-Guided Loss Component Evolution', fontsize=14, fontweight='bold', y=0.995)
+    fig.suptitle('GTransformer Theory-Guided Loss Component Evolution', fontsize=14, fontweight='bold', y=0.995)
     
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Saved: {output_path}")
@@ -551,14 +551,14 @@ def calculate_ccc(y_true, y_pred):
 def plot_per_skill_alignment(mastery_df, output_path, config, seed=42):
     """
     Plot 4: Pedagogical Confidence Zone Heatmap
-    Treats iDKT as the 'Observer' to determine if BKT prediction is in/out of confidence.
+    Treats GTransformer as the 'Observer' to determine if BKT prediction is in/out of confidence.
     """
     if mastery_df is None:
         print("⚠️  Skipping per-skill alignment plot (no mastery states data)")
         return
     
     # Identify descriptive names
-    new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+    new_pairs = [('p_gtransformer', 'p_bkt'), ('gtransformer_im', 'bkt_im'), ('gtransformer_rate', 'bkt_rate')]
     mi_col, rasch_col = None, None
     
     for c1, c2 in new_pairs:
@@ -616,7 +616,7 @@ def plot_per_skill_alignment(mastery_df, output_path, config, seed=42):
     ax.set_xlabel('Knowledge Components (Top 50 by Density)', fontsize=12)
     ax.set_ylabel('Student ID (Top 30 by Density)', fontsize=12)
     ax.set_title(f'Scientific Concordance Heatmap: Longitudinal Validation Scope\n'
-                 f'iDKT Observer vs. BKT Baseline ({mi_col.upper()})', 
+                 f'GTransformer Observer vs. BKT Baseline ({mi_col.upper()})', 
                  fontsize=14, fontweight='bold', pad=20)
     
     # 2. Add Discrete Legend
@@ -647,7 +647,7 @@ def plot_student_intervention_analysis(mastery_df, output_root, config, prefix, 
     if mastery_df is None: return
 
     # Identify columns
-    new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+    new_pairs = [('p_gtransformer', 'p_bkt'), ('gtransformer_im', 'bkt_im'), ('gtransformer_rate', 'bkt_rate')]
     mi_col, rasch_col = None, None
     for c1, c2 in new_pairs:
         if c1 in mastery_df.columns and c2 in mastery_df.columns:
@@ -882,10 +882,10 @@ def main():
             print("4. Per-Skill Alignment Heatmap...")
             plot_per_skill_alignment(mastery_df, os.path.join(plots_dir, 'per_skill_alignment.png'), config)
             
-        elif format_type == "idkt":
-            # Plot 1: Loss Evolution (iDKT version)
-            print("1. Loss Evolution (iDKT)...")
-            plot_idkt_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
+        elif format_type == "gtransformer":
+            # Plot 1: Loss Evolution (GTransformer version)
+            print("1. Loss Evolution (GTransformer)...")
+            plot_gtransformer_loss_evolution(metrics_df, os.path.join(plots_dir, 'loss_evolution.png'), config)
             
             # Plot 2: Per-Skill Alignment Heatmaps (multiple splits)
             print("2. Per-Skill Alignment Heatmaps...")
@@ -922,7 +922,7 @@ def main():
                     plot_student_intervention_analysis(df_split, plots_dir, config, base_name, seed=args.seed)
                 
                 # Identify columns for bars
-                new_pairs = [('p_idkt', 'p_bkt'), ('idkt_im', 'bkt_im'), ('idkt_rate', 'bkt_rate')]
+                new_pairs = [('p_gtransformer', 'p_bkt'), ('gtransformer_im', 'bkt_im'), ('gtransformer_rate', 'bkt_rate')]
                 mi_col, rasch_col = None, None
                 for c1, c2 in new_pairs:
                     if c1 in df_split.columns and c2 in df_split.columns:
@@ -949,7 +949,7 @@ def main():
                         var_agg = var_agg.dropna()
                         if not var_agg.empty:
                             # Context-aware threshold: Predictions vary more than static parameters
-                            is_pred = 'p_idkt' in mi_col
+                            is_pred = 'p_gtransformer' in mi_col
                             v_thresh = 0.05 if is_pred else 0.0001
                             v_label = "Significant Discovery"
                             

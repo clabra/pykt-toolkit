@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Training script for iDKT (Interpretable Deep Knowledge Tracing) model.
+Training script for GTransformer (Grounded Transformer) model.
 
 This script follows pykt framework patterns for standard KT model training.
-Initial version: iDKT is identical to AKT baseline.
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                         ⚠️  REPRODUCIBILITY WARNING ⚠️                        ║
@@ -13,7 +12,7 @@ Initial version: iDKT is identical to AKT baseline.
 ║                                                                              ║
 ║  This script requires explicit parameters. For reproducible experiments:    ║
 ║                                                                              ║
-║      python examples/run_repro_experiment.py --model idkt --short_title ... ║
+║      python examples/run_repro_experiment.py --model gtransformer --short_title ... ║
 ║                                                                              ║
 ║  The launcher will generate explicit commands with ALL parameters.          ║
 ║                                                                              ║
@@ -48,7 +47,7 @@ os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:2'
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train iDKT model")
+    parser = argparse.ArgumentParser(description="Train GTransformer model")
     
     # Data parameters
     parser.add_argument("--dataset", type=str, required=True,
@@ -119,7 +118,7 @@ def parse_args():
                       help="Max slip rate allowed for a skill to be included")
     
     # Output
-    parser.add_argument("--save_dir", type=str, default="saved_model/idkt",
+    parser.add_argument("--save_dir", type=str, default="saved_model/gtransformer",
                       help="Directory to save model checkpoints")
     parser.add_argument("--use_wandb", type=int, required=True,
                       help="Use Weights & Biases logging (0 or 1)")
@@ -152,7 +151,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def evaluate_idkt_individualized(model, loader, device, args=None, bkt_skill_params=None):
+def evaluate_gtransformer_individualized(model, loader, device, args=None, bkt_skill_params=None):
     """
     Specialized evaluation for iDKT with student-level individualization.
     Calculates both performance metrics (AUC, Acc) and grounding losses.
@@ -259,7 +258,7 @@ def main():
     
     # Prepare parameters dict (pykt convention)
     params = {
-        'model_name': 'idkt',
+        'model_name': 'gtransformer',
         'dataset_name': args.dataset,
         'fold': args.fold,
         'seed': args.seed,
@@ -295,15 +294,15 @@ def main():
     print(f"Loading dataset: {args.dataset}, fold: {args.fold}")
     
     if args.theory_guided:
-        # Override filenames to use augmented versions
-        # NOTE: This assumes augment_with_bkt.py has been run
+        # Override filenames to use augmented versions (idempotent)
         if 'train_valid_file' in data_config[args.dataset]:
             orig = data_config[args.dataset]['train_valid_file']
-            data_config[args.dataset]['train_valid_file'] = orig.replace('.csv', '_bkt.csv')
+            if '_bkt.csv' not in orig:
+                data_config[args.dataset]['train_valid_file'] = orig.replace('.csv', '_bkt.csv')
             print(f"  Using augmented training file: {data_config[args.dataset]['train_valid_file']}")
 
     train_loader, valid_loader = init_dataset4train(
-        args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+        args.dataset, 'gtransformer', data_config, args.fold, args.batch_size)
     
     # Extract num_students from dataset (uses dense UID-to-index mapping)
     num_students = train_loader.dataset.dori.get("num_students", 0)
@@ -340,7 +339,7 @@ def main():
         'n_uid': num_students
     }
     
-    model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
+    model = init_model('gtransformer', model_config, data_config[args.dataset], args.emb_type)
     
     # Initialize theory bases from BKT parameters (Grounded Init)
     if args.theory_guided and bkt_skill_params is not None and args.grounded_init == 1:
@@ -539,7 +538,7 @@ def main():
         avg_l_student = train_l_student / train_steps
         
         # Validation
-        valid_auc, valid_acc, valid_metrics = evaluate_idkt_individualized(model, valid_loader, device, args, bkt_skill_params)
+        valid_auc, valid_acc, valid_metrics = evaluate_gtransformer_individualized(model, valid_loader, device, args, bkt_skill_params)
         print(f"Epoch {epoch}/{args.epochs}: Loss={avg_train_loss:.4f} (Raw SUP={avg_l_sup:.4f}, REF={avg_l_ref:.4f}, IM={avg_l_init:.4f}, RT={avg_l_rate:.4f}), Gap_L2={avg_l_gap:.4f}, Stu_L2={avg_l_student:.4f}, Valid AUC={valid_auc:.4f}")
         
         # Save to CSV
@@ -585,7 +584,7 @@ def main():
     # Final Evaluation (matching pykt pattern)
     print("\nRunning final evaluation on sets...")
     model_config['n_uid'] = num_students # Ensure test eval uses correct n_uid
-    test_auc, test_acc, test_metrics = evaluate_idkt_individualized(model, valid_loader, device, args, bkt_skill_params) # Using validation as proxy for now
+    test_auc, test_acc, test_metrics = evaluate_gtransformer_individualized(model, valid_loader, device, args, bkt_skill_params) # Using validation as proxy for now
     
     # Save results
     results = {
@@ -607,5 +606,5 @@ def main():
 
 
 if __name__ == "__main__":
-    from sklearn import metrics # Needed for evaluate_idkt_individualized
+    from sklearn import metrics # Needed for evaluate_gtransformer_individualized
     main()

@@ -74,7 +74,7 @@ def main():
     fold = config.get('input', {}).get('fold', 0)
     # Init Loader (Validation)
     from pykt.datasets import init_dataset4train
-    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
+    _, test_loader = init_dataset4train(dataset_name, 'gtransformer', data_config, fold, params['batch_size'])
     
     # Model Setup
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')
@@ -86,7 +86,7 @@ def main():
         'n_blocks': params['n_blocks'], 'dropout': params['dropout'], 'final_fc_dim': params['final_fc_dim'],
         'l2': params['l2'], 'n_uid': n_uid
     }
-    model = init_model('idkt', model_config, cur_config, params['emb_type'])
+    model = init_model('gtransformer', model_config, cur_config, params['emb_type'])
     model.load_state_dict(state_dict)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

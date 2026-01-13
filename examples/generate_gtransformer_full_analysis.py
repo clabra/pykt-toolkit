@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 """
-Comprehensive iDKT Analysis Pipeline
+Comprehensive GTransformer Analysis Pipeline
 Regenerates all interpretability outputs, plots, and probing visualizations.
 
-This script orchestrates the complete post-training analysis for iDKT experiments:
+This script orchestrates the complete post-training analysis for GTransformer experiments:
 1. Interpretability alignment (trajectories, rosters)
 2. Analysis plots (loss evolution, parameter distributions, mastery alignment)
 3. Probing validation (train probes, generate visualizations)
 4. Advanced visualizations (clusters, skill maps, curriculum heatmaps)
 
 Usage:
-    python examples/generate_idkt_full_analysis.py --experiment_dir experiments/YYYYMMDD_HHMMSS_idkt_...
+    python examples/generate_gtransformer_full_analysis.py --experiment_dir experiments/YYYYMMDD_HHMMSS_gtransformer_...
 """
 
 import os
@@ -24,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generate complete iDKT analysis")
+    parser = argparse.ArgumentParser(description="Generate complete GTransformer analysis")
     parser.add_argument("--experiment_dir", type=str, required=True, help="Path to experiment directory")
     parser.add_argument("--skip_interpretability", action="store_true", help="Skip interpretability alignment (if already done)")
     parser.add_argument("--skip_probing", action="store_true", help="Skip probing analysis")
@@ -74,7 +73,7 @@ def main():
     project_root = exp_dir.parent.parent
     
     print(f"\n{'='*80}")
-    print(f"iDKT COMPREHENSIVE ANALYSIS PIPELINE")
+    print(f"GTransformer COMPREHENSIVE ANALYSIS PIPELINE")
     print(f"{'='*80}")
     print(f"Experiment: {exp_dir.name}")
     print(f"Dataset: {dataset}")
@@ -85,7 +84,7 @@ def main():
     # Step 1: Interpretability Alignment
     if not args.skip_interpretability:
         interp_cmd = (
-            f"{python_path} examples/eval_idkt_interpretability.py "
+            f"{python_path} examples/eval_gtransformer_interpretability.py "
             f"--checkpoint {checkpoint} "
             f"--output_dir {exp_dir} "
             f"--dataset {dataset} "
@@ -132,8 +131,8 @@ def main():
     
     # Step 5: Advanced Visualizations
     if not args.skip_viz:
-        roster_idkt = exp_dir / "roster_idkt.csv"
-        if roster_idkt.exists():
+        roster_gtransformer = exp_dir / "roster_gtransformer.csv"
+        if roster_gtransformer.exists():
             # Student clusters
             viz_clusters_cmd = f"{python_path} examples/viz_student_clusters.py --experiment_dir {exp_dir}"
             run_step(viz_clusters_cmd, "Student Cluster Analysis")
@@ -162,7 +161,7 @@ def main():
             viz_zoom_cmd = f"{python_path} examples/viz_skill_zoom.py --experiment_dir {exp_dir} --skill_id 68"
             run_step(viz_zoom_cmd, "Skill-Level Zoom Analysis")
         else:
-            print(f"⚠️  Skipping advanced visualizations: roster_idkt.csv not found")
+            print(f"⚠️  Skipping advanced visualizations: roster_gtransformer.csv not found")
     
     print(f"\n{'='*80}")
     print(f"✅ ANALYSIS PIPELINE COMPLETE")

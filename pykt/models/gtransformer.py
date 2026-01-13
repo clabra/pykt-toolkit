@@ -1,3 +1,12 @@
+"""
+GTransformer (Grounded Transformer) Model
+This model integrates probabilistic priors (BKT) into a Transformer architecture
+via Representational Grounding for enhanced interpretability and predictive performance.
+
+Based on: AKT - Context-Aware Attentive Knowledge Tracing
+Paper: Ghosh et al., 2020 (KDD)
+"""
+
 import torch
 from torch import nn
 from torch.nn.init import xavier_uniform_
@@ -7,8 +16,6 @@ import torch.nn.functional as F
 from enum import IntEnum
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 class Dim(IntEnum):
     batch = 0
     seq = 1
@@ -16,9 +23,11 @@ class Dim(IntEnum):
 
 class GTransformer(nn.Module):
     def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff=256, 
-            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, emb_type="qid", emb_path="", pretrain_dim=768):
+            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, lambda_student=1e-5, lambda_gap=1e-5, n_uid=0, emb_type="qid", emb_path="", pretrain_dim=768):
         super().__init__()
         """
+        GTransformer Model
+        
         Input:
             d_model: dimension of attention block
             final_fc_dim: dimension of final fully connected net before prediction
@@ -36,10 +45,28 @@ class GTransformer(nn.Module):
         self.separate_qa = separate_qa
         self.emb_type = emb_type
         embed_l = d_model
+        
         if self.n_pid > 0:
-            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # 题目难度
-            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # question emb, 总结了包含当前question（concept）的problems（questions）的变化
-            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # interaction emb, 同上
+            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # Problem difficulty (u_q)
+            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # Difficulty variation across concepts (d_ct)
+            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # Interaction variation (f_ct,rt)
+        
+        self.n_uid = n_uid
+        self.lambda_student = lambda_student
+        self.lambda_gap = lambda_gap
+        if self.n_uid > 0:
+            self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
+            self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
+        
+        # Semantic Axes for Individualization (Initialized with mean=1.0 for scalar visibility)
+        self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Knowledge axis (d_c)
+        self.velocity_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Velocity axis (d_s)
+        nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+        nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+        
+        # Theoretical Bases (Grounding points from BKT)
+        self.l0_base_emb = nn.Embedding(self.n_question + 1, embed_l) # L0_skill (Prior Base)
+        self.t_base_emb = nn.Embedding(self.n_question + 1, embed_l)  # T_skill (Velocity Base)
         
         if emb_type.startswith("qid"):
             # n_question+1 ,d_model
@@ -60,12 +87,54 @@ class GTransformer(nn.Module):
             ), nn.Dropout(self.dropout),
             nn.Linear(256, 1)
         )
+        
         self.reset()
 
     def reset(self):
         for p in self.parameters():
-            if p.size(0) == self.n_pid+1 and self.n_pid > 0:
+            # Zero-center difficulty and student parameters
+            if p.size(0) in {self.n_pid+1, self.n_uid+1} and p.shape[-1] == 1:
                 torch.nn.init.constant_(p, 0.)
+
+    def load_theory_params(self, bkt_skill_params):
+        """
+        Initialize l0_base_emb and t_base_emb with pre-calculated BKT parameters.
+        Using Textured Grounding: Embeddings are shifted logits with feature variance
+        to survive LayerNorm blocks.
+        """
+        if bkt_skill_params is None:
+            return
+        
+        # Extract params mapping
+        params_dict = bkt_skill_params.get('params', {})
+        global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
+        
+        def to_logit(p, eps=1e-6):
+            p = np.clip(p, eps, 1.0 - eps)
+            return np.log(p / (1.0 - p))
+
+        with torch.no_grad():
+            for q_idx in range(self.n_question + 1):
+                s_params = params_dict.get(q_idx, global_params)
+                l0_p = s_params.get('prior', global_params['prior'])
+                t_p = s_params.get('learns', global_params['learns'])
+                
+                # Textured Grounding: 
+                # Instead of a constant vector, we use a small normal distribution 
+                # centered at the logit. This ensures non-zero variance per-student
+                # so LayerNorm doesn't zero out the features.
+                l0_logit = to_logit(l0_p)
+                t_logit = to_logit(t_p)
+                
+                # N(logit, 0.05)
+                self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
+                self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
+            
+            # Initialize axes with mean=1.0 to ensure student parameters are visible through mean() projection
+            nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+            nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+                
+        print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)) and Relational Axes initialized.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -77,47 +146,99 @@ class GTransformer(nn.Module):
             qa_embed_data = self.qa_embed(target)+q_embed_data
         return q_embed_data, qa_embed_data
 
-    def forward(self, q_data, target, pid_data=None, qtest=False):
+    def forward(self, q_data, target, pid_data=None, uid_data=None, qtest=False):
         emb_type = self.emb_type
         # Batch First
         if emb_type.startswith("qid"):
             q_embed_data, qa_embed_data = self.base_emb(q_data, target)
 
         pid_embed_data = None
+        c_reg_loss = 0.
+        
+        # 1. Rasch Difficulty Shift (u_q * d_ct)
         if self.n_pid > 0: # have problem id
-            q_embed_diff_data = self.q_embed_diff(q_data)  # d_ct 总结了包含当前question（concept）的problems（questions）的变化
-            pid_embed_data = self.difficult_param(pid_data)  # uq 当前problem的难度
-            q_embed_data = q_embed_data + pid_embed_data * \
-                q_embed_diff_data  # uq *d_ct + c_ct # question encoder
-
-            qa_embed_diff_data = self.qa_embed_diff(
-                target)  # f_(ct,rt) or #h_rt (qt, rt)差异向量
+            q_embed_diff_data = self.q_embed_diff(q_data)  # d_ct
+            pid_embed_data = self.difficult_param(pid_data)  # u_q
+            
+            # Question and Interaction with Rasch base
+            q_embed_data = q_embed_data + pid_embed_data * q_embed_diff_data
+            
+            qa_embed_diff_data = self.qa_embed_diff(target)  # f_(ct,rt)
             if self.separate_qa:
-                qa_embed_data = qa_embed_data + pid_embed_data * \
-                    qa_embed_diff_data  # uq* f_(ct,rt) + e_(ct,rt)
+                qa_embed_data = qa_embed_data + pid_embed_data * qa_embed_diff_data
             else:
-                qa_embed_data = qa_embed_data + pid_embed_data * \
-                    (qa_embed_diff_data+q_embed_diff_data)  # + uq *(h_rt+d_ct) # （q-response emb diff + question emb diff）
-            c_reg_loss = (pid_embed_data ** 2.).sum() * self.l2 # rasch部分loss
+                qa_embed_data = qa_embed_data + pid_embed_data * (qa_embed_diff_data + q_embed_diff_data)
+            
+            rasch_reg = (pid_embed_data ** 2.).sum()
+            c_reg_loss = rasch_reg * self.l2
         else:
-            c_reg_loss = 0.
+            rasch_reg = torch.tensor(0., device=q_data.device)
+            
+        # 2. Individualization Grounding (Archetype 1)
+        if self.n_uid > 0 and uid_data is not None:
+            # Student-specific scalar embeddings
+            s_param = self.student_param(uid_data) # [BS, 1]
+            sg_param = self.student_gap_param(uid_data) # [BS, 1]
+            
+            # Expansion for fusion
+            vs = s_param.unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            kc = sg_param.unsqueeze(1).expand(-1, q_data.shape[1], -1) # [BS, seq, 1]
+            
+            # Skill-specific axes and bases
+            dc = self.knowledge_axis_emb(q_data) # [BS, seq, d]
+            ds = self.velocity_axis_emb(q_data) # [BS, seq, d]
+            l0_skill = self.l0_base_emb(q_data)  # [BS, seq, d]
+            t_skill = self.t_base_emb(q_data)   # [BS, seq, d]
+            
+            # Grounded Individual Embeddings
+            lc = l0_skill + kc * dc # Individualized Initial Knowledge
+            ts = t_skill + vs * ds # Individualized Learning Velocity
+            
+            # Relational Differential Fusion
+            q_embed_data = q_embed_data - lc # x' = x - l_c (Residual Difficulty)
+            qa_embed_data = qa_embed_data + ts # y' = y + t_s (Personalized Momentum)
+            
+            # Additional Regularization - Calculate on raw embeddings to avoid seq_len multiplier
+            gap_reg = (sg_param ** 2.).sum()
+            student_reg = (s_param ** 2.).sum()
+            s_reg_loss = gap_reg * self.lambda_gap + student_reg * self.lambda_student
+            c_reg_loss = c_reg_loss + s_reg_loss
+        else:
+            gap_reg = torch.tensor(0., device=q_data.device)
+            student_reg = torch.tensor(0., device=q_data.device)
 
-        # BS.seqlen,d_model
-        # Pass to the decoder
-        # output shape BS,seqlen,d_model or d_model//2
+        reg_losses = {
+            "reg_rasch": rasch_reg,
+            "reg_gap": gap_reg,
+            "reg_student": student_reg
+        }
+
+        # 3. Transformer Core
         d_output = self.model(q_embed_data, qa_embed_data, pid_embed_data)
 
+        # 4. Prediction
         concat_q = torch.cat([d_output, q_embed_data], dim=-1)
         output = self.out(concat_q).squeeze(-1)
+        
         m = nn.Sigmoid()
         preds = m(output)
-        if not qtest:
-            return preds, c_reg_loss
+        
+        if 'lc' in locals() and 'ts' in locals():
+            # Use the individualized embeddings directly
+            initmastery = m(lc.mean(dim=-1))
+            rate = m(ts.mean(dim=-1))
         else:
-            return preds, c_reg_loss, concat_q
+            # Fallback for no student data (use population defaults)
+            initmastery = m(self.l0_base_emb(q_data).mean(dim=-1))
+            rate = m(self.t_base_emb(q_data).mean(dim=-1))
+        
+        if not qtest:
+            return preds, initmastery, rate, c_reg_loss, reg_losses
+        else:
+            return preds, initmastery, rate, c_reg_loss, concat_q, reg_losses
 
 
-class Architecture(nn.ModuleList):
+class Architecture(nn.Module):
     def __init__(self, n_question,  n_blocks, d_model, d_feature,
                  d_ff, n_heads, dropout, kq_same, model_type, emb_type):
         super().__init__()
@@ -132,12 +253,12 @@ class Architecture(nn.ModuleList):
 
         self.blocks_1 = nn.ModuleList([
             TransformerLayer(d_model=d_model, d_feature=d_model // n_heads,
-                             d_ff=d_ff, dropout=dropout, n_heads=n_heads, kq_same=kq_same, emb_type=emb_type)
+                                d_ff=d_ff, dropout=dropout, n_heads=n_heads, kq_same=kq_same, emb_type=emb_type)
             for _ in range(n_blocks)
         ])
         self.blocks_2 = nn.ModuleList([
             TransformerLayer(d_model=d_model, d_feature=d_model // n_heads,
-                             d_ff=d_ff, dropout=dropout, n_heads=n_heads, kq_same=kq_same, emb_type=emb_type)
+                                d_ff=d_ff, dropout=dropout, n_heads=n_heads, kq_same=kq_same, emb_type=emb_type)
             for _ in range(n_blocks*2)
         ])
 
@@ -153,18 +274,16 @@ class Architecture(nn.ModuleList):
         x = q_pos_embed
 
         # encoder
-        for block in self.blocks_1:  # encode qas, 对0～t-1时刻前的qa信息进行编码
-            y = block(mask=1, query=y, key=y, values=y, pdiff=pid_embed_data) # yt^
+        for block in self.blocks_1:  # encode qas
+            y = block(mask=1, query=y, key=y, values=y, pdiff=pid_embed_data) 
         flag_first = True
         for block in self.blocks_2:
             if flag_first:  # peek current question
                 x = block(mask=1, query=x, key=x,
-                          values=x, apply_pos=False, pdiff=pid_embed_data) # False: 没有FFN, 第一层只有self attention, 对应于xt^
+                          values=x, apply_pos=False, pdiff=pid_embed_data) 
                 flag_first = False
             else:  # dont peek current response
-                x = block(mask=0, query=x, key=x, values=y, apply_pos=True, pdiff=pid_embed_data) # True: +FFN+残差+laynorm 非第一层与0~t-1的的q的attention, 对应图中Knowledge Retriever
-                # mask=0，不能看到当前的response, 在Knowledge Retrever的value全为0，因此，实现了第一题只有question信息，无qa信息的目的
-                # print(x[0,0,:])
+                x = block(mask=0, query=x, key=x, values=y, apply_pos=True, pdiff=pid_embed_data) 
                 flag_first = True
         return x
 
@@ -193,39 +312,26 @@ class TransformerLayer(nn.Module):
         self.dropout2 = nn.Dropout(dropout)
 
     def forward(self, mask, query, key, values, apply_pos=True, pdiff=None):
-        """
-        Input:
-            block : object of type BasicBlock(nn.Module). It contains masked_attn_head objects which is of type MultiHeadAttention(nn.Module).
-            mask : 0 means, it can peek only past values. 1 means, block can peek only current and pas values
-            query : Query. In transformer paper it is the input for both encoder and decoder
-            key : Keys. In transformer paper it is the input for both encoder and decoder
-            Values. In transformer paper it is the input for encoder and  encoded output for decoder (in masked attention part)
-
-        Output:
-            query: Input gets changed over the layer and returned.
-
-        """
-
         seqlen, batch_size = query.size(1), query.size(0)
         nopeek_mask = np.triu(
             np.ones((1, 1, seqlen, seqlen)), k=mask).astype('uint8')
-        src_mask = (torch.from_numpy(nopeek_mask) == 0).to(device)
+        src_mask = (torch.from_numpy(nopeek_mask) == 0).to(query.device)
         if mask == 0:  # If 0, zero-padding is needed.
             # Calls block.masked_attn_head.forward() method
             query2 = self.masked_attn_head(
-                query, key, values, mask=src_mask, zero_pad=True, pdiff=pdiff) # 只能看到之前的信息，当前的信息也看不到，此时会把第一行score全置0，表示第一道题看不到历史的interaction信息，第一题attn之后，对应value全0
+                query, key, values, mask=src_mask, zero_pad=True, pdiff=pdiff) 
         else:
             # Calls block.masked_attn_head.forward() method
             query2 = self.masked_attn_head(
                 query, key, values, mask=src_mask, zero_pad=False, pdiff=pdiff)
 
-        query = query + self.dropout1((query2)) # 残差1
-        query = self.layer_norm1(query) # layer norm
+        query = query + self.dropout1((query2)) 
+        query = self.layer_norm1(query) 
         if apply_pos:
-            query2 = self.linear2(self.dropout( # FFN
+            query2 = self.linear2(self.dropout( 
                 self.activation(self.linear1(query))))
-            query = query + self.dropout2((query2)) # 残差
-            query = self.layer_norm2(query) # lay norm
+            query = query + self.dropout2((query2)) 
+            query = self.layer_norm2(query) 
         return query
 
 
@@ -238,14 +344,8 @@ class MultiHeadAttention(nn.Module):
         self.d_model = d_model
         self.emb_type = emb_type
         if emb_type.endswith("avgpool"):
-            # pooling
-            #self.pool =  nn.AvgPool2d(pool_size, stride=1, padding=pool_size//2, count_include_pad=False, )
             pool_size = 3
             self.pooling =  nn.AvgPool1d(pool_size, stride=1, padding=pool_size//2, count_include_pad=False, )
-            self.out_proj = nn.Linear(d_model, d_model, bias=bias)
-        elif emb_type.endswith("linear"):
-            # linear
-            self.linear = nn.Linear(d_model, d_model, bias=bias)
             self.out_proj = nn.Linear(d_model, d_model, bias=bias)
         elif emb_type.startswith("qid"):
             self.d_k = d_feature
@@ -259,8 +359,7 @@ class MultiHeadAttention(nn.Module):
             self.dropout = nn.Dropout(dropout)
             self.proj_bias = bias
             self.out_proj = nn.Linear(d_model, d_model, bias=bias)
-            self.gammas = nn.Parameter(torch.zeros(n_heads, 1, 1))
-            torch.nn.init.xavier_uniform_(self.gammas)
+            self.gammas = nn.Parameter(torch.zeros(n_heads, 1, 1)) 
             self._reset_parameters()
 
 
@@ -275,26 +374,18 @@ class MultiHeadAttention(nn.Module):
             constant_(self.v_linear.bias, 0.)
             if self.kq_same is False:
                 constant_(self.q_linear.bias, 0.)
-            # constant_(self.attnlinear.bias, 0.)
             constant_(self.out_proj.bias, 0.)
 
     def forward(self, q, k, v, mask, zero_pad, pdiff=None):
-
         bs = q.size(0)
 
         if self.emb_type.endswith("avgpool"):
-            # v = v.transpose(1,2)
             scores = self.pooling(v)
             concat = self.pad_zero(scores, bs, scores.shape[2], zero_pad)
-            # concat = concat.transpose(1,2)#.contiguous().view(bs, -1, self.d_model)
         elif self.emb_type.endswith("linear"):
-            # v = v.transpose(1,2)
             scores = self.linear(v)
             concat = self.pad_zero(scores, bs, scores.shape[2], zero_pad)
-            # concat = concat.transpose(1,2)
         elif self.emb_type.startswith("qid"):
-            # perform linear operation and split into h heads
-
             k = self.k_linear(k).view(bs, -1, self.h, self.d_k)
             if self.kq_same is False:
                 q = self.q_linear(q).view(bs, -1, self.h, self.d_k)
@@ -302,19 +393,15 @@ class MultiHeadAttention(nn.Module):
                 q = self.k_linear(q).view(bs, -1, self.h, self.d_k)
             v = self.v_linear(v).view(bs, -1, self.h, self.d_k)
 
-            # transpose to get dimensions bs * h * sl * d_model
-
             k = k.transpose(1, 2)
             q = q.transpose(1, 2)
             v = v.transpose(1, 2)
-            # calculate attention using function we will define next
             gammas = self.gammas
             if self.emb_type.find("pdiff") == -1:
                 pdiff = None
             scores = attention(q, k, v, self.d_k,
                             mask, self.dropout, zero_pad, gammas, pdiff)
 
-            # concatenate heads and put through final linear layer
             concat = scores.transpose(1, 2).contiguous()\
                 .view(bs, -1, self.d_model)
 
@@ -324,90 +411,49 @@ class MultiHeadAttention(nn.Module):
 
     def pad_zero(self, scores, bs, dim, zero_pad):
         if zero_pad:
-            # # need: torch.Size([64, 1, 200]), scores: torch.Size([64, 200, 200]), v: torch.Size([64, 200, 32])
-            pad_zero = torch.zeros(bs, 1, dim).to(device)
-            scores = torch.cat([pad_zero, scores[:, 0:-1, :]], dim=1) # 所有v后置一位
+            pad_zero = torch.zeros(bs, 1, dim).to(scores.device)
+            scores = torch.cat([pad_zero, scores[:, 0:-1, :]], dim=1) 
         return scores
 
 
 def attention(q, k, v, d_k, mask, dropout, zero_pad, gamma=None, pdiff=None):
-    """
-    This is called by Multi-head atention object to find the values.
-    """
-    # d_k: 每一个头的dim
+    # BS, 8, seqlen, seqlen
     scores = torch.matmul(q, k.transpose(-2, -1)) / \
-        math.sqrt(d_k)  # BS, 8, seqlen, seqlen
+        math.sqrt(d_k)  
     bs, head, seqlen = scores.size(0), scores.size(1), scores.size(2)
 
-    x1 = torch.arange(seqlen).expand(seqlen, -1).to(device)
+    x1 = torch.arange(seqlen).expand(seqlen, -1).to(q.device)
     x2 = x1.transpose(0, 1).contiguous()
 
     with torch.no_grad():
         scores_ = scores.masked_fill(mask == 0, -1e32)
-        scores_ = F.softmax(scores_, dim=-1)  # BS,8,seqlen,seqlen
-        scores_ = scores_ * mask.float().to(device) # 结果和上一步一样
-        distcum_scores = torch.cumsum(scores_, dim=-1)  # bs, 8, sl, sl
+        scores_ = F.softmax(scores_, dim=-1)  
+        scores_ = scores_ * mask.float().to(q.device) 
+        distcum_scores = torch.cumsum(scores_, dim=-1)  
         disttotal_scores = torch.sum(
-            scores_, dim=-1, keepdim=True)  # bs, 8, sl, 1 全1
-        # print(f"distotal_scores: {disttotal_scores}")
+            scores_, dim=-1, keepdim=True)  
         position_effect = torch.abs(
-            x1-x2)[None, None, :, :].type(torch.FloatTensor).to(device)  # 1, 1, seqlen, seqlen 位置差值
-        # bs, 8, sl, sl positive distance
+            x1-x2)[None, None, :, :].type(torch.FloatTensor).to(q.device)  
         dist_scores = torch.clamp(
-            (disttotal_scores-distcum_scores)*position_effect, min=0.) # score <0 时，设置为0
+            (disttotal_scores-distcum_scores)*position_effect, min=0.) 
         dist_scores = dist_scores.sqrt().detach()
     m = nn.Softplus()
-    gamma = -1. * m(gamma).unsqueeze(0)  # 1,8,1,1 一个头一个gamma参数， 对应论文里的theta
-    # Now after do exp(gamma*distance) and then clamp to 1e-5 to 1e5
+    gamma = -1. * m(gamma).unsqueeze(0)  
     if pdiff == None:
         total_effect = torch.clamp(torch.clamp(
-            (dist_scores*gamma).exp(), min=1e-5), max=1e5) # 对应论文公式1中的新增部分
+            (dist_scores*gamma).exp(), min=1e-5), max=1e5) 
     else:
         diff = pdiff.unsqueeze(1).expand(pdiff.shape[0], dist_scores.shape[1], pdiff.shape[1], pdiff.shape[2])
         diff = diff.sigmoid().exp()
         total_effect = torch.clamp(torch.clamp(
-            (dist_scores*gamma*diff).exp(), min=1e-5), max=1e5) # 对应论文公式1中的新增部分
+            (dist_scores*gamma*diff).exp(), min=1e-5), max=1e5) 
     scores = scores * total_effect
 
     scores.masked_fill_(mask == 0, -1e32)
-    scores = F.softmax(scores, dim=-1)  # BS,8,seqlen,seqlen
-    # print(f"before zero pad scores: {scores.shape}")
-    # print(zero_pad)
+    scores = F.softmax(scores, dim=-1)  
     if zero_pad:
-        pad_zero = torch.zeros(bs, head, 1, seqlen).to(device)
-        scores = torch.cat([pad_zero, scores[:, :, 1:, :]], dim=2) # 第一行score置0
-    # print(f"after zero pad scores: {scores}")
+        pad_zero = torch.zeros(bs, head, 1, seqlen).to(q.device)
+        scores = torch.cat([pad_zero, scores[:, :, 1:, :]], dim=2) 
     scores = dropout(scores)
     output = torch.matmul(scores, v)
-    # import sys
-    # sys.exit()
     return output
-
-
-class LearnablePositionalEmbedding(nn.Module):
-    def __init__(self, d_model, max_len=512):
-        super().__init__()
-        # Compute the positional encodings once in log space.
-        pe = 0.1 * torch.randn(max_len, d_model)
-        pe = pe.unsqueeze(0)
-        self.weight = nn.Parameter(pe, requires_grad=True)
-
-    def forward(self, x):
-        return self.weight[:, :x.size(Dim.seq), :]  # ( 1,seq,  Feature)
-
-
-class CosinePositionalEmbedding(nn.Module):
-    def __init__(self, d_model, max_len=512):
-        super().__init__()
-        # Compute the positional encodings once in log space.
-        pe = 0.1 * torch.randn(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() *
-                             -(math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.weight = nn.Parameter(pe, requires_grad=False)
-
-    def forward(self, x):
-        return self.weight[:, :x.size(Dim.seq), :]  # ( 1,seq,  Feature)

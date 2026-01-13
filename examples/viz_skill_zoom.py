@@ -76,7 +76,7 @@ def main():
     fold = config.get('input', {}).get('fold', 0)
     # Init Loader (Validation)
     from pykt.datasets import init_dataset4train
-    _, test_loader = init_dataset4train(dataset_name, 'idkt', data_config, fold, params['batch_size'])
+    _, test_loader = init_dataset4train(dataset_name, 'gtransformer', data_config, fold, params['batch_size'])
     
     # Model Setup
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')
@@ -89,7 +89,7 @@ def main():
         'l2': params['l2'], 'n_uid': n_uid
     }
     
-    model = init_model('idkt', model_config, cur_config, params['emb_type'])
+    model = init_model('gtransformer', model_config, cur_config, params['emb_type'])
     model.load_state_dict(state_dict)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -146,7 +146,7 @@ def main():
     plt.figure(figsize=(8, 8))
     sns.regplot(x=y_s, y=y_pred, scatter_kws={'alpha':0.6, 's':40}, line_kws={'color':'red', 'ls':'--'})
     plt.xlabel("Ground Truth BKT Mastery", fontsize=12)
-    plt.ylabel("Probed iDKT Prediction", fontsize=12)
+    plt.ylabel("Probed GTransformer Prediction", fontsize=12)
     plt.title(f"Diagnostic Probe Alignment: Skill {SKILL_ID}", fontsize=14)
     plt.grid(True, alpha=0.3)
     plt.xlim(0, 1)

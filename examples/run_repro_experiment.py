@@ -37,8 +37,7 @@ MODEL_SCRIPTS = {
     "saint": "examples/wandb_saint_train.py",
     "saint++": "examples/wandb_saint_plus_plus_train.py",
     "akt": "examples/wandb_akt_train.py",
-    "gtransformer": "examples/wandb_gtransformer_train.py",
-    "idkt": "examples/train_idkt.py",
+    "gtransformer": "examples/train_gtransformer.py",
     "lpkt": "examples/wandb_lpkt_train.py",
     "skvmn": "examples/wandb_skvmn_train.py",
     "deep_irt": "examples/wandb_deep_irt_train.py"
@@ -258,11 +257,11 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             "skvmn": "dim_s", "deep_irt": "dim_s", "akt": "d_model", "gtransformer": "d_model"
         },
         "n_heads": {
-            "akt": "num_attn_heads", "gtransformer": "num_attn_heads", "sakt": "num_attn_heads", 
+            "akt": "num_attn_heads", "sakt": "num_attn_heads", 
             "saint": "num_attn_heads", "saint++": "num_attn_heads"
         },
         "n_blocks": {
-            "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks", "gtransformer": "n_blocks"
+            "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks"
         },
         "d_ff": {
             "atkt": "attention_dim"
@@ -278,11 +277,11 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         }
     }
 
-    model = params.get('model', 'idkt')
+    model = params.get('model', 'gtransformer')
     is_standard_pykt = "wandb_" in train_script
 
     # Determine which parameters to pass based on training script
-    if 'train_idkt.py' in train_script:
+    if 'train_gtransformer.py' in train_script:
         allowed_params = {
             'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
             'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
@@ -292,7 +291,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             'save_dir', '_doc_grounding', '_doc_regularization',
             'answer_dim', 'beta', 'epsilon', 'graph_type', 'lambda_r', 'lambda_w1', 'lambda_w2', 
             'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
-            'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size'
+            'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size', 'fusion_type'
         }
     elif is_standard_pykt:
         # Minimal set for all standard pykt scripts
@@ -387,7 +386,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     # Standard PyKT scripts (wandb_*.py) must be run from examples/ 
     # to find '../configs/'. We wrap with surrogate if needed.
     if "wandb_" in train_script:
-        if model != "idkt":
+        if model != "gtransformer":
             surrogate = os.path.join(PROJECT_ROOT, "tmp/pykt_train_surrogate.py")
             # Use env var for target script to avoid CLI parsing issues
             command = f"PYKT_TARGET_SCRIPT={abs_train_script} {python_path} {surrogate} {' '.join(cmd_parts[2:])}"
@@ -470,14 +469,14 @@ def build_validation_plots_command(experiment_folder):
 def build_explicit_eval_command(eval_script, experiment_folder, params):
     """
     Build explicit evaluation command.
-    - iDKT: uses examples/eval_idkt.py with full parameters
+    - GTransformer: uses examples/eval_gtransformer.py with full parameters
     - Baselines: uses examples/wandb_predict.py with simplified interface
     """
     python_path = sys.executable
     model = params['model']
     
-    # 1. iDKT (and related custom models) Evaluation
-    if model in ['idkt', 'ikt2', 'ikt3']:
+    # 1. GTransformer (and related custom models) Evaluation
+    if model in ['gtransformer', 'ikt2', 'ikt3']:
         cmd_parts = [python_path, eval_script]
         
         # Checkpoint and Output
@@ -490,7 +489,7 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         
         # Model-Specific Parameters
         model_params = []
-        if model == 'idkt':
+        if model == 'gtransformer':
             model_params = ['d_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'final_fc_dim', 'l2', 
                            'emb_type', 'seq_len', 'lambda_student', 'lambda_gap', 'lambda_ref', 
                            'lambda_initmastery', 'lambda_rate', 'grounded_init', 'theory_guided']
@@ -524,9 +523,11 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         cmd_parts.append(f"--bz {params['batch_size']}")
         cmd_parts.append(f"--use_wandb 0")
         
-        # Use late_fusion if requested, otherwise default to none for consistency
-        fusion_type = params.get('fusion_type', 'none')
-        cmd_parts.append(f"--fusion_type {fusion_type}")
+        # Use fusion_type from params if present
+        # fusion_type = params.get('fusion_type', 'none')
+        # cmd_parts.append(f"--fusion_type {fusion_type}")
+        if 'fusion_type' in params:
+            cmd_parts.append(f"--fusion_type {params['fusion_type']}")
         
         return " ".join(cmd_parts)
 
@@ -732,6 +733,8 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         train_script = MODEL_SCRIPTS[model_name]
         
     eval_script = default_eval_script
+    if model_name == "gtransformer":
+        eval_script = "examples/eval_gtransformer.py"
 
     # Create experiment folder
     experiment_folder = create_experiment_folder(
@@ -854,9 +857,11 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
             print(f"  ⚠️ Could not read metrics: {e}")
     
     # Interpretability & Plots (Only for iDKT or if requested)
-    if model_name == 'idkt' and not args.dry_run:
-        print(f"  Running comprehensive iDKT analysis...")
-        analysis_cmd = f"{python_path} examples/generate_idkt_full_analysis.py --experiment_dir {experiment_dir_abs}"
+    if model_name == 'gtransformer' and not args.dry_run:
+        print("\n" + "=" * 80)
+        print("LAUNCHING GTRANSFORMER ANALYSIS")
+        print("=" * 80 + "\n")
+        analysis_cmd = f"{python_path} examples/generate_gtransformer_full_analysis.py --experiment_dir {experiment_dir_abs}"
         analysis_result = subprocess.run(analysis_cmd, shell=True)
         if analysis_result.returncode != 0:
             print(f"  ⚠️ Analysis pipeline encountered errors (non-fatal)")

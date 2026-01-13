@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-Evaluation script for iDKT interpretability (alignment with BKT reference model).
+Evaluation script for GTransformer interpretability (alignment with BKT reference model).
 
 Note that data/[DATASET]/keyid2idx.json is a bidirectional mapping dictionary that converts between original dataset IDs and zero-based 
 sequential indices used internally by the pykt framework
@@ -19,11 +18,11 @@ import pickle
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from pyBKT.models import Model, Roster
-from pykt.models.idkt_roster import IDKTRoster
+from pykt.models.gtransformer_roster import GTransformerRoster
 
 from pykt.models import init_model
 from pykt.datasets import init_dataset4train
-from pykt.datasets.idkt_dataloader import IDKTDataset
+from pykt.datasets.gtransformer_loader import GTransformerDataset
 from torch.utils.data import DataLoader
 from pykt.utils import set_seed
 
@@ -120,14 +119,16 @@ def main():
         if args.theory_guided:
             test_file = test_file.replace('.csv', '_bkt.csv')
         print(f"Loading test split: {test_file}")
-        valid_dataset = IDKTDataset(test_file, data_config[args.dataset]['input_type'], {-1})
+        valid_dataset = GTransformerDataset(test_file, data_config[args.dataset]['input_type'], {-1})
         valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
         roster_data_file = test_file
     else:
-        augmented_train_file = orig_file.replace('.csv', '_bkt.csv')
+        augmented_train_file = orig_file
+        if '_bkt.csv' not in augmented_train_file:
+            augmented_train_file = orig_file.replace('.csv', '_bkt.csv')
         data_config[args.dataset]['train_valid_file'] = augmented_train_file
         print(f"Loading validation split (fold {args.fold})")
-        _, valid_loader = init_dataset4train(args.dataset, 'idkt', data_config, args.fold, args.batch_size)
+        _, valid_loader = init_dataset4train(args.dataset, 'gtransformer', data_config, args.fold, args.batch_size)
         roster_data_file = os.path.join(dpath, augmented_train_file)
     
     # Build Index -> Raw UID Mapping
@@ -152,20 +153,20 @@ def main():
         'n_blocks': args.n_blocks, 'dropout': args.dropout, 'final_fc_dim': args.final_fc_dim, 
         'l2': args.l2, 'n_uid': n_uid
     }
-    model = init_model('idkt', model_config, data_config[args.dataset], args.emb_type)
+    model = init_model('gtransformer', model_config, data_config[args.dataset], args.emb_type)
     model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
 
-    all_idkt_p = []
+    all_gtransformer_p = []
     all_bkt_p = []
-    all_idkt_initmastery = []
+    all_gtransformer_initmastery = []
     all_bkt_initmastery = []
-    all_idkt_rate = []
+    all_gtransformer_rate = []
     all_bkt_rate = []
     
     # H2: Functional Substitutability
-    all_idkt_induced_mastery = []
+    all_gtransformer_induced_mastery = []
     all_bkt_reference_mastery = []
     induced_mastery_states = {} # (uid, skill_id) -> current_p_l
     
@@ -176,7 +177,7 @@ def main():
     
     # Roster-style records (Wide table format)
     roster_bkt_records = []
-    roster_idkt_records = []
+    roster_gtransformer_records = []
     
     # Limit students to capture representative sample for trajectories
     max_export_students = args.max_correlation_students
@@ -221,7 +222,7 @@ def main():
     
     print(f"Pre-initializing rosters for {len(export_uids)} students...")
     bkt_roster = Roster(export_uids, [str(s) for s in all_skills], model=bkt_model)
-    idkt_roster = IDKTRoster(export_uids, all_skills, model, device=device)
+    gtransformer_roster = GTransformerRoster(export_uids, all_skills, model, device=device)
 
     print("Running inference for interpretability alignment...")
     torch.cuda.empty_cache()
@@ -241,11 +242,11 @@ def main():
             cr_full = torch.cat((r[:,0:1], rshft), dim=1)
             cq_full = torch.cat((q[:,0:1], qshft), dim=1)
             # Forward with uid_data
-            y, idkt_im_batch, idkt_r_batch, _, concat_q, reg_losses_dict = model(cc_full.long(), cr_full.long(), cq_full.long(), uid_data=uids.to(device), qtest=True)
+            y, gtransformer_im_batch, gtransformer_r_batch, _, concat_q, reg_losses_dict = model(cc_full.long(), cr_full.long(), cq_full.long(), uid_data=uids.to(device), qtest=True)
             
             # Collect aggregated metrics
             # y[:, 1:] corresponds to shifted concepts cshft
-            all_idkt_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())
+            all_gtransformer_p.extend(torch.masked_select(y[:, 1:], sm).cpu().numpy())
             all_bkt_p.extend(torch.masked_select(bkt_p_batch, sm).cpu().numpy())
             
             # Prepare full-sequence references (including index 0)
@@ -259,12 +260,12 @@ def main():
                         bkt_im_static_full[b, s] = params['prior']
                         ref_rate_full[b, s] = params['learns']
 
-            # Use shifted idkt results for masked select
-            all_idkt_initmastery.extend(torch.masked_select(idkt_im_batch[:, 1:], sm).cpu().numpy())
+            # Use shifted gtransformer results for masked select
+            all_gtransformer_initmastery.extend(torch.masked_select(gtransformer_im_batch[:, 1:], sm).cpu().numpy())
             # For correlation metrics, keep only shifted indices [1:] to maintain standard benchmark
             all_bkt_initmastery.extend(torch.masked_select(bkt_im_static_full[:, 1:], sm).cpu().numpy())
             
-            all_idkt_rate.extend(torch.masked_select(idkt_r_batch[:, 1:], sm).cpu().numpy())
+            all_gtransformer_rate.extend(torch.masked_select(gtransformer_r_batch[:, 1:], sm).cpu().numpy())
             all_bkt_rate.extend(torch.masked_select(ref_rate_full[:, 1:], sm).cpu().numpy())
 
             # H2: Calculate Induced Mastery Trajectories
@@ -277,8 +278,8 @@ def main():
                 for idx in indices:
                     skill_id = int(cshft[b, idx].item())
                     y_true = int(rshft[b, idx].item())
-                    idkt_l0 = idkt_im_batch[b, 1+idx].item()
-                    idkt_t = idkt_r_batch[b, 1+idx].item()
+                    gtransformer_l0 = gtransformer_im_batch[b, 1+idx].item()
+                    gtransformer_t = gtransformer_r_batch[b, 1+idx].item()
 
                     # Update rosters if student is tracked
                     if int(raw_uid) in export_uids_set:
@@ -290,14 +291,14 @@ def main():
                         state_key = (raw_uid, skill_id)
                         if state_key not in induced_mastery_states:
                             # Initialize with iDKT's projected initial mastery
-                            induced_mastery_states[state_key] = idkt_l0
+                            induced_mastery_states[state_key] = gtransformer_l0
                         
                         current_m = induced_mastery_states[state_key]
-                        all_idkt_induced_mastery.append(current_m)
+                        all_gtransformer_induced_mastery.append(current_m)
                         all_bkt_reference_mastery.append(bkt_im_batch[b, idx].item())
                         
                         # Update for next step using BKT formula but iDKT learning rate
-                        induced_mastery_states[state_key] = bkt_step(current_m, y_true, idkt_t, s_c, g_c)
+                        induced_mastery_states[state_key] = bkt_step(current_m, y_true, gtransformer_t, s_c, g_c)
 
             # Export interaction records and Rosters
             for b in range(uids.shape[0]):
@@ -317,7 +318,7 @@ def main():
                     param_records.append({
                         'student_id': raw_uid,
                         'skill_id': cc_full[b, idx].item(),
-                        'idkt_im': idkt_im_batch[b, idx].item(),
+                        'gtransformer_im': gtransformer_im_batch[b, idx].item(),
                         'bkt_im': bkt_im_static_full[b, idx].item(),
                     })
                     # Trajectory Alignment
@@ -325,8 +326,8 @@ def main():
                         'student_id': raw_uid,
                         'skill_id': cc_full[b, idx].item(),
                         'y_true': int(cr_full[b, idx].item()),
-                        'p_idkt': y[b, idx].item(),
-                        'y_idkt': 1 if y[b, idx].item() > 0.5 else 0,
+                        'p_gtransformer': y[b, idx].item(),
+                        'y_gtransformer': 1 if y[b, idx].item() > 0.5 else 0,
                         'p_bkt': bkt_p_batch[b, idx].item() if idx < bkt_p_batch.shape[1] else -1.0,
                         'y_bkt': 1 if (idx < bkt_p_batch.shape[1] and bkt_p_batch[b, idx].item() > 0.5) else 0,
                     })
@@ -334,7 +335,7 @@ def main():
                     rate_records.append({
                         'student_id': raw_uid,
                         'skill_id': cc_full[b, idx].item(),
-                        'idkt_rate': idkt_r_batch[b, idx].item(),
+                        'gtransformer_rate': gtransformer_r_batch[b, idx].item(),
                         'bkt_rate': ref_rate_full[b, idx].item(),
                     })
 
@@ -346,7 +347,7 @@ def main():
                         skill_id = int(cshft[b, idx].item())
                         correct = int(rshft[b, idx].item())
                         
-                        idkt_roster.update_state(skill_id, raw_uid, correct)
+                        gtransformer_roster.update_state(skill_id, raw_uid, correct)
                         if str(skill_id) in bkt_model.fit_model:
                             bkt_roster.update_state(str(skill_id), raw_uid, correct)
                         
@@ -360,18 +361,18 @@ def main():
                                 **bkt_mastery
                             })
 
-                    idkt_matrix = idkt_roster.get_mastery_matrix(raw_uid)
-                    if idkt_matrix is not None:
+                    gtransformer_matrix = gtransformer_roster.get_mastery_matrix(raw_uid)
+                    if gtransformer_matrix is not None:
                         for step_idx, idx in enumerate(indices):
                             if (step_idx + 1) % sampling_rate == 0 or (step_idx == len(indices) - 1):
-                                step_mastery = idkt_matrix[step_idx]
-                                idkt_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
-                                roster_idkt_records.append({
+                                step_mastery = gtransformer_matrix[step_idx]
+                                gtransformer_mastery_formatted = {f"S{s}": v for s, v in zip(all_skills, step_mastery)}
+                                roster_gtransformer_records.append({
                                     'student_id': raw_uid,
                                     'step': step_idx + 1,
                                     'skill_id': int(cshft[b, idx].item()),
                                     'correct': int(rshft[b, idx].item()),
-                                    **idkt_mastery_formatted
+                                    **gtransformer_mastery_formatted
                                 })
 
     # Save Record Files
@@ -399,10 +400,10 @@ def main():
         pd.DataFrame(roster_bkt_records).to_csv(roster_bkt_path, index=False)
         print(f"✓ Saved BKT Roster: {roster_bkt_path}")
         
-    if roster_idkt_records:
-        roster_idkt_path = os.path.join(args.output_dir, "roster_idkt.csv")
-        pd.DataFrame(roster_idkt_records).to_csv(roster_idkt_path, index=False)
-        print(f"✓ Saved iDKT Roster: {roster_idkt_path}")
+    if roster_gtransformer_records:
+        roster_gtransformer_path = os.path.join(args.output_dir, "roster_gtransformer.csv")
+        pd.DataFrame(roster_gtransformer_records).to_csv(roster_gtransformer_path, index=False)
+        print(f"✓ Saved iDKT Roster: {roster_gtransformer_path}")
 
     # Calculate Alignment Metrics
     results = {}
@@ -412,18 +413,18 @@ def main():
         corr, _ = pearsonr(pred, ref)
         return {f"{name}_mse": float(mse), f"{name}_corr": float(corr)}
 
-    results.update(calc_metrics("prediction", np.array(all_idkt_p), np.array(all_bkt_p)))
-    results.update(calc_metrics("initmastery", np.array(all_idkt_initmastery), np.array(all_bkt_initmastery)))
-    results.update(calc_metrics("learning_rate", np.array(all_idkt_rate), np.array(all_bkt_rate)))
+    results.update(calc_metrics("prediction", np.array(all_gtransformer_p), np.array(all_bkt_p)))
+    results.update(calc_metrics("initmastery", np.array(all_gtransformer_initmastery), np.array(all_bkt_initmastery)))
+    results.update(calc_metrics("learning_rate", np.array(all_gtransformer_rate), np.array(all_bkt_rate)))
 
     # H2: Functional Substitutability (Induced vs Reference Mastery)
     print("Calculating Functional Substitutability (H2)...")
-    res_h2 = calc_metrics("h2_functional", np.array(all_idkt_induced_mastery), np.array(all_bkt_reference_mastery))
+    res_h2 = calc_metrics("h2_functional", np.array(all_gtransformer_induced_mastery), np.array(all_bkt_reference_mastery))
     results["h2_functional_alignment"] = res_h2["h2_functional_corr"]
     
     # H3: Discriminant Validity (Distinctness of Latent Projections)
     print("Calculating Discriminant Validity (H3)...")
-    h3_corr, _ = pearsonr(all_idkt_initmastery, all_idkt_rate)
+    h3_corr, _ = pearsonr(all_gtransformer_initmastery, all_gtransformer_rate)
     results["h3_discriminant_overlap"] = float(h3_corr)
     
     if n_uid > 0:

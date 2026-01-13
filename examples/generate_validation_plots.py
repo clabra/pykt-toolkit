@@ -24,7 +24,7 @@ def generate_validation_plots(run_dir):
     df_roster = pd.read_csv(roster_path)
     
     # Standardize column naming if necessary (handling NEW/OLD names)
-    if 'Mi' in df_pred.columns: df_pred = df_pred.rename(columns={'Mi': 'p_idkt', 'M_rasch': 'p_bkt'})
+    if 'Mi' in df_pred.columns: df_pred = df_pred.rename(columns={'Mi': 'p_gtransformer', 'M_rasch': 'p_bkt'})
     
     # Reconstruct 'step' in df_pred because it was missing in the export
     # We assume the CSV order is step-sequential per student_id
@@ -54,10 +54,10 @@ def generate_validation_plots(run_dir):
 
     # --- 1. Multi-Model Consensus Agreement (Confidence Mapping) ---
     plt.figure(figsize=(10, 8))
-    sns.kdeplot(data=df, x='bkt_latent_mastery', y='p_idkt', fill=True, cmap="Greens", thresh=0, levels=15)
+    sns.kdeplot(data=df, x='bkt_latent_mastery', y='p_gtransformer', fill=True, cmap="Greens", thresh=0, levels=15)
     plt.plot([0, 1], [0, 1], linestyle='--', color='red', alpha=0.5, label='Identity Line')
     plt.xlabel('BKT Latent Mastery P(L_t)')
-    plt.ylabel('iDKT Predicted Correctness P(r_t+1)')
+    plt.ylabel('GTransformer Predicted Correctness P(r_t+1)')
     plt.title('Multi-Model Consensus Agreement (Density Plot)')
     plt.legend()
     plt.grid(True, alpha=0.3)
@@ -72,7 +72,7 @@ def generate_validation_plots(run_dir):
         if len(group) < 10 or len(group['correct'].unique()) < 2:
             continue
             
-        mae = mean_absolute_error(group['p_bkt'], group['p_idkt'])
+        mae = mean_absolute_error(group['p_bkt'], group['p_gtransformer'])
         try:
             auc = roc_auc_score(group['correct'], group['p_bkt'])
         except:
@@ -89,7 +89,7 @@ def generate_validation_plots(run_dir):
         plt.figure(figsize=(10, 8))
         sns.scatterplot(data=df_skills, x='bkt_auc', y='mae', size='mae', hue='mae', palette='viridis', legend=False)
         plt.xlabel('BKT Prediction Performance (AUC per Skill)')
-        plt.ylabel('Model-Theory Divergence (MAE between iDKT and BKT)')
+        plt.ylabel('Model-Theory Divergence (MAE between GTransformer and BKT)')
         plt.title('Theoretical Residual vs. AUC (Skill-Fit Validation)')
         plt.grid(True, alpha=0.3)
         save_path = os.path.join(plots_dir, "theoretical_residual_vs_auc.png")
@@ -99,27 +99,27 @@ def generate_validation_plots(run_dir):
     else:
         print("Skipped Theoretical Residual plot (insufficient per-skill data)")
 
-    # --- 3. Cross-Model Uncertainty Intervals (iDKT-based BKT Bounds) ---
+    # --- 3. Cross-Model Uncertainty Intervals (GTransformer-based BKT Bounds) ---
     # Bin BKT mastery into 10 intervals
     df['mastery_bin'] = pd.cut(df['bkt_latent_mastery'], bins=np.linspace(0, 1, 11), labels=False)
     
-    bin_stats = df.groupby('mastery_bin')['p_idkt'].agg(['mean', 'std']).reset_index()
+    bin_stats = df.groupby('mastery_bin')['p_gtransformer'].agg(['mean', 'std']).reset_index()
     bin_stats['bin_center'] = bin_stats['mastery_bin'] / 10 + 0.05
     
     plt.figure(figsize=(10, 8))
     # Plot BKT Theoretical Line (assuming p_bkt tracks latent mastery closely, or just the identity as a reference)
     plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Theoretical BKT Identity')
     
-    # Plot iDKT Mean and Variance
+    # Plot GTransformer Mean and Variance
     plt.errorbar(bin_stats['bin_center'], bin_stats['mean'], yerr=bin_stats['std'], fmt='o', color='forestgreen', 
-                 ecolor='lightgreen', elinewidth=3, capsize=5, label='iDKT Mean ± Std')
+                 ecolor='lightgreen', elinewidth=3, capsize=5, label='GTransformer Mean ± Std')
     
     plt.fill_between(bin_stats['bin_center'], bin_stats['mean'] - bin_stats['std'], 
                      bin_stats['mean'] + bin_stats['std'], color='lightgreen', alpha=0.3)
     
     plt.xlabel('BKT Latent Mastery Level')
-    plt.ylabel('iDKT Predicted Correctness Distribution')
-    plt.title('Cross-Model Uncertainty Intervals (iDKT-based BKT Bounds)')
+    plt.ylabel('GTransformer Predicted Correctness Distribution')
+    plt.title('Cross-Model Uncertainty Intervals (GTransformer-based BKT Bounds)')
     plt.legend()
     plt.grid(True, alpha=0.3)
     save_path = os.path.join(plots_dir, "uncertainty_intervals.png")

@@ -33,7 +33,7 @@ The scope of the Special Issue includes, but is not limited to, the following to
 
 ## Paper Abstract
 
-"*Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional models coexist with new deep learning approaches that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. This study introduces iDKT, an interpretable-by-design Deep Knowledge Tracing model that utilizes \textit{Representational Grounding} to align latent representations with educational constructs defined by traditional models that are intrinsically interpretable. We introduce a formal validation framework to verify representational alignment and, using Bayesian Knowledge Tracing as a reference, evaluate iDKT across multiple educational datasets. Results demonstrate that iDKT maintains state-of-the-art predictive performance while yielding additional interpretable estimations at a significantly higher granularity than population-level bayesian approaches. Specifically, iDKT identifies student-level initial knowledge and learning velocities, providing mastery estimations that are more sensitive to the nuances of individual behavioral patterns than standard bayesian predictions. By anchoring internal representations to semantic concepts defined by the reference model, iDKT enables a pedagogically interpretable deep learning alternative and a practical tool for learner-centred systems through data-driven personalization.*"
+
 
 ## Reference Documents
 
@@ -144,7 +144,7 @@ When you are updating the paper or documentation (Writer Agent):
 - Use the academic "we" instead of "you".
 - Maintain a tone suitable for a PhD-level audience.
 - The paper master is the `paper/latex/paper.tex` file, in Latex format.
-- The folder `paper/` contains also other auxiliar files for the paper, such as the bibliography file `paper/latex/biblio.bib` and `paper/idkt.md` containing a detailed description of our approach, including the idkt model implemented in `pykt/models/idkt.py`, scripts to run experiments in `pykt/examples` and results of the experiments in `experiments` folder. **Most of the information in the latex paper is based on teh info in this file**.
+- The folder `paper/` contains also other auxiliar files for the paper, such as the bibliography file `paper/latex/biblio.bib` and `paper/gtransformer.md` containing a detailed description of our approach, including the gtransformer model implemented in `pykt/models/gtransformer.py`, scripts to run experiments in `pykt/examples` and results of the experiments in `experiments` folder. **Most of the information in the latex paper is based on teh info in this file**.
 - Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper/latex/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.
 
 #### 📊 For Experiments & Reproducibility

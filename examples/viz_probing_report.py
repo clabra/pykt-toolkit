@@ -15,7 +15,7 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--experiment_dir", type=str, default="/workspaces/pykt-toolkit/experiments/20251230_224907_idkt_setS-pure_assist2009_baseline_364494")
+    parser.add_argument("--experiment_dir", type=str, default="/workspaces/pykt-toolkit/experiments/20251230_224907_gtransformer_setS-pure_assist2009_baseline_364494")
     return parser.parse_args()
 
 args = parse_args()

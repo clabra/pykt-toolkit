@@ -57,7 +57,7 @@ def main():
     args = parse_args()
     EXP_DIR = args.experiment_dir
     OUTPUT_DIR = os.path.join(EXP_DIR, "probing_plots")
-    ROSTER_PATH = os.path.join(EXP_DIR, "roster_idkt.csv")
+    ROSTER_PATH = os.path.join(EXP_DIR, "roster_gtransformer.csv")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
     print("Loading data for skill-by-cluster map...")

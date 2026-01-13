@@ -542,5 +542,31 @@
         "test_file_quelevel": "test_sequences_quelevel.csv",
         "test_window_file_quelevel": "test_window_sequences_quelevel.csv",
         "test_original_file_quelevel": "test_quelevel.csv"
+    },
+    "assist2009_bkt": {
+        "dpath": "/home/conchalabra/projects/dl/pykt-toolkit/data/assist2009/bkt_augmented",
+        "num_q": 17737,
+        "num_c": 123,
+        "input_type": [
+            "questions",
+            "concepts"
+        ],
+        "max_concepts": 4,
+        "min_seq_len": 3,
+        "maxlen": 200,
+        "emb_path": "",
+        "train_valid_original_file": "train_valid_bkt.csv",
+        "train_valid_file": "train_valid_sequences_bkt.csv",
+        "folds": [
+            0,
+            1,
+            2,
+            3,
+            4
+        ],
+        "test_original_file": "test_bkt.csv",
+        "test_file": "test_sequences_bkt.csv",
+        "test_window_file": "test_window_sequences.csv",
+        "bkt_augmented": true
     }
 }
