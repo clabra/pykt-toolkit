@@ -1,44 +1,39 @@
 # GTransformer Ablation Strategy
 
-This document outlines the systematic ablation strategy for the GTransformer model. Ablation studies are essential to decompose the contribution of each theoretical component to the overall predictive performance and interpretability of the model.
+This document outlines the simplified ablation strategy for the GTransformer model. 
 
-## 1. Ablation Baseline Codebase
+## 1. Ablation Baseline Codebase (Case 1)
 
-The **Ablation Baseline Codebase** refers to the state of the code functionally equivalent to the commit `de277669539f91c1bed8ba1f09917ce17cc7091c`. In this scenario, all augmented features are disabled, and the model behaves as a standard Context-Aware Attentive Knowledge Tracing (AKT) architecture. 
+The **Ablation Baseline Codebase** refers to the state of the code functionally equivalent to the commit `de277669539f91c1bed8ba1f09917ce17cc7091c`. 
 
-The baseline results for this version are documented in `paper/benchmark_paper.md`. Any addition of new features must ensure that the model returns to this exact level of performance when all ablation toggles are set to `false`.
+**Functional Requirement**: When `ablation` is set to "all", the model must produce results that match the `AKT` metrics reported in `paper/benchmark_paper.md`.
 
-## 2. Parameter On/Off Strategy
+## 2. Parameter Strategy
 
-To ensure scientific rigor and adherence to the "Explicit Parameters, Zero Defaults" reproducibility guidelines, the following protocol is followed for all ablation runs:
+We use a single `ablation` parameter to control the model's behavior. 
 
-1.  **Defaults**: All ablation toggles are set to `true` by default in `configs/parameter_default.json`. This ensures that a standard run includes the full feature set.
-2.  **Explicit Overrides**: For ablation studies, toggles must be explicitly set to `false` via the CLI or a dedicated experiment configuration file.
-3.  **Data Path Switching**: The `prior_augmentation` toggle controls the data ingestion path:
-    - `true`: Read from `data/[dataset_name]/bkt` (BKT-augmented sequences).
-    - `false`: Read from `data/[dataset_name]` (Standard interaction sequences).
-4.  **Baseline Reversion**: When a feature is toggled off, the model architecture must revert to its fallback behavior (functionally copy of AKT) without hidden side-effects or residual parameters being active in the computation graph.
+1.  **Defaults**: `ablation` is set to "none" by default in `configs/parameter_default.json`. This ensures that a standard run includes the full gTransformer feature set.
+2.  **Explicit Overrides**: For ablation runs, set `ablation` to "all" or "regularization" via the CLI.
 
-## 3. Ablation Parameters Table
+## 3. Ablation Scenarios
 
-The following toggle in `GTransformer` controls its theory-guided features:
+| Scenario | Parameter Setting | Description | Reversion Behavior |
+| :--- | :--- | :--- | :--- |
+| **Full Model** | `ablation="none"` | The complete gTransformer model with all theory-guided components active. | N/A |
+| **All Features Ablated** | `ablation="all"` | Reverts the model to the Baseline Codebase (AKT functionality). | 1. **Output**: Supervised Output only (Bayesian head disabled).<br>2. **Loss**: $L_{total} = L_{sup}$ (no $L_{reg}$ or $L_{gro}$).<br>3. **Input**: Standard data path (no BKT priors).<br>4. **Embeddings**: Standard size constraints (no augmented features). |
+| **Regularization Ablated** | `ablation="regularization"` | Tests the impact of semantic regularization ($L_{reg}$). | 1. **Loss**: $L_{total}$ excludes $L_{reg}$.<br>2. **Note**: Other components (Input, Output, Embeddings) remain active. |
 
-| Parameter | Type | Default | Component | Description |
-| :--- | :--- | :---: | :--- | :--- |
-| `prior_augmentation` | `bool` | `true` | **Theoretical Priors** | When `true`, input data is enriched with population-level parameters from a reference model (e.g., BKT $L_0, T, G, S$). Data is read from `data/[dataset_name]/bkt`. |
+## 4. Implementation Details
 
-## 4. Ablation Matrix
+- **Input Path Logic**:
+    - If `ablation="all"`, read from `data/[dataset_name]` (Standard).
+    - Otherwise, read from `data/[dataset_name]/bkt` (Augmented).
 
-The following table defines the combination of parameters required to ablate specific features and reach the AKT baseline.
+- **Loss Calculation**:
+    - If `ablation="all"`, $L_{total} = L_{sup}$.
+    - If `ablation="regularization"`, $L_{total} = L_{sup} + L_{gro}$ (exclude $L_{reg}$).
+    - Else ($total$), $L_{total} = L_{sup} + L_{reg} + L_{gro}$.
 
-| Experiment Label | `prior_augmentation` | Target Insight |
-| :--- | :---: | :--- |
-| **GTransformer (Full)** | `true` | Performance of the architecture anchored to theoretical BKT population estimates. |
-| **Ablation Baseline** | `false` | Reverts the model to the original AKT architecture (Standard Benchmark). |
-
-## 5. Update Protocol
-
-This document must be updated whenever a new toggleable feature is added. Each update must:
-- Define the new parameter and its pedagogical purpose.
-- Expand the Ablation Matrix.
-- Verify that the parameter follows the "Explicitness" protocol in `configs/parameter_default.json`.
+- **Embedding & Output**:
+    - If `ablation="all"`, disable parameter projection layers and Bayesian output head. Use standard MLP output.
+    - Ensure embedding dimensions are adjusted to exclude augmented feature slots.

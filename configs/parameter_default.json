@@ -57,7 +57,7 @@
     "dim_s": 256,
     "emb_size": 256,
     "fusion_type": "late_fusion",
-    "prior_augmentation": true
+    "ablation": "none"
   },
   "types": {
     "launcher": [
@@ -120,7 +120,9 @@
       "dim_s",
       "emb_size",
       "fusion_type",
-      "prior_augmentation"
+      "use_wandb",
+      "add_uuid",
+      "ablation"
     ]
   },
   "fixed": {
@@ -130,5 +132,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "8551204f0c8be9a06f6433741d59f2f9"
+  "md5": "0da27525381a3d90bec9fe826f555fac"
 }

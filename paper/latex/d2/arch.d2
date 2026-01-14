@@ -62,7 +62,16 @@ Outputs: {
 
   SupervisedOut: {
     class: component
-    label: "Supervised \n p_res"
+    label: "Supervised \n p_sup"
+
+    linear
+    softmax
+    linear -> softmax
+  }
+
+  ReferenceOut: {
+    class: component
+    label: "Reference \n p_ref"
 
     linear
     softmax
@@ -97,6 +106,10 @@ LossLayer: {
     label: + \n Sup
     class: loss
   }
+  LossReference: {
+    label: + \n Ref
+    class: loss
+  }
   LossRegularization: {
     label: + \n Reg
     class: loss
@@ -123,6 +136,7 @@ Transformer.zt -> Outputs.GroundedOut2
 
 # Loss functions
 Outputs.SupervisedOut -> LossLayer.LossSupervised
+Outputs.ReferenceOut -> LossLayer.LossReference
 Outputs.GroundedOut1 -> LossLayer.LossGrounded1: {
   style: {
     # All CSS color names are valid
@@ -150,6 +164,7 @@ Outputs.GroundedOut2 -> LossLayer.LossRegularization: {
 }
 
 InputData -> LossLayer.LossSupervised
+InputData -> LossLayer.LossReference
 BKT -> LossLayer.LossGrounded1: p_L0 {
   style: {
     # All CSS color names are valid

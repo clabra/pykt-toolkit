@@ -2,6 +2,8 @@
 
 The GTransformer model is a "Grounded" version of the Context-Aware Attentive Knowledge Tracing (AKT) architecture. It grounds output estimations of parameter values given by an intrinsic interpretable reference model like Bayesian Knowledge Tracing (BKT). This allows the model to learn student-specific parameters (initial mastery and learning rate) that are anchored to established pedagogical theory while maintaining the predictive power of Transformers. By anchoring deep representations to defined concepts, gTransformer offers a pedagogically interpretable alternative for data-driven personalization.
 
+The main difference between future intended versions of gtransformer and the `pykt/models/idkt.py` current implementation is that the last one grounds embeddings while gtransformer grounds outputs (z context vector projected into enriched context-aware parameters), so loss functions are different. 
+
 We will launch experiments to demonstrate state-of-the-art accuracy showing that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. 
 
 ## Design Guidelines
