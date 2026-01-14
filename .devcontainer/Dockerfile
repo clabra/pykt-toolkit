@@ -36,7 +36,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-science \
     texlive-publishers \
     latexmk \
-    ghostscript
+    ghostscript && \
+    # Install D2 diagramming tool
+    curl -L https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-linux-amd64.tar.gz -o d2.tar.gz && \
+    tar -xzf d2.tar.gz && \
+    cp d2-v0.7.1/bin/d2 /usr/local/bin/ && \
+    rm -rf d2.tar.gz d2-v0.7.1
 
 # Latex
 # If eventually a specific package is missing, it's possible add texlive-full (though note it is several gigabytes in size):

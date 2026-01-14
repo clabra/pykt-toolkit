@@ -70,7 +70,7 @@ experiments/**/*.pth
 examples/experiments/**/*.pth
 experiments/**/*.pt
 experiments/**/roster*.csv
-experiments/**/qid_model.ckpt
+experiments/**/*.ckpt
 
 data/difficulty/
 data/peer_index/

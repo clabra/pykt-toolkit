@@ -1,9 +1,28 @@
 # GTransformer (Grounded Transformer)
 
-The GTransformer model is a "Grounded" version of the Context-Aware Attentive Knowledge Tracing (AKT) architecture. It grounds output estimations ot parameter values given by an intrinsic interprtable reference model like Bayesian Knowledge Tracing (BKT). This allows the model to learn student-specific parameters (initial mastery and learning rate) that are anchored to established pedagogical theory while maintaining the predictive power of Transformers.
+The GTransformer model is a "Grounded" version of the Context-Aware Attentive Knowledge Tracing (AKT) architecture. It grounds output estimations of parameter values given by an intrinsic interpretable reference model like Bayesian Knowledge Tracing (BKT). This allows the model to learn student-specific parameters (initial mastery and learning rate) that are anchored to established pedagogical theory while maintaining the predictive power of Transformers. By anchoring deep representations to defined concepts, gTransformer offers a pedagogically interpretable alternative for data-driven personalization.
+
+We will launch experiments to demonstrate state-of-the-art accuracy showing that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. 
+
+## Design Guidelines
+- gTransformer is a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. 
+- The design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Current implementation can be found in `pykt/models/gtransformer.py`. It borrows from the akt model described in `bibliography/papers-pykt/2020 Ghosh - AKT - Context-Aware Attentive Knowledge Tracing.pdf`.
+- Attention mechanisms integrate the embeddings into a latent context vector, which is projected into updated parameter values constrained to remain semantically grounded to educational constructs while incorporating rich temporal dependencies learned by the network. The embeddings are escribed in detail in the section "Embeddings" of `paper/latex/paper.tex`.
+- These enriched parameters then drive predictions through interpretable Bayesian logic. 
+- We will use a loss function compound by 3 types of losses: 
+    - A typical supervised classification loss for the prediction of student responses. See "Supervised Alignment (Lsup)" in the section "Loss Function" of `paper/latex/paper.tex`.
+    - Regularization losses (one per parameter) for the parameter values to ensure they remain within valid ranges, similar to parameter values given by the reference model (BKT) and only diverge whent the evidence is strong enough. See "Regularization Term (Lreg)" in the section "Loss Function" of `paper/latex/paper.tex`.
+    - Probing losses (one per parameter) to ensure that the model is learning the right things, i.e. that the values obtained by projection of the z context vector actually represent the intended concepts. To use this loss we extract the task-contextualized representations (zt)—the concatenation of the decoder’s hidden state and the task embedding—and train a simple linear regression probe to recover the BKT mastery probability P(Lt). However, high performance  on this true task alone is insufﬁcient, as high-capacity models might memorize arbitrary  patterns. To rigorously distinguish genuine encoding from superﬁcial correlation, we  implement a control task [ 35] by training an identical probe to predict a randomly shufﬂed  version of the theoretical labels. We quantify the integrity of the representation via the Selectivity metric. 
+
+    ```
+    Selectivity = R^2_{true} − R^2_{control}
+    where R^2_{true} measures the variance explained when predicting actual BKT mastery, and R^2_{control} measures the same for the shufﬂed control. A high positive selectivity score (∆R2 > 0.5) provides terminal evidence of Structural Encoding, confirming that the pedagogical constructs remain the primary informative features through the model’s entire reasoning chain.
+    ```
+A digram of the gtransformer intended architecture, described in d2 language, can be found in `paper/latex/d2/arch.d2`. 
 
 ---
 
+## Baseline Benchmark 
 This section summarizes the results and methodology used to verify the parity between the newly implemented `gTransformer` model (a direct architectural copy of the Context-Aware Attentive Knowledge Tracing or AKT) and the original `AKT` implementation within the `pykt-toolkit` framework.
 
 ### 1. Objective
@@ -141,4 +160,50 @@ Once training is complete, the `generate_gtransformer_full_analysis.py` pipeline
 - **Interpretability Alignment**: Trajectory and Roster comparisons (`traj_predictions.csv`, `roster_gtransformer.csv`).
 - **Probing Validation**: Diagnostic validation metrics and Pareto plots.
 - **Advanced Visualizations**: Student clusters, Skill Mastery Maps, and Curriculum Heatmaps.
+## BKT Augmented Datasets
 
+To implement Informed Machine Learning with theoretical grounding, we augment the raw interaction datasets with population-level parameter estimates from a Bayesian Knowledge Tracing (BKT) model. This provides the GTransformer with a semantically grounded reference point for its latent representations.
+
+### 1. Augmentation Methodology
+The process involves training a population-level BKT model on the raw interaction history and projecting its parameters back into the original feature space.
+
+- **Script**: `examples/augment_raw_with_bkt.py`
+- **Informed Logic**: The script fits a BKT model using the Expectation-Maximization (EM) algorithm to identify the optimal Prior ($L_0$), Learn Rate ($T$), Guess ($G$), and Slip ($S$) parameters for every skill in the dataset.
+- **Scientific Rigor**: Row-level predictions ($P(C_t)$) are **excluded** at this stage to prevent data leakage. The augmentation focuses solely on the four population parameters which represent invariant pedagogical characteristics of the Knowledge Components (KCs).
+
+### 2. Column Mapping Resolution
+The pipeline manages dataset-specific schemas (e.g., Assistments csv vs. Carnegie Learning txt) using a three-tier strategy:
+1. **User Override**: Prioritizes any existing `data/[dataset]/bkt/default_dictionary.json`.
+2. **Central Registry**: Pulls from a hardcoded registry in the script for standard benchmarks (Assist2009, AL2005, etc.).
+3. **Generic Fallback**: Uses standard EDM headers (`user_id`, `correct`, etc.) if no specific mapping is found.
+
+### 3. Technical Robustness
+- **Sanitization**: Skill names containing special characters (common in `KC(Default)` fields) are temporarily mapped to numeric IDs during fitting to prevent regex compilation errors in the underlying `pyBKT` engine.
+- **Delimiters**: The script dynamically handles both comma and tab-separated formats.
+
+### 4. Replication Command
+To generate the augmented version of a dataset (e.g., `assist2009`), execute:
+```bash
+docker exec pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && \
+python examples/augment_raw_with_bkt.py --dataset assist2009"
+```
+
+### 5. Input and Output Structure
+- **Input**: The raw CSV file specified in the `dname2paths` mapping within the script (e.g., `data/assist2009/skill_builder_data_corrected_collapsed.csv`).
+- **Outputs** (Saved in `data/[dataset]/bkt/`):
+    - `[file_name]_bkt.csv`: The augmented dataset.
+    - `parameters.json`: Human-readable population-level parameters per skill.
+    - `model.pkl`: The serialized `pyBKT` model object.
+    - `default_dictionary.json`: The column mapping used for the specific dataset.
+
+### 6. Added Features and Semantic Meaning
+The following columns are appended to the raw dataset to serve as theoretical priors for the GTransformer embedding layer:
+
+| Column | Parameter | Pedagogical Meaning |
+| :--- | :--- | :--- |
+| `bkt_p_l0` | $P(L_0)$ | **Initial Knowledge**: Probability the student knows the skill before any interaction. |
+| `bkt_p_t` | $P(T)$ | **Learning Rate**: Probability of transitioning from non-mastery to mastery after an interaction. |
+| `bkt_p_g` | $P(G)$ | **Guessing**: Probability of a correct response despite lacking mastery. |
+| `bkt_p_s` | $P(S)$ | **Slipping**: Probability of an incorrect response despite having achieved mastery. |
+
+These features are consumed by the GTransformer during the embedding stage to anchor its latent context vector to established educational constructs.

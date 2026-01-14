@@ -11,7 +11,7 @@ Models (Liu et al. 2023, Table 8):
 dkt, dkt+, dkt_forget, kqn, dkvmn, atkt, gkt, sakt, saint, akt + idkt
 
 Datasets:
-assist2009_S, assist2015_S, bridge2algebra2006_S, nips_task34_S
+assist2009, assist2015, bridge2algebra2006, nips_task34
 
 Usage:
     # ALWAYS run inside the Docker container (pinn-dev)
@@ -23,10 +23,10 @@ Usage:
     tail -f experiments/benchmark_paper_queue.log
 
     # 3. Launch evaluation (after training finishes)
-    python3 examples/run_benchmarks_paper.py --mode evaluation
+    python3 examples/run_benchmarks_paper.py --mode evaluation --dataset assist2015
 
-    # 4. Process results
-    python3 examples/run_benchmarks_paper.py --mode results
+    # 4. Process results & generate cv_results.json
+    python3 examples/run_benchmarks_paper.py --mode results --dataset assist2015
 
 Expected Outputs & Metrics Location:
 - Reproduced Experiment Folder (Grouped):
@@ -62,20 +62,18 @@ from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-#BENCHMARK_MODELS = [
-#    "dkt", "dkt+", "dkvmn", "sakt", "saint", "akt", "atkt", "dkt_forget", "kqn", "gkt", "idkt"
-#]
-
-BENCHMARK_MODELS = ["idkt"]
+BENCHMARK_MODELS = [
+    "gtransformer", "akt", "dkt", "sakt", "saint", "dkvmn", "atkt" 
+]
 
 
 # 4 'S' datasets (truncated to sequence length 200)
 BENCHMARK_DATASETS = [
-    "assist2009_S", "assist2015_S", "bridge2algebra2006_S", "nips_task34_S"
+    "assist2009", "assist2015", "bridge2algebra2006", "nips_task34"
 ]
 
 #BENCHMARK_DATASETS = [
-#    "assist2009_S"
+#    "assist2009"
 #]
 
 # Mapping models to training scripts
@@ -90,7 +88,6 @@ MODEL_SCRIPTS = {
     "sakt": "wandb_sakt_train.py",
     "saint": "wandb_saint_train.py",
     "akt": "wandb_akt_train.py",
-    "idkt": "train_idkt.py",
     "gtransformer": "wandb_gtransformer_train.py"
 }
 
@@ -271,13 +268,37 @@ def evaluate_worker(model, dataset, fold, gpu_id):
            'idkt': ['n_blocks', 'dropout', 'n_heads', 'd_ff', 'seq_len', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap'],
            'atkt': ['skill_dim', 'answer_dim', 'hidden_dim', 'attention_dim', 'epsilon', 'beta', 'dropout'],
            'gkt': ['hidden_dim', 'emb_size', 'graph_type', 'dropout'],
-           'dkt_forget': ['emb_size', 'dropout']
-        }
+           'dkt_forget': ['emb_size', 'dropout'],
+           'gtransformer': ['d_model', 'n_blocks', 'dropout', 'd_ff', 'kq_same', 'final_fc_dim', 'num_attn_heads', 'separate_qa', 'l2']
+         }
         
-        # Get raw parameters by merging defaults and input
+        # Get raw parameters by merging resolved train_config and input
         cfg_in = config.get("input", {})
-        cfg_def = config.get("defaults", {})
+        # Prioritize train_config as it contains resolved overrides used during training
+        cfg_def = config.get("train_config", config.get("defaults", {}))
         raw_params = {**cfg_def, **cfg_in}
+        
+        allowed_keys = specific_keys.get(model, [])
+        
+        # CRITICAL FIX: Parse parameters from train_explicit command string if available
+        # This acts as the final source of truth for what was actually run.
+        train_cmd = config.get("commands", {}).get("train_explicit", "")
+        if train_cmd:
+            import re
+            for key in allowed_keys:
+                # Look for --key VALUE
+                match = re.search(rf'--{key}\s+([^\s]+)', train_cmd)
+                if match:
+                    val = match.group(1)
+                    # Try to convert to int or float if possible
+                    try:
+                        if '.' in val: val = float(val)
+                        else: val = int(val)
+                    except: pass
+                    raw_params[key] = val
+                    # print(f"[Sanitizer] Overrode {key}={val} from train_explicit for {model}")
+
+        sanitized_config = {k: v for k, v in raw_params.items() if k in allowed_keys}
         
         # Perform alias mapping BEFORE sanitization
         if 'd_model' in raw_params:
@@ -301,9 +322,6 @@ def evaluate_worker(model, dataset, fold, gpu_id):
             # So hidden_dim (64) actually won in training. 
             # Checkpoint [512, 64] confirms hidden_dim=64 and attention_dim=512.
             pass
-        
-        allowed_keys = specific_keys.get(model, [])
-        sanitized_config = {k: v for k, v in raw_params.items() if k in allowed_keys}
         
         # Determine data_config (reconstruct if missing or incomplete)
         cfg_data_config = config.get("data_config", {})
@@ -507,7 +525,7 @@ def main():
         except Exception: pass
 
         # 2. Define Sort Order
-        DATASET_ORDER = ["assist2009_S", "assist2015_S", "bridge2algebra2006_S", "nips_task34_S"]
+        DATASET_ORDER = ["assist2009", "assist2015", "assist2009", "assist2015", "bridge2algebra2006", "nips_task34"]
         
         # 3. Sort datasets and models
         datasets_to_run = sorted(datasets_to_run, key=lambda d: DATASET_ORDER.index(d) if d in DATASET_ORDER else 999)
@@ -548,28 +566,29 @@ def main():
                         is_running = any(abs_exp_dir in d for d in running_dirs)
 
                     if exp_dir:
-                        log_file = exp_dir / "eval_benchmark.log"
-                        if log_file.exists():
-                            # If it's running, the eval log is likely from a PREVIOUS failed attempt
-                            # We should ignore it if we know it's being re-trained
-                            if not is_running:
+                        # 1. Try Structured JSON first (Priority: Question-level Late Fusion)
+                        res_files = list(exp_dir.glob("**/eval_results.json"))
+                        if res_files and not is_running:
+                            try:
+                                with open(res_files[0]) as f:
+                                    d = json.load(f)
+                                    # Prioritize Question-level Late Fusion metrics as per benchmark protocol
+                                    auc = d.get("oriauclate_mean", d.get("testauc", d.get("test_auc")))
+                                    acc = d.get("oriacclate_mean", d.get("testacc", d.get("test_acc")))
+                            except: pass
+
+                        # 2. Fallback to Log File (Regex parsing)
+                        if auc is None:
+                            log_file = exp_dir / "eval_benchmark.log"
+                            if log_file.exists() and not is_running:
                                 with open(log_file, "r") as f:
                                     lines = f.readlines()
                                     for line in reversed(lines):
+                                        # Generic fallback for older logs
                                         ma = re.search(r"testauc: (0\.\d+)", line)
                                         mac = re.search(r"testacc: (0\.\d+)", line)
                                         if ma and mac:
                                             auc, acc = float(ma.group(1)), float(mac.group(1))
-                        
-                        if auc is None:
-                            res_files = list(exp_dir.glob("**/eval_results.json"))
-                            if res_files and not is_running:
-                                try:
-                                    with open(res_files[0]) as f:
-                                        d = json.load(f)
-                                        auc = d.get("testauc", d.get("test_auc"))
-                                        acc = d.get("testacc", d.get("test_acc"))
-                                except: pass
 
                         if auc is not None:
                             metrics["auc"].append(auc)

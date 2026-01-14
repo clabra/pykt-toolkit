@@ -163,9 +163,24 @@ class KTDataset(Dataset):
             interaction_num += dori["smasks"][-1].count(1)
 
             if self.qtest:
-                dqtest["qidxs"].append([int(_) for _ in row["qidxs"].split(",")])
-                dqtest["rests"].append([int(_) for _ in row["rest"].split(",")])
-                dqtest["orirow"].append([int(_) for _ in row["orirow"].split(",")])
+                if "qidxs" in row:
+                    dqtest["qidxs"].append([int(_) for _ in row["qidxs"].split(",")])
+                elif "cidxs" in row:
+                    dqtest["qidxs"].append([int(_) for _ in row["cidxs"].split(",")])
+                else:
+                    # Fallback for datasets without predefined question indices
+                    seqlen = len(dori["rseqs"][-1])
+                    dqtest["qidxs"].append(list(range(interaction_num, interaction_num + seqlen)))
+
+                if "rest" in row:
+                    dqtest["rests"].append([int(_) for _ in row["rest"].split(",")])
+                else:
+                    dqtest["rests"].append([0] * len(dori["rseqs"][-1]))
+
+                if "orirow" in row:
+                    dqtest["orirow"].append([int(_) for _ in row["orirow"].split(",")])
+                else:
+                    dqtest["orirow"].append([i] * len(dori["rseqs"][-1]))
         for key in dori:
             if key == "uids":
                 # uids are scalars (one per sequence), not sequences

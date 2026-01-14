@@ -1,0 +1,183 @@
+direction: up
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+# Define Classes for visual consistency
+classes: {
+  input_layer: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      border-radius: 8
+    }
+  }
+  process_layer: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  transformer_core: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  output_head: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  loss_box: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-dash: 5
+      stroke-width: 2
+    }
+  }
+}
+
+# Layer 1: Input & Embeddings (Bottom)
+InputStage: {
+  InputData: {
+    class: input_layer
+    label: |latex
+      \textbf{1. Input & BKT Refs} \\
+      Interactions: $\{c, q, r\}$ \\
+      BKT: $p_{BKT}$ \\
+      Priors: $P(L_0), P(T), P(G), P(S)$
+    |
+  }
+
+  Embeddings: {
+    class: process_layer
+    label: |latex
+      \textbf{2. Embeddings} \\
+      $\mathbf{x}'_t$\text{ (Task)} \\
+      $\mathbf{y}'_t$\text{ (History)}
+    |
+  }
+  
+  InputData -> Embeddings
+}
+
+# Layer 2: Encoder-Decoder & Context (Middle)
+TransformerLayer: {
+  class: transformer_core
+  
+  Encoder: {
+    label: |latex
+      \text{Encoder} \\
+      \text{Attn}(\mathbf{y}'_{1:t-1})
+    |
+  }
+
+  Decoder: {
+    label: |latex
+      \text{Decoder} \\
+      \text{Attn}(\mathbf{x}'_t, \mathbf{y}'_{1:t-1})
+    |
+  }
+
+  zt: {
+    shape: rectangle
+    label: |latex
+      \mathbf{z}_t \\
+      \text{(Context Vector)}
+    |
+    style.fill: "#ffffff"
+  }
+
+  Encoder -> Decoder: History Context
+  Decoder -> zt
+}
+
+# Layer 3: Outputs (Top)
+OutputLayer: {
+  grid-columns: 3
+  
+  ParamL0Head: {
+    class: output_head
+    label: |latex
+      \text{Head } P(L_0)'
+    |
+    Linear: { shape: rectangle; label: Linear }
+    Softmax: { shape: rectangle; label: Softmax }
+    Linear -> Softmax
+    Result: { shape: circle; label: |latex P(L_0)' | }
+    Softmax -> Result
+  }
+
+  ParamTHead: {
+    class: output_head
+    label: |latex
+      \text{Head } P(T)'
+    |
+    Linear: { shape: rectangle; label: Linear }
+    Softmax: { shape: rectangle; label: Softmax }
+    Linear -> Softmax
+    Result: { shape: circle; label: |latex P(T)' | }
+    Softmax -> Result
+  }
+
+  SupervisedHead: {
+    class: output_head
+    label: Supervised Output
+    Linear: { shape: rectangle; label: Linear }
+    Softmax: { shape: rectangle; label: Softmax }
+    Linear -> Softmax
+    Result: { shape: circle; label: |latex \hat{y}_t | }
+    Softmax -> Result
+  }
+}
+
+# 5. Multi-objective Loss & Validation
+LossPipeline: {
+  class: loss_box
+  label: |md
+    ### 5. Multi-objective Loss
+    L = L_pred + L_int
+  |
+  L_pred: "Prediction Loss"
+  L_int: "Interpretability Loss (Grounding)"
+}
+
+Probing: {
+  label: "6. Diagnostic Probing Validation"
+  shape: parallelogram
+  style: {
+    stroke-dash: 3
+    fill: "#ffffff"
+  }
+}
+
+
+# Relationships / Flow between Layers
+InputStage.Embeddings -> TransformerLayer.Encoder: "y'_{1:t-1}"
+InputStage.Embeddings -> TransformerLayer.Decoder: "x'_t"
+
+TransformerLayer.zt -> OutputLayer.ParamL0Head.Linear
+TransformerLayer.zt -> OutputLayer.ParamTHead.Linear
+
+# Bayesian dependency: parameters drive supervised prediction
+OutputLayer.ParamL0Head.Result -> OutputLayer.SupervisedHead.Linear
+OutputLayer.ParamTHead.Result -> OutputLayer.SupervisedHead.Linear
+
+# Loss Connections
+OutputLayer.SupervisedHead.Result -> LossPipeline.L_pred
+OutputLayer.ParamL0Head.Result -> LossPipeline.L_int
+OutputLayer.ParamTHead.Result -> LossPipeline.L_int
+InputStage.InputData -> LossPipeline.L_int: "BKT Grounding Values"
+
+# Probing connects to the internal representation
+TransformerLayer.zt -> Probing: "Linear Probes"
+
