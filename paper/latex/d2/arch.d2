@@ -1,22 +1,23 @@
 direction: up
 
 BKT: {
-  class: component
+  class: input
   label: BKT
 }
 
 InputData: {
-  class: component
+  class: input
   label: Interactions \n Data
 }
-InputData.shape: rectangle
+InputData.shape: cylinder
 
 # 1. Embeddings Layer
 
 EmbeddingsLayer: {
   class: layer
+  label: Embeddings
   Embeddings: {
-    class: component
+    class: embeddings
     label: |md
       Individualized Embeddings
 
@@ -34,24 +35,21 @@ Transformer: {
   class: transformer
 
   Encoder: {
-    class: component
+    class: transformer_component
+    style.multiple: true
     label: "Encoder\n(Self-Attention on y'_{1:t-1})"
   }
 
   Decoder: {
-    class: component
+    class: transformer_component
+    style.multiple: true
     label: "Decoder\n(Cross-Attention + x'ₜ)"
   }
 
   # 4. Intermediate Context Vector
   zt: {
-    class: component
-    shape: rectangle
+    class: transformer_component
     label: "zₜ \n Context Vector"
-    style: {
-      fill: "#ffffff"
-      stroke-width: 2
-    }
   }
 
   Encoder -> Decoder: "History Context"
@@ -64,27 +62,53 @@ Outputs: {
 
   SupervisedOut: {
     class: component
-    label: "p_res \n Supervised"
+    label: "Supervised \n p_res"
+
+    linear
+    softmax
+    linear -> softmax
   }
 
   GroundedOut1: {
     class: component
-    label: "p_L0 \n Grounded"
+    label: "Grounded \n p_L0"
+
+    linear
+    softmax
+    linear -> softmax
   }
 
   GroundedOut2: {
     class: component
-    label: "p_T \n Grounded"
+    label: "Grounded \n p_T"
+
+    linear
+    softmax
+    linear -> softmax
   }
 }
 
 # 6. Multi-objective Loss Functions
 
 LossLayer: {
+  label: Losses
   class: layer
-  LossSupervised: {class: component}
-  LossRegularization: {class: component}
-  LossGrounded: {class: component}
+  LossSupervised: {
+    label: + \n Sup
+    class: loss
+  }
+  LossRegularization: {
+    label: + \n Reg
+    class: loss
+  }
+  LossGrounded1: {
+    label: + \n p_L0
+    class: loss
+  }
+  LossGrounded2: {
+    label: + \n p_T
+    class: loss
+  }
 }
 
 # Relationships / Flow
@@ -94,28 +118,78 @@ EmbeddingsLayer.Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
 EmbeddingsLayer.Embeddings -> Transformer.Decoder: "x'ₜ"
 
 Transformer.zt -> Outputs.SupervisedOut
+Transformer.zt -> Outputs.GroundedOut1
+Transformer.zt -> Outputs.GroundedOut2
 
 # Loss functions
-Outputs -> LossLayer
+Outputs.SupervisedOut -> LossLayer.LossSupervised
+Outputs.GroundedOut1 -> LossLayer.LossGrounded1: {
+  style: {
+    # All CSS color names are valid
+    stroke: deepskyblue
+  }
+}
+
+Outputs.GroundedOut1 -> LossLayer.LossRegularization: {
+  style: {
+    # All CSS color names are valid
+    stroke: brown
+  }
+}
+Outputs.GroundedOut2 -> LossLayer.LossGrounded2: {
+  style: {
+    # All CSS color names are valid
+    stroke: green
+  }
+}
+Outputs.GroundedOut2 -> LossLayer.LossRegularization: {
+  style: {
+    # All CSS color names are valid
+    stroke: brown
+  }
+}
+
+InputData -> LossLayer.LossSupervised
+BKT -> LossLayer.LossGrounded1: p_L0 {
+  style: {
+    # All CSS color names are valid
+    stroke: deepskyblue
+  }
+}
+BKT -> LossLayer.LossGrounded2: p_T {
+  style: {
+    # All CSS color names are valid
+    stroke: green
+  }
+}
 
 # Define Classes for visual consistency
 classes: {
   layer: {
     style: {
-      fill: "#ffffff"
       stroke: "#000000"
       stroke-width: 2
       border-radius: 8
       stroke-dash: 5
+      shadow: true
     }
   }
 
   component: {
     style: {
-      fill: "#ffffff"
       stroke: "#000000"
       stroke-width: 2
+      shadow: true
     }
+  }
+
+  loss: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+    shape: circle
   }
 
   transformer: {
@@ -123,8 +197,35 @@ classes: {
       fill: "#ffffff"
       stroke: "#000000"
       stroke-width: 2
+      shadow: true
+    }
+  }
+
+  transformer_component: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  input: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  embeddings: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+      3d: true
     }
   }
 }
-
 
