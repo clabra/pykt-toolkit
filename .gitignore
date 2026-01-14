@@ -63,14 +63,17 @@ examples/nips2022-peiyou/
 examples/nips2022-ednet/
 examples/models/
 data_original/*
-
-TSMini/
-
 experiments/**/*.pth
 examples/experiments/**/*.pth
 experiments/**/*.pt
 experiments/**/roster*.csv
 experiments/**/*.ckpt
+node_modules/
+.gemini/
+*.mp4
+*.webm
+
+TSMini/
 
 data/difficulty/
 data/peer_index/
