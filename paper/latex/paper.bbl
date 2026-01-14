@@ -58,15 +58,28 @@ Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
 \newblock {\em Advances in neural information processing systems} {\bf 2017},
   {\em 30}.
 
-\bibitem[Bai et~al.(2024)]{bai2024survey}
-Bai, X.;  et~al.
-\newblock A Survey of Explainable Knowledge Tracing,  2024.
-
 \bibitem[Rudin(2019)]{rudin2019stop}
 Rudin, C.
 \newblock Stop explaining black box machine learning models for high stakes
   decisions and use interpretable models instead.
 \newblock {\em Nature machine intelligence} {\bf 2019}, {\em 1},~206--215.
+
+\bibitem[Semenova et~al.(2019)Semenova, Rudin, and Parr]{semenova2019study}
+Semenova, L.; Rudin, C.; Parr, R.
+\newblock A study in Rashomon curves and volumes: A new perspective on
+  generalization and model simplicity in machine learning.
+\newblock {\em arXiv preprint arXiv:1908.01755} {\bf 2019}, {\em 4}.
+
+\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
+  Gordon]{yudelson2013individualized}
+Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
+\newblock Individualized bayesian knowledge tracing models.
+\newblock In Proceedings of the International conference on artificial
+  intelligence in education. Springer,  2013, pp. 171--180.
+
+\bibitem[Bai et~al.(2024)]{bai2024survey}
+Bai, X.;  et~al.
+\newblock A Survey of Explainable Knowledge Tracing,  2024.
 
 \bibitem[Pandey and Karypis(2019)]{pandey2019self}
 Pandey, S.; Karypis, G.
@@ -162,19 +175,6 @@ Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
   Knowledge into Learning Systems.
 \newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
   p. 1–1.
-
-\bibitem[Semenova et~al.(2019)Semenova, Rudin, and Parr]{semenova2019study}
-Semenova, L.; Rudin, C.; Parr, R.
-\newblock A study in Rashomon curves and volumes: A new perspective on
-  generalization and model simplicity in machine learning.
-\newblock {\em arXiv preprint arXiv:1908.01755} {\bf 2019}, {\em 4}.
-
-\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
-  Gordon]{yudelson2013individualized}
-Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
-\newblock Individualized bayesian knowledge tracing models.
-\newblock In Proceedings of the International conference on artificial
-  intelligence in education. Springer,  2013, pp. 171--180.
 
 \bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
   Ganguly, Shekhar, Samatova, and Kumar]{karpatne2017theory}

@@ -44,6 +44,35 @@ MODEL_SCRIPTS = {
     "deep_irt": "examples/wandb_deep_irt_train.py"
 }
 
+# Parameter Translation Map (Canonical -> Script Specific)
+PARAM_MAP = {
+    "d_model": {
+        "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size", "sakt": "emb_size",
+        "dkvmn": "dim_s", "atkt": "skill_dim", "saint": "emb_size", "saint++": "emb_size", "gkt": "hidden_dim",
+        "kqn": "n_hidden", # KQN uses n_hidden for its_main embedding size, which maps from d_model
+        "skvmn": "dim_s", "deep_irt": "dim_s", "akt": "d_model", "gtransformer": "d_model"
+    },
+    "n_heads": {
+        "akt": "num_attn_heads", "gtransformer": "num_attn_heads", "sakt": "num_attn_heads", 
+        "saint": "num_attn_heads", "saint++": "num_attn_heads"
+    },
+    "n_blocks": {
+        "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks", "gtransformer": "n_blocks"
+    },
+    "d_ff": {
+        "atkt": "attention_dim"
+    },
+    "dataset": {
+        "standard_pykt": "dataset_name"
+    },
+    "model": {
+        "standard_pykt": "model_name"
+    },
+    "epochs": {
+        "standard_pykt": "num_epochs"
+    }
+}
+
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
 def select_gpus(num_gpus=None):
@@ -249,35 +278,6 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     architecture_params = {'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type'}
     runtime_params = {'epochs', 'batch_size', 'learning_rate', 'weight_decay', 'optimizer', 'gradient_clip', 'patience', 'seed'}
     
-    # Parameter Translation Map (Canonical -> Script Specific)
-    PARAM_MAP = {
-        "d_model": {
-            "dkt": "emb_size", "dkt+": "emb_size", "dkt_forget": "emb_size", "sakt": "emb_size",
-            "dkvmn": "dim_s", "atkt": "skill_dim", "saint": "emb_size", "saint++": "emb_size", "gkt": "hidden_dim",
-            "kqn": "n_hidden", # KQN uses n_hidden for its_main embedding size, which maps from d_model
-            "skvmn": "dim_s", "deep_irt": "dim_s", "akt": "d_model", "gtransformer": "d_model"
-        },
-        "n_heads": {
-            "akt": "num_attn_heads", "gtransformer": "num_attn_heads", "sakt": "num_attn_heads", 
-            "saint": "num_attn_heads", "saint++": "num_attn_heads"
-        },
-        "n_blocks": {
-            "sakt": "num_en", "saint": "n_blocks", "saint++": "n_blocks", "akt": "n_blocks", "gtransformer": "n_blocks"
-        },
-        "d_ff": {
-            "atkt": "attention_dim"
-        },
-        "dataset": {
-            "standard_pykt": "dataset_name"
-        },
-        "model": {
-            "standard_pykt": "model_name"
-        },
-        "epochs": {
-            "standard_pykt": "num_epochs"
-        }
-    }
-
     model = params.get('model', 'idkt')
     is_standard_pykt = "wandb_" in train_script
 
@@ -370,27 +370,29 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             # String "None" should be passed as "null" for consistency
             cmd_parts.append(f"--{translated_key} null")
         else:
-            # Quote string values if they contain spaces or special characters
+            # Don't add quotes - shlex.split will handle proper parsing
             val_str = str(value)
-            if isinstance(value, str):
-                # Ensure the value is properly quoted for shell execution
-                cmd_parts.append(f"--{translated_key} '{val_str}'")
-            else:
-                cmd_parts.append(f"--{translated_key} {val_str}")
+            cmd_parts.append(f"--{translated_key} {val_str}")
     
     # Add save_dir for all models to ensure they save results into the experiment folder
     if experiment_dir:
         cmd_parts.append(f"--save_dir {experiment_dir}")
-    
-    command = " ".join(cmd_parts)
     
     # Standard PyKT scripts (wandb_*.py) must be run from examples/ 
     # to find '../configs/'. We wrap with surrogate if needed.
     if "wandb_" in train_script:
         if model != "idkt":
             surrogate = os.path.join(PROJECT_ROOT, "tmp/pykt_train_surrogate.py")
-            # Use env var for target script to avoid CLI parsing issues
-            command = f"PYKT_TARGET_SCRIPT={abs_train_script} {python_path} {surrogate} {' '.join(cmd_parts[2:])}"
+            # Build command args list (not string) to avoid shell expansion issues
+            surrogate_args = [python_path, surrogate] + cmd_parts[2:]
+            # Don't add quotes here - shlex.split will handle them
+            command = " ".join(str(arg) for arg in surrogate_args)
+            # Set env var for target script
+            command = f"PYKT_TARGET_SCRIPT={abs_train_script} {command}"
+        else:
+            command = " ".join(cmd_parts)
+    else:
+        command = " ".join(cmd_parts)
         
     return command
 
@@ -745,7 +747,71 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
     print(f"✓ Created fold folder: {experiment_folder.name}")
 
     # 2. Build configuration
+    # Start with global defaults
     training_params = defaults_config["defaults"].copy()
+    
+    # Priority 2: kt_config.json (Model-specific defaults)
+    kt_config_path = PROJECT_ROOT / "configs" / "kt_config.json"
+    if kt_config_path.exists():
+        with open(kt_config_path, 'r') as f:
+            kt_config = json.load(f)
+            # Apply global train_config if present
+            if "train_config" in kt_config:
+                for k, v in kt_config["train_config"].items():
+                    if k in training_params:
+                        training_params[k] = v
+            # Apply model-specific parameters
+            if model_name in kt_config:
+                for k, v in kt_config[model_name].items():
+                    if k in training_params:
+                        training_params[k] = v
+    
+    # Priority 3: kt_config_[dataset].json (Dataset-fold-model-specific optimal values)
+    # Handle dataset variants (strip _S, _bkt, _quelevel suffixes for lookup)
+    canonical_dataset = dataset
+    for suffix in ["_S", "_bkt", "_quelevel", "_BKT"]:
+        if canonical_dataset.endswith(suffix):
+            canonical_dataset = canonical_dataset[:-len(suffix)]
+            
+    dataset_paths = [
+        PROJECT_ROOT / "configs" / f"kt_config_{dataset}.json",
+        PROJECT_ROOT / "configs" / f"kt_config_{canonical_dataset}.json"
+    ]
+    
+    config_found = False
+    for dataset_config_path in dataset_paths:
+        if dataset_config_path.exists():
+            with open(dataset_config_path, 'r') as f:
+                dataset_config = json.load(f)
+                if model_name in dataset_config:
+                    fold_str = str(fold)
+                    if fold_str in dataset_config[model_name]:
+                        opt_params = dataset_config[model_name][fold_str]
+                        print(f"  ✓ Applied optimal hyperparameters for {model_name} from {dataset_config_path.name} fold {fold}")
+                        
+                        # Create reverse mapping to translate tuning keys back to canonical keys
+                        REVERSE_PARAM_MAP = {}
+                        for canonical_key, model_map in PARAM_MAP.items():
+                            if model_name in model_map:
+                                script_key = model_map[model_name]
+                                REVERSE_PARAM_MAP[script_key] = canonical_key
+                            elif "standard_pykt" in model_map:
+                                script_key = model_map["standard_pykt"]
+                                REVERSE_PARAM_MAP[script_key] = canonical_key
+
+                        for k, v in opt_params.items():
+                            # Translate if mapping exists
+                            target_key = REVERSE_PARAM_MAP.get(k, k)
+                            if target_key in training_params:
+                                training_params[target_key] = v
+                            # Also check if the raw key is in training_params (for keys not in PARAM_MAP)
+                            elif k in training_params:
+                                training_params[k] = v
+                        config_found = True
+                        break
+                if config_found:
+                    break
+
     training_params["model"] = model_name
     training_params["dataset"] = dataset
     training_params["fold"] = fold
@@ -826,22 +892,40 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         return True, {}
 
     print(f"  Execution CWD: {PROJECT_ROOT / 'examples'}")
-    result = subprocess.run(run_cmd, shell=True, cwd=PROJECT_ROOT / "examples")
+    # Ensure PROJECT_ROOT is in PYTHONPATH so pykt can be found
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{PROJECT_ROOT}:{env.get('PYTHONPATH', '')}"
+    
+    # Parse CUDA_VISIBLE_DEVICES from run_cmd if present
+    if gpu_selection:
+        env["CUDA_VISIBLE_DEVICES"] = gpu_selection
+    env["EXPERIMENT_DIR"] = experiment_dir_abs
+    
+    # Execute without shell=True to prevent process duplication
+    # Split the command properly, handling the surrogate wrapper
+    import shlex
+    cmd_to_run = train_command_explicit
+    if "PYKT_TARGET_SCRIPT=" in train_command_explicit:
+        # Extract env var and command
+        parts = train_command_explicit.split(" ", 1)
+        target_script_part = parts[0]  # PYKT_TARGET_SCRIPT=...
+        env["PYKT_TARGET_SCRIPT"] = target_script_part.split("=", 1)[1]
+        cmd_to_run = parts[1] if len(parts) > 1 else ""
+    
+    result = subprocess.run(shlex.split(cmd_to_run), cwd=PROJECT_ROOT / "examples", env=env, check=False, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"❌ Training failed for fold {fold}")
+        if result.stdout:
+            print(f"Training output:\n{result.stdout[-2000:]}")
+        if result.stderr:
+            print(f"Training errors:\n{result.stderr[-2000:]}")
         return False, {}
 
     # 6. Execute Evaluation
     print(f"  Evaluating Fold {fold}...")
-    # Add fix for nested checkpoint/config in baseline models 
-    # (Simplified internal version of what run_benchmarks_paper.py does externally)
-    # The external script handles complex patching, here we use the generated command
-    # but we DO need to ensure wandb_predict can find the config if it's nested.
-    # Fortunately build_explicit_eval_command adds --save_dir pointing to experiment_folder
-    # which contains config.json.
     
-    eval_cmd_full = f"EXPERIMENT_DIR={experiment_dir_abs} {eval_command_explicit}"
-    eval_result = subprocess.run(eval_cmd_full, shell=True, cwd=PROJECT_ROOT / "examples")
+    # Parse eval command similarly
+    eval_result = subprocess.run(shlex.split(eval_command_explicit), cwd=PROJECT_ROOT / "examples", env=env, check=False, capture_output=True, text=True)
     
     # 7. Collect Results
     metrics = {}

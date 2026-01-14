@@ -541,8 +541,6 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmr7t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmr7t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/euler/eurm10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/euler/eurm7.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8t.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7m.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/fplmri.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
@@ -555,6 +553,8 @@ INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr7t.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7y.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/fplmr.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8t.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7v.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
@@ -564,11 +564,11 @@ INPUT /usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr8t.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmb7t.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/fplmb.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/zplmb7t.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7t.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/mathpazo/zplmr7y.vf

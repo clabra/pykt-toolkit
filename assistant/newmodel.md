@@ -1,1 +1,1 @@
-../paper/idkt.md
+../paper/gtransformer.md
