@@ -21,7 +21,8 @@
 - **Delta (Δ)**: Difference between our result and PyKT reference (Our - PyKT). Negative = we're lower, Positive = we're higher
 - **DKT AS2009**: Δ-0.0013 is within our standard deviation (±0.0013), confirming excellent reproducibility
 - AS2009 = assist2009, AL2005 = algebra2005, BD2006 = bridge2algebra2006, NIPS34 = nips_task34
-- All models use optimized hyperparameters from `configs/kt_config_[dataset].json`
+- **Parameter Source**: All models use optimized, dataset-specific hyperparameters loaded dynamically from `configs/kt_config_[dataset].json`.
+- **Note**: The "Hyperparameters Table" below shows values specifically for `assist2009` and serves as an illustration; other datasets use different tuned values.
 - Current benchmark run: AS2009 only (other datasets to be added)
 
 **Experiments**:
@@ -62,7 +63,11 @@ python examples/run_repro_experiment.py --model_name atkt --dataset assist2009 -
 ---
 
 ## Hyperparameters Table
-
+ 
+> [!WARNING]
+> **The table below is for illustration based on the `assist2009` dataset.**  
+> Hyperparameters are **dataset-specific**. For any other dataset, the definitive source of truth is the corresponding `.json` file in the `configs/` directory (e.g. `configs/kt_config_assist2015.json`).
+ 
 **Overview of hyperparameters used for all models** (adapted from PyKT benchmark Table 7)
 
 ### Model-Specific Hyperparameters
@@ -99,7 +104,7 @@ python examples/run_repro_experiment.py --model_name atkt --dataset assist2009 -
 
 ### Notes
 
-- All hyperparameters are optimized values from `configs/kt_config_assist2009.json` (PyKT team's hyperparameter tuning results)
+- **Source of Truth**: All hyperparameters are loaded dynamically from the dataset-specific configuration files (e.g., `configs/kt_config_assist2009.json`). The values below are specifically for `assist2009`.
 - Common parameters are from `configs/parameter_default.json`
 - **qid**: Question ID embedding type
 - Early stopping is applied based on validation AUC

@@ -90,7 +90,8 @@ MODEL_SCRIPTS = {
     "sakt": "wandb_sakt_train.py",
     "saint": "wandb_saint_train.py",
     "akt": "wandb_akt_train.py",
-    "idkt": "train_idkt.py"
+    "idkt": "train_idkt.py",
+    "gtransformer": "wandb_gtransformer_train.py"
 }
 
 # Environment Config
@@ -105,7 +106,7 @@ def run_cmd(cmd, log_path, env=None, cwd=None):
         process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, start_new_session=True)
         return process.wait()
 
-def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None, dry_run=False):
+def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None, dry_run=False, epochs=None):
     """
     Worker that uses run_repro_experiment.py to launch a training task.
     Logs are written directly into the experiment folder.
@@ -148,6 +149,8 @@ def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None
         "--force_id", exp_id,
         "--num_gpus", "1" # Already limited by CUDA_VISIBLE_DEVICES
     ]
+    if epochs:
+        cmd.extend(["--epochs", str(epochs)])
     if dry_run:
         cmd.append("--dry_run")
 
@@ -385,9 +388,9 @@ def evaluate_worker(model, dataset, fold, gpu_id):
              print(f"[Sanitizer] Copied sanitized config to {nested_config_path}")
 
         # Add required flags
-        eval_cmd = eval_cmd.replace("--fusion_type 'early_fusion,late_fusion'", "--fusion_type none")
+        eval_cmd = eval_cmd.replace("--fusion_type 'early_fusion,late_fusion'", "--fusion_type late_fusion")
         if "--fusion_type" not in eval_cmd:
-            eval_cmd += " --fusion_type none"
+            eval_cmd += " --fusion_type late_fusion"
         # eval_cmd += " --use_all_in_one False" # wandb_predict.py does not support this
 
     log_path = exp_dir / "eval_benchmark.log"
@@ -417,6 +420,7 @@ def main():
     parser.add_argument("--dataset", type=str, default=None, help="Filter by dataset")
     parser.add_argument("--model", type=str, default=None, help="Filter by model")
     parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
+    parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     args = parser.parse_args()
 
     gpus = args.gpus.split(",")
@@ -455,7 +459,7 @@ def main():
                         gpu_id = gpus[idx % max_workers]
                         delay = min((idx % max_workers) * 20, 120) # Stagger starts (audit can be heavy)
                         print(f"[QUEUE] {model} on {dataset} fold {fold} (GPU {gpu_id})")
-                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder, args.dry_run))
+                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder, args.dry_run, args.epochs))
                         idx += 1
             
             for future in as_completed(futures):
