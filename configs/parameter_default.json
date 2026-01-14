@@ -56,7 +56,8 @@
     "attention_dim": 64,
     "dim_s": 256,
     "emb_size": 256,
-    "fusion_type": "late_fusion"
+    "fusion_type": "late_fusion",
+    "prior_augmentation": true
   },
   "types": {
     "launcher": [
@@ -118,7 +119,8 @@
       "attention_dim",
       "dim_s",
       "emb_size",
-      "fusion_type"
+      "fusion_type",
+      "prior_augmentation"
     ]
   },
   "fixed": {
@@ -128,5 +130,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "91e5ff980e3a3dc06ad3802f911d3510"
+  "md5": "8551204f0c8be9a06f6433741d59f2f9"
 }

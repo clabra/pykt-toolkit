@@ -83,6 +83,10 @@ We want to avoid the risks of having parameter defaults hardcoded. Changes in ha
 
 when you change any parameter default value (the reference values are in paper/parameters.cvs) follow guidelines in "Parameter Evolution Protocol" section.
 
+## Ablation Studies
+
+See `assistant/ablation.md` for guidelines on how to augment or modify the model code in order to be able to properly perform ablation studies.
+
 ## Important Constraints
 
 - Always work within the activated .pykt-env virtual environment
