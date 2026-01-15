@@ -125,7 +125,15 @@ This ensures that the model loaded for test AUC calculation is **identical** in 
 *Table will be updated as each model completes its 5-fold CV run*  
 *Last updated: 2026-01-14 20:30 UTC*
 
-## Exp 090230 - Steps 2 to 4 (Grounding, Outputs, Losses)
+## Exp 090230 - Steps 2 to 4 (Grounding, Outputs, Losses) ✅
+
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `4b45fa41` (Jan 15) |
+> | **Experiment** | `20260115_090230_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
+> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5` |
+> | **Interpretation** | **Recommended Configuration**. "Interpretability for Free" achieved, matching the unconstrained neural performance of this architecture while providing full pedagogical diagnostics. |
 
 This section tracks the evolution of the **gTransformer** model as we introduce Neuro-Symbolic features beyond the initial AKT-equivalent baseline.
 
@@ -188,6 +196,14 @@ The campaign completed on 2026-01-15. Individual fold metrics were aggregated to
 
 ## Exp 112429 (True Parity)
 
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `7449c53b` (Jan 15) |
+> | **Experiment** | `20260115_112429_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7769** ± 0.0007 |
+> | **Parameters Changed** | `n_blocks: 4`, `n_heads: 4` (Matched Baseline) |
+> | **Interpretation** | Poorest performance, establishing a high "Cost of Interpretability" (~0.56% AUC drop) for this specific architecture. |
+
 This campaign achieves the most rigorous scientific comparison by matching the **exact architectural footprint** of the black-box baseline: 4 transformer blocks and 4 attention heads.
 
 ### Rationale & Design
@@ -215,6 +231,15 @@ This final verification allows us to map the performance across the architectura
 3.  **Optimal Default**: The results identify the **2 blocks / 8 heads** configuration as the optimal "sweet spot" for gTransformer, balancing predictive power and pedagogical alignment.
 
 ## Exp 123509 - Ablation Validity Check
+
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `003e6766` (Jan 15) |
+> | **Experiment** | `20260115_123509_benchpaper_baseline` |
+> | **Test AUC (Late Fusion)** | **0.7838** ± 0.0017 |
+> | **Parameters Changed** | `ablation: 'all'`, `n_blocks: 4`, `n_heads: 4` |
+> | **Interpretation** | Successful reproduction of the Step 0 Baseline (0.7825), confirming the `ablation` flag effectively reverts the model to a pure neural state. |
+
 This experiment serves as a **negative control** to verify the integrity of our architectural comparisons.
 
 ### Design
@@ -233,16 +258,34 @@ The experiment successfully replicated (and slightly exceeded) the baseline perf
 1.  **Codebase Integrity**: The core neural architecture remains sound.
 2.  **Valid Delta**: The performance drop observed in Exp 112429 (0.7769 AUC) is definitively attributable to the Neuro-Symbolic constraints, validating our measurement of the "Cost of Interpretability."
 
+## Exp 133835 - Optimal Baseline Establishment (2/8)
+
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `003e6766` (Jan 15) |
+> | **Experiment** | `20260115_133835_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7803** ± 0.0016 |
+> | **Parameters Changed** | `ablation: 'all'`, `n_blocks: 2`, `n_heads: 8` |
+> | **Interpretation** | Defines the "Neural Ceiling" for our optimal architecture. Allows us to measure the *Marginal Cost of Grounding* (vs the 2/8 host) rather than the global cost (vs the 4/4 baseline). |
+
+This experiment measures the performance of the **optimal gTransformer architecture** (2 blocks, 8 heads) when stripped of all Neuro-Symbolic constraints (`ablation="all"`).
+
+### Results (5-Fold CV)
+| Metric | Exp 133835 (Ablated) | Exp 090230 (Grounded) | **Delta (Cost)** |
+| :--- | :---: | :---: | :---: |
+| **Mean AUC** | **0.7803** ± 0.0016 | **0.7800** ± 0.0013 | **-0.0003** |
+| **Mean ACC** | **0.7362** ± 0.0006 | **0.7371** ± 0.0012 | **+0.0009** |
+
+### Interpretation: "Zero Marginal Cost"
+This result is crucial for understanding the architectural dynamics of grounding.
+
+1.  **Lower Neural Ceiling**: Reducing depth from 4 blocks to 2 blocks (Exp 123509 vs 133835) naturally lowers the unconstrained neural ceiling from **0.7838** to **0.7803**. This ~0.35% drop is the price of a shallower architecture.
+2.  **Negligible Grounding Cost**: However, for this specific 2/8 architecture, introducing the Neuro-Symbolic constraints costs almost nothing ($\Delta = -0.0003$).
+    *   **4/4 Architecture**: Grounding cost was expensive ($\Delta \approx -0.70\%$).
+    *   **2/8 Architecture**: Grounding cost is negligible ($\Delta \approx -0.03\%$).
+
+**Conclusion**: While the 4/4 black-box model remains the absolute predictive champion (0.7825+), the **2/8 architecture** is the "Optimal Grounded Host." It allows us to inject pedagogical theory with effectively **zero marginal cost** to its specific capacity, making it the most efficient vehicle for interpretable AI in this domain.
 
 
-## Next Steps 
-
-This finding reinforces the need for the following **Next Steps** to isolate the impact of architectural width (heads) on the accuracy-interpretability trade-off:
-
-
-### 2. Optimal Baseline Establishment (2/8)
-*   **Goal**: Define the correct reference point for our optimal architecture.
-*   **Setup**: **2 blocks / 8 heads** (Optimal) with `ablation="all"`.
-*   **Rationale**: Comparing the Grounded 2/8 model (0.7800) against the Parity 4/4 Baseline (0.7825) is technically unfair because the architectures differ. To precisely measure the "Grounding Cost" for our best model, we must compare it against an unconstrained model **with the same 2/8 architecture**.
 
 
