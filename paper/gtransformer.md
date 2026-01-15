@@ -174,3 +174,33 @@ In addition to the explicit *Grounding Losses* ($\mathcal{L}_{ref}$, $\mathcal{L
     *   **Formula**: $\mathcal{L}_{reg} = \lambda_{rasch} \sum ||u_q||^2$
     *   **Implementation**: This logic is encapsulated within the `forward` pass (`gtransformer.py`) but added to the total loss in `train_model.py` via the `preloss` accumulator. In current benchmarks (`assist2009`), $\lambda_{rasch}$ is set to `1e-05`.
 
+
+## Hyperparameter Configuration
+
+Through a benchmarking campaign (documented in `paper/benchmark_paper.md`), we established the optimal architectural configuration for balancing predictive performance with interpretability.
+
+### The "Wide & Shallow" Insight
+Our experiments revealed a counter-intuitive dynamic: grounding works better in **wider, shallower** networks.
+*   **Narrow Architectures (4 heads)**: Suffered significant performance degradation when grounding was applied ($-0.56\%$ AUC), likely due to a bottleneck in processing both pattern-matching and symbolic constraints.
+*   **Wide Architectures (8 heads)**: Absorbed the grounding constraints with effectively **zero marginal cost** ($-0.03\%$ AUC). The increased width provides the necessary capacity to maintain separate subspaces for neural patterns and symbolic logic.
+
+**Note**: While the 2-block/8-head gTransformer (0.7800 AUC) is the optimal *grounded* host, the absolute highest predictive performance observed in our campaign remains the **unconstrained (ablation=all) 4-block/4-head AKT baseline** (Exp 123509, **0.7838 AUC**). We intentionally trade this minor 0.38% predictive margin to gain full pedagogical interpretability at zero *marginal* cost for the chosen architecture.
+
+### Recommended Defaults
+Based on these findings, we endorse the following configuration as the standard for gTransformer:
+
+| Parameter | Value | Rationale |
+| :--- | :--- | :--- |
+| `n_blocks` | **2** | Sufficient depth for reasoning; deeper models (4 blocks) showed diminishing returns. |
+| `n_heads` | **8** | Critical width required to host neuro-symbolic logic without friction ("Interpretability for Free"). |
+| `d_model` | 64 | Standard embedding size. |
+| `lambda_ref` | 0.5 | Balanced weight for the Reference BKT Loss. |
+| `lambda_init` | 0.1 | Regularization strength for Initial Mastery ($p_{L0}$). |
+| `lambda_rate` | 0.1 | Regularization strength for Learning Rate ($p_T$). |
+
+## Next Steps 
+
+### Probing Lossess
+
+### Per Paramete Regularization
+

@@ -10,11 +10,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 42,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.0001
         },
@@ -28,11 +28,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 42,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.0001
         },
@@ -46,11 +46,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 42,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.0001
         },
@@ -64,11 +64,11 @@
             "final_fc_dim2": 64,
             "loss1": 0.5,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.0001
         },
@@ -82,11 +82,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 1e-05
         }
@@ -268,9 +268,9 @@
             "d_ff": 256,
             "dropout": 0.05,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         },
         "3": {
@@ -278,9 +278,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         },
         "0": {
@@ -288,9 +288,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         },
         "2": {
@@ -298,9 +298,9 @@
             "d_ff": 256,
             "dropout": 0.05,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         },
         "1": {
@@ -308,9 +308,9 @@
             "d_ff": 256,
             "dropout": 0.05,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         }
     },
@@ -319,7 +319,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.1,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
             "num_en": 1,
             "learning_rate": 0.001
@@ -328,7 +328,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.1,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
             "num_en": 1,
             "learning_rate": 0.001
@@ -567,7 +567,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 8,
             "learning_rate": 0.0001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         },
@@ -578,7 +578,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 4,
             "learning_rate": 0.0001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         },
@@ -600,7 +600,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 2,
             "learning_rate": 0.0001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         },
@@ -611,7 +611,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 4,
             "learning_rate": 0.0001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         }
@@ -742,7 +742,7 @@
             "k_index": 3,
             "seed": 42,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.2,
             "learning_rate": 0.0001
         },
@@ -753,11 +753,11 @@
             "dropout": 0.05,
             "final_fc_dim2": 64,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "k_index": 4,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.8,
             "learning_rate": 0.0001
         },
@@ -772,7 +772,7 @@
             "k_index": 3,
             "seed": 3407,
             "final_fc_dim": 64,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.8,
             "learning_rate": 0.0001
         },
@@ -783,11 +783,11 @@
             "dropout": 0.1,
             "final_fc_dim2": 256,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "k_index": 3,
             "seed": 42,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.5,
             "learning_rate": 0.0001
         },
@@ -798,11 +798,11 @@
             "dropout": 0.1,
             "final_fc_dim2": 256,
             "d_model": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "k_index": 4,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.8,
             "learning_rate": 0.0001
         }
@@ -976,7 +976,7 @@
             "d_model": 256,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 1e-05
         },
         "2": {
@@ -986,7 +986,7 @@
             "d_model": 256,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 1e-05
         },
         "3": {
@@ -995,7 +995,7 @@
             "dropout": 0.05,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "n_blocks": 2,
             "learning_rate": 0.0001
         },
@@ -1006,7 +1006,7 @@
             "d_model": 256,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 1e-05
         }
     },
@@ -1114,7 +1114,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -1123,7 +1123,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -1132,7 +1132,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -1141,9 +1141,9 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.5,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         },
         "4": {
@@ -1152,7 +1152,7 @@
             "dropout": 0.3,
             "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.0001
         }
     },
@@ -1173,7 +1173,7 @@
             "dropout": 0.05,
             "d_model": 256,
             "d_ff": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "n_know": 32
         },
@@ -1183,7 +1183,7 @@
             "dropout": 0.05,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "n_know": 16
         },
@@ -1193,7 +1193,7 @@
             "dropout": 0.1,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.0001,
             "n_know": 8
         },
@@ -1203,7 +1203,7 @@
             "dropout": 0.05,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.0001,
             "n_know": 8
         }
@@ -1397,7 +1397,7 @@
             "emb_size": 256,
             "dropout": 0.05,
             "l3": 0.1,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 4,
             "seed": 3407,
@@ -1436,7 +1436,7 @@
             "emb_size": 256,
             "dropout": 0.1,
             "l3": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 4,
             "seed": 3407,
