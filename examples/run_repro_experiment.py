@@ -20,6 +20,9 @@ import sys
 import subprocess
 import hashlib
 import random
+import re
+import csv
+import shlex
 from pathlib import Path
 from datetime import datetime
 
@@ -144,16 +147,94 @@ def get_required_param(config, section, param_name):
     if section in config and param_name in config[section]:
         return config[section][param_name]
     
+    
     # For backward compatibility, also check top-level defaults
     if 'defaults' in config and param_name in config['defaults']:
         return config['defaults'][param_name]
     
-    # Parameter not found - this is an error
-    raise ValueError(
-        f"Required parameter '{param_name}' not found in config.\n"
-        f"Expected in: input section (user override) or {section} section (default value).\n"
-        f"Please ensure parameter_default.json contains this parameter."
+    raise KeyError(f"Required parameter '{param_name}' not found in any section")
+
+def execute_command_with_logging(command_str, experiment_folder, env=None, cwd=None, is_shell=True):
+    """
+    Executes a command and parses its output to save per-epoch metrics to a CSV file.
+    Returns a result object with 'returncode' and 'stdout' attributes.
+    """
+    metrics_path = Path(experiment_folder) / "epoch_metrics.csv"
+    
+    # Define regex patterns for different KT models' output formats
+    # Pattern 1: Standard pykt (train_model.py)
+    # Epoch: 1, validauc: 0.7689, validacc: 0.7296, best epoch: 1, best auc: 0.7689, train loss: 0.45...
+    pykt_pattern = re.compile(r"Epoch:\s+(\d+),\s+validauc:\s+([0-9.]+),\s+validacc:\s+([0-9.]+),\s+best epoch:\s+(\d+),\s+best auc:\s+([0-9.]+),\s+train loss:\s+([0-9.]+)")
+    
+    # Pattern 2: idkt (train_idkt.py)
+    # Epoch 1/200: Loss=0.6931 (Raw SUP=0.6931... Valid AUC=0.5000
+    idkt_pattern = re.compile(r"Epoch\s+(\d+)/\d+:\s+Loss=([0-9.]+).*Valid AUC=([0-9.]+)")
+
+    # Prepare CSV headers if file doesn't exist
+    if not metrics_path.exists():
+        with open(metrics_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['epoch', 'valid_auc', 'valid_acc', 'train_loss', 'best_auc', 'best_epoch'])
+
+    print(f"  Logging per-epoch metrics to {metrics_path.name}")
+
+    # Use Popen to capture output in real-time
+    process = subprocess.Popen(
+        command_str if is_shell else shlex.split(command_str),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        shell=is_shell,
+        env=env,
+        cwd=cwd,
+        bufsize=1,
+        universal_newlines=True
     )
+
+    full_output = []
+    
+    try:
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            
+            clean_line = line.strip()
+            print(clean_line)
+            full_output.append(clean_line)
+
+            # Try parsing
+            match = pykt_pattern.search(clean_line)
+            if match:
+                epoch, vauc, vacc, bepoch, bauc, loss = match.groups()
+                with open(metrics_path, 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([epoch, vauc, vacc, loss, bauc, bepoch])
+                continue
+
+            match = idkt_pattern.search(clean_line)
+            if match:
+                epoch, loss, vauc = match.groups()
+                # idkt output doesn't have all fields inline in the print
+                with open(metrics_path, 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([epoch, vauc, "", loss, "", ""])
+                continue
+
+    except Exception as e:
+        print(f"\n⚠️ Error during output parsing: {e}")
+    finally:
+        if process.stdout:
+            process.stdout.close()
+        return_code = process.wait()
+
+    # Compatibility shim for subprocess.CompletedProcess
+    class MockResult:
+        def __init__(self, rc, out):
+            self.returncode = rc
+            self.stdout = out
+            self.stderr = ""
+    
+    return MockResult(return_code, "\n".join(full_output))
 
 def generate_experiment_id():
     """Generate a unique 6-digit experiment ID."""
@@ -693,7 +774,7 @@ def reproduce_experiment(repro_experiment_id, num_gpus=None, dry_run=False):
     print("\n" + "=" * 80)
     print("LAUNCHING REPRODUCTION TRAINING")
     print("=" * 80 + "\n")
-    result = subprocess.run(train_command, shell=True)
+    result = execute_command_with_logging(train_command, repro_folder, is_shell=True)
     
     if result.returncode == 0:
         print("\n" + "=" * 80)
@@ -910,7 +991,6 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
     
     # Execute without shell=True to prevent process duplication
     # Split the command properly, handling the surrogate wrapper
-    import shlex
     cmd_to_run = train_command_explicit
     if "PYKT_TARGET_SCRIPT=" in train_command_explicit:
         # Extract env var and command
@@ -919,7 +999,7 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         env["PYKT_TARGET_SCRIPT"] = target_script_part.split("=", 1)[1]
         cmd_to_run = parts[1] if len(parts) > 1 else ""
     
-    result = subprocess.run(shlex.split(cmd_to_run), cwd=PROJECT_ROOT / "examples", env=env, check=False, capture_output=True, text=True)
+    result = execute_command_with_logging(cmd_to_run, experiment_folder, env=env, cwd=PROJECT_ROOT / "examples", is_shell=False)
     if result.returncode != 0:
         print(f"❌ Training failed for fold {fold}")
         if result.stdout:
