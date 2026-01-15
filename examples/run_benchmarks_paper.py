@@ -249,6 +249,7 @@ def evaluate_worker(model, dataset, fold, gpu_id):
         eval_cmd = eval_cmd.replace("/usr/bin/python", sys.executable)
         eval_cmd = eval_cmd.replace("/home/vscode/.pykt-env/bin/python3", sys.executable)
         eval_cmd = eval_cmd.replace("python3 examples/wandb_predict.py", f"{sys.executable} examples/wandb_predict.py")
+        eval_cmd = eval_cmd.replace("python3 examples/wandb_gtransformer_predict.py", f"{sys.executable} examples/wandb_gtransformer_predict.py")
         # However, eval_cmd is a shell string "cd ... && python ...".
         # We rely on replacement or we could parse it. Replacement is safer for now.
     

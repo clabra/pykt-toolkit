@@ -6,7 +6,7 @@
     "seed": 42,
     "short_title": "test",
     "train_script": "examples/wandb_gtransformer_train.py",
-    "eval_script": "examples/wandb_predict.py",
+    "eval_script": "examples/wandb_gtransformer_predict.py",
     "epochs": 200,
     "patience": 10,
     "batch_size": 64,
@@ -145,5 +145,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "1c65f661dd7b9ed7603492c4e9380d4f"
+  "md5": "f8dd1f7f1d51cb81acb44ecfbb386d38"
 }

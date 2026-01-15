@@ -1,0 +1,2 @@
+epoch,valid_auc,valid_acc,train_loss,best_auc,best_epoch
+1,0.7196,0.7093,1.0289924235661474,0.7196,1

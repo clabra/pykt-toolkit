@@ -197,9 +197,24 @@ Based on these findings, we endorse the following configuration as the standard 
 
 ### Probing-Guided Training (Active Grounding)
 
-Moving beyond passive verification, we propose integrating probing objectives directly into the training loop as **Active Grounding**.
-*   **Methodology**: Define an auxiliary loss $\mathcal{L}_{probe} = || Probe(z_{context}) - p_{target} ||^2$ where the $Probe$ is a simple linear projection and $p_{target}$ are the theoretical BKT parameters ($p_{L0}, p_T$).
-*   **Why it's interesting**: This forces the gradient descent to explicitly carve out a latent space Isomorphic to the pedagogical theory. Instead of just hoping the model aligns its *outputs* with BKT ($\mathcal{L}_{ref}$), this forces the model's *internal thoughts* ($z$) to be linearly decodable as pedagogical constructs. It guarantees **Structural Isomorphism**, maximizing the interpretability of the learned representations by design.
+Moving beyond passive verification, we propose integrating probing objectives directly into the training loop as **Active Grounding**. This forces the model to encode pedagogical parameters into its latent space by design.
+
+**Implementation Roadmap**:
+1.  **Phase 1: Oracle Generation (Offline)**: Generate "Ground Truth" parameters ($Target_{L0}, Target_{T}$) for the entire training set using the pre-fit BKT model. These serve as the supervision targets for the probes.
+2.  **Phase 2: Probe Architecture**: enhance `gtransformer.py` with dedicated linear Probe Heads:
+    *   $\hat{p}_{L0} = \sigma(W_{L0} \cdot z_{context})$
+    *   $\hat{p}_{T} = \sigma(W_{T} \cdot z_{context})$
+3.  **Phase 3: Active Loss Integration**: Implement a dedicated training loop (e.g., `train_gtransformer.py`) to handle the specialized data loading (Oracle targets) and Active Loss computation. This avoids cluttering the generic `train_model.py`.
+    *   $\mathcal{L}_{total} = \mathcal{L}_{pred} + \lambda_{probe} \cdot ||\hat{p} - Target||^2$
+    *   Backpropagating this loss forces the Transformer encoder to organize its latent space $z$ such that it is **linearly isomorphic** to the BKT parameters.
+4.  **Phase 4: Structural Validation**: Monitor `Probe_MSE` alongside `AUC`. Success is defined as high AUC with low Probe Error, proving the model is both accurate and structurally grounded.
+
+### Contextualization 
+
+How to show, in a rigurous and visual way, the practical benefits of the gttransformer approach to educational practitioners?. Some ideas: 
+
+- Plot comparing traditional BKT mastery trajectory estimations vs gtransformer estimations for a given student.  Highligh context-awareness. 
+
 
 
 ## Potential Future Work
@@ -235,3 +250,9 @@ Future iterations should explore the interplay between two distinct types of reg
 2.  **Structural Shrinkage (Bias Regularization)**:
     *   **Mechanism**: $\lambda_{bias} \cdot ||v_s||^2$. Pulls the *learnable student weights* towards zero.
     *   **Role**: **Pending**. This becomes essential **only when Individualization is enabled**. Without shrinkage, the model would overfit by learning massive offsets ($v_s$) for every student ID, ignoring the context. Exploring the balance between the "Leash" (Theory) and the "Shrinkage" (Parsimony) is a key direction for robust personalized modeling.
+
+## Expected Contributions
+
+1.  **Interpretability for Free**: Proving that a properly grounded Neuro-Symbolic architecture (2-block/8-head gTransformer) can match the predictive performance of unconstrained deep learning models ($\Delta AUC \approx 0$) while producing fully transparent parameters.
+2.  **Active Grounding & Structural Isomorphism**: Introducing a novel training paradigm that goes beyond output alignment. By enforcing "Active Grounding" via probing-guided objectives, we demonstrate that a black-box Transformer can be forced to become **structurally isomorphic** to a classical probabilistic model (BKT). This offers a rigorous mathematical guarantee that the model's internal representations are faithful to pedagogical theory, not just convenient correlations.
+3.  **Low-Cost Individualization Framework**: Establishing a scalable pathway for adding student personalization (Steps 2-4) that integrates seamlessly with the grounded core, controlled by clear regularization strategies ("Leash" vs "Shrinkage").

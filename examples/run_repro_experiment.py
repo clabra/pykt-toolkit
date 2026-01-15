@@ -587,7 +587,10 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
     else:
         # Baselines use wandb_predict.py which needs to run from examples/ directory
         # It reads configuration directly from the experiment folder's config.json
-        predict_script = os.path.join(os.path.dirname(__file__), "wandb_predict.py")
+        if model == "gtransformer":
+            predict_script = os.path.join(os.path.dirname(__file__), "wandb_gtransformer_predict.py")
+        else:
+            predict_script = os.path.join(os.path.dirname(__file__), "wandb_predict.py")
         abs_predict_script = os.path.abspath(predict_script)
         
         cmd_parts = [python_path, abs_predict_script]
