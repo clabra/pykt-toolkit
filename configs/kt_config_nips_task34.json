@@ -10,11 +10,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.001
         },
@@ -32,7 +32,7 @@
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.001
         },
@@ -50,7 +50,7 @@
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.001
         },
@@ -64,11 +64,11 @@
             "final_fc_dim2": 256,
             "loss1": 0.5,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.001
         },
@@ -82,11 +82,11 @@
             "final_fc_dim2": 64,
             "loss1": 0.5,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "num_layers": 2,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "start": 50,
             "learning_rate": 0.001
         }
@@ -270,7 +270,7 @@
             "d_model": 64,
             "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "2": {
@@ -280,7 +280,7 @@
             "d_model": 64,
             "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "3": {
@@ -288,7 +288,7 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -298,9 +298,9 @@
             "d_ff": 64,
             "dropout": 0.3,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "4": {
@@ -308,9 +308,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         }
     },
@@ -319,7 +319,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
             "num_en": 1,
             "learning_rate": 0.001
@@ -567,8 +567,8 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 8,
             "learning_rate": 0.001,
-            "n_blocks": 4,
-            "num_attn_heads": 4,
+            "n_blocks": 2,
+            "num_attn_heads": 8,
             "seed": "3,407"
         },
         "1": {
@@ -578,7 +578,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 4,
             "learning_rate": 0.001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         },
@@ -600,7 +600,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 4,
             "learning_rate": 0.001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "3,407"
         },
@@ -611,7 +611,7 @@
             "emb_type": "qid_conv_ker_noexp",
             "kernel_size": 2,
             "learning_rate": 0.001,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "num_attn_heads": 8,
             "seed": "42"
         }
@@ -672,7 +672,7 @@
             "nheads": 4,
             "d_model": 64,
             "d_ff": 256,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "r": 0.9,
             "gamma": 5.0
@@ -742,7 +742,7 @@
             "k_index": 6,
             "seed": 3407,
             "final_fc_dim": 64,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.7,
             "learning_rate": 0.001
         },
@@ -757,7 +757,7 @@
             "k_index": 6,
             "seed": 3407,
             "final_fc_dim": 64,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.9,
             "learning_rate": 0.001
         },
@@ -772,7 +772,7 @@
             "k_index": 7,
             "seed": 42,
             "final_fc_dim": 64,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.3,
             "learning_rate": 0.001
         },
@@ -802,7 +802,7 @@
             "k_index": 6,
             "seed": 3407,
             "final_fc_dim": 256,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "sparse_ratio": 0.3,
             "learning_rate": 0.001
         }
@@ -966,7 +966,7 @@
             "d_model": 64,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "1": {
@@ -976,7 +976,7 @@
             "d_model": 64,
             "d_ff": 64,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "2": {
@@ -986,7 +986,7 @@
             "d_model": 64,
             "d_ff": 256,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "3": {
@@ -996,7 +996,7 @@
             "d_model": 128,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "4": {
@@ -1006,7 +1006,7 @@
             "d_model": 64,
             "d_ff": 128,
             "num_attn_heads": 8,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         }
     },
@@ -1123,7 +1123,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
             "n_blocks": 1,
             "learning_rate": 0.001
@@ -1132,7 +1132,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.5,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 42,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -1141,16 +1141,16 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
-            "n_blocks": 4,
+            "n_blocks": 2,
             "learning_rate": 0.001
         },
         "1": {
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "seed": 3407,
             "n_blocks": 2,
             "learning_rate": 0.001
@@ -1163,7 +1163,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 128,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "n_know": 4
         },
@@ -1183,7 +1183,7 @@
             "dropout": 0.1,
             "d_model": 128,
             "d_ff": 128,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "n_know": 32
         },
@@ -1203,7 +1203,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 128,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "learning_rate": 0.001,
             "n_know": 16
         }
@@ -1397,7 +1397,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 0.3,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 1,
             "seed": 42,
@@ -1423,7 +1423,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 1.0,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 1,
             "seed": 42,
@@ -1436,7 +1436,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 1.0,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 2,
             "seed": 42,
@@ -1449,7 +1449,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 0.7,
-            "num_attn_heads": 4,
+            "num_attn_heads": 8,
             "l1": 1,
             "num_layers": 1,
             "seed": 3407,

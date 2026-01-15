@@ -132,7 +132,7 @@ This ensures that the model loaded for test AUC calculation is **identical** in 
 > | **Commit** | `4b45fa41` (Jan 15) |
 > | **Experiment** | `20260115_090230_benchpaper` |
 > | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
-> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5` |
+> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5`, `lambda_init: 0.1`, `lambda_rate: 0.1` |
 > | **Interpretation** | **Recommended Configuration**. "Interpretability for Free" achieved, matching the unconstrained neural performance of this architecture while providing full pedagogical diagnostics. |
 
 This section tracks the evolution of the **gTransformer** model as we introduce Neuro-Symbolic features beyond the initial AKT-equivalent baseline.
@@ -165,6 +165,14 @@ To ensure a fair and consistent comparison, we standardized several hyperparamet
 *   **Initialization**: Switched from random initialization to **Grounded Gaussian Initialization**, where bases are seeded with pre-fit BKT parameters to facilitate faster and more stable convergence toward pedagogical constructs.
 
 ## Exp 102914 - Restoring Baseline Depth
+
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `18604dad` (Jan 14) |
+> | **Experiment** | `20260114_102914_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7795** ± 0.0009 |
+> | **Parameters Changed** | `n_blocks: 4`, `n_heads: 8`, `lambda_ref: 0.5`, `lambda_init: 0.1`, `lambda_rate: 0.1` |
+> | **Interpretation** | Deeper architecture increases stability (lower std dev) but degrades mean performance slightly compared to the 2-block optimal, likely due to over-regularization. |
 
 This campaign evaluates the grounded GTransformer using the full architectural depth of the original gtransformer akt-like baseline (4 blocks) while maintaining the enhanced head count (8 heads) and Neuro-Symbolic features (Steps 2-4).
 
@@ -230,13 +238,13 @@ This final verification allows us to map the performance across the architectura
 2.  **Width vs. Depth for Grounding**: Counter-intuitively, grounded models perform **better with more heads (width)** than with more blocks (depth). The "Shallow/Wide" configuration (2/8) recovered half of the parity loss (-0.25% vs -0.56%) compared to the "Deep/Narrow" (4/4) configuration.
 3.  **Optimal Default**: The results identify the **2 blocks / 8 heads** configuration as the optimal "sweet spot" for gTransformer, balancing predictive power and pedagogical alignment.
 
-## Exp 123509 - Ablation Validity Check
+## Exp 123509 - Ablation Validity Check (Baseline Candidate with Higher Absolute AUC) 🔶
 
 > | **Attribute** | **Details** |
 > | :--- | :--- |
 > | **Commit** | `003e6766` (Jan 15) |
 > | **Experiment** | `20260115_123509_benchpaper_baseline` |
-> | **Test AUC (Late Fusion)** | **0.7838** ± 0.0017 |
+> | **Test AUC (Late Fusion)** | **0.7838** ± 0.0017 ✅ (Exceeds 0.7825 baseline) |
 > | **Parameters Changed** | `ablation: 'all'`, `n_blocks: 4`, `n_heads: 4` |
 > | **Interpretation** | Successful reproduction of the Step 0 Baseline (0.7825), confirming the `ablation` flag effectively reverts the model to a pure neural state. |
 
@@ -258,7 +266,9 @@ The experiment successfully replicated (and slightly exceeded) the baseline perf
 1.  **Codebase Integrity**: The core neural architecture remains sound.
 2.  **Valid Delta**: The performance drop observed in Exp 112429 (0.7769 AUC) is definitively attributable to the Neuro-Symbolic constraints, validating our measurement of the "Cost of Interpretability."
 
-## Exp 133835 - Optimal Baseline Establishment (2/8)
+**Note**: The AUC achieved in this validity check (**0.7838**) is slightly higher than the initial Step 0 Baseline (**0.7825**). This small improvement suggests that the minor code refactorings and library updates performed during development have possibly improved the overall stability or efficiency of the training pipeline, further confirming that no regressions were introduced.
+
+## Exp 133835 - Optimal Baseline Establishment (2/8) ✅
 
 > | **Attribute** | **Details** |
 > | :--- | :--- |
