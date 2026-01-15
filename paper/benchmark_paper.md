@@ -188,5 +188,35 @@ This finding reinforces the need for the **Planned Parity Verification** (4/4 se
 
 *Full 5-fold cross-validated results will be appended here upon completion.*
 
+## Exp 112429 (True Parity)
+
+This campaign achieves the most rigorous scientific comparison by matching the **exact architectural footprint** of the black-box baseline: 4 transformer blocks and 4 attention heads.
+
+### Rationale & Design
+By eliminating architectural differences (width and depth), we can isolate the "Semantic Residual"—the precise drop in predictive performance caused solely by the introduction of pedagogical constraints ($L_{ref}$, $L_{param}$) and representational grounding.
+
+### Results (5-Fold CV)
+| Metric | Mean Result | Std Dev |
+| :--- | :---: | :---: |
+| **Test AUC (Late Fusion)** | **0.7769** | ± 0.0007 |
+| **Test ACC (Late Fusion)** | **0.7363** | ± 0.0015 |
+
+### Global Structural Comparison
+This final verification allows us to map the performance across the architectural and grounding spectrum:
+
+| Campaign | Config (B / H) | Grounded | Mean AUC | Delta to Baseline |
+| :--- | :---: | :---: | :---: | :---: |
+| **Step 0 (Baseline)** | **4 / 4** | No | **0.7825** | **0.0000** |
+| **Exp 090230 (Shallow)** | 2 / 8 | Yes | **0.7800** | -0.0025 |
+| **Exp 102914 (Deep)** | 4 / 8 | Yes | **0.7795** | -0.0030 |
+| **Exp 112429 (Parity)** | **4 / 4** | Yes | **0.7769** | **-0.0056** |
+
+### Interpretation
+1.  **The Cost of Interpretability**: In a strict parity setup, the introduction of symbolic grounding logic results in a loss of **0.56% AUC**. This represents the "Information Loss" when forcing a Transformer to ignore non-pedagogical noise and focus on pedagogically valid latent structures.
+2.  **Width vs. Depth for Grounding**: Counter-intuitively, grounded models perform **better with more heads (width)** than with more blocks (depth). The "Shallow/Wide" configuration (2/8) recovered half of the parity loss (-0.25% vs -0.56%) compared to the "Deep/Narrow" (4/4) configuration.
+3.  **Optimal Default**: The results identify the **2 blocks / 8 heads** configuration as the optimal "sweet spot" for gTransformer, balancing predictive power and pedagogical alignment.
+## Next Steps 
+
 ### Planned Parity Verification
 If Exp 102914 (4 blocks, 8 heads) is unable to bridge the gap to the black-box baseline (4 blocks, 4 heads), we will launch a **True Parity Grounded Run (4/4)**. This controlled comparison will allow us to isolate the impact of the head count vs. the Neuro-Symbolic constraints, ensuring that our verification against the scientific floor is as rigorous as possible.
+
