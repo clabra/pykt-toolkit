@@ -219,10 +219,11 @@ class GTransformer(nn.Module):
         preds = torch.sigmoid(output)
 
         if self.ablation == "all":
+            outputs = {'predictions': preds}
             if not qtest:
-                return preds, c_reg_loss
+                return outputs, c_reg_loss
             else:
-                return preds, c_reg_loss, z_context
+                return outputs, c_reg_loss, z_context
 
         # 2. Step 2 & 3: Grounded Outputs via Semantic Axis Projection
         # Get concept-specific axes and bases

@@ -4,7 +4,17 @@ The GTransformer model is a "Grounded" version of the Context-Aware Attentive Kn
 
 The main difference between gtransformer and the `pykt/models/idkt.py` implementation is that `idkt` grounded inputs/embeddings, whereas `gtransformer` grounds the **output parameter estimation**. The latent context vector $z$ is projected into enriched context-aware parameters ($p_{L0}, p_T$), which are then fed into a differentiable BKT logic layer.
 
-## Architecture & Implementation Steps
+## Theory-Guided Strategy
+
+The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learning model remains pedagogically meaningful. This mechanism acts as a Bayesian **prior**, where the model starts by assuming the student is "average" and then uses the Transformer's pattern-matching power to calculate a **contextual adjustment** ($\Delta$).
+
+*   **Theoretical Bases (Logit-space Initialization)**: Every skill is initialized with population-level $L_0$ and $T$ from a pre-fit Bayesian Knowledge Tracing model. These probabilities are converted into **logits** to serve as the fixed intercept ($\text{Base}_{\text{theory}}$). This ensures that at $epoch=0$, the model already behaves like a valid BKT machine.
+*   **Semantic Projections**: The model uses concept-specific axes ($\text{Axis}_{Know}, \text{Axis}_{Vel}$) to project the latent context vector $z$. The final context-aware parameter is calculated as the sum of the theoretical prior and the contextual delta:
+    $$ \text{logit}(p) = \text{Base}_{\text{theory}} + \underbrace{(z \cdot \text{Axis})}_{\Delta \text{context}} $$
+*   **Textured Grounding (Signal Survival)**: To ensure these theoretical priors are not "erased" by the Transformer's LayerNorm blocks, we use **Textured Grounding**. Instead of a flat constant, the bases are initialized with a small amount of Gaussian variance ($N(\mu=logit, \sigma=0.05)$). This non-zero variance allows the theoretical signal to propagate through the deep architecture.
+*   **Anchored Learning**: By regularizing the learned parameters against these bases ($\mathcal{L}_{param}$), the model is forced to find the best *individual* deviations from the theoretical average, rather than learning unconstrained values that lack semantic meaning.
+
+## Steps
 
 The implementation of `gTransformer` follows a Neuro-Symbolic architecture, progressively built in four verified steps:
 
@@ -47,26 +57,67 @@ $$ \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \l
 2.  **$\mathcal{L}_{ref}$**: Binary cross-entropy on the BKT Reference Output ($y_{bkt}$ vs $y_{true}$). This forces the learned $p_{L0}, p_T$ to be useful for BKT reasoning.
 3.  **$\mathcal{L}_{param}$**: MSE regularization penalizing deviation of $p_{L0}, p_T$ from their population-level BKT priors, ensuring they don't drift into theoretically invalid regions.
 
-## Baseline Benchmark Verification
 
-This section summarizes the results verifying Step 1 (Baseline Parity) between `gTransformer` (in ablation mode) and `AKT`.
+## BKT Logic
 
-### Performance Parity Results (5-Fold CV)
+In GTransformer, we do not simply use a pre-calculated BKT model to predict student performance. Instead, we implement a **Differentiable BKT Logic Wrapper** directly within the neural network's forward pass. This Neuro-Symbolic integration allows the Transformer to serve as a context-aware parameter estimator for a symbolic probabilistic machine.
 
-| Metric | AKT (Benchmark) | gTransformer (Baseline Mode) | Delta |
-| :--- | :--- | :--- | :--- |
-| **Test AUC (Mean)** | **0.7825** ± 0.0017 | **0.7825** ± 0.0017 | **0.0000** |
-| **Experiment ID** | `557255` | `282848` | - |
+### Differentiable Implementation
+The BKT logic is encapsulated in the `_bkt_ref_output` method, which implements the standard Hidden Markov Model (HMM) recurrence equations for Bayesian Knowledge Tracing:
 
-**Conclusion**: The `gTransformer` model is a reliable architectural reproduction of `AKT` when BKT components are disabled.
+1.  **Bayes Update (Post-observation)**: Given an observation $y_{i}$ at history step $i$, the model updates the belief of mastery $L_i$:
+    $$ P(L_i | y_i=1) = \frac{L_i(1 - S)}{L_i(1 - S) + (1 - L_i)G} $$
+    $$ P(L_i | y_i=0) = \frac{L_i S}{L_i S + (1 - L_i)(1 - G)} $$
+2.  **Learning Transition**: The belief for the next step $i+1$ is updated using the learning rate $T$:
+    $$ L_{i+1} = P(L_i|y_i) + (1 - P(L_i|y_i))T $$
+3.  **Output Emission**: The final prediction for step $t$ is:
+    $$ P(y_t=1) = L_t(1 - S) + (1 - L_t)G $$
 
-## Current Training Campaign (Neuro-Symbolic)
+This logic is implemented using vectorized PyTorch operations, ensuring that the entire "BKT walk" is fully differentiable. This allows the Transformer to receive gradients through the BKT logic, learning to estimate parameters that are not only accurate but also theoretically consistent.
 
-We are currently running a **5-Fold Cross-Validation Campaign** on `assist2009` with the full Neuro-Symbolic architecture enabled:
-*   **Dataset**: `assist2009`
-*   **Configuration**:
-    *   `lambda_ref`: 0.5
-    *   `lambda_initmastery`: 0.1
-    *   `lambda_rate`: 0.1
-    *   `ablation`: `none` (Full architecture active)
-*   **Live Experiments**: Fold 0-4 are running on dedicated GPUs.
+### Integration in GTransformer
+GTransformer integrates this logic by separating the **Parameter Estimation** from the **Inference Machine**:
+
+*   **The Estimator (Transformer)**: The Transformer encoder-decoder processes the student's interaction history and projects the latent context $z_t$ into context-aware parameters $p_{L0}$ (Initial Mastery) and $p_{T}$ (Learning Rate).
+*   **The Machine (BKT Logic Wrapper)**: For every timestep $t$, the BKT Wrapper takes the estimated $(p_{L0}, p_T)$ and "walks" through the student's actual responses from $1 \dots t-1$ to calculate the mastery belief $L_t$. This **retrospective re-evaluation** is necessary because as the Transformer's estimation of the student's stable traits ($p_{L0}, p_T$) improves with more evidence, it must re-interpret the entire journey to arrive at a theoretically consistent diagnostic of their current knowledge. Despite its $O(T^2)$ nature, this process is computationally efficient as it matches the complexity of the Transformer's self-attention mechanism and is fully parallelized across the temporal dimension using vectorized GPU operations.
+*   **The Reference Output**: The result of this walk is the **Reference Output** ($y_{ref}$). Because this output is constrained by BKT equations, any performance gains must come from the Transformer's ability to better estimate the underlying learner parameters $(p_{L0}, p_T)$ based on temporal context.
+
+### Role of the pre-fit BKT Model (`pyBKT`)
+While GTransformer implements its own BKT logic, we still leverage a standard BKT model (fit using Expectation-Maximization via `pyBKT`) for two critical "anchoring" purposes:
+
+1.  **Global Priors**: The population-level Guess ($G$) and Slip ($S$) parameters are loaded from the pre-fit model and kept fixed during GTransformer training. This ensures that the model's interpretation of "Knowledge" remains grounded in standard pedagogical assumptions.
+2.  **Theoretical Bases**: The `Base` terms for $p_{L0}$ and $p_T$ are initialized with the population-level $P(L_0)$ and $P(T)$ from the BKT model. This provides the Transformer with a "theory-guided" starting point, from which it learns to deviate based on specific student contexts.
+
+**Why not use `pyBKT` directly?** We don't use the `pyBKT` library during training because it is a static, non-differentiable CPU library designed for population-level fits. By re-implementing the logic in PyTorch, we enable the high-performance, context-aware individualization that characterizes GTransformer.
+
+### Implementation Snippet: Vectorized Retrospective Walk
+
+The following snippet shows how we efficiently implement the retrospective re-evaluation using 3D tensor expansion. By expanding the history ($i$) and context ($t$) into separate dimensions, we can update the entire mastery block in parallel across all contexts.
+
+```python
+# Initial Belief L and Learning Rate T at context t
+# Shape: [BS, seqlen_context, seqlen_history]
+L = p_l0.unsqueeze(-1).expand(bs, seqlen, seqlen).clone()
+T_rate = p_t.unsqueeze(-1).expand(bs, seqlen, seqlen)
+
+# Iterative walk through student history (i)
+for i in range(seqlen - 1):
+    # Retrieve observation and skill priors at history step i
+    obs = target[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
+    g_i, s_i = gs[:, i].unsqueeze(1).unsqueeze(1), ss[:, i].unsqueeze(1).unsqueeze(1)
+    
+    L_i = L[:, :, i:i+1] # Belief for all contexts t at history step i
+    
+    # 1. Bayes Update (Probabilistic Symbolic Step)
+    prob_correct = L_i * (1 - s_i) + (1 - L_i) * g_i
+    L_post = torch.where(obs > 0.5, 
+                         (L_i * (1 - s_i)) / prob_correct, 
+                         (L_i * s_i) / (1 - prob_correct))
+    
+    # 2. Transition (Learning Step using context-aware T)
+    L[:, :, i+1:i+2] = L_post + (1 - L_post) * T_rate[:, :, i:i+1]
+
+# Diagonal Extraction: For context t, get mastery belief after journey 1...t-1
+idx = torch.arange(seqlen)
+L_at_t = L[:, idx, idx] 
+```

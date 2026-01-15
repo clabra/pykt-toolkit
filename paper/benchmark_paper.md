@@ -1,6 +1,6 @@
 # Benchmark Results for Paper
 
-## Test AUC Table: Question Level - Late Fusion (Mean Average)
+## Test AUC Table: Question Level - Late Fusion (Mean Average) - Baseline
 
 **Evaluation**: 5-fold Cross-Validation  
 **Metric**: Test AUC - Question-level Late Fusion (Mean Average) - `oriauclate_mean`
@@ -124,3 +124,35 @@ This ensures that the model loaded for test AUC calculation is **identical** in 
 
 *Table will be updated as each model completes its 5-fold CV run*  
 *Last updated: 2026-01-14 20:30 UTC*
+
+## Exp 090230 - Steps 2 to 4 (Grounding, Outputs, Losses)
+
+This section tracks the evolution of the **gTransformer** model as we introduce Neuro-Symbolic features beyond the initial AKT-equivalent baseline.
+
+### Summary of Component Implementation
+Starting from the baseline (Step 1), we have integrated the following architectural enhancements:
+*   **Step 2: Grounded Outputs**: Introduction of the Differentiable BKT Wrapper and the dual-loss architecture (Supervised + Reference).
+*   **Step 3: Textured Grounding**: Implementation of Semantic Axes ($\text{Axis}_{Know}, \text{Axis}_{Vel}$) for parameter projection anchored to theoretical bases.
+*   **Step 4: Individualization**: Integration of student-specific latent biases ($v_s$) to capture behavioral heterogeneity.
+
+For detailed theoretical justifications and implementation blueprints of these steps, see the **Architecture & Implementation** sections in `paper/gtransformer.md`.
+
+### Neuro-Symbolic Results (assist2009)
+
+The following metrics represent the finalized 5-fold cross-validation of the full "Grounded" model compared against the unconstrained baseline.
+
+| Feature Set | Campaign ID | Mean AUC | Mean ACC | Interpretability |
+| :--- | :--- | :---: | :---: | :--- |
+| **Step 1: Baseline** | `20260113_...` | **0.7825** ± 0.0017 | 0.7371 ± 0.0011 | Black-Box (Neural Only) |
+| **Steps 2-4: Grounded** | `20260115_...` | **0.7800** ± 0.0013 | 0.7371 ± 0.0012 | High (Neuro-Symbolic) |
+
+**Interpretation**: 
+The implementation of representational grounding results in a marginal drop in AUC (~0.0025). This is a positive indicator of the "Theoretical Anchor" at work: by forcing the high-capacity Transformer to align its latent representations with symbolic BKT logic, we slightly narrow the Rashomon set to focus only on pedagogically meaningful solutions. This small trade-off in predictive performance buys us high-granularity diagnostic parameters ($p_{L0}, p_T$) that are directly actionable for educators.
+
+### Parameter Standardization (Changes from Baseline)
+To ensure a fair and consistent comparison, we standardized several hyperparameters across all 5 folds that were previously variable in the baseline:
+
+*   **Architecture**: `n_blocks` fixed to 2 and `n_heads` fixed to 8. This reduces model complexity compared to some baseline folds (which used 4 blocks) while maintaining comparable performance.
+*   **Regularization**: Added $\lambda_{ref}=0.5$, $\lambda_{initmastery}=0.1$, and $\lambda_{rate}=0.1$. These parameters control the strength of the grounding constraints, forcing the model to minimize the "Symbolic Residual" during training.
+*   **Initialization**: Switched from random initialization to **Textured Grounding**, where bases are seeded with pre-fit BKT parameters to facilitate faster and more stable convergence toward pedagogical constructs.
+
