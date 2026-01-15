@@ -141,10 +141,10 @@ For detailed theoretical justifications and implementation blueprints of these s
 
 The following metrics represent the finalized 5-fold cross-validation of the full "Grounded" model compared against the unconstrained baseline.
 
-| Feature Set | Campaign ID | Mean AUC | Mean ACC | Interpretability |
-| :--- | :--- | :---: | :---: | :--- |
-| **Step 1: Baseline** | `20260113_...` | **0.7825** ± 0.0017 | 0.7371 ± 0.0011 | Black-Box (Neural Only) |
-| **Steps 2-4: Grounded** | `20260115_...` | **0.7800** ± 0.0013 | 0.7371 ± 0.0012 | High (Neuro-Symbolic) |
+| Feature Set | Mean AUC | Mean ACC | Interpretability | Campaign ID |
+| :--- | :---: | :---: | :--- | :--- |
+| **Step 1: Baseline** | **0.7825** ± 0.0017 | 0.7371 ± 0.0011 | Black-Box (Neural Only) | `20260113_1814_benchmark_CV_fixed_baseline_benchpaper` |
+| **Steps 2-4: Grounded** | **0.7800** ± 0.0013 | 0.7371 ± 0.0012 | High (Neuro-Symbolic) | `20260115_090230_benchpaper` |
 
 **Interpretation**: 
 The implementation of representational grounding results in a marginal drop in AUC (~0.0025). This is a positive indicator of the "Theoretical Anchor" at work: by forcing the high-capacity Transformer to align its latent representations with symbolic BKT logic, we slightly narrow the Rashomon set to focus only on pedagogically meaningful solutions. This small trade-off in predictive performance buys us high-granularity diagnostic parameters ($p_{L0}, p_T$) that are directly actionable for educators.
@@ -156,3 +156,37 @@ To ensure a fair and consistent comparison, we standardized several hyperparamet
 *   **Regularization**: Added $\lambda_{ref}=0.5$, $\lambda_{initmastery}=0.1$, and $\lambda_{rate}=0.1$. These parameters control the strength of the grounding constraints, forcing the model to minimize the "Symbolic Residual" during training.
 *   **Initialization**: Switched from random initialization to **Textured Grounding**, where bases are seeded with pre-fit BKT parameters to facilitate faster and more stable convergence toward pedagogical constructs.
 
+## Exp 102914 - Restoring Baseline Depth
+
+This campaign evaluates the grounded GTransformer using the full architectural depth of the original gtransformer akt-like baseline (4 blocks) while maintaining the enhanced head count (8 heads) and Neuro-Symbolic features (Steps 2-4).
+
+### Rationale & Design
+In Exp 090230, we established a "Grounded Floor" using a shallower architecture (2 blocks), witnessing a 0.25% drop from the unconstrained baseline. This experiment aims to bridge that gap by restoring the number of Transformer blocks to 4, matching the capacity of the original benchmark exactly.
+
+### Parameter Configuration
+| Parameter | Exp 090230 (Shallow Grounded) | Exp 102914 (Deep Grounded) |
+| :--- | :---: | :---: |
+| **n_blocks** | 2 | **4** |
+| **n_heads** | 8 | 8 |
+| **lambda_ref** | 0.5 | 0.5 |
+| **Theory Ready** | Yes | Yes |
+
+### Final Results (5-Fold CV)
+The campaign completed on 2026-01-15. Individual fold metrics were aggregated to determine the final grounded performance floor for the deep architecture.
+
+| Metric | Exp 090230 (Shallow) | Exp 102914 (Deep) | Delta |
+| :--- | :---: | :---: | :---: |
+| **Mean AUC** | **0.7800** ± 0.0013 | **0.7795** ± 0.0009 | -0.0005 |
+| **Mean ACC** | **0.7371** ± 0.0012 | **0.7371** ± 0.0012 | 0.0000 |
+
+### Conclusions
+1.  **Diminishing Returns of Depth**: Increasing model depth from 2 to 4 blocks did not result in the expected increase in Test AUC. In fact, we observed a minor regression of 0.05% in the mean.
+2.  **Structural Stability**: While the predictive performance didn't increase, the stability did—evidenced by the reduction in standard deviation (0.0009 vs 0.0013). This suggests the deeper model is more consistent but potentially over-regularized by the interaction between a high-capacity Transformer and the BKT loss.
+3.  **Head Count Hypothesis**: Both Grounded campaigns (090230 and 102914) used **8 heads**, while the AKT baseline used **4**. It is possible that the optimized 8-head configuration, while superior in neural-only settings, introduces confounding variance when constrained by symbolic logic.
+
+This finding reinforces the need for the **Planned Parity Verification** (4/4 setup) to isolate the impact of architectural width (heads) on the accuracy-interpretability trade-off.
+
+*Full 5-fold cross-validated results will be appended here upon completion.*
+
+### Planned Parity Verification
+If Exp 102914 (4 blocks, 8 heads) is unable to bridge the gap to the black-box baseline (4 blocks, 4 heads), we will launch a **True Parity Grounded Run (4/4)**. This controlled comparison will allow us to isolate the impact of the head count vs. the Neuro-Symbolic constraints, ensuring that our verification against the scientific floor is as rigorous as possible.

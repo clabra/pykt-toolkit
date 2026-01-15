@@ -16,8 +16,8 @@
     "gradient_clip": 1.0,
     "seq_len": 200,
     "d_model": 64,
-    "n_heads": 8,
-    "n_blocks": 2,
+    "n_heads": 4,
+    "n_blocks": 4,
     "d_ff": 256,
     "dropout": 0.1,
     "emb_type": "qid",
@@ -145,5 +145,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "1c65f661dd7b9ed7603492c4e9380d4f"
+  "md5": "fe5c64bc72291241db6a7afe6b8efc9d"
 }

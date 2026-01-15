@@ -98,7 +98,7 @@
             "dropout": 0.05,
             "d_model": 64,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001
         },
         "1": {
@@ -107,7 +107,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.001
         },
         "2": {
@@ -116,7 +116,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001
         },
         "3": {
@@ -125,7 +125,7 @@
             "dropout": 0.1,
             "d_model": 128,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001
         },
         "4": {
@@ -134,7 +134,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 128,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001
         }
     },
@@ -298,7 +298,7 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "n_blocks": 2,
             "learning_rate": 0.0001
@@ -319,7 +319,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 42,
             "num_en": 1,
             "learning_rate": 0.001
@@ -328,7 +328,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "num_en": 1,
             "learning_rate": 0.001
@@ -355,7 +355,7 @@
             "emb_type": "qid",
             "emb_size": 64,
             "dropout": 0.5,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "num_en": 1,
             "learning_rate": 0.001
@@ -570,7 +570,7 @@
             "nheads": 4,
             "d_model": 256,
             "d_ff": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001,
             "r": 0.1,
             "gamma": 5.0
@@ -585,7 +585,7 @@
             "nheads": 4,
             "d_model": 256,
             "d_ff": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001,
             "r": 0.5,
             "gamma": 0.3
@@ -600,7 +600,7 @@
             "nheads": 4,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001,
             "r": 0.5,
             "gamma": 0.1
@@ -615,7 +615,7 @@
             "nheads": 4,
             "d_model": 64,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.001,
             "r": 5.0,
             "gamma": 0.7
@@ -630,7 +630,7 @@
             "nheads": 4,
             "d_model": 256,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "learning_rate": 0.0001,
             "r": 0.3,
             "gamma": 0.1
@@ -659,7 +659,7 @@
             "dropout": 0.1,
             "final_fc_dim2": 256,
             "d_model": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "k_index": 2,
             "seed": 3407,
             "final_fc_dim": 256,
@@ -704,7 +704,7 @@
             "dropout": 0.3,
             "final_fc_dim2": 64,
             "d_model": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "k_index": 2,
             "seed": 42,
             "final_fc_dim": 256,
@@ -871,7 +871,7 @@
             "dropout": 0.1,
             "d_model": 64,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "n_blocks": 4,
             "learning_rate": 0.0001
         },
@@ -891,7 +891,7 @@
             "dropout": 0.05,
             "d_model": 64,
             "d_ff": 128,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "n_blocks": 4,
             "learning_rate": 0.001
         },
@@ -911,7 +911,7 @@
             "dropout": 0.3,
             "d_model": 128,
             "d_ff": 256,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "n_blocks": 2,
             "learning_rate": 0.001
         }
@@ -1020,7 +1020,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "n_blocks": 4,
             "learning_rate": 0.001
@@ -1029,7 +1029,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 42,
             "n_blocks": 4,
             "learning_rate": 0.001
@@ -1038,7 +1038,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "n_blocks": 4,
             "learning_rate": 0.001
@@ -1047,7 +1047,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.1,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "n_blocks": 4,
             "learning_rate": 0.001
@@ -1056,7 +1056,7 @@
             "emb_type": "qid",
             "emb_size": 256,
             "dropout": 0.3,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
             "n_blocks": 4,
             "learning_rate": 0.001
@@ -1316,7 +1316,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 1.0,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "l1": 1,
             "num_layers": 4,
             "seed": 42,
@@ -1329,7 +1329,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 0.7,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "l1": 1,
             "num_layers": 4,
             "seed": 42,
@@ -1342,7 +1342,7 @@
             "emb_size": 256,
             "dropout": 0.3,
             "l3": 0.5,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "l1": 1,
             "num_layers": 4,
             "seed": 42,
@@ -1370,9 +1370,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
-            "n_blocks": 2,
+            "n_blocks": 4,
             "learning_rate": 0.0001,
             "lambda_ref": 0.5,
             "lambda_initmastery": 0.1,
@@ -1383,9 +1383,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
-            "n_blocks": 2,
+            "n_blocks": 4,
             "learning_rate": 0.0001,
             "lambda_ref": 0.5,
             "lambda_initmastery": 0.1,
@@ -1396,9 +1396,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
-            "n_blocks": 2,
+            "n_blocks": 4,
             "learning_rate": 0.0001,
             "lambda_ref": 0.5,
             "lambda_initmastery": 0.1,
@@ -1409,9 +1409,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
-            "n_blocks": 2,
+            "n_blocks": 4,
             "learning_rate": 0.0001,
             "lambda_ref": 0.5,
             "lambda_initmastery": 0.1,
@@ -1422,9 +1422,9 @@
             "d_ff": 256,
             "dropout": 0.1,
             "d_model": 64,
-            "num_attn_heads": 8,
+            "num_attn_heads": 4,
             "seed": 3407,
-            "n_blocks": 2,
+            "n_blocks": 4,
             "learning_rate": 0.0001,
             "lambda_ref": 0.5,
             "lambda_initmastery": 0.1,

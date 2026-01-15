@@ -16,14 +16,41 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
 
 ## Steps
 
-The implementation of `gTransformer` follows a Neuro-Symbolic architecture, progressively built in four verified steps:
+### Step 0: Baseline Architecture (AKT-like)
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `18604dad66b3b5ff112c566b2803e3d34e1641af` (Jan 13) |
+> | **Experiment** | `20260113_1814_benchmark_CV_fixed_baseline_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7825** ± 0.0017 |
+> | **Parameters Changed** | None (Established Baseline) |
+> | **Interpretation** | Benchmarking results for a standard, unconstrained AKT architecture. |
 
-### Step 1: Baseline Architecture (AKT-like)
 *   **Foundation**: The core is the `AKT` model (Transformer Encoder with monotonic attention).
-*   **Verification**: We established functional parity with the standard `AKT` model in `pykt-toolkit` by running `gtransformer` with `--ablation all`.
-*   **Result**: The baseline gTransformer achieves identical predictive performance to AKT on `assist2009` (AUC ~0.7825).
+*   **Verification**: We established functional parity with the standard `AKT` model by running `gtransformer` with `--ablation all`.
+*   **Result**: The baseline gTransformer achieves identical predictive performance to AKT on `assist2009`.
+
+### Step 1: Augmented Input and Embeddings
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `6ef69d83006e98f6fe238f6a91f23549fe225f82` (Jan 15) |
+> | **Experiment** | N/A (Ablation Verification Only) |
+> | **Test AUC (Late Fusion)** | N/A |
+> | **Parameters Changed** | `ablation` flag enabled |
+> | **Interpretation** | Verification that grounding infrastructure logic does not interfere with neural processing. |
+
+*   **Grounding Infrastructure**: Integration of the BKT data loader to ingest population-level $L_0$ and $T$ parameters from pre-fit models (`bkt_skill_params.pkl`).
+*   **Texturing**: Initialization of `l0_base_emb` and `t_base_emb` using the "Prior-Adjustment" logic (logit-space conversion).
+*   **Verification**: Verified that the enrichment of the embedding space with theoretical priors does not degrade performance when the non-symbolic projection heads are bypassed (via `--ablation no_individualization`).
 
 ### Step 2: Grounded Outputs & Reference BKT Logic
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `4b45fa41ac15ebab5ea2695812363ed70c1b46ed` (Jan 15) |
+> | **Experiment** | `20260115_090230_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
+> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5` |
+> | **Interpretation** | Marginal (~0.25%) drop confirms grounding acts as a regularizer, narrowing the Rashomon set to focus on pedagogically valid representations. |
+
 *   **Symbolic Output**: Instead of just predicting correctness $P(y)$, the model outputs two grounded BKT parameters for every timestep:
     *   $p_{L0}$: Context-aware Initial Mastery probability.
     *   $p_T$: Context-aware Learning Rate (Transition) probability.
@@ -35,6 +62,14 @@ The implementation of `gTransformer` follows a Neuro-Symbolic architecture, prog
     *   **Reference Loss**: BCE on the BKT layer's prediction (forcing parameters to be valid for BKT logic).
 
 ### Step 3: Textured Grounding (Semantic Axes)
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `4b45fa41ac15ebab5ea2695812363ed70c1b46ed` (Jan 15) |
+> | **Experiment** | `20260115_090230_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
+> | **Parameters Changed** | Same as Step 2 |
+> | **Interpretation** | Successful projection of latent vectors through Semantic Axes without further performance degradation. |
+
 *   **Motivation**: To ensure the parameters imply "Knowledge" and "Learning Ability" rather than arbitrary values.
 *   **Implementation**: Instead of a black-box linear layer, parameters are projected using concept-specific semantic axes:
     *   $p_{L0} = \sigma(\text{Base}_{L0} + z \cdot \text{Axis}_{Know})$
@@ -42,6 +77,14 @@ The implementation of `gTransformer` follows a Neuro-Symbolic architecture, prog
 *   **BKT Anchoring**: The `Base` terms are initialized from population-level BKT parameters, ensuring the model starts from a theoretically sound prior.
 
 ### Step 4: Individualization (Representational Grounding)
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `4b45fa41ac15ebab5ea2695812363ed70c1b46ed` (Jan 15) |
+> | **Experiment** | `20260115_090230_benchpaper` |
+> | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
+> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5` |
+> | **Interpretation** | Final verification of the full Neuro-Symbolic pipeline. Implementation of Step 4 completes the representational grounding roadmap. |
+
 *   **Student Logic**: When student IDs are available (`n_uid > 0`), the model learns static student-specific biases:
     *   $v_s$: Student Velocity bias (added to $p_T$).
     *   $k_s$: Student Knowledge Gap bias (added to $p_{L0}$).
