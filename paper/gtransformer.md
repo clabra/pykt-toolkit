@@ -11,7 +11,7 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
 *   **Theoretical Bases (Logit-space Initialization)**: Every skill is initialized with population-level $L_0$ and $T$ from a pre-fit Bayesian Knowledge Tracing model. These probabilities are converted into **logits** to serve as the fixed intercept ($\text{Base}_{\text{theory}}$). This ensures that at $epoch=0$, the model already behaves like a valid BKT machine.
 *   **Semantic Projections**: The model uses concept-specific axes ($\text{Axis}_{Know}, \text{Axis}_{Vel}$) to project the latent context vector $z$. The final context-aware parameter is calculated as the sum of the theoretical prior and the contextual delta:
     $$ \text{logit}(p) = \text{Base}_{\text{theory}} + \underbrace{(z \cdot \text{Axis})}_{\Delta \text{context}} $$
-*   **Textured Grounding (Signal Survival)**: To ensure these theoretical priors are not "erased" by the Transformer's LayerNorm blocks, we use **Textured Grounding**. Instead of a flat constant, the bases are initialized with a small amount of Gaussian variance ($N(\mu=logit, \sigma=0.05)$). This non-zero variance allows the theoretical signal to propagate through the deep architecture.
+*   **Grounded Gaussian Initialization (Signal Survival)**: To ensure these theoretical priors are not "erased" by the Transformer's LayerNorm blocks, we use **Grounded Gaussian Initialization**. Instead of a flat constant, the bases are initialized with a small amount of Gaussian variance ($N(\mu=logit, \sigma=0.05)$). This non-zero variance allows the theoretical signal to propagate through the deep architecture.
 *   **Anchored Learning**: By regularizing the learned parameters against these bases ($\mathcal{L}_{param}$), the model is forced to find the best *individual* deviations from the theoretical average, rather than learning unconstrained values that lack semantic meaning.
 
 ## Steps
@@ -61,7 +61,7 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
     *   **Supervised Loss**: Standard BCE on the Transformer's direct prediction.
     *   **Reference Loss**: BCE on the BKT layer's prediction (forcing parameters to be valid for BKT logic).
 
-### Step 3: Textured Grounding (Semantic Axes)
+### Step 3: Semantic Axes & Grounded Gaussian Initialization (Semantic Axes)
 > | **Attribute** | **Details** |
 > | :--- | :--- |
 > | **Commit** | `4b45fa41ac15ebab5ea2695812363ed70c1b46ed` (Jan 15) |
@@ -164,3 +164,13 @@ for i in range(seqlen - 1):
 idx = torch.arange(seqlen)
 L_at_t = L[:, idx, idx] 
 ```
+
+## Regularization
+
+In addition to the explicit *Grounding Losses* ($\mathcal{L}_{ref}$, $\mathcal{L}_{param}$) described above, the model employs a structural regularization mechanism (`LossRegularization`) to prevent overfitting of the difficulty parameters.
+
+*   **Rasch Regularization**: This is an $L_2$ penalty applied specifically to the Question Difficulty embeddings ($u_q$) when `emb_type="qid"` is used with problem IDs.
+    *   **Goal**: Encourages parsimony in the difficulty estimation, preventing the model from explaining away student performance variances solely through arbitrary difficulty adjustments.
+    *   **Formula**: $\mathcal{L}_{reg} = \lambda_{rasch} \sum ||u_q||^2$
+    *   **Implementation**: This logic is encapsulated within the `forward` pass (`gtransformer.py`) but added to the total loss in `train_model.py` via the `preloss` accumulator. In current benchmarks (`assist2009`), $\lambda_{rasch}$ is set to `1e-05`.
+

@@ -2,7 +2,7 @@ direction: up
 
 BKT: {
   class: input
-  label: BKT
+  label: BKT Model
 }
 
 InputData: {
@@ -73,9 +73,7 @@ Outputs: {
     class: component
     label: "Reference \n p_ref"
 
-    linear
-    softmax
-    linear -> softmax
+    bkt: "BKT Logic"
   }
 
   GroundedOut1: {

@@ -132,7 +132,7 @@ This section tracks the evolution of the **gTransformer** model as we introduce 
 ### Summary of Component Implementation
 Starting from the baseline (Step 1), we have integrated the following architectural enhancements:
 *   **Step 2: Grounded Outputs**: Introduction of the Differentiable BKT Wrapper and the dual-loss architecture (Supervised + Reference).
-*   **Step 3: Textured Grounding**: Implementation of Semantic Axes ($\text{Axis}_{Know}, \text{Axis}_{Vel}$) for parameter projection anchored to theoretical bases.
+*   **Step 3: Grounded Gaussian Initialization**: Implementation of Semantic Axes ($\text{Axis}_{Know}, \text{Axis}_{Vel}$) for parameter projection anchored to theoretical bases.
 *   **Step 4: Individualization**: Integration of student-specific latent biases ($v_s$) to capture behavioral heterogeneity.
 
 For detailed theoretical justifications and implementation blueprints of these steps, see the **Architecture & Implementation** sections in `paper/gtransformer.md`.
@@ -154,7 +154,7 @@ To ensure a fair and consistent comparison, we standardized several hyperparamet
 
 *   **Architecture**: `n_blocks` fixed to 2 and `n_heads` fixed to 8. This reduces model complexity compared to some baseline folds (which used 4 blocks) while maintaining comparable performance.
 *   **Regularization**: Added $\lambda_{ref}=0.5$, $\lambda_{initmastery}=0.1$, and $\lambda_{rate}=0.1$. These parameters control the strength of the grounding constraints, forcing the model to minimize the "Symbolic Residual" during training.
-*   **Initialization**: Switched from random initialization to **Textured Grounding**, where bases are seeded with pre-fit BKT parameters to facilitate faster and more stable convergence toward pedagogical constructs.
+*   **Initialization**: Switched from random initialization to **Grounded Gaussian Initialization**, where bases are seeded with pre-fit BKT parameters to facilitate faster and more stable convergence toward pedagogical constructs.
 
 ## Exp 102914 - Restoring Baseline Depth
 
@@ -184,9 +184,7 @@ The campaign completed on 2026-01-15. Individual fold metrics were aggregated to
 2.  **Structural Stability**: While the predictive performance didn't increase, the stability did—evidenced by the reduction in standard deviation (0.0009 vs 0.0013). This suggests the deeper model is more consistent but potentially over-regularized by the interaction between a high-capacity Transformer and the BKT loss.
 3.  **Head Count Hypothesis**: Both Grounded campaigns (090230 and 102914) used **8 heads**, while the AKT baseline used **4**. It is possible that the optimized 8-head configuration, while superior in neural-only settings, introduces confounding variance when constrained by symbolic logic.
 
-This finding reinforces the need for the **Planned Parity Verification** (4/4 setup) to isolate the impact of architectural width (heads) on the accuracy-interpretability trade-off.
 
-*Full 5-fold cross-validated results will be appended here upon completion.*
 
 ## Exp 112429 (True Parity)
 
@@ -215,8 +213,36 @@ This final verification allows us to map the performance across the architectura
 1.  **The Cost of Interpretability**: In a strict parity setup, the introduction of symbolic grounding logic results in a loss of **0.56% AUC**. This represents the "Information Loss" when forcing a Transformer to ignore non-pedagogical noise and focus on pedagogically valid latent structures.
 2.  **Width vs. Depth for Grounding**: Counter-intuitively, grounded models perform **better with more heads (width)** than with more blocks (depth). The "Shallow/Wide" configuration (2/8) recovered half of the parity loss (-0.25% vs -0.56%) compared to the "Deep/Narrow" (4/4) configuration.
 3.  **Optimal Default**: The results identify the **2 blocks / 8 heads** configuration as the optimal "sweet spot" for gTransformer, balancing predictive power and pedagogical alignment.
+
+## Exp 123509 - Ablation Validity Check
+This experiment serves as a **negative control** to verify the integrity of our architectural comparisons.
+
+### Design
+*   **Architecture**: 4 Blocks / 4 Heads (True Parity).
+*   **Constraint**: `ablation="all"`. This disables all neuro-symbolic components (Steps 1-4), effectively turning GTransformer back into a standard AKT model.
+*   **Hypothesis**: If the implementation is correct, this run should reproduce the Step 0 Baseline performance (~0.7825 AUC), confirming that any drop observed in Exp 112429 is indeed caused by grounding, not code regression.
+
+### Results (5-Fold CV)
+| Metric | Baseline (Step 0) | Exp 123509 (Ablated) | Result |
+| :--- | :---: | :---: | :---: |
+| **Mean AUC** | **0.7825** ± 0.0017 | **0.7838** ± 0.0017 | **Reproduced** |
+| **Mean ACC** | **0.7371** ± 0.0011 | **0.7381** ± 0.0012 | **Reproduced** |
+
+### Interpretation
+The experiment successfully replicated (and slightly exceeded) the baseline performance. This confirms:
+1.  **Codebase Integrity**: The core neural architecture remains sound.
+2.  **Valid Delta**: The performance drop observed in Exp 112429 (0.7769 AUC) is definitively attributable to the Neuro-Symbolic constraints, validating our measurement of the "Cost of Interpretability."
+
+
+
 ## Next Steps 
 
-### Planned Parity Verification
-If Exp 102914 (4 blocks, 8 heads) is unable to bridge the gap to the black-box baseline (4 blocks, 4 heads), we will launch a **True Parity Grounded Run (4/4)**. This controlled comparison will allow us to isolate the impact of the head count vs. the Neuro-Symbolic constraints, ensuring that our verification against the scientific floor is as rigorous as possible.
+This finding reinforces the need for the following **Next Steps** to isolate the impact of architectural width (heads) on the accuracy-interpretability trade-off:
+
+
+### 2. Optimal Baseline Establishment (2/8)
+*   **Goal**: Define the correct reference point for our optimal architecture.
+*   **Setup**: **2 blocks / 8 heads** (Optimal) with `ablation="all"`.
+*   **Rationale**: Comparing the Grounded 2/8 model (0.7800) against the Parity 4/4 Baseline (0.7825) is technically unfair because the architectures differ. To precisely measure the "Grounding Cost" for our best model, we must compare it against an unconstrained model **with the same 2/8 architecture**.
+
 
