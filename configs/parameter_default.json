@@ -23,6 +23,7 @@
     "emb_type": "qid",
     "final_fc_dim": 512,
     "l2": 1e-05,
+    "l2_rasch": 1e-05,
     "lambda_student": 1e-05,
     "lambda_gap": 1e-05,
     "lambda_ref": 0.1,
@@ -57,7 +58,13 @@
     "dim_s": 256,
     "emb_size": 256,
     "fusion_type": "late_fusion",
-    "ablation": "none"
+    "ablation": "none",
+    "kq_same": 1,
+    "separate_qa": 0,
+    "pretrain_dim": 768,
+    "n_uid": 0,
+    "emb_path": "none",
+    "add_uuid": 1
   },
   "types": {
     "launcher": [
@@ -95,6 +102,7 @@
       "emb_type",
       "final_fc_dim",
       "l2",
+      "l2_rasch",
       "lambda_student",
       "lambda_gap",
       "lambda_ref",
@@ -122,7 +130,12 @@
       "fusion_type",
       "use_wandb",
       "add_uuid",
-      "ablation"
+      "ablation",
+      "kq_same",
+      "separate_qa",
+      "pretrain_dim",
+      "n_uid",
+      "emb_path"
     ]
   },
   "fixed": {
@@ -132,5 +145,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "0da27525381a3d90bec9fe826f555fac"
+  "md5": "2274c56dfc04ffc073886bf381ea2c2b"
 }

@@ -272,7 +272,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     cmd_parts = [python_path, abs_train_script]
     
     # Launcher-only parameters (not passed to training script)
-    launcher_only_params = {'model', 'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
+    launcher_only_params = {'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
     
     # Canonical parameter groups
     architecture_params = {'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type'}
@@ -284,7 +284,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     # Determine which parameters to pass based on training script
     if 'train_idkt.py' in train_script:
         allowed_params = {
-            'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
+            'model', 'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
             'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
             'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
             'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
@@ -295,12 +295,19 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size'
         }
     elif is_standard_pykt:
-        # Minimal set for all standard pykt scripts
-        allowed_params = {'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 'save_dir', 'epochs'}
+        # base set for all standard pykt scripts
+        allowed_params = {
+            'model', 'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 
+            'save_dir', 'epochs', 'batch_size', 'weight_decay', 'gradient_clip', 'patience',
+            'seq_len', 'emb_type', 'emb_path', 'optimizer'
+        }
         
         # Architecture if supported by that specific script
         if model == 'akt' or model == 'gtransformer':
-            allowed_params.update({'d_model', 'n_heads', 'n_blocks', 'd_ff', 'final_fc_dim', 'l2'})
+            allowed_params.update({
+                'd_model', 'n_heads', 'n_blocks', 'd_ff', 'final_fc_dim', 'l2',
+                'kq_same', 'separate_qa', 'pretrain_dim', 'ablation', 'n_uid', 'l2_rasch'
+            })
         elif model == 'sakt':
             allowed_params.update({'d_model', 'n_heads', 'n_blocks'})
         elif model == 'saint' or model == 'saint++':

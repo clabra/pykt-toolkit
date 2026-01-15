@@ -35,5 +35,5 @@ We use a single `ablation` parameter to control the model's behavior.
     - Else ($total$), $L_{total} = L_{sup} + L_{reg} + L_{gro}$.
 
 - **Embedding & Output**:
-    - If `ablation="all"`, disable parameter projection layers and Bayesian output head. Use standard MLP output.
+    - If `ablation="all"`, disable parameter projection layers and Bayesian output head. Use standard Supervised output.
     - Ensure embedding dimensions are adjusted to exclude augmented feature slots.

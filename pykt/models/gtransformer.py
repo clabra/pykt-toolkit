@@ -15,8 +15,8 @@ class Dim(IntEnum):
     feature = 2
 
 class GTransformer(nn.Module):
-    def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff=256, 
-            kq_same=1, final_fc_dim=512, num_attn_heads=8, separate_qa=False, l2=1e-5, emb_type="qid", emb_path="", pretrain_dim=768):
+    def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff, 
+            kq_same, final_fc_dim, num_attn_heads, separate_qa, l2_rasch, emb_type, emb_path, pretrain_dim, ablation, n_uid, **kwargs):
         super().__init__()
         """
         Input:
@@ -31,15 +31,19 @@ class GTransformer(nn.Module):
         self.dropout = dropout
         self.kq_same = kq_same
         self.n_pid = n_pid
-        self.l2 = l2
+        self.l2_rasch = l2_rasch
         self.model_type = self.model_name
         self.separate_qa = separate_qa
         self.emb_type = emb_type
+        self.ablation = ablation
+        self.n_uid = n_uid
         embed_l = d_model
+        
+        # 1. Standard AKT/GTransformer
         if self.n_pid > 0:
-            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # 题目难度
-            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # question emb, 总结了包含当前question（concept）的problems（questions）的变化
-            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # interaction emb, 同上
+            self.difficult_param = nn.Embedding(self.n_pid+1, 1) # Problem difficulty (u_q)
+            self.q_embed_diff = nn.Embedding(self.n_question+1, embed_l) # Difficulty variation across concepts (d_ct)
+            self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # Interaction variation (f_ct,rt)
         
         if emb_type.startswith("qid"):
             # n_question+1 ,d_model
@@ -48,6 +52,22 @@ class GTransformer(nn.Module):
                 self.qa_embed = nn.Embedding(2*self.n_question+1, embed_l) # interaction emb
             else: # false default
                 self.qa_embed = nn.Embedding(2, embed_l)
+                
+        # 2. Grounded Embeddings (Step 1.4: Only if ablation != "all")
+        if self.ablation != "all":
+            if self.n_uid > 0:
+                self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
+                self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
+            
+            # Semantic Axes for Individualization (Initialized with mean=1.0 for scalar visibility)
+            self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Knowledge axis (d_c)
+            self.velocity_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Velocity axis (d_s)
+            nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+            nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+            
+            # Theoretical Bases (Grounding points from BKT)
+            self.l0_base_emb = nn.Embedding(self.n_question + 1, embed_l) # L0_skill (Prior Base)
+            self.t_base_emb = nn.Embedding(self.n_question + 1, embed_l)  # T_skill (Velocity Base)
 
         # Architecture Object. It contains stack of attention block
         self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=num_attn_heads, dropout=dropout,
@@ -66,6 +86,55 @@ class GTransformer(nn.Module):
         for p in self.parameters():
             if p.size(0) == self.n_pid+1 and self.n_pid > 0:
                 torch.nn.init.constant_(p, 0.)
+
+    def load_theory_params(self, bkt_skill_params):
+        """
+        Initialize l0_base_emb and t_base_emb with pre-calculated BKT parameters.
+        Using Textured Grounding: Embeddings are shifted logits with feature variance
+        to survive LayerNorm blocks.
+        """
+        # If ablation="all", we do NOT use theory params, so we skip initialization.
+        if self.ablation == "all":
+            return
+            
+        if bkt_skill_params is None:
+            return
+        
+        # Extract params mapping
+        params_dict = bkt_skill_params.get('params', {})
+        global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
+        
+        def to_logit(p, eps=1e-6):
+            p = np.clip(p, eps, 1.0 - eps)
+            return np.log(p / (1.0 - p))
+
+        with torch.no_grad():
+            for q_idx in range(self.n_question + 1):
+                s_params = params_dict.get(q_idx, global_params)
+                l0_p = s_params.get('prior', global_params['prior'])
+                t_p = s_params.get('learns', global_params['learns'])
+                
+                # Textured Grounding: 
+                # Instead of a constant vector, we use a small normal distribution 
+                # centered at the logit. This ensures non-zero variance per-student
+                # so LayerNorm doesn't zero out the features.
+                l0_logit = to_logit(l0_p)
+                t_logit = to_logit(t_p)
+                
+                # N(logit, 0.05)
+                # Ensure the parameters exist (they might not if self.ablation="all", but we checked above)
+                if hasattr(self, 'l0_base_emb'):
+                    self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
+                if hasattr(self, 't_base_emb'):
+                    self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
+            
+            # Initialize axes with mean=1.0 to ensure student parameters are visible through mean() projection
+            if hasattr(self, 'knowledge_axis_emb'):
+                nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+            if hasattr(self, 'velocity_axis_emb'):
+                nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+                
+        print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)) and Relational Axes initialized.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -98,7 +167,7 @@ class GTransformer(nn.Module):
             else:
                 qa_embed_data = qa_embed_data + pid_embed_data * \
                     (qa_embed_diff_data+q_embed_diff_data)  # + uq *(h_rt+d_ct) # （q-response emb diff + question emb diff）
-            c_reg_loss = (pid_embed_data ** 2.).sum() * self.l2 # rasch部分loss
+            c_reg_loss = (pid_embed_data ** 2.).sum() * self.l2_rasch # rasch部分loss
         else:
             c_reg_loss = 0.
 

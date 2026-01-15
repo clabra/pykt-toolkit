@@ -181,7 +181,11 @@ def init_model(model_name, model_config, data_config, emb_type):
     #     model = GainAKT2Enhanced(data_config["num_c"], **enhanced_config, emb_type=emb_type, 
     #                            emb_path=data_config["emb_path"]).to(device)
     elif model_name == "gtransformer":
-        model = GTransformer(data_config["num_c"], data_config["num_q"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
+        # Avoid duplicate keys if they are already in model_config due to reproducibility standards
+        _model_config = model_config.copy()
+        _model_config.pop("emb_type", None)
+        _model_config.pop("emb_path", None)
+        model = GTransformer(data_config["num_c"], data_config["num_q"], **_model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")
         return None
