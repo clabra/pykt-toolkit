@@ -76,19 +76,14 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
     *   $p_{T} = \sigma(\text{Base}_{T} + z \cdot \text{Axis}_{Vel})$
 *   **BKT Anchoring**: The `Base` terms are initialized from population-level BKT parameters, ensuring the model starts from a theoretically sound prior.
 
-### Step 4: Individualization (Representational Grounding)
+### Step 4: Individualization (Representational Grounding) - *Inactive by Default*
 > | **Attribute** | **Details** |
 > | :--- | :--- |
-> | **Commit** | `4b45fa41ac15ebab5ea2695812363ed70c1b46ed` (Jan 15) |
-> | **Experiment** | `20260115_090230_benchpaper` |
-> | **Test AUC (Late Fusion)** | **0.7800** ± 0.0013 |
-> | **Parameters Changed** | `n_blocks: 4 -> 2`, `n_heads: 4 -> 8`, `lambda_ref: 0.5` |
-> | **Interpretation** | Final verification of the full Neuro-Symbolic pipeline. Implementation of Step 4 completes the representational grounding roadmap. |
+> | **Status** | Implemented but **Disabled** (`n_uid=0`) |
+> | **Rationale** | To ensure the model generalizes based on *behavioral context* rather than *student identity*. |
 
-*   **Student Logic**: When student IDs are available (`n_uid > 0`), the model learns static student-specific biases:
-    *   $v_s$: Student Velocity bias (added to $p_T$).
-    *   $k_s$: Student Knowledge Gap bias (added to $p_{L0}$).
-*   **Integration**: These are additive terms in the logit space, allowing the model to capture that some students are systematically faster learners or have higher prior knowledge, independent of the context.
+*   **Student Logic**: The architecture supports learning static student-specific biases ($v_s$ for velocity, $k_s$ for knowledge gap) to capture latent traits.
+*   **Current State**: In the recommended "Optimal Grounded" configuration (Exp 090230), this feature is turned off. The high predictive performance (0.7800 AUC) is achieved purely through **Contextualized Grounding**, proving that the model extracts student parameters ($p_{L0}, p_T$) dynamically from the interaction history without needing to "memorize" student IDs. This enhances the model's robustness for cold-start scenarios.
 
 ## Loss Function
 
@@ -202,5 +197,39 @@ Based on these findings, we endorse the following configuration as the standard 
 
 ### Probing Lossess
 
-### Per Paramete Regularization
+Use probing losses to validate the model's ability to learn the ground truth given by the reference model.
 
+
+## Potential Future Work
+
+### Structural Loss: Orthogonality Constraint
+
+Currently, the semantic axes ($Axis_{Know}, Axis_{Vel}$) are learned freely. There is a risk that they might collapse into a single "General Ability" vector, making $p_{L0}$ and $p_T$ highly correlated.
+
+*   **Proposal**: Introduce a regularization term to force these axes to be orthogonal:
+    $$ \mathcal{L}_{ortho} = \lambda_{ortho} \sum_{q} (Axis_{Know}^{(q)} \cdot Axis_{Vel}^{(q)})^2 $$
+*   **Why it's interesting**: This would mathematically enforce the disentanglement of "Prior Knowledge" (State) from "Learning Rate" (Velocity). It ensures that the model can distinguish a student who *knows a lot but learns slowly* from one who *knows little but learns fast*, preventing the "halo effect" where good students are just assumed to be good at everything. This is crucial for high-fidelity pedagogical diagnostics.
+
+### Individualization (Student ID Bias)
+
+While currently disabled (`n_uid=0`) to prioritize context generalization, enabling student-specific biases ($v_s, k_s$) offers distinct advantages in specific deployment scenarios.
+
+*   **When to Explore**:
+    *   **Longitudinal Tracking**: In real-world ITS (Intelligent Tutoring Systems) where students persist over long periods (months/years). The model can accumulate a "reputation" for a student, allowing it to predict high performance even at the start of a new topic (Cold Start amelioration) based on their historical ID profile.
+    *   **Latent Trait Discovery**: When the goal is to profile students for offline analysis (e.g., identifying "Fast Learners" vs "High Prior Knowledge" students) rather than just predicting the next interaction.
+
+*   **Risks & Limitations**:
+    *   **Overfitting in Benchmarks**: In standard randomized Cross-Validation (where students are split randomly), relying on IDs can lead to valid-set leakage (memorizing a student's performance from Monday to predict Tuesday).
+    *   **Cold Start (New Users)**: Relying too heavily on $v_s$ hurts new users who have no learned bias yet.
+    *   **Recommendation**: Individualization should be treated as an optional "User Profile" layer on top of the robust core model, only activated when the training setup (e.g., Chronological Splitting) supports learning stable long-term traits.
+
+### Per Parameter Regularization Strategies
+
+Future iterations should explore the interplay between two distinct types of regularization for parameters ($p_{L0}, p_T$):
+
+1.  **Grounding Loss (Reference Leash)**:
+    *   **Mechanism**: $\lambda_{ref} \cdot ||p_{context} - p_{prior}||^2$. Pulls the *dynamic output* towards the population prior.
+    *   **Role**: **Active**. Ensures valid semantic grounding.
+2.  **Structural Shrinkage (Bias Regularization)**:
+    *   **Mechanism**: $\lambda_{bias} \cdot ||v_s||^2$. Pulls the *learnable student weights* towards zero.
+    *   **Role**: **Pending**. This becomes essential **only when Individualization is enabled**. Without shrinkage, the model would overfit by learning massive offsets ($v_s$) for every student ID, ignoring the context. Exploring the balance between the "Leash" (Theory) and the "Shrinkage" (Parsimony) is a key direction for robust personalized modeling.
