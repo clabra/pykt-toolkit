@@ -134,6 +134,18 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                         y, im, rate, reg_loss, reg_losses = outputs
                     else:
                         y, reg_loss = outputs
+                elif model_name == "gtransformer":
+                    if isinstance(outputs, tuple):
+                        output_obj = outputs[0]
+                        reg_loss = outputs[1]
+                    else:
+                        output_obj = outputs
+                        reg_loss = torch.tensor(0.0).to(device)
+                    
+                    if isinstance(output_obj, dict):
+                        y = output_obj['predictions']
+                    else:
+                        y = output_obj
                 else:
                     y, reg_loss = outputs
                 y = y[:,1:]
@@ -470,6 +482,23 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                         h = None
                     else:
                         y, reg_loss, h = outputs
+                elif model_name == "gtransformer":
+                    if isinstance(outputs, tuple):
+                        output_obj = outputs[0]
+                        reg_loss = outputs[1]
+                        h = outputs[2] if len(outputs) > 2 else None
+                    else:
+                        output_obj = outputs
+                        reg_loss = torch.tensor(0.0).to(device)
+                        h = None
+                    
+                    if isinstance(output_obj, dict):
+                        y = output_obj['predictions']
+                        # GTransformer returns z_context as h if present
+                        if h is None:
+                            h = output_obj.get('z_context', None)
+                    else:
+                        y = output_obj
                 else:
                     y, reg_loss, h = outputs
                 y = y[:,1:]

@@ -120,6 +120,8 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - When creating or updating plans don't include time estimations
 - Only do commits when I ask for. In general, I prefer to commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for.
 - In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions, in case something doesn't match what is expected.
+- Don't update early models such as idkt for instance. They are deprecated in favour of current model. 
+- You are allowed to access tmp folder and log files. Don't ask for permission each time. 
 
 ## Models architecture and implementation
 

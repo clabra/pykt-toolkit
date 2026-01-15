@@ -8,6 +8,10 @@ import pandas as pd
 from pykt.models import evaluate,evaluate_question,load_model
 from pykt.datasets import init_test_datasets
 
+# CRITICAL ARCHITECTURAL FLAGS
+# This script reads model architecture directly from the experiment's config.json
+# to ensure perfect alignment between training and evaluation.
+
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 os.environ['CUBLAS_WORKSPACE_CONFIG']=':4096:2'
 

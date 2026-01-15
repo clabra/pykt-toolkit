@@ -131,10 +131,14 @@
         "seq_len": 200
     },
     "gtransformer": {
-        "learning_rate": 1e-05,
-        "d_model": 256,
-        "n_blocks": 1,
-        "dropout": 0.05,
-        "d_ff": 256
+        "learning_rate": 0.0001,
+        "d_model": 64,
+        "n_blocks": 2,
+        "dropout": 0.1,
+        "d_ff": 256,
+        "num_attn_heads": 8,
+        "lambda_ref": 0.5,
+        "lambda_initmastery": 0.1,
+        "lambda_rate": 0.1
     }
 }

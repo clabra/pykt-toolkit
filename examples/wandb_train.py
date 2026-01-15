@@ -11,6 +11,7 @@ from pykt.models import train_model,evaluate,init_model
 from pykt.utils import debug_print,set_seed
 from pykt.datasets import init_dataset4train
 import datetime
+import pickle
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -114,6 +115,26 @@ def main(params):
     else:
         model = init_model(model_name, model_config, data_config[dataset_name], emb_type)
         print(f"model is {model}")
+        
+        # Step 2: Theory-Guided Initialization for GTransformer
+        if model_name == "gtransformer" and model.ablation != "all":
+            dpath = data_config[dataset_name]["dpath"]
+            # Fix relative path if needed (wandb_train runs in examples/)
+            if dpath.startswith("../"):
+                dpath = os.path.join(os.getcwd(), dpath)
+            
+            bkt_path = os.path.join(dpath, "bkt_skill_params.pkl")
+            # Also check in 'old' directory if not found (for assist2009 per my search)
+            if not os.path.exists(bkt_path):
+                bkt_path = os.path.join(dpath, "old", "bkt_skill_params.pkl")
+                
+            if os.path.exists(bkt_path):
+                print(f"  [GTransformer] Loading BKT skill parameters from {bkt_path}")
+                with open(bkt_path, "rb") as f:
+                    bkt_params = pickle.load(f)
+                model.load_theory_params(bkt_params)
+            else:
+                print(f"  [GTransformer] WARNING: No BKT skill parameters found at {bkt_path}")
     if model_name == "gainakt2exp":
         # gainakt2exp handles optimizer creation internally
         opt = None

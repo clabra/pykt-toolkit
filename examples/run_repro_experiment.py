@@ -56,7 +56,7 @@ PARAM_MAP = {
         "skvmn": "dim_s", "deep_irt": "dim_s", "akt": "d_model", "gtransformer": "d_model"
     },
     "n_heads": {
-        "akt": "num_attn_heads", "gtransformer": "num_attn_heads", "sakt": "num_attn_heads", 
+        "akt": "num_attn_heads", "gtransformer": "n_heads", "sakt": "num_attn_heads", 
         "saint": "num_attn_heads", "saint++": "num_attn_heads"
     },
     "n_blocks": {
@@ -66,13 +66,16 @@ PARAM_MAP = {
         "atkt": "attention_dim"
     },
     "dataset": {
-        "standard_pykt": "dataset_name"
+        "standard_pykt": "dataset_name",
+        "gtransformer": "dataset"
     },
     "model": {
-        "standard_pykt": "model_name"
+        "standard_pykt": "model_name",
+        "gtransformer": "model"
     },
     "epochs": {
-        "standard_pykt": "num_epochs"
+        "standard_pykt": "num_epochs",
+        "gtransformer": "epochs"
     }
 }
 
@@ -353,7 +356,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     cmd_parts = [python_path, abs_train_script]
     
     # Launcher-only parameters (not passed to training script)
-    launcher_only_params = {'train_script', 'eval_script', 'max_correlation_students', 'short_title'}
+    launcher_only_params = {'train_script', 'eval_script', 'max_correlation_students'}
     
     # Canonical parameter groups
     architecture_params = {'seq_len', 'd_model', 'n_heads', 'n_blocks', 'd_ff', 'dropout', 'emb_type'}
@@ -363,50 +366,24 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
     is_standard_pykt = "wandb_" in train_script
 
     # Determine which parameters to pass based on training script
-    if 'train_idkt.py' in train_script:
-        allowed_params = {
-            'model', 'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
-            'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
-            'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
-            'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
-            'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
-            'save_dir', '_doc_grounding', '_doc_regularization',
-            'answer_dim', 'beta', 'epsilon', 'graph_type', 'lambda_r', 'lambda_w1', 'lambda_w2', 
-            'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
-            'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size'
-        }
-    elif is_standard_pykt:
-        # base set for all standard pykt scripts
-        allowed_params = {
-            'model', 'dataset', 'fold', 'seed', 'learning_rate', 'dropout', 'use_wandb', 'add_uuid', 
-            'save_dir', 'epochs', 'batch_size', 'weight_decay', 'gradient_clip', 'patience',
-            'seq_len', 'emb_type', 'emb_path', 'optimizer'
-        }
-        
-        # Architecture if supported by that specific script
-        if model == 'akt' or model == 'gtransformer':
-            allowed_params.update({
-                'd_model', 'n_heads', 'n_blocks', 'd_ff', 'final_fc_dim', 'l2',
-                'kq_same', 'separate_qa', 'pretrain_dim', 'ablation', 'n_uid', 'l2_rasch'
-            })
-        elif model == 'sakt':
-            allowed_params.update({'d_model', 'n_heads', 'n_blocks'})
-        elif model == 'saint' or model == 'saint++':
-            allowed_params.update({'d_model', 'n_heads', 'n_blocks'})
-        elif model == 'atkt':
-            allowed_params.update({'d_model', 'd_ff', 'answer_dim', 'epsilon', 'beta', 'hidden_dim', 'skill_dim', 'attention_dim'})
-        elif model == 'dkvmn':
-            allowed_params.update({'d_model', 'size_m'})
-        elif model == 'gkt':
-            allowed_params.update({'d_model', 'graph_type', 'hidden_dim'})
-        elif model in ['dkt', 'skvmn', 'deep_irt']:
-            allowed_params.update({'d_model'})
-        elif model == 'kqn':
-            allowed_params.update({'d_model', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden'})
-        elif model == 'dkt+':
-            allowed_params.update({'d_model', 'lambda_r', 'lambda_w1', 'lambda_w2'})
-        elif model == 'dkt_forget':
-            allowed_params.update({'d_model', 'num_rgap', 'num_sgap', 'num_pcount'})
+    # To satisfy reproducibility audit, we pass ALL parameters from defaults to ANY training script
+    # This ensures "Explicit Parameters, Zero Defaults" is enforced everywhere.
+    all_benchmark_params = {
+        'model', 'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
+        'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
+        'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
+        'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
+        'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
+        'save_dir', '_doc_grounding', '_doc_regularization',
+        'answer_dim', 'beta', 'epsilon', 'graph_type', 'lambda_r', 'lambda_w1', 'lambda_w2', 
+        'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
+        'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size', 'fusion_type',
+        'ablation', 'add_uuid', 'emb_path', 'kq_same', 'l2_rasch', 'n_uid', 'pretrain_dim', 'separate_qa',
+        'short_title'
+    }
+    
+    if 'train_idkt.py' in train_script or is_standard_pykt:
+        allowed_params = all_benchmark_params
     else:
         # Default safety: only pass runtime basics
         allowed_params = {'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'save_dir', 'fusion_type'}
@@ -450,31 +427,35 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
             # Special case: construct rasch_path dynamically
             if translated_key == "rasch_path" and "dataset" in params:
                 rasch_path = f"data/{params['dataset']}/rasch_targets.pkl"
-                cmd_parts.append(f"--{translated_key} {rasch_path}")
+                cmd_parts.append(f"--{translated_key}")
+                cmd_parts.append(rasch_path)
             else:
                 # Pass "null" as string to satisfy required=True
-                cmd_parts.append(f"--{translated_key} null")
+                cmd_parts.append(f"--{translated_key}")
+                cmd_parts.append("null")
         elif value == "None":
             # String "None" should be passed as "null" for consistency
-            cmd_parts.append(f"--{translated_key} null")
+            cmd_parts.append(f"--{translated_key}")
+            cmd_parts.append("null")
         else:
-            # Don't add quotes - shlex.split will handle proper parsing
-            val_str = str(value)
-            cmd_parts.append(f"--{translated_key} {val_str}")
+            # Append flag and value as separate items to avoid space issues
+            cmd_parts.append(f"--{translated_key}")
+            cmd_parts.append(str(value))
     
     # Add save_dir for all models to ensure they save results into the experiment folder
     if experiment_dir:
-        cmd_parts.append(f"--save_dir {experiment_dir}")
+        cmd_parts.append("--save_dir")
+        cmd_parts.append(str(experiment_dir))
     
-    # Standard PyKT scripts (wandb_*.py) must be run from examples/ 
-    # to find '../configs/'. We wrap with surrogate if needed.
+    # Standard PyKT scripts (wandb_*.py) must be run from examples/
     if "wandb_" in train_script:
         if model != "idkt":
             surrogate = os.path.join(PROJECT_ROOT, "tmp/pykt_train_surrogate.py")
             # Build command args list (not string) to avoid shell expansion issues
             surrogate_args = [python_path, surrogate] + cmd_parts[2:]
-            # Don't add quotes here - shlex.split will handle them
-            command = " ".join(str(arg) for arg in surrogate_args)
+            
+            import shlex
+            command = shlex.join(surrogate_args)
             # Set env var for target script
             command = f"PYKT_TARGET_SCRIPT={abs_train_script} {command}"
         else:

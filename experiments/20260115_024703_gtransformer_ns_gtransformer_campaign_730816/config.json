@@ -1,28 +1,22 @@
 {
     "experiment": {
-        "id": "795745",
-        "created": "2026-01-15T01:53:14.401242",
-        "repro_command": "examples/run_repro_experiment.py --model_name gtransformer --dataset assist2009 --fold 0 --seed 3407 --d_model 64 --num_attn_heads 4 --n_blocks 4 --d_ff 256 --dropout 0.1 --epochs 200 --batch_size 64 --learning_rate 0.0001 --final_fc_dim 512 --l2 1e-05 --fusion_type late_fusion --ablation all --short_title ablation_all_verify_20260115 --parent_folder experiments/verification_gtransformer",
-        "parent_folder": "experiments/verification_gtransformer"
+        "id": "730816",
+        "created": "2026-01-15T02:47:03.898776",
+        "repro_command": "examples/run_repro_experiment.py --model_name gtransformer --dataset assist2009 --fold 4 --seed 3407 --epochs 200 --num_attn_heads 4 --lambda_ref 0.5 --lambda_initmastery 0.1 --lambda_rate 0.1 --short_title ns_gtransformer_campaign --ablation none",
+        "parent_folder": null
     },
     "input": {
-        "short_title": "ablation_all_verify_20260115",
+        "short_title": "ns_gtransformer_campaign",
         "dataset": "assist2009",
-        "fold": 0,
+        "fold": 4,
         "model": "gtransformer",
         "seed": 3407,
         "epochs": 200,
-        "batch_size": 64,
-        "learning_rate": 0.0001,
-        "d_model": 64,
-        "n_blocks": 4,
-        "d_ff": 256,
-        "dropout": 0.1,
-        "final_fc_dim": 512,
-        "l2": 1e-05,
+        "lambda_ref": 0.5,
+        "lambda_initmastery": 0.1,
+        "lambda_rate": 0.1,
         "num_attn_heads": 4,
-        "fusion_type": "late_fusion",
-        "ablation": "all"
+        "ablation": "none"
     },
     "defaults": {
         "model": "idkt",
@@ -94,9 +88,9 @@
     "train_config": {
         "model": "gtransformer",
         "dataset": "assist2009",
-        "fold": 0,
+        "fold": 4,
         "seed": 3407,
-        "short_title": "ablation_all_verify_20260115",
+        "short_title": "ns_gtransformer_campaign",
         "train_script": "examples/train_idkt.py",
         "eval_script": "examples/eval_idkt.py",
         "epochs": 200,
@@ -108,8 +102,8 @@
         "gradient_clip": 1.0,
         "seq_len": 200,
         "d_model": 64,
-        "n_heads": 4,
-        "n_blocks": 4,
+        "n_heads": 8,
+        "n_blocks": 2,
         "d_ff": 256,
         "dropout": 0.1,
         "emb_type": "qid",
@@ -118,7 +112,7 @@
         "l2_rasch": 1e-05,
         "lambda_student": 1e-05,
         "lambda_gap": 1e-05,
-        "lambda_ref": 0.1,
+        "lambda_ref": 0.5,
         "lambda_initmastery": 0.1,
         "lambda_rate": 0.1,
         "theory_guided": 1,
@@ -150,7 +144,7 @@
         "dim_s": 256,
         "emb_size": 256,
         "fusion_type": "late_fusion",
-        "ablation": "all",
+        "ablation": "none",
         "kq_same": 1,
         "separate_qa": 0,
         "pretrain_dim": 768,
@@ -159,12 +153,12 @@
         "add_uuid": 1
     },
     "commands": {
-        "train_explicit": "PYKT_TARGET_SCRIPT=/workspaces/pykt-toolkit/examples/wandb_gtransformer_train.py /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/tmp/pykt_train_surrogate.py --ablation all --add_uuid 1 --batch_size 64 --d_ff 256 --d_model 64 --dataset_name assist2009 --dropout 0.1 --emb_path none --emb_type qid --final_fc_dim 512 --fold 0 --gradient_clip 1.0 --kq_same 1 --l2 1e-05 --l2_rasch 1e-05 --learning_rate 0.0001 --model_name gtransformer --n_blocks 4 --n_uid 0 --num_attn_heads 4 --num_epochs 200 --optimizer adam --patience 10 --pretrain_dim 768 --seed 3407 --separate_qa 0 --seq_len 200 --use_wandb 0 --weight_decay 0.0 --save_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745",
-        "eval_explicit": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/wandb_predict.py --save_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745 --bz 64 --use_wandb 0 --fusion_type late_fusion",
-        "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745 --num_students 15 --split test",
-        "plot_param_distribution": "/home/vscode/.pykt-env/bin/python examples/plot_param_distribution.py --experiment_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745",
-        "plot_mastery_mosaic": "/home/vscode/.pykt-env/bin/python examples/plot_mastery_mosaic.py --experiment_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745",
-        "train_probe": "/home/vscode/.pykt-env/bin/python examples/train_probe.py --experiment_dir /workspaces/pykt-toolkit/experiments/verification_gtransformer/fold_0_795745 --dimension difficult"
+        "train_explicit": "PYKT_TARGET_SCRIPT=/workspaces/pykt-toolkit/examples/wandb_gtransformer_train.py /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/tmp/pykt_train_surrogate.py --ablation none --add_uuid 1 --batch_size 64 --d_ff 256 --d_model 64 --dataset_name assist2009 --dropout 0.1 --emb_path none --emb_type qid --final_fc_dim 512 --fold 4 --gradient_clip 1.0 --kq_same 1 --l2 1e-05 --l2_rasch 1e-05 --learning_rate 0.0001 --model_name gtransformer --n_blocks 2 --n_uid 0 --num_attn_heads 8 --num_epochs 200 --optimizer adam --patience 10 --pretrain_dim 768 --seed 3407 --separate_qa 0 --seq_len 200 --use_wandb 0 --weight_decay 0.0 --save_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816",
+        "eval_explicit": "/home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/wandb_predict.py --save_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816 --bz 64 --use_wandb 0 --fusion_type late_fusion",
+        "mastery_states": "/home/vscode/.pykt-env/bin/python examples/mastery_states.py --run_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816 --num_students 15 --split test",
+        "plot_param_distribution": "/home/vscode/.pykt-env/bin/python examples/plot_param_distribution.py --experiment_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816",
+        "plot_mastery_mosaic": "/home/vscode/.pykt-env/bin/python examples/plot_mastery_mosaic.py --experiment_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816",
+        "train_probe": "/home/vscode/.pykt-env/bin/python examples/train_probe.py --experiment_dir /workspaces/pykt-toolkit/experiments/20260115_024703_gtransformer_ns_gtransformer_campaign_730816 --dimension difficult"
     },
     "md5": "2274c56dfc04ffc073886bf381ea2c2b"
 }

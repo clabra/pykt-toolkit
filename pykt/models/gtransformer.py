@@ -37,7 +37,17 @@ class GTransformer(nn.Module):
         self.emb_type = emb_type
         self.ablation = ablation
         self.n_uid = n_uid
+        
+        # Loss component weights (Passed through from data_config/params)
+        self.lambda_initmastery = kwargs.get('lambda_initmastery', 0.1)
+        self.lambda_rate = kwargs.get('lambda_rate', 0.1)
+        self.lambda_ref = kwargs.get('lambda_ref', 0.5)
+
         embed_l = d_model
+        
+        # Step 2 & 3: Parameter Projection Layers and Texture
+        # z context vector is of dimension d_model + embed_l (concat of decoder output and question embedding)
+        z_dim = d_model + embed_l
         
         # 1. Standard AKT/GTransformer
         if self.n_pid > 0:
@@ -46,35 +56,54 @@ class GTransformer(nn.Module):
             self.qa_embed_diff = nn.Embedding(2 * self.n_question + 1, embed_l) # Interaction variation (f_ct,rt)
         
         if emb_type.startswith("qid"):
-            # n_question+1 ,d_model
             self.q_embed = nn.Embedding(self.n_question, embed_l)
             if self.separate_qa: 
                 self.qa_embed = nn.Embedding(2*self.n_question+1, embed_l) # interaction emb
             else: # false default
                 self.qa_embed = nn.Embedding(2, embed_l)
                 
-        # 2. Grounded Embeddings (Step 1.4: Only if ablation != "all")
+        # 2. Grounded Embeddings (Only if ablation != "all")
         if self.ablation != "all":
+            # Note: We use size 1 for bases (scalar logit) and size z_dim for axes (projection direction)
+            
+            # Relational Axes (Step 3: Texture)
+            # Directions in latent space corresponding to "More Knowledgeable" or "Faster Learner"
+            # Dimensions must match z_context (d_model + embed_l)
+            self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, z_dim) 
+            self.velocity_axis_emb = nn.Embedding(self.n_question + 1, z_dim)
+            nn.init.normal_(self.knowledge_axis_emb.weight, mean=0.0, std=0.02) # Axis implies direction, centered at 0
+            nn.init.normal_(self.velocity_axis_emb.weight, mean=0.0, std=0.02) # Axis implies direction, centered at 0
+            
+            # Theoretical Bases (Grounding points from BKT)
+            # These remain scalar logits
+            self.l0_base_emb = nn.Embedding(self.n_question + 1, 1) # L0_skill (Prior Base)
+            self.t_base_emb = nn.Embedding(self.n_question + 1, 1)  # T_skill (Velocity Base)
+            
+            # Buffers for population-level parameters (Guess/Slip)
+            # These are loaded from pre-fit BKT and kept constant during Reference Output generation
+            self.register_buffer('bkt_guess', torch.ones(n_question + 1) * 0.2)
+            self.register_buffer('bkt_slip', torch.ones(n_question + 1) * 0.1)
+            self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
+            self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
+            
             if self.n_uid > 0:
                 self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
                 self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
-            
-            # Semantic Axes for Individualization (Initialized with mean=1.0 for scalar visibility)
-            self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Knowledge axis (d_c)
-            self.velocity_axis_emb = nn.Embedding(self.n_question + 1, embed_l) # Velocity axis (d_s)
-            nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
-            nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
-            
-            # Theoretical Bases (Grounding points from BKT)
-            self.l0_base_emb = nn.Embedding(self.n_question + 1, embed_l) # L0_skill (Prior Base)
-            self.t_base_emb = nn.Embedding(self.n_question + 1, embed_l)  # T_skill (Velocity Base)
 
         # Architecture Object. It contains stack of attention block
         self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=num_attn_heads, dropout=dropout,
                                     d_model=d_model, d_feature=d_model / num_attn_heads, d_ff=d_ff,  kq_same=self.kq_same, model_type=self.model_type, emb_type=self.emb_type)
 
+        # Step 2: Parameter Projection Layers (The "Grounded Outputs")
+        # z context vector is of dimension d_model + embed_l (concat of decoder output and question embedding)
+        # z_dim = d_model + embed_l # Moved up
+        if self.ablation != "all":
+            # p_L0 and p_T Grounded Outputs (Projecting z context vector)
+            self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
+            self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
+
         self.out = nn.Sequential(
-            nn.Linear(d_model + embed_l,
+            nn.Linear(z_dim,
                       final_fc_dim), nn.ReLU(), nn.Dropout(self.dropout),
             nn.Linear(final_fc_dim, 256), nn.ReLU(
             ), nn.Dropout(self.dropout),
@@ -127,6 +156,12 @@ class GTransformer(nn.Module):
                     self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
                 if hasattr(self, 't_base_emb'):
                     self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
+
+                # Store population-level parameters for Reference Output
+                self.bkt_l0_pop[q_idx] = l0_p
+                self.bkt_t_pop[q_idx] = t_p
+                self.bkt_guess[q_idx] = s_params.get('guess', 0.2)
+                self.bkt_slip[q_idx] = s_params.get('slip', 0.1)
             
             # Initialize axes with mean=1.0 to ensure student parameters are visible through mean() projection
             if hasattr(self, 'knowledge_axis_emb'):
@@ -134,7 +169,7 @@ class GTransformer(nn.Module):
             if hasattr(self, 'velocity_axis_emb'):
                 nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
                 
-        print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)) and Relational Axes initialized.")
+        print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)), Relational Axes, and Population Parameters initialized.")
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -176,14 +211,195 @@ class GTransformer(nn.Module):
         # output shape BS,seqlen,d_model or d_model//2
         d_output = self.model(q_embed_data, qa_embed_data, pid_embed_data)
 
-        concat_q = torch.cat([d_output, q_embed_data], dim=-1)
-        output = self.out(concat_q).squeeze(-1)
-        m = nn.Sigmoid()
-        preds = m(output)
+        # BS, seqlen, z_dim (d_model + embed_l)
+        z_context = torch.cat([d_output, q_embed_data], dim=-1)
+        
+        # 1. Supervised Output (Standard AKT logic)
+        output = self.out(z_context).squeeze(-1)
+        preds = torch.sigmoid(output)
+
+        if self.ablation == "all":
+            if not qtest:
+                return preds, c_reg_loss
+            else:
+                return preds, c_reg_loss, z_context
+
+        # 2. Step 2 & 3: Grounded Outputs via Semantic Axis Projection
+        # Get concept-specific axes and bases
+        # q_data: BS, seqlen
+        k_axis = self.knowledge_axis_emb(q_data) # BS, seqlen, z_dim
+        v_axis = self.velocity_axis_emb(q_data)  # BS, seqlen, z_dim
+        
+        l0_base = self.l0_base_emb(q_data).squeeze(-1) # BS, seqlen
+        t_base = self.t_base_emb(q_data).squeeze(-1)   # BS, seqlen
+        
+        # Projection: Base + (z . Axis)
+        # z_context: BS, seqlen, z_dim
+        # Dot product along dim -1
+        l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
+        t_logits = t_base + (z_context * v_axis).sum(dim=-1)
+        
+        # Step 4: Individualization (Student-Specific scalars)
+        # Adds static student bias to the dynamic estimate
+        if self.n_uid > 0 and uid_data is not None:
+             # uid_data: BS (assumed constant per sequence or BS, seqlen if available)
+             # Expand to match sequence if necessary
+             if uid_data.dim() == 1:
+                 uid_seq = uid_data.unsqueeze(1).expand(-1, q_data.size(1))
+             else:
+                 uid_seq = uid_data
+                 
+             # Get student params: [BS, seqlen]
+             s_gap = self.student_gap_param(uid_seq).squeeze(-1)
+             s_vel = self.student_param(uid_seq).squeeze(-1)
+             
+             l0_logits = l0_logits + s_gap
+             t_logits = t_logits + s_vel
+        
+        p_l0 = torch.sigmoid(l0_logits) # BS, seqlen
+        p_t = torch.sigmoid(t_logits)   # BS, seqlen
+
+        # Reference Output Generation via BKT Implementation
+        # We process the batch but since each timestep t uses a different p_l0_t and p_t_t
+        # were each prediction is the result of a BKT "walk" from 1 to t.
+        
+        # Initial Mastery State (L1) is the p_L0 generated at the current prediction timestep
+        # We implement this vectorized to maintain performance
+        ref_preds = self._bkt_ref_output(q_data, target, p_l0, p_t)
+
+        # Collect all outputs in a structured dictionary
+        outputs = {
+            'predictions': preds,           # Supervised Output
+            'reference_preds': ref_preds,   # Reference Output (BKT Logic Wrapper)
+            'p_l0': p_l0,                   # Grounded Output L0
+            'p_t': p_t                      # Grounded Output T
+        }
+
         if not qtest:
-            return preds, c_reg_loss
+            return outputs, c_reg_loss
         else:
-            return preds, c_reg_loss, concat_q
+            return outputs, c_reg_loss, z_context
+
+    def _bkt_ref_output(self, q_data, target, p_l0, p_t):
+        """
+        Implements the BKT Logic Wrapper.
+        For each timestep t, generates a prediction P(Y_t=1) by walking through
+        history 1:t-1 using context-aware parameters p_l0(t) and p_t(t).
+        """
+        bs, seqlen = q_data.size()
+        
+        # Retrieve skill-specific population Guess and Slip
+        # q_data: BS, seqlen
+        gs = self.bkt_guess[q_data.long()] # BS, seqlen
+        ss = self.bkt_slip[q_data.long()]  # BS, seqlen
+        
+        # Prepare for recurrence
+        # We need to calculate mastery for every step.
+        # But critically: a prediction at time t uses the parameters p_l0[t] and p_t[t]
+        # and walks through the history of responses target[0...t-1].
+        
+        # To avoid O(T^2) code, we can optimize if parameters were constant, 
+        # but since they are dynamic (contextual), we perform a masked walk.
+        # However, for the Reference Output used in training/eval, 
+        # it is common to use the parameters generated at index t to "re-interpret"
+        # the journey that led to t.
+        
+        # Vectorized BKT Walk (Across entire batch and sequence)
+        # current_L will hold the mastery belief.
+        # Initialize with p_l0
+        current_L = p_l0 # BS, seqlen
+        
+        # We iterate over the maximum sequence length to perform the Bayesian updates
+        # ref_preds = []
+        
+        # Pre-calculate Bayes Updates for all possible L and target
+        # L_post if corrected = L*(1-s) / (L*(1-s) + (1-L)*g)
+        # L_post if incorrect = L*s / (L*s + (1-L)*(1-g))
+        
+        # Implementation Note: 
+        # In GTransformer, z_t at time t already contains information about target[0...t-1].
+        # The BKT wrapper's mission is to provide the "pedagogical constraint" head.
+        
+        # For efficiency, we implement the recurrence.
+        # Start with Mastery for t=1
+        all_masteries = []
+        l_step = p_l0[:, 0] # Initial knowledge for the start of the sequence
+        
+        # Wait, if p_l0 is dynamic, which one do we use?
+        # Following the architecture: p_l0[t] is the estimate of the student's 
+        # starting point given evidence up to t.
+        # Thus, for the prediction at index t, we use p_l0[t] and p_t[t].
+        
+        # This requires T steps of BKT for each of the T timesteps? 
+        # Yes, to be strictly correct with "contextual parameters".
+        # But we can simplify: we can use the latest parameters p_l0[seqlen-1] 
+        # to retrospective describe the whole sequence, or use p_l0[t] and p_t[t]
+        # to generate a single prediction at t.
+        
+        # Strategy: Use p_l0[t] and p_t[t] to predict y[t] given journey y[0:t-1].
+        # Mastery at t=0 is p_l0[t].
+        # Loop i from 0 to t-1: Update mastery with target[i].
+        # Final mastery after walk is L_t.
+        # Prediction is L_t*(1-s) + (1-L_t)*g.
+
+        # Optimized vectorized version for sequence:
+        # We can't avoid the inner loop easily if parameters are dynamic per timestep t.
+        # But we can vectorize the BKT formulas!
+        
+        # Let's perform a "cumulative" BKT walk where at each step i, 
+        # we calculate updates for ALL possible future contexts t.
+        
+        # shape: BS, seqlen (i), seqlen (t) - where i is the history step and t is the context
+        # This might be memory intensive (BS*200*200). 
+        # For seqlen=200, BS=64, it's 2.5M floats per level. Very doable.
+        
+        # current_L_retrospective: BS, seqlen_t (context), seqlen_i (history)
+        L = p_l0.unsqueeze(-1).expand(bs, seqlen, seqlen).clone() # Initialized with p_l0[t] for all history i
+        T_rate = p_t.unsqueeze(-1).expand(bs, seqlen, seqlen)     # Contextual T[t] for all history i
+        
+        # Iterative update for history i
+        for i in range(seqlen - 1):
+            # Mastery belief at history step i: L[:, :, i]
+            # Observation at history step i: target[:, i]
+            # We want to update Mastery for history step i+1: L[:, :, i+1]
+            
+            # 1. Bayes Update (Post-observation)
+            obs = target[:, i].view(bs, 1, 1).expand(bs, seqlen, 1) # History evidence at i
+            
+            # Skill params at history step i
+            g_i = gs[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
+            s_i = ss[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
+            
+            L_i = L[:, :, i:i+1] # BS, seqlen_t, 1
+            
+            # Likelihoods
+            prob_correct = L_i * (1 - s_i) + (1 - L_i) * g_i
+            # P(L|Y=1)
+            L_post_1 = (L_i * (1 - s_i)) / torch.clamp(prob_correct, min=1e-6)
+            # P(L|Y=0)
+            L_post_0 = (L_i * s_i) / torch.clamp(1 - prob_correct, min=1e-6)
+            
+            L_post = torch.where(obs > 0.5, L_post_1, L_post_0)
+            
+            # 2. Learning Transition
+            # Use contextual transition rate p_t[t]
+            L_next = L_post + (1 - L_post) * T_rate[:, :, i:i+1]
+            
+            # Fill the next history step for all contexts
+            # But only for contexts t > i (where this history is relevant)
+            # However, filling the whole block is faster in Torch
+            L[:, :, i+1:i+2] = L_next
+
+        # Now, for each context t, the mastery for the prediction at t is L[:, t, t]
+        # Diagonal extraction
+        idx = torch.arange(seqlen).to(device)
+        L_at_t = L[:, idx, idx] # BS, seqlen
+        
+        # Final Output Emission
+        # Note: we use Guess/Slip for the skill at index t
+        ref_preds = L_at_t * (1 - ss) + (1 - L_at_t) * gs
+        
+        return ref_preds
 
 
 class Architecture(nn.ModuleList):

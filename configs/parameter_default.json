@@ -1,12 +1,12 @@
 {
   "defaults": {
-    "model": "idkt",
+    "model": "gtransformer",
     "dataset": "assist2009_S",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
-    "train_script": "examples/train_idkt.py",
-    "eval_script": "examples/eval_idkt.py",
+    "train_script": "examples/wandb_gtransformer_train.py",
+    "eval_script": "examples/wandb_predict.py",
     "epochs": 200,
     "patience": 10,
     "batch_size": 64,
@@ -15,18 +15,18 @@
     "optimizer": "Adam",
     "gradient_clip": 1.0,
     "seq_len": 200,
-    "d_model": 256,
+    "d_model": 64,
     "n_heads": 8,
-    "n_blocks": 4,
-    "d_ff": 512,
-    "dropout": 0.3,
+    "n_blocks": 2,
+    "d_ff": 256,
+    "dropout": 0.1,
     "emb_type": "qid",
     "final_fc_dim": 512,
     "l2": 1e-05,
     "l2_rasch": 1e-05,
     "lambda_student": 1e-05,
     "lambda_gap": 1e-05,
-    "lambda_ref": 0.1,
+    "lambda_ref": 0.5,
     "lambda_initmastery": 0.1,
     "lambda_rate": 0.1,
     "theory_guided": 1,
@@ -145,5 +145,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "2274c56dfc04ffc073886bf381ea2c2b"
+  "md5": "1c65f661dd7b9ed7603492c4e9380d4f"
 }

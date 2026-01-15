@@ -127,7 +127,38 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
         loss_w2 = loss_w2.mean() / model.num_c
 
         loss = loss + model.lambda_r * loss_r + model.lambda_w1 * loss_w1 + model.lambda_w2 * loss_w2
-    elif model_name in ["akt","idkt","gtransformer","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx","lefokt_akt", "dtransformer", "simakt", "fluckt"]:
+    elif model_name == "gtransformer":
+        output_dict = ys[0]
+        # 1. Supervised Loss (Primary Predictions)
+        y = torch.masked_select(output_dict['predictions'], sm)
+        t = torch.masked_select(rshft, sm)
+        loss = binary_cross_entropy(y.double(), t.double())
+
+        # 2. Grounded and Reference Losses (Only if not in ablation="all")
+        if model.ablation != "all":
+            # Reference Supervised Loss (BKT head)
+            y_ref = torch.masked_select(output_dict['reference_preds'], sm)
+            loss_ref_sup = binary_cross_entropy(y_ref.double(), t.double())
+            
+            # Parameter Reference Losses (Targeting population BKT stats)
+            p_l0 = torch.masked_select(output_dict['p_l0'], sm)
+            p_t = torch.masked_select(output_dict['p_t'], sm)
+            
+            # Skill-specific population parameters
+            l0_pop = torch.masked_select(model.bkt_l0_pop[cshft.long()], sm)
+            t_pop = torch.masked_select(model.bkt_t_pop[cshft.long()], sm)
+            
+            loss_l0 = F.mse_loss(p_l0, l0_pop.float())
+            loss_t = F.mse_loss(p_t, t_pop.float())
+            
+            # Combine losses
+            loss = loss + model.lambda_ref * loss_ref_sup + \
+                   model.lambda_initmastery * loss_l0 + \
+                   model.lambda_rate * loss_t
+        
+        # 3. Regularization from model forward
+        loss = loss + preloss[0]
+    elif model_name in ["akt","idkt","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx","lefokt_akt", "dtransformer", "simakt", "fluckt"]:
         y = torch.masked_select(ys[0], sm)
         t = torch.masked_select(rshft, sm)
         loss = binary_cross_entropy(y.double(), t.double()) + preloss[0]
@@ -285,8 +316,14 @@ def model_forward(model, data, rel=None):
         y = model(cq.long(), cc.long(), r.long())
         ys.append(y[:, 1:])
     elif model_name in ["akt","idkt","gtransformer","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:               
-        y, reg_loss = model(cc.long(), cr.long(), cq.long())
-        ys.append(y[:,1:])
+        outputs, reg_loss = model(cc.long(), cr.long(), cq.long())
+        if isinstance(outputs, dict):
+            # Slice all sequence tensors within the dict [:, 1:]
+            y = {k: v[:, 1:] if isinstance(v, torch.Tensor) and len(v.shape) >= 2 else v 
+                 for k, v in outputs.items()}
+        else:
+            y = outputs[:, 1:]
+        ys.append(y)
         preloss.append(reg_loss)
     elif model_name in ["atkt", "atktfix"]:
         y, features = model(c.long(), r.long())
