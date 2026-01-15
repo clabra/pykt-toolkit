@@ -195,9 +195,11 @@ Based on these findings, we endorse the following configuration as the standard 
 
 ## Next Steps 
 
-### Probing Lossess
+### Probing-Guided Training (Active Grounding)
 
-Use probing losses to validate the model's ability to learn the ground truth given by the reference model.
+Moving beyond passive verification, we propose integrating probing objectives directly into the training loop as **Active Grounding**.
+*   **Methodology**: Define an auxiliary loss $\mathcal{L}_{probe} = || Probe(z_{context}) - p_{target} ||^2$ where the $Probe$ is a simple linear projection and $p_{target}$ are the theoretical BKT parameters ($p_{L0}, p_T$).
+*   **Why it's interesting**: This forces the gradient descent to explicitly carve out a latent space Isomorphic to the pedagogical theory. Instead of just hoping the model aligns its *outputs* with BKT ($\mathcal{L}_{ref}$), this forces the model's *internal thoughts* ($z$) to be linearly decodable as pedagogical constructs. It guarantees **Structural Isomorphism**, maximizing the interpretability of the learned representations by design.
 
 
 ## Potential Future Work
