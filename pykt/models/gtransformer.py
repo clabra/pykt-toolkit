@@ -219,7 +219,7 @@ class GTransformer(nn.Module):
             qa_embed_data = self.qa_embed(target)+q_embed_data
         return q_embed_data, qa_embed_data
 
-    def forward(self, q_data, target, pid_data=None, qtest=False):
+    def forward(self, q_data, target, pid_data=None, uid_data=None, qtest=False):
         emb_type = self.emb_type
         # Batch First
         if emb_type.startswith("qid"):

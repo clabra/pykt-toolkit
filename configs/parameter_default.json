@@ -62,10 +62,10 @@
     "emb_size": 256,
     "fusion_type": "late_fusion",
     "ablation": "none",
+    "personalization": false,
     "kq_same": 1,
     "separate_qa": 0,
     "pretrain_dim": 768,
-    "n_uid": 0,
     "emb_path": "none",
     "add_uuid": 1
   },
@@ -136,10 +136,10 @@
       "use_wandb",
       "add_uuid",
       "ablation",
+      "personalization",
       "kq_same",
       "separate_qa",
       "pretrain_dim",
-      "n_uid",
       "emb_path"
     ]
   },
@@ -150,5 +150,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "3f78bd5b6324a6ccd788a22c332e6db2"
+  "md5": "461aab39030f51bb3b056cbfc8ef074e"
 }

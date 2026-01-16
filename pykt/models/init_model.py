@@ -185,6 +185,21 @@ def init_model(model_name, model_config, data_config, emb_type):
         _model_config = model_config.copy()
         _model_config.pop("emb_type", None)
         _model_config.pop("emb_path", None)
+        
+        # Personalization control: enable/disable student-specific embeddings
+        # Backward compatibility: if personalization flag is not present, use explicit n_uid if provided
+        if "personalization" in _model_config:
+            # New behavior: use personalization flag
+            if _model_config.get("personalization", False):
+                _model_config["n_uid"] = data_config.get("n_uid", 0)
+            else:
+                _model_config["n_uid"] = 0
+        else:
+            # Backward compatibility: use explicit n_uid from model_config or default to 0
+            if "n_uid" not in _model_config:
+                _model_config["n_uid"] = data_config.get("n_uid", 0)
+            # If n_uid is already in _model_config, keep it as is
+        
         model = GTransformer(data_config["num_c"], data_config["num_q"], **_model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     else:
         print("The wrong model name was used...")

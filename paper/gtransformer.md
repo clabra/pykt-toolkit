@@ -402,6 +402,252 @@ A critical questions arises: Are $\mathcal{L}_{param}$ and $\mathcal{L}_{probe}$
 
 However, functionally, if $\mathcal{L}_{probe}$ successfully enforces a clean, structured latent space, the explicit parameter constraints on the axes might become unnecessary. We currently employ a "Belt and Suspenders" approach to maximize stability, but a key future **Ablation Study** will be to obtain "Minimalist Grounding" by removing $\lambda_{param}$ entirely. If performance maintains, it would prove that Active Grounding alone is sufficient to create a robust neuro-symbolic architecture.
 
+## Individualization (Student ID Bias)
+
+GTransformer supports **optional student-specific personalization** controlled by the `personalization` parameter. This creates a **Hybrid Architecture** that combines:
+1. **Contextual Reasoning** (Transformer): Infers pedagogical state from interaction history
+2. **Student Memory** (Embeddings): Learns individual-specific biases for each student
+
+### Implementation: Two Modes
+
+**Mode 1: Contextual Only (`personalization=false`)**
+- **Use Case**: Privacy-preserving scenarios, cold-start users, benchmark generalization
+- **Behavior**: Model relies purely on temporal context to estimate parameters
+- **Code Path**: Lines 283-296 in `gtransformer.py` are skipped (no student embeddings created)
+- **Result**: `n_uid=0` (no student-specific parameters)
+
+**Mode 2: Hybrid Personalization (`personalization=true`)**
+- **Use Case**: Longitudinal tracking in deployed ITS, latent trait discovery
+- **Behavior**: Model combines contextual estimates with learned student-specific biases
+- **Code Path**: Full end-to-end personalization pipeline activated
+- **Result**: `n_uid` automatically set from dataset-specific value in `data_config.json`
+  - `assist2009`: `n_uid=3082`
+  - `assist2015`: `n_uid=15275`
+  - `algebra2005`: `n_uid=460`
+
+### Parameter Control Mechanism
+
+The personalization feature uses a **two-parameter design** that separates control from data:
+
+1. **`personalization`** (in `configs/parameter_default.json`): Boolean flag to enable/disable the feature
+2. **`n_uid`** (in `configs/data_config.json`): Dataset-specific student count (metadata)
+
+**Resolution Logic** (`pykt/models/init_model.py`, lines 189-194):
+```python
+# Personalization control: enable/disable student-specific embeddings
+# If enabled, use dataset-specific n_uid; if disabled, force n_uid=0
+if _model_config.get("personalization", False):
+    _model_config["n_uid"] = data_config.get("n_uid", 0)
+else:
+    _model_config["n_uid"] = 0
+```
+
+**Design Rationale**:
+- **Ablation-friendly**: Toggle `personalization` in one place to compare contextual vs. hybrid modes
+- **Dataset-agnostic**: Same `personalization=true` works for all datasets (each uses its own `n_uid`)
+- **Clear semantics**: `personalization` = "should we use student IDs?", `n_uid` = "how many students exist?"
+- **No hardcoding**: Student counts are dataset metadata, not hyperparameters
+
+**Configuration Example**:
+```json
+// configs/parameter_default.json
+{
+  "personalization": false  // Control: disable for baseline
+}
+
+// configs/data_config.json
+{
+  "assist2009": {
+    "n_uid": 3082  // Data: 3082 unique students in dataset
+  }
+}
+
+// Result: n_uid=0 (personalization disabled)
+```
+
+If `personalization=true`, the model automatically uses `n_uid=3082` from `data_config.json`.
+
+### End-to-End Personalization Flow
+
+**Step 1: Model Initialization** (`gtransformer.py`, lines 91-93)
+```python
+if self.n_uid > 0:
+    self.student_param = nn.Embedding(self.n_uid + 1, 1)      # Learning rate bias (β)
+    self.student_gap_param = nn.Embedding(self.n_uid + 1, 1)  # Initial knowledge bias (α)
+```
+- Creates learnable scalar embeddings for each student
+- `n_uid` = total number of unique students in the dataset (e.g., 3082 for assist2009)
+
+**Step 2: Data Loading** (`data_loader.py`, lines 140-161)
+```python
+unique_uids = sorted(df["uid"].unique())
+uid_to_index = {uid: idx for idx, uid in enumerate(unique_uids)}
+# For each sequence:
+dori["uids"].append(uid_to_index[row["uid"]])
+```
+- Maps original student IDs to zero-indexed integers
+- Each batch includes `dcur["uids"]` tensor with student indices
+
+**Step 3: Training Loop** (`train_gtransformer.py`, lines 335-340)
+```python
+uid_data = None
+if model_name == "gtransformer" and "uids" in dcur:
+    uid_data = dcur["uids"].to(device)  # [BS] tensor
+
+outputs, reg_loss = model(cc.long(), cr.long(), cq.long(), uid_data=uid_data)
+```
+- Extracts student IDs from batch
+- Passes `uid_data` to model's `forward()` method
+
+**Step 4: Forward Pass with Personalization** (`gtransformer.py`, lines 283-296)
+```python
+# Contextual estimates (from Transformer + Semantic Axes)
+l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)  # [BS, seqlen]
+t_logits = t_base + (z_context * v_axis).sum(dim=-1)    # [BS, seqlen]
+
+# Add student-specific biases if enabled
+if self.n_uid > 0 and uid_data is not None:
+    # Expand uid from [BS] to [BS, seqlen]
+    if uid_data.dim() == 1:
+        uid_seq = uid_data.unsqueeze(1).expand(-1, q_data.size(1))
+    
+    # Retrieve learnable biases for this student
+    s_gap = self.student_gap_param(uid_seq).squeeze(-1)  # [BS, seqlen]
+    s_vel = self.student_param(uid_seq).squeeze(-1)      # [BS, seqlen]
+    
+    # Hybrid estimate = Context + Student Memory
+    l0_logits = l0_logits + s_gap  # α_hybrid = α_context + α_student
+    t_logits = t_logits + s_vel    # β_hybrid = β_context + β_student
+
+# Final parameters
+p_l0 = torch.sigmoid(l0_logits)  # Initial knowledge
+p_t = torch.sigmoid(t_logits)    # Learning rate
+```
+
+### How Personalization Complements Other Mechanisms
+
+Personalization **adds to** (not replaces) the existing theory-guided and context-aware mechanisms through an **additive composition** of three components:
+
+#### The Additive Formula (`gtransformer.py`, lines 272-299)
+
+```python
+# Component 1: Theory-Guided Base (Population Priors from BKT)
+l0_base = self.l0_base_emb(q_data)  # Skill-specific difficulty
+t_base = self.t_base_emb(q_data)    # Skill-specific learning rate
+
+# Component 2: Contextual Reasoning (Transformer)
+k_axis = self.knowledge_axis_emb(q_data)  # Skill-specific projection axis
+v_axis = self.velocity_axis_emb(q_data)   # Skill-specific projection axis
+z_context = [output from Transformer]     # Student's temporal trajectory
+
+# Component 3: Semantic Axis Projection (Active Grounding)
+l0_logits = l0_base + (z_context · k_axis)
+t_logits = t_base + (z_context · v_axis)
+
+# Component 4: Personalization (Student Memory) - OPTIONAL
+if personalization == True:
+    s_gap = student_gap_param[uid]  # Student-specific bias for L0
+    s_vel = student_param[uid]      # Student-specific bias for T
+    
+    l0_logits = l0_logits + s_gap   # ADD student bias
+    t_logits = t_logits + s_vel     # ADD student bias
+
+# Final Parameters
+p_l0 = sigmoid(l0_logits)
+p_t = sigmoid(t_logits)
+```
+
+#### Decomposition: What Each Component Contributes
+
+| Component | Always Active? | What It Captures | Example Contribution |
+|:----------|:--------------|:-----------------|:---------------------|
+| **Theory Base** (`l0_base`, `t_base`) | ✅ Yes | Skill-level population priors from BKT | "Fractions are hard" → `l0_base = 0.3` |
+| **Contextual Projection** (`z·k_axis`) | ✅ Yes | Temporal trajectory (recent performance) | "Just answered 5 correctly" → `+0.5` |
+| **Student Memory** (`s_gap`, `s_vel`) | ⚠️ Optional | Individual-level stable traits | "Historically fast learner" → `+0.4` |
+
+#### Mathematical Comparison
+
+**Without Personalization** (`personalization=false`):
+```
+p_l0 = sigmoid(Theory + Context)
+     = sigmoid(l0_base + z·k_axis)
+```
+
+**With Personalization** (`personalization=true`):
+```
+p_l0 = sigmoid(Theory + Context + StudentMemory)
+     = sigmoid(l0_base + z·k_axis + s_gap)
+```
+
+#### Concrete Example
+
+**Scenario**: Student A attempting "Fractions" at timestep t=10
+
+**Baseline Mode** (`personalization=false`):
+```
+l0_base = 0.3           # BKT: fractions are hard
+z·k_axis = +0.5         # Transformer: recent success
+l0_logits = 0.3 + 0.5 = 0.8
+p_l0 = sigmoid(0.8) = 0.69  # 69% mastery
+```
+
+**Hybrid Mode** (`personalization=true`):
+```
+l0_base = 0.3           # BKT: fractions are hard
+z·k_axis = +0.5         # Transformer: recent success
+s_gap = +0.4            # Student A: historically starts high
+l0_logits = 0.3 + 0.5 + 0.4 = 1.2
+p_l0 = sigmoid(1.2) = 0.77  # 77% mastery (higher!)
+```
+
+**Interpretation**: "This student is performing well (0.69 from context), but they're *also* historically a fast learner (+0.4), so we estimate even higher mastery (0.77)."
+
+#### Design Rationale
+
+1. **Graceful Degradation**: If `personalization=false`, you still get a strong model (Theory + Context)
+2. **Cold Start Friendly**: New students with no history still benefit from Theory + Context
+3. **Interpretable Decomposition**: You can see exactly how much each component contributes
+4. **Ablation-Ready**: Toggle personalization to measure its marginal contribution
+
+**Key Insight**: Personalization captures **individual-level stable traits** that the contextual model can't infer from short-term trajectories alone. This is why the "Placement vs. Pacing" plot shows **wider variance** with personalization—the `s_gap` and `s_vel` parameters reveal individual differences in learning archetypes.
+
+### Pedagogical Interpretation
+
+**Contextual Component** (`l0_base + z·k_axis`):
+- Answers: "Given this student's *recent* performance trajectory, what is their current state?"
+- Generalizes to new students (cold-start capable)
+
+**Student Memory Component** (`s_gap`, `s_vel`):
+- Answers: "Does this *specific* student tend to start higher/lower than average?" (α bias)
+- Answers: "Does this student learn faster/slower than their trajectory suggests?" (β bias)
+- Captures stable individual traits (e.g., "Fast Learner" archetype)
+
+**Hybrid Output**:
+- Combines **temporal reasoning** (Transformer) with **individual memory** (Embeddings)
+- Enables fine-grained diagnostics: "Student A is struggling *despite* historically being a fast learner"
+
+### When to Use Each Mode
+
+| Scenario | Recommended Mode | Rationale |
+|:---------|:-----------------|:----------|
+| **Benchmark Evaluation** | `n_uid=0` | Avoids memorization, tests pure generalization |
+| **Privacy-Sensitive Deployment** | `n_uid=0` | No student-specific data stored |
+| **Deployed ITS (Longitudinal)** | `n_uid=3082` | Leverages accumulated student history |
+| **Ablation Study** | Both | Compare contextual vs. hybrid performance |
+
+### Risks & Mitigations
+
+**Risk 1: Overfitting in Random CV**
+- **Problem**: Model memorizes Monday's performance to predict Tuesday
+- **Mitigation**: Use chronological splits or disable for benchmarks
+
+**Risk 2: Cold Start**
+- **Problem**: New students have no learned bias (defaults to zero)
+- **Mitigation**: Contextual component still works; bias accumulates over time
+
+**Risk 3: Unbounded Biases**
+- **Problem**: Without regularization, `s_gap` and `s_vel` can grow arbitrarily large
+- **Mitigation**: Add L2 penalty via `lambda_student` and `lambda_gap` (currently 1e-5)
 
 
 ## Next Steps 
@@ -468,18 +714,7 @@ Currently, the semantic axes ($Axis_{Know}, Axis_{Vel}$) are learned freely. The
     $$ \mathcal{L}_{ortho} = \lambda_{ortho} \sum_{q} (Axis_{Know}^{(q)} \cdot Axis_{Vel}^{(q)})^2 $$
 *   **Why it's interesting**: This would mathematically enforce the disentanglement of "Prior Knowledge" (State) from "Learning Rate" (Velocity). It ensures that the model can distinguish a student who *knows a lot but learns slowly* from one who *knows little but learns fast*, preventing the "halo effect" where good students are just assumed to be good at everything. This is crucial for high-fidelity pedagogical diagnostics.
 
-### Individualization (Student ID Bias)
 
-While currently disabled (`n_uid=0`) to prioritize context generalization, enabling student-specific biases ($v_s, k_s$) offers distinct advantages in specific deployment scenarios.
-
-*   **When to Explore**:
-    *   **Longitudinal Tracking**: In real-world ITS (Intelligent Tutoring Systems) where students persist over long periods (months/years). The model can accumulate a "reputation" for a student, allowing it to predict high performance even at the start of a new topic (Cold Start amelioration) based on their historical ID profile.
-    *   **Latent Trait Discovery**: When the goal is to profile students for offline analysis (e.g., identifying "Fast Learners" vs "High Prior Knowledge" students) rather than just predicting the next interaction.
-
-*   **Risks & Limitations**:
-    *   **Overfitting in Benchmarks**: In standard randomized Cross-Validation (where students are split randomly), relying on IDs can lead to valid-set leakage (memorizing a student's performance from Monday to predict Tuesday).
-    *   **Cold Start (New Users)**: Relying too heavily on $v_s$ hurts new users who have no learned bias yet.
-    *   **Recommendation**: Individualization should be treated as an optional "User Profile" layer on top of the robust core model, only activated when the training setup (e.g., Chronological Splitting) supports learning stable long-term traits.
 
 ### Per Parameter Regularization Strategies
 

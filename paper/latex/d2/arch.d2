@@ -12,9 +12,15 @@ Oracle: {
 
 InputData: {
   class: input
-  label: Interactions \n Data
+  label: Interactions \\n Data
 }
 InputData.shape: cylinder
+
+StudentIDs: {
+  class: input
+  label: Student IDs \\n (Optional)
+}
+StudentIDs.shape: cylinder
 
 # 1. Embeddings Layer
 
@@ -42,19 +48,19 @@ Transformer: {
   Encoder: {
     class: transformer_component
     style.multiple: true
-    label: "Encoder\n(Self-Attention on y'_{1:t-1})"
+    label: "Encoder\\n(Self-Attention on y'_{1:t-1})"
   }
 
   Decoder: {
     class: transformer_component
     style.multiple: true
-    label: "Decoder\n(Cross-Attention + x'ₜ)"
+    label: "Decoder\\n(Cross-Attention + x'ₜ)"
   }
 
   # 4. Intermediate Context Vector
   zt: {
     class: transformer_component
-    label: "zₜ \n Context Vector"
+    label: "zₜ \\n Context Vector"
   }
 
   Encoder -> Decoder: "History Context"
@@ -67,20 +73,32 @@ Outputs: {
 
   SupervisedOut: {
     class: component
-    label: "Supervised \n Prediction"
+    label: "Supervised \\n Prediction"
   }
 
   GroundedParams: {
     label: Grounded Parameters
     class: component
     
-    p_L0: "p_L0 \n Initial Mastery"
-    p_T: "p_T \n  Learning Rate"
+    p_L0: "p_L0 \\n Initial Mastery"
+    p_T: "p_T \\n  Learning Rate"
+    
+    StudentBias: {
+      label: |md
+        Student Memory
+        (if personalization=true)
+        
+        s_gap, s_vel
+      |
+      style: {
+        stroke-dash: 3
+      }
+    }
   }
 
   ReferenceOut: {
     class: component
-    label: "Reference Logic \n (BKT)"
+    label: "Reference Logic \\n (BKT)"
   }
 
   DiagnosticProbes: {
@@ -116,6 +134,11 @@ LossLayer: {
 BKT -> EmbeddingsLayer.Embeddings: p_l0, p_T
 BKT -> Oracle
 InputData -> EmbeddingsLayer.Embeddings: "{(q, c, r)}"
+StudentIDs -> Outputs.GroundedParams.StudentBias: "uid (if enabled)" {
+  style: {
+    stroke-dash: 3
+  }
+}
 EmbeddingsLayer.Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
 EmbeddingsLayer.Embeddings -> Transformer.Decoder: "x'ₜ"
 

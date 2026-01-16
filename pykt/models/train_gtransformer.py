@@ -332,7 +332,12 @@ def model_forward(model, data, rel=None):
         y = model(cq.long(), cc.long(), r.long())
         ys.append(y[:, 1:])
     elif model_name in ["akt","idkt","gtransformer","extrakt","folibikt", "robustkt", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lefokt_akt", "fluckt"]:               
-        outputs, reg_loss = model(cc.long(), cr.long(), cq.long())
+        # Extract uid_data if available (for personalization)
+        uid_data = None
+        if model_name == "gtransformer" and "uids" in dcur:
+            uid_data = dcur["uids"].to(device)
+        
+        outputs, reg_loss = model(cc.long(), cr.long(), cq.long(), uid_data=uid_data)
         if isinstance(outputs, dict):
             # Slice all sequence tensors within the dict [:, 1:]
             y = {k: v[:, 1:] if isinstance(v, torch.Tensor) and len(v.shape) >= 2 else v 

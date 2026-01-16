@@ -494,6 +494,8 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                     if uids is not None:
                         uids = uids.to(device)
                     outputs = model(cc.long(), cr.long(), cq.long(), uid_data=uids, qtest=True)
+                elif model_name == "gtransformer":
+                    outputs = model(cc.long(), cr.long(), cq.long(), qtest=True)
                 else:
                     outputs = model(cc.long(), cr.long(), cq.long(), True)
                 

@@ -185,14 +185,19 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
     # Strategy 1: Search in timestamped campaign folders (modern structure)
     # We assume folders are named like "YYYYMMDD_HHMMSS_benchpaper"
     if campaign_pattern:
+        if "*" not in campaign_pattern:
+            campaign_pattern = f"*{campaign_pattern}*"
         campaigns = sorted(list(base_path.glob(campaign_pattern)))
     else:
-        campaigns = sorted(list(base_path.glob("*_benchpaper")))
+        campaigns = sorted(list(base_path.glob("*_benchpaper*")))
     
     potential_folders = []
     
     # Search campaigns in reverse chronological order (newest first)
     for campaign in reversed(campaigns):
+        # Explicit check: ensure it's a directory
+        if not campaign.is_dir(): continue
+        
         # Try nested structure first: campaign/model/dataset/fold_X
         target_path = campaign / model / dataset
         if target_path.exists():
@@ -210,14 +215,11 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
 
     # Strategy 2: Fallback / Legacy (Legacy flat structure or manually created)
     # We limit this to direct children of experiments/ to avoid full rglob
-    if not potential_folders:
+    if not potential_folders and not campaign_pattern:
          # Try finding direct folders (old behavior) that match the precise pattern
-         # Avoid rglob unless absolutely necessary
-         pass
+         potential_folders = list(base_path.glob(f"auto_{model}_{dataset}_fold_{fold}_*"))
 
     if not potential_folders:
-        # Last resort: if the user moved things, maybe rglob but restricted
-        # For now, let's rely on the structured folders which cover 99% of cases
         return None
 
     # Filter by valid config.json (Validation)
@@ -236,10 +238,11 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
         # Resolve actual dataset/fold/model from config to be 100% sure
         cfg_in = cfg.get("input", {})
         cfg_def = cfg.get("defaults", {})
+        cfg_train = cfg.get("train_config", {})
         
-        c_data = cfg_in.get("dataset", cfg_def.get("dataset"))
-        c_fold = cfg_in.get("fold", cfg_def.get("fold"))
-        c_model = cfg_in.get("model", cfg_def.get("model"))
+        c_data = cfg_in.get("dataset", cfg_train.get("dataset", cfg_def.get("dataset")))
+        c_fold = cfg_in.get("fold", cfg_train.get("fold", cfg_def.get("fold")))
+        c_model = cfg_in.get("model", cfg_train.get("model", cfg_def.get("model")))
 
         # Loose string comparison to avoid type mismatches
         if str(c_data) == str(dataset) and str(c_fold) == str(fold) and str(c_model) == str(model):
@@ -639,7 +642,7 @@ def main():
                         break
 
                 for fold in range(5):
-                    exp_dir = find_experiment_folder(model, dataset, fold)
+                    exp_dir = find_experiment_folder(model, dataset, fold, args.campaign)
                     auc, acc = None, None
                     
                     is_running = False
@@ -745,6 +748,41 @@ def main():
         with open(json_path, 'w') as f:
             json.dump(all_results_data, f, indent=4)
         print(f"\n[INFO] Complete results snapshot saved to: {json_path}")
+
+        # Post-process: Diagnostic Plots for GTransformer
+        if args.campaign:
+            campaign_path = Path(PROJECT_ROOT) / "experiments" / args.campaign
+            if campaign_path.exists():
+                plot_dir = campaign_path / "plots"
+                os.makedirs(plot_dir, exist_ok=True)
+                
+                print(f"\n--- GENERATING DIAGNOSTIC PLOTS ---")
+                for model, datasets in all_results_data.items():
+                    if model == "gtransformer":
+                        for dataset, data in datasets.items():
+                            if data.get("folds_ok", 0) > 0:
+                                # Use Fold 0 for representative plots
+                                fold_dir = find_experiment_folder(model, dataset, 0, args.campaign)
+                                if not fold_dir: 
+                                    # Fallback to any OK fold if Fold 0 is missing
+                                    for f_idx in range(5):
+                                        fold_dir = find_experiment_folder(model, dataset, f_idx, args.campaign)
+                                        if fold_dir: break
+                                
+                                if fold_dir:
+                                    print(f"[PLOT] Generating maps for {dataset} using {fold_dir}...")
+                                    # Run from PROJECT_ROOT
+                                    scripts = [
+                                        "tmp/plot_latent_pca.py",
+                                        "tmp/plot_student_clusters_gtransformer.py"
+                                    ]
+                                    for script in scripts:
+                                        full_script = Path(PROJECT_ROOT) / script
+                                        if full_script.exists():
+                                            cmd = [sys.executable, str(full_script), "--exp_dir", str(fold_dir), "--output_dir", str(plot_dir)]
+                                            subprocess.run(cmd, check=False)
+                
+                print(f"[INFO] All plots saved to: {plot_dir}")
 
 if __name__ == "__main__":
     main()
