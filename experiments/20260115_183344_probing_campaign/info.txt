@@ -1,0 +1,4 @@
+Campaign: Active Grounding Probing
+Date: 2026-01-15
+Config: active_grounding=1, lambda_probe=1.0, 2 blocks, 8 heads
+Status: Successful 5-fold CV

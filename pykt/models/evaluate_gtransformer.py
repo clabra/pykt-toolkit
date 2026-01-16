@@ -50,7 +50,9 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
     with torch.no_grad():
         y_trues = []
         y_scores = []
+        l0_mses, t_mses = [], []
         dres = dict()
+        import torch.nn.functional as F
         test_mini_index = 0
         for data in test_loader:
             # if model_name in ["dkt_forget", "lpkt"]:
@@ -144,6 +146,15 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                     
                     if isinstance(output_obj, dict):
                         y = output_obj['predictions']
+                        # Phase 4: Probing MSE tracking (Validation/Test)
+                        if 'p_l0_probe' in output_obj and 'target_l0' in dcur:
+                            p_l0 = torch.masked_select(output_obj['p_l0_probe'][:,1:], sm)
+                            p_t = torch.masked_select(output_obj['p_t_probe'][:,1:], sm)
+                            t_l0 = torch.masked_select(dcur['target_l0'].to(device), sm)
+                            t_t = torch.masked_select(dcur['target_t'].to(device), sm)
+                            
+                            l0_mses.append(F.mse_loss(p_l0, t_l0.float()).item())
+                            t_mses.append(F.mse_loss(p_t, t_t.float()).item())
                     else:
                         y = output_obj
                 else:
@@ -202,7 +213,15 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
         acc = metrics.accuracy_score(ts, prelabels)
     # if save_path != "":
     #     pd.to_pickle(dres, save_path+".pkl")
-    return auc, acc
+    
+    # Phase 4: Extra metrics
+    extra_metrics = {}
+    if len(l0_mses) > 0:
+        extra_metrics['probe_l0_mse'] = np.mean(l0_mses)
+        extra_metrics['probe_t_mse'] = np.mean(t_mses)
+        print(f"  [Evaluate] Probe L0 MSE: {extra_metrics['probe_l0_mse']:.6f}, T MSE: {extra_metrics['probe_t_mse']:.6f}")
+
+    return auc, acc, extra_metrics
 
 def early_fusion(curhs, model, model_name):
     if model_name in ["dkvmn","skvmn"]:
@@ -261,7 +280,7 @@ def effective_fusion(df, model, model_name, fusion_type):
 
     curhs, curr = [[], []], []
     dcur = {"late_trues": [], "qidxs": [], "questions": [], "concepts": [], "row": [], "concept_preds": []}
-    hasearly = ["dkvmn","deep_irt", "skvmn", "kqn", "akt","idkt","gtransformer","extrakt", "folibikt", "robustkt", "dtransformer", "simakt", "simplekt","stablekt","cskt","fluckt", "ukt", "hcgkt", "datakt", "sparsekt","lefokt_akt",  "saint", "sakt", "hawkes", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lpkt"]
+    hasearly = ["dkvmn","deep_irt", "skvmn", "kqn", "dtransformer", "simakt", "akt","idkt","gtransformer","extrakt", "folibikt", "robustkt", "simplekt","cskt","fluckt", "ukt", "hcgkt", "datakt", "sparsekt","lefokt_akt",  "saint", "sakt", "hawkes", "akt_vector", "akt_norasch", "akt_mono", "akt_attn", "aktattn_pos", "aktmono_pos", "akt_raschx", "akt_raschy", "aktvec_raschx", "lpkt"]
     for ui in df:
         # 一题一题处理
         curdf = ui[1]
@@ -421,6 +440,10 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
         #     dhistory[key] = []
         y_trues, y_scores = [], []
         lenc = 0
+
+        l0_mses = []
+        t_mses = []
+
         for data in test_loader:
             if model_name in ["dkt_forget", "datakt"]:
                 dcurori, dgaps, dqtest = data
@@ -497,6 +520,15 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                         # GTransformer returns z_context as h if present
                         if h is None:
                             h = output_obj.get('z_context', None)
+                        # Phase 4: Probing MSE tracking (Validation/Test)
+                        if 'p_l0_probe' in output_obj and 'target_l0' in dcurori:
+                            p_l0 = torch.masked_select(output_obj['p_l0_probe'][:,1:], sm)
+                            p_t = torch.masked_select(output_obj['p_t_probe'][:,1:], sm)
+                            t_l0 = torch.masked_select(dcurori['target_l0'].to(device), sm)
+                            t_t = torch.masked_select(dcurori['target_t'].to(device), sm)
+                            
+                            l0_mses.append(F.mse_loss(p_l0, t_l0.float()).item())
+                            t_mses.append(F.mse_loss(p_t, t_t.float()).item())
                     else:
                         y = output_obj
                 else:
@@ -623,9 +655,6 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
             acc = metrics.accuracy_score(ts, prelabels)
             aucs[key] = auc
             accs[key] = acc
-    return aucs, accs
-
-
 def log2(t):
     import math
     return round(math.log(t+1, 2))

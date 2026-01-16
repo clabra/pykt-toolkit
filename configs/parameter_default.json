@@ -29,6 +29,8 @@
     "lambda_ref": 0.5,
     "lambda_initmastery": 0.1,
     "lambda_rate": 0.1,
+    "active_grounding": 1,
+    "lambda_probe": 1.0,
     "theory_guided": 1,
     "calibrate": 1,
     "grounded_init": 0,
@@ -108,6 +110,8 @@
       "lambda_ref",
       "lambda_initmastery",
       "lambda_rate",
+      "active_grounding",
+      "lambda_probe",
       "theory_guided",
       "size_m",
       "graph_type",
@@ -145,5 +149,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f8dd1f7f1d51cb81acb44ecfbb386d38"
+  "md5": "92cc38a5ae0b8798e108f58594b8127d"
 }

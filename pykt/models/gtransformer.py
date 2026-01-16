@@ -42,6 +42,7 @@ class GTransformer(nn.Module):
         self.lambda_initmastery = kwargs.get('lambda_initmastery', 0.1)
         self.lambda_rate = kwargs.get('lambda_rate', 0.1)
         self.lambda_ref = kwargs.get('lambda_ref', 0.5)
+        self.lambda_probe = kwargs.get('lambda_probe', 1.0)
 
         embed_l = d_model
         
@@ -89,6 +90,11 @@ class GTransformer(nn.Module):
             if self.n_uid > 0:
                 self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
                 self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
+            
+            # Phase 2: Probe Architecture
+            # Dedicated shared linear probe heads for Active Grounding
+            self.probe_l0 = nn.Linear(z_dim, 1)
+            self.probe_t = nn.Linear(z_dim, 1)
 
         # Architecture Object. It contains stack of attention block
         self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=num_attn_heads, dropout=dropout,
@@ -131,7 +137,29 @@ class GTransformer(nn.Module):
         
         # Extract params mapping
         params_dict = bkt_skill_params.get('params', {})
-        global_params = bkt_skill_params.get('global', {'prior': 0.5, 'learns': 0.1})
+        
+        # Determine global fallbacks
+        tmp_global = bkt_skill_params.get('global', {})
+        if isinstance(tmp_global, dict) and 'prior' in tmp_global:
+            global_params = tmp_global
+        else:
+            # Fallback: calculate mean from available skill params
+            if params_dict:
+                # Handle potential array wrappers in pyBKT values
+                def get_val(d, k, def_val):
+                    v = d.get(k, def_val)
+                    if isinstance(v, (np.ndarray, list)):
+                        return float(v[0])
+                    return float(v)
+
+                all_priors = [get_val(p, 'prior', 0.5) for p in params_dict.values()]
+                all_learns = [get_val(p, 'learns', 0.1) for p in params_dict.values()]
+                global_params = {
+                    'prior': np.mean(all_priors) if all_priors else 0.5,
+                    'learns': np.mean(all_learns) if all_learns else 0.1
+                }
+            else:
+                global_params = {'prior': 0.5, 'learns': 0.1}
         
         def to_logit(p, eps=1e-6):
             p = np.clip(p, eps, 1.0 - eps)
@@ -139,9 +167,18 @@ class GTransformer(nn.Module):
 
         with torch.no_grad():
             for q_idx in range(self.n_question + 1):
-                s_params = params_dict.get(q_idx, global_params)
-                l0_p = s_params.get('prior', global_params['prior'])
-                t_p = s_params.get('learns', global_params['learns'])
+                # Try integer key, then string key, then fallback to global
+                s_params = params_dict.get(q_idx, params_dict.get(str(q_idx), global_params))
+                
+                # Retrieve values, handling possible array/scalar types from pyBKT
+                def extract(d, k, fallback_d, fallback_k):
+                    v = d.get(k, fallback_d.get(fallback_k, 0.5))
+                    if isinstance(v, (np.ndarray, list)):
+                        return float(v[0])
+                    return float(v)
+
+                l0_p = extract(s_params, 'prior', global_params, 'prior')
+                t_p = extract(s_params, 'learns', global_params, 'learns')
                 
                 # Textured Grounding: 
                 # Instead of a constant vector, we use a small normal distribution 
@@ -260,6 +297,14 @@ class GTransformer(nn.Module):
         p_l0 = torch.sigmoid(l0_logits) # BS, seqlen
         p_t = torch.sigmoid(t_logits)   # BS, seqlen
 
+        # Phase 2: Probe Outputs
+        # Compute probes for validation and active grounding
+        probe_l0_logits = self.probe_l0(z_context).squeeze(-1) # BS, seqlen
+        probe_t_logits = self.probe_t(z_context).squeeze(-1)   # BS, seqlen
+        
+        p_l0_probe = torch.sigmoid(probe_l0_logits)
+        p_t_probe = torch.sigmoid(probe_t_logits)
+
         # Reference Output Generation via BKT Implementation
         # We process the batch but since each timestep t uses a different p_l0_t and p_t_t
         # were each prediction is the result of a BKT "walk" from 1 to t.
@@ -270,10 +315,12 @@ class GTransformer(nn.Module):
 
         # Collect all outputs in a structured dictionary
         outputs = {
-            'predictions': preds,           # Supervised Output
+            'predictions': preds,
+            'p_l0': p_l0,
+            'p_t': p_t,
+            'p_l0_probe': p_l0_probe,
+            'p_t_probe': p_t_probe,
             'reference_preds': ref_preds,   # Reference Output (BKT Logic Wrapper)
-            'p_l0': p_l0,                   # Grounded Output L0
-            'p_t': p_t                      # Grounded Output T
         }
 
         if not qtest:

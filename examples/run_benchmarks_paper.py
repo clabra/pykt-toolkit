@@ -270,7 +270,7 @@ def evaluate_worker(model, dataset, fold, gpu_id):
            'atkt': ['skill_dim', 'answer_dim', 'hidden_dim', 'attention_dim', 'epsilon', 'beta', 'dropout'],
            'gkt': ['hidden_dim', 'emb_size', 'graph_type', 'dropout'],
            'dkt_forget': ['emb_size', 'dropout'],
-           'gtransformer': ['d_model', 'n_blocks', 'dropout', 'd_ff', 'kq_same', 'final_fc_dim', 'num_attn_heads', 'separate_qa', 'l2']
+           'gtransformer': ['d_model', 'n_blocks', 'dropout', 'd_ff', 'kq_same', 'final_fc_dim', 'num_attn_heads', 'separate_qa', 'l2', 'lambda_probe', 'active_grounding', 'lambda_ref', 'lambda_initmastery', 'lambda_rate']
          }
         
         # Get raw parameters by merging resolved train_config and input

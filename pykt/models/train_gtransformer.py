@@ -14,7 +14,7 @@ import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
+def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None):
     model_name = model.model_name
 
     if model_name in ["atdkt", "simplekt", "stablekt", "datakt", "sparsekt", "cskt", "hcgkt"]:
@@ -140,21 +140,37 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[]):
             y_ref = torch.masked_select(output_dict['reference_preds'], sm)
             loss_ref_sup = binary_cross_entropy(y_ref.double(), t.double())
             
-            # Parameter Reference Losses (Targeting population BKT stats)
+            # Phase 3: Active Grounding (Probing Loss)
+            # Use dedicated probing heads and compare with Oracle BKT targets
+            p_l0_probe = torch.masked_select(output_dict['p_l0_probe'], sm)
+            p_t_probe = torch.masked_select(output_dict['p_t_probe'], sm)
+            
+            # Check if probe_targets provided by dataloader, fallback to model-stored population params
+            if probe_targets is not None:
+                l0_target = torch.masked_select(probe_targets['l0'], sm)
+                t_target = torch.masked_select(probe_targets['t'], sm)
+            else:
+                l0_target = torch.masked_select(model.bkt_l0_pop[cshft.long()], sm)
+                t_target = torch.masked_select(model.bkt_t_pop[cshft.long()], sm)
+            
+            # Standard Parameter Reference Losses (Targeting population BKT stats for BKT logic head)
             p_l0 = torch.masked_select(output_dict['p_l0'], sm)
             p_t = torch.masked_select(output_dict['p_t'], sm)
             
-            # Skill-specific population parameters
-            l0_pop = torch.masked_select(model.bkt_l0_pop[cshft.long()], sm)
-            t_pop = torch.masked_select(model.bkt_t_pop[cshft.long()], sm)
+            loss_l0_logic = F.mse_loss(p_l0, l0_target.float())
+            loss_t_logic = F.mse_loss(p_t, t_target.float())
+
+            # Probing Loss (Active Grounding)
+            loss_probe_l0 = F.mse_loss(p_l0_probe, l0_target.float())
+            loss_probe_t = F.mse_loss(p_t_probe, t_target.float())
             
-            loss_l0 = F.mse_loss(p_l0, l0_pop.float())
-            loss_t = F.mse_loss(p_t, t_pop.float())
+            loss_probe = loss_probe_l0 + loss_probe_t
             
             # Combine losses
             loss = loss + model.lambda_ref * loss_ref_sup + \
-                   model.lambda_initmastery * loss_l0 + \
-                   model.lambda_rate * loss_t
+                   model.lambda_initmastery * loss_l0_logic + \
+                   model.lambda_rate * loss_t_logic + \
+                   model.lambda_probe * loss_probe
         
         # 3. Regularization from model forward
         loss = loss + preloss[0]
@@ -325,6 +341,16 @@ def model_forward(model, data, rel=None):
             y = outputs[:, 1:]
         ys.append(y)
         preloss.append(reg_loss)
+        
+        # Phase 3: Active Grounding (Retrieve targets from data)
+        if model_name == "gtransformer":
+            probe_targets = None
+            if 'target_l0' in dcur and 'target_t' in dcur:
+                probe_targets = {
+                    'l0': dcur['target_l0'].to(device),
+                    't': dcur['target_t'].to(device)
+                }
+            return cal_loss(model, ys, r, rshft, sm, cshft, preloss, probe_targets)
     elif model_name in ["atkt", "atktfix"]:
         y, features = model(c.long(), r.long())
         y = (y * one_hot(cshft.long(), model.num_c)).sum(-1)
@@ -359,7 +385,7 @@ def model_forward(model, data, rel=None):
         ys.append(y)
         ys.append(y) 
 
-    if model_name not in ["atkt", "atktfix"]+que_type_models or model_name in ["lpkt", "rkt"]:
+    if model_name not in ["atkt", "atktfix", "gtransformer"]+que_type_models or model_name in ["lpkt", "rkt"]:
         loss = cal_loss(model, ys, r, rshft, sm, cshft, preloss)
     if model_name in ["ukt"] and model.use_CL != 0:
         return loss,temp

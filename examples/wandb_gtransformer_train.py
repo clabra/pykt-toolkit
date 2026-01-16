@@ -13,6 +13,7 @@ from pykt.models.train_gtransformer import train_model
 from pykt.models import init_model
 from pykt.utils import debug_print, set_seed
 from pykt.datasets import init_dataset4train
+from torch.utils.data import DataLoader
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -65,7 +66,27 @@ def main(params):
     print(dataset_name, model_name, data_config, fold, batch_size)
     
     debug_print(text="init_dataset", fuc_name="main")
-    train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
+    
+    # Phase 3: Active Grounding (Custom Data Loading)
+    if params.get('active_grounding', 1) == 1:
+        from pykt.datasets.gtransformer_dataloader import GTransformerDataset
+        dpath = data_config[dataset_name]["dpath"]
+        if dpath.startswith("../"):
+            dpath = os.path.join(os.getcwd(), dpath)
+        target_path = os.path.join(dpath, "bkt_targets_train_valid.npz")
+        
+        train_file = os.path.join(dpath, data_config[dataset_name]["train_valid_file"])
+        all_folds = set(data_config[dataset_name]["folds"])
+        
+        curvalid = GTransformerDataset(train_file, data_config[dataset_name]["input_type"], {fold}, target_path=target_path)
+        curtrain = GTransformerDataset(train_file, data_config[dataset_name]["input_type"], all_folds - {fold}, target_path=target_path)
+        
+        nw = int(os.getenv('PYKT_NUM_WORKERS', '32'))
+        train_loader = DataLoader(curtrain, batch_size=batch_size, num_workers=nw, pin_memory=True, shuffle=True)
+        valid_loader = DataLoader(curvalid, batch_size=batch_size, num_workers=nw, pin_memory=True, shuffle=False)
+        print(f"  [Active Grounding] Using GTransformerDataset with targets from {target_path}")
+    else:
+        train_loader, valid_loader, *_ = init_dataset4train(dataset_name, model_name, data_config, fold, batch_size)
 
     # Create a compact identifying string for the checkpoint directory
     # Only include essential parameters to avoid "File name too long" errors
@@ -192,9 +213,11 @@ if __name__ == "__main__":
     # 6. Benchmark-wide Compatibility Parameters (Ignored by GTransformer but required for Audit)
     parser.add_argument("--lambda_student", type=float, required=True)
     parser.add_argument("--lambda_gap", type=float, required=True)
-    parser.add_argument("--lambda_ref", type=float, required=True)
-    parser.add_argument("--lambda_initmastery", type=float, required=True)
-    parser.add_argument("--lambda_rate", type=float, required=True)
+    parser.add_argument("--lambda_ref", type=float, required=True, help="Weight for BKT reference supervised loss")
+    parser.add_argument("--lambda_initmastery", type=float, required=True, help="Weight for L0 grounding loss")
+    parser.add_argument("--lambda_rate", type=float, required=True, help="Weight for T grounding loss")
+    parser.add_argument("--active_grounding", type=int, required=True, help="Whether to use active grounding (probing loss)")
+    parser.add_argument("--lambda_probe", type=float, required=True, help="Weight for probing loss")
     parser.add_argument("--theory_guided", type=int, required=True)
     parser.add_argument("--calibrate", type=int, required=True)
     parser.add_argument("--grounded_init", type=int, required=True)

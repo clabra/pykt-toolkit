@@ -2,7 +2,12 @@ direction: up
 
 BKT: {
   class: input
-  label: BKT Model
+  label: Reference Model \n (BKT)
+}
+
+Oracle: {
+  class: input
+  label: Reference Labels
 }
 
 InputData: {
@@ -62,43 +67,35 @@ Outputs: {
 
   SupervisedOut: {
     class: component
-    label: "Supervised \n p_sup"
+    label: "Supervised \n Prediction"
+  }
 
-    linear
-    softmax
-    linear -> softmax
+  GroundedParams: {
+    label: Grounded Parameters
+    class: component
+    
+    p_L0: "p_L0 \n Initial Mastery"
+    p_T: "p_T \n  Learning Rate"
   }
 
   ReferenceOut: {
     class: component
-    label: "Reference \n p_ref"
-
-    bkt: "BKT Logic"
+    label: "Reference Logic \n (BKT)"
   }
 
-  GroundedOut1: {
+  DiagnosticProbes: {
+    label: Active Grounding
     class: component
-    label: "Grounded \n p_L0"
-
-    linear
-    softmax
-    linear -> softmax
-  }
-
-  GroundedOut2: {
-    class: component
-    label: "Grounded \n p_T"
-
-    linear
-    softmax
-    linear -> softmax
+    
+    probe_L0: "Logit Probe (L0)"
+    probe_T: "Logit Probe (T)"
   }
 }
 
 # 6. Multi-objective Loss Functions
 
 LossLayer: {
-  label: Losses
+  label: Total Loss (L)
   class: layer
   LossSupervised: {
     label: + \n Sup
@@ -108,73 +105,45 @@ LossLayer: {
     label: + \n Ref
     class: loss
   }
-  LossRegularization: {
-    label: + \n Reg
-    class: loss
-  }
-  LossGrounded1: {
-    label: + \n p_L0
-    class: loss
-  }
-  LossGrounded2: {
-    label: + \n p_T
+
+  LossProbing: {
+    label: + \n Probe
     class: loss
   }
 }
 
 # Relationships / Flow
 BKT -> EmbeddingsLayer.Embeddings: p_l0, p_T
+BKT -> Oracle
 InputData -> EmbeddingsLayer.Embeddings: "{(q, c, r)}"
 EmbeddingsLayer.Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
 EmbeddingsLayer.Embeddings -> Transformer.Decoder: "x'ₜ"
 
-Transformer.zt -> Outputs.SupervisedOut
-Transformer.zt -> Outputs.GroundedOut1
-Transformer.zt -> Outputs.GroundedOut2
+Transformer.zt -> Outputs.SupervisedOut: Standard MLP
+Transformer.zt -> Outputs.GroundedParams: "Axis Projection \n Base + (z . Axis) + Bias"
+Transformer.zt -> Outputs.DiagnosticProbes: "Active Alignment \n Linear Probe (W . z + b)"
+
+Outputs.GroundedParams -> Outputs.ReferenceOut: Informed Logic
+Outputs.ReferenceOut -> LossLayer.LossReference
 
 # Loss functions
 Outputs.SupervisedOut -> LossLayer.LossSupervised
-Outputs.ReferenceOut -> LossLayer.LossReference
-Outputs.GroundedOut1 -> LossLayer.LossGrounded1: {
+
+Outputs.DiagnosticProbes -> LossLayer.LossProbing: "Active Verification" {
   style: {
-    # All CSS color names are valid
-    stroke: deepskyblue
+
+    #stroke-dash: 3
   }
 }
 
-Outputs.GroundedOut1 -> LossLayer.LossRegularization: {
+# Supervision and Grounding Labels
+InputData -> LossLayer.LossSupervised: y_true
+Oracle -> LossLayer.LossProbing: "Oracle Targets" {
   style: {
-    # All CSS color names are valid
-    stroke: brown
+    #stroke-dash: 3
   }
 }
-Outputs.GroundedOut2 -> LossLayer.LossGrounded2: {
-  style: {
-    # All CSS color names are valid
-    stroke: green
-  }
-}
-Outputs.GroundedOut2 -> LossLayer.LossRegularization: {
-  style: {
-    # All CSS color names are valid
-    stroke: brown
-  }
-}
-
-InputData -> LossLayer.LossSupervised
-InputData -> LossLayer.LossReference
-BKT -> LossLayer.LossGrounded1: p_L0 {
-  style: {
-    # All CSS color names are valid
-    stroke: deepskyblue
-  }
-}
-BKT -> LossLayer.LossGrounded2: p_T {
-  style: {
-    # All CSS color names are valid
-    stroke: green
-  }
-}
+BKT -> Outputs.GroundedParams: "Theory Priors"
 
 # Define Classes for visual consistency
 classes: {

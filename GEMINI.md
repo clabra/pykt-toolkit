@@ -162,6 +162,7 @@ When you are running experiments (Experiment Agent):
 - Ensure all default parameters are in `configs/parameter_default.json`.
 - Use `configs/data_config.json` for datasets path and configuration.
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
+- For gtransformer model, the metric we use is test auc question-level average late-fusion
 
 ## Copyright and License
 
