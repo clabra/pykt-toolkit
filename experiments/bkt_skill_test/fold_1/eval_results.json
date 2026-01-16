@@ -1,0 +1,16 @@
+{
+  "fold": 1,
+  "valid_auc": 0.6966647386694883,
+  "valid_rmse": 0.444005403138087,
+  "valid_acc": 0.7057055343112075,
+  "test_auc": 0.7136275324957083,
+  "test_rmse": 0.4458556394093895,
+  "test_acc": 0.7038045642030163,
+  "num_train": 222044,
+  "num_valid": 52563,
+  "num_test": 62808,
+  "evaluation_type": "skill_level",
+  "evaluation_mode": "skill",
+  "model": "BKT",
+  "library": "pyBKT"
+}

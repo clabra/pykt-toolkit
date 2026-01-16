@@ -26,11 +26,12 @@
     "l2_rasch": 1e-05,
     "lambda_student": 1e-05,
     "lambda_gap": 1e-05,
+    "lambda_sup": 1.0,
     "lambda_ref": 0.5,
     "lambda_initmastery": 0.1,
     "lambda_rate": 0.1,
-    "active_grounding": 1,
-    "lambda_probe": 1.0,
+    "active_grounding": 0,
+    "lambda_probe": 0.0,
     "theory_guided": 1,
     "calibrate": 1,
     "grounded_init": 0,
@@ -47,7 +48,7 @@
     "lambda_r": 0.01,
     "lambda_w1": 0.003,
     "lambda_w2": 3.0,
-    "_doc_grounding": "lambda_ref, lambda_initmastery, lambda_rate control Representational Grounding strength. theory_guided, calibrate, grounded_init control model behavior.",
+    "_doc_grounding": "lambda_sup controls supervised loss weight (default 1.0, set to 0 for pure interpretability). lambda_ref, lambda_initmastery, lambda_rate control Representational Grounding strength. theory_guided, calibrate, grounded_init control model behavior.",
     "_doc_regularization": "l2 (u_q), lambda_gap (k_s), and lambda_student (v_s) control the parsimony of individualization (L_reg).",
     "n_hidden": 128,
     "n_rnn_hidden": 128,
@@ -149,5 +150,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "92cc38a5ae0b8798e108f58594b8127d"
+  "md5": "3f78bd5b6324a6ccd788a22c332e6db2"
 }

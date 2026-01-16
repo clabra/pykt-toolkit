@@ -132,7 +132,7 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None):
         # 1. Supervised Loss (Primary Predictions)
         y = torch.masked_select(output_dict['predictions'], sm)
         t = torch.masked_select(rshft, sm)
-        loss = binary_cross_entropy(y.double(), t.double())
+        loss = model.lambda_sup * binary_cross_entropy(y.double(), t.double())
 
         # 2. Grounded and Reference Losses (Only if not in ablation="all")
         if model.ablation != "all":

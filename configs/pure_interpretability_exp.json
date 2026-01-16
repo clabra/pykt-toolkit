@@ -1,0 +1,40 @@
+{
+  "experiment_name": "Pure Interpretability Ablation",
+  "description": "Tests whether gtransformer can learn using ONLY interpretability constraints (lambda_sup=0) without direct supervision on predictions. Baseline: Exp 636452 (Active Grounding).",
+  "base_config": "Exp 636452",
+  "model": "gtransformer",
+  "dataset": "assist2009",
+  "folds": [0, 1, 2, 3, 4],
+  "parameters": {
+    "lambda_sup": 0.0,
+    "lambda_ref": 0.5,
+    "lambda_initmastery": 0.1,
+    "lambda_rate": 0.1,
+    "lambda_probe": 1.0,
+    "active_grounding": 1,
+    "n_blocks": 2,
+    "n_heads": 8,
+    "d_model": 64,
+    "d_ff": 256,
+    "dropout": 0.1,
+    "learning_rate": 0.0001,
+    "l2_rasch": 1e-05,
+    "epochs": 200,
+    "patience": 10,
+    "seed": 3407
+  },
+  "research_question": "Can a model trained purely on pedagogical constraints (BKT reference loss + parameter grounding + probing) achieve reasonable predictive performance without any direct supervision on prediction accuracy?",
+  "expected_outcomes": {
+    "scenario_1": "AUC > 0.75 - Strong evidence that interpretability constraints encode rich information",
+    "scenario_2": "0.65 < AUC < 0.75 - Moderate performance, measurable cost to pure interpretability",
+    "scenario_3": "AUC < 0.65 - Direct supervision is essential for performance"
+  },
+  "comparison_baseline": {
+    "exp_id": "636452",
+    "test_auc": 0.7758,
+    "test_auc_std": 0.0037,
+    "test_acc": 0.7337,
+    "test_acc_std": 0.0015,
+    "lambda_sup": 1.0
+  }
+}

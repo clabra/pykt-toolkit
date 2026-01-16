@@ -104,10 +104,13 @@ def run_cmd(cmd, log_path, env=None, cwd=None):
         process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, start_new_session=True)
         return process.wait()
 
-def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None, dry_run=False, epochs=None):
+def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None, dry_run=False, epochs=None, param_overrides=None):
     """
     Worker that uses run_repro_experiment.py to launch a training task.
     Logs are written directly into the experiment folder.
+    
+    Args:
+        param_overrides: Dict of parameter overrides to pass to run_repro_experiment.py
     """
     if start_delay > 0:
         time.sleep(start_delay)
@@ -154,6 +157,12 @@ def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None
 
     if parent_folder:
         cmd.extend(["--parent_folder", parent_folder])
+    
+    # Add parameter overrides (zero hardcoded defaults philosophy)
+    if param_overrides:
+        for param_name, param_value in param_overrides.items():
+            if param_value is not None:
+                cmd.extend([f"--{param_name}", str(param_value)])
     
     # run_repro_experiment MUST be run from PROJECT_ROOT for path consistency
     cwd = Path(PROJECT_ROOT)
@@ -491,6 +500,13 @@ def main():
     parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
+    
+    # Parameter overrides (pass-through to run_repro_experiment.py)
+    parser.add_argument("--lambda_sup", type=float, default=None, help="Override lambda_sup (supervised loss weight)")
+    parser.add_argument("--lambda_ref", type=float, default=None, help="Override lambda_ref (BKT reference loss weight)")
+    parser.add_argument("--active_grounding", type=int, default=None, help="Override active_grounding (0 or 1)")
+    parser.add_argument("--lambda_probe", type=float, default=None, help="Override lambda_probe (probing loss weight)")
+    
     args = parser.parse_args()
 
     gpus = args.gpus.split(",")
@@ -509,6 +525,19 @@ def main():
         print(f"--- BENCHMARK TRAINING QUEUE (Concurrency={max_workers}) ---")
         print(f"Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)")
         
+        # Build parameter overrides dict from command-line arguments
+        param_overrides = {}
+        if args.lambda_sup is not None:
+            param_overrides['lambda_sup'] = args.lambda_sup
+        if args.lambda_ref is not None:
+            param_overrides['lambda_ref'] = args.lambda_ref
+        if args.active_grounding is not None:
+            param_overrides['active_grounding'] = args.active_grounding
+        if args.lambda_probe is not None:
+            param_overrides['lambda_probe'] = args.lambda_probe
+        
+        if param_overrides:
+            print(f"Parameter overrides: {param_overrides}")
         
         # Create campaign folder with unique ID
         campaign_folder = f"{PROJECT_ROOT}/experiments/{benchmark_timestamp}_benchpaper_{unique_id}"
@@ -530,7 +559,7 @@ def main():
                         gpu_id = gpus[idx % max_workers]
                         delay = min((idx % max_workers) * 20, 120) # Stagger starts (audit can be heavy)
                         print(f"[QUEUE] {model} on {dataset} fold {fold} (GPU {gpu_id})")
-                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder, args.dry_run, args.epochs))
+                        futures.append(executor.submit(train_worker, model, dataset, fold, gpu_id, delay, group_folder, args.dry_run, args.epochs, param_overrides))
                         idx += 1
             
             for future in as_completed(futures):

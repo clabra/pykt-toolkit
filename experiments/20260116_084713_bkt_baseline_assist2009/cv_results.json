@@ -1,0 +1,62 @@
+{
+  "model": "BKT",
+  "dataset": "assist2009",
+  "mean_auc": 0.7100032476835185,
+  "std_auc": 0.006898854612770168,
+  "mean_acc": 0.709338092782206,
+  "std_acc": 0.0048148199806296935,
+  "mean_rmse": 0.4414201863609429,
+  "std_rmse": 0.002747315865852138,
+  "folds": [
+    {
+      "fold": 0,
+      "test_auc": 0.7149066086469051,
+      "test_rmse": 0.44182926186358423,
+      "test_acc": 0.7073703468618153,
+      "num_train": 221041,
+      "num_test": 53566,
+      "model": "BKT",
+      "library": "pyBKT"
+    },
+    {
+      "fold": 1,
+      "test_auc": 0.6966647386694883,
+      "test_rmse": 0.444005403138087,
+      "test_acc": 0.7057055343112075,
+      "num_train": 222044,
+      "num_test": 52563,
+      "model": "BKT",
+      "library": "pyBKT"
+    },
+    {
+      "fold": 2,
+      "test_auc": 0.7107939374313532,
+      "test_rmse": 0.43865039278146883,
+      "test_acc": 0.715427523210542,
+      "num_train": 221179,
+      "num_test": 53428,
+      "model": "BKT",
+      "library": "pyBKT"
+    },
+    {
+      "fold": 3,
+      "test_auc": 0.7155816291257349,
+      "test_rmse": 0.4379027147363967,
+      "test_acc": 0.7146452937669736,
+      "num_train": 214219,
+      "num_test": 60388,
+      "model": "BKT",
+      "library": "pyBKT"
+    },
+    {
+      "fold": 4,
+      "test_auc": 0.7120693245441114,
+      "test_rmse": 0.4447131592851775,
+      "test_acc": 0.7035417657604918,
+      "num_train": 219945,
+      "num_test": 54662,
+      "model": "BKT",
+      "library": "pyBKT"
+    }
+  ]
+}

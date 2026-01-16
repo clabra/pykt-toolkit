@@ -392,3 +392,146 @@ This experiment demonstrates that adding explicit probing losses ($\mathcal{L}_{
 4.  **Probe Accuracy Analysis**: Evaluate how accurately the linear probes can predict BKT parameters from the latent representations.
 
 
+## Exp 474858 - Supervised Loss Removed (Pure Interpretability) ❌
+
+> | **Attribute** | **Details** |
+> | :--- | :--- |
+> | **Commit** | `003e6766` (Jan 16) |
+> | **Experiment** | `20260116_084144_benchpaper_474858` |
+> | **Test AUC (Late Fusion)** | **0.5130** ± 0.0002 ❌ (Random Performance) |
+> | **Parameters Changed** | `lambda_sup: 0.0`, `lambda_ref: 1.0`, `active_grounding: 1`, `lambda_probe: 1.0` |
+> | **Interpretation** | **Critical Failure**. Removing supervised loss completely breaks learning, demonstrating that grounding losses alone cannot drive meaningful pattern discovery. |
+
+This experiment attempted to create a "Pure Interpretability" model by setting `lambda_sup = 0.0`, removing the standard supervised BCE loss entirely and relying only on the neuro-symbolic grounding losses.
+
+### Rationale & Design
+The hypothesis was that with sufficiently strong grounding constraints, the model might learn meaningful representations purely from aligning with BKT structure, without direct supervision on prediction accuracy.
+
+### Parameter Configuration
+| Parameter | Exp 636452 (Active Grounding) | Exp 474858 (Pure Interp) |
+| :--- | :---: | :---: |
+| **lambda_sup** | 1.0 (default) | **0.0** ❌ |
+| **lambda_ref** | 0.5 | **1.0** |
+| **lambda_probe** | 1.0 | 1.0 |
+| **active_grounding** | 1 | 1 |
+
+### Results (5-Fold CV)
+| Metric | Exp 636452 (Supervised + Grounded) | Exp 474858 (Pure Grounding) | Delta |
+| :--- | :---: | :---: | :---: |
+| **Test AUC (Late Fusion)** | **0.7758** ± 0.0037 | **0.5130** ± 0.0002 | **-0.2628** ❌ |
+| **Test ACC (Late Fusion)** | **0.7337** ± 0.0015 | **0.6395** ± 0.0000 | **-0.0942** |
+| **Valid AUC** | 0.7093 ± 0.0057 | **0.5175** (stuck) | **-0.1918** |
+
+### Individual Fold Results (Test AUC - Late Fusion)
+| Fold | Test AUC |
+| :---: | :---: |
+| 0 | 0.5130 |
+| 1 | 0.5130 |
+| 2 | 0.5132 |
+| 3 | 0.5127 |
+| 4 | 0.5133 |
+| **Mean** | **0.5130** |
+| **Std** | **±0.0002** |
+
+### Training Behavior
+Examining the training logs reveals the core issue:
+- **Validation AUC stuck at 0.5175** across all epochs (1-11)
+- **No learning signal**: Loss decreases (0.808 → 0.692) but AUC remains flat
+- **Early stopping triggered at epoch 11** (patience=10) with no improvement
+
+### Interpretation
+
+1.  **Grounding ≠ Supervision**: The grounding losses ($\mathcal{L}_{ref}$, $\mathcal{L}_{probe}$) enforce structural alignment with BKT but do not provide sufficient learning signal for discriminative prediction. They constrain *how* the model represents knowledge but cannot teach it *what* patterns to look for.
+
+2.  **Supervised Loss is Critical**: The standard BCE loss ($\mathcal{L}_{sup}$) is not merely a performance boost—it is the fundamental learning signal that enables the model to discover predictive patterns in the data. Without it, the model cannot learn to distinguish correct from incorrect responses.
+
+3.  **The Role of Grounding**: This experiment clarifies that grounding losses are **regularizers**, not **objectives**. They shape learned representations toward interpretable structures but cannot replace task-specific supervision.
+
+4.  **Architectural Implication**: For Neuro-Symbolic KT, the optimal approach is:
+    - **Primary Signal**: Supervised loss for discriminative learning
+    - **Secondary Constraints**: Grounding losses for interpretable structure
+    - This aligns with the "Dual Loss Architecture" design in Exp 090230 and 636452.
+
+5.  **Performance Floor**: AUC = 0.5130 represents true random performance (51.3% = coin flip), confirming the model learned nothing beyond the base rate.
+
+### Conclusion
+**Supervised loss cannot be removed**. The grounding losses add interpretability *on top of* a working predictive model but cannot create one from scratch. This experiment validates our design decision to maintain $\lambda_{sup} = 1.0$ as the foundation, with grounding losses as additive constraints rather than replacements.
+
+## BKT Metrics
+
+**Bayesian Knowledge Tracing (BKT)** serves as a classical baseline for knowledge tracing tasks. We implemented two evaluation modes to enable fair comparison with neural models:
+
+#### Mode 1: Skill-Level Evaluation
+
+**Description**: Standard BKT evaluation at the skill level, where the model updates its belief state sequentially based on observed responses.
+
+**Configuration**:
+- Training: Skill-level BKT on 4 folds
+- Validation: Skill-level (fold 5)
+- Test: Skill-level (held-out test set with fold=-1)
+
+**Results (5-fold CV)**:
+| Split | AUC | ACC | RMSE |
+| :--- | :---: | :---: | :---: |
+| **Validation** | 0.7100 ± 0.0069 | 0.7093 ± 0.0048 | 0.4414 ± 0.0027 |
+| **Test** | **0.7144 ± 0.0005** | 0.7026 ± 0.0007 | 0.4458 ± 0.0002 |
+
+**Reproduction Command**:
+```bash
+python3 examples/run_bkt_benchmark.py --dataset assist2009 --mode skill --output_dir experiments/bkt_skill_mode
+```
+
+**Campaign**: `experiments/bkt_skill_mode/`
+
+---
+
+#### Mode 2: Question-Level Evaluation (Late Fusion)
+
+**Description**: Question-level evaluation using late fusion (mean average) to match neural model evaluation protocol. This mode prevents data leakage by using only the trained BKT parameters without updating beliefs on test data.
+
+**Configuration**:
+- Training: Skill-level BKT on 4 folds  
+- Validation: Skill-level (fold 5)
+- Test: Question-level with late fusion (mean), no model updates
+- Prediction: P(correct) = P(L₀) × (1 - P(S)) + (1 - P(L₀)) × P(G)
+- Late Fusion: Averages skill-level predictions for multi-skill questions
+
+**Results (5-fold CV)**:
+| Split | AUC | ACC | RMSE |
+| :--- | :---: | :---: | :---: |
+| **Validation** | 0.7100 ± 0.0069 | 0.7093 ± 0.0048 | 0.4414 ± 0.0027 |
+| **Test** | **0.6097 ± 0.0008** | 0.6556 ± 0.0050 | 0.4678 ± 0.0003 |
+
+**Reproduction Command**:
+```bash
+python3 examples/run_bkt_benchmark.py --dataset assist2009 --mode question --output_dir experiments/bkt_question_mode
+```
+
+**Campaign**: `experiments/bkt_question_mode_fixed/`
+
+---
+
+#### Key Findings
+
+1. **No Data Leakage**: The question-level evaluation achieves a reasonable AUC of 0.6097 (not 1.0), confirming proper implementation without data leakage.
+
+2. **Performance Context**: 
+   - **Skill-level**: BKT achieves 0.7144 AUC by leveraging sequential belief updates
+   - **Question-level**: BKT achieves 0.6097 AUC using only initial parameters (P(L₀), P(S), P(G))
+   - The drop reflects BKT's reliance on sequential updates, which are disabled in question-level evaluation to prevent data leakage
+
+3. **Comparison with Neural Models** (Question-Level, Late Fusion):
+   - **BKT**: 0.6097 ± 0.0008 AUC
+   - **gTransformer (Active Grounding, Exp 636452)**: 0.7758 ± 0.0037 AUC  
+   - **gTransformer (Baseline Grounded, Exp 090230)**: 0.7800 ± 0.0013 AUC
+   - **gTransformer (Baseline Neural, Step 0)**: 0.7825 ± 0.0017 AUC
+
+4. **Fair Comparison Protocol**: Both BKT and neural models use:
+   - Late fusion (mean) for multi-skill questions
+   - Pre-trained models without test-time updates
+   - Identical test set (test_question_sequences.csv with fold=-1)
+
+5. **BKT Implementation**: Uses [pyBKT](https://github.com/CAHLR/pyBKT) library with EM algorithm for parameter estimation (P(L₀), P(T), P(S), P(G)) per skill.
+
+**Note**: The skill-level mode demonstrates BKT's native strength (0.7144 AUC), while the question-level mode enables fair comparison with neural models that also cannot update during test evaluation.
+

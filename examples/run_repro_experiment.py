@@ -76,6 +76,9 @@ PARAM_MAP = {
     "epochs": {
         "standard_pykt": "num_epochs",
         "gtransformer": "epochs"
+    },
+    "lambda_sup": {
+        "gtransformer": "lambda_sup"
     }
 }
 
@@ -372,7 +375,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'model', 'dataset', 'fold', 'seed', 'epochs', 'batch_size', 'learning_rate', 'weight_decay', 
         'optimizer', 'gradient_clip', 'patience', 'seq_len', 'd_model', 'n_heads', 'n_blocks', 
         'd_ff', 'dropout', 'emb_type', 'final_fc_dim', 'l2', 'lambda_student', 'lambda_gap', 
-        'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
+        'lambda_sup', 'lambda_ref', 'lambda_initmastery', 'lambda_rate', 'theory_guided', 'calibrate',
         'bkt_filter', 'bkt_guess_threshold', 'bkt_slip_threshold', 'grounded_init', 'use_wandb',
         'save_dir', '_doc_grounding', '_doc_regularization',
         'answer_dim', 'beta', 'epsilon', 'graph_type', 'lambda_r', 'lambda_w1', 'lambda_w2', 

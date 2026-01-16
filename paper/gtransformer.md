@@ -89,11 +89,11 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
 
 The model is trained using a multi-component loss function to enforce grounding:
 
-$$ \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \lambda_{initmastery}\mathcal{L}_{L0} + \lambda_{rate}\mathcal{L}_{T} + \lambda_{probe}\mathcal{L}_{probe} + \mathcal{L}_{reg} $$
+$$ \mathcal{L}_{total} = \lambda_{sup}\mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \lambda_{initmastery}\mathcal{L}_{L0} + \lambda_{rate}\mathcal{L}_{T} + \lambda_{probe}\mathcal{L}_{probe} + \mathcal{L}_{reg} $$
 
 ### Core Loss Components
 
-1.  **$\mathcal{L}_{sup}$** (Supervised Loss): Standard binary cross-entropy on the transformer's direct prediction ($y_{pred}$ vs $y_{true}$). This is the primary predictive objective with implicit weight of 1.0.
+1.  **$\mathcal{L}_{sup}$** (Supervised Loss, $\lambda_{sup}=1.0$): Standard binary cross-entropy on the transformer's direct prediction ($y_{pred}$ vs $y_{true}$). This is the primary predictive objective. **Note**: Setting $\lambda_{sup}=0$ creates a "pure interpretability" mode where the model is trained exclusively on grounding constraints without direct supervision on predictions.
 
 2.  **$\mathcal{L}_{ref}$** (Reference Loss, $\lambda_{ref}=0.5$): Binary cross-entropy on the BKT Reference Output ($y_{bkt}$ vs $y_{true}$). This forces the learned $p_{L0}, p_T$ to be useful for BKT reasoning, ensuring the parameters produce theoretically valid predictions when fed through the differentiable BKT logic wrapper.
 
@@ -106,6 +106,15 @@ $$ \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \l
 
 6.  **$\mathcal{L}_{reg}$** (Rasch Regularization, $\lambda_{rasch}=1e-5$): L2 penalty on question difficulty embeddings ($u_q$) to prevent overfitting:
     $$ \mathcal{L}_{reg} = l2_{rasch} \cdot \sum ||u_q||^2 $$
+
+### Pure Interpretability Mode
+
+By setting $\lambda_{sup}=0$, the model can be trained in **pure interpretability mode**, where the only supervision comes from:
+- BKT reference loss (forcing outputs to match BKT logic)
+- Parameter grounding losses (forcing parameters to be pedagogically valid)
+- Probing losses (forcing latent space to be linearly interpretable)
+
+This configuration allows researchers to investigate whether a model can achieve reasonable predictive performance using **only** theory-guided constraints, without any direct supervision on prediction accuracy. This is a critical test of whether interpretability constraints contain sufficient information to learn useful representations.
 
 ### Inactive Components (Not Used in Current Implementation)
 

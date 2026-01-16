@@ -1,0 +1,10 @@
+{
+  "fold": 4,
+  "test_auc": 0.7120693245441114,
+  "test_rmse": 0.4447131592851775,
+  "test_acc": 0.7035417657604918,
+  "num_train": 219945,
+  "num_test": 54662,
+  "model": "BKT",
+  "library": "pyBKT"
+}

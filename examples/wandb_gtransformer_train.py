@@ -213,6 +213,7 @@ if __name__ == "__main__":
     # 6. Benchmark-wide Compatibility Parameters (Ignored by GTransformer but required for Audit)
     parser.add_argument("--lambda_student", type=float, required=True)
     parser.add_argument("--lambda_gap", type=float, required=True)
+    parser.add_argument("--lambda_sup", type=float, required=True, help="Weight for supervised loss on predictions")
     parser.add_argument("--lambda_ref", type=float, required=True, help="Weight for BKT reference supervised loss")
     parser.add_argument("--lambda_initmastery", type=float, required=True, help="Weight for L0 grounding loss")
     parser.add_argument("--lambda_rate", type=float, required=True, help="Weight for T grounding loss")

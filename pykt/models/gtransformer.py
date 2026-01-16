@@ -39,6 +39,7 @@ class GTransformer(nn.Module):
         self.n_uid = n_uid
         
         # Loss component weights (Passed through from data_config/params)
+        self.lambda_sup = kwargs.get('lambda_sup', 1.0)
         self.lambda_initmastery = kwargs.get('lambda_initmastery', 0.1)
         self.lambda_rate = kwargs.get('lambda_rate', 0.1)
         self.lambda_ref = kwargs.get('lambda_ref', 0.5)
