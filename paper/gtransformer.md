@@ -928,17 +928,72 @@ python tmp/plot_student_clusters_gtransformer.py \
 - **Contextual (Plot 6)**: 770 students, probe predictions, test-time inference, log scale
 
 
-## Grounding, Probing and Personalization
 
-- Grounding: Model uses BKT-based grounding losses (lambda_ref, lambda_initmastery, lambda_rate) to constrain outputs and parameters toward pedagogically interpretable values. When activated, the model's predictions are forced to align with BKT theory.
+## Grounding, Probing, and Personalization
 
-- Probing: Model uses active grounding via probing losses (lambda_probe) to enforce that BKT parameters are linearly extractable from the latent space itself, not just from outputs. When activated, linear probes can recover parameters directly from internal representations, creating global interpretability.
+The design of the GTransformer represents a systematic evolution in the field of **Interpretable Deep Knowledge Tracing (IDKT)**, moving from post-hoc explanations to intrinsic transparency. We operationalize this evolution through three progressive levels of constraint: **Grounding**, **Probing**, and **Personalization**.
 
-- Personalization: Model uses student embeddings to personalize predictions and BKT parameters. 
+### 1. The Paradigm Shift: Why these three components?
 
-**Key distinction:**
+Traditional approaches to interpretability in Deep Learning often rely on "Post-Hoc" methods (e.g., attention weights, SHAP values) which explain *correlations* found by a black-box model. These explanations are often unstable and disconnected from pedagogical theory. GTransformer introduces a paradigm shift towards **Theory-Guided Machine Learning**, where the model is structurally forced to "think" in terms of established educational constructs.
 
-- Grounded only (Exp 090230): BKT parameters computed from outputs via differentiable wrapper, interpretable predictions
-- Grounded + Probing (Exp 334772): BKT parameters also linearly accessible from latent vectors, interpretable representations. 
-- Grounded + Probing + Personalization (Exp 948799): BKT parameters computed from outputs via differentiable wrapper, interpretable predictions. 
+#### A. Grounding: From Output to Logic (Output-Level Interpretability)
+*   **The Problem**: A standard Transformer predicts $P(correct)$ as a raw probability. While accurate, it is a risk score, not a diagnosis. It tells us *that* a student might fail, but not *why* (Lack of knowledge? Slip? Guessing?).
+*   **The Solution**: By **grounding** the output to BKT parameters ($p_{L0}, p_T$), we force the model to produce a *justification* for its prediction.
+*   **Benefits**: Educators receive **Cognitive Prescriptions** rather than risk scores.
+    *   *Baseline*: "Risk is 80%." (Non-actionable)
+    *   *Grounded*: "Initial mastery is low ($L_0=0.2$), but learning rate is high ($T=0.8$)." $\to$ Prescription: "Rapid micro-remediation."
+
+#### B. Probing: From Logic to Representation (Latent-Level Interpretability)
+*   **The Problem**: While **Output-Constraint Mechanisms** constrain the model's final predictions to lie within a valid pedagogical parameter space, they do not guarantee that the underlying latent representations ($z$) are disentangled. Without explicit constraints on the latent manifold, the model may achieve "correct" outputs via entangled, non-interpretable feature combinations, resulting in a system that exhibits **extrinsic behavioral compliance** without **intrinsic structural fidelity** to the domain theory.
+*   **The Solution**: **Active Grounding** via probing losses forces the latent space itself to be linearly isomorphic to the pedagogical parameters. We demand that $z$ be organized such that "Difficulty" and "Learning Rate" are principal components of the representation.
+*   **Benefits**:
+    *   **Trust & Safety Audit**: Practitioners can visually verify *how* the model organizes knowledge (e.g., via t-SNE maps), ensuring decisions aren't based on spurious correlations.
+    *   **Semantic Navigation**: Enabling "Semantic Search" for students—e.g., identifying all students in the "High Mastery, Low Confidence" region of the latent space for targeted intervention.
+    *   **Structural Isomorphism**: Ensures the neural "brain" aligns with pedagogical taxonomy, facilitating debugging and refinement of the educational content itself.
+
+#### C. Personalization: From Context to Individual (Diagnostic Granularity)
+*   **The Problem**: Purely contextual models suffer from "Educational Amnesia"—they treat every student as a tabularula rasa defined only by their last $N$ interactions. They miss stable traits like "Grit," "Fast Learner," or "Careless," forcing the model to re-learn these characteristics in every session.
+*   **The Solution**: Explicit **Student Embeddings** serve as a long-term memory bank, capturing stable behavioral biases ($s_{gap}, s_{vel}$) that persist across sessions.
+*   **Benefits**: Enables **Longitudinal Consistency**. The system can distinguish between a "Struggle" (low performance due to difficulty) and a "Trait" (historically slow pacing), refining the diagnosis for high-stakes decision making.
+
+---
+
+### 2. Research Hypotheses
+
+We structure our experimental validation around three formal research hypotheses that challenge the "Accuracy vs. Interpretability" trade-off myth.
+
+#### H1: The Recoverability Hypothesis (Active Grounding)
+> *Statement*: "Deep latent representations can be constrained to encode pedagogical parameters linearly without degrading predictive fidelity."
+
+If this hypothesis holds, we should observe:
+1.  **Parity Plots** showing strong $R^2$ between linear probe predictions and BKT targets (validating theoretical recoverability).
+2.  **No Performance Drop**: The AUC of the "Probed" model (Exp 334772) should remain statistically equivalent to the "Unconstrained" baseline.
+
+#### H2: The Interpretability Cost Hypothesis (Pareto Optimality)
+> *Statement*: "There exists an architectural configuration where the marginal cost of enforcing interpretability constraints is negligible ($\Delta AUC \approx 0$)."
+
+Contrary to the belief that constraints hurt performance, we hypothesize that pedagogical priors act as beneficial regularizers.
+*   **Validation**: Compare "Black-Box Baseline" (Exp 123509) vs "Grounded Optimal" (Exp 090230). A drop of $<0.5\%$ AUC confirms that interpretability is effectively "free."
+
+#### H3: The Individualization Hypothesis (Granularity)
+> *Statement*: "Explicit student embeddings capture stable behavioral heterogeneity that contextual models cannot infer from short-term history alone."
+
+*   **Validation**:
+    *   **Visual Proof**: PCA plots of student embeddings should reveal distinct "Learning Archetypes" (e.g., Fast Learners vs. Struggling Learners).
+    *   **Metric**: "Personalized" model (Exp 948799) should maintain or improve AUC while providing distinct parameter biases ($s_{gap}$) for different student clusters.
+
+---
+
+### 3. Validation Strategy
+
+We validate these hypotheses through a rigorous ablation campaign documented in `benchmark_paper.md`.
+
+| Component | Hypothesis | Verification Experiment | Key Metric | Result |
+| :--- | :---: | :--- | :--- | :--- |
+| **Grounding** | **H2** | Exp 090230 vs Exp 123509 | $\Delta$ AUC | -0.25% (Negligible Cost) |
+| **Probing** | **H1** | Exp 334772 (Aligned) | Probe $R^2$ | $R^2 > 0.5$, AUC Stable |
+| **Personalization** | **H3** | Exp 948799 | Cluster Separation | 4 Distinct Archetypes Found |
+
+**Conclusion**: The GTransformer demonstrates that we can achieve a "Best of Both Worlds" scenario: the predictive power of Transformers, the transparency of BKT, and the granularity of individualized diagnostics.
 
