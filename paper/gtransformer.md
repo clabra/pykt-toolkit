@@ -928,29 +928,46 @@ python tmp/plot_student_clusters_gtransformer.py \
 - **Contextual (Plot 6)**: 770 students, probe predictions, test-time inference, log scale
 
 
-## Grounding, Probing, and Personalization: The "Cognitive Prescriber" Paradigm
+## Personalization based on Grounded Representations - Grounding, Probing, and Personalization
 
-GTransformer represents a shift from "Black Box" predictive engines to **Cognitive Prescribers**. To achieve this, we operationalize interpretability through two complementary pillars: a **Neuro-Symbolic Engine** (Technical Foundation) and **Individualized Diagnostics** (Practical Outcome).
+GTransformer represents a shift from **Black Box performance prediction** models to **Context-Aware diagnostic** models. To achieve this, we operationalize interpretability through two complementary pillars: a **Representational Grounding Engine** (Technical Foundation) and **Context-Aware Personalized Diagnostics** (Practical Outcome).
 
-### 1. The Neuro-Symbolic Engine (Grounding & Probing)
+### 1. The Representational Grounding Engine (Grounding & Probing)
 
-Before we can enable personalized diagnostics, we must first build a model that *speaks the language* of pedagogy. Standard deep learning models maximize accuracy by any means necessary, often learning "entangled" representations that are opaque to humans.
+In order to enable personalized diagnostics, we build first a model that *speaks the language* of pedagogy. Standard deep learning models maximize accuracy by any means necessary, often learning "entangled" representations that are opaque to humans, not related to meaningful educational concepts. 
 
 To solve this, we employ **Output-Constraint Mechanisms** (Grounding) and **Active Probing Losses**. These essentially force the Transformer to organize its internal "brain" (latent space $z$) according to established educational constructs—specifically, the Bayesian Knowledge Tracing (BKT) parameters of *Initial Mastery* ($L_0$) and *Learning Rate* ($T$). This creates a **Structural Isomorphism** between the neural network and pedagogical theory, ensuring that the model's high-dimensional vector space is linearly mapped to human-understandable concepts.
+
+#### C. Personalization: From Context to Individual (Diagnostic Granularity)
+*   **The Problem ("Educational Amnesia")**: Purely contextual models treat every student sequence as an isolated event. If a student's past success in "Fractions" falls outside the current context window (e.g., max sequence length), the model "forgets" specific traits like high learning agility when predicting performance on "Algebra". Transfer is limited to the active memory.
+*   **The Solution**: Explicit **Student Embeddings** serve as a **Long-Term Trait Memory**. By learning a persistent vector for each student ID, the model captures cross-skill meta-traits (e.g., $s_{vel}=$ High) that are instantly available even when starting a new skill with zero local context.
+*   **Benefits**: Enables **Cross-Skill Transfer**. A student identified as a "Hyperefficient Learner" in one domain carries that embedding into a new domain, allowing the model to project a steeper learning curve ($p_T$) before a single interaction occurs. This distinguishes "State" (Contextual) from "Trait" (Personalized).
+
+### The Necessity of the Joint Architecture
+
+A critical question arises: *If Personalization provides the diagnostic benefits, why is Probing necessary?*
+*   **Without Probing**: A standard Transformer with student embeddings (e.g., SAINT+) would learn to distinguish students, but the learned embeddings would be opaque high-dimensional vectors. A high value in Dimension 32 might correlate with "speed," but we would have no guarantee or mechanism to verify it.
+*   **With Probing**: The Grounding/Probing mechanism establishes a **Semantic Coordinate System**. It forces the latent space axes to align with "Mastery" and "Learning Rate".
+*   **Synergy**: Consequently, when the Student Embedding biases the latent state along these specific axes, the result is interpretable. Probing builds the **Map** (Semantic Space), and Personalization allows the student to have a fixed **Location** (Archetype) on that map. Without Probing, Personalization yields a personalized black box; with Probing, it yields an interpretable diagnostic profile.
+
+---
 
 ### 2. Research Questions
 
 Rather than treating accuracy and broad interpretability as a zero-sum trade-off, we structure our investigation around two key questions:
 
-#### RQ1 (Technical Validation): Can we constrain deep learning models to be structurally isomorphic to pedagogical theory without sacrificing predictive accuracy?
-We hypothesize that enforcing pedagogical priors acts as a beneficial regularizer rather than a harmful constraint. If successful, we should observe:
-*   **Predictive Parity**: The constrained model should achieve AUC statistically equivalent to an unconstrained baseline.
-*   **Representational Fidelity**: Linear probes should be able to recover BKT parameters from the latent space with high accuracy ($R^2 > 0.5$).
 
-#### RQ2 (Practical Outcome): Does this structural isomorphism enable the discovery of granular Student Archetypes that opaque models obscure?
-We hypothesize that because the latent space is now a valid "Pedagogical Map" (established in RQ1), student embeddings projected into this space will reveal interpretable behavioral clusters.
-*   **Validation**: Projecting learned student embeddings ($s._{gap}, s_{vel}$) into the isomorphic space should reveal distinct, pedagogically meaningful groups (e.g., "Fast Learner," "Struggling Expert") rather than random distributions.
-*   **Success Metric**: The emergence of distinct "Learning Archetypes" in the student embedding space.
+#### RQ1 (The Interpretability Gap): Can Deep Learning models transcend "Black-Box" prediction to strictly adhere to pedagogical theory without accuracy loss?
+Standard DKT models optimize only for $P(correct)$, offering no insight into the *cause* of failure—conflating lack of knowledge ($L_0$) with poor learning ($T$) or slipping ($S$).
+*   **Hypothesis**: By enforcing **Structural Isomorphism** (via Grounding and Probing), we can constrain the Transformer to **factorize** its latent state into disentangled components that correspond to valid BKT parameters, achieving the interpretability of symbolic models while retaining the predictive power of deep learning.
+*   **Success Metric**: High fidelity in recovering pedagogical parameters ($R^2 > 0.5$) with zero statistical degradation in AUC compared to unconstrained baselines.
+
+#### RQ2 (The Diagnostic Gap): Does this **Theory-Guided DKT** framework enable **Context-Aware Diagnostics** that neither BKT nor DKT can achieve alone?
+Traditional BKT provides diagnostics but is rigid and ignores longitudinal context (Markov assumption). Standard DKT uses context but provides no diagnostics.
+*   **Hypothesis**: Building upon the **disentangled latent representations established in RQ1**, GTransformer bridges this gap by providing **Context-Aware Placement and Pacing**.
+    *   *Mechanism*: In a standard Transformer, the latent vector $z$ is an entangled "soup" of difficulty, ability, and history. RQ1 proves (via probing) that we have effectively "unmixed" this state into distinct subspaces corresponding to **Initial Mastery** ($L_0$) and **Learning Rate** ($T$).
+    *   *Application*: GTransformer uses **Student Embeddings** to bias these disentangled channels with long-term traits. This allows **Cross-Skill Transfer**: a "Fast Learner" trait learned in previous skills persists in the embedding, biasing the $p_T$ output upwards for new skills even without local history, enabling precise differentiation between contextual variation and stable student characteristics.
+*   **Success Metric**: The ability to identify **Non-Markovian Divergence**—situations where two students with identical recent interaction sequences receive distinct diagnostic profiles due to their differing long-term histories (as visualized in the "Twin Divergence" analysis).
 
 ---
 
@@ -961,6 +978,6 @@ We validate these questions through a rigorous ablation campaign documented in `
 | Question | Focus | Experiment | Key Metric | Result |
 | :--- | :--- | :--- | :--- | :--- |
 | **RQ1** | **Technical** | Exp 334772 (Grounded+Probed) | Probe $R^2$ / $\Delta$ AUC | **Validated** ($R^2=0.51$, Stable AUC) |
-| **RQ2** | **Practical** | Exp 948799 (Personalized) | Learning Archetypes | **4 Distinct Profiles Identified** |
+| **RQ2** | **Practical** | Exp 948799 (Personalized) | Twin Divergence Analysis | **Non-Markovian Profiles Confirmed** |
 
 **Conclusion**: The GTransformer demonstrates that we can achieve a "Best of Both Worlds" scenario: the predictive power of Transformers (RQ1) and the granularity of individualized diagnostics (RQ2).
