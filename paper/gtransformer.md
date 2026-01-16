@@ -947,10 +947,10 @@ We hypothesize that enforcing pedagogical priors acts as a beneficial regularize
 *   **Predictive Parity**: The constrained model should achieve AUC statistically equivalent to an unconstrained baseline.
 *   **Representational Fidelity**: Linear probes should be able to recover BKT parameters from the latent space with high accuracy ($R^2 > 0.5$).
 
-#### RQ2 (Practical Outcome): Does this neuro-symbolic foundation enable actionable, individualized diagnostics that purely contextual models miss?
-Contextual models suffer from "Educational Amnesia"—they treat every student as a blank slate defined only by recent history.
-*   We hypothesize that by adding explicit **Student Embeddings** to our neuro-symbolic engine, we can capture stable behavioral traits (e.g., "Fast Learner," "Struggling Expert") that persist across sessions.
-*   **Success Metric**: The emergence of distinct, pedagogically meaningful "Learning Archetypes" in the student embedding space.
+#### RQ2 (Practical Outcome): Does this structural isomorphism enable the discovery of granular Student Archetypes that opaque models obscure?
+We hypothesize that because the latent space is now a valid "Pedagogical Map" (established in RQ1), student embeddings projected into this space will reveal interpretable behavioral clusters.
+*   **Validation**: Projecting learned student embeddings ($s._{gap}, s_{vel}$) into the isomorphic space should reveal distinct, pedagogically meaningful groups (e.g., "Fast Learner," "Struggling Expert") rather than random distributions.
+*   **Success Metric**: The emergence of distinct "Learning Archetypes" in the student embedding space.
 
 ---
 
