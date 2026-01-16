@@ -96,17 +96,20 @@ def main(params):
     save_test_path = os.path.join(save_dir, model.emb_type+"_test_predictions.txt")
 
     # Call the SPECIALIZED evaluation loop
-    testauc, testacc = evaluate(model, test_loader, model_name, save_test_path)
+    testauc, testacc, extra_metrics = evaluate(model, test_loader, model_name, save_test_path)
     print(f"testauc: {testauc}, testacc: {testacc}")
 
     window_testauc, window_testacc = -1, -1
     save_test_window_path = os.path.join(save_dir, model.emb_type+"_test_window_predictions.txt")
-    window_testauc, window_testacc = evaluate(model, test_window_loader, model_name, save_test_window_path)
+    window_testauc, window_testacc, window_extra_metrics = evaluate(model, test_window_loader, model_name, save_test_window_path)
     print(f"testauc: {testauc}, testacc: {testacc}, window_testauc: {window_testauc}, window_testacc: {window_testacc}")
   
     dres = {
         "testauc": testauc, "testacc": testacc, "window_testauc": window_testauc, "window_testacc": window_testacc,
-    }  
+    }
+    # Add extra metrics (probing MSE, etc.)
+    dres.update(extra_metrics)
+  
 
     if "test_question_file" in data_config and not test_question_loader is None:
         save_test_question_path = os.path.join(save_dir, model.emb_type+"_test_question_predictions.txt")

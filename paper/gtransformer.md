@@ -89,11 +89,32 @@ The GTransformer employs a "Prior-Adjustment" mechanism to ensure the deep learn
 
 The model is trained using a multi-component loss function to enforce grounding:
 
-$$ \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \lambda_{L0}\mathcal{L}_{param\_L0} + \lambda_{T}\mathcal{L}_{param\_T} $$
+$$ \mathcal{L}_{total} = \mathcal{L}_{sup} + \lambda_{ref}\mathcal{L}_{ref} + \lambda_{initmastery}\mathcal{L}_{L0} + \lambda_{rate}\mathcal{L}_{T} + \lambda_{probe}\mathcal{L}_{probe} + \mathcal{L}_{reg} $$
 
-1.  **$\mathcal{L}_{sup}$**: Standard binary cross-entropy on the transformer's direct prediction ($y_{pred}$ vs $y_{true}$).
-2.  **$\mathcal{L}_{ref}$**: Binary cross-entropy on the BKT Reference Output ($y_{bkt}$ vs $y_{true}$). This forces the learned $p_{L0}, p_T$ to be useful for BKT reasoning.
-3.  **$\mathcal{L}_{param}$**: MSE regularization penalizing deviation of $p_{L0}, p_T$ from their population-level BKT priors, ensuring they don't drift into theoretically invalid regions.
+### Core Loss Components
+
+1.  **$\mathcal{L}_{sup}$** (Supervised Loss): Standard binary cross-entropy on the transformer's direct prediction ($y_{pred}$ vs $y_{true}$). This is the primary predictive objective with implicit weight of 1.0.
+
+2.  **$\mathcal{L}_{ref}$** (Reference Loss, $\lambda_{ref}=0.5$): Binary cross-entropy on the BKT Reference Output ($y_{bkt}$ vs $y_{true}$). This forces the learned $p_{L0}, p_T$ to be useful for BKT reasoning, ensuring the parameters produce theoretically valid predictions when fed through the differentiable BKT logic wrapper.
+
+3.  **$\mathcal{L}_{L0}$** (Initial Mastery Parameter Loss, $\lambda_{initmastery}=0.1$): MSE regularization penalizing deviation of the grounded $p_{L0}$ parameter from its population-level BKT prior (Oracle), ensuring initial mastery estimates remain pedagogically grounded.
+
+4.  **$\mathcal{L}_{T}$** (Learning Rate Parameter Loss, $\lambda_{rate}=0.1$): MSE regularization penalizing deviation of the grounded $p_{T}$ parameter from its population-level BKT prior (Oracle), ensuring learning rate estimates remain pedagogically grounded.
+
+5.  **$\mathcal{L}_{probe}$** (Probing Loss, $\lambda_{probe}=1.0$, *Active Grounding only*): MSE between linear probe predictions and Oracle BKT targets. This component is only active when `active_grounding=1`. It enforces global linear interpretability by supervising the internal latent representations directly:
+    $$ \mathcal{L}_{probe} = \text{MSE}(\text{Probe}_{L0}(z), \text{Oracle}_{L0}) + \text{MSE}(\text{Probe}_{T}(z), \text{Oracle}_{T}) $$
+
+6.  **$\mathcal{L}_{reg}$** (Rasch Regularization, $\lambda_{rasch}=1e-5$): L2 penalty on question difficulty embeddings ($u_q$) to prevent overfitting:
+    $$ \mathcal{L}_{reg} = l2_{rasch} \cdot \sum ||u_q||^2 $$
+
+### Inactive Components (Not Used in Current Implementation)
+
+The following regularization terms were designed for student individualization but are **not active** in the current gtransformer experiments (`n_uid=0`):
+
+*   **$\lambda_{student}$** (Student Velocity Regularization, default: 1e-5): Would regularize student-specific learning velocity scalars ($v_s$) if individualization were enabled.
+*   **$\lambda_{gap}$** (Student Knowledge Gap Regularization, default: 1e-5): Would regularize student-specific knowledge gap scalars ($k_s$) if individualization were enabled.
+
+These parameters exist in the configuration for compatibility but have no effect when `n_uid=0` (no student embeddings).
 
 
 ## BKT Logic

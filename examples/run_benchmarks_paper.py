@@ -30,7 +30,7 @@ Usage:
 
 Expected Outputs & Metrics Location:
 - Reproduced Experiment Folder (Grouped):
-    Location: experiments/YYYYMMDD_HHMMSS_[model]_[dataset]_benchpaper/
+    Location: experiments/YYYYMMDD_HHMMSS_benchpaper_[UNIQUE_ID]/
     - fold_[X]_[ID]/: Individual fold directory.
         - config.json: Reproducibility audit, parameters, and explicit commands.
         - results.json: Summary of best epoch performance (AUC, ACC).
@@ -58,6 +58,7 @@ import time
 import glob
 import shutil
 import random
+import uuid
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -160,27 +161,43 @@ def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None
 
     return (model, dataset, fold, exit_code)
 
-def find_experiment_folder(model, dataset, fold):
+def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
     """
     Locate the experiment folder created by run_repro_experiment.py.
-    Optimized to search in structured campaign folders first: experiments/*_benchpaper/[model]/[dataset]/fold_[fold]_*
+    Supports both nested and flat campaign structures:
+    - Nested: experiments/*_benchpaper/[model]/[dataset]/fold_[fold]_*
+    - Flat: experiments/*_benchpaper/fold_[fold]_* (validates model/dataset from config.json)
+    
+    Args:
+        campaign_pattern: Optional glob pattern to filter campaigns (e.g., "*probing_benchpaper")
     """
     base_path = Path(PROJECT_ROOT) / "experiments"
     
     # Strategy 1: Search in timestamped campaign folders (modern structure)
     # We assume folders are named like "YYYYMMDD_HHMMSS_benchpaper"
-    campaigns = sorted(list(base_path.glob("*_benchpaper")))
+    if campaign_pattern:
+        campaigns = sorted(list(base_path.glob(campaign_pattern)))
+    else:
+        campaigns = sorted(list(base_path.glob("*_benchpaper")))
     
     potential_folders = []
     
     # Search campaigns in reverse chronological order (newest first)
     for campaign in reversed(campaigns):
-        # Construct the expected specific path
+        # Try nested structure first: campaign/model/dataset/fold_X
         target_path = campaign / model / dataset
         if target_path.exists():
             # Look for the specific fold folder
             fold_matches = list(target_path.glob(f"fold_{fold}_*"))
             potential_folders.extend(fold_matches)
+        
+        # Try flat structure: campaign/fold_X (common for single-model campaigns)
+        else:
+            flat_fold_matches = list(campaign.glob(f"fold_{fold}_*"))
+            # Also check for exact fold_X pattern without ID suffix
+            if not flat_fold_matches:
+                flat_fold_matches = list(campaign.glob(f"fold_{fold}"))
+            potential_folders.extend(flat_fold_matches)
 
     # Strategy 2: Fallback / Legacy (Legacy flat structure or manually created)
     # We limit this to direct children of experiments/ to avoid full rglob
@@ -226,11 +243,14 @@ def find_experiment_folder(model, dataset, fold):
     valid_matches.sort(key=lambda x: x[0], reverse=True)
     return valid_matches[0][1]
 
-def evaluate_worker(model, dataset, fold, gpu_id):
+def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None):
     """
     Worker that finds the experiment folder and runs its eval_explicit command.
+    
+    Args:
+        campaign_pattern: Optional pattern to filter which campaign to evaluate (e.g., "*probing_benchpaper")
     """
-    exp_dir = find_experiment_folder(model, dataset, fold)
+    exp_dir = find_experiment_folder(model, dataset, fold, campaign_pattern)
     if not exp_dir:
         return (model, dataset, fold, -1, "Experiment folder not found")
 
@@ -243,6 +263,7 @@ def evaluate_worker(model, dataset, fold, gpu_id):
         return (model, dataset, fold, -1, "Eval command missing in config.json")
 
     # Force use of current sys.executable to ensure correct environment (fix ModuleNotFoundError)
+    # Also fix script paths to use relative paths from PROJECT_ROOT
     if "python" in eval_cmd:
         # Generic replace of explicit python paths common in docker
         eval_cmd = eval_cmd.replace("/usr/bin/python3", sys.executable)
@@ -250,12 +271,15 @@ def evaluate_worker(model, dataset, fold, gpu_id):
         eval_cmd = eval_cmd.replace("/home/vscode/.pykt-env/bin/python3", sys.executable)
         eval_cmd = eval_cmd.replace("python3 examples/wandb_predict.py", f"{sys.executable} examples/wandb_predict.py")
         eval_cmd = eval_cmd.replace("python3 examples/wandb_gtransformer_predict.py", f"{sys.executable} examples/wandb_gtransformer_predict.py")
-        # However, eval_cmd is a shell string "cd ... && python ...".
-        # We rely on replacement or we could parse it. Replacement is safer for now.
+        # Fix absolute script paths to relative (handle different workspace locations)
+        import re
+        eval_cmd = re.sub(r'/[^ ]+/examples/(wandb_\w+_predict\.py)', r'examples/\1', eval_cmd)
+        # Since we run from examples/ directory, remove the examples/ prefix from script path
+        eval_cmd = eval_cmd.replace("examples/wandb", "wandb")
     
     # Hardcode evaluation mode for Scientific Alignment (KC-level, no fusion)
     # We modify the command to override fusion if it was set to defaults
-    if "wandb_predict" in eval_cmd:
+    if "predict.py" in eval_cmd:
         # Strict Mapping for model parameters to avoid TypeError in legacy __init__
         # These must match pykt/models/[model].py __init__ signatures
         specific_keys = {
@@ -270,7 +294,7 @@ def evaluate_worker(model, dataset, fold, gpu_id):
            'atkt': ['skill_dim', 'answer_dim', 'hidden_dim', 'attention_dim', 'epsilon', 'beta', 'dropout'],
            'gkt': ['hidden_dim', 'emb_size', 'graph_type', 'dropout'],
            'dkt_forget': ['emb_size', 'dropout'],
-           'gtransformer': ['d_model', 'n_blocks', 'dropout', 'd_ff', 'kq_same', 'final_fc_dim', 'num_attn_heads', 'separate_qa', 'l2', 'lambda_probe', 'active_grounding', 'lambda_ref', 'lambda_initmastery', 'lambda_rate']
+           'gtransformer': ['d_model', 'n_blocks', 'dropout', 'd_ff', 'kq_same', 'final_fc_dim', 'num_attn_heads', 'separate_qa', 'l2', 'l2_rasch', 'pretrain_dim', 'ablation', 'n_uid', 'lambda_probe', 'active_grounding', 'lambda_ref', 'lambda_initmastery', 'lambda_rate']
          }
         
         # Get raw parameters by merging resolved train_config and input
@@ -293,13 +317,30 @@ def evaluate_worker(model, dataset, fold, gpu_id):
                     val = match.group(1)
                     # Try to convert to int or float if possible
                     try:
-                        if '.' in val: val = float(val)
-                        else: val = int(val)
-                    except: pass
+                        if '.' in val or 'e' in val.lower():
+                            val = float(val)
+                        else:
+                            val = int(val)
+                    except:
+                        pass
                     raw_params[key] = val
                     # print(f"[Sanitizer] Overrode {key}={val} from train_explicit for {model}")
 
         sanitized_config = {k: v for k, v in raw_params.items() if k in allowed_keys}
+        
+        # Ensure proper type conversion for all numeric parameters
+        for key in sanitized_config:
+            val = sanitized_config[key]
+            if isinstance(val, str):
+                try:
+                    # Try to convert string representations to numeric types
+                    if '.' in val or 'e' in val.lower():
+                        sanitized_config[key] = float(val)
+                    else:
+                        sanitized_config[key] = int(val)
+                except (ValueError, AttributeError):
+                    # Keep as string if conversion fails
+                    pass
         
         # Perform alias mapping BEFORE sanitization
         if 'd_model' in raw_params:
@@ -394,9 +435,15 @@ def evaluate_worker(model, dataset, fold, gpu_id):
         # If found, update commands to point to the nested dir so wandb_predict finds it directly
         effective_save_dir = found_ckpt_dir if found_ckpt_dir else exp_dir
         
-        # Ensure correct path is used (points to where config.json is)
+        # Ensure correct path is used (relative to PROJECT_ROOT since we run from examples/)
+        # Convert to relative path from examples/ directory
         import re
-        eval_cmd = re.sub(r'--save_dir\s+\S+', f'--save_dir {effective_save_dir}', eval_cmd)
+        try:
+            rel_save_dir = os.path.relpath(effective_save_dir, Path(PROJECT_ROOT) / "examples")
+            eval_cmd = re.sub(r'--save_dir\s+\S+', f'--save_dir {rel_save_dir}', eval_cmd)
+        except ValueError as e:
+            # Fallback to absolute path if relative fails
+            eval_cmd = re.sub(r'--save_dir\s+\S+', f'--save_dir {effective_save_dir.resolve()}', eval_cmd)
         
         # Also copy the sanitized config.json to the nested dir if it's different so wandb_predict finds it there
         if found_ckpt_dir and found_ckpt_dir != exp_dir:
@@ -423,10 +470,13 @@ def evaluate_worker(model, dataset, fold, gpu_id):
     # Run from examples/ directory for relative path compatibility
     cwd = Path(PROJECT_ROOT) / "examples"
     
-    # Use shell=True for complex commands with env vars
+    # Split command into list for shell=False (safer, prevents process explosion)
+    import shlex
+    eval_cmd_list = shlex.split(eval_cmd)
+    
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "w") as f:
-        process = subprocess.Popen(eval_cmd, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, shell=True, start_new_session=True)
+        process = subprocess.Popen(eval_cmd_list, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, shell=False, start_new_session=True)
         exit_code = process.wait()
         
     return (model, dataset, fold, exit_code)
@@ -440,6 +490,7 @@ def main():
     parser.add_argument("--model", type=str, default=None, help="Filter by model")
     parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
+    parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
     args = parser.parse_args()
 
     gpus = args.gpus.split(",")
@@ -453,13 +504,14 @@ def main():
     if args.mode == "training":
         # Global timestamp for this benchmark session
         benchmark_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(random.randint(100000, 999999))  # 6-digit numeric ID
         
         print(f"--- BENCHMARK TRAINING QUEUE (Concurrency={max_workers}) ---")
         print(f"Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)")
         
         
-        # Create campaign folder
-        campaign_folder = f"{PROJECT_ROOT}/experiments/{benchmark_timestamp}_benchpaper"
+        # Create campaign folder with unique ID
+        campaign_folder = f"{PROJECT_ROOT}/experiments/{benchmark_timestamp}_benchpaper_{unique_id}"
         
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []
@@ -486,16 +538,16 @@ def main():
 
     elif args.mode == "evaluation":
         print(f"--- BENCHMARK EVALUATION QUEUE (Concurrency={max_workers}) ---")
+        if args.campaign:
+            print(f"Campaign filter: {args.campaign}")
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = []
-            idx = 0
             futures = []
             idx = 0
             for dataset in datasets_to_run:
                 for model in models_to_run:
                     for fold in folds_to_run:
                         gpu_id = gpus[idx % max_workers]
-                        futures.append(executor.submit(evaluate_worker, model, dataset, fold, gpu_id))
+                        futures.append(executor.submit(evaluate_worker, model, dataset, fold, gpu_id, args.campaign))
                         idx += 1
             for future in as_completed(futures):
                 print(f"[COMPLETE EVAL] {future.result()}")

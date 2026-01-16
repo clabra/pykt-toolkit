@@ -655,6 +655,8 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
             acc = metrics.accuracy_score(ts, prelabels)
             aucs[key] = auc
             accs[key] = acc
+    
+    return aucs, accs
 def log2(t):
     import math
     return round(math.log(t+1, 2))

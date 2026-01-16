@@ -147,6 +147,9 @@
         "dropout": 0.05,
         "final_fc_dim": 512,
         "l2": "1e-05",
+        "lambda_ref": 0.1,
+        "lambda_initmastery": 0.1,
+        "lambda_rate": 0.1,
         "num_attn_heads": 4
     },
     "data_config": {

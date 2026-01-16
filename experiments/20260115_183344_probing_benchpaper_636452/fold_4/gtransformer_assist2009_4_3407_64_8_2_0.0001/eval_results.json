@@ -1,0 +1,22 @@
+{
+    "testauc": 0.8441527495701816,
+    "testacc": 0.7765895580253296,
+    "window_testauc": 0.8451520695157155,
+    "window_testacc": 0.7773533204384269,
+    "oriaucconcepts": 0.7640998744179076,
+    "oriauclate_mean": 0.7787528189358306,
+    "oriauclate_vote": 0.7773078904982793,
+    "oriauclate_all": 0.7777381654645046,
+    "oriaccconcepts": 0.7282066238900772,
+    "oriacclate_mean": 0.7338194205228308,
+    "oriacclate_vote": 0.73366632219543,
+    "oriacclate_all": 0.7334366747043288,
+    "windowaucconcepts": 0.7650831108489866,
+    "windowauclate_mean": 0.7799233410496975,
+    "windowauclate_vote": 0.7783315673063778,
+    "windowauclate_all": 0.7789617088472858,
+    "windowaccconcepts": 0.7290165153033192,
+    "windowacclate_mean": 0.7349077857115582,
+    "windowacclate_vote": 0.7343541181412043,
+    "windowacclate_all": 0.7341822902745427
+}
