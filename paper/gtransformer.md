@@ -927,3 +927,18 @@ python tmp/plot_student_clusters_gtransformer.py \
 - **Personalized (Plot 5)**: 3,082 students, learned embeddings, PCA projection, linear scale
 - **Contextual (Plot 6)**: 770 students, probe predictions, test-time inference, log scale
 
+
+## Grounding, Probing and Personalization
+
+- Grounding: Model uses BKT-based grounding losses (lambda_ref, lambda_initmastery, lambda_rate) to constrain outputs and parameters toward pedagogically interpretable values. When activated, the model's predictions are forced to align with BKT theory.
+
+- Probing: Model uses active grounding via probing losses (lambda_probe) to enforce that BKT parameters are linearly extractable from the latent space itself, not just from outputs. When activated, linear probes can recover parameters directly from internal representations, creating global interpretability.
+
+- Personalization: Model uses student embeddings to personalize predictions and BKT parameters. 
+
+**Key distinction:**
+
+- Grounded only (Exp 090230): BKT parameters computed from outputs via differentiable wrapper, interpretable predictions
+- Grounded + Probing (Exp 334772): BKT parameters also linearly accessible from latent vectors, interpretable representations. 
+- Grounded + Probing + Personalization (Exp 948799): BKT parameters computed from outputs via differentiable wrapper, interpretable predictions. 
+

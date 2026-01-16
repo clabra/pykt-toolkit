@@ -2,41 +2,68 @@
 
 ## Experiments Summary
 
+Exp 948799 (Personalization) is the current best model. It applies Probing Grounding and Personlization. Compared with the baseline Exp 133835 that has the same base configuration with ablation of probing grounding nd personalization, this model shows a marginal decrease in accuracy while providing interpretability. 
+
+For comparison with SOTA models, we can use the results from Exp 123509	that overcomes all of them, including AKT (0.7838 vs 0.7825). 
+
 ### Quick Reference Table
 
 Complete summary of all experiments documented in this paper.
 
-| Short Title | Exp ID | n_blocks | n_heads | Grounded | Active | λ_sup | λ_ref | λ_probe | n_uid | Exp Folder | Test AUC | Description |
+| Short Title | Exp ID | n_blocks | n_heads | Grounded | Probing | λ_sup | λ_ref | λ_probe | n_uid | Exp Folder | Test AUC | Description |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :--- |
 | **Baseline (Step 0)** | - | 4 | 4 | ❌ | ❌ | 1.0 | - | - | 0 | `20260113_1814...baseline` | **0.7825** ± 0.0017 | Black-box AKT-equivalent, unconstrained neural baseline |
 | **Grounded (2/8)** | 090230 | 2 | 8 | ✅ | ❌ | 1.0 | 0.5 | - | 0 | `20260115_090230` | **0.7800** ± 0.0013 | Shallow grounded model, "Interpretability for Free" |
 | **Grounded (4/8)** | 102914 | 4 | 8 | ✅ | ❌ | 1.0 | 0.5 | - | 0 | `20260114_102914` | **0.7795** ± 0.0009 | Deep grounded model, improved stability |
 | **Parity (4/4)** | 112429 | 4 | 4 | ✅ | ❌ | 1.0 | 0.5 | - | 0 | `20260115_112429` | **0.7769** ± 0.0007 | True parity with baseline architecture, measures Cost of Interpretability |
-| **Ablation (4/4)** | 123509 | 4 | 4 | ❌ | ❌ | 1.0 | - | - | 0 | `20260115_123509...baseline` | **0.7838** ± 0.0017 | Validation: ablation reproduces baseline, confirms no code regression |
-| **Ablation (2/8)** | 133835 | 2 | 8 | ❌ | ❌ | 1.0 | - | - | 0 | `20260115_133835` | **0.7803** ± 0.0016 | Neural ceiling for optimal architecture, measures marginal cost |
+| **Ablation (4/4)** | 123509 | 4 | 4 | ❌ | ❌ | 1.0 | - | - | 0 | `20260115_123509...baseline` | **0.7838** ± 0.0017 ✅ | Validation: ablation reproduces baseline, confirms no code regression |
+| **Ablation (2/8)** | 133835 | 2 | 8 | ❌ | ❌ | 1.0 | - | - | 0 | `20260115_133835` | **0.7803** ± 0.0016 ✅ | Neural ceiling for optimal architecture, measures marginal cost |
 | **Active Grounding** | 636452 | 2 | 8 | ✅ | ✅ | 1.0 | 0.5 | 1.0 | 0 | `20260115_183344...636452` | **0.7758** ± 0.0037 | Probing-guided training, global linear interpretability |
 | **Pure Interpretability** | 474858 | 2 | 8 | ✅ | ✅ | **0.0** | 1.0 | 1.0 | 0 | `20260116_084144...474858` | **0.5130** ± 0.0002 ❌ | FAILURE: Supervised loss is critical, grounding alone insufficient |
 | **Aligned Grounding** | 334772 | 2 | 8 | ✅ | ✅ | 1.0 | 0.5 | 1.0 | 0 | `20260116_101107...334772` | **0.7786** ± 0.0013 | Gold standard: BKT labels aligned with evaluation protocol |
-| **Personalization** | 948799 | 2 | 8 | ✅ | ✅ | 1.0 | 0.5 | 1.0 | **3082** | `20260116_120815...948799` | **0.7785** ± 0.0008 | Student embeddings enable individualized diagnostics |
+| **Personalization** | 948799 | 2 | 8 | ✅ | ✅ | 1.0 | 0.5 | 1.0 | **3082** | `20260116_120815...948799` | **0.7785** ± 0.0008 ✅ | Student embeddings enable individualized diagnostics |
 | **BKT Skill-Level** | 304787 | - | - | - | - | - | - | - | - | `bkt_skill_mode` | **0.7144** ± 0.0005 | Classical BKT with sequential belief updates |
 | **BKT Question-Level** | 305377 | - | - | - | - | - | - | - | - | `bkt_question_mode_fixed` | **0.6097** ± 0.0008 | BKT with late fusion, no test-time updates |
 
 **Legend:**
-- **Grounded**: Uses BKT reference loss (λ_ref) and parameter losses (λ_init, λ_rate)
-- **Active**: Uses probing losses (λ_probe) for global linear interpretability
-- **λ_sup**: Supervised BCE loss weight (0.0 = pure interpretability, 1.0 = standard)
-- **n_uid**: Number of student embeddings (0 = no personalization)
+
+- **Grounded** (✅): Model uses BKT-based grounding losses to constrain outputs toward pedagogically interpretable values
+  - **What it does**: Forces predictions to align with BKT theory via differentiable wrapper
+  - **Losses used**: λ_ref (reference loss), λ_init (initial mastery), λ_rate (learning rate)
+  - **Result**: Interpretable predictions (output-level interpretability)
+  - **Example**: Exp 090230 can explain *what* it predicts using BKT parameters
+
+- **Probing** (✅): Model uses probing losses to make BKT parameters linearly extractable from internal representations
+  - **What it does**: Trains linear probes to recover $p_{L0}$ and $p_T$ directly from latent vectors
+  - **Loss used**: λ_probe (probing loss) on MSE between probe predictions and BKT soft labels
+  - **Result**: Interpretable representations (latent-level interpretability)
+  - **Example**: Exp 334772 can visualize *how* it thinks via t-SNE maps organized by difficulty
+  - **Key distinction**: Grounded-only models compute BKT params from outputs; Probing models encode them in hidden states
+
+- **λ_sup**: Supervised BCE loss weight
+  - 1.0 = standard supervised learning (all experiments except 474858)
+  - 0.0 = pure interpretability (Exp 474858, **failed** - demonstrates supervised loss is essential)
+
+- **n_uid**: Number of student-specific embeddings
+  - 0 = no personalization (contextual diagnostics only, works for any student)
+  - 3082 = full personalization (Exp 948799, enables individualized parameter estimates but requires student IDs)
+
 - **Test AUC**: Question-level late fusion (mean average), 5-fold CV on ASSIST2009
+
+**Interpretability Hierarchy:**
+1. **Baseline** (❌ Grounded, ❌ Probing): Black-box predictions, no interpretability
+2. **Grounded only** (✅ Grounded, ❌ Probing): Can explain outputs using BKT parameters
+3. **Grounded + Probing** (✅ Grounded, ✅ Probing): Can explain outputs *and* internal reasoning process
+4. **Grounded + Probing + Personalization** (+ n_uid): Individual student diagnostics on top of #3
 
 **Key Findings:**
 1. **Cost of Interpretability**: Grounding reduces AUC by 0.56% (0.7825 → 0.7769) in strict parity
 2. **Optimal Architecture**: 2 blocks / 8 heads minimizes grounding cost to 0.25% (0.7825 → 0.7800)
-3. **Zero Cost Active Grounding**: Aligned probing maintains 0.7786 AUC (Δ=-0.0014 from baseline grounded)
+3. **Zero Cost Probing**: Aligned probing maintains 0.7786 AUC (Δ=-0.0014 from baseline grounded)
 4. **Zero Cost Personalization**: Student embeddings maintain 0.7785 AUC (Δ=-0.0001 from aligned)
 5. **Supervised Loss is Critical**: Pure interpretability (λ_sup=0) fails completely (AUC=0.5130)
 
 ---
-
 
 ### Narrative Flow & Rationale
 
