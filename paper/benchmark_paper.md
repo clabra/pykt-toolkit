@@ -461,7 +461,7 @@ Examining the training logs reveals the core issue:
 
 **Bayesian Knowledge Tracing (BKT)** serves as a classical baseline for knowledge tracing tasks. We implemented two evaluation modes to enable fair comparison with neural models:
 
-#### Mode 1: Skill-Level Evaluation
+#### Exp 304787 - Mode 1: Skill-Level Evaluation 
 
 **Description**: Standard BKT evaluation at the skill level, where the model updates its belief state sequentially based on observed responses.
 
@@ -483,9 +483,11 @@ python3 examples/run_bkt_benchmark.py --dataset assist2009 --mode skill --output
 
 **Campaign**: `experiments/bkt_skill_mode/`
 
+**Experiment ID**: 304787
+
 ---
 
-#### Mode 2: Question-Level Evaluation (Late Fusion)
+#### Exp 04787 Mode 2: Question-Level Evaluation (Late Fusion)
 
 **Description**: Question-level evaluation using late fusion (mean average) to match neural model evaluation protocol. This mode prevents data leakage by using only the trained BKT parameters without updating beliefs on test data.
 
@@ -508,6 +510,8 @@ python3 examples/run_bkt_benchmark.py --dataset assist2009 --mode question --out
 ```
 
 **Campaign**: `experiments/bkt_question_mode_fixed/`
+
+**Experiment ID**: 305377
 
 ---
 
