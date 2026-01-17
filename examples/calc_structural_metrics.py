@@ -162,36 +162,34 @@ def compute_causal_sensitivity(model, loader, device, w_probe, axis_name="L0"):
                 # Intervention: z' = z + delta * w
                 z_prime = z_context + (delta * w_probe_norm)
                 
-                # Step 3: Pass through Grounded Projection Heads
-                # We need to replicate the projection logic from forward()
-                # l0_logits = l0_base + (z_prime * k_axis).sum(-1)
-                
-                # Retrieve embeddings required for projection
-                k_axis = model.knowledge_axis_emb(c)
-                v_axis = model.velocity_axis_emb(c)
-                l0_base = model.l0_base_emb(c).squeeze(-1)
-                t_base = model.t_base_emb(c).squeeze(-1)
-                
-                # Re-compute Parameters using perturbed z
-                if axis_name == "L0":
-                    # Perturbing L0 axis primarily affects L0
-                    l0_logits = l0_base + (z_prime * k_axis).sum(dim=-1)
-                    # T should technically be affected too if axes are correlated, 
-                    # but for "Sensitivity to L0", we measure response to L0 changes.
-                    t_logits = t_base + (z_context * v_axis).sum(dim=-1) # Keep T constant? 
-                    # OR: if w_probe is the "Mastery Direction", we allow it to affect distinct heads?
-                    # Let's assume w_probe aligns with k_axis.
+                # Step 3: Pass through Output Layers
+                if not hasattr(model, 'knowledge_axis_emb'):
+                     # Baseline (Ungrounded) Path: Direct Prediction
+                     # model.out expects [BS, Seq, Z_dim]
+                     output = model.out(z_prime).squeeze(-1)
+                     ref_preds = torch.sigmoid(output)
                 else: 
-                     l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
-                     t_logits = t_base + (z_prime * v_axis).sum(dim=-1)
-                     
-                p_l0 = torch.sigmoid(l0_logits)
-                p_t = torch.sigmoid(t_logits)
-                
-                # Step 4: Pass through BKT Logic
-                # We use the internal BKT wrapper
-                # Note: BKT wrapper outputs P(Correct)
-                ref_preds = model._bkt_ref_output(c, r, p_l0, p_t)
+                    # Grounded Path: Projection Heads -> BKT Logic
+                    # Retrieve embeddings required for projection
+                    k_axis = model.knowledge_axis_emb(c)
+                    v_axis = model.velocity_axis_emb(c)
+                    l0_base = model.l0_base_emb(c).squeeze(-1)
+                    t_base = model.t_base_emb(c).squeeze(-1)
+                    
+                    # Re-compute Parameters using perturbed z
+                    if axis_name == "L0":
+                        # Perturbing L0 axis primarily affects L0
+                        l0_logits = l0_base + (z_prime * k_axis).sum(dim=-1)
+                        t_logits = t_base + (z_context * v_axis).sum(dim=-1)
+                    else: 
+                        l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
+                        t_logits = t_base + (z_prime * v_axis).sum(dim=-1)
+                        
+                    p_l0 = torch.sigmoid(l0_logits)
+                    p_t = torch.sigmoid(t_logits)
+                    
+                    # Step 4: Pass through BKT Logic
+                    ref_preds = model._bkt_ref_output(c, r, p_l0, p_t)
                 
                 # Metric: Average Predicted Probability of Correctness
                 # We only care about the *change*, so average is a fine proxy.
@@ -252,6 +250,19 @@ def main():
     dpath = os.path.join(PROJECT_ROOT, dpath)
     dc[dataset_name]['dpath'] = dpath
     
+    # Sanitize config for GTransformer
+    defaults = {
+        'kq_same': 1,
+        'separate_qa': 0,
+        'l2_rasch': 0.0,
+        'pretrain_dim': 768,
+        'ablation': 'all', # Default to 'all' if not specified (likely baseline)
+        'n_uid': 0
+    }
+    for k, v in defaults.items():
+        if k not in model_config:
+            model_config[k] = v
+            
     # 2. Init Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = init_model('gtransformer', model_config, dc[dataset_name], model_config.get('emb_type', 'qid'))
