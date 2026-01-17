@@ -307,26 +307,6 @@ python3 examples/validation/validate_sensitivity.py \
     --output_dir examples/validation/results
 ```
 
----
-
-### Section 5: Case Studies (Qualitative Validation)
-
-**Research Question**: Can the model provide actionable, pedagogically meaningful diagnostics for individual students?
-
-#### 5.1 Student Trajectory Analysis
-
-**Selection Criteria**: Choose 4 representative student archetypes (Struggling, Fast Learner, Advanced, Consistent).
-
-#### Implementation:
-
-**Script**: `examples/validation/generate_case_studies.py` (PLANNED)
-
-**Usage**:
-```bash
-python3 examples/validation/generate_case_studies.py \
-    --exp_dir [EXPERIMENT_DIRECTORY] \
-    --output_dir examples/validation/results
-```
 
 ### 5. Context-Aware Diagnostics: Qualitative Validation
 
