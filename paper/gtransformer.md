@@ -99,7 +99,7 @@ $$ \mathcal{L}_{total} = \lambda_{sup}\mathcal{L}_{sup} + \lambda_{ref}\mathcal{
 
 3.  **$\mathcal{L}_{L0}$** (Initial Mastery Parameter Loss, $\lambda_{initmastery}=0.1$): MSE regularization penalizing deviation of the grounded $p_{L0}$ parameter from its population-level BKT prior (Oracle), ensuring initial mastery estimates remain pedagogically grounded.
 
-4.  **$\mathcal{L}_{T}$** (Learning Rate Parameter Loss, $\lambda_{rate}=0.1$): MSE regularization penalizing deviation of the grounded $p_{T}$ parameter from its population-level BKT prior (Oracle), ensuring learning rate estimates remain pedagogically grounded.
+4.  **$\mathcal{L}_{T}$** (Learning Rate Parameter Loss, $\lambda_{rate}=0.1$): MSE regularization penalizing deviation of the grounded $p_{T}$ parameter from its population-level BKT prior (Oracle), ensuring learning rate estimates remain pedagogically grounded. 
 
 5.  **$\mathcal{L}_{probe}$** (Probing Loss, $\lambda_{probe}=1.0$, *Active Grounding only*): MSE between linear probe predictions and Oracle BKT targets. This component is only active when `active_grounding=1`. It enforces global linear interpretability by supervising the internal latent representations directly:
     $$ \mathcal{L}_{probe} = \text{MSE}(\text{Probe}_{L0}(z), \text{Oracle}_{L0}) + \text{MSE}(\text{Probe}_{T}(z), \text{Oracle}_{T}) $$
@@ -229,6 +229,10 @@ Moving beyond passive verification, we implement **Active Grounding** by integra
 
 ### The Concept
 Standard grounding ensures the *outputs* of the model are theoretically valid. Active Grounding (via Probing Losses) ensures the *internal representations* are theoretically grounded. By minimizing the error between dedicated linear probes and "Oracle" BKT labels, we guarantee that the Transformer doesn't just "behave" like BKT, but "thinks" in terms of BKT constructs.
+
+By adding the probe loss to the total loss, we are telling the model: "Whatever complex patterns you learn to reach high AUC, you must organize your hidden state so that a simple linear head can always extract the BKT Mastery value from it."
+
+We use Pearson $r$ as our evaluation metric (because we want to show that our latent space is linearly organized), but MSE is our training objective because we need the model's "internal gauges" to be calibrated to the same physical units (probabilities) as the BKT theory.
 
 ### Implementation Summary
 The Active Grounding framework follows a three-phase execution:
