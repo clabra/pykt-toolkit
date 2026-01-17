@@ -1,54 +1,132 @@
-## Alignment and Sensitivity
+# Scientific Validation Strategy: The "Triangulation" Argument
 
-To satisfy a "first-class" reviewer, do not rely on one plot. Use a Triangulation argument:
+To satisfy a rigor of a top-tier publication, we cannot rely solely on visual inspection or simple correlation. We must employ a **Triangulation Validation Strategy** that proves the model's interpretability from three distinct, mutually reinforcing angles: **Structure (Geometry)**, **Causality (Mechanics)**, and **Parsimony (Efficiency)**.
 
-- Alignment (Structural): "The latent space is geometrically organized around pedagogical axes..."
-    - Defense: "...validated on stratified subsets to rule out frequency confounders."
-- Sensitivity (Causal): "...and crucially, intervening along these axes produces the theoretically predicted behavioral changes..."
-- Defense: "...proving the relationship is causal, not just correlational."
-- Rank (Parsimony): "...using the minimum necessary degrees of freedom."
+## 1. The Three Pillars of Proof
 
-Conclusion: Use Intervention (Sensitivity) as your hammer. No reviewer can argue that a "coincidence" causes a mathematically precise, monotonic response to a specific vector perturbation.
+### A. Alignment (Structural Proof)
+*   **Claim:** "The latent space is geometrically organized around pedagogical axes."
+*   **The Reviewer's Doubt:** "Maybe the model is just organizing by 'Sequence Length' or 'Question Frequency', which happens to correlate with difficulty."
+*   **The Defense:**
+    1.  **Metric:** **Principal Alignment Score ($S_{align}$)**. The Cosine Similarity between the Data's natural axis (PC1) and the Theory's required axis (Probe Weight).
+    2.  **Control:** Validate on **Stratified Subsets** (e.g., fixed sequence lengths) to rule out confounders. If $S_{align}$ remains $>0.9$, the structure is intrinsic to the pedagogy, not the metadata.
 
-## The Role of PCA 
+### B. Sensitivity (Causal Proof)
+*   **Claim:** "Intervening along these axes produces the theoretically predicted behavioral changes."
+*   **The Reviewer's Doubt:** "Correlation does not imply causation. A 'coincidence' could explain why points sit in a certain place."
+*   **The Defense:**
+    1.  **Metric:** **Interventional Fidelity**. We artificially perturb the latent vector $z$ along the pedagogical axis: $z' = z + \delta \cdot \vec{W}_{probe}$.
+    2.  **Logic:** If $z$ represents "Mastery", increasing it **MUST** monotonically increase the predicted probability of correctness via the BKT head. No "coincidence" can mimic a functional causal mechanism. This is the "Silver Bullet" argument.
 
+### C. Rank (Parsimony Proof)
+*   **Claim:** "The model uses the minimum necessary degrees of freedom to solve the task."
+*   **The Reviewer's Doubt:** "Maybe the model uses 100 hidden dimensions to cheat, and you're only looking at the first two."
+*   **The Defense:**
+    1.  **Metric:** **Effective Rank / Explained Variance**. Show that >90% of the variance in the grounded model is captured by $k=2$ dimensions (matching BKT's $L_0, T$), whereas the ungrounded baseline requires $k=14+$.
 
-### PCA-related Plots 
+---
 
+## 2. The Role of PCA (Manifold Analysis)
 
-### PCA-related Metrics 
+PCA serves as the tool for analyzing **Global Organization** and **Parsimony**.
 
+### PCA-related Plots
+1.  **The "Semantic Gradient" Map**:
+    *   *X/Y Axis*: PC1 and PC2 of the latent space $z$.
+    *   *Color*: Oracle Initial Mastery ($L_0$).
+    *   *Success Condition*: A smooth, monotonic color gradient (e.g., dark-to-light) traversing the cloud.
+    *   *Failure Condition*: "Confetti" (random mixing) or clusters based on non-pedagogical features (like Question ID).
+2.  **The Eigenvalue Scree Plot**:
+    *   *X Axis*: Principal Component Index (1 to 64).
+    *   *Y Axis*: Cumulative Explained Variance Ratio.
+    *   *Success Condition*: An "Elbow" at $k=2$ or $k=3$, reaching >90% variance quickly.
 
-## The Role of Probing
+### PCA-related Metrics
+1.  **Effective Rank**: The number of singular values required to explain 99% of the variance.
+2.  **Principal Axis Vectors ($\vec{v}_{PC1}, \vec{v}_{PC2}$)**: These vectors are extracted to calculate the **Alignment Score** against the Probes.
 
-Probing is the "Compass" that makes both Alignment and Sensitivity possible.
+---
 
-You cannot perform either the Structural or Causal tests without Probing. It is the fundamental tool that bridges the gap between the "Black Box" ($z$) and the "Theory" ($L_0$).
+## 3. The Role of Probing (The Compass)
 
-Here is exactly how Probing fits into the workflow:
+Probing is the **Fundamental Bridge** that connects the "Black Box" ($z$) to the "Theory" ($L_0, T$). It makes both Alignment and Sensitivity tests possible.
 
-1. Probing in Structural Alignment
-You cannot measure Alignment without a Probe.
+### Why Probing is Mandatory
+1.  **In Structural Alignment**: PCA gives us the "Data Axis" (PC1), but it doesn't tell us what it *means*. The Probe finds "North" (Mastery).
+    *   *The Calculation*: $S_{align} = \text{Cosine}(PC1, \vec{W}_{probe})$.
+    *   *Without Probing*: We don't know if PC1 is "Mastery", "Time", or "Luck".
+2.  **In Causal Sensitivity**: To test causality, we must perturb $z$. But which way?
+    *   *The Calculation*: $z_{new} = z_{old} + \delta \cdot \vec{W}_{probe}$.
+    *   *Without Probing*: We would be poking the model blindly in random directions.
 
-The Problem: PCA gives you the "Data Axis" (PC1), but you need something to compare it against. Where is "North" (Mastery) in this high-dimensional space?
-The Probe's Role: The Probe finds "North". By training the linear probe, you derive the weight vector $\vec{W}_{probe}$ which points exactly in the direction of increasing Mastery.
-The Calculation: $S_{align} = \text{Cosine}(PC1, \vec{W}_{probe})$.
-Without Probing: You have PC1, but you don't know if it points to "Mastery," "Time," or "Luck." The Probe validates the semantic meaning of the axis.
-2. Probing in Causal Sensitivity
-You cannot perform a Causal Intervention without a Probe.
+### Connection to Code
+In `pykt/models/gtransformer.py`, the Active Grounding implementation already provides this structure:
+*   `self.probe_l0`: This linear layer ($W \cdot z + b$) *is* the learned Probe Vector $\vec{W}_{L0}$.
+*   `self.probe_t`: This *is* the learned Probe Vector $\vec{W}_{T}$.
+*   **Action**: We do not need to train post-hoc probes for the Active Grounding model; we simply extract `model.probe_l0.weight`. For the Baseline model, we *do* need to train post-hoc probes.
 
-The Problem: To test sensitivity, you want to "artificially increase a student's Initial Mastery" inside the vector $z$. But which way do you push the vector?
-The Probe's Role: The Probe defines the Direction of Intervention.
-To simulate "Getting Smarter," you calculate: $z_{new} = z_{old} + \delta \cdot \vec{W}_{probe}$.
-The Calculation: Causal Effect = $Output(z_{new}) - Output(z_{old})$.
-Without Probing: You wouldn't know which dimension to perturb. You would be poking the model blindly.
-Summary: The Logical Hierarchy
-For your paper, structure the argument like this:
+---
 
-Method (Active Grounding): We train the model with Probing Loss to force the structure to exist.
-Tool (Diagnostic Probing): We use post-hoc Probes to extract the "Theoretical Axes" ($\vec{W}{L0}, \vec{W}{T}$) from the latent space.
-Proof 1 (Alignment): We show that these Theoretical Axes align perfectly with the Data's Principal Components.
-Proof 2 (Sensitivity): We show that moving along these Theoretical Axes causes the mathematically predicted change in behavior.
+## 4. Implementation Steps
 
-## Steps
+To rigorously demonstrate these claims, we need to create a specific evaluation pipeline.
 
+### Step 1: Metric Extraction Script
+**Script Name**: `examples/calc_structural_metrics.py` (New)
+**Reference**: `pykt/models/gtransformer.py`, `examples/run_benchmarks_paper.py`
+
+**Tasks**:
+1.  **Data Loading**: Load test set samples ($q, c, r$) using `GTransformerDataset`.
+2.  **Latent Extraction**:
+    *   Run `model(..., qtest=True)` to get $z_{context}$ vectors.
+    *   Extract corresponding "Oracle" targets ($L_{0\_target}, T_{target}$) from the dataset.
+3.  **Probe Identification**:
+    *   *If Active Grounding*: Extract `w_L0 = model.probe_l0.weight.data`, `w_T = model.probe_t.weight.data`.
+    *   *If Baseline*: Train a `sklearn.linear_model.Ridge` on $(Z, Oracle)$ to get `w_L0, w_T`.
+4.  **PCA Analysis**:
+    *   Fit `PCA(n_components=10)` on $Z$.
+    *   Extract `v_PC1 = pca.components_[0]`, `v_PC2 = pca.components_[1]`.
+    *   Compute **Alignment Score**: `cosine_similarity(v_PC1, w_L0)`.
+5.  **Causal Intervention (The Loop)**:
+    *   Range $\delta \in [-3.0, +3.0]$ (Z-score units).
+    *   For each $\delta$:
+        *   $Z_{new} = Z + \delta \cdot \frac{w_{L0}}{||w_{L0}||}$
+        *   Pass $Z_{new}$ into `model.out` (or `model._bkt_ref_output`).
+        *   Record average predicted probability $\hat{y}$.
+    *   metric: **Monotonicity Correlation** (Spearman Rank of $\delta$ vs $\hat{y}$).
+
+### Step 2: Visualization Script
+**Script Name**: `examples/plot_structural_proofs.py` (New)
+
+**Plots to Generate**:
+1.  **The "Structural Compass" (Alignment)**:
+    *   A Unit Circle Plot.
+    *   Arrow 1 (Red): Probe Vector $\vec{W}_{L0}$ (Theory).
+    *   Arrow 2 (Blue): PC1 Vector $\vec{v}_{PC1}$ (Data).
+    *   *Goal*: Show they overlap (Angle $\approx 0^\circ$).
+    *   *Comparison*: Side-by-side with Baseline (Angle $\approx 90^\circ$).
+2.  **The "Causal Sensitivity" Curve**:
+    *   X-Axis: Perturbation magnitude $\delta$ (Standard Deviations).
+    *   Y-Axis: Change in Predicted Probability $\Delta P(Correct)$.
+    *   *Goal*: A strictly monotonic sigmoid-like curve.
+    *   *Baseline*: Likely a flat line or random noise (since Baseline $z$ isn't organized by Mastery).
+3.  **The "Dimensional Collapse" (Scree Plot)**:
+    *   X-Axis: PC Index.
+    *   Y-Axis: Explained Variance.
+    *   Line 1: Active Grounding (Sharp elbow at 2).
+    *   Line 2: Baseline (Slow decay).
+
+### Step 3: Execution Plan
+1.  **Identify Checkpoints**:
+    *   **Baseline**: Experiment `20260113_...` (or similar standard AKT/GTransformer without losses).
+    *   **Active**: Experiment `20260116_...` (Current best GTransformer with `active_grounding=1`).
+2.  **Run Extraction**:
+    ```bash
+    python3 examples/calc_structural_metrics.py --baseline_dir ... --active_dir ...
+    ```
+3.  **Generate Plots**:
+    ```bash
+    python3 examples/plot_structural_proofs.py --input_file metrics_summary.pkl
+    ```
+
+This pipeline converts the "Pictures" into "Proofs".
