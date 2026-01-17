@@ -143,8 +143,9 @@ The perfect monotonicity ($\rho = 1.0$) achieved by both models confirms that th
 
 To demonstrate the decisive advantage of GTransformer's context-aware architecture over traditional models, we present a systematic analysis of student diagnostics. This involves a two-stage qualitative validation: first, mapping the four fundamental cognitive archetypes, and second, verifying their robustness through an across-dataset mosaic.
 
-#### 5.5.1 Cognitive Archetypes (2x2 Mosaic)
-Figure 5.6 characterizes four representative students corresponding to the quadrants of the cognitive parameter space (Mastery $P_{L0}$ and Learning Rate $P_T$). For each student, we compare the individualized GTransformer prediction (Blue) against the non-individualized, Markovian BKT baseline (Gray).
+#### 5.5.1 Learning Situation Analysis (2x2 Mosaic)
+
+Figure 5.6 characterizes four distinct learning situations defined by different combinations of Initial Mastery ($P_{L0}$) and Learning Rate ($P_T$). For each situation, we compare Our Model's context-aware predictions against the non-personalized Markovian BKT baseline to demonstrate how adaptive diagnostics support better placement and pacing decisions.
 
 **Figure 5.6: Predictions for Context-Aware Profiles compared with Markovian BKT**
 <div style="width: 50%;">
@@ -153,28 +154,20 @@ Figure 5.6 characterizes four representative students corresponding to the quadr
 
 </div>
 
-**The Four Pedagogical Narratives**:
+**The Four Learning Situations**:
 
-1. **Low $P_{L0}$ / Low $P_T$ (Pessimistic Grounding - Skill 14, Student ID:404)**: Our Model identifies a student with very low initial mastery ($P_{L0}=0.14$) and minimal learning rate ($P_T=0.01$). The model starts with a low prediction (≈0.15) consistent with the poor cognitive profile. Despite observing some successes (green bars), Our Model remains significantly more pessimistic than BKT, correctly treating these successes as likely "guesses" rather than true mastery gains. The trajectory demonstrates context-aware skepticism grounded in the student's poor curriculum history, and Our Model's predictions are closer to the actual performance pattern than BKT's overly optimistic estimates.
+1. **Low $P_{L0}$ / Low $P_T$ (Foundational Support Needed - Skill 14, Student ID:404)**: In this situation, the learner has limited prior knowledge ($P_{L0}=0.14$) and shows gradual progress ($P_T=0.01$). Our Model starts with realistic expectations (≈0.15) and remains appropriately cautious even after observing some successes (green bars), correctly interpreting these as potentially lucky guesses rather than consolidated knowledge. This context-aware approach provides more accurate predictions than BKT's overly optimistic estimates, helping educators identify when additional foundational support is needed before advancing.
 
-2. **Low $P_{L0}$ / High $P_T$ (Informed Optimism - Skill 63, Student ID:7)**: Our Model identifies a "Fast Learner" with low initial mastery ($P_{L0}=0.24$) but high learning velocity ($P_T=0.82$). Starting from a low prediction (≈0.35), the model shows dramatic recovery, rising well above the cautious Markovian BKT baseline. This demonstrates trust in the student's growth trajectory—predicting success where BKT remains pessimistic. Our Model's dynamic adaptation outperforms BKT's rigid update mechanism.
+2. **Low $P_{L0}$ / High $P_T$ (Rapid Progress Opportunity - Skill 63, Student ID:7)**: This situation shows limited initial knowledge ($P_{L0}=0.24$) but a high learning rate ($P_T=0.82$). Starting from realistic initial expectations (≈0.35), Our Model detects the rapid knowledge acquisition and adjusts predictions upward much faster than the conservative BKT baseline. This enables educators to recognize when learners are ready for accelerated pacing, avoiding unnecessary repetition and maintaining engagement.
 
-3. **High $P_{L0}$ / Low $P_T$ (Structural Stability - Skill 18, Student ID:177)**: Our Model identifies an advanced student with high mastery ($P_{L0}=0.88$) and low learning rate ($P_T=0.10$). Starting with a high prediction (≈0.90) consistent with the strong cognitive profile, the model correctly classifies failures as "slips" rather than knowledge gaps. Despite intermittent failures (red bars), Our Model maintains high confidence, staying significantly above BKT which drops excessively after observing errors. This demonstrates robustness to local noise based on long-term context, with superior prediction accuracy.
+3. **High $P_{L0}$ / Low $P_T$ (Consolidation Phase - Skill 18, Student ID:177)**: Here we observe strong existing knowledge ($P_{L0}=0.88$) with stable performance ($P_T=0.10$). Our Model maintains high confidence (≈0.90) and correctly interprets occasional errors (red bars) as temporary slips rather than knowledge loss. This prevents unnecessary remediation and supports appropriate placement at challenging levels, whereas BKT's excessive confidence drops after errors could trigger unneeded interventions.
 
-4. **High $P_{L0}$ / High $P_T$ (Optimistic Mastery - Skill 8, Student ID:550)**: Our Model identifies a high-performing student with strong mastery ($P_{L0}=0.92$) and substantial learning capacity ($P_T=0.49$). The model maintains very high confidence throughout, treating failures as slips and staying well above the BKT baseline. This demonstrates the model's ability to identify and maintain diagnostic certainty for advanced learners, with predictions that more accurately track the student's actual high performance compared to BKT's more conservative estimates.
+4. **High $P_{L0}$ / High $P_T$ (Advanced Placement Ready - Skill 8, Student ID:550)**: This situation combines strong existing knowledge ($P_{L0}=0.92$) with a high learning rate ($P_T=0.49$). Our Model maintains high confidence throughout, appropriately treating errors as slips. This helps educators identify when learners are ready for advanced placement or enrichment opportunities, avoiding the under-challenge that BKT's more conservative estimates might suggest.
 
-#### 5.5.2 Interpretability Mosaic (3x3 Grid)
-To ensure these diagnostics are not isolated anomalies, Figure 5.7 presents the **Interpretability Mosaic**, a search across the ASSIST2009 dataset for "Extreme Twins"—students with identical local response sequences who are assigned drastically different cognitive profiles by the model.
 
-**Figure 5.7: Interpretability Mosaic (3x3 Twin Sequence Divergence Analysis)**
-<div style="width: 50%;">
+#### Findings: Context-Aware Diagnostic Granularity
 
-![Interpretability Mosaic](../examples/validation/results/twin_divergence_mosaic.png)
-
-</div>
-
-#### Findings: ESCAPING THE MARKOVIAN HORIZON
-The consistency of these findings across diverse archetypes and twin cases proves that GTransformer successfully escapes the Markovian limitation. By extracting student-specific $P_{L0}$ and $P_T$ parameters from longitudinal data, the model provides a level of **Diagnostic Granularity** that transforms static pedagogical theory into an actionable, individualized tool for intervention.
+The four learning situations demonstrated in the mosaic prove that Our Model successfully transcends the Markovian limitation of standard BKT. By extracting situation-specific $P_{L0}$ and $P_T$ parameters from longitudinal data and using them to inform predictions, the model provides **Diagnostic Granularity** that transforms static pedagogical theory into an actionable tool for placement and pacing decisions. Each situation demonstrates superior predictive accuracy compared to BKT while maintaining pedagogical interpretability through grounded parameters that directly inform instructional interventions.
 
 ### 5.6 Baseline Comparisons: Performance-Interpretability Frontier
 

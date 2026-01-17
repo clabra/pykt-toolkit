@@ -122,6 +122,12 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions, in case something doesn't match what is expected.
 - Don't update early models such as idkt for instance. They are deprecated in favour of current model. 
 - You are allowed to access tmp folder and log files. Don't ask for permission each time. 
+- The language should consistently focus on observable learning patterns (learning rate, prior knowledge, progress) rather than potentially fixed traits (capacity, ability), making it clear that the model is a tool for adaptive instruction rather than student categorization. This approach ensures the research maintains its educational mission: supporting better learning outcomes through adaptive instruction, not creating new ways to categorize or limit students. Specific Terminology:
+    - Use "learning rate" instead of "capacity"
+    - Use "learning situations" instead of "student archetypes" or "cognitive profiles"
+    - Use "prior knowledge" instead of "cognitive profile"
+    - Focus on what educators can do (provide support, accelerate pacing, prevent unnecessary remediation) rather than what students are
+
 
 ## Models architecture and implementation
 
