@@ -324,30 +324,65 @@ python3 examples/validation/validate_sensitivity.py \
 **Usage**:
 ```bash
 python3 examples/validation/generate_case_studies.py \
-    --exp_dir [PROPOSED_EXP_DIR] \
-    --output_dir examples/validation/results/case_studies
-```
+### 5. Context-Aware Diagnostics: Qualitative Validation
+
+This section demonstrates GTransformer's ability to escape Markovian limitations through "Context-Aware Personalization." We validate this through a two-stage qualitative analysis:
+
+#### 5.5.1 Cognitive Archetypes (2x2 Mosaic)
+We categorize individual students into four archetypes based on their inferred Mastery ($P_{L0}$) and Learning Rate ($P_T$) and compare them to the standard Markovian BKT baseline.
 
 **Expected Output**:
-- `case_study_composite.png`: 2x2 grid of representative student trajectories.
+- `cognitive_quadrants_mosaic.png`: 2x2 grid showing characteristic behaviors for each quadrant.
 
 #### Visual Proof:
-
 <div style="width: 50%;">
 
-![Case Studies](../examples/validation/results/case_study_composite.png)
+![Cognitive Quadrants](../examples/validation/results/cognitive_quadrants_mosaic.png)
 
 </div>
 
-**Explanation**: This 2x2 composite plot visualizes the evolution of GTransformer's internal diagnostics for 4 different student types.
-- **Blue Line**: Probability of a correct response ($P(Correct)$).
-- **Orange Dashed Line**: Inferred Mastery ($P(L_0)$).
-- **Green Bars**: Actual student performance (1=Correct).
-- **Interpretation**: We see that for the "Fast Learner," the model rapidly increases the mastery estimate after clear evidence of learning, while for the "Advanced Student," it maintains high mastery from the start. This demonstrates that the model successfully translates longitudinal interaction patterns into student-specific cognitive parameters.
+**The Four Pedagogical Narratives**:
+
+1. **Low $P_{L0}$ / Low $P_T$ (Pessimistic Grounding)**: Our Model identifies a student with systemic difficulty. Despite multiple successes (green bars), the model remains significantly more pessimistic than BKT, correctly treating these successes as likely "guesses" rather than true mastery gains. The flat, low trajectory demonstrates context-aware skepticism grounded in the student's poor curriculum history.
+
+2. **Low $P_{L0}$ / High $P_T$ (Informed Optimism)**: Our Model identifies a "Fast Learner" who starts with low mastery but exhibits high learning velocity. The model shows dramatic recovery, rising well above the cautious Markovian BKT baseline. This demonstrates trust in the student's growth trajectory—predicting success where BKT remains pessimistic.
+
+3. **High $P_{L0}$ / Low $P_T$ (Structural Stability)**: Our Model identifies an advanced student where failures are correctly classified as "slips" rather than knowledge gaps. Despite initial and intermittent failures (red bars), the model maintains high confidence, staying significantly above BKT which collapses after observing errors. This demonstrates robustness to local noise based on long-term context.
+
+4. **High $P_{L0}$ / High $P_T$ (Optimistic Mastery)**: Our Model identifies a high-performing student with strong learning capacity. The model maintains very high confidence throughout, treating all failures as slips and staying well above the BKT baseline. This demonstrates the model's ability to identify and maintain diagnostic certainty for advanced learners.
 
 **Reproduction Command**:
 ```bash
-python3 examples/validation/generate_case_studies.py \
+python3 examples/validation/generate_quadrant_analysis.py \
+    --exp_dir [PROPOSED_EXP_DIR] \
+    --output_dir examples/validation/results
+```
+
+#### 5.5.2 Interpretability Mosaic (3x3 Grid)
+We use a dataset-wide search to identify "Extreme Twins"—students with identical local data but drastically different longitudinal contexts.
+
+**Expected Output**:
+- `twin_divergence_mosaic.png`: 3x3 grid comparing twins with unique UIDs and internal parameters ($P_{L0}$, $P_T$).
+
+#### Visual Proof:
+<div style="width: 50%;">
+
+![Interpretability Mosaic](../examples/validation/results/twin_divergence_mosaic.png)
+
+</div>
+
+**Explanation**: 
+- **Personalized vs. Markovian**: The 2x2 mosaic establishes four fundamental categories of model deviation from BKT:
+    - **Pessimistic Grounding**: GT < BKT for struggling students (penalizing fails, ignoring accidental successes).
+    - **Informed Optimism**: GT > BKT for fast learners (trusting growth based on curriculum context).
+    - **Structural Stability**: Identifying "Slips" in advanced students (ignoring local noise).
+    - **Pedagogical Ceiling**: Saturated trajectories for prodigies.
+- **Twin Divergence**: The 3x3 mosaic proves robustness by showing these deviations occurring for identical local response sequences.
+- **Pedagogical Anchor**: By displaying UIDs and cognitive parameters ($L_0, T$), we provide a clear causal link between curriculum context and the resulting diagnostic trajectory.
+
+**Reproduction Command**:
+```bash
+python3 examples/validation/generate_twin_sequences.py \
     --exp_dir [PROPOSED_EXP_DIR] \
     --output_dir examples/validation/results
 ```
@@ -407,9 +442,9 @@ python3 examples/validation/compare_interpretability.py \
 - Perturbation curves (δ vs. ΔP)
 - Finding: Learned axes have causal, interpretable effects
 
-**5.5 Case Studies**
-- Representative student trajectories
-- Finding: Model provides actionable individualized diagnostics
+**5.5 Context-Aware Diagnostics**
+- 2x2 Cognitive Archetypes and 3x3 Interpretability Mosaic
+- Finding: GTransformer provides individualized, non-Markovian diagnostics
 
 **5.6 Baseline Comparisons**
 - Three-way comparison table

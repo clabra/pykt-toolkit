@@ -139,25 +139,42 @@ We quantify this relationship using the **Spearman Rank Correlation ($\rho$)** b
 #### Insights
 The perfect monotonicity ($\rho = 1.0$) achieved by both models confirms that the "BKT-essence" identified by the probes acts as a reliable control axis. However, the **Proposed GTransformer** achieved this alignment through **Active Grounding during training**, whereas the Baseline model's axes were only identified post-hoc. This demonstrates that GTransformer's internal representation is "Theory-Steered" by design, ensuring that any diagnostic intervention (e.g., manually overriding a student's mastery level) produces a predictable and pedagogically sound change in the system's behavior.
 
-### 5.5 Case Studies: Qualitative Diagnostic Validation
+### 5.5 Context-Aware Diagnostics: Individualized Cognitive Profiles
 
-To demonstrate the clinical utility of the model, we visualize the inferred trajectories of four representative student archetypes from the test set. By tracking the evolution of the **Inferred Mastery ($P(L_0)$)** alongside the actual student responses, we can extract actionable pedagogical insights.
+To demonstrate the decisive advantage of GTransformer's context-aware architecture over traditional models, we present a systematic analysis of student diagnostics. This involves a two-stage qualitative validation: first, mapping the four fundamental cognitive archetypes, and second, verifying their robustness through an across-dataset mosaic.
 
-**Figure 5.6: Individualized Student Trajectories (Case Studies)**
+#### 5.5.1 Cognitive Archetypes (2x2 Mosaic)
+Figure 5.6 characterizes four representative students corresponding to the quadrants of the cognitive parameter space (Mastery $P_{L0}$ and Learning Rate $P_T$). For each student, we compare the individualized GTransformer prediction (Blue) against the non-individualized, Markovian BKT baseline (Gray).
+
+**Figure 5.6: Predictions for Context-Aware Profiles compared with Markovian BKT**
 <div style="width: 50%;">
 
-![Case Studies](../examples/validation/results/case_study_composite.png)
+![Cognitive Quadrants](../examples/validation/results/cognitive_quadrants_mosaic.png)
 
 </div>
 
-#### Diagnostic Archetypes
-1.  **Struggling Student**: Characterized by low initial mastery and a flat learning trajectory despite repeated practice. The model correctly identifies a persistent "Knowledge Gap" and predicts low future performance, suggesting the need for a remedial intervention on prerequisite skills.
-2.  **Fast Learner**: This student begins with low correctness but shows a rapid increase in Inferred Mastery after only a few interactions. The model captures the high "Learning Velocity" ($p_T$) and quickly adjusts its predictions to reflect mastery, allowing for accelerated pacing.
-3.  **Advanced Student**: The model identifies high initial mastery from the very first interaction. Inferred Mastery stays near $1.0$, and the system maintains high prediction accuracy without needing a long observation window.
-4.  **Steady Progress**: Shows a typical learning curve where mastery gradually accumulates with practice.
+**The Four Pedagogical Narratives**:
 
-#### Findings
-Unlike traditional BKT, which would apply a "one-size-fits-all" learning rate to these four students, GTransformer's neuro-symbolic heads allow it to **individualize the cognitive parameters**. This confirms that the model achieved the high "Diagnostic Granularity" hypothesized in Section 3, providing a system that can "think in theory" while "acting in context."
+1. **Low $P_{L0}$ / Low $P_T$ (Pessimistic Grounding)**: Our Model identifies a student with systemic difficulty. Despite multiple successes (green bars), the model remains significantly more pessimistic than BKT, correctly treating these successes as likely "guesses" rather than true mastery gains. The flat, low trajectory demonstrates context-aware skepticism grounded in the student's poor curriculum history.
+
+2. **Low $P_{L0}$ / High $P_T$ (Informed Optimism)**: Our Model identifies a "Fast Learner" who starts with low mastery but exhibits high learning velocity. The model shows dramatic recovery, rising well above the cautious Markovian BKT baseline. This demonstrates trust in the student's growth trajectory—predicting success where BKT remains pessimistic.
+
+3. **High $P_{L0}$ / Low $P_T$ (Structural Stability)**: Our Model identifies an advanced student where failures are correctly classified as "slips" rather than knowledge gaps. Despite initial and intermittent failures (red bars), the model maintains high confidence, staying significantly above BKT which collapses after observing errors. This demonstrates robustness to local noise based on long-term context.
+
+4. **High $P_{L0}$ / High $P_T$ (Optimistic Mastery)**: Our Model identifies a high-performing student with strong learning capacity. The model maintains very high confidence throughout, treating all failures as slips and staying well above the BKT baseline. This demonstrates the model's ability to identify and maintain diagnostic certainty for advanced learners.
+
+#### 5.5.2 Interpretability Mosaic (3x3 Grid)
+To ensure these diagnostics are not isolated anomalies, Figure 5.7 presents the **Interpretability Mosaic**, a search across the ASSIST2009 dataset for "Extreme Twins"—students with identical local response sequences who are assigned drastically different cognitive profiles by the model.
+
+**Figure 5.7: Interpretability Mosaic (3x3 Twin Sequence Divergence Analysis)**
+<div style="width: 50%;">
+
+![Interpretability Mosaic](../examples/validation/results/twin_divergence_mosaic.png)
+
+</div>
+
+#### Findings: ESCAPING THE MARKOVIAN HORIZON
+The consistency of these findings across diverse archetypes and twin cases proves that GTransformer successfully escapes the Markovian limitation. By extracting student-specific $P_{L0}$ and $P_T$ parameters from longitudinal data, the model provides a level of **Diagnostic Granularity** that transforms static pedagogical theory into an actionable, individualized tool for intervention.
 
 ### 5.6 Baseline Comparisons: Performance-Interpretability Frontier
 

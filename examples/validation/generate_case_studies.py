@@ -58,12 +58,13 @@ def load_model_from_dir(exp_dir, device):
     model.eval()
 
     theory_path = os.path.join(dpath, "bkt_skill_params.pkl")
+    bkt_params = None
     if os.path.exists(theory_path):
         with open(theory_path, "rb") as f:
             bkt_params = pickle.load(f)
         model.load_theory_params(bkt_params)
     
-    return model, dc[dataset_name], mc, dpath
+    return model, dc[dataset_name], mc, dpath, bkt_params
 
 def collect_trajectories(model, loader, device, n_students=50):
     """
@@ -175,7 +176,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # 1. Load Model
-    model, dc, mc, dpath = load_model_from_dir(args.exp_dir, device)
+    model, dc, mc, dpath, bkt_params = load_model_from_dir(args.exp_dir, device)
     
     # 2. Setup Dataloader (Standard PyKT init)
     # This handles padding and format alignment automatically

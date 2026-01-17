@@ -1,9 +1,7 @@
 # Fdb version 3
-["pdflatex"] 1767743286 "/workspaces/pykt-toolkit/paper/latex/prueba.tex" "/workspaces/pykt-toolkit/paper/latex/prueba.pdf" "prueba" 1767743286
+["pdflatex"] 1768667733 "/workspaces/pykt-toolkit/paper/latex/prueba.tex" "/workspaces/pykt-toolkit/paper/latex/prueba.pdf" "prueba" 1768667734
   "/dev/null" 1765994506 0 d41d8cd98f00b204e9800998ecf8427e ""
   "/etc/texmf/web2c/texmf.cnf" 1766826484 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
-  "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii" 1461363279 71627 94eb9990bed73c364d7f53f960cc8c5b ""
   "/usr/share/texlive/texmf-dist/tex/generic/iftex/ifluatex.sty" 1572645307 492 1994775aa15b0d1289725a0b1bbc2d4c ""
   "/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty" 1573336935 6902 30fdaf7dc5636b8e3afa306210c45cae ""
@@ -128,14 +126,14 @@
   "/usr/share/texlive/texmf-dist/web2c/texmf.cnf" 1581979058 38841 ce3692aa899bb693b90b87eaa5d4d84e ""
   "/usr/share/texmf/web2c/texmf.cnf" 1581979058 38841 ce3692aa899bb693b90b87eaa5d4d84e ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1766826500 4877423 437a1a75fc525326c628674933c3203a ""
-  "/workspaces/pykt-toolkit/paper/latex/prueba.aux" 1767743197 8 a94a2480d3289e625eea47cd1b285758 ""
+  "/workspaces/pykt-toolkit/paper/latex/commands.tex" 0 -1 0 ""
+  "/workspaces/pykt-toolkit/paper/latex/prueba.aux" 1768667733 8 a94a2480d3289e625eea47cd1b285758 ""
   "/workspaces/pykt-toolkit/paper/latex/prueba.tex" 1767743285 4122 b95f68b655063a92d385e931cb19c7f6 ""
-  "commands.tex" 1767743099 4307 01c2aacfb5c6d98ab38fe49b3e4b8538 ""
-  "data.csv" 1767743258 698 6f09561e7d0ccf070a7433f35a9d5805 ""
-  "prueba.aux" 1767743197 8 a94a2480d3289e625eea47cd1b285758 "pdflatex"
+  "commands.tex" 0 -1 0 ""
+  "prueba.aux" 0 -1 0 "pdflatex"
   "prueba.tex" 1767743285 4122 b95f68b655063a92d385e931cb19c7f6 ""
   (generated)
   "prueba.log"
+  "/workspaces/pykt-toolkit/paper/latex/prueba.pdf"
   "prueba.aux"
   "/workspaces/pykt-toolkit/paper/latex/prueba.log"
-  "/workspaces/pykt-toolkit/paper/latex/prueba.pdf"
