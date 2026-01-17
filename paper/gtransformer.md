@@ -981,3 +981,21 @@ We validate these questions through a rigorous ablation campaign documented in `
 | **RQ2** | **Practical** | Exp 948799 (Personalized) | Twin Divergence Analysis | **Non-Markovian Profiles Confirmed** |
 
 **Conclusion**: The GTransformer demonstrates that we can achieve a "Best of Both Worlds" scenario: the predictive power of Transformers (RQ1) and the granularity of individualized diagnostics (RQ2).
+
+## Paper Introduction - Script
+
+- dKT and BKT 
+- Neceisda de interpretabilidad en DKT
+- Interpretabilid defnidad en relacion a un modelo de referencia (BKT) - Dos caracrtristicas: estimaciones basadas en conceptos relacionados con el modelo de referencia, las estimaciones se explican meduiante relaciones de causa-efecto
+- Propuesta: modelo hibrido: P_ref, AUC de P_ref
+- Validacion: los parametros representan lo que decimos que repsentan: buena metrica Probing
+- Tecnicas: embeddings, Probing losses 
+- Beneficion: estimaciones interpretables = 4 parametros, relaciones caus efecto = pasamos esos parametros por una logica BKT para obtener las prediciones
+- Que gano:con respecto a BKT mayor AUC (AUC p_ref > AUC BKT), con respeco a DKT consigo interpretabilidad
+- (SI DA TIEMPO) Qué pierdo: coste de la interpretabilidad medido como AUC_sup - AUC_ref. Analisi Pareto. 
+
+Me falta: 
+- AUC_ref 
+- Afinar las Probing Loss y las metricas Probing 
+
+
