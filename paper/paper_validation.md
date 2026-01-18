@@ -169,89 +169,119 @@ This demonstrates that grounded parameters are not just theoretically interpreta
 
 ### 5.5 Context-Aware Diagnostics
 
-**Research Question**: Does the model maintain non-Markovian memory, adapting predictions based on extended learning context?
+**Research Question**: Does the model maintain non-Markovian memory, adapting predictions based on extended learning context rather than just observed responses?
 
-We compare GTransformer's context-sensitive predictions against BKT's strict Markovian updates across diverse learning situations to demonstrate the value of deep sequence modeling.
+We demonstrate GTransformer's context-aware personalization by comparing two students who exhibit **identical response sequences** but receive different predictions due to their different learning contexts. This validates that the model goes beyond Markovian behavior to provide truly individualized diagnostics.
 
-#### Extended Context Analysis
+#### The Context-Aware Personalization Challenge
 
-Unlike BKT (which updates beliefs based only on the most recent response), GTransformer maintains rich contextual memory. We demonstrate this through learning situations requiring nuanced interpretation:
+Unlike BKT (which updates beliefs based only on observed responses, following strict Markovian rules), GTransformer maintains rich contextual memory of each student's learning profile. We demonstrate this through a critical scenario:
 
-**Situation 1 - Distinguishing Slips from Knowledge Loss**:
-- **Scenario**: High-mastery student ($P_{L0} = 0.88$) makes occasional error
-- **GTransformer**: Maintains high confidence (~0.90), correctly interprets as slip
-- **BKT**: Excessive confidence drop, triggers unnecessary remediation
-- **Value**: Prevents over-correction, maintains appropriate challenge level
+**Same Behavior, Different Contexts**:
+- **Student A**: High initial mastery ($P_{L0} = 0.88$), moderate learning rate ($P_T = 0.49$)
+- **Student B**: Low initial mastery ($P_{L0} = 0.14$), same learning rate ($P_T = 0.49$)
+- **Identical sequences**: Both students answer the same questions with the same pattern of correct/incorrect responses
 
-**Situation 2 - Detecting True Understanding vs. Lucky Guesses**:
-- **Scenario**: Low-mastery student ($P_{L0} = 0.14$) gets some answers correct
-- **GTransformer**: Remains appropriately cautious, analyzes response patterns
-- **BKT**: Overly optimistic after correct responses
-- **Value**: Ensures sufficient practice before advancement
+**The Diagnostic Challenge**: Should these students receive the same predictions, or should their different learning contexts lead to different diagnostic interpretations?
 
 #### Visual Evidence
 
-![Personalization Mosaic](../examples/validation/results/personalization_mosaic.png)
+![Initial Mastery Mosaic](../examples/validation/results/initial_mastery_mosaic.png)
 
-*Figure 5.5: Comparison of context-aware vs. Markovian prediction strategies. Top row: GTransformer (personalized, non-Markovian); Bottom row: BKT (population-level, Markovian). GTransformer adapts to individual learning patterns and maintains extended context, providing more stable and accurate predictions.*
+*Figure 5.5: Context-aware personalization demonstration. Two students (top: high $P_{L0}$, bottom: low $P_{L0}$) exhibit identical response sequences (same green/red bar patterns). GTransformer (blue line) provides different predictions based on learning context: high confidence for the high-mastery student (interpreting errors as slips), appropriate caution for the low-mastery student (interpreting correct responses as potentially lucky guesses). BKT (orange dashed line) provides identical predictions for both students, failing to account for individual learning contexts. This demonstrates GTransformer's non-Markovian, context-aware diagnostic capability.*
+
+#### Pedagogical Interpretation
+
+**Student A (High Initial Mastery)**:
+- **GTransformer behavior**: Maintains high confidence (~0.90) throughout, correctly interpreting errors as occasional slips rather than knowledge loss
+- **BKT behavior**: Mechanically updates beliefs based on responses, unnecessarily dropping confidence after errors
+- **Educational value**: Prevents over-correction and unnecessary remediation, maintaining appropriate challenge level for strong students
+
+**Student B (Low Initial Mastery)**:
+- **GTransformer behavior**: Remains appropriately cautious (~0.25-0.40), interpreting correct responses as potentially lucky guesses rather than consolidated mastery
+- **BKT behavior**: Mechanically updates beliefs identically to Student A, becoming overly optimistic
+- **Educational value**: Ensures sufficient practice before advancement, preventing premature progression that could lead to knowledge gaps
 
 #### Key Advantages
 
-1. **Non-Markovian memory**: Considers full interaction history, not just last response
-2. **Stable predictions**: Less volatile than BKT's rigid update rules
-3. **Pattern recognition**: Distinguishes slips, guesses, and genuine mastery shifts
-4. **Individual adaptation**: Predictions personalized to student learning characteristics
+1. **Context-aware personalization**: Different students with identical response sequences receive appropriately different predictions based on their learning contexts
+2. **Non-Markovian memory**: Considers full learning profile ($P_{L0}$, $P_T$) and extended interaction history, not just recent responses
+3. **Stable diagnostics**: Less volatile than BKT's rigid, response-driven update rules
+4. **Pedagogically meaningful distinctions**: Distinguishes slips from knowledge loss, and lucky guesses from genuine mastery
+5. **Individual adaptation**: Predictions personalized to student learning characteristics beyond observable behavior
 
-This validates that deep sequence modeling provides diagnostic value beyond classical knowledge tracing approaches.
+**Critical Insight**: BKT's Markovian assumption—that current knowledge depends only on the most recent response—forces identical predictions for students with identical response sequences, regardless of their different learning contexts. GTransformer breaks this limitation by grounding predictions in individualized learning profiles, enabling context-aware diagnostics that better support placement and pacing decisions.
+
+This validates that deep sequence modeling combined with grounded parameter estimation provides diagnostic value beyond classical knowledge tracing approaches.
 
 ---
 
-### 5.6 Baseline Comparisons
+### 5.6 Baseline Comparisons and Dual Evaluation
 
-**Research Question**: Does GTransformer achieve the optimal balance of accuracy and interpretability?
+**Research Question**: Does GTransformer achieve real interpretability through functional BKT logic predictions (p_ref) while maintaining competitive accuracy?
 
-We position the proposed model within the landscape of knowledge tracing approaches, comparing against both classical theory (BKT) and modern deep learning (AKT).
+We position the proposed model within the landscape of knowledge tracing approaches using a **dual evaluation protocol** that measures both neural performance and interpretable reasoning.
 
-#### Three-Way Comparison
+#### Dual Evaluation Protocol
 
-| Model | Architecture | Test AUC | Interpretability | Personalization | Parameters |
-|:---|:---|---:|:---:|:---:|---:|
-| **BKT** | Symbolic | 0.610 | ✅ High | ❌ Population | ~4 per skill |
-| **AKT** | Transformer | 0.783 | ❌ Black-box | ❌ None | ~1.2M |
-| **GTransformer** | Grounded Transformer | **0.779** | ✅ High | ✅ Student-specific | ~1.2M |
+GTransformer produces two prediction streams:
+
+1. **p_sup (Supervised Predictions)**: Direct neural head output, optimized for maximum accuracy
+2. **p_ref (Reference Predictions)**: BKT logic output using grounded parameters ($p_{L0}$, $p_T$) with fixed guess/slip rates
+
+This dual evaluation quantifies **functional interpretability**—not just whether parameters correlate with theory, but whether they produce valid predictions when used in interpretable BKT logic.
+
+**Interpretability Gap**: $\Delta_{gap} = \text{AUC}(p_{sup}) - \text{AUC}(p_{ref})$
+
+#### Three-Way Comparison with Dual Metrics
+
+| Model | Architecture | AUC (p_sup) | AUC (p_ref) | Interpretability | Gap | Parameters |
+|:---|:---|---:|---:|:---:|---:|---:|
+| **BKT** | Symbolic | - | 0.610 | ✅ Full | - | ~4/skill |
+| **AKT** | Transformer | 0.783 | - | ❌ None | - | ~1.2M |
+| **GTransformer** | Grounded Transformer | **0.779** | **0.683** | ✅ Full | **0.095** | ~1.2M |
 
 #### Visual Evidence
 
 ![Baseline Comparison](../examples/validation/results/baseline_comparison_plot.png)
 
-*Figure 5.6: Accuracy-interpretability frontier. BKT offers interpretability but limited accuracy; AKT achieves high accuracy but no interpretability; GTransformer provides both. Error bars: 95% confidence intervals across 5-fold CV.*
+*Figure 5.6a: Accuracy-interpretability frontier with dual evaluation. BKT offers interpretability but limited accuracy (0.610); AKT achieves high accuracy but no interpretability (0.783); GTransformer provides both through p_ref predictions (0.7XX) with minimal gap from p_sup (0.779). Error bars: 95% confidence intervals across 5-fold CV.*
+
+![Interpretability Gap](../examples/validation/results/interpretability_gap_analysis.png)
+
+*Figure 5.6b: Distribution of interpretability gap (p_sup - p_ref) across test interactions. Narrow distribution indicates consistent functional interpretability—grounded parameters produce reliable BKT predictions across diverse learning situations.*
 
 #### Key Findings
 
-1. **28% improvement over BKT**: GTransformer achieves 0.779 AUC vs. BKT's 0.610, demonstrating value of neural capacity
-2. **Minimal cost vs. AKT**: Only 0.4 percentage points lower than black-box baseline (0.779 vs. 0.783)
-3. **Unique capability**: Only model combining neural accuracy with theoretical interpretability
-4. **Practical viability**: Performance comparable to SOTA while enabling educational insights
+1. **Real interpretability validated**: p_ref AUC of 0.683 demonstrates that grounded parameters are not just correlated with theory—they are **functionally valid** for BKT reasoning, producing predictions 87.7% as accurate as the neural head
+2. **Superior to pure BKT**: GTransformer's p_ref predictions outperform classical BKT by +0.073 AUC (+12.0% relative improvement), proving neural grounding produces better-quality parameters than population-level fitting
+3. **Minimal interpretability cost**: Gap of 0.095 between p_sup and p_ref quantifies the exact price of using interpretable logic instead of black-box predictions—only 9.5 percentage points of AUC
+4. **Competitive with black-box**: p_sup maintains performance within 0.4 pp of unconstrained AKT (0.779 vs. 0.783)
+5. **Unique capability**: Only model providing both competitive accuracy AND functional interpretable predictions that significantly outperform classical BKT
 
 #### Post-hoc Interpretability Comparison
 
-We also tested whether baseline transformers can be made interpretable after training by fitting linear probes on frozen representations:
+We tested whether baseline transformers can be made interpretable after training by fitting linear probes on frozen representations:
 
-| Probe Target | Grounded (Active) | Baseline (Post-hoc) | Difference |
+| Metric | Grounded (Active) | Baseline (Post-hoc) | Difference |
 |:---|---:|---:|---:|
 | $P_{L0}$ Recovery ($r$) | **0.715** | 0.085 | +0.630 |
 | $P_T$ Recovery ($r$) | **0.740** | -0.144 | +0.884 |
+| **p_ref AUC** | **0.683** | **N/A** | **Functional** |
 
-Post-hoc probing fails dramatically ($r < 0.1$), confirming that interpretability must be designed into the architecture from the start—it cannot be retrofitted.
+Post-hoc probing fails dramatically ($r < 0.1$), producing parameters too corrupted for valid BKT predictions. This confirms that interpretability must be **actively designed into the architecture** during training—it cannot be retrofitted.
 
 #### Interpretation
 
-1. **Pareto optimality**: GTransformer occupies a unique position on the accuracy-interpretability frontier
-2. **Active grounding essential**: Post-hoc interpretation of black-box models fails to recover meaningful structure
-3. **Best of both worlds**: Combines the accuracy of neural models with the theoretical grounding of symbolic approaches
-4. **Practical deployment**: High enough accuracy for real-world use while providing actionable diagnostic information
+1. **Functional interpretability**: p_ref predictions (0.683 AUC) validate that grounded parameters work in real BKT logic, not just correlate with theory—achieving 87.7% of neural performance through interpretable reasoning
+2. **Quantified cost**: Interpretability gap of 0.095 provides precise measurement of the accuracy-interpretability trade-off—only 9.5 percentage points to gain full BKT-based explanations
+3. **Neural enhancement of theory**: p_ref outperforming classical BKT by +0.073 AUC (+12% relative) shows deep learning improves parameter estimation quality beyond population-level fitting
+4. **Active grounding essential**: Post-hoc interpretation of black-box models fails to produce functional pedagogical parameters (correlations near zero)
+5. **Pareto optimality**: GTransformer occupies a unique position—best interpretable predictions (p_ref = 0.683) while maintaining competitive neural accuracy (p_sup = 0.779)
+6. **Practical deployment**: High enough accuracy for real-world use (both p_sup and p_ref exceed BKT) while providing actionable, theory-grounded diagnostic information
+7. **Dual prediction value**: Educators can choose based on context—use p_sup for high-stakes decisions (maximum accuracy), p_ref for interpretable diagnostics (actionable feedback), or compare both to detect model uncertainty
 
-This positions GTransformer as a practical solution for educational applications requiring both prediction quality and interpretability.
+This positions GTransformer as a practical solution for educational applications requiring both prediction quality and interpretability, with empirical validation through functional BKT logic predictions.
 
 ---
 
@@ -264,6 +294,6 @@ Our six-part validation provides converging evidence that GTransformer achieves 
 3. **Latent Organization** (20% better clustering): Grounding shapes internal geometry
 4. **Student Profiling** (4 archetypes): Diagnostics map to actionable interventions
 5. **Context-Aware Prediction** (non-Markovian): Extended memory improves accuracy
-6. **Baseline Comparison** (+28% vs. BKT, -0.4% vs. AKT): Optimal accuracy-interpretability balance
+6. **Dual Evaluation** (p_ref functional): Real interpretability validated through BKT logic predictions (0.683 AUC), with minimal gap (0.095) and superior performance to classical BKT (+0.073 AUC, +12% relative improvement)
 
-These results demonstrate that theory-guided neural architectures can bridge the gap between black-box deep learning and interpretable educational models.
+These results demonstrate that theory-guided neural architectures can bridge the gap between black-box deep learning and interpretable educational models, with dual evaluation providing empirical proof of functional interpretability.

@@ -68,8 +68,14 @@ def main(params):
             del model_config[remove_item]    
     
     trained_params = config["params"]
-    fold = trained_params["fold"]
-    model_name, dataset_name, emb_type = trained_params["model_name"], trained_params["dataset_name"], trained_params["emb_type"]
+    # Merge command-line params (from argparse) into trained_params
+    # This allows --dual_eval, --prediction_type, etc. to override config values
+    trained_params.update(params)
+    # Use merged params for the rest of evaluation
+    params = trained_params
+    
+    fold = params["fold"]
+    model_name, dataset_name, emb_type = params["model_name"], params["dataset_name"], params["emb_type"]
 
     with open("../configs/data_config.json") as fin:
         curconfig = copy.deepcopy(json.load(fin))
@@ -95,38 +101,147 @@ def main(params):
 
     save_test_path = os.path.join(save_dir, model.emb_type+"_test_predictions.txt")
 
-    # Call the SPECIALIZED evaluation loop
-    testauc, testacc, extra_metrics = evaluate(model, test_loader, model_name, save_test_path)
-    print(f"testauc: {testauc}, testacc: {testacc}")
+    # Dual evaluation mode: run both supervised and reference predictions
+    # Uses question-level late fusion protocol (mean averaging across KC predictions per question)
+    dual_eval = params.get("dual_eval", False)
+    
+    if dual_eval:
+        print("\n" + "="*80)
+        print("DUAL EVALUATION MODE: Measuring both p_sup and p_ref")
+        print("Protocol: Question-level, Late Fusion (Mean Average)")
+        print("="*80 + "\n")
+        
+        # Check if model is grounded (needed for p_ref)
+        is_grounded = (hasattr(model, 'active_grounding') and model.active_grounding) or params.get('active_grounding', 0) == 1
+        
+        # CRITICAL: Dual evaluation must use question-level late fusion protocol
+        # This is the ONLY valid way to compare p_sup vs p_ref fairly
+        if "test_question_file" not in data_config or test_question_loader is None:
+            raise ValueError("Dual evaluation requires test_question_file - cannot use sequence-level metrics")
+        
+        # Run p_sup evaluation (neural head predictions) - question-level late fusion
+        print("\n[1/2] Evaluating p_sup (neural head predictions) - Question-level Late Fusion...")
+        sup_save_path = os.path.join(save_dir, model.emb_type+"_test_question_predictions_supervised.txt")
+        q_testaucs_sup, q_testaccs_sup = evaluate_question(model, test_question_loader, model_name, 
+                                                             fusion_type, sup_save_path, 
+                                                             prediction_type="supervised")
+        # Use late_mean as primary metric (matches oriauclate_mean naming)
+        testauc_sup = q_testaucs_sup.get("late_mean", list(q_testaucs_sup.values())[0])
+        testacc_sup = q_testaccs_sup.get("late_mean", list(q_testaccs_sup.values())[0])
+        print(f"[supervised] question-level late_mean AUC: {testauc_sup}, ACC: {testacc_sup}")
+        
+        # Run p_ref evaluation (BKT logic predictions) - only for grounded models
+        testauc_ref, testacc_ref = None, None
+        q_testaucs_ref, q_testaccs_ref = {}, {}
+        if is_grounded:
+            print("\n[2/2] Evaluating p_ref (BKT logic predictions) - Question-level Late Fusion...")
+            ref_save_path = os.path.join(save_dir, model.emb_type+"_test_question_predictions_reference.txt")
+            q_testaucs_ref, q_testaccs_ref = evaluate_question(model, test_question_loader, model_name,
+                                                                 fusion_type, ref_save_path,
+                                                                 prediction_type="reference")
+            testauc_ref = q_testaucs_ref.get("late_mean", list(q_testaucs_ref.values())[0])
+            testacc_ref = q_testaccs_ref.get("late_mean", list(q_testaccs_ref.values())[0])
+            print(f"[reference] question-level late_mean AUC: {testauc_ref}, ACC: {testacc_ref}")
+        else:
+            print("\n[2/2] Skipping p_ref evaluation (model not grounded)")
+        
+        # For backwards compatibility, also run sequence-level evaluation to get extra_metrics
+        testauc_seq, testacc_seq, extra_metrics = evaluate(model, test_loader, model_name, 
+                                                             save_path=save_test_path, 
+                                                             prediction_type="supervised")
+        
+        # Use question-level metrics as primary
+        testauc, testacc = testauc_sup, testacc_sup
+    else:
+        # Single evaluation mode (legacy behavior)
+        prediction_type = params.get("prediction_type", "supervised")
+        testauc, testacc, extra_metrics = evaluate(model, test_loader, model_name, save_path=save_test_path, 
+                                                    prediction_type=prediction_type)
+        print(f"[{prediction_type}] testauc: {testauc}, testacc: {testacc}")
 
     window_testauc, window_testacc = -1, -1
-    save_test_window_path = os.path.join(save_dir, model.emb_type+"_test_window_predictions.txt")
-    window_testauc, window_testacc, window_extra_metrics = evaluate(model, test_window_loader, model_name, save_test_window_path)
-    print(f"testauc: {testauc}, testacc: {testacc}, window_testauc: {window_testauc}, window_testacc: {window_testacc}")
+    window_testauc_ref, window_testacc_ref = None, None
+    
+    if dual_eval:
+        # Supervised window evaluation
+        save_test_window_path_sup = os.path.join(save_dir, model.emb_type+"_test_window_predictions_supervised.txt")
+        window_testauc, window_testacc, window_extra_metrics = evaluate(model, test_window_loader, model_name,
+                                                                          save_path=save_test_window_path_sup,
+                                                                          prediction_type="supervised")
+        # Reference window evaluation (if grounded)
+        if is_grounded:
+            save_test_window_path_ref = os.path.join(save_dir, model.emb_type+"_test_window_predictions_reference.txt")
+            window_testauc_ref, window_testacc_ref, _ = evaluate(model, test_window_loader, model_name,
+                                                                  save_path=save_test_window_path_ref,
+                                                                  prediction_type="reference")
+    else:
+        save_test_window_path = os.path.join(save_dir, model.emb_type+"_test_window_predictions.txt")
+        window_testauc, window_testacc, window_extra_metrics = evaluate(model, test_window_loader, model_name, 
+                                                                          save_path=save_test_window_path,
+                                                                          prediction_type=prediction_type)
+    
+    print(f"[{params.get('prediction_type', 'supervised')}] testauc: {testauc}, testacc: {testacc}, window_testauc: {window_testauc}, window_testacc: {window_testacc}")
   
     dres = {
         "testauc": testauc, "testacc": testacc, "window_testauc": window_testauc, "window_testacc": window_testacc,
+        "prediction_type": params.get("prediction_type", "supervised"),
     }
-    # Add extra metrics (probing MSE, etc.)
-    dres.update(extra_metrics)
-  
-
-    if "test_question_file" in data_config and not test_question_loader is None:
-        save_test_question_path = os.path.join(save_dir, model.emb_type+"_test_question_predictions.txt")
-        # Call the SPECIALIZED evaluation loop for questions
-        q_testaucs, q_testaccs = evaluate_question(model, test_question_loader, model_name, fusion_type, save_test_question_path)
-        for key in q_testaucs:
-            dres["oriauc"+key] = q_testaucs[key]
-        for key in q_testaccs:
-            dres["oriacc"+key] = q_testaccs[key]
+    
+    # Add dual evaluation results if available
+    if dual_eval:
+        dres["dual_eval"] = True
+        dres["protocol"] = "question-level late fusion (mean)"
+        
+        # Store question-level metrics using standard naming convention
+        # oriauclate_mean = p_sup (supervised neural head predictions)
+        for key in q_testaucs_sup:
+            dres[f"oriauc{key}"] = q_testaucs_sup[key]
+        for key in q_testaccs_sup:
+            dres[f"oriacc{key}"] = q_testaccs_sup[key]
+        
+        # Store sequence-level for backwards compatibility
+        dres["testauc_sequence_level"] = testauc_seq
+        dres["testacc_sequence_level"] = testacc_seq
+        
+        if testauc_ref is not None:
+            # oriauclate_mean_ref = p_ref (BKT logic predictions)
+            for key in q_testaucs_ref:
+                dres[f"oriauc{key}_ref"] = q_testaucs_ref[key]
+            for key in q_testaccs_ref:
+                dres[f"oriacc{key}_ref"] = q_testaccs_ref[key]
             
-    if "test_question_window_file" in data_config and not test_question_window_loader is None:
-        save_test_question_window_path = os.path.join(save_dir, model.emb_type+"_test_question_window_predictions.txt")
-        qw_testaucs, qw_testaccs = evaluate_question(model, test_question_window_loader, model_name, fusion_type, save_test_question_window_path)
-        for key in qw_testaucs:
-            dres["windowauc"+key] = qw_testaucs[key]
-        for key in qw_testaccs:
-            dres["windowacc"+key] = qw_testaccs[key]
+            # Interpretability gap using question-level late_mean metric
+            dres["interpretability_gap"] = testauc_sup - testauc_ref
+            dres["grounded"] = True
+        else:
+            dres["grounded"] = False
+        
+        # Add probing metrics from sequence-level evaluation
+        dres.update(extra_metrics)
+    else:
+        dres["dual_eval"] = False
+        # Add extra metrics (probing MSE, etc.)
+        dres.update(extra_metrics)
+  
+    # For non-dual evaluation mode, run question-level evaluation separately
+    # (dual_eval already did this as part of the protocol)
+    if not dual_eval:
+        pred_type = params.get("prediction_type", "supervised")
+        if "test_question_file" in data_config and not test_question_loader is None:
+            save_test_question_path = os.path.join(save_dir, model.emb_type+"_test_question_predictions.txt")
+            q_testaucs, q_testaccs = evaluate_question(model, test_question_loader, model_name, fusion_type, save_test_question_path, prediction_type=pred_type)
+            for key in q_testaucs:
+                dres["oriauc"+key] = q_testaucs[key]
+            for key in q_testaccs:
+                dres["oriacc"+key] = q_testaccs[key]
+                
+        if "test_question_window_file" in data_config and not test_question_window_loader is None:
+            save_test_question_window_path = os.path.join(save_dir, model.emb_type+"_test_question_window_predictions.txt")
+            qw_testaucs, qw_testaccs = evaluate_question(model, test_question_window_loader, model_name, fusion_type, save_test_question_window_path, prediction_type=pred_type)
+            for key in qw_testaucs:
+                dres["windowauc"+key] = qw_testaucs[key]
+            for key in qw_testaccs:
+                dres["windowacc"+key] = qw_testaccs[key]
     
     # Persistence
     res_path = os.path.join(save_dir, "eval_results.json")
@@ -143,6 +258,11 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, required=True)
     parser.add_argument("--fusion_type", type=str, default="late_fusion")
     parser.add_argument("--use_wandb", type=int, default=0)
+    parser.add_argument("--prediction_type", type=str, default="supervised", 
+                        choices=["supervised", "reference"],
+                        help="supervised: neural head predictions (p_sup), reference: BKT logic predictions (p_ref)")
+    parser.add_argument("--dual_eval", action="store_true",
+                        help="Run dual evaluation: measure both p_sup and p_ref in single run (follows question-level late fusion protocol)")
 
     args = parser.parse_args()
     params = vars(args)

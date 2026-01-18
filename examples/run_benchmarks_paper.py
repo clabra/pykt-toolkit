@@ -255,16 +255,23 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
     valid_matches.sort(key=lambda x: x[0], reverse=True)
     return valid_matches[0][1]
 
-def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None):
+def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_eval=False, exp_dir_override=None):
     """
     Worker that finds the experiment folder and runs its eval_explicit command.
     
     Args:
         campaign_pattern: Optional pattern to filter which campaign to evaluate (e.g., "*probing_benchpaper")
+        dual_eval: If True, add --dual_eval flag to evaluation command for p_sup + p_ref measurement
+        exp_dir_override: If provided, use this directory instead of searching
     """
-    exp_dir = find_experiment_folder(model, dataset, fold, campaign_pattern)
-    if not exp_dir:
-        return (model, dataset, fold, -1, "Experiment folder not found")
+    if exp_dir_override:
+        exp_dir = Path(exp_dir_override)
+        if not exp_dir.exists():
+            return (model, dataset, fold, -1, "Experiment folder not found")
+    else:
+        exp_dir = find_experiment_folder(model, dataset, fold, campaign_pattern)
+        if not exp_dir:
+            return (model, dataset, fold, -1, "Experiment folder not found")
 
     config_path = exp_dir / "config.json"
     with open(config_path) as f:
@@ -283,6 +290,11 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None):
         eval_cmd = eval_cmd.replace("/home/vscode/.pykt-env/bin/python3", sys.executable)
         eval_cmd = eval_cmd.replace("python3 examples/wandb_predict.py", f"{sys.executable} examples/wandb_predict.py")
         eval_cmd = eval_cmd.replace("python3 examples/wandb_gtransformer_predict.py", f"{sys.executable} examples/wandb_gtransformer_predict.py")
+        
+        # Fix model-specific predict scripts for gtransformer
+        if model == "gtransformer" and "wandb_predict.py" in eval_cmd:
+            eval_cmd = eval_cmd.replace("wandb_predict.py", "wandb_gtransformer_predict.py")
+        
         # Fix absolute script paths to relative (handle different workspace locations)
         import re
         eval_cmd = re.sub(r'/[^ ]+/examples/(wandb_\w+_predict\.py)', r'examples/\1', eval_cmd)
@@ -469,6 +481,12 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None):
         eval_cmd = eval_cmd.replace("--fusion_type 'early_fusion,late_fusion'", "--fusion_type late_fusion")
         if "--fusion_type" not in eval_cmd:
             eval_cmd += " --fusion_type late_fusion"
+        
+        # Add dual_eval flag if requested
+        if dual_eval:
+            eval_cmd += " --dual_eval"
+            print(f"[DUAL EVAL] Enabled for {model} on {dataset} fold {fold}")
+        
         # eval_cmd += " --use_all_in_one False" # wandb_predict.py does not support this
 
     log_path = exp_dir / "eval_benchmark.log"
@@ -485,6 +503,11 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None):
     # Split command into list for shell=False (safer, prevents process explosion)
     import shlex
     eval_cmd_list = shlex.split(eval_cmd)
+    
+    # Debug: Print the actual command being executed
+    if dual_eval:
+        print(f"[DEBUG] Eval command: {' '.join(eval_cmd_list)}")
+        print(f"[DEBUG] --dual_eval in command: {'--dual_eval' in eval_cmd_list}")
     
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "w") as f:
@@ -503,6 +526,8 @@ def main():
     parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
+    parser.add_argument("--experiment_folder", type=str, default=None, help="Specific experiment folder to evaluate (for dual evaluation)")
+    parser.add_argument("--dual_eval", action="store_true", help="Run dual evaluation: measure both p_sup and p_ref")
     
     # Parameter overrides (pass-through to run_repro_experiment.py)
     parser.add_argument("--lambda_sup", type=float, default=None, help="Override lambda_sup (supervised loss weight)")
@@ -572,6 +597,42 @@ def main():
         print(f"--- BENCHMARK EVALUATION QUEUE (Concurrency={max_workers}) ---")
         if args.campaign:
             print(f"Campaign filter: {args.campaign}")
+        if args.dual_eval:
+            print(f"Dual Evaluation Mode: ENABLED (measuring p_sup + p_ref)")
+        
+        # Handle experiment_folder parameter for targeted evaluation
+        if args.experiment_folder:
+            print(f"Targeted evaluation mode: {args.experiment_folder}")
+            exp_path = Path(args.experiment_folder)
+            if not exp_path.exists():
+                print(f"ERROR: Experiment folder not found: {exp_path}")
+                return
+            
+            # Parse model/dataset/fold from folder structure or config.json
+            config_path = exp_path / "config.json"
+            if not config_path.exists():
+                print(f"ERROR: config.json not found in {exp_path}")
+                return
+            
+            with open(config_path) as f:
+                config = json.load(f)
+            
+            # Extract metadata from config
+            params = config.get("params", {})
+            model = params.get("model_name", params.get("model", "gtransformer"))
+            dataset = params.get("dataset_name", params.get("dataset", "assist2009"))
+            fold = params.get("fold", 0)
+            
+            print(f"Evaluating: {model} on {dataset} fold {fold}")
+            gpu_id = gpus[0]  # Use first GPU for single evaluation
+            
+            # Run evaluation directly on this folder
+            result = evaluate_worker(model, dataset, fold, gpu_id, 
+                                    campaign_pattern=None, dual_eval=args.dual_eval,
+                                    exp_dir_override=str(exp_path))
+            print(f"[COMPLETE] {result}")
+            return
+        
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             idx = 0
@@ -579,7 +640,8 @@ def main():
                 for model in models_to_run:
                     for fold in folds_to_run:
                         gpu_id = gpus[idx % max_workers]
-                        futures.append(executor.submit(evaluate_worker, model, dataset, fold, gpu_id, args.campaign))
+                        futures.append(executor.submit(evaluate_worker, model, dataset, fold, gpu_id, 
+                                                      args.campaign, args.dual_eval))
                         idx += 1
             for future in as_completed(futures):
                 print(f"[COMPLETE EVAL] {future.result()}")

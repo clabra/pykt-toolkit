@@ -67,7 +67,9 @@
     "separate_qa": 0,
     "pretrain_dim": 768,
     "emb_path": "none",
-    "add_uuid": 1
+    "add_uuid": 1,
+    "dual_eval": true,
+    "prediction_type": "supervised"
   },
   "types": {
     "launcher": [
@@ -76,6 +78,11 @@
       "eval_script",
       "model",
       "max_correlation_students"
+    ],
+    "evaluation": [
+      "dual_eval",
+      "prediction_type",
+      "fusion_type"
     ],
     "data": [
       "dataset",
@@ -150,5 +157,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "461aab39030f51bb3b056cbfc8ef074e"
+  "md5": "82d0d7cffa27299c3f5611f6c88ab889"
 }

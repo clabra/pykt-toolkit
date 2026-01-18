@@ -44,7 +44,14 @@ def save_cur_predict_result(dres, q, r, d, t, m, sm, p):
         results.append(str([qs, rs, ds, ts, ps, prelabels, auc, acc]))
     return "\n".join(results)
 
-def evaluate(model, test_loader, model_name, rel=None, save_path=""):
+def evaluate(model, test_loader, model_name, rel=None, save_path="", prediction_type="supervised"):
+    """
+    Evaluate model on test data.
+    
+    Args:
+        prediction_type: "supervised" (default, uses p_sup from neural head) or 
+                        "reference" (uses p_ref from BKT logic wrapper for interpretable evaluation)
+    """
     if save_path != "":
         fout = open(save_path, "w", encoding="utf8")
     with torch.no_grad():
@@ -145,7 +152,12 @@ def evaluate(model, test_loader, model_name, rel=None, save_path=""):
                         reg_loss = torch.tensor(0.0).to(device)
                     
                     if isinstance(output_obj, dict):
-                        y = output_obj['predictions']
+                        # Support dual prediction modes for interpretability validation
+                        if prediction_type == "reference" and 'reference_preds' in output_obj:
+                            y = output_obj['reference_preds']  # BKT logic-based interpretable predictions
+                        else:
+                            y = output_obj['predictions']  # Neural head predictions (default)
+                        
                         # Phase 4: Probing MSE tracking (Validation/Test)
                         if 'p_l0_probe' in output_obj and 'target_l0' in dcur:
                             p_l0 = torch.masked_select(output_obj['p_l0_probe'][:,1:], sm)
@@ -420,7 +432,7 @@ def save_question_res(dres, fout, early=False):
         curstr = "\t".join([str(round(s, 4)) if type(s) == type(0.1) or type(s) == np.float32 else str(s) for s in curres])
         fout.write(curstr + "\n")
 
-def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion", "late_fusion"], save_path=""):
+def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion", "late_fusion"], save_path="", prediction_type="supervised"):
     # dkt / dkt+ / dkt_forget / atkt: give past -> predict all. has no early fusion!!!
     # dkvmn / akt / saint: give cur -> predict cur
     # sakt: give past+cur -> predict cur
@@ -518,7 +530,12 @@ def evaluate_question(model, test_loader, model_name, fusion_type=["early_fusion
                         h = None
                     
                     if isinstance(output_obj, dict):
-                        y = output_obj['predictions']
+                        # Support dual prediction modes for interpretability validation
+                        if prediction_type == "reference" and 'reference_preds' in output_obj:
+                            y = output_obj['reference_preds']  # BKT logic-based interpretable predictions
+                        else:
+                            y = output_obj['predictions']  # Neural head predictions (default)
+                        
                         # GTransformer returns z_context as h if present
                         if h is None:
                             h = output_obj.get('z_context', None)
