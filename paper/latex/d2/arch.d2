@@ -18,7 +18,10 @@ InputData.shape: cylinder
 
 StudentIDs: {
   class: input
-  label: Student IDs \\n (Optional)
+  label: Student IDs \\n (if personalization=true)
+  style: {
+    stroke-dash: 3
+  }
 }
 StudentIDs.shape: cylinder
 
@@ -30,15 +33,30 @@ EmbeddingsLayer: {
   Embeddings: {
     class: embeddings
     label: |md
-      Individualized Embeddings
+      Task & History Embeddings
 
       x'ₜ (Current Task)
 
       y'ₜ (History)
     |
   }
+  
+  StudentEmbeddings: {
+    class: embeddings
+    label: |md
+      Student Memory
+      (if personalization=true)
+      
+      s_gap[uid] (Knowledge Bias)
+      s_vel[uid] (Learning Rate Bias)
+    |
+    style: {
+      stroke-dash: 3
+    }
+  }
 
   Embeddings.shape: rectangle
+  StudentEmbeddings.shape: rectangle
 }
 
 # 3. Attention Heads (Transformer)
@@ -80,16 +98,48 @@ Outputs: {
     label: Grounded Parameters
     class: component
     
-    p_L0: "p_L0 \\n Initial Mastery"
-    p_T: "p_T \\n  Learning Rate"
+    TheoryBase: {
+      label: |md
+        Theory Base
+        (Always Active)
+        
+        p_L0_base, p_T_base
+      |
+    }
     
-    StudentBias: {
+    ContextualProjection: {
+      label: |md
+        Contextual Projection
+        (Always Active)
+        
+        z · k_axis, z · v_axis
+      |
+    }
+    
+    StudentMemory: {
       label: |md
         Student Memory
         (if personalization=true)
         
-        s_gap, s_vel
+        s_gap[uid], s_vel[uid]
       |
+      style: {
+        stroke-dash: 3
+      }
+    }
+    
+    FinalParams: {
+      label: |md
+        Final Parameters
+        
+        p_L0 = σ(Base + Context + Student)
+        p_T = σ(Base + Context + Student)
+      |
+    }
+    
+    TheoryBase -> FinalParams: "+"
+    ContextualProjection -> FinalParams: "+"
+    StudentMemory -> FinalParams: "+ (if enabled)" {
       style: {
         stroke-dash: 3
       }
@@ -134,7 +184,12 @@ LossLayer: {
 BKT -> EmbeddingsLayer.Embeddings: p_l0, p_T
 BKT -> Oracle
 InputData -> EmbeddingsLayer.Embeddings: "{(q, c, r)}"
-StudentIDs -> Outputs.GroundedParams.StudentBias: "uid (if enabled)" {
+StudentIDs -> EmbeddingsLayer.StudentEmbeddings: "uid (if enabled)" {
+  style: {
+    stroke-dash: 3
+  }
+}
+StudentIDs -> Outputs.GroundedParams.StudentMemory: "uid (if enabled)" {
   style: {
     stroke-dash: 3
   }
@@ -143,10 +198,16 @@ EmbeddingsLayer.Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
 EmbeddingsLayer.Embeddings -> Transformer.Decoder: "x'ₜ"
 
 Transformer.zt -> Outputs.SupervisedOut: Standard MLP
-Transformer.zt -> Outputs.GroundedParams: "Axis Projection \n Base + (z . Axis) + Bias"
+Transformer.zt -> Outputs.GroundedParams.TheoryBase: "BKT Priors"
+Transformer.zt -> Outputs.GroundedParams.ContextualProjection: "z · Axis"
+EmbeddingsLayer.StudentEmbeddings -> Outputs.GroundedParams.StudentMemory: "s_gap, s_vel" {
+  style: {
+    stroke-dash: 3
+  }
+}
 Transformer.zt -> Outputs.DiagnosticProbes: "Active Alignment \n Linear Probe (W . z + b)"
 
-Outputs.GroundedParams -> Outputs.ReferenceOut: Informed Logic
+Outputs.GroundedParams.FinalParams -> Outputs.ReferenceOut: "p_L0, p_T"
 Outputs.ReferenceOut -> LossLayer.LossReference
 
 # Loss functions

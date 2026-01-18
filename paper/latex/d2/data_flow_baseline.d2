@@ -1,0 +1,176 @@
+direction: down
+
+title: "Data Flow: Baseline Mode (personalization=false)" {
+  near: top-center
+  shape: text
+  style: {
+    font-size: 24
+    bold: true
+  }
+}
+
+# Inputs
+BKT: {
+  label: BKT Priors
+  shape: cylinder
+  style: {
+    fill: "#e8f4f8"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+InputData: {
+  label: |md
+    Interaction
+    Data
+  |
+  shape: cylinder
+  style: {
+    fill: "#e8f4f8"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+# Embeddings
+Embeddings: {
+  label: |md
+    Task & History
+    Embeddings
+  |
+  shape: rectangle
+  style: {
+    fill: "#d4e6f1"
+    stroke: "#000000"
+    stroke-width: 2
+    3d: true
+  }
+}
+
+# Transformer
+Transformer: {
+  label: |md
+    Transformer
+    (Encoder-Decoder)
+  |
+  shape: rectangle
+  style: {
+    fill: "#aed6f1"
+    stroke: "#000000"
+    stroke-width: 2
+    multiple: true
+  }
+}
+
+ContextVector: {
+  label: |md
+    Context Vector
+    zₜ
+  |
+  shape: hexagon
+  style: {
+    fill: "#85c1e9"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+# Grounded Parameters
+TheoryBase: {
+  label: |md
+    Theory Base
+    p_L0_base, p_T_base
+  |
+  shape: rectangle
+  style: {
+    fill: "#d5f4e6"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+ContextualProjection: {
+  label: |md
+    Contextual
+    Projection
+    z · k_axis
+  |
+  shape: rectangle
+  style: {
+    fill: "#d5f4e6"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+FinalParams: {
+  label: |md
+    Final Parameters
+    
+    p_L0 = σ(Base + Context)
+    p_T = σ(Base + Context)
+  |
+  shape: rectangle
+  style: {
+    fill: "#fdebd0"
+    stroke: "#000000"
+    stroke-width: 3
+  }
+}
+
+# Outputs
+ReferenceOutput: {
+  label: |md
+    Reference Output
+    (BKT Logic)
+  |
+  shape: rectangle
+  style: {
+    fill: "#d5f4e6"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+Prediction: {
+  label: |md
+    Final
+    Prediction
+  |
+  shape: rectangle
+  style: {
+    fill: "#abebc6"
+    stroke: "#000000"
+    stroke-width: 3
+  }
+}
+
+# Flow
+BKT -> Embeddings: "p_L0, p_T"
+InputData -> Embeddings: "{(q, c, r)}"
+Embeddings -> Transformer
+Transformer -> ContextVector
+ContextVector -> TheoryBase: "BKT Priors"
+ContextVector -> ContextualProjection: "z · Axis"
+TheoryBase -> FinalParams: "+"
+ContextualProjection -> FinalParams: "+"
+FinalParams -> ReferenceOutput: "p_L0, p_T"
+ReferenceOutput -> Prediction
+
+# Note
+Note: {
+  shape: rectangle
+  label: |md
+    **Baseline Mode:**
+    • No student IDs required
+    • Purely contextual reasoning
+    • Cold-start capable
+    • Privacy-preserving
+  |
+  style: {
+    fill: "#f9f9f9"
+    stroke: "#666666"
+    stroke-width: 1
+  }
+}

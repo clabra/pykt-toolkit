@@ -1,0 +1,113 @@
+direction: down
+
+title: "Section 3: Transformer Architecture" {
+  near: top-center
+  shape: text
+  style: {
+    font-size: 24
+    bold: true
+  }
+}
+
+Embeddings: {
+  label: |md
+    Embeddings
+    (x'ₜ, y'ₜ)
+  |
+  shape: rectangle
+  style: {
+    fill: "#e8f4f8"
+    stroke: "#000000"
+    stroke-width: 2
+    3d: true
+  }
+}
+
+Transformer: {
+  label: Transformer
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#ffffff"
+  }
+  
+  Encoder: {
+    label: |md
+      **Encoder**
+      Self-Attention
+      on y'_{1:t-1}
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+      multiple: true
+    }
+  }
+  
+  Decoder: {
+    label: |md
+      **Decoder**
+      Cross-Attention
+      + x'ₜ
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+      multiple: true
+    }
+  }
+  
+  ContextVector: {
+    label: |md
+      **Context Vector**
+      zₜ
+    |
+    shape: hexagon
+    style: {
+      fill: "#aed6f1"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  
+  Encoder -> Decoder: "History Context"
+  Decoder -> ContextVector
+}
+
+Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
+Embeddings -> Transformer.Decoder: "x'ₜ"
+
+Outputs: {
+  label: |md
+    Outputs
+    (Grounded Parameters,
+    Predictions, Probes)
+  |
+  shape: rectangle
+  style: {
+    fill: "#e8f4f8"
+    stroke: "#000000"
+    stroke-width: 2
+  }
+}
+
+Transformer.ContextVector -> Outputs: "zₜ"
+
+Info: {
+  shape: rectangle
+  label: |md
+    **Transformer Components:**
+    • Encoder: Processes interaction history
+    • Decoder: Integrates current task
+    • Context Vector: Rich representation for downstream tasks
+  |
+  style: {
+    fill: "#f0f0f0"
+    stroke: "#666666"
+    stroke-width: 1
+  }
+}
