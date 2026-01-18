@@ -103,7 +103,17 @@ def main(params):
 
     # Dual evaluation mode: run both supervised and reference predictions
     # Uses question-level late fusion protocol (mean averaging across KC predictions per question)
-    dual_eval = params.get("dual_eval", False)
+    # CRITICAL: Parameter must come from config (merged with CLI args)
+    # No hardcoded defaults - value comes from parameter_default.json or experiment config
+    if "dual_eval" not in params:
+        raise ValueError(
+            "Missing required parameter: dual_eval\\n"
+            "The parameter should be in experiment config.json (from parameter_default.json)\\n"
+            "or passed explicitly via command line.\\n"
+            "This may indicate the experiment was created before dual_eval was added.\\n"
+            "For new experiments, ensure parameter_default.json has 'dual_eval' entry."
+        )
+    dual_eval = params["dual_eval"]
     
     if dual_eval:
         print("\n" + "="*80)
@@ -254,16 +264,24 @@ def main(params):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bz", type=int, default=256)
-    parser.add_argument("--save_dir", type=str, required=True)
-    parser.add_argument("--fusion_type", type=str, default="late_fusion")
-    parser.add_argument("--use_wandb", type=int, default=0)
-    parser.add_argument("--prediction_type", type=str, default="supervised", 
+    # NO DEFAULTS - all parameters must be passed explicitly or come from config
+    # This enforces reproducibility standards (see examples/reproducibility.md)
+    parser.add_argument("--bz", type=int, required=True,
+                        help="Batch size for evaluation")
+    parser.add_argument("--save_dir", type=str, required=True,
+                        help="Directory containing trained model and config.json")
+    parser.add_argument("--fusion_type", type=str, required=True,
+                        help="Fusion type for multi-skill questions (late_fusion, early_fusion, etc.)")
+    parser.add_argument("--use_wandb", type=int, required=True,
+                        help="Whether to log to wandb (0 or 1)")
+    parser.add_argument("--prediction_type", type=str, required=True,
                         choices=["supervised", "reference"],
                         help="supervised: neural head predictions (p_sup), reference: BKT logic predictions (p_ref)")
-    parser.add_argument("--dual_eval", action="store_true",
-                        help="Run dual evaluation: measure both p_sup and p_ref in single run (follows question-level late fusion protocol)")
+    parser.add_argument("--dual_eval", type=int, required=True, choices=[0, 1],
+                        help="Run dual evaluation: measure both p_sup and p_ref (0=no, 1=yes)")
 
     args = parser.parse_args()
     params = vars(args)
+    # Convert int to bool for dual_eval
+    params['dual_eval'] = bool(params['dual_eval'])
     main(params)

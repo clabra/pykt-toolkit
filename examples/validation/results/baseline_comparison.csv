@@ -1,4 +1,0 @@
-Model,Predictive AUC,Structural Alignment (r),Individualization,Interpretability Mode
-BKT (Symbolic),0.6097,1.0,❌ No,Intrinsic (Formulaic)
-AKT (Deep Learning),0.7825,0.0521,❌ No,Post-hoc (Black-box)
-GTransformer (Proposed),0.7785,0.7278,✅ Yes,Intrinsic (Neuro-symbolic)

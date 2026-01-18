@@ -15,7 +15,7 @@ from pykt.datasets import init_test_datasets
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, PROJECT_ROOT)
 
-from examples.validation.generate_case_studies import load_model_from_dir
+from examples.validation.validation_helpers import load_model_from_dir
 
 def calculate_bkt_trajectory(skill_params, skill_id, sequence):
     """
@@ -58,6 +58,9 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
         'High L0 / High T': {'data': None, 'score': -1.0}
     }
     
+    all_l0 = []
+    all_t = []
+    
     with torch.no_grad():
         for i, data in enumerate(loader):
             q = data["qseqs"].long().to(device)
@@ -88,15 +91,18 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
                     
                     mean_l0 = np.mean(cur_p_l0[s_mask])
                     mean_t = np.mean(cur_p_t[s_mask])
+                    
+                    all_l0.append(mean_l0)
+                    all_t.append(mean_t)
                     init_p_l0 = cur_p_l0[s_mask][0] # Mastery at the very start
                     uid = data['uids'][b].item() if 'uids' in data else f"S{b}"
                     
                     # 1. Define Quadrant Thresholds
                     q_key = None
-                    if mean_l0 < 0.35 and mean_t < 0.2: q_key = 'Low L0 / Low T'
-                    elif mean_l0 < 0.35 and mean_t > 0.4: q_key = 'Low L0 / High T'
-                    elif mean_l0 > 0.6 and mean_t < 0.2: q_key = 'High L0 / Low T'
-                    elif mean_l0 > 0.6 and 0.4 <= mean_t <= 0.8: q_key = 'High L0 / High T' # Less exaggerated
+                    if mean_l0 < 0.65 and mean_t < 0.1: q_key = 'Low L0 / Low T'
+                    elif mean_l0 < 0.65 and mean_t > 0.15: q_key = 'Low L0 / High T'
+                    elif mean_l0 > 0.7 and mean_t < 0.1: q_key = 'High L0 / Low T'
+                    elif mean_l0 > 0.7 and mean_t > 0.15: q_key = 'High L0 / High T'
                     
                     if q_key:
                         bkt_p = calculate_bkt_trajectory(bkt_params, skill, cur_r[s_mask])
@@ -126,45 +132,88 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
                             if first_pred < 0.5:
                                 continue
                         
-                        # Narrative-Driven Scoring
+                        # Narrative-Driven Scoring - Enhanced for clarity
                         if q_key == 'Low L0 / Low T':
-                            # Story: GT < BKT, penalizes fails, treats successes as guesses
+                            # Story: Cautious model, treats successes as potential guesses
+                            # Want: Low initial predictions, stays cautious, GT < BKT after successes
                             success_mask = (cur_r[s_mask] == 1)
-                            if np.any(success_mask):
+                            if np.any(success_mask) and np.sum(success_mask) >= 2:
+                                # Reward staying cautious after successes
                                 pessimism_after_success = np.mean(bkt_p[success_mask] - cur_preds[s_mask][success_mask])
-                                narrative_score = np.mean(bkt_p - cur_preds[s_mask]) + pessimism_after_success
+                                # Reward low initial prediction
+                                low_start_bonus = 2.0 if cur_preds[s_mask][0] < 0.3 else 0.0
+                                # Reward overall caution
+                                overall_caution = np.mean(bkt_p - cur_preds[s_mask])
+                                narrative_score = pessimism_after_success + low_start_bonus + overall_caution
                             else:
-                                narrative_score = np.mean(bkt_p - cur_preds[s_mask])
+                                narrative_score = -1.0  # Need successes to show the pattern
                         
                         elif q_key == 'Low L0 / High T':
-                            # Story: GT > BKT, trusts growth, optimistic recovery
-                            low_start = 2.0 if cur_preds[s_mask][0] < 0.4 else 0.0
-                            recovery = np.std(cur_preds[s_mask]) * 3
-                            optimism = np.mean(cur_preds[s_mask] - bkt_p)
-                            narrative_score = low_start + recovery + optimism
-                        
-                        elif q_key == 'High L0 / Low T':
-                            # Story: GT identifies slips, stays high despite failures
-                            fail_mask = (cur_r[s_mask] == 0)
-                            if np.any(fail_mask):
-                                robustness = np.mean(cur_preds[s_mask][fail_mask] - bkt_p[fail_mask])
-                                high_mastery = np.mean(cur_preds[s_mask]) if np.mean(cur_preds[s_mask]) > 0.7 else 0
-                                narrative_score = robustness * 2 + high_mastery
+                            # Story: High learning rate - sharp jumps in predictions after correct responses
+                            # Want: Low start, sharp increases after successes, high volatility
+                            if len(cur_preds[s_mask]) >= 6:
+                                low_start_bonus = 3.0 if cur_preds[s_mask][0] < 0.4 else 1.0
+                                
+                                # Calculate step-by-step changes (jumps)
+                                pred_diffs = np.diff(cur_preds[s_mask])
+                                
+                                # Reward sharp positive jumps (high T means responsive to successes)
+                                positive_jumps = pred_diffs[pred_diffs > 0]
+                                if len(positive_jumps) > 0:
+                                    max_jump = np.max(positive_jumps)
+                                    avg_positive_jump = np.mean(positive_jumps)
+                                    sharp_jump_bonus = max_jump * 10 + avg_positive_jump * 5
+                                else:
+                                    sharp_jump_bonus = 0.0
+                                
+                                # Reward volatility (high T means predictions change a lot)
+                                volatility = np.std(pred_diffs)
+                                volatility_bonus = volatility * 8
+                                
+                                # Overall growth still matters
+                                growth = cur_preds[s_mask][-1] - cur_preds[s_mask][0]
+                                growth_bonus = max(0, growth * 3)
+                                
+                                # Reward if GT is more optimistic than BKT in later steps
+                                later_half = len(cur_preds[s_mask]) // 2
+                                optimism_later = np.mean(cur_preds[s_mask][later_half:] - bkt_p[later_half:])
+                                
+                                narrative_score = low_start_bonus + sharp_jump_bonus + volatility_bonus + growth_bonus + optimism_later * 2
                             else:
                                 narrative_score = -1.0
                         
+                        elif q_key == 'High L0 / Low T':
+                            # Story: Strong mastery, treats errors as slips
+                            # Want: High predictions throughout, stays high after errors, GT > BKT after errors
+                            fail_mask = (cur_r[s_mask] == 0)
+                            if np.any(fail_mask) and np.sum(fail_mask) >= 1:
+                                # Reward staying confident after errors
+                                robustness = np.mean(cur_preds[s_mask][fail_mask])
+                                # Reward if GT stays higher than BKT after errors
+                                confidence_advantage = np.mean(cur_preds[s_mask][fail_mask] - bkt_p[fail_mask])
+                                # Reward high overall mastery
+                                high_mastery_bonus = 3.0 if np.mean(cur_preds[s_mask]) > 0.75 else 0.0
+                                narrative_score = robustness * 2 + confidence_advantage * 2 + high_mastery_bonus
+                            else:
+                                narrative_score = -1.0  # Need errors to show slip interpretation
+                        
                         elif q_key == 'High L0 / High T':
-                            # Story: Very optimistic, treats all fails as slips
+                            # Story: Advanced learner, high confidence, treats errors as slips
+                            # Want: Very high predictions, stays high throughout, errors don't hurt much
                             fail_mask = (cur_r[s_mask] == 0)
                             high_confidence = np.mean(cur_preds[s_mask])
+                            high_start_bonus = 3.0 if cur_preds[s_mask][0] > 0.7 else 0.0
                             if np.any(fail_mask):
-                                slip_identification = np.mean(cur_preds[s_mask][fail_mask] - bkt_p[fail_mask])
-                                narrative_score = high_confidence * 2 + slip_identification
+                                # Reward maintaining confidence after errors
+                                slip_identification = np.mean(cur_preds[s_mask][fail_mask])
+                                confidence_advantage = np.mean(cur_preds[s_mask][fail_mask] - bkt_p[fail_mask])
+                                narrative_score = high_confidence * 3 + slip_identification * 2 + confidence_advantage + high_start_bonus
                             else:
-                                narrative_score = high_confidence
+                                # Still good if consistently high
+                                narrative_score = high_confidence * 3 + high_start_bonus
                         
                         # Combined score: narrative alignment + accuracy advantage
-                        score = narrative_score + accuracy_advantage * 2
+                        score = narrative_score + accuracy_advantage * 3
                         
                         if score > best_cases[q_key]['score']:
                             best_cases[q_key]['score'] = score
@@ -177,6 +226,18 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
             
             if i > n_students // 64: break
             
+    print(f"\nParameter Variance Audit:")
+    print(f"P_L0: Mean {np.mean(all_l0):.4f}, Std {np.std(all_l0):.4f}, Range [{np.min(all_l0):.4f}, {np.max(all_l0):.4f}]")
+    print(f"P_T:  Mean {np.mean(all_t):.4f}, Std {np.std(all_t):.4f}, Range [{np.min(all_t):.4f}, {np.max(all_t):.4f}]")
+    
+    # Count how many students fall into each quadrant range
+    l_l0 = [x for x in all_l0 if x < 0.35]
+    h_l0 = [x for x in all_l0 if x > 0.6]
+    l_t = [x for x in all_t if x < 0.2]
+    h_t = [x for x in all_t if x > 0.4]
+    
+    print(f"Quadrant Coverage: Low L0: {len(l_l0)}, High L0: {len(h_l0)}, Low T: {len(l_t)}, High T: {len(h_t)}")
+
     return {k: v['data'] for k, v in best_cases.items()}
 
 def plot_quadrant_mosaic(quadrants, bkt_params, output_path):

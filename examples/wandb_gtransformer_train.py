@@ -209,6 +209,9 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", type=int, required=True)
     parser.add_argument("--add_uuid", type=int, required=True)
     parser.add_argument("--save_dir", type=str, required=True)
+    parser.add_argument("--dual_eval", action='store_true', help="Whether to run dual evaluation")
+    parser.add_argument("--personalization", action='store_true', help="Whether to use student personalization")
+    parser.add_argument("--prediction_type", type=str, required=True, help="Type of prediction (supervised/reference)")
     
     # 6. Benchmark-wide Compatibility Parameters (Ignored by GTransformer but required for Audit)
     parser.add_argument("--lambda_student", type=float, required=True)

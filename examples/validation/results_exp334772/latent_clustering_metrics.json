@@ -1,0 +1,14 @@
+{
+    "grounded": {
+        "silhouette": 0.5991724133491516,
+        "db_index": 0.7791446126144663,
+        "ch_score": 376.27766294113155,
+        "effective_rank": 39
+    },
+    "baseline": {
+        "silhouette": 0.4970022141933441,
+        "db_index": 0.9730844362206106,
+        "ch_score": 231.71074711394073,
+        "effective_rank": 39
+    }
+}

@@ -63,13 +63,14 @@
     "fusion_type": "late_fusion",
     "ablation": "none",
     "personalization": false,
+    "n_uid": 0,
+    "prediction_type": "supervised",
     "kq_same": 1,
     "separate_qa": 0,
     "pretrain_dim": 768,
     "emb_path": "none",
     "add_uuid": 1,
-    "dual_eval": true,
-    "prediction_type": "supervised"
+    "dual_eval": true
   },
   "types": {
     "launcher": [
@@ -157,5 +158,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "82d0d7cffa27299c3f5611f6c88ab889"
+  "md5": "0460fd71a4a3225fde17012f7d587404"
 }

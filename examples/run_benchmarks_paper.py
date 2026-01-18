@@ -284,10 +284,12 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     # Force use of current sys.executable to ensure correct environment (fix ModuleNotFoundError)
     # Also fix script paths to use relative paths from PROJECT_ROOT
     if "python" in eval_cmd:
-        # Generic replace of explicit python paths common in docker
-        eval_cmd = eval_cmd.replace("/usr/bin/python3", sys.executable)
-        eval_cmd = eval_cmd.replace("/usr/bin/python", sys.executable)
-        eval_cmd = eval_cmd.replace("/home/vscode/.pykt-env/bin/python3", sys.executable)
+        # Re-order to replace longer paths first and avoid double-replacement (e.g., /usr/bin/python3 -> /usr/bin/python33)
+        for old_path in ["/home/vscode/.pykt-env/bin/python3", "/usr/bin/python3", "/usr/bin/python"]:
+            if old_path in eval_cmd:
+                eval_cmd = eval_cmd.replace(old_path, sys.executable)
+                break # Only replace the first match to avoid corruption
+        
         eval_cmd = eval_cmd.replace("python3 examples/wandb_predict.py", f"{sys.executable} examples/wandb_predict.py")
         eval_cmd = eval_cmd.replace("python3 examples/wandb_gtransformer_predict.py", f"{sys.executable} examples/wandb_gtransformer_predict.py")
         
@@ -524,6 +526,7 @@ def main():
     parser.add_argument("--dataset", type=str, default=None, help="Filter by dataset")
     parser.add_argument("--model", type=str, default=None, help="Filter by model")
     parser.add_argument("--fold", type=int, default=None, help="Filter by fold")
+    parser.add_argument("--short_title", type=str, default="benchpaper", help="Descriptive label for this benchmark session")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
     parser.add_argument("--experiment_folder", type=str, default=None, help="Specific experiment folder to evaluate (for dual evaluation)")
@@ -534,6 +537,9 @@ def main():
     parser.add_argument("--lambda_ref", type=float, default=None, help="Override lambda_ref (BKT reference loss weight)")
     parser.add_argument("--active_grounding", type=int, default=None, help="Override active_grounding (0 or 1)")
     parser.add_argument("--lambda_probe", type=float, default=None, help="Override lambda_probe (probing loss weight)")
+    parser.add_argument("--lambda_initmastery", type=float, default=None, help="Override lambda_initmastery (L0 loss weight)")
+    parser.add_argument("--lambda_rate", type=float, default=None, help="Override lambda_rate (T loss weight)")
+    parser.add_argument("--personalization", type=int, default=None, help="Override personalization (0/1)")
     
     args = parser.parse_args()
 
@@ -563,12 +569,18 @@ def main():
             param_overrides['active_grounding'] = args.active_grounding
         if args.lambda_probe is not None:
             param_overrides['lambda_probe'] = args.lambda_probe
+        if args.lambda_initmastery is not None:
+            param_overrides['lambda_initmastery'] = args.lambda_initmastery
+        if args.lambda_rate is not None:
+            param_overrides['lambda_rate'] = args.lambda_rate
+        if args.personalization is not None:
+            param_overrides['personalization'] = args.personalization
         
         if param_overrides:
             print(f"Parameter overrides: {param_overrides}")
         
-        # Create campaign folder with unique ID
-        campaign_folder = f"{PROJECT_ROOT}/experiments/{benchmark_timestamp}_benchpaper_{unique_id}"
+        # Create campaign folder with unique ID and short title
+        campaign_folder = f"{PROJECT_ROOT}/experiments/{benchmark_timestamp}_{args.short_title}_{unique_id}"
         
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []

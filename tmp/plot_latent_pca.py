@@ -14,7 +14,7 @@ from sklearn.manifold import TSNE
 import pickle
 
 # Add project root to path
-project_root = "/workspaces/pykt-toolkit"
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 from pykt.models import init_model

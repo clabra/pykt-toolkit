@@ -35,6 +35,10 @@ The scope of the Special Issue includes, but is not limited to, the following to
 
 "Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain semantically grounded to educational constructs while incorporating rich temporal dependencies learned by the network. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to defined concepts, gTransformer offers a pedagogically interpretable alternative for data-driven personalization."
 
+## Reviewers
+
+The focus of the paper is Education and practical applications more the Deep Learning specialists. Use rigurous, well-established practices and methodologies in deep knowledge tracing, avoiding methodological approaches that sound unfamiliar, unclear or risky. The contributions to this special issue have to be practical more than about methodology innovations 
+
 
 ## Reference Documents
 

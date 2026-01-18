@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 
 # Add project root to path
-project_root = "/workspaces/pykt-toolkit"
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 from pykt.models import init_model
@@ -260,25 +260,52 @@ def main():
         point_size = 100
         point_alpha = 0.7
     
+    # 1. Plot Density Contours (KDE) to show the underlying mass
+    sns.kdeplot(data=df, x='Placement (Mean Probe L0)', y='Pacing (Mean Probe T)',
+                hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
+                alpha=0.3, levels=5, thresh=0.1, fill=True, legend=False)
+
+    # 2. Plot the individual student points
     sns.scatterplot(data=df.sort_values('Cluster'), x='Placement (Mean Probe L0)', y='Pacing (Mean Probe T)', 
                     hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
                     s=point_size, alpha=point_alpha, edgecolors='black', linewidth=0.5)
-    
-    # Only use log scale for contextual (probe-based) plots
-    if not has_personalization:
-        plt.yscale('log')
 
-    plt.title("Student Clustering", fontsize=16, fontweight='bold', pad=20)
+    # 3. Apply Power Transform (Sqrt) to y-axis to expand the dense [0.0 - 0.4] region
+    # This addresses the sparse space issue while keeping 0 visible.
+    def forward(x): return np.sqrt(np.maximum(x, 0))
+    def inverse(x): return x**2
+    ax = plt.gca()
+    ax.set_yscale('function', functions=(forward, inverse))
+
+    # Set major ticks for the power scale
+    ax.yaxis.set_major_locator(plt.FixedLocator([0.0, 0.05, 0.1, 0.2, 0.4, 0.6, 1.0]))
+    plt.xlim(-0.02, 1.05)
+    plt.ylim(0.0, 1.05)
+    
+    # Remove log scale for the y-axis (Pacing/T is in [0,1] range)
+    # if not has_personalization:
+    #     plt.yscale('log')
+
+    plt.title("Student Situational Clustering (Sqrt Scale)", fontsize=16, fontweight='bold', pad=20)
     
     if has_personalization:
         plt.xlabel("Student Embedding PC1 (Placement-related)", fontsize=14)
         plt.ylabel("Student Embedding PC2 (Pacing-related)", fontsize=14)
     else:
         plt.xlabel("Student Placement (Estimated Mean Difficulty Encountered)", fontsize=14)
-        plt.ylabel("Student Pacing (Estimated Mean Learning Rate) - Log Scale", fontsize=14)
+        plt.ylabel("Student Pacing (Estimated Mean Learning Rate)", fontsize=14)
     
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+    # Remove explicit xticks/yticks to allow the new scale to handle formatting
+    # plt.xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], fontsize=12)
+    # plt.yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], fontsize=12)
+    plt.xlim(-0.02, 1.05)
+    plt.ylim(-0.02, 1.05)
+
+    # Disable scientific notation for axes
+    from matplotlib.ticker import ScalarFormatter
+    ax.xaxis.set_major_formatter(ScalarFormatter())
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    ax.ticklabel_format(useOffset=False, style='plain', axis='x')
     
     # Improve legend
     plt.legend(title='Learning Patterns', title_fontsize=12, fontsize=11, 

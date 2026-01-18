@@ -15,7 +15,7 @@ from pykt.datasets import init_test_datasets
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, PROJECT_ROOT)
 
-from examples.validation.generate_case_studies import load_model_from_dir
+from examples.validation.validation_helpers import load_model_from_dir
 
 def calculate_bkt_trajectory(skill_params, skill_id, sequence):
     """

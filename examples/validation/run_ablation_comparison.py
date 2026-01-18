@@ -1,39 +1,51 @@
 
 import os
+import sys
 import json
+import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-# Define Experiments
-EXPERIMENTS = {
-    "Baseline": {
-        "exp_dir": "experiments/20260115_123509_benchpaper_baseline/gtransformer/assist2009/fold_0_414325",
-        "recovery_dir": "examples/validation/results/ablation_123509",
-        "config": "G=❌, P=❌, Pr=❌"
-    },
-    "Grounded": {
-        "exp_dir": "experiments/20260115_090230_benchpaper/gtransformer/assist2009/fold_0_338568",
-        "recovery_dir": "examples/validation/results/ablation_090230",
-        "config": "G=✅, P=❌, Pr=❌"
-    },
-    "Probing": {
-        "exp_dir": "experiments/20260116_101107_benchpaper_oraclecorrect_baseline_334772/gtransformer/assist2009/fold_0_536546",
-        "recovery_dir": "examples/validation/results/ablation_334772",
-        "config": "G=✅, P=❌, Pr=✅"
-    },
-    "Personalized": {
-        "exp_dir": "experiments/20260116_120815_benchpaper_personalization_948799/gtransformer/assist2009/fold_0_172858",
-        "recovery_dir": "examples/validation/results/ablation_948799",
-        "config": "G=✅, P=✅, Pr=✅"
-    }
-}
-
-OUTPUT_DIR = "examples/validation/results"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 def main():
+    parser = argparse.ArgumentParser(description='Generate ablation study comparison')
+    parser.add_argument('--baseline_exp', type=str, required=True, help='Baseline experiment directory')
+    parser.add_argument('--grounded_exp', type=str, required=True, help='Grounded experiment directory')
+    parser.add_argument('--probing_exp', type=str, required=True, help='Probing experiment directory')
+    parser.add_argument('--personalization_exp', type=str, default=None, help='Personalization experiment directory (optional)')
+    parser.add_argument('--output_dir', type=str, default='examples/validation/results', help='Output directory')
+    args = parser.parse_args()
+    
+    # Define Experiments with command-line arguments
+    EXPERIMENTS = {
+        "Baseline": {
+            "exp_dir": args.baseline_exp,
+            "recovery_dir": os.path.join(args.output_dir, "ablation_baseline"),
+            "config": "G=❌, P=❌, Pr=❌"
+        },
+        "Grounded": {
+            "exp_dir": args.grounded_exp,
+            "recovery_dir": os.path.join(args.output_dir, "ablation_grounded"),
+            "config": "G=✅, P=❌, Pr=❌"
+        },
+        "Probing": {
+            "exp_dir": args.probing_exp,
+            "recovery_dir": os.path.join(args.output_dir, "ablation_probing"),
+            "config": "G=✅, P=❌, Pr=✅"
+        }
+    }
+    
+    # Add personalization if provided
+    if args.personalization_exp:
+        EXPERIMENTS["Personalized"] = {
+            "exp_dir": args.personalization_exp,
+            "recovery_dir": os.path.join(args.output_dir, "ablation_personalization"),
+            "config": "G=✅, P=✅, Pr=✅"
+        }
+    
+    os.makedirs(args.output_dir, exist_ok=True)
+    
     rows = []
     
     for name, paths in EXPERIMENTS.items():
@@ -78,7 +90,7 @@ def main():
         })
 
     df = pd.DataFrame(rows)
-    df.to_csv(os.path.join(OUTPUT_DIR, "ablation_summary.csv"), index=False)
+    df.to_csv(os.path.join(args.output_dir, "ablation_summary.csv"), index=False)
     
     # Plotting: Performance vs Interpretability Trade-off
     plt.figure(figsize=(10, 6))
@@ -107,10 +119,10 @@ def main():
     plt.legend(lines1 + lines2, labels1 + labels2, loc='center right')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "ablation_tradeoff.png"), dpi=300)
+    plt.savefig(os.path.join(args.output_dir, "ablation_tradeoff.png"), dpi=300)
     
     print(f"Summary Table:\n{df[['Stage', 'Test AUC', 'Interpretability']]}")
-    print(f"Ablation study assets saved to {OUTPUT_DIR}")
+    print(f"Ablation study assets saved to {args.output_dir}")
 
 if __name__ == "__main__":
     main()

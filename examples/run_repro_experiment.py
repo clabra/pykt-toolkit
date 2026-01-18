@@ -382,7 +382,7 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
         'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size', 'fusion_type',
         'ablation', 'add_uuid', 'emb_path', 'kq_same', 'l2_rasch', 'n_uid', 'pretrain_dim', 'separate_qa',
-        'short_title', 'active_grounding', 'lambda_probe'
+        'short_title', 'active_grounding', 'lambda_probe', 'prediction_type', 'dual_eval', 'personalization'
     }
     
     if 'train_idkt.py' in train_script or is_standard_pykt:
@@ -599,11 +599,20 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         cmd_parts = [python_path, abs_predict_script]
         cmd_parts.append(f"--save_dir {experiment_folder}")
         cmd_parts.append(f"--bz {params['batch_size']}")
-        cmd_parts.append(f"--use_wandb 0")
         
-        # Use late_fusion if requested, otherwise default to none for consistency
-        fusion_type = params.get('fusion_type', 'none')
+        # Evaluation parameters - ALL EXPLICIT (no defaults per reproducibility.md)
+        use_wandb = params.get('use_wandb', 0)
+        cmd_parts.append(f"--use_wandb {use_wandb}")
+        
+        fusion_type = params.get('fusion_type', 'late_fusion')
         cmd_parts.append(f"--fusion_type {fusion_type}")
+        
+        prediction_type = params.get('prediction_type', 'supervised')
+        cmd_parts.append(f"--prediction_type {prediction_type}")
+        
+        # dual_eval as explicit 0/1 (converted from bool in parameter_default.json)
+        dual_eval_int = 1 if params.get('dual_eval', False) else 0
+        cmd_parts.append(f"--dual_eval {dual_eval_int}")
         
         return " ".join(cmd_parts)
 

@@ -31,6 +31,7 @@ Section1: {
   BKT: {
     label: |md
       BKT
+
       Reference Model
     |
     shape: cylinder
@@ -41,22 +42,11 @@ Section1: {
     }
   }
 
-  Oracle: {
-    label: |md
-      Oracle
-      Labels
-    |
-    shape: cylinder
-    style: {
-      fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
-    }
-  }
 
   InputData: {
     label: |md
-      Interaction
+      Interaction 
+      
       Data
     |
     shape: cylinder
@@ -67,19 +57,6 @@ Section1: {
     }
   }
 
-  StudentIDs: {
-    label: |md
-      Student IDs
-      (if personalization=true)
-    |
-    shape: cylinder
-    style: {
-      fill: "#d4e6f1"
-      stroke: "#ff8800"
-      stroke-width: 2
-      stroke-dash: 3
-    }
-  }
 }
 
 # ============================================================================
@@ -113,23 +90,6 @@ Section2: {
     }
   }
   
-  StudentMemoryEmb: {
-    label: |md
-      Student Memory
-      
-      s_gap[uid] (Knowledge Bias)
-
-      s_vel[uid] (Learning Rate Bias)
-    |
-    shape: rectangle
-    style: {
-      fill: "#d4e6f1"
-      stroke: "#ff8800"
-      stroke-width: 2
-      stroke-dash: 3
-      3d: true
-    }
-  }
 }
 
 # ============================================================================
@@ -245,30 +205,14 @@ Section4: {
     }
   }
   
-  StudentMemory: {
-    label: |md
-      Student Memory
-      
-      s_gap[uid]
-
-      s_vel[uid]
-    |
-    shape: rectangle
-    style: {
-      fill: "#d4e6f1"
-      stroke: "#ff8800"
-      stroke-width: 2
-      stroke-dash: 3
-    }
-  }
   
   FinalParams: {
     label: |md
       Final Parameters
       
-      p_L0 = σ(Base + Context + Student)
+      p_L0 = σ(Base + Context)
       
-      p_T = σ(Base + Context + Student)
+      p_T = σ(Base + Context)
     |
     shape: rectangle
     style: {
@@ -280,13 +224,6 @@ Section4: {
   
   TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
   ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
-  StudentMemory -> FinalParams:  {
-    style: {
-      stroke-dash: 3
-      stroke: "#000000"
-      font-size: 80
-    }
-  }
 }
 
 # ============================================================================
@@ -436,15 +373,8 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section2.TaskHistoryEmb: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
-Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r)}" { style: { stroke: "#000000"; font-size: 80 } }
-Section1.StudentIDs -> Section2.StudentMemoryEmb: "uid" {
-  style: {
-    stroke-dash: 3
-    stroke: "#000000"
-    font-size: 80
-  }
-}
+Section1.BKT -> Section1.InputData: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r, p_L0, p_T)}" { style: { stroke: "#000000"; font-size: 80 } }
 
 # 2 -> 3
 Section2.TaskHistoryEmb -> Section3.Encoder: "y'_{1:t-1}" { style: { stroke: "#000000"; font-size: 80 } }
@@ -453,13 +383,6 @@ Section2.TaskHistoryEmb -> Section3.Decoder: "x'ₜ" { style: { stroke: "#000000
 # 3 -> 4
 Section3.ContextVector -> Section4.TheoryBase: "" { style: { stroke: "#000000"; font-size: 80 } }
 Section3.ContextVector -> Section4.ContextualProjection: "z · Axis" { style: { stroke: "#000000"; font-size: 80 } }
-Section2.StudentMemoryEmb -> Section4.StudentMemory: "s_gap, s_vel" {
-  style: {
-    stroke-dash: 3
-    stroke: "#000000"
-    font-size: 80
-  }
-}
 
 # 4 -> 5
 Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
@@ -475,7 +398,7 @@ Section1.InputData -> Section5.Loss.LossSup: "y_true" {
     stroke: "#000000"
   }
 }
-Section1.Oracle -> Section5.Loss.LossProbe: "Oracle p_L0, p_T" {
+Section1.BKT -> Section5.Loss.LossProbe: "p_L0, p_T" {
   style: {
     stroke-dash: 5
     opacity: 0.5
