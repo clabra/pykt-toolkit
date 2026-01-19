@@ -1,0 +1,77 @@
+#!/bin/bash
+# Full training run with orthogonal init + diversity loss
+
+cd /home/conchalabra/projects/dl/pykt-toolkit
+
+CUDA_VISIBLE_DEVICES=0 python3 examples/train_idkt.py \
+    --dataset assist2015 \
+    --model idkt \
+    --emb_type qid \
+    --save_dir saved_model \
+    --seed 42 \
+    --fold 0 \
+    --dropout 0.1 \
+    --final_fc_dim 512 \
+    --final_fc_dim2 256 \
+    --num_layers 2 \
+    --nheads 8 \
+    --d_model 64 \
+    --d_ff 256 \
+    --l2 1e-5 \
+    --l2_rasch 1e-5 \
+    --ablation none \
+    --add_uuid 1 \
+    --batch_size 64 \
+    --epochs 200 \
+    --patience 10 \
+    --learning_rate 0.001 \
+    --weight_decay 0.0 \
+    --optimizer Adam \
+    --gradient_clip 10.0 \
+    --lambda_student 1e-5 \
+    --lambda_gap 1e-5 \
+    --lambda_sup 1.0 \
+    --lambda_ref 0.5 \
+    --lambda_initmastery 0.0 \
+    --lambda_rate 0.0 \
+    --lambda_probe 1.0 \
+    --theory_guided 1 \
+    --calibrate 1 \
+    --grounded_init 0 \
+    --bkt_guess_threshold 0.2 \
+    --bkt_slip_threshold 0.15 \
+    --active_grounding 1 \
+    --use_wandb 0 \
+    --_doc_grounding "ref" \
+    --_doc_regularization "sup+ref" \
+    --answer_dim 128 \
+    --beta 0.2 \
+    --epsilon 0.1 \
+    --graph_type Dense \
+    --lambda_r 0.01 \
+    --lambda_w1 0.03 \
+    --lambda_w2 0.3 \
+    --size_m 50 \
+    --n_hidden 128 \
+    --n_rnn_hidden 128 \
+    --n_mlp_hidden 128 \
+    --hidden_dim 128 \
+    --num_attn_heads 8 \
+    --num_en 2 \
+    --skill_dim 64 \
+    --attention_dim 256 \
+    --dim_s 64 \
+    --emb_size 64 \
+    --fusion_type concat \
+    --n_blocks 2 \
+    --n_heads 8 \
+    --seq_len 200 \
+    --kq_same 1 \
+    --separate_qa 0 \
+    --emb_path none \
+    --pretrain_dim 768 \
+    --prediction_type supervised \
+    --n_uid 0 \
+    --dual_eval \
+    --short_title "full_orthogonal_diversity" \
+    2>&1 | tee training_full_orthogonal_diversity.log

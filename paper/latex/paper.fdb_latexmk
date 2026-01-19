@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex paper"] 1768807011 "paper.aux" "paper.bbl" "paper" 1768807023
+["bibtex paper"] 1768824689 "paper.aux" "paper.bbl" "paper" 1768828288
   "./Definitions/mdpi.bst" 1766565721 23683 4afe8e0b352a18c39ff91c43fd26f4b2 ""
   "biblio.bib" 1767835593 24143 7328d2891df9c97204e08e32bce1d6c8 ""
-  "paper.aux" 1768807020 24524 1af72c34c4595e3b921272f91d866e20 "pdflatex"
+  "paper.aux" 1768828259 24991 98bcda43bf152cc7c70415bb9a234e6a "pdflatex"
   (generated)
-  "paper.bbl"
   "paper.blg"
-["pdflatex"] 1768807011 "/workspaces/pykt-toolkit/paper/latex/paper.tex" "/workspaces/pykt-toolkit/paper/latex/paper.pdf" "paper" 1768807023
+  "paper.bbl"
+["pdflatex"] 1768828250 "/workspaces/pykt-toolkit/paper/latex/paper.tex" "/workspaces/pykt-toolkit/paper/latex/paper.pdf" "paper" 1768828288
   "/etc/texmf/web2c/texmf.cnf" 1766826484 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/vscode/.texlive2019/texmf-var/fonts/pk/ljfour/jknappen/ec/ecss0500.600pk" 1766826890 10800 a13facc4688a8ff51479ae6780a6c658 ""
   "/home/vscode/.texlive2019/texmf-var/fonts/pk/ljfour/jknappen/ec/ectt1000.600pk" 1766826890 20008 8b20bc3ef35dae3575fe3303c28547b1 ""
@@ -265,13 +265,12 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1581979058 38841 ce3692aa899bb693b90b87eaa5d4d84e ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1766826493 165012 f177baa1c39a3ebd62c3096a43521a0d ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1766826500 4877423 437a1a75fc525326c628674933c3203a ""
-  "/workspaces/pykt-toolkit/paper/latex/paper.aux" 1768807020 24524 1af72c34c4595e3b921272f91d866e20 ""
-  "/workspaces/pykt-toolkit/paper/latex/paper.tex" 1768807018 82154 913df9e6b116d3d33ea351c9237be287 ""
+  "/workspaces/pykt-toolkit/paper/latex/paper.aux" 1768828259 24991 98bcda43bf152cc7c70415bb9a234e6a ""
+  "/workspaces/pykt-toolkit/paper/latex/paper.tex" 1768828288 87775 8a49addb78855d2d36ae4665e14d264e ""
   "Definitions/journalnames.tex" 1766565721 111264 8eedf5dee628f990080269740349d346 ""
   "Definitions/logo-mdpi.eps" 1766565721 563678 6065ff936803124b091b05458e057116 ""
   "Definitions/logo-orcid.pdf" 1766565721 12671 39a20ba789123aa897c7efc569fb5270 ""
   "Definitions/mdpi.cls" 1766565721 62373 522ff94f7feedac3af8d56ada889ebe8 ""
-  "img/arch2.png" 1767841893 94544 57d0c6cc8576809612a6a81357a32bf3 ""
   "img/cluster_placement_pacing.png" 1767853362 1201613 74156cf5633eb76f3aa44e6227c52cc2 ""
   "img/mastery_alignment_mosaic_real.png" 1767854750 1620686 65f2a6b34b982ae503405e3808f133fc ""
   "img/pareto_as2009.png" 1767142149 230812 197571117397c3b9af5bfb018adb0fc5 ""
@@ -281,14 +280,14 @@
   "img/per_skill_alignment_predictions_2015.png" 1767023219 427116 b7d9d1ad4145d0c4942debda0826804d ""
   "img/twin_divergence.png" 1767852662 516521 f749ccc0ad8fbca58713ca52ae32dcc4 ""
   "img/vonrueden.png" 1767819933 33313 8e45e35c9564b51b031e6c6e16035671 ""
-  "paper.aux" 1768807020 24524 1af72c34c4595e3b921272f91d866e20 "pdflatex"
-  "paper.bbl" 1768807011 10976 eb4c12e152f928fc23206e76a1424662 "bibtex paper"
-  "paper.out" 1768807020 5522 efbc4f2b29e416ca1bee220d3073aa42 "pdflatex"
-  "paper.tex" 1768807018 82154 913df9e6b116d3d33ea351c9237be287 ""
+  "paper.aux" 1768828259 24991 98bcda43bf152cc7c70415bb9a234e6a "pdflatex"
+  "paper.bbl" 1768824689 10666 15f6c56ca0981236c0452e1abf7de362 "bibtex paper"
+  "paper.out" 1768828259 5451 4afce3286ae1d9f2a67514a4cd4b0bd8 "pdflatex"
+  "paper.tex" 1768828288 87775 8a49addb78855d2d36ae4665e14d264e ""
   (generated)
   "paper.out"
-  "/workspaces/pykt-toolkit/paper/latex/paper.pdf"
   "paper.log"
   "paper.pdf"
-  "paper.aux"
   "/workspaces/pykt-toolkit/paper/latex/paper.log"
+  "/workspaces/pykt-toolkit/paper/latex/paper.pdf"
+  "paper.aux"

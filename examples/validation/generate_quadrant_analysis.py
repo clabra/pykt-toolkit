@@ -48,18 +48,13 @@ def calculate_bkt_trajectory(skill_params, skill_id, sequence):
 def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
     """
     Searches for diverse cases showcasing different prediction behaviors.
-    Returns 9 cases for a 3x3 mosaic exploring p_ref vs p_sup relationships.
+    Returns 4 cases for a 2x2 mosaic based on L0/T quadrants.
     """
     best_cases = {
-        'High Agreement - Stable High': {'data': None, 'score': -1.0},
-        'High Agreement - Stable Low': {'data': None, 'score': -1.0},
-        'High Agreement - Growth': {'data': None, 'score': -1.0},
-        'p_sup > p_ref - Optimistic': {'data': None, 'score': -1.0},
-        'p_sup > p_ref - Large Gap': {'data': None, 'score': -1.0},
-        'p_sup > p_ref - Dynamic': {'data': None, 'score': -1.0},
-        'p_ref > p_sup - Conservative': {'data': None, 'score': -1.0},
-        'p_ref > p_sup - Volatile': {'data': None, 'score': -1.0},
-        'Crossover - Complex': {'data': None, 'score': -1.0}
+        'Low L0 / Low T': {'data': None, 'score': -1.0},
+        'Low L0 / High T': {'data': None, 'score': -1.0},
+        'High L0 / Low T': {'data': None, 'score': -1.0},
+        'High L0 / High T': {'data': None, 'score': -1.0}
     }
     
     all_l0 = []

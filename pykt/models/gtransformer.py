@@ -201,11 +201,12 @@ class GTransformer(nn.Module):
                 self.bkt_guess[q_idx] = s_params.get('guess', 0.2)
                 self.bkt_slip[q_idx] = s_params.get('slip', 0.1)
             
-            # Initialize axes with mean=1.0 to ensure student parameters are visible through mean() projection
+            # Initialize axes with orthogonal vectors for maximum initial diversity
+            # This helps prevent collapse, but diversity loss is still needed to maintain it
             if hasattr(self, 'knowledge_axis_emb'):
-                nn.init.normal_(self.knowledge_axis_emb.weight, mean=1.0, std=0.02)
+                nn.init.orthogonal_(self.knowledge_axis_emb.weight)
             if hasattr(self, 'velocity_axis_emb'):
-                nn.init.normal_(self.velocity_axis_emb.weight, mean=1.0, std=0.02)
+                nn.init.orthogonal_(self.velocity_axis_emb.weight)
                 
         print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)), Relational Axes, and Population Parameters initialized.")
 
@@ -278,6 +279,38 @@ class GTransformer(nn.Module):
         l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
         t_logits = t_base + (z_context * v_axis).sum(dim=-1)
         
+        # Diversity Loss: Encourage semantic axes to be different across concepts
+        # This prevents all axes from collapsing to identical vectors
+        # Only apply when theory-guided mode is active (ablation != "all")
+        if self.ablation != "all":
+            unique_concepts = torch.unique(q_data)
+            if len(unique_concepts) > 1 and not qtest:  # Only during training
+                # Get axes for unique concepts in this batch
+                sampled_k_axes = self.knowledge_axis_emb(unique_concepts)  # [N_unique, z_dim]
+                sampled_v_axes = self.velocity_axis_emb(unique_concepts)  # [N_unique, z_dim]
+                
+                # Normalize to unit vectors for cosine similarity
+                k_normalized = sampled_k_axes / (sampled_k_axes.norm(dim=1, keepdim=True) + 1e-8)
+                v_normalized = sampled_v_axes / (sampled_v_axes.norm(dim=1, keepdim=True) + 1e-8)
+                
+                # Compute pairwise cosine similarities (should be low for diversity)
+                k_sim_matrix = k_normalized @ k_normalized.t()  # [N_unique, N_unique]
+                v_sim_matrix = v_normalized @ v_normalized.t()  # [N_unique, N_unique]
+                
+                # Penalize high off-diagonal similarities (we want orthogonal axes)
+                # Mask out diagonal (self-similarity = 1.0)
+                mask = ~torch.eye(len(unique_concepts), dtype=torch.bool, device=q_data.device)
+                
+                # Mean absolute cosine similarity (want this near 0)
+                k_diversity_loss = k_sim_matrix[mask].abs().mean()
+                v_diversity_loss = v_sim_matrix[mask].abs().mean()
+                
+                diversity_loss = 0.1 * (k_diversity_loss + v_diversity_loss)  # Weight to maintain orthogonality
+            else:
+                diversity_loss = torch.tensor(0.0, device=q_data.device)
+        else:
+            diversity_loss = torch.tensor(0.0, device=q_data.device)
+        
         # Step 4: Individualization (Student-Specific scalars)
         # Adds static student bias to the dynamic estimate
         if self.n_uid > 0 and uid_data is not None:
@@ -324,10 +357,13 @@ class GTransformer(nn.Module):
             'reference_preds': ref_preds,   # Reference Output (BKT Logic Wrapper)
         }
 
+        # Add diversity loss to regularization
+        total_reg_loss = c_reg_loss + diversity_loss
+
         if not qtest:
-            return outputs, c_reg_loss
+            return outputs, total_reg_loss
         else:
-            return outputs, c_reg_loss, z_context
+            return outputs, total_reg_loss, z_context
 
     def _bkt_ref_output(self, q_data, target, p_l0, p_t):
         """
@@ -404,7 +440,7 @@ class GTransformer(nn.Module):
         
         # current_L_retrospective: BS, seqlen_t (context), seqlen_i (history)
         L = p_l0.unsqueeze(-1).expand(bs, seqlen, seqlen).clone() # Initialized with p_l0[t] for all history i
-        T_rate = p_t.unsqueeze(-1).expand(bs, seqlen, seqlen)     # Contextual T[t] for all history i
+        # NOTE: Removed static T_rate expansion - now using time-varying p_t[i] in loop
         
         # Iterative update for history i
         for i in range(seqlen - 1):
@@ -430,9 +466,17 @@ class GTransformer(nn.Module):
             
             L_post = torch.where(obs > 0.5, L_post_1, L_post_0)
             
-            # 2. Learning Transition
-            # Use contextual transition rate p_t[t]
-            L_next = L_post + (1 - L_post) * T_rate[:, :, i:i+1]
+            # 2. Learning Transition (TIME-VARYING FIX)
+            # Use HISTORICAL transition rate p_t[i] at this specific timestep
+            # Shape: p_t[:, i:i+1] = [BS, 1] -> unsqueeze -> [BS, 1, 1] -> expand -> [BS, seqlen_t, 1]
+            T_rate_i = p_t[:, i:i+1].unsqueeze(-1).expand(bs, seqlen, 1)
+            
+            # Validation: Check tensor shapes (only on first iteration to avoid overhead)
+            if i == 0:
+                assert T_rate_i.shape == (bs, seqlen, 1), f"T_rate_i shape mismatch: {T_rate_i.shape} vs expected ({bs}, {seqlen}, 1)"
+                assert L_post.shape == (bs, seqlen, 1), f"L_post shape mismatch: {L_post.shape}"
+            
+            L_next = L_post + (1 - L_post) * T_rate_i
             
             # Fill the next history step for all contexts
             # But only for contexts t > i (where this history is relevant)

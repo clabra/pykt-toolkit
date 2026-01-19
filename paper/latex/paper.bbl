@@ -58,25 +58,6 @@ Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
 \newblock {\em Advances in neural information processing systems} {\bf 2017},
   {\em 30}.
 
-\bibitem[Rudin(2019)]{rudin2019stop}
-Rudin, C.
-\newblock Stop explaining black box machine learning models for high stakes
-  decisions and use interpretable models instead.
-\newblock {\em Nature machine intelligence} {\bf 2019}, {\em 1},~206--215.
-
-\bibitem[Semenova et~al.(2019)Semenova, Rudin, and Parr]{semenova2019study}
-Semenova, L.; Rudin, C.; Parr, R.
-\newblock A study in Rashomon curves and volumes: A new perspective on
-  generalization and model simplicity in machine learning.
-\newblock {\em arXiv preprint arXiv:1908.01755} {\bf 2019}, {\em 4}.
-
-\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
-  Gordon]{yudelson2013individualized}
-Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
-\newblock Individualized bayesian knowledge tracing models.
-\newblock In Proceedings of the International conference on artificial
-  intelligence in education. Springer,  2013, pp. 171--180.
-
 \bibitem[Bai et~al.(2024)]{bai2024survey}
 Bai, X.;  et~al.
 \newblock A Survey of Explainable Knowledge Tracing,  2024.
@@ -105,6 +86,36 @@ Su, Y.; Cheng, Z.; Luo, P.; Wu, J.; Zhang, L.; Liu, Q.; Wang, S.
   for interpretable knowledge tracing.
 \newblock {\em Knowledge-Based Systems} {\bf 2021}, {\em 218},~106819.
 
+\bibitem[Chen et~al.(2023)Chen, Liu, Huang, Liu, and Luo]{chen2023improving}
+Chen, J.; Liu, Z.; Huang, S.; Liu, Q.; Luo, W.
+\newblock Improving interpretability of deep sequential knowledge tracing
+  models with question-centric cognitive representations.
+\newblock In Proceedings of the Proceedings of the AAAI conference on
+  artificial intelligence,  2023, Vol.~37, pp. 14196--14204.
+
+\bibitem[Rudin(2019)]{rudin2019stop}
+Rudin, C.
+\newblock Stop explaining black box machine learning models for high stakes
+  decisions and use interpretable models instead.
+\newblock {\em Nature machine intelligence} {\bf 2019}, {\em 1},~206--215.
+
+\bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
+  Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
+  Bauckhage, and Schuecker]{vonrueden2021informed}
+Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
+  Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
+\newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
+  Knowledge into Learning Systems.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
+  p. 1–1.
+
+\bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
+  Gordon]{yudelson2013individualized}
+Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
+\newblock Individualized bayesian knowledge tracing models.
+\newblock In Proceedings of the International conference on artificial
+  intelligence in education. Springer,  2013, pp. 171--180.
+
 \bibitem[Gan et~al.(2020)Gan, Sun, and Sun]{gan2020knowledge}
 Gan, W.; Sun, Y.; Sun, Y.
 \newblock Knowledge interaction enhanced knowledge tracing for learner
@@ -117,13 +128,6 @@ Zhou, Y.; Li, X.; Cao, Y.; Zhao, X.; Ye, Q.; Lv, J.
 \newblock LANA: towards personalized deep knowledge tracing through
   distinguishable interactive sequences.
 \newblock {\em arXiv preprint arXiv:2105.06266} {\bf 2021}.
-
-\bibitem[Chen et~al.(2023)Chen, Liu, Huang, Liu, and Luo]{chen2023improving}
-Chen, J.; Liu, Z.; Huang, S.; Liu, Q.; Luo, W.
-\newblock Improving interpretability of deep sequential knowledge tracing
-  models with question-centric cognitive representations.
-\newblock In Proceedings of the Proceedings of the AAAI conference on
-  artificial intelligence,  2023, Vol.~37, pp. 14196--14204.
 
 \bibitem[Liu et~al.(2022)Liu, Yu, Li, Liang, Zhang, Shen, and
   Sun]{liu2022ability}
@@ -165,16 +169,6 @@ Zhang, M.; Zhu, X.; Zhang, C.; Qian, W.; Pan, F.; Zhao, H.
   Dynamic Mastery of Knowledge Concepts.
 \newblock In Proceedings of the Proceedings of the 32nd ACM international
   conference on information and knowledge management,  2023, pp. 3236--3246.
-
-\bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
-  Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
-  Bauckhage, and Schuecker]{vonrueden2021informed}
-Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
-  Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
-\newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
-  Knowledge into Learning Systems.
-\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
-  p. 1–1.
 
 \bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
   Ganguly, Shekhar, Samatova, and Kumar]{karpatne2017theory}

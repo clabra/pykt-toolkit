@@ -1,0 +1,4 @@
+Stage,Configuration,Test AUC,L0 Recovery (r),T Recovery (r),Interpretability
+Baseline,"G=❌, P=❌, Pr=❌",0.7832131766569213,0.0,0.0,0.0
+Grounded,"G=✅, P=❌, Pr=❌",0.776929040846859,0.0,0.0,0.0
+Probing,"G=✅, P=❌, Pr=✅",0.7815119908234999,0.0,0.0,0.0
