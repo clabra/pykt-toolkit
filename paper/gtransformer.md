@@ -1328,6 +1328,126 @@ Future iterations should explore the interplay between two distinct types of reg
 
 ## Plots
 
+The following plots demonstrate the prediction envelope concept and quantify the disagreement between interpretable (p_ref) and accurate (p_sup) predictions. All plots were generated using Experiment 533154 (Minimalist Grounding baseline) on fold 0 for consistency.
+
+### 7. **Cognitive Quadrants Mosaic with Prediction Envelope**
+![Cognitive Quadrants Mosaic](../examples/validation/results_exp533154/cognitive_quadrants_mosaic.png)
+
+**Description**: 2×2 pedagogical mosaic showing four canonical learning situations defined by BKT parameters (Low/High Initial Mastery × Low/High Learning Rate). For each quadrant, the plot displays:
+- **p_sup** (solid blue line): Neural head prediction (accurate but opaque)
+- **p_ref** (dashed steelblue line): BKT logic prediction (interpretable but less accurate)
+- **Prediction Envelope** (shaded blue band): The disagreement region between p_sup and p_ref
+
+The envelope width |p_sup - p_ref| visualizes the "cost of interpretability" for each learning trajectory. Narrow envelopes indicate p_ref successfully approximates p_sup using interpretable BKT parameters.
+
+**Generation Command**:
+```bash
+python3 examples/validation/generate_quadrant_analysis.py \
+  --exp_dir experiments/20260118_203059_minimalist_grounding_baseline_533154/gtransformer/assist2009/fold_0_947873 \
+  --output_dir examples/validation/results_exp533154
+```
+
+**Parameters**:
+- `--exp_dir`: Experiment directory containing trained model checkpoint and configuration
+- `--output_dir`: Output directory for generated plot (defaults to `examples/validation/results`)
+
+### 8. **Prediction Envelope Gallery (3×3 Diversity)**
+![Prediction Envelope Gallery](../examples/validation/results_exp533154/prediction_envelope_gallery.png)
+
+**Description**: 3×3 gallery showcasing diverse envelope behaviors across 61,904 test predictions. Each panel displays three prediction trajectories:
+- **BKT Model** (black dotted line with × markers): Classical BKT population-level predictions (static, context-free baseline)
+- **p_ref** (steelblue dashed line with □ markers): gTransformer's BKT logic output using estimated parameters (interpretable, context-aware)
+- **p_sup** (dark blue solid line with ○ markers): gTransformer's neural head output (accurate but opaque)
+- **Prediction Envelope** (shaded blue band): Disagreement region between p_sup and p_ref
+
+**Pattern Categories**:
+- **Row 1**: Envelope width diversity (Narrow Agreement, Moderate Disagreement, Wide Divergence)
+- **Row 2**: Directional bias (p_sup Optimistic, Both Dynamic, p_ref Optimistic)
+- **Row 3**: Temporal dynamics (Converging, Diverging, Oscillating)
+
+The gallery demonstrates that disagreement patterns vary systematically with student trajectories and BKT parameter configurations. Cases were selected using a two-stage scoring system: (1) primary pattern-matching criteria, (2) secondary preference for higher p_ref variance (more dynamic, visually interesting trajectories).
+
+**Generation Command**:
+```bash
+python3 examples/validation/generate_prediction_envelope_gallery.py \
+  --exp_dir experiments/20260118_203059_minimalist_grounding_baseline_533154/gtransformer/assist2009/fold_0_947873 \
+  --output_dir examples/validation/results_exp533154
+```
+
+**Parameters**:
+- `--exp_dir`: Experiment directory containing trained model checkpoint
+- `--output_dir`: Output directory for generated plot
+
+### 9. **Disagreement Heatmap by BKT Parameter Space**
+![Disagreement Heatmap](../examples/validation/results_exp533154/disagreement_heatmap.png)
+
+**Description**: 6-panel analysis of envelope width across the (P_L0, P_T) BKT parameter space using 20×20 binning:
+1. **Mean Envelope Width**: Shows disagreement peaks at Low Initial Mastery + High Learning Rate (0.410 mean envelope)
+2. **Sample Density**: Reveals most predictions concentrate in moderate parameter ranges
+3. **Directional Bias**: p_ref - p_sup difference (negative values = p_ref more optimistic)
+4. **Envelope Volatility**: Standard deviation of disagreement within bins
+5. **Marginal by P_L0**: Mean envelope aggregated across Initial Mastery dimension
+6. **Marginal by P_T**: Mean envelope aggregated across Learning Rate dimension
+
+**Key Finding**: Low L0/High T quadrant has highest disagreement (0.410), indicating p_ref struggles most when students start weak but learn rapidly. High L0/Low T has lowest disagreement (0.144).
+
+**Generation Command**:
+```bash
+python3 examples/validation/generate_disagreement_heatmap.py \
+  --exp_dir experiments/20260118_203059_minimalist_grounding_baseline_533154/gtransformer/assist2009/fold_0_947873 \
+  --output_dir examples/validation/results_exp533154
+```
+
+**Parameters**:
+- `--exp_dir`: Experiment directory containing trained model
+- `--output_dir`: Output directory for plot and JSON summary (`disagreement_summary.json`)
+
+**Outputs**:
+- `disagreement_heatmap.png`: 6-panel visualization (768KB)
+- `disagreement_summary.json`: Quadrant statistics and overall metrics
+
+### 10. **Envelope Distribution Analysis (9-Panel Comprehensive)**
+![Envelope Distribution](../examples/validation/results_exp533154/envelope_distribution.png)
+
+**Description**: Comprehensive statistical analysis of envelope width distribution across 61,904 test predictions:
+
+1. **Histogram + KDE**: Distribution shape with kernel density estimate
+2. **Cumulative Distribution**: CDF showing percentile accumulation
+3. **Directional Bias Distribution**: Histogram of (p_ref - p_sup) showing asymmetry
+4. **Envelope by Correctness**: Violin plot comparing envelope when ground truth is correct vs incorrect
+5. **Envelope by Confidence** (Separated): Side-by-side box plots for p_sup confidence bins (blue) vs p_ref confidence bins (coral)
+6. **Envelope Percentiles**: Horizontal bar chart with gradient colors (green→red) showing key percentiles
+7. **Q-Q Plot**: Quantile-quantile comparison against normal distribution
+8. **Summary Statistics Table**: Mean, Median, Std, IQR, Skewness, Kurtosis
+9. **Narrow/Wide Case Examples**: Text summary of extreme cases
+
+**Key Statistics**:
+- **Mean Envelope**: 0.2086 (20.86 percentage points)
+- **Median Envelope**: 0.1308 (13.08 pp) — indicates right-skewed distribution
+- **90th Percentile**: 0.5067 (50.67 pp) — worst 10% of cases
+- **Directional Bias**: -0.094 (p_ref typically 9.4pp higher than p_sup)
+- **Agreement Categories**: 42.9% narrow (<0.10), 32.9% moderate (0.10-0.30), 24.1% wide (>0.30)
+
+**Generation Command**:
+```bash
+python3 examples/validation/generate_envelope_distribution.py \
+  --exp_dir experiments/20260118_203059_minimalist_grounding_baseline_533154/gtransformer/assist2009/fold_0_947873 \
+  --output_dir examples/validation/results_exp533154
+```
+
+**Parameters**:
+- `--exp_dir`: Experiment directory containing trained model
+- `--output_dir`: Output directory for plot and statistics
+
+**Outputs**:
+- `envelope_distribution.png`: 9-panel visualization (764KB)
+- `envelope_statistics.json`: Detailed statistics including percentiles, directional bias, and case examples
+
+**Interpretation Notes**:
+- **Plot #5 Update**: Changed from combined confidence bins (using OR logic) to separate p_sup (blue) and p_ref (coral) box plots for clearer comparison
+- **Plot #6 Update**: Converted from static table to horizontal bar chart with gradient colors for more intuitive percentile visualization
+- **Confidence Measurement**: Confidence is defined as distance from decision boundary (0.5). High confidence = |p - 0.5| > 0.3, Low confidence = |p - 0.5| < 0.1
+
 The following plots demonstrate the model's interpretability features. All plots were generated using fold 0 for consistency. They have been generated using the `run_benchmarks_paper.py` script with the `results` mode for the results in the `20260116_120815_benchpaper_personalization_948799` campaign. 
 
 

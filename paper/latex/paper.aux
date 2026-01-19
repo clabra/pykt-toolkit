@@ -19,8 +19,6 @@
 \providecommand\HyField@AuxAddToCoFields[2]{}
 \providecommand*\new@tpo@label[2]{}
 \citation{corbett1994knowledge}
-\newmarginnote{note.1.1}{{1}{10945661sp}}
-\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \citation{abdelrahman2023knowledge}
 \citation{corbett1994knowledge}
 \citation{cen2008comparing}
@@ -28,6 +26,8 @@
 \citation{vie2019knowledge}
 \citation{embretson2013item}
 \citation{twenty_five_years_of_bkt}
+\newmarginnote{note.1.1}{{1}{10945661sp}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \citation{piech2015deep}
 \citation{vaswani2017attention}
 \citation{abdelrahman2023knowledge}
@@ -45,7 +45,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Bayesian Knowledge Tracing}{3}{subsection.2.1}\protected@file@percent }
 \newlabel{sec_bkt}{{2.1}{3}{Bayesian Knowledge Tracing}{subsection.2.1}{}}
 \newlabel{sec_bkt@cref}{{[subsection][1][2]2.1}{[1][3][]3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Interpretability in Deep Knowledge Tracing}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Deep Knowledge Tracing}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Interpretability in Deep Knowledge Tracing}{3}{subsection.2.3}\protected@file@percent }
 \citation{embretson2013item}
 \citation{yeung2019deep}
 \citation{su2021time}
@@ -66,7 +67,8 @@
 \citation{vonrueden2021informed}
 \citation{vonrueden2021informed}
 \citation{vonrueden2021informed}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Current Limitations}{4}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Informed Machine Learning}{4}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Current Limitations}{4}{subsection.2.5}\protected@file@percent }
 \citation{vaswani2017attention}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The information flow in iDKT, following the taxonomy proposed by \citet  {vonrueden2021informed}, comprises: (1) \textit  {Prior Knowledge}: simulation results from an educational model serve as a source of structured information; (2) \textit  {Training Data}: the augmented data is used to train the model; (3) \textit  {Hypothesis Set}: an attention-based Transformer architecture provides the inductive bias required to align internal representations with the reference model; (4) \textit  {Learning Algorithm}: optimization is driven by a compound loss function, which guides the system toward semantically aligned representations; and (5) \textit  {Final Hypothesis}: the internal representations are projected and compared with the prior knowledge of the reference model.\relax }}{5}{figure.caption.1}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
@@ -74,7 +76,7 @@
 \newlabel{fig_info_flow@cref}{{[figure][1][]1}{[1][4][]5}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}The gTransformer Model}{5}{section.3}\protected@file@percent }
 \newlabel{sec_arch}{{3}{5}{The gTransformer Model}{section.3}{}}
-\newlabel{sec_arch@cref}{{[section][3][]3}{[1][4][]5}}
+\newlabel{sec_arch@cref}{{[section][3][]3}{[1][5][]5}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Architecture}{5}{subsection.3.1}\protected@file@percent }
 \citation{liu2022pykt}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The diagram illustrates the functional layers of the iDKT Architecture: (1) \textit  {Input Layer}: data enriched with BKT reference data ($p_{BKT}$ and theoretical parameters); (2) \textit  {Embeddings}: provides the foundational material through individualized transformations ($x', y'$); (3) \textit  {Attention Heads}: encoder-decoder transformer synthesizes history and task into a contextualized representation ($z_t$); (4) \textit  {Prediction Head and Grounded Read-out}: provide performance probabilities ($p_{pred}$) from historical context and grounded pedagogical diagnostics ($p_{know}, p_{rate}$) from representational grounding; (5) \textit  {Loss Functions}: implement a multi-objective pipeline ($\mathcal  {L}_{sup}, \mathcal  {L}_{int}$) to ensure semantic alignment; and (6) \textit  {Diagnostic Probing Validation}: verifies the structural preservation of pedagogical constructs through linear probing of internal representations.\relax }}{6}{figure.caption.2}\protected@file@percent }

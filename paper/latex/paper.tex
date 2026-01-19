@@ -84,7 +84,7 @@
 
 %=================================================================
 % Full title of the paper (Capitalized)
-\Title{Semantic Interpretability in Deep Knowledge Tracing via Representational Grounding: Toward Individualized Learning Trajectories}
+\Title{Pedagogical Interpretability in Deep Knowledge Tracing via Grounded Transformers}
 
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
@@ -120,7 +120,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e. \\) 
-\abstract{Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain semantically grounded to educational constructs while incorporating rich temporal dependencies learned by the network. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to defined concepts, gTransformer offers a pedagogically interpretable alternative for data-driven personalization.} 
+\abstract{Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain semantically grounded to educational constructs while incorporating rich temporal dependencies learned by the model. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to concepts defined by an intrinsically interpretable reference model, gTransformer offers a pedagogically transparent alternative for data-driven personalization.} 
 
 % Keywords
 \keyword{deep knowledge tracing; interpretability; grounded transformer; bayesian knowledge tracing; educational data analysis; personalized learning} 
@@ -203,16 +203,15 @@ The remainder of this paper is structured as follows. Section~\ref{sec_arch} des
 
 \section{Related Work}
 
-
-
-
-
 \subsection{Bayesian Knowledge Tracing} \label{sec_bkt}
 
 For this study, we selected Bayesian Knowledge Tracing (BKT) as our anchoring theoretical framework. BKT models the learning process as a hidden Markov process governed by four explicit parameters: \textit{Initial Mastery}, the probability a student knows a skill prior to practice; \textit{Learn Rate}, the probability of transitioning from unlearned to learned states after a practice opportunity; \textit{Guess}, the probability of a correct response despite a lack of mastery; and \textit{Slip}, the probability of an incorrect response despite mastery. These parameters provide a causal narrative of student performance that is intuitive to educators and aligned with cognitive science principles. 
 
 Standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{Individualized BKT} approaches exist, they are often computationally expensive and struggle with data sparsity \citep{yudelson2013individualized}. The Representational Grounding used in the iDKT model offers a novel way to address individualization by leveraging the capabilities of Transformers to compress student interaction histories into a context vector. This allows the model to infer personalized initial knowledge and learning rates dynamically, transforming population-level BKT insights into high-granularity student diagnostics.
 
+\subsection{Deep Knowledge Tracing}
+
+From DKT to Transformers... 
 
 \subsection{Interpretability in Deep Knowledge Tracing}
 
@@ -221,6 +220,10 @@ Interpretability in DKT remains an open issue, despite diverse attempts categori
 The second category, \textit{ante-hoc} methods, aims for intrinsic interpretability, encompassing two main approaches: traditional models that rely on simple, transparent structures, and DKT variants that achieve interpretability by incorporating additional modules or side information. Prominent examples in the latter group include Self-Attentive Knowledge Tracing (SAKT) \citep{pandey2019self}, the first model to incorporate attention mechanisms, and Attentive Knowledge Tracing (AKT) \citep{ghosh2020context}, which achieved high predictive performance by integrating attention heads that apply different temporal distances to capture student interaction patterns with varying temporal resolution. However, it can be maintained that relying solely on attention mechanisms presents similar practical obstacles to post-hoc methods since they do not provide a clear interpretation of the model's predictions in terms of pedagogically sound principles. 
 
 Concerning the integration of side information into ante-hoc methods, Item Response Theory (IRT) \citep{embretson2013item} represents the most prominent theoretical foundation. IRT estimates the probability of a student correctly answering a question given their latent ability and the question's difficulty. This framework has been coupled with DKT models such as Deep-IRT \citep{yeung2019deep}, which leverages dynamic key-value memory networks to capture learners’ trajectories; this allows for the inference of abilities and item difficulties via neural networks, which are subsequently operationalized to predict answer correctness. Similarly, TC-MIRT \citep{su2021time} embeds the parameters of a multidimensional IRT to predict students’ states and generate interpretable parameters. Other approaches, such as KIKT \citep{gan2020knowledge}, harness IRT to simulate learners’ performance, while LANA \citep{zhou2021lana} adopts a IRT variant to cluster students’ ability levels. Finally, QIKT \citep{chen2023improving} features question-centric representations combined with an interpretable IRT layer. Beyond IRT, other researchers have leveraged diverse principles, such as constructive learning \citep{liu2022ability, sun2024progressive}, learning curve and forgetting curve \citep{zhang2021learning}, finite state automaton (FSA) \citep{zhu2020learning}, classical test theory (CTT) \citep{lee2024monacobert}, and monotonicity theory \citep{zhang2023counterfactual}. 
+
+\subsection{Informed Machine Learning}
+
+
 
 \subsection{Current Limitations}
 

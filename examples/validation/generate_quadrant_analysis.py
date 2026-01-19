@@ -47,15 +47,19 @@ def calculate_bkt_trajectory(skill_params, skill_id, sequence):
 
 def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
     """
-    Searches for the most illustrative students for the 2x2 matrix:
-    (Low/High L0) x (Low/High T)
-    Maximizes divergence from Markovian BKT.
+    Searches for diverse cases showcasing different prediction behaviors.
+    Returns 9 cases for a 3x3 mosaic exploring p_ref vs p_sup relationships.
     """
     best_cases = {
-        'Low L0 / Low T': {'data': None, 'score': -1.0},
-        'Low L0 / High T': {'data': None, 'score': -1.0},
-        'High L0 / Low T': {'data': None, 'score': -1.0},
-        'High L0 / High T': {'data': None, 'score': -1.0}
+        'High Agreement - Stable High': {'data': None, 'score': -1.0},
+        'High Agreement - Stable Low': {'data': None, 'score': -1.0},
+        'High Agreement - Growth': {'data': None, 'score': -1.0},
+        'p_sup > p_ref - Optimistic': {'data': None, 'score': -1.0},
+        'p_sup > p_ref - Large Gap': {'data': None, 'score': -1.0},
+        'p_sup > p_ref - Dynamic': {'data': None, 'score': -1.0},
+        'p_ref > p_sup - Conservative': {'data': None, 'score': -1.0},
+        'p_ref > p_sup - Volatile': {'data': None, 'score': -1.0},
+        'Crossover - Complex': {'data': None, 'score': -1.0}
     }
     
     all_l0 = []
@@ -66,23 +70,36 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
             q = data["qseqs"].long().to(device)
             c = data["cseqs"].long().to(device)
             r = data["rseqs"].long().to(device)
+            qshft = data["shft_qseqs"].long().to(device)
+            cshft = data["shft_cseqs"].long().to(device)
+            rshft = data["shft_rseqs"].long().to(device)
+            m = data["masks"].bool().to(device)
             sm = data["smasks"].bool().to(device)
             uids = data.get("uids", None)
             if uids is not None: uids = uids.long().to(device)
             
-            outputs, _ = model(c, r, pid_data=q, uid_data=uids)
-            # Use supervised predictions (more dynamic, context-aware)
-            p_l0 = outputs['p_l0'].cpu().numpy()
-            p_t = outputs['p_t'].cpu().numpy()
-            preds = outputs['predictions'].cpu().numpy()
+            # Concatenate sequences like in evaluation
+            cq = torch.cat((q[:,0:1], qshft), dim=1)
+            cc = torch.cat((c[:,0:1], cshft), dim=1)
+            cr = torch.cat((r[:,0:1], rshft), dim=1)
+            
+            outputs, _ = model(cc.long(), cr.long(), pid_data=cq.long(), uid_data=uids)
+            
+            # Extract both supervised and reference predictions (already shifted by model)
+            # Predictions are at positions [1:] corresponding to responses at positions [1:]
+            p_l0 = outputs['p_l0'][:,1:].cpu().numpy()
+            p_t = outputs['p_t'][:,1:].cpu().numpy()
+            preds = outputs['predictions'][:,1:].cpu().numpy()  # p_sup (neural head)
+            ref_preds = outputs['reference_preds'][:,1:].cpu().numpy()  # p_ref (BKT logic)
             
             for b in range(c.shape[0]):
-                m = sm[b].cpu().numpy()
-                cur_c = c[b].cpu().numpy()[m]
-                cur_r = r[b].cpu().numpy()[m]
-                cur_p_l0 = p_l0[b][m]
-                cur_p_t = p_t[b][m]
-                cur_preds = preds[b][m]
+                m_b = sm[b].cpu().numpy()
+                cur_c = cshft[b].cpu().numpy()[m_b]
+                cur_r = rshft[b].cpu().numpy()[m_b]
+                cur_p_l0 = p_l0[b][m_b]
+                cur_p_t = p_t[b][m_b]
+                cur_preds = preds[b][m_b]  # p_sup
+                cur_ref_preds = ref_preds[b][m_b]  # p_ref
                 
                 unique_skills = np.unique(cur_c)
                 for skill in unique_skills:
@@ -219,7 +236,8 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
                             best_cases[q_key]['score'] = score
                             best_cases[q_key]['data'] = {
                                 'uid': uid, 'skill': skill, 'seq': cur_r[s_mask], 
-                                'preds': cur_preds[s_mask], 
+                                'preds': cur_preds[s_mask],  # p_sup (neural)
+                                'ref_preds': cur_ref_preds[s_mask],  # p_ref (BKT logic)
                                 'p_l0': mean_l0,  # Use actual latent parameter
                                 'p_t': mean_t
                             }
@@ -243,6 +261,7 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
 def plot_quadrant_mosaic(quadrants, bkt_params, output_path):
     """
     Plots a 2x2 mosaic of the cognitive archetypes.
+    Shows both p_sup (neural) and p_ref (interpretable BKT logic) trajectories.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 11))
     axes = axes.flatten()
@@ -261,27 +280,44 @@ def plot_quadrant_mosaic(quadrants, bkt_params, output_path):
             color = 'green' if val == 1 else 'red'
             ax.axvline(x=i, color=color, alpha=0.15, linewidth=18, zorder=0)
 
-        # GTransformer Line and Dynamic Markers
-        ax.plot(x, data['preds'], color='royalblue', linewidth=2, alpha=0.8, 
-                label=f"Our Model")
-        for i, p in enumerate(data['preds']):
+        # GTransformer Prediction Range (shaded band between p_ref and p_sup)
+        # This shows the "interpretability-accuracy envelope"
+        p_sup = data['preds']  # Neural head (more accurate)
+        p_ref = data['ref_preds']  # BKT logic (interpretable)
+        
+        # Fill between p_ref and p_sup to show the prediction envelope
+        ax.fill_between(x, p_ref, p_sup, color='royalblue', alpha=0.2, 
+                        label='Prediction Envelope', zorder=1)
+        
+        # p_ref trajectory (interpretable, BKT logic)
+        ax.plot(x, p_ref, color='steelblue', linewidth=2, alpha=0.9, 
+                linestyle='--', label='p_ref (Interpretable BKT Logic)', zorder=2)
+        for i, p in enumerate(p_ref):
             marker = 'o' if p > 0.5 else 'x'
-            ax.plot(i, p, marker=marker, color='royalblue', markersize=6)
+            ax.plot(i, p, marker=marker, color='steelblue', markersize=5, zorder=2)
+        
+        # p_sup trajectory (neural head, more accurate)
+        ax.plot(x, p_sup, color='royalblue', linewidth=2.5, alpha=0.9, 
+                label='p_sup (Neural Head)', zorder=3)
+        for i, p in enumerate(p_sup):
+            marker = 'o' if p > 0.5 else 'x'
+            ax.plot(i, p, marker=marker, color='royalblue', markersize=6, zorder=3)
 
-        # BKT Line and Dynamic Markers
-        ax.plot(x, bkt_p, color='gray', linestyle='--', linewidth=1.5, alpha=0.6, label="Standard BKT (Markovian)")
+        # BKT Baseline (Markovian)
+        ax.plot(x, bkt_p, color='gray', linestyle=':', linewidth=1.5, alpha=0.6, 
+                label="Classical BKT (Markovian)", zorder=1)
         for i, p in enumerate(bkt_p):
             marker = 'o' if p > 0.5 else 'x'
-            ax.plot(i, p, marker=marker, color='gray', markersize=5)
+            ax.plot(i, p, marker=marker, color='gray', markersize=4, alpha=0.6, zorder=1)
             
         ax.set_title(f"{title} (Skill {data['skill']})\nStudent ID:{data['uid']}, $P_{{L0}}$={data['p_l0']:.2f}, $P_{{T}}$={data['p_t']:.2f}", 
                     fontsize=11, fontweight='bold')
         ax.set_ylim(-0.05, 1.05)
         ax.set_ylabel("Predicted $P(Correct)$")
-        ax.legend(loc='lower right', fontsize=9, framealpha=0.9)
+        ax.legend(loc='lower right', fontsize=8, framealpha=0.9)
         ax.grid(True, alpha=0.2)
         
-    plt.suptitle("Predictions for Context-Aware Profiles compared with Markovian BKT", 
+    plt.suptitle("GTransformer Prediction Envelope: Interpretable (p_ref) vs. Accurate (p_sup)", 
                  fontsize=16, fontweight='bold', y=0.98)
     plt.tight_layout(rect=[0.02, 0.02, 0.98, 0.95])
     plt.savefig(output_path, dpi=300)
