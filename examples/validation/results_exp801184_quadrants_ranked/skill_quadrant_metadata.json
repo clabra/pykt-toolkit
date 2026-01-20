@@ -1,0 +1,440 @@
+[
+  {
+    "skill_id": 11,
+    "seq_length": 5,
+    "diversity_score": 2.8146503154857783e-06,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.4,
+    "accuracy_advantage": 0.6,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / Low T": {
+        "uid": "587",
+        "l0": 0.3272286653518677,
+        "t": 0.07493603974580765,
+        "response_seq": [
+          0,
+          1,
+          0,
+          1,
+          1
+        ]
+      },
+      "Low L0 / High T": {
+        "uid": "4",
+        "l0": 0.30972737073898315,
+        "t": 0.09021683782339096,
+        "response_seq": [
+          0,
+          1,
+          0,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 47,
+    "seq_length": 5,
+    "diversity_score": 2.0806112388527254e-10,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.6,
+    "accuracy_advantage": 0.4,
+    "n_quadrants": 2,
+    "quadrants": {
+      "High L0 / Low T": {
+        "uid": "77",
+        "l0": 0.8672124743461609,
+        "t": 0.06512230634689331,
+        "response_seq": [
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "15",
+        "l0": 0.8950722813606262,
+        "t": 0.10313527286052704,
+        "response_seq": [
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 15,
+    "seq_length": 5,
+    "diversity_score": 0.07332129031419754,
+    "gt_accuracy": 0.7,
+    "bkt_accuracy": 0.4,
+    "accuracy_advantage": 0.29999999999999993,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / Low T": {
+        "uid": "149",
+        "l0": 0.2010362148284912,
+        "t": 0.06262929737567902,
+        "response_seq": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "Low L0 / High T": {
+        "uid": "174",
+        "l0": 0.27894166111946106,
+        "t": 0.15179768204689026,
+        "response_seq": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 12,
+    "seq_length": 7,
+    "diversity_score": 3.0397577575058676e-05,
+    "gt_accuracy": 0.7142857142857143,
+    "bkt_accuracy": 0.42857142857142855,
+    "accuracy_advantage": 0.28571428571428575,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / Low T": {
+        "uid": "88",
+        "l0": 0.5455478429794312,
+        "t": 0.023459220305085182,
+        "response_seq": [
+          1,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / Low T": {
+        "uid": "481",
+        "l0": 0.5918874144554138,
+        "t": 0.028862660750746727,
+        "response_seq": [
+          1,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 9,
+    "seq_length": 5,
+    "diversity_score": 0.006503523793071508,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.8,
+    "accuracy_advantage": 0.19999999999999996,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / High T": {
+        "uid": "16",
+        "l0": 0.39798229932785034,
+        "t": 0.24953846633434296,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "20",
+        "l0": 0.5823206901550293,
+        "t": 0.2121257781982422,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 55,
+    "seq_length": 5,
+    "diversity_score": 0.0006585109513252974,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.8,
+    "accuracy_advantage": 0.19999999999999996,
+    "n_quadrants": 2,
+    "quadrants": {
+      "High L0 / Low T": {
+        "uid": "9",
+        "l0": 0.7340471148490906,
+        "t": 0.07766621559858322,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "10",
+        "l0": 0.6910963654518127,
+        "t": 0.08740340918302536,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 69,
+    "seq_length": 5,
+    "diversity_score": 6.214940367499366e-05,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.8,
+    "accuracy_advantage": 0.19999999999999996,
+    "n_quadrants": 2,
+    "quadrants": {
+      "High L0 / Low T": {
+        "uid": "13",
+        "l0": 0.8653548955917358,
+        "t": 0.07253556698560715,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "85",
+        "l0": 0.875765323638916,
+        "t": 0.09077098965644836,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 53,
+    "seq_length": 5,
+    "diversity_score": 0.00011336683382978663,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.8,
+    "accuracy_advantage": 0.19999999999999996,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / High T": {
+        "uid": "194",
+        "l0": 0.4738081097602844,
+        "t": 0.17954936623573303,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "76",
+        "l0": 0.6422046422958374,
+        "t": 0.14990679919719696,
+        "response_seq": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 68,
+    "seq_length": 5,
+    "diversity_score": 4.66849670033298e-10,
+    "gt_accuracy": 1.0,
+    "bkt_accuracy": 0.8,
+    "accuracy_advantage": 0.19999999999999996,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / Low T": {
+        "uid": "76",
+        "l0": 0.3141329884529114,
+        "t": 0.06307359784841537,
+        "response_seq": [
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "Low L0 / High T": {
+        "uid": "10",
+        "l0": 0.32993191480636597,
+        "t": 0.10155792534351349,
+        "response_seq": [
+          0,
+          0,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 65,
+    "seq_length": 6,
+    "diversity_score": 0.028061512857675552,
+    "gt_accuracy": 0.6666666666666666,
+    "bkt_accuracy": 0.5,
+    "accuracy_advantage": 0.16666666666666663,
+    "n_quadrants": 2,
+    "quadrants": {
+      "High L0 / Low T": {
+        "uid": "14",
+        "l0": 0.9690147042274475,
+        "t": 0.08265777677297592,
+        "response_seq": [
+          0,
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "13",
+        "l0": 0.9617505073547363,
+        "t": 0.10861586779356003,
+        "response_seq": [
+          0,
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 21,
+    "seq_length": 10,
+    "diversity_score": 0.00884866714477539,
+    "gt_accuracy": 0.7,
+    "bkt_accuracy": 0.6,
+    "accuracy_advantage": 0.09999999999999998,
+    "n_quadrants": 2,
+    "quadrants": {
+      "High L0 / Low T": {
+        "uid": "367",
+        "l0": 0.6958404183387756,
+        "t": 0.08502870053052902,
+        "response_seq": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0
+        ]
+      },
+      "High L0 / High T": {
+        "uid": "544",
+        "l0": 0.7438146471977234,
+        "t": 0.09031393378973007,
+        "response_seq": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    }
+  },
+  {
+    "skill_id": 31,
+    "seq_length": 6,
+    "diversity_score": 0.0011486256262287498,
+    "gt_accuracy": 0.75,
+    "bkt_accuracy": 0.6666666666666666,
+    "accuracy_advantage": 0.08333333333333337,
+    "n_quadrants": 2,
+    "quadrants": {
+      "Low L0 / Low T": {
+        "uid": "75",
+        "l0": 0.5217226147651672,
+        "t": 0.06110570952296257,
+        "response_seq": [
+          1,
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      },
+      "High L0 / Low T": {
+        "uid": "108",
+        "l0": 0.5974633097648621,
+        "t": 0.032365236431360245,
+        "response_seq": [
+          1,
+          1,
+          0,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+]
