@@ -141,25 +141,28 @@ def extract_student_skill_data(model, loader, device):
                     skill_responses = tuple(cur_r[s_mask].astype(int).tolist())
                     skill_preds = cur_preds[s_mask]
                     
-                    # SKILL-SPECIFIC APPROACH: Use P(L0) and P(T) from the FIRST encounter with this skill
-                    # This represents the model's initial assessment for this specific skill,
-                    # which is what drives the predictions we're visualizing.
-                    # Using historical averages can create pedagogical inconsistencies when
-                    # the model has skill-specific contextualization.
+                    # Get skill-specific P(L0) and P(T) at first encounter
                     skill_indices = np.where(s_mask)[0]
                     first_skill_idx = skill_indices[0]
-                    
-                    # Use the parameters at the FIRST timestep when encountering this skill
-                    # These are the skill-specific P(L0) and P(T) that the model uses
-                    # to initialize its predictions for this skill
                     skill_l0 = cur_p_l0[first_skill_idx]
                     skill_t = cur_p_t[first_skill_idx]
                     
-                    # Store student data for this skill and response sequence
+                    # Calculate HISTORICAL AVERAGE P(L0) and P(T) from all previous timesteps
+                    if first_skill_idx > 0:
+                        hist_l0 = np.mean(cur_p_l0[:first_skill_idx])
+                        hist_t = np.mean(cur_p_t[:first_skill_idx])
+                    else:
+                        # If skill appears at first timestep, use that timestep's values
+                        hist_l0 = skill_l0
+                        hist_t = skill_t
+                    
+                    # Store student data with both skill-specific and historical parameters
                     skill_data[int(skill)][skill_responses].append({
                         'uid': uid,
-                        'l0': skill_l0,
-                        't': skill_t,
+                        'l0': skill_l0,           # Skill-specific L0 (first encounter)
+                        't': skill_t,             # Skill-specific T (first encounter)
+                        'hist_l0': hist_l0,       # Historical average L0
+                        'hist_t': hist_t,         # Historical average T
                         'preds': skill_preds
                     })
             
@@ -186,13 +189,17 @@ def find_matching_quadrant_skills(skill_data, bkt_params, top_n=20):
     for skill_sequences in skill_data.values():
         for students in skill_sequences.values():
             for student in students:
-                all_l0.append(student['l0'])
-                all_t.append(student['t'])
+                all_l0.append(student['hist_l0'])
+                all_t.append(student['hist_t'])
     
     l0_med = np.median(all_l0)
     t_med = np.median(all_t)
     
     print(f"\nParameter Medians: L0={l0_med:.4f}, T={t_med:.4f}")
+    
+    # Track total candidates and violations
+    total_candidates = 0
+    ordering_violations = 0
     
     valid_skills = []
     all_quadrants = ["Low L0 / Low T", "Low L0 / High T", 
@@ -204,10 +211,11 @@ def find_matching_quadrant_skills(skill_data, bkt_params, top_n=20):
             if len(students) < 2:  # Need at least 2 students
                 continue
             
-            # Group students by quadrant for this specific response sequence
+            # Group students by quadrant using HISTORICAL AVERAGE L0 and T
             quadrants_for_seq = defaultdict(list)
             for student in students:
-                quad = get_quadrant_label(student['l0'], student['t'], l0_med, t_med)
+                # Use historical averages for quadrant classification
+                quad = get_quadrant_label(student['hist_l0'], student['hist_t'], l0_med, t_med)
                 quadrants_for_seq[quad].append(student)
             
             # Check if we have at least 2 quadrants with this exact sequence
@@ -216,23 +224,18 @@ def find_matching_quadrant_skills(skill_data, bkt_params, top_n=20):
             if len(present_quadrants) < 2:
                 continue
             
-            # Select one representative student per quadrant (closest to quadrant center)
+            # Select one representative student per quadrant
+            # NEW CRITERION: Select student whose skill-specific L0/T are CLOSEST to historical L0/T
+            # This ensures pedagogical consistency by selecting students where the model's
+            # skill-specific assessment aligns with their overall trajectory
             selected = {}
             for quad in present_quadrants:
                 candidates = quadrants_for_seq[quad]
                 
-                # Score by distance to quadrant center
-                if quad == "Low L0 / Low T":
-                    center_l0, center_t = l0_med * 0.5, t_med * 0.5
-                elif quad == "Low L0 / High T":
-                    center_l0, center_t = l0_med * 0.5, t_med * 1.5
-                elif quad == "High L0 / Low T":
-                    center_l0, center_t = l0_med * 1.5, t_med * 0.5
-                else:  # High L0 / High T
-                    center_l0, center_t = l0_med * 1.5, t_med * 1.5
-                
+                # Score by alignment between skill-specific and historical parameters
+                # Lower score = better alignment
                 best_student = min(candidates, 
-                                 key=lambda s: (s['l0'] - center_l0)**2 + (s['t'] - center_t)**2)
+                                 key=lambda s: (s['l0'] - s['hist_l0'])**2 + (s['t'] - s['hist_t'])**2)
                 best_student['response_seq'] = response_seq
                 selected[quad] = best_student
             
@@ -273,59 +276,39 @@ def find_matching_quadrant_skills(skill_data, bkt_params, top_n=20):
             # This produces clean, distinct lines rather than overlapping bands
             quality_score = pred_range / (1 + avg_within_var)
             
-            # Check pedagogical consistency
-            # Rule 1: High L0 should predict >= Low L0 (for same T level)
-            # Rule 2: High T should predict >= Low T (for same L0 level)
-            is_pedagogically_consistent = True
+            # Track this as a candidate
+            total_candidates += 1
             
-            # Check L0 ordering: High L0 >= Low L0 for same T
-            # Low T group
-            if "High L0 / Low T" in selected and "Low L0 / Low T" in selected:
-                high_l0_avg = np.mean(selected["High L0 / Low T"]['preds'])
-                low_l0_avg = np.mean(selected["Low L0 / Low T"]['preds'])
-                if high_l0_avg < low_l0_avg:
-                    is_pedagogically_consistent = False
+            # Helper to check if curve 1 is pedagogically superior to curve 2
+            def is_superior(q1, q2):
+                if q1 not in selected or q2 not in selected:
+                    return True
+                p1 = selected[q1]['preds']
+                p2 = selected[q2]['preds']
+                # Curve 1 must be better in average, start, and finish
+                # We use a tiny tolerance of 0.01 to allow for numeric precision issues
+                return (np.mean(p1) >= np.mean(p2) - 0.01 and 
+                        p1[0] >= p2[0] - 0.01 and 
+                        p1[-1] >= p2[-1] - 0.01)
+
+            is_pedagogically_ordered = True
+            # Check 1: Green >= Dark Blue >= Red (T dimension)
+            if not is_superior("High L0 / High T", "Low L0 / High T"): is_pedagogically_ordered = False
+            if not is_superior("Low L0 / High T", "Low L0 / Low T"): is_pedagogically_ordered = False
             
-            # High T group
-            if "High L0 / High T" in selected and "Low L0 / High T" in selected:
-                high_l0_avg = np.mean(selected["High L0 / High T"]['preds'])
-                low_l0_avg = np.mean(selected["Low L0 / High T"]['preds'])
-                if high_l0_avg < low_l0_avg:
-                    is_pedagogically_consistent = False
+            # Check 2: Green >= Light Blue >= Red (L0 dimension)
+            if not is_superior("High L0 / High T", "High L0 / Low T"): is_pedagogically_ordered = False
+            if not is_superior("High L0 / Low T", "Low L0 / Low T"): is_pedagogically_ordered = False
             
-            # Check T ordering: High T >= Low T for same L0
-            # Low L0 group
-            if "Low L0 / High T" in selected and "Low L0 / Low T" in selected:
-                high_t_avg = np.mean(selected["Low L0 / High T"]['preds'])
-                low_t_avg = np.mean(selected["Low L0 / Low T"]['preds'])
-                if high_t_avg < low_t_avg:
-                    is_pedagogically_consistent = False
+            # Check 3: Diagonal
+            if not is_superior("High L0 / High T", "Low L0 / Low T"): is_pedagogically_ordered = False
             
-            # High L0 group
-            if "High L0 / High T" in selected and "High L0 / Low T" in selected:
-                high_t_avg = np.mean(selected["High L0 / High T"]['preds'])
-                low_t_avg = np.mean(selected["High L0 / Low T"]['preds'])
-                if high_t_avg < low_t_avg:
-                    is_pedagogically_consistent = False
+            # If any check failed, increment violation counter
+            if not is_pedagogically_ordered:
+                ordering_violations += 1
             
-            # Check diagonal: High L0/High T should be >= Low L0/Low T
-            # This catches cases where only diagonal quadrants are present
-            if "High L0 / High T" in selected and "Low L0 / Low T" in selected:
-                high_high_avg = np.mean(selected["High L0 / High T"]['preds'])
-                low_low_avg = np.mean(selected["Low L0 / Low T"]['preds'])
-                if high_high_avg < low_low_avg:
-                    is_pedagogically_consistent = False
-            
-            # Check anti-diagonal: High L0/Low T should be >= Low L0/High T
-            # (High L0 dominates over High T when they conflict)
-            if "High L0 / Low T" in selected and "Low L0 / High T" in selected:
-                high_low_avg = np.mean(selected["High L0 / Low T"]['preds'])
-                low_high_avg = np.mean(selected["Low L0 / High T"]['preds'])
-                # This is less strict - we allow either ordering since L0 and T have opposite effects
-                # Skip this check for now as it's ambiguous
-            
-            # Only include pedagogically consistent skills
-            if not is_pedagogically_consistent:
+            # Only include skills with pedagogical ordering
+            if not is_pedagogically_ordered:
                 continue
             
             valid_skills.append({
@@ -362,8 +345,30 @@ def find_matching_quadrant_skills(skill_data, bkt_params, top_n=20):
     print(f"Unique skills after filtering: {len(unique_by_skill)}")
     print(f"Selecting top {top_n} ranked by line quality (high range, low within-variance)")
     
+    # Print selection methodology
+    print(f"\n{'='*80}")
+    print(f"ALIGNMENT-BASED STUDENT SELECTION + PEDAGOGICAL ORDERING FILTER")
+    print(f"{'='*80}")
+    print(f"Total candidates evaluated: {total_candidates}")
+    print(f"Pedagogical ordering violations: {ordering_violations}")
+    if ordering_violations > 0:
+        print(f"Violation rate: {100*ordering_violations/total_candidates:.1f}%")
+    print(f"\nSelection Methodology:")
+    print(f"  1. Quadrant classification: Based on HISTORICAL AVERAGE L0 and T")
+    print(f"  2. Student selection: Choose student whose SKILL-SPECIFIC L0/T")
+    print(f"     are CLOSEST to their historical averages")
+    print(f"  3. Robust Pedagogical ordering filter:")
+    print(f"     Checks Mean, First, and Last predictions for all quadrant pairs:")
+    print(f"     a) Green >= Dark Blue >= Red")
+    print(f"     b) Green >= Light Blue >= Red")
+    print(f"     c) Green >= Red (Diagonal)")
+    print(f"\nThis approach selects students where the model's skill-specific assessment")
+    print(f"aligns with their overall learning trajectory, then filters for pedagogical")
+    print(f"ordering to ensure monotonic predictions across learning situations.")
+    print(f"{'='*80}\n")
+    
     if len(unique_by_skill) > 0:
-        print(f"\nTop 5 skills by quality score:")
+        print(f"Top 5 skills by quality score:")
         for i, skill in enumerate(unique_by_skill[:5]):
             print(f"  {i+1}. Skill {skill['skill_id']}: "
                   f"Quality={skill['quality_score']:.4f}, Range={skill['pred_range']:.4f}, "
@@ -389,7 +394,7 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
     quadrant_colors = {
         "Low L0 / Low T": "#d62728",      # Red - Low L0 / Low T
         "Low L0 / High T": "#1f77b4",     # Blue - Low L0 / High T  
-        "High L0 / Low T": "#ff7f0e",     # Orange - High L0 / Low T
+        "High L0 / Low T": "#87CEEB",     # Light Blue - High L0 / Low T (changed from orange)
         "High L0 / High T": "#2ca02c"     # Green - High L0 / High T
     }
     
@@ -458,7 +463,7 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
         ax.tick_params(axis='both', which='major', labelsize=7)
         
         # Always show legend with student info
-        ax.legend(loc='best', fontsize=6, framealpha=0.95)
+        ax.legend(loc='upper right', fontsize=6, framealpha=0.95)
         
         ax.grid(True, alpha=0.2)
     
@@ -538,7 +543,7 @@ def plot_individual_skill(skill_data, bkt_params, output_dir, quadrant_colors, q
     ax.set_xticks(np.arange(0, max_len, 1))
     ax.set_ylabel("P(Correct)", fontsize=12, fontweight='bold')
     ax.set_ylim(-0.05, 1.05)
-    ax.legend(loc='best', fontsize=11, framealpha=0.95, ncol=2)
+    ax.legend(loc='upper right', fontsize=11, framealpha=0.95, ncol=2)
     ax.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
@@ -551,9 +556,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", type=str, required=True,
                        help="Path to experiment fold directory (e.g., fold_0_955042)")
-    parser.add_argument("--output_dir", type=str, default="examples/validation/results",
+    parser.add_argument("--output_dir", type=str, default="examples/validation/results_exp801184",
                        help="Directory to save output plots")
-    parser.add_argument("--top_n", type=int, default=20,
+    parser.add_argument("--top_n", type=int, default=12,
                        help="Number of skills to include in mosaic")
     args = parser.parse_args()
     
