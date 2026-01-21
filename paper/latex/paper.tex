@@ -85,7 +85,7 @@
 
 %=================================================================
 % Full title of the paper (Capitalized)
-\Title{Grounded Interpretability in Deep Knowledge Tracing via Theory-Guided Transformers}
+\Title{Theory-Based Interpretability in Deep Knowledge Tracing via Grounded Transformers}
 
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
@@ -124,7 +124,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 \abstract{Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain pedagogically grounded to educational constructs while incorporating rich temporal dependencies learned by the model. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to concepts defined by an intrinsically interpretable reference model, gTransformer offers a pedagogically interpretable alternative for data-driven personalization.} 
 
 % Keywords
-\keyword{deep knowledge tracing; grounded interpretability; theory-guided transformers; bayesian knowledge tracing; educational data analysis; personalized learning} 
+\keyword{deep knowledge tracing; theory-based interpretability; grounded transformers; bayesian knowledge tracing; educational data analysis; personalized learning} 
 
 % The fields PACS, MSC, and JEL may be left empty or commented out if not applicable
 %\PACS{J0101}
@@ -202,15 +202,15 @@ We evaluate our approach across four primary dimensions. First, we demonstrate p
 Our research is guided by three primary research questions:
 
 \begin{itemize}
-\item RQ1: \textit{Grounded Interpretability Through Theory-Guided Transformers}
+\item RQ1: \textbf{Theory-Based Interpretability Through Grounded Transformers}
 
 Can deep knowledge tracing models achieve state-of-the-art predictive performance while providing interpretability grounded in established educational theory? Specifically, can we design a transformer architecture that produces pedagogically meaningful parameters (initial mastery, learning rates) aligned with Bayesian Knowledge Tracing principles, enabling predictions through interpretable logic?
 
-\item RQ2: \textit{Comparison of Supervised, Interpretable and BKT predictions}
+\item RQ2: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
 
 How do the metrics of the supervised, interpretable, and BKT predictions compare? What is the cost of interpretability in terms of AUC? How much predictive gain do the interpretable grounded predictions achieve compared to traditional BKT?
 
-\item RQ3: \textit{Practical Value for Educational Decision-Making}
+\item RQ3: \textbf{Practical Value for Educational Decision-Making}
 
 How can the high capacity of gTransformer to handle behavioral nuances and longitudinal context-awareness be leveraged to provide practical value for educational decision-making? Specifically, how do these high-granularity diagnostics enable more precise, student-centered personalization and instructional interventions that surpass the limitations of population-level Markovian models?
 \end{itemize}
@@ -251,9 +251,29 @@ The second approach to ante-hoc interpretability involves the integration of sid
 
 In contrast to these models, whose diagnostic utility is often restricted by the specificity and scope of the single underlying theory serving as side information \citep{bai2024survey}, gTransformer offers a more flexible framework. It can be grounded in any established theoretical reference, effectively decoupling the expressiveness of deep learning from the constraints of specific pedagogical models.
 
-\subsection{Informed Machine Learning}
+\subsection{Informed Machine Learning} \label{sec_iml}
 
-The integration of domain knowledge into deep learning has been broadly explored through conceptual frameworks such as Theory-Guided Data Science \citep{karpatne2017theory}, Physics-Informed Machine Learning \citep{karniadakis2021physics}, and Informed Machine Learning (IML) \citep{vonrueden2021informed}. In this context, gTransformer operationalizes IML principles within the field of Knowledge Tracing, aligning with the taxonomic dimensions of information flow characterized by \citet{vonrueden2021informed}, as shown in Figure~\ref{fig_info_flow}. 
+The integration of domain knowledge into deep learning has been broadly explored through conceptual frameworks such as Theory-Guided Data Science (TGDS) \citep{karpatne2017theory}, Physics-Informed Machine Learning (PIML) \citep{karniadakis2021physics}, and Informed Machine Learning (IML) \citep{vonrueden2021informed}. 
+
+TGDS emerged as a paradigm to address the limitations of purely data-driven ``black-box'' models, which may produce results inconsistent with established domain knowledge \citep{karpatne2017theory}. By explicitly requiring scientific consistency, TGDS integrates theoretical insights into the learning process to ensure that models remain scientifically plausible. This integration is typically achieved via theory-guided learning—where domain-specific invariants serve as regularization terms—or through the design of neural architectures that respect the structural constraints of the problem \citep{karpatne2017theory, jia2021physics}. A prominent implementation of this paradigm is Physics-Informed Neural Networks (PINNs) \citep{raissi2019physics, karniadakis2021physics}, which embed differential equations directly into the loss function, forcing the model to satisfy theoretical constraints while learning from empirical data. 
+
+A widely adopted technique to enforce this consistency involves incorporating domain-specific constraints into the loss function as follows \citep{karpatne2017theory, willard2022integrating}: 
+\begin{equation} \label{eq_theory_loss}
+\mathcal{L} = \mathcal{L}_{TRN}(Y_{true}, Y_{pred}) + \gamma \mathcal{L}_{THEORY}(Y_{pred}),
+\end{equation}
+where $\mathcal{L}_{TRN}$ measures the supervised error between true labels $Y_{true}$ and predicted labels $Y_{pred}$, while $\mathcal{L}_{THEORY}$ penalizes violations of theoretical constraints, weighted by the hyperparameter $\gamma$. 
+
+\citet{vonrueden2021informed} formalized these efforts into an IML taxonomy, which categorizes knowledge integration by its source, representation, and the stage of the machine learning pipeline where it is incorporated. Knowledge can be represented as algebraic equations, logical rules, or probabilistic priors, and integrated at various stages: within the training data, through the design of tailored architectures, or by influencing the model's final output. 
+
+We operationalized these taxonomic dimensions in gTransformer by integrating theoretical priors from an interpretable BKT model into the input layer and employing a multi-objective loss function to anchor the model's predictions to BKT parameters. However, while most IML approaches focus on enhancing predictive performance \citep{vonrueden2021informed}, gTransformer aims to achieve theory-based interpretability by grounding estimations in sound pedagogical concepts, as detailed in \cref{sec_iml_gtransformer}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{The gTransformer Model} \label{sec_arch}
+
+\subsection{Theory-Guided Information Flow} \label{sec_iml_gtransformer}
+
+Figure~\ref{fig_info_flow} illustrates the information flow through the system, mapped to the taxonomic dimensions of IML as defined in \cite{vonrueden2021informed}.
 
 \begin{figure}[h]
     \centering
@@ -262,22 +282,15 @@ The integration of domain knowledge into deep learning has been broadly explored
     \label{fig_info_flow}
 \end{figure}
 
-These dimensions can be explained as follows: 
+Within the context of our architecture, these dimensions are operationalized as follows: 
 
 \begin{itemize}
-    \item \textbf{Prior Knowledge}: Simulation results from a reference model serve as the source of theoretical information, frequently in the form of parameter values representing pedagogical constructs.
-    \item \textbf{Training Data}: The student interaction history is enriched with these theoretical priors to guide the learning process.
-    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture provides the relational inductive bias required for grounding, i.e. to align latent representations with concepts given by the reference model. 
-    \item \textbf{Learning Algorithm}: Optimization is driven by a multi-objective loss function that looks after a proper trade-off between predictive performance and interpretability.
-    \item \textbf{Final Hypothesis}: The solution is the set of weights learned during the training process that drive latent representations; from these representations, we can extract parameter values aligned with those given by the reference model.
+    \item \textbf{Prior Knowledge}: The source of theoretical information comprises simulation results from a reference model, typically expressed as parameter values that represent foundational pedagogical constructs.
+    \item \textbf{Training Data}: Empirical student interaction histories are augmented with theoretical priors to guide the learning process toward pedagogically valid states.
+    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture is employed to provide the inductive biases necessary for grounding internal latent representations within the conceptual framework of the reference model.
+    \item \textbf{Learning Algorithm}: The model is optimized via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical interpretability.
+    \item \textbf{Final Hypothesis}: A set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted.
 \end{itemize}
-
-In contrast to many IML-based approaches that primarily focus on enhancing predictive performance \citep{vonrueden2021informed}, gTransformer leverages informed learning to provide intrinsic pedagogical interpretability. In the section \ref{sec_arch}, we will explain in detail what prior knowledge is used for this study, how it is integrated into the model, and how it is used to obtain the final output. 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{The gTransformer Model} \label{sec_arch}
 
 
 \subsection{Architecture}
@@ -340,7 +353,7 @@ This design enables a pedagogical interpretation of the model's behavior:
 
 \subsection{Loss Functions} \label{sec_loss}
 
-The optimization of gTransformer is governed by a multi-objective loss function designed to ensure that the high-capacity Transformer architecture remains aligned with pedagogical principles. Following established patterns in theory-guided machine learning \citep{karpatne2017theory, willard2020integrating}, we incorporate theoretical constraints as grounding terms in the optimization objective. This approach steers the model to learn latent representations that are both predictive of student outcomes and semantically consistent with established educational constructs. The total loss $\mathcal{L}_{total}$ is defined as a weighted sum of supervised, grounding, and regularization components:
+The optimization of gTransformer is governed by a multi-objective loss function designed to ensure that the high-capacity Transformer architecture remains aligned with pedagogical principles. Following established patterns in theory-guided machine learning \citep{karpatne2017theory, willard2022integrating}, we incorporate theoretical constraints as grounding terms in the optimization objective. This approach steers the model to learn latent representations that are both predictive of student outcomes and semantically consistent with established educational constructs. The total loss $\mathcal{L}_{total}$ is defined as a weighted sum of supervised, grounding, and regularization components:
 
 \begin{equation} \label{eq_loss}
     \mathcal{L}_{total} = \lambda_{sup} \mathcal{L}_{sup} + \lambda_{ref} \mathcal{L}_{ref} + \lambda_{probe} \mathcal{L}_{probe} + \lambda_{reg} \mathcal{L}_{reg}
