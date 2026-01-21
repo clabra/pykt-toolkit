@@ -267,9 +267,9 @@ These dimensions can be explained as follows:
 \begin{itemize}
     \item \textbf{Prior Knowledge}: Simulation results from a reference model serve as the source of theoretical information, frequently in the form of parameter values representing pedagogical constructs.
     \item \textbf{Training Data}: The student interaction history is enriched with these theoretical priors to guide the learning process.
-    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture provides the relational inductive bias required to align latent representations with pedagogical constructs.
-    \item \textbf{Learning Algorithm}: Optimization is driven by a multi-objective loss function that grounds the system on the parameter values of the reference model.
-    \item \textbf{Final Hypothesis}: The internal representations are projected into enriched parameter values that remain semantically grounded to the constructs provided by the reference model.
+    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture provides the relational inductive bias required for grounding, i.e. to align latent representations with concepts given by the reference model. 
+    \item \textbf{Learning Algorithm}: Optimization is driven by a multi-objective loss function that looks after a proper trade-off between predictive performance and interpretability.
+    \item \textbf{Final Hypothesis}: The solution is the set of weights learned during the training process that drive latent representations; from these representations, we can extract parameter values aligned with those given by the reference model.
 \end{itemize}
 
 In contrast to many IML-based approaches that primarily focus on enhancing predictive performance \citep{vonrueden2021informed}, gTransformer leverages informed learning to provide intrinsic pedagogical interpretability. In the section \ref{sec_arch}, we will explain in detail what prior knowledge is used for this study, how it is integrated into the model, and how it is used to obtain the final output. 
@@ -305,49 +305,37 @@ The core architecture of gTransformer, illustrated in Figure~\ref{gtransformer_a
 
 In standard educational datasets, such as ASSISTments 2009, ASSISTments 2015, Algebra 2005, and others \citep{liu2022pykt}, student interactions are recorded at the level of specific questions or tasks, each of which is associated with one or more underlying concepts or knowledge components. This structure reflects the fact that proficiency in a concept (e.g., the Pythagorean Theorem) is acquired through interactions with a diverse range of tasks. While all tasks involving a concept share the same semantic core, they differ in their specific manifestations—most notably in their intrinsic difficulty or complexity. Therefore, an effective representation must capture both the shared identity of the concept and the unique deviation of the specific task.
 
-In Transformer-based models we can operationalize this principle representing the tasks as embedding vectors: 
+In Transformer-based models, we operationalize this principle by representing tasks as high-dimensional embedding vectors: 
 
-\begin{equation}
-    x' = c + u \cdot d \quad \text{(Task)}
+\begin{equation} \label{eq_x_prime}
+    x' = c + u \cdot d \quad \text{(Task Embedding)}
 \end{equation}
 
+In this formulation, $c$ is the \textit{Concept Base}, representing the invariant semantic identity of the knowledge component. The scalar $u$ is the \textit{Problem Difficulty} ($u_q$), and $d$ is the \textit{Difficulty Variation Axis} ($d_c$). This Rasch-inspired decomposition ensures that the embedding $x'$ captures both the general concept and the specific task complexity.
 
-In this formulation, $c$ acts as the \textit{Concept Base}, a vector representing the invariant semantic identity of the concept while the vector $d$ represents the learnable \textit{Question Variation Axis}, defining the specific direction of the "transition gap". The scalar $u$ serves as the \textit{Relational Magnitude}, representing the question's specific relative difficulty compared to other questions involving the same concept. Consequently, rather than encode simple embeddings for every question, we encode the vector sum of two distinct components with clear semantic meaning: the base \textit{concept identity} and the \textit{difficulty shift}. 
+Similarly, we represent student interactions as:
 
-In a similar way, we can operationalize the interactions between questions and students as embedding vectors: 
-
-\begin{equation}
-    y' = e + u \cdot (f + d) \quad \text{(Interaction History)}
+\begin{equation} \label{eq_y_prime}
+    y' = e + u \cdot f \quad \text{(Interaction History Embedding)}
 \end{equation}
 
-Here $e$ represents the \textit{Interaction Base}, which is a combined representation of concept c and the binary outcome r (correct/incorrect), while $f$ represents the \textit{Interaction Variation Axis}, which is similar to the Question Variation Axis ($d_c$) but is specific to the interaction between a question and a student. The inclusion of $d$ also here ensures that the difficulty vectors are consistent across both questions ($x'$) and interactions ($y'$).
+where $e$ is the \textit{Interaction Base} (encoding concept and response outcome), and $f$ is the \textit{Interaction Variation Axis}. These embeddings $x'$ and $y'$ serve as the primary queries and values for the Transformer's attention mechanism.
 
-Extending this rationale, we can enrich the $x'$ embeddings by integrating additional components with explicit semantic significance. Specifically, by adopting Bayesian Knowledge Tracing (BKT) as a reference model, we can incorporate vectors corresponding to its core theoretical parameters—Initial Knowledge ($L_0$) and Learning Rate ($T$)—thereby grounding the deep representation in established pedagogical constructs. 
+Rather than using theoretical parameters as static inputs, gTransformer treats them as \textit{grounded objectives} whose values are dynamically estimated from the Transformer's context. To achieve this, we define a set of \textit{Theoretical Bases} ($p_{L_0}^{\text{base}}, p_{T}^{\text{base}}$) and \textit{Semantic Axes} ($\mathbf{k}_c, \mathbf{v}_c$) for each concept. The final individualized parameters are estimated at each timestep $t$ as follows:
 
-To get individualized values for these parameters, we decompose them into population-level bases and student-specific deviations: 
-
-\begin{equation} \label{eq_lc}
-    l_c = L_{0} + k_s \cdot d_{k} \quad \text{(Personalized Initial Knowledge)}
+\begin{equation} \label{eq_p_l0}
+    p_{L_0} = \sigma \left( p_{L_0}^{\text{base}} + (z_t \cdot \mathbf{k}_c) + k_s \right)
 \end{equation}
-\begin{equation} \label{eq_tc}
-    t_c = T + v_s \cdot d_{v} \quad \text{(Personalized Learning Rate)}
+\begin{equation} \label{eq_p_t}
+    p_{T} = \sigma \left( p_{T}^{\text{base}} + (z_t \cdot \mathbf{v}_c) + v_s \right)
 \end{equation}
 
+where $p_{L_0}^{\text{base}}$ and $p_{T}^{\text{base}}$ are the theoretical priors initialized from the BKT reference model; $z_t \cdot \mathbf{k}_c$ and $z_t \cdot \mathbf{v}_c$ represent the \textit{Contextual Projection}, where the latent state of the student is projected onto the semantic dimensions of knowledge mastery and acquisition rate; and $k_s, v_s$ are the \textit{Student Personalization Scalars}, capturing stable student-level traits that persist beyond specific interactions.
 
-where $l_c$ is the personalized initial knowledge for concept, $t_c$ is the personalized learning rate for concept, $L_{0}$ and $T$ are the population-level base embeddings, $d_{k}$ and $d_{v}$ are the learnable variation axes vectors (similar to the difficulty axis $d$), and $k_s$ and $v_s$ are the scalar student-specific deviations learned for each individual.
-
-Finally, we include these vectors to get the individualized input embeddings for the encoder and decoder components of the Transformer: 
-\begin{equation}
-    x' = (c + u \cdot d) - l_c \quad \text{(Individualized Task)}
-\end{equation}
-\begin{equation}
-    y' = (e + u \cdot (f + d)) + t_c \quad \text{(Individualized Interaction History)}
-\end{equation}
-
-We can interpret these individualized embeddings as follows:
+This design enables a pedagogical interpretation of the model's behavior: 
 \begin{itemize}
-    \item \textit{Transition Gap} ($x'$): Represents the individualized difficulty of a task by offsetting objective item difficulty with the student's proficiency ($l_c$). Through this relational lens, task demands are normalized against the individual's baseline, effectively isolating the residual 'gap' that the student must bridge to achieve mastery.
-    \item \textit{Transition Momentum} ($y'$): Captures individualized momentum by modulating observed outcomes with the learning rate ($t_c$). This allows the encoder to process interactions within the context of the student's acquisition rate, enabling the model to differentiate between students who share similar performance histories but different acquisition rates.
+    \item \textit{Personalized Mastery} ($p_{L_0}$): Adjusts the theoretical prior by observing the student's behavior history, identifying cases where a student's prior knowledge significantly deviates from the population mean.
+    \item \textit{Contextual Learning Rate} ($p_{T}$): Modulates the acquisition speed based on the longitudinal signature of the student's interactions, distinguishing between fast learners and those requiring more intensive support even when their current performance is identical.
 \end{itemize}
 
 \subsection{Loss Functions} \label{sec_loss}
@@ -355,7 +343,7 @@ We can interpret these individualized embeddings as follows:
 The optimization of gTransformer is governed by a multi-objective loss function designed to ensure that the high-capacity Transformer architecture remains aligned with pedagogical principles. Following established patterns in theory-guided machine learning \citep{karpatne2017theory, willard2020integrating}, we incorporate theoretical constraints as grounding terms in the optimization objective. This approach steers the model to learn latent representations that are both predictive of student outcomes and semantically consistent with established educational constructs. The total loss $\mathcal{L}_{total}$ is defined as a weighted sum of supervised, grounding, and regularization components:
 
 \begin{equation} \label{eq_loss}
-    \mathcal{L}_{total} = \lambda_{sup} \mathcal{L}_{sup} + \lambda_{ref} \mathcal{L}_{ref} + \sum_{k \in \{L_0, T\}} \lambda_k \mathcal{L}_k + \lambda_{probe} \mathcal{L}_{probe} + \lambda_{reg} \mathcal{L}_{reg}
+    \mathcal{L}_{total} = \lambda_{sup} \mathcal{L}_{sup} + \lambda_{ref} \mathcal{L}_{ref} + \lambda_{probe} \mathcal{L}_{probe} + \lambda_{reg} \mathcal{L}_{reg}
 \end{equation}
 
 \subsubsection{Supervised Alignment ($\mathcal{L}_{sup}$)}
@@ -365,7 +353,7 @@ The primary objective $\mathcal{L}_{sup}$ uses standard Binary Cross-Entropy (BC
 \end{equation}
 
 \subsubsection{Theoretical Grounding and Alignment}
-To satisfy the criteria for Pedagogical Interpretability, gTransformer anchors both its internal representations and its diagnostic behavior to BKT logic through specialized grounding terms.
+To satisfy the criteria for Pedagogical Interpretability, gTransformer anchors both its internal representations and its diagnostic behavior to BKT logic through two specialized grounding terms.
 
 \textbf{Interpretable Fidelity ($\mathcal{L}_{ref}$)}: To ensure the pedagogical parameters drive meaningful predictions, the model enforces behavioral alignment through the \textit{Interpretable Output}. $\mathcal{L}_{ref}$ is calculated as the BCE between the BKT-logic predictions ($p_{ref}$) and the ground truth labels:
 \begin{equation}
@@ -373,7 +361,6 @@ To satisfy the criteria for Pedagogical Interpretability, gTransformer anchors b
 \end{equation}
 By penalizing the predictive deviance of the logic-constrained head, this grounding loss ensures that the inferred $p_{L_0}$ and $p_{T}$ factors retain their intended pedagogical utility.
 
-\textbf{Representational Grounding ($\mathcal{L}_{L_0}, \mathcal{L}_{T}$)}: These losses utilize Mean Squared Error (MSE) to anchor the student-level individualized factors ($p_{L_0}, p_{T}$) directly to the theoretical base parameters ($p_{L_0}^{\text{base}}, p_{T}^{\text{base}}$) from the reference model. This ensures that the latent shifts remain centered around established educational constructs.
 
 \textbf{Diagnostic Probing Loss ($\mathcal{L}_{probe}$)}: Finally, we implement an "Active Grounding" mechanism via linear probes. $\mathcal{L}_{probe}$ measures the MSE between dedicated probing heads (linear mappings from $z_t$) and the theoretical targets. This verifies that the Transformer's context vector explicitly encodes the targeted pedagogical signatures:
 \begin{equation}
