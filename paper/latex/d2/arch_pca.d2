@@ -216,20 +216,8 @@ Section4: {
     }
   }
   
-  StudentParams: {
-    label: "Student-Specific\n(optional: n_uid > 0)\ns_gap[uid], s_vel[uid]\n\nR^1 (scalar bias)"
-    shape: rectangle
-    style: {
-        fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
-      stroke-dash: 5
-      bold: false
-    }
-  }
-  
   FinalParams: {
-    label: "Final Parameters\np_L0 = sigma(Base + Context [+ Student])\np_T = sigma(Base + Context [+ Student])"
+    label: "Final Parameters\np_L0 = sigma(Base + Context)\np_T = sigma(Base + Context)"
     shape: rectangle
     style: {
       fill: "#d4e6f1"
@@ -241,7 +229,6 @@ Section4: {
   
   TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
   ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
-  StudentParams -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80; stroke-dash: 5 } }
 }
 
 # ============================================================================
