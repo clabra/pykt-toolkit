@@ -136,11 +136,11 @@ def run_causal_sweep(model, loader, device, axis_vec, axis_name="L0", n_batches=
                 
                 # Pass through output logic
                 if not hasattr(model, 'knowledge_axis_emb'):
-                    # Standard AKT Prediction
+                    # Supervised Head Prediction
                     output = model.out(z_prime).squeeze(-1)
                     preds = torch.sigmoid(output)
                 else: 
-                    # Grounded BKT Logic
+                    # Interpretable Logic
                     k_axis = model.knowledge_axis_emb(c)
                     v_axis = model.velocity_axis_emb(c)
                     l0_base = model.l0_base_emb(c).squeeze(-1)

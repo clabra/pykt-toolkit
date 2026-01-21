@@ -125,9 +125,9 @@ def find_twin_pairs(model, test_loader, bkt_params, n_pairs=4, n_students=6000):
         # Find pairs with maximum contrast in cognitive parameters
         for i, student_a in enumerate(students):
             for student_b in students[i+1:]:
-                # We want: Student A (Low L0, Low T) vs Student B (High L0, High T)
-                if student_a['p_l0'] < 0.3 and student_a['p_t'] < 0.3:
-                    if student_b['p_l0'] > 0.7 and student_b['p_t'] > 0.4:
+                # Student A (Bottom Half L0, Bottom Half T) vs Student B (Top Half L0, Top Half T)
+                if student_a['p_l0'] < 0.65 and student_a['p_t'] < 0.1:
+                    if student_b['p_l0'] > 0.7 and student_b['p_t'] > 0.12:
                         # CRITICAL: Ensure predictions are consistent with profiles
                         # Student B (high profile) should have higher mean predictions than Student A (low profile)
                         mean_pred_a = np.mean(student_a['preds'])

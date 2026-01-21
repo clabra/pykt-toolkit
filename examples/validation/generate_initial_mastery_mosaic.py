@@ -126,10 +126,10 @@ def find_twin_pairs(model, test_loader, bkt_params, n_pairs=4, n_students=6000):
         for i, student_a in enumerate(students):
             for student_b in students[i+1:]:
                 # We want: Student A (Low L0) vs Student B (High L0), but similar T
-                # Low L0: < 0.3, High L0: > 0.7, Similar T: difference < 0.2
-                if student_a['p_l0'] < 0.3 and student_b['p_l0'] > 0.7:
+                # Low L0: < 0.4, High L0: > 0.6, Similar T: difference < 0.15
+                if student_a['p_l0'] < 0.4 and student_b['p_l0'] > 0.6:
                     t_diff = abs(student_a['p_t'] - student_b['p_t'])
-                    if t_diff < 0.2:  # Similar learning rates
+                    if t_diff < 0.15:  # Similar learning rates
                         # CRITICAL: Ensure predictions are consistent with profiles
                         # Student B (high profile) should have higher mean predictions than Student A (low profile)
                         mean_pred_a = np.mean(student_a['preds'])

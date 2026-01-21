@@ -855,6 +855,34 @@ def main():
                                         if full_script.exists():
                                             cmd = [sys.executable, str(full_script), "--exp_dir", str(fold_dir), "--output_dir", str(plot_dir)]
                                             subprocess.run(cmd, check=False)
+                                    
+                                    # Generate per-skill prediction alignment heatmaps
+                                    print(f"[PLOT] Generating per-skill alignment heatmaps for {dataset}...")
+                                    alignment_scripts = [
+                                        ("examples/validation/generate_skill_alignment_heatmap.py", {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir),
+                                            "--min_interactions": "8",
+                                            "--top_skills": "50",
+                                            "--top_students": "30"
+                                        }),
+                                        ("examples/validation/analyze_skill_alignment_detailed.py", {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir),
+                                            "--min_samples": "100"
+                                        })
+                                    ]
+                                    
+                                    for script_path, script_args in alignment_scripts:
+                                        full_script = Path(PROJECT_ROOT) / script_path
+                                        if full_script.exists():
+                                            cmd = [sys.executable, str(full_script)]
+                                            for arg_name, arg_val in script_args.items():
+                                                cmd.extend([arg_name, arg_val])
+                                            try:
+                                                subprocess.run(cmd, check=False, cwd=PROJECT_ROOT)
+                                            except Exception as e:
+                                                print(f"[WARN] Failed to run {script_path}: {e}")
                 
                 print(f"[INFO] All plots saved to: {plot_dir}")
 

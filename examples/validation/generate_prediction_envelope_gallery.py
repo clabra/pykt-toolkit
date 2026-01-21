@@ -51,7 +51,7 @@ def find_diverse_cases(model, loader, device, bkt_params, n_cases=9):
     1. Narrow envelope (high agreement)
     2. Wide envelope (high disagreement)
     3. p_sup > p_ref (neural more optimistic)
-    4. p_ref > p_sup (BKT logic more optimistic)
+    4. p_ref > p_sup (interpretable more optimistic)
     5. Dynamic p_sup, flat p_ref
     6. Both dynamic
     7. Both converge over time
@@ -62,8 +62,8 @@ def find_diverse_cases(model, loader, device, bkt_params, n_cases=9):
     case_criteria = {
         'Narrow Envelope\n(High Agreement)': {'score': -1.0, 'data': None, 'metric': 'min_envelope'},
         'Wide Envelope\n(High Disagreement)': {'score': -1.0, 'data': None, 'metric': 'max_envelope'},
-        'p_sup Optimistic\n(Neural > BKT)': {'score': -1.0, 'data': None, 'metric': 'psup_higher'},
-        'p_ref Optimistic\n(BKT > Neural)': {'score': -1.0, 'data': None, 'metric': 'pref_higher'},
+        'p_sup Optimistic\n(Supervised > Interpretable)': {'score': -1.0, 'data': None, 'metric': 'psup_higher'},
+        'p_ref Optimistic\n(Interpretable > Supervised)': {'score': -1.0, 'data': None, 'metric': 'pref_higher'},
         'Dynamic p_sup\nStable p_ref': {'score': -1.0, 'data': None, 'metric': 'psup_volatile'},
         'Both Dynamic\n(Covarying)': {'score': -1.0, 'data': None, 'metric': 'both_dynamic'},
         'Converging\nEnvelope': {'score': -1.0, 'data': None, 'metric': 'converging'},
@@ -224,13 +224,13 @@ def plot_envelope_gallery(cases, bkt_params, output_path):
         ax.plot(x, bkt_p, color='black', linestyle=':', linewidth=2, alpha=0.7, 
                 label="BKT Model", zorder=2, marker='x', markersize=4)
         
-        # p_ref trajectory (interpretable, BKT logic from gTransformer)
+        # p_ref trajectory (interpretable)
         ax.plot(x, p_ref, color='steelblue', linewidth=2, alpha=0.85, 
-                linestyle='--', label='p_ref (gT-BKT)', zorder=3, marker='s', markersize=4)
+                linestyle='--', label='$p_{ref}$ (Interpretable)', zorder=3, marker='s', markersize=4)
         
-        # p_sup trajectory (neural head, accurate)
+        # p_sup trajectory (supervised)
         ax.plot(x, p_sup, color='darkblue', linewidth=2.5, alpha=0.9, 
-                label='p_sup (Neural)', zorder=4, marker='o', markersize=5)
+                label='$p_{sup}$ (Supervised)', zorder=4, marker='o', markersize=5)
         
         # Calculate envelope stats for subtitle
         env_width = np.mean(np.abs(p_sup - p_ref))
@@ -246,7 +246,7 @@ def plot_envelope_gallery(cases, bkt_params, output_path):
         ax.grid(True, alpha=0.2)
         ax.tick_params(labelsize=7)
         
-    plt.suptitle("Prediction Envelope Gallery: Diverse Behaviors of p_sup vs p_ref", 
+    plt.suptitle("Prediction Envelope Gallery: Diverse Behaviors of $p_{sup}$ vs $p_{ref}$", 
                  fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout(rect=[0.01, 0.01, 0.99, 0.99])
     plt.savefig(output_path, dpi=300, bbox_inches='tight')

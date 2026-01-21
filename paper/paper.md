@@ -76,36 +76,13 @@ Classification proposed in @fantozzi2024explainability employs the following cla
 
 ### Theory-Guided Deep Learning
 
-Theory-Guided Data Science (TGDS) is a paradigm introduced by @karpatne2017theory that leverages the wealth of scientific knowledge (theory) to improve the effectiveness of data science models in scientific disciplines.
+Theory-Guided Data Science (TGDS) emerged as a paradigm to overcome the limitations of purely data-driven "black-box" models, which often fail to generalize to unseen scenarios and may produce results inconsistent with established domain knowledge [@karpatne2017theory]. By explicitly requiring scientific consistency, TGDS integrates domain knowledge into the learning process to ensure that models are not only predictive but also scientifically plausible. This integration is typically achieved through theory-guided learning, where domain-specific invariants act as regularization terms in the loss function, or through the design of neural architectures that inherently respect the structural constraints of the scientific problem [@karpatne2017theory; @jia2020physics].
 
-The most relevant method for our approach is based in the use of some variant of an augmented loss function:
+A prominent methodological advancement in this field is Physics-Informed Machine Learning (PIML), particularly Physics-Informed Neural Networks (PINNs) [@karniadakis2021physics; @raissi2017physics]. PINNs embed domain knowledge, such as differential equations, directly into the neural network's loss function, forcing the model to satisfy theoretical constraints while learning from empirical data. This hybrid approach utilizes multi-objective optimization to reconcile data fitting with theoretical adherence, often employing a weighted sum of supervised and domain-specific loss terms: $L = L_{SUP} + \lambda L_{THEORY}$ [@willard2020integrating]. In educational contexts, parallel principles have began to appear in models such as the TGEL-Transformer and PINN-based Knowledge Tracing, which fuse cognitive theories with deep architectures to enable robust and explainable performance prediction [@gong2025tgel; @nasir2025pinns].
 
-```math
-    Loss = Loss_{SUP}(Ytrue,Ypred) + \lambda R(W) +\gamma Loss_{PHY}(Ypred)
-```
+Informed Machine Learning (IML) further formalizes these concepts through a comprehensive taxonomy that categorizes knowledge integration by its source, representation, and the stage of the pipeline where it is incorporated [@vonrueden2021informed]. Knowledge can be represented as algebraic equations, logical rules, or probabilistic priors, and integrated at various stages: within the training data, through the design of tailored architectures, or by influencing the model's final output. This framework emphasizes the use of relational inductive biases to shape representations from the outset, allowing models to learn meaningful features even in data-scarce regimes [@battaglia2018relational; @elhamod2023understanding].
 
-Where $Loss_{SUP}$ is the supervised training loss, $Loss_{PHY}$ is the physics loss, $R(W)$ is a regularization term, and $\lambda$ and $\gamma$ are hyperparameters.
-
-See `bibliography/theory-guided/theory_guided.md` for background on theory-guided learning. Some relevant papers are:
-
-- @karpatne2017theory was a foundational work defining Theory-Guided Deep Learning (TGDL). It covers:
-
-  - **Motivation:** Purely data-driven models (black-box DL) often fail to generalize to unseen scenarios (e.g., changing climate conditions) and may produce results inconsistent with known physical laws.
-  - **Core Concept:** TGDS introduces scientific consistency as an explicit requirement. It integrates domain knowledge into the learning process to ensure models are scientifically plausible and interpretable.
-  - **Approaches:**
-  - **Theory-guided Learning:** Incorporating physical laws (e.g., conservation of mass/energy) as regularization terms in the loss function.
-  - **Theory-guided Architecture:** Designing neural network architectures that respect domain structure (e.g., connectivity based on physical interactions).
-  - **Theory-guided Refinement:** Post-processing predictions to enforce consistency.
-
-- @vonrueden2021informed reviews the field including how algebraic equations and inequalities can be integrated into learning algorithms via additional loss terms or, more generally, via constrained problem formulation.
-
-- @willard2023theory reviews the field including various ways to integrate theory into machine learning including loss functions, initialization (using the physics-based model’s simulated data to pre-train the ML model), physics-guided architecture, and hybrid Physics-ML Models
-
-- @nasir2025understanding focuses on the mechanics of training deep networks using theoretical constraints:
-
-  - **Physics-Informed Neural Networks (PINNs):** A dominant approach where differential equations (PDEs) are embedded into the loss function.
-  - **Optimization:** Discusses challenges in optimizing these hybrid loss functions (balancing data loss vs. physics loss) and methods like meta-learning or evolutionary strategies to find optimal architectures.
-  - **Design:** Argues for designing networks that are inherently constrained by theory rather than just regularized by it.
+Parallel to these hybrid approaches, gTransformer operationalizes IML principles to bridge the gap between deep learning capacity and pedagogical interpretability. Similar to the hybrid models in TGDS, gTransformer integrates theoretical priors from a Bayesian Knowledge Tracing (BKT) reference model into its input layer and employs a multi-objective loss function that balances predictive accuracy with theoretical grounding. By projecting high-dimensional latent states onto semantic axes defined by established educational constructs, gTransformer implements a form of representational grounding that ensures its internal logic remains structurally anchored to human-understandable principles, thereby transcending the opaque nature of standard black-box models.
 
 ### Theory-Guided Loss Functions
 

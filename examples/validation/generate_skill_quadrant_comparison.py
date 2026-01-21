@@ -444,7 +444,7 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
             
             # BKT baseline for this student's sequence with markers (more visible)
             bkt_preds = calculate_bkt_trajectory(bkt_params, skill_id, response_seq)
-            bkt_label = f"id: {student['uid']} - BKT"
+            bkt_label = f"id: {student['uid']} (Classical BKT)"
             ax.plot(x, bkt_preds, color='#555555', linestyle=':', linewidth=2.0, 
                    alpha=0.6, zorder=0, label=bkt_label)
             for i, p in enumerate(bkt_preds):
@@ -528,7 +528,7 @@ def plot_individual_skill(skill_data, bkt_params, output_dir, quadrant_colors, q
         
         # BKT baseline (gray for all, since they're identical for same sequence) with markers
         bkt_preds = calculate_bkt_trajectory(bkt_params, skill_id, response_seq)
-        bkt_label = f"id: {student['uid']} - BKT"
+        bkt_label = f"id: {student['uid']} (Classical BKT)"
         ax.plot(x, bkt_preds, color='gray', linestyle='--', linewidth=2, 
                alpha=0.5, zorder=0, label=bkt_label)
         for i, p in enumerate(bkt_preds):

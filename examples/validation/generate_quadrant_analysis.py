@@ -84,8 +84,8 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
             # Predictions are at positions [1:] corresponding to responses at positions [1:]
             p_l0 = outputs['p_l0'][:,1:].cpu().numpy()
             p_t = outputs['p_t'][:,1:].cpu().numpy()
-            preds = outputs['predictions'][:,1:].cpu().numpy()  # p_sup (neural head)
-            ref_preds = outputs['reference_preds'][:,1:].cpu().numpy()  # p_ref (BKT logic)
+            preds = outputs['predictions'][:,1:].cpu().numpy()  # p_sup (supervised head)
+            ref_preds = outputs['reference_preds'][:,1:].cpu().numpy()  # p_ref (interpretable logic)
             
             for b in range(c.shape[0]):
                 m_b = sm[b].cpu().numpy()
@@ -232,7 +232,7 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
                             best_cases[q_key]['data'] = {
                                 'uid': uid, 'skill': skill, 'seq': cur_r[s_mask], 
                                 'preds': cur_preds[s_mask],  # p_sup (neural)
-                                'ref_preds': cur_ref_preds[s_mask],  # p_ref (BKT logic)
+                                'ref_preds': cur_ref_preds[s_mask],  # p_ref (interpretable)
                                 'p_l0': mean_l0,  # Use actual latent parameter
                                 'p_t': mean_t
                             }
@@ -256,7 +256,7 @@ def find_quadrant_cases(model, loader, device, bkt_params, n_students=6000):
 def plot_quadrant_mosaic(quadrants, bkt_params, output_path):
     """
     Plots a 2x2 mosaic of the cognitive archetypes.
-    Shows both p_sup (neural) and p_ref (interpretable BKT logic) trajectories.
+    Shows both $p_{sup}$ (supervised) and $p_{ref}$ (interpretable) trajectories.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 11))
     axes = axes.flatten()
@@ -284,23 +284,23 @@ def plot_quadrant_mosaic(quadrants, bkt_params, output_path):
         ax.fill_between(x, p_ref, p_sup, color='royalblue', alpha=0.2, 
                         label='Prediction Envelope', zorder=1)
         
-        # p_ref trajectory (interpretable, BKT logic)
+        # p_ref trajectory (interpretable)
         ax.plot(x, p_ref, color='steelblue', linewidth=2, alpha=0.9, 
-                linestyle='--', label='p_ref (Interpretable BKT Logic)', zorder=2)
+                linestyle='--', label='$p_{ref}$ (Interpretable)', zorder=2)
         for i, p in enumerate(p_ref):
             marker = 'o' if p > 0.5 else 'x'
             ax.plot(i, p, marker=marker, color='steelblue', markersize=5, zorder=2)
         
-        # p_sup trajectory (neural head, more accurate)
+        # p_sup trajectory (supervised)
         ax.plot(x, p_sup, color='royalblue', linewidth=2.5, alpha=0.9, 
-                label='p_sup (Neural Head)', zorder=3)
+                label='$p_{sup}$ (Supervised)', zorder=3)
         for i, p in enumerate(p_sup):
             marker = 'o' if p > 0.5 else 'x'
             ax.plot(i, p, marker=marker, color='royalblue', markersize=6, zorder=3)
 
         # BKT Baseline (Markovian)
         ax.plot(x, bkt_p, color='gray', linestyle=':', linewidth=1.5, alpha=0.6, 
-                label="Classical BKT (Markovian)", zorder=1)
+                label="Classical BKT", zorder=1)
         for i, p in enumerate(bkt_p):
             marker = 'o' if p > 0.5 else 'x'
             ax.plot(i, p, marker=marker, color='gray', markersize=4, alpha=0.6, zorder=1)
@@ -312,7 +312,7 @@ def plot_quadrant_mosaic(quadrants, bkt_params, output_path):
         ax.legend(loc='lower right', fontsize=8, framealpha=0.9)
         ax.grid(True, alpha=0.2)
         
-    plt.suptitle("GTransformer Prediction Envelope: Interpretable (p_ref) vs. Accurate (p_sup)", 
+    plt.suptitle("Prediction Envelope: Interpretable ($p_{ref}$) vs. Supervised ($p_{sup}$)", 
                  fontsize=16, fontweight='bold', y=0.98)
     plt.tight_layout(rect=[0.02, 0.02, 0.98, 0.95])
     plt.savefig(output_path, dpi=300)

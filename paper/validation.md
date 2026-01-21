@@ -1,8 +1,8 @@
-# Validation Strategy for GTransformer
+# Validation Strategy for gTransformer
 
 ## Overview
 
-This document outlines a **rigorous yet straightforward** validation strategy for demonstrating that GTransformer achieves interpretable knowledge tracing through theory-guided grounding. The approach follows standard practices in educational data mining and interpretable machine learning, avoiding unnecessarily complex approaches while maintaining scientific rigor suitable for top-tier publication.
+This document outlines a **rigorous yet straightforward** validation strategy for demonstrating that gTransformer achieves interpretable knowledge tracing through theory-guided grounding. The approach follows standard practices in educational data mining and interpretable machine learning, avoiding unnecessarily complex approaches while maintaining scientific rigor suitable for top-tier publication.
 
 ## Design Philosophy
 
@@ -81,7 +81,7 @@ python3 examples/validation/validate_parameter_recovery.py \
 ![Mastery Recovery](../examples/validation/results/recovery_l0_probe.png)
 
 </div>
-**Explanation**: This scatter plot compares the $P(L_0)$ (Initial Mastery) parameters predicted by the GTransformer linear probe against the "Oracle" targets calculated by traditional BKT on the ASSIST2009 dataset. 
+**Explanation**: This scatter plot compares the $P(L_0)$ (Initial Mastery) parameters predicted by the gTransformer linear probe against the "Oracle" targets calculated by traditional BKT on the ASSIST2009 dataset. 
 - **Interpretation**: Each point represents a skill-student interaction. The red line indicates the linear regression fit, while the dashed gray line represents the theoretical ideal ($y=x$).
 - **Demonstration**: The high Pearson $r$ (> 0.7) demonstrates that the model's latent space has successfully encoded the concept of "Initial Mastery" in a linearly readable format.
 
@@ -148,7 +148,7 @@ We quantify interpretability costs through two complementary metrics:
 - Interpretability Gap: 0.1086 (transparent cost quantification)
 - Improvement over Minimalist: +0.0022 AUC with better stability (std 0.0012 vs 0.0015)
 
-This demonstrates that GTransformer achieves **interpretability for free** at its optimal architecture (2 blocks, 8 heads, probing-only grounding), with orthogonal initialization and diversity loss further improving both performance and stability.
+This demonstrates that gTransformer achieves **interpretability for free** at its optimal architecture (2 blocks, 8 heads, probing-only grounding), with orthogonal initialization and diversity loss further improving both performance and stability.
 
 #### 2.1 Component Necessity
 
@@ -253,9 +253,9 @@ python3 examples/validation/analyze_latent_space.py \
 ![Elbow Plot Comparison](../examples/validation/results/elbow_plot_comparison.png)
 
 </div>
-**Explanation**: This Elbow Plot compares the cumulative variance explained by Principal Components for GTransformer (Blue) versus the Baseline (Grey) on ASSIST2009.
+**Explanation**: This Elbow Plot compares the cumulative variance explained by Principal Components for gTransformer (Blue) versus the Baseline (Grey) on ASSIST2009.
 - **Interpretation**: Both models reach the 90% variance threshold with a similar number of components.
-- **Demonstration**: Confirming that grounding maintains a parsimonious latent representation in GTransformer.
+- **Demonstration**: Confirming that grounding maintains a parsimonious latent representation in gTransformer.
 
 **Reproduction Command**:
 ```bash
@@ -323,13 +323,13 @@ We compare how different grounding configurations impact the resolution of stude
 
 **Situational Diagnostics vs. Student Labeling**
 
-The discovery that **Minimalist Grounding** achieves the highest variance ($0.3494$) without student IDs shifts the pedagogical paradigm of the GTransformer:
+The discovery that **Minimalist Grounding** achieves the highest variance ($0.3494$) without student IDs shifts the pedagogical paradigm of the gTransformer:
 
 1. **The Dominance of Behavior**: The model does not need a "Student Profile" (embedding) to identify rapid vs. slow learners. Instead, the Transformer's attention mechanism observes the *temporal signature* of the student's history (e.g., how quickly errors transition to stable success).
 2. **Beyond Trait Theory**: Traditional BKT and its personalized variants often treat learning rate as a fixed student trait. Our results suggest that learning rates are better characterized as **situational**. A student isn't "slow"; they are currently in a "slow learning situation" relative to the specific skill context.
 3. **Personalization as Refinement**: While student embeddings (Exp 948799) provide a slight refinement in predictive accuracy, the heavy lifting of diagnostic profiling is performed by the **longitudinal context**.
 
-**Key Pedagogical Finding**: This validates that the GTransformer provides **High-Resolution Diagnostics for Cold-Start Students**. Because it relies on behavioral signatures rather than fixed IDs, it can identify a "Rapid Progress" learner within just a few interactions, enabling immediate acceleration without waiting for a large historical profile to be built.
+**Key Pedagogical Finding**: This validates that the gTransformer provides **High-Resolution Diagnostics for Cold-Start Students**. Because it relies on behavioral signatures rather than fixed IDs, it can identify a "Rapid Progress" learner within just a few interactions, enabling immediate acceleration without waiting for a large historical profile to be built.
 
 **Archetype Distribution (Minimalist Model - Exp 533154)**:
 - **Low Mastery / Low Pacing** (58%): Foundational support and cautious scaffolding needed.
@@ -347,14 +347,14 @@ This section demonstrates how gTransformer adapts predictions based on learning 
 
 #### 5.5.1 Learning Situation Analysis (2x2 Mosaic)
 
-We examine four learning situations characterized by different combinations of Initial Mastery ($P_{L0}$) and Learning Rate ($P_T$), comparing GTransformer's dual predictions against the non-personalized Markovian BKT baseline.
+We examine four learning situations characterized by different combinations of Initial Mastery ($P_{L0}$) and Learning Rate ($P_T$), comparing gTransformer's dual predictions against the non-personalized Markovian BKT baseline.
 
 **Dual Prediction Framework**:
-- **p_sup (Neural Head)**: Direct neural network predictions optimized for maximum accuracy
-- **p_ref (BKT Logic)**: Interpretable predictions using grounded parameters ($P_{L0}$, $P_T$) through BKT equations
-- **Prediction Envelope**: The shaded band between p_ref and p_sup visualizes the **interpretability-accuracy tradeoff**—showing educators both the transparent reasoning (p_ref) and the most accurate forecast (p_sup)
+- **$p_{sup}$ (Supervised Head)**: Direct neural network predictions optimized for maximum accuracy
+- **$p_{ref}$ (Interpretable Logic)**: Interpretable predictions using grounded parameters ($P_{L0}$, $P_T$) through BKT equations
+- **Prediction Envelope**: The shaded band between $p_{ref}$ and $p_{sup}$ visualizes the **interpretability-accuracy tradeoff**—showing educators both the transparent reasoning ($p_{ref}$) and the most accurate forecast ($p_{sup}$)
 
-This dual-trajectory visualization demonstrates that GTransformer provides educators with both:
+This dual-trajectory visualization demonstrates that gTransformer provides educators with both:
 1. **Interpretable diagnostics** (p_ref) that explain *why* the model makes each prediction using BKT parameters
 2. **Accurate forecasts** (p_sup) that maximize predictive performance for high-stakes decisions
 
@@ -366,15 +366,15 @@ The narrow envelope (typically 5-15 percentage points) proves that interpretabil
 #### Visual Proof:
 <div style="width: 50%;">
 
-![Cognitive Quadrants](../examples/validation/results_exp801184_quadrants_ranked_fixed/skill_quadrant_comparison_mosaic.png)
+![Cognitive Quadrants](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/cognitive_quadrants_mosaic.png)
 
 </div>
 
 **The Four Learning Situations**:
 
-1. **Low $P_{L0}$ / Low $P_T$ (Top-Left: Foundational Support Needed)**: This situation represents a learner with limited prior knowledge and gradual learning progress. The prediction envelope shows how GTransformer maintains appropriate caution throughout the sequence. The p_ref trajectory (interpretable) provides transparent BKT-based reasoning for low confidence, while p_sup (accurate) refines these estimates using contextual patterns. When successes occur (green bars), both trajectories interpret them carefully rather than immediately assuming mastery, helping educators identify when learners need sustained foundational support before advancing to more complex material.
+1. **Low $P_{L0}$ / Low $P_T$ (Top-Left: Foundational Support Needed)**: This situation represents a learner with limited prior knowledge and gradual learning progress. The prediction envelope shows how gTransformer maintains appropriate caution throughout the sequence. The p_ref trajectory (interpretable) provides transparent BKT-based reasoning for low confidence, while p_sup (accurate) refines these estimates using contextual patterns. When successes occur (green bars), both trajectories interpret them carefully rather than immediately assuming mastery, helping educators identify when learners need sustained foundational support before advancing to more complex material.
 
-2. **Low $P_{L0}$ / High $P_T$ (Top-Right: Responsive Learning)**: This situation shows a learner starting with limited initial knowledge but demonstrating high learning responsiveness. Both prediction trajectories begin with realistic low expectations and exhibit sharp upward adjustments following successful interactions, reflecting the high learning rate parameter. The envelope width illustrates where interpretable BKT logic (p_ref) differs from neural refinements (p_sup), with p_sup capturing more nuanced contextual patterns while p_ref maintains theoretical transparency. These dynamic prediction changes—characterized by noticeable jumps in both trajectories—enable educators to recognize when learners are ready for appropriately paced advancement.
+2. **Low $P_{L0}$ / High $P_T$ (Top-Right: Responsive Learning)**: This situation shows a learner starting with limited initial knowledge but demonstrating high learning responsiveness. Both prediction trajectories begin with realistic low expectations and exhibit sharp upward adjustments following successful interactions, reflecting the high learning rate parameter. The envelope width illustrates where interpretable BKT logic (p_ref) differs from supervised refinements (p_sup), with p_sup capturing more nuanced contextual patterns while p_ref maintains theoretical transparency. These dynamic prediction changes—characterized by noticeable jumps in both trajectories—enable educators to recognize when learners are ready for appropriately paced advancement.
 
 3. **High $P_{L0}$ / Low $P_T$ (Bottom-Left: Consolidation Phase)**: This situation represents a learner with strong existing knowledge and stable performance. The prediction envelope maintains high confidence throughout, with both p_ref and p_sup appropriately interpreting occasional errors (red bars) within the context of overall strong performance. The narrow envelope demonstrates strong agreement between interpretable and accurate predictions in stable mastery situations. This prevents unnecessary remediation triggered by temporary slips and supports appropriate placement at challenging levels that match the learner's demonstrated capabilities.
 
@@ -396,8 +396,7 @@ To regenerate the Cognitive Quadrants Mosaic from Experiment 801184:
 ```bash
 export PYTHONPATH=$PYTHONPATH:.
 python3 examples/validation/generate_quadrant_analysis.py \
-    --exp_dir experiments/20260119_110013_orthogonal_diversity_801184/gtransformer/assist2009/fold_0_955042 \
-    --output_dir examples/validation/results_exp801184
+    --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
 ```
 
 **Note**: This command uses fold_0 as the representative fold. The script analyzes predictions and grounded BKT parameters from the specified experiment directory to generate the 2x2 mosaic showing how p_sup (neural), p_ref (BKT logic), and traditional BKT predictions compare across four distinct learning situations (Low/High L0 × Low/High T).
@@ -406,11 +405,11 @@ python3 examples/validation/generate_quadrant_analysis.py \
 
 ### Section 6: Baseline Comparisons and Dual Evaluation
 
-**Research Question**: Does GTransformer achieve real interpretability through BKT logic predictions (p_ref) while maintaining competitive accuracy?
+**Research Question**: Does gTransformer achieve real interpretability through BKT logic predictions (p_ref) while maintaining competitive accuracy?
 
 #### 6.1 Dual Evaluation Protocol
 
-We evaluate GTransformer using a **dual prediction framework** that measures both neural performance and interpretable reasoning:
+We evaluate gTransformer using a **dual prediction framework** that measures both neural performance and interpretable reasoning:
 
 - **p_sup (Supervised Predictions)**: Direct neural head predictions optimized for accuracy
 - **p_ref (Reference Predictions)**: BKT logic predictions using grounded parameters ($p_{L0}$, $p_T$, fixed $G$, $S$)
@@ -430,9 +429,9 @@ Interpretability Gap = AUC(p_sup) - AUC(p_ref)
 |:---|:---|---:|---:|:---:|---:|---:|
 | **BKT** | Symbolic | - | 0.610 | ✅ Full | - | ~4/skill |
 | **AKT (Baseline)** | Transformer | 0.783 | - | ❌ None | - | ~1.2M |
-| **GTransformer (Aligned)** | Aligned Grounding | **0.778** | **0.683** | ✅ Full | **0.095** | ~1.2M |
-| **GTransformer (Minimal)** | Minimalist Grounding | **0.779** | **0.676** | ✅ Full | **0.103** | ~1.2M |
-| **GTransformer (Optimized)** | Orth Init + Diversity | **0.781** ± 0.001 | **0.673** ± 0.0002 | ✅ Full | **0.109** | ~1.2M |
+| **gTransformer (Aligned)** | Aligned Grounding | **0.778** | **0.683** | ✅ Full | **0.095** | ~1.2M |
+| **gTransformer (Minimal)** | Minimalist Grounding | **0.779** | **0.676** | ✅ Full | **0.103** | ~1.2M |
+| **gTransformer (Optimized)** | Orth Init + Diversity | **0.781** ± 0.001 | **0.673** ± 0.0002 | ✅ Full | **0.109** | ~1.2M |
 
 **Key Findings**:
 1. **Real interpretability validated**: p_ref predictions through BKT logic demonstrate that grounded parameters are pedagogically functional, not just correlated
@@ -447,7 +446,7 @@ Interpretability Gap = AUC(p_sup) - AUC(p_ref)
 **Research Question**: Can baseline transformers be made interpretable after training?
 
 We compare two interpretability approaches:
-- **Active Grounding (GTransformer)**: Interpretability designed into architecture from training start
+- **Active Grounding (gTransformer)**: Interpretability designed into architecture from training start
 - **Post-hoc Probing (Baseline)**: Linear probes fitted on frozen baseline transformer representations
 
 | Probe Target | Grounded (Active) | Baseline (Post-hoc) | Difference |
@@ -528,7 +527,7 @@ cd examples
 
 **5.5 Context-Aware Diagnostics**
 - 2x2 Cognitive Archetypes and Learning Situation Analysis
-- Finding: GTransformer provides individualized, context-aware diagnostics
+- Finding: gTransformer provides individualized, context-aware diagnostics
 
 **5.6 Baseline Comparisons**
 - Three-way comparison table (BKT vs. AKT vs. Proposed)
@@ -536,13 +535,13 @@ cd examples
 
 ## Context-Aware Diagnostics Plots
 
-This section demonstrates how GTransformer provides context-aware diagnostics by comparing predictions for different students working on the same skills **with identical response sequences**. This is the critical test: when students have the exact same response pattern, traditional BKT makes identical predictions (since it only uses skill parameters and the response sequence), while GTransformer adapts predictions based on the learning context—specifically the student's inferred initial mastery ($P_{L0}$) and learning rate ($P_T$) parameters.
+This section demonstrates how gTransformer provides context-aware diagnostics by comparing predictions for different students working on the same skills **with identical response sequences**. This is the critical test: when students have the exact same response pattern, traditional BKT makes identical predictions (since it only uses skill parameters and the response sequence), while gTransformer adapts predictions based on the learning context—specifically the student's inferred initial mastery ($P_{L0}$) and learning rate ($P_T$) parameters.
 
 ### Skill-Level Quadrant Comparison
 
 We selected 12 skills from the test set where we can identify students from at least 2 different learning situations (quadrants defined by Low/High $P_{L0}$ × Low/High $P_T$) **who have identical response sequences** for that skill. For each skill, we show:
 
-- **GTransformer predictions (solid lines)**: Context-aware **per-skill predictions** that adapt based on student parameters ($P_{L0}$, $P_T$), shown in different colors for each quadrant
+- **gTransformer predictions (solid lines)**: Context-aware **per-skill predictions** that adapt based on student parameters ($P_{L0}$, $P_T$), shown in different colors for each quadrant
 - **BKT baseline (dotted lines)**: Traditional BKT predictions using only skill-level parameters (L0, T, S, G). **All dotted lines overlap** because students have identical response sequences and BKT is Markovian
 - **Response bars (bottom)**: Light green (correct) or light coral (incorrect) bars showing the actual student responses (identical for all students in each subplot)
 
@@ -569,14 +568,14 @@ The skill and student selection follows a three-stage process using **alignment-
   - Lower score = better alignment between skill-specific and global parameters
   - This ensures pedagogical consistency by selecting students where the model's skill-specific assessment aligns with their overall trajectory
 - **Inclusion criterion**: Keep only skill-sequence combinations where students from at least 2 different quadrants have the **identical response sequence**
-  - This ensures BKT produces identical predictions (Markovian property) while GTransformer can differentiate based on learning context
+  - This ensures BKT produces identical predictions (Markovian property) while gTransformer can differentiate based on learning context
 
 **Stage 3: Skill Ranking and Selection**
 - For each skill-sequence combination, calculate:
   - **Prediction range**: Maximum difference between average predictions across quadrants
   - **Within-quadrant variance**: Average variance of predictions within each quadrant (measures line "tightness")
   - **Quality score**: `pred_range / (1 + avg_within_var)` - balances visual separation with line clarity
-  - **GTransformer accuracy**: Fraction of correct binary predictions (threshold 0.5)
+  - **gTransformer accuracy**: Fraction of correct binary predictions (threshold 0.5)
   - **BKT accuracy**: Fraction of correct BKT predictions using skill-level parameters
   - **Accuracy advantage**: GT_accuracy - BKT_accuracy
 - **Ranking criterion**: Sort skills by quality score (descending), then accuracy advantage (descending), then sequence length (descending)
@@ -600,9 +599,9 @@ The skill and student selection follows a three-stage process using **alignment-
 - **Historical average for quadrant classification**: Represents the student's overall learning trajectory before encountering the skill
   - Provides richer context than single-timestep classification
   - Enables comparison of students with different overall learning patterns
-- **Quality score as primary ranking**: Prioritizes skills where GTransformer predictions **diverge significantly** across learning contexts (high range) while maintaining **clean, distinct lines** (low within-quadrant variance), maximizing both visual clarity and interpretability
+- **Quality score as primary ranking**: Prioritizes skills where gTransformer predictions **diverge significantly** across learning contexts (high range) while maintaining **clean, distinct lines** (low within-quadrant variance), maximizing both visual clarity and interpretability
 - **Accuracy advantage as secondary criterion**: Validates that high-quality visualizations also provide performance value
-- The identical response constraint proves GTransformer uses learning context, not just answer patterns
+- The identical response constraint proves gTransformer uses learning context, not just answer patterns
 
 **Reproduction Command**:
 ```bash
@@ -615,14 +614,14 @@ python3 examples/validation/generate_skill_quadrant_comparison.py \
 
 The visualization demonstrates that:
 1. **Critical insight**: All students shown in each subplot have the **exact same response sequence**, so BKT produces **identical predictions** (all dotted lines overlap)
-2. **Context sensitivity**: Despite identical responses, GTransformer produces **different predictions** (solid lines diverge) based on the student's learning quadrant (defined by their historical learning trajectory before the skill)
+2. **Context sensitivity**: Despite identical responses, gTransformer produces **different predictions** (solid lines diverge) based on the student's learning quadrant (defined by their historical learning trajectory before the skill)
 3. **Alignment-based consistency**: Students are selected whose skill-specific parameters align with their historical averages, ensuring pedagogically sound comparisons
 4. **Robust filtering**: Triple-check filtering (Mean, First, Last) ensures 100% curve-level consistency (12/12 skills pedagogically sound)
-5. **Beyond Markovian modeling**: GTransformer differentiates students not by what they answered, but by **how they learned**—their inferred learning parameters ($P_{L0}$, $P_T$)
+5. **Beyond Markovian modeling**: gTransformer differentiates students not by what they answered, but by **how they learned**—their inferred learning parameters ($P_{L0}$, $P_T$)
 
 <div style="width: 100%;">
 
-![Skill Quadrant Comparison Mosaic](../examples/validation/results_exp801184/skill_quadrant_comparison_mosaic.png)
+![Skill Quadrant Comparison Mosaic](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/skill_quadrant_comparison_mosaic.png)
 
 </div>
 
@@ -635,21 +634,21 @@ The visualization demonstrates that:
 - **Average prediction range**: 0.3696 (37.0 percentage points between quadrants)
 - **Top quality**: Skill 15 shows quality=0.5373, range=0.5416 (54.2 percentage point separation)
 
-**Interpretation**: The 4×3 mosaic shows 12 skills ranked by prediction contrastiveness (how much GTransformer predictions diverge across learning contexts). Each subplot shows students with **identical response sequences** but different learning contexts:
-- Each colored solid line represents GTransformer's predictions for a student in that quadrant
+**Interpretation**: The 4×3 mosaic shows 12 skills ranked by prediction contrastiveness (how much gTransformer predictions diverge across learning contexts). Each subplot shows students with **identical response sequences** but different learning contexts:
+- Each colored solid line represents gTransformer's predictions for a student in that quadrant
 - Legend format: `id: [student_id] (L0_level, T_level)` where L0_level ∈ {Low L0, High L0} and T_level ∈ {Low T, High T}
 - **All dotted lines in each subplot overlap** because they represent BKT predictions for the **same response sequence** (BKT is Markovian)
-- **Key demonstration**: The divergence of solid lines (GTransformer) while dotted lines overlap (BKT) proves that GTransformer uses learning context beyond just the response pattern
+- **Key demonstration**: The divergence of solid lines (gTransformer) while dotted lines overlap (BKT) proves that gTransformer uses learning context beyond just the response pattern
 - Students are differentiated by their **historical learning trajectory** (averaged P_{L0}, P_T across all previous interactions before encountering this skill)
 - This enables personalized predictions: two students who answer identically receive different predictions based on their learning history
-- **Performance validation**: GTransformer's context-aware approach achieves substantially higher accuracy than BKT's Markovian predictions on these challenging skills
+- **Performance validation**: gTransformer's context-aware approach achieves substantially higher accuracy than BKT's Markovian predictions on these challenging skills
 
 **Reproduction Command**:
 ```bash
 export PYTHONPATH=$PYTHONPATH:.
 python3 examples/validation/generate_skill_quadrant_comparison.py \
     --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
-    --output_dir examples/validation/results_exp801184_quadrants_quality \
+    --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots \
     --top_n 12
 ```
 
@@ -670,4 +669,79 @@ python3 examples/validation/generate_skill_quadrant_comparison.py \
   - Historical average method: 291 combinations, 66 skills (220% and 136% increases)
   - Contrastiveness-based selection: 284 combinations, 68 unique skills, avg std=0.1914
   - **Quality-based selection**: 273 combinations, 66 unique skills, avg quality=0.3803, avg range=0.3938, avg max_std=0.243 (optimizes both separation and clarity)
+
+## Per Experiment Plots: Optimized gTransformer (Exp 801184)
+
+This section provides a centralized gallery of all validation visualizations generated for the optimized gTransformer configuration (**Orthogonal Initialization + Diversity Loss**). These plots objectively demonstrate the model's personalization capacity, theoretical alignment, and diagnostic granularity.
+
+### 1. Prediction Envelope Mosaic (Cognitive Archetypes)
+![Cognitive Quadrants](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/cognitive_quadrants_mosaic.png)
+- **Explanation**: A 2x2 grid representing the four learning situations (Low/High $P_{L0}$ × Low/High $P_T$). It visualizes the **Prediction Envelope** between the supervised ($p_{sup}$) and interpretable ($p_{ref}$) trajectories. The narrow band demonstrates that neural accuracy refinements preserve the BKT pedagogical structure while providing high-resolution forecasts.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_quadrant_analysis.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
+
+### 2. Context-Aware Skill Mosaic (Non-Markovian Personalization)
+![Skill Quadrant Comparison Mosaic](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/skill_quadrant_comparison_mosaic.png)
+- **Explanation**: A 4x3 mosaic of diverse skills featuring student groups with **identical response sequences**. While the classical BKT baseline (dotted lines) produces overlapping identical predictions, gTransformer (solid lines) produces divergent, context-aware predictions. This visually proves that the model leverages longitudinal learning history (temporal signatures) rather than just the immediate response Markovian state.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_skill_quadrant_comparison.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots \
+      --top_n 12
+  ```
+
+### 3. Initial Mastery Mosaic (Placement Resolution)
+![Initial Mastery Mosaic](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/initial_mastery_mosaic.png)
+- **Explanation**: Isolates the effect of **Initial Mastery** ($P_{L0}$) by comparing students with identical response sequences and similar learning rates. It demonstrates how gTransformer personalizes the starting baseline (placement) according to the student's inferred prior knowledge, even before the first skill-specific interaction.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_initial_mastery_mosaic.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
+
+### 4. Personalization Mosaic (Cumulative Profile Divergence)
+![Personalization Mosaic](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/personalization_mosaic.png)
+- **Explanation**: Compares extreme behavioral archetypes (Low Profile vs. High Profile) responding to identical tasks. It quantifies the model's total personalization capacity by showing how the prediction gap widens or narrows based on the inferred pedagogical parameters, providing a "Personalization Stress-Test."
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_personalization_mosaic.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
+
+### 5. Prediction Alignment Heatmap (Global Concordance)
+![Alignment Heatmap](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/skill_alignment_heatmap.png)
+- **Explanation**: A large-scale analysis of global **Concordance** (1 - MAE) between Supervised ($p_{sup}$) and Interpretable ($p_{ref}$) heads. The discrete color zones categorize student-skill interactions into "Excellent Alignment" (Green) where grounding is perfect, down to "Supervised Divergence" (Red), where neural refinements are most active.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_skill_alignment_heatmap.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
+
+### 6. Per-Skill Alignment Distribution
+![Per-Skill Concordance](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/per_skill_concordance.png)
+- **Explanation**: Ranks curriculum skills by their "Interpretability Score." It provides a diagnostic view for curriculum designers, identifying which concepts are perfectly modeled by BKT-logic grounding and which concepts require higher neural expressiveness to capture student complexity.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/analyze_skill_alignment_detailed.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
+
+### 7. Prediction Envelope Gallery (Dynamic Interpretability Cost)
+![Envelope Gallery](../experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots/prediction_envelope_gallery.png)
+- **Explanation**: A 3x3 gallery of diverse behavioral situations (Converging, Diverging, Oscillating). It documents how the "Interpretability Gap" (the distance between $p_{sup}$ and $p_{ref}$) evolves over time, providing transparency into when the model relies on pedagogical theory versus neural feature extraction.
+- **Reproduction**:
+  ```bash
+  python3 examples/validation/generate_prediction_envelope_gallery.py \
+      --exp_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/gtransformer/assist2009/fold_0_955042 \
+      --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
+  ```
 
