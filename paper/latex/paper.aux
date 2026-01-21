@@ -112,12 +112,12 @@
 \newlabel{eq_y_prime@cref}{{[equation][3][]3}{[1][8][]8}}
 \newlabel{eq_p_l0}{{4}{8}{Embeddings}{equation.3.4}{}}
 \newlabel{eq_p_l0@cref}{{[equation][4][]4}{[1][8][]8}}
+\newlabel{eq_p_t}{{5}{8}{Embeddings}{equation.3.5}{}}
+\newlabel{eq_p_t@cref}{{[equation][5][]5}{[1][8][]8}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Functional layers of the gTransformer Architecture: (1) \textit  {Input Components}: student interaction data enriched with BKT reference parameters; (2) \textit  {Individualized Embeddings}: task-specific and student-specific latent transformations ($x', y'$); (3) \textit  {Contextual Transformer Architecture}: encoder-decoder synthesis of longitudinal learning history into a context vector ($z_t$); (4) \textit  {Grounded Parameter Projection}: additive composition of theoretical bases and contextual displacements to derive pedagogical factors ($p_{know}, p_{rate}$); (5) \textit  {Dual Prediction Heads}: high-accuracy supervised forecasts ($p_{sup}$) and theoretically-consistent interpretable predictions ($p_{ref}$); and (6) \textit  {Multi-Objective Training Pipeline}: alignment of neural representations with pedagogical theory via supervised ($\mathcal  {L}_{sup}$), interpretability ($\mathcal  {L}_{ref}$), and probing ($\mathcal  {L}_{probe}$) losses.\relax }}{9}{figure.caption.2}\protected@file@percent }
 \newlabel{gtransformer_arch}{{2}{9}{Functional layers of the gTransformer Architecture: (1) \textit {Input Components}: student interaction data enriched with BKT reference parameters; (2) \textit {Individualized Embeddings}: task-specific and student-specific latent transformations ($x', y'$); (3) \textit {Contextual Transformer Architecture}: encoder-decoder synthesis of longitudinal learning history into a context vector ($z_t$); (4) \textit {Grounded Parameter Projection}: additive composition of theoretical bases and contextual displacements to derive pedagogical factors ($p_{know}, p_{rate}$); (5) \textit {Dual Prediction Heads}: high-accuracy supervised forecasts ($p_{sup}$) and theoretically-consistent interpretable predictions ($p_{ref}$); and (6) \textit {Multi-Objective Training Pipeline}: alignment of neural representations with pedagogical theory via supervised ($\mathcal {L}_{sup}$), interpretability ($\mathcal {L}_{ref}$), and probing ($\mathcal {L}_{probe}$) losses.\relax }{figure.caption.2}{}}
 \newlabel{gtransformer_arch@cref}{{[figure][2][]2}{[1][8][]9}}
 \citation{karpatne2017theory,willard2022integrating}
-\newlabel{eq_p_t}{{5}{10}{Embeddings}{equation.3.5}{}}
-\newlabel{eq_p_t@cref}{{[equation][5][]5}{[1][8][]10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Loss Functions}{10}{subsection.3.4}\protected@file@percent }
 \newlabel{sec_loss}{{3.4}{10}{Loss Functions}{subsection.3.4}{}}
 \newlabel{sec_loss@cref}{{[subsection][4][3]3.4}{[1][10][]10}}
@@ -129,6 +129,7 @@
 \citation{liu2022pykt}
 \citation{feng2009addressing}
 \citation{feng2009addressing}
+\citation{stamper2010bridge}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}Regularization and Structural Diversity}{11}{subsubsection.3.4.3}\protected@file@percent }
 \newlabel{sec_reg}{{3.4.3}{11}{Regularization and Structural Diversity}{subsubsection.3.4.3}{}}
 \newlabel{sec_reg@cref}{{[subsubsection][3][3,4]3.4.3}{[1][11][]11}}
@@ -139,7 +140,6 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Datasets}{11}{subsection.4.2}\protected@file@percent }
 \newlabel{sec_dataset}{{4.2}{11}{Datasets}{subsection.4.2}{}}
 \newlabel{sec_dataset@cref}{{[subsection][2][4]4.2}{[1][11][]11}}
-\citation{stamper2010bridge}
 \citation{wang2020instructions}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Results and Discussion}{12}{section.5}\protected@file@percent }
 \newlabel{sec_results}{{5}{12}{Results and Discussion}{section.5}{}}
@@ -151,9 +151,9 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Interpretability Validation (RQ1)}{12}{subsection.5.2}\protected@file@percent }
 \newlabel{sec_validation}{{5.2}{12}{Interpretability Validation (RQ1)}{subsection.5.2}{}}
 \newlabel{sec_validation@cref}{{[subsection][2][5]5.2}{[1][12][]12}}
+\newlabel{eq_i1}{{11}{12}{Interpretability Validation (RQ1)}{equation.5.11}{}}
+\newlabel{eq_i1@cref}{{[equation][11][]11}{[1][12][]12}}
 \citation{hewitt2019designing}
-\newlabel{eq_i1}{{11}{13}{Interpretability Validation (RQ1)}{equation.5.11}{}}
-\newlabel{eq_i1@cref}{{[equation][11][]11}{[1][12][]13}}
 \newlabel{eq_i2}{{12}{13}{Interpretability Validation (RQ1)}{equation.5.12}{}}
 \newlabel{eq_i2@cref}{{[equation][12][]12}{[1][13][]13}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Interpretability Alignment Metrics for unconstrained gTransformer ($\lambda _{\mathcal  {I}}=0$). \relax }}{13}{table.caption.4}\protected@file@percent }
@@ -181,24 +181,24 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces gTransformer Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda _{\mathcal  {I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }}{15}{figure.caption.8}\protected@file@percent }
 \newlabel{fig_pareto_as2015}{{3}{15}{gTransformer Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda _{\mathcal {I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \relax }{figure.caption.8}{}}
 \newlabel{fig_pareto_as2015@cref}{{[figure][3][]3}{[1][15][]15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Context-Aware Diagnostics (RQ2)}{15}{subsection.5.4}\protected@file@percent }
+\newlabel{sec_gran_results}{{5.4}{15}{Context-Aware Diagnostics (RQ2)}{subsection.5.4}{}}
+\newlabel{sec_gran_results@cref}{{[subsection][4][5]5.4}{[1][15][]15}}
 \@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Pareto Sweep results for AS2009. \relax }}{16}{table.caption.9}\protected@file@percent }
 \newlabel{tab_pareto_as2009}{{6}{16}{Pareto Sweep results for AS2009. \relax }{table.caption.9}{}}
 \newlabel{tab_pareto_as2009@cref}{{[table][6][]6}{[1][15][]16}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces gTransformer Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda _{\mathcal  {I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }}{16}{figure.caption.10}\protected@file@percent }
 \newlabel{fig_pareto_as2009}{{4}{16}{gTransformer Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda _{\mathcal {I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \relax }{figure.caption.10}{}}
 \newlabel{fig_pareto_as2009@cref}{{[figure][4][]4}{[1][15][]16}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Context-Aware Diagnostics (RQ2)}{17}{subsection.5.4}\protected@file@percent }
-\newlabel{sec_gran_results}{{5.4}{17}{Context-Aware Diagnostics (RQ2)}{subsection.5.4}{}}
-\newlabel{sec_gran_results@cref}{{[subsection][4][5]5.4}{[1][15][]17}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}Contextualization}{17}{subsubsection.5.4.1}\protected@file@percent }
 \newlabel{sec_longitudinal}{{5.4.1}{17}{Contextualization}{subsubsection.5.4.1}{}}
 \newlabel{sec_longitudinal@cref}{{[subsubsection][1][5,4]5.4.1}{[1][17][]17}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Twin Sequence Divergence for Skill 4 in AS2009. Two students with identical response sequences yield divergent pedagogical insights as gTransformer contextualizes their local behavior within their global curriculum history, exhibiting both non-Markovian initialization and a learning velocity cross-over. \relax }}{17}{figure.caption.11}\protected@file@percent }
 \newlabel{fig_twin_divergence}{{5}{17}{Twin Sequence Divergence for Skill 4 in AS2009. Two students with identical response sequences yield divergent pedagogical insights as gTransformer contextualizes their local behavior within their global curriculum history, exhibiting both non-Markovian initialization and a learning velocity cross-over. \relax }{figure.caption.11}{}}
 \newlabel{fig_twin_divergence@cref}{{[figure][5][]5}{[1][17][]17}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}Individualization and Behavioral Heterogeneity}{18}{subsubsection.5.4.2}\protected@file@percent }
-\newlabel{sec_individualization}{{5.4.2}{18}{Individualization and Behavioral Heterogeneity}{subsubsection.5.4.2}{}}
-\newlabel{sec_individualization@cref}{{[subsubsection][2][5,4]5.4.2}{[1][17][]18}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}Individualization and Behavioral Heterogeneity}{17}{subsubsection.5.4.2}\protected@file@percent }
+\newlabel{sec_individualization}{{5.4.2}{17}{Individualization and Behavioral Heterogeneity}{subsubsection.5.4.2}{}}
+\newlabel{sec_individualization@cref}{{[subsubsection][2][5,4]5.4.2}{[1][17][]17}}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Discovery of student archetypes in the gTransformer diagnostic space. Students are mapped along individualized Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) axes, revealing the behavioral heterogeneity hidden within population-level BKT averages. \relax }}{18}{figure.caption.12}\protected@file@percent }
 \newlabel{fig_clusters}{{6}{18}{Discovery of student archetypes in the gTransformer diagnostic space. Students are mapped along individualized Knowledge Gap ($k_c$) and Learning Velocity ($v_s$) axes, revealing the behavioral heterogeneity hidden within population-level BKT averages. \relax }{figure.caption.12}{}}
 \newlabel{fig_clusters@cref}{{[figure][6][]6}{[1][18][]18}}
@@ -214,15 +214,15 @@
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.5}Pedagogical Confidence}{19}{subsubsection.5.4.5}\protected@file@percent }
 \newlabel{sec_confidence}{{5.4.5}{19}{Pedagogical Confidence}{subsubsection.5.4.5}{}}
 \newlabel{sec_confidence@cref}{{[subsubsection][5][5,4]5.4.5}{[1][19][]19}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{19}{section.6}\protected@file@percent }
+\newlabel{sec_conclusions}{{6}{19}{Conclusions}{section.6}{}}
+\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][19][]19}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Pedagogical Diagnostic Map for AS2009. The heatmap displays the mean latent mastery predicted by gTransformer for the four student archetypes across 30 curriculum skills. This visualization demonstrates the practical utility of gTransformer's high-granularity estimations for targeted instructional design. \relax }}{20}{figure.caption.14}\protected@file@percent }
 \newlabel{fig_skill_map}{{8}{20}{Pedagogical Diagnostic Map for AS2009. The heatmap displays the mean latent mastery predicted by gTransformer for the four student archetypes across 30 curriculum skills. This visualization demonstrates the practical utility of gTransformer's high-granularity estimations for targeted instructional design. \relax }{figure.caption.14}{}}
 \newlabel{fig_skill_map@cref}{{[figure][8][]8}{[1][19][]20}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Heatmaps of per-skill prediction alignment. \relax }}{21}{figure.caption.15}\protected@file@percent }
 \newlabel{fig_heatmaps}{{9}{21}{Heatmaps of per-skill prediction alignment. \relax }{figure.caption.15}{}}
-\newlabel{fig_heatmaps@cref}{{[figure][9][]9}{[1][21][]21}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{21}{section.6}\protected@file@percent }
-\newlabel{sec_conclusions}{{6}{21}{Conclusions}{section.6}{}}
-\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][21][]21}}
+\newlabel{fig_heatmaps@cref}{{[figure][9][]9}{[1][19][]21}}
 \bibdata{biblio}
 \bibcite{corbett1994knowledge}{{1}{1994}{{Corbett and Anderson}}{{}}}
 \bibcite{abdelrahman2023knowledge}{{2}{2023}{{Abdelrahman et~al.}}{{Abdelrahman, Wang, and Nunes}}}
@@ -236,9 +236,9 @@
 \bibcite{bai2024survey}{{10}{2024}{{Bai et~al.}}{{Bai, Zhao, Wei, Cai, and He}}}
 \bibcite{Pandey2019384}{{11}{2019}{{Pandey and Karypis}}{{}}}
 \bibcite{ghosh2020context}{{12}{2020}{{Ghosh et~al.}}{{Ghosh, Heffernan, and Lan}}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}References}{22}{section.7}\protected@file@percent }
 \bibcite{yeung2019deep}{{13}{2019}{{Yeung}}{{}}}
 \bibcite{su2021time}{{14}{2021}{{Su et~al.}}{{Su, Cheng, Luo, Wu, Zhang, Liu, and Wang}}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}References}{22}{section.7}\protected@file@percent }
 \bibcite{chen2023improving}{{15}{2023}{{Chen et~al.}}{{Chen, Liu, Huang, Liu, and Luo}}}
 \bibcite{rudin2019stop}{{16}{2019}{{Rudin}}{{}}}
 \bibcite{vonrueden2021informed}{{17}{2021}{{Von~Rueden et~al.}}{{Von~Rueden, Mayer, Beckh, Georgiev, Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke, Bauckhage, and Schuecker}}}

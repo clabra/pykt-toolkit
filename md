@@ -38,7 +38,7 @@ Section1: {
     style: {
       fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
     }
   }
 
@@ -53,18 +53,7 @@ Section1: {
     style: {
       fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
-    }
-  }
-
-  PCAReference: {
-    label: "PCA Reference \n (from BKT) \n Z_pca[uid] in R^2 \n \nCluster targets"
-    shape: cylinder
-    style: {
-        fill: "#fce4ec"
-      stroke: "#000000"
-      stroke-width: 3
-      bold: false
+      stroke-width: 2
     }
   }
 
@@ -96,7 +85,7 @@ Section2: {
     style: {
       fill: "#e8f4f8"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       3d: true
     }
   }
@@ -129,7 +118,7 @@ Section3: {
     style: {
       fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       multiple: true
     }
   }
@@ -146,7 +135,7 @@ Section3: {
     style: {
       fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       multiple: true
     }
   }
@@ -157,7 +146,7 @@ Section3: {
     style: {
       fill: "#e8f4f8"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       bold: false
     }
   }
@@ -168,7 +157,7 @@ Section3: {
     style: {
       fill: "#e8f4f8"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       bold: false
     }
   }
@@ -179,16 +168,16 @@ Section3: {
     style: {
       fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       3d: true
       bold: false
     }
   }
   
-  Encoder -> Decoder: "History Context" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-  Decoder -> DecoderOutput { style: { stroke-width: 4; stroke: "#000000" } }
-  DecoderOutput -> ContextVector: "concat" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-  QuestionEmbed -> ContextVector: "concat" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+  Encoder -> Decoder: "History Context" { style: { stroke: "#000000"; font-size: 80 } }
+  Decoder -> DecoderOutput { style: { stroke: "#000000" } }
+  DecoderOutput -> ContextVector: "concat" { style: { stroke: "#000000"; font-size: 80 } }
+  QuestionEmbed -> ContextVector: "concat" { style: { stroke: "#000000"; font-size: 80 } }
 }
 
 # ============================================================================
@@ -211,29 +200,18 @@ Section4: {
     style: {
         fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
-      bold: false
-    }
-  }
-  
-  TraitAggregator: {
-    label: "Trait Aggregator \n (Attention Pooling) \n Q_trait attend(z_1:t)"
-    shape: rectangle
-    style: {
-      fill: "#fce4ec"
-      stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       bold: false
     }
   }
   
   StudentTraits: {
-    label: "Per-Student Traits \n (Pooled Representation) \n delta = proj(z_student) \n \n R^2 per student"
+    label: "Per-Student Traits \n (cluster embeddings) \n delta_L0[uid], delta_T[uid] \n \n R^2 per student"
     shape: rectangle
     style: {
-        fill: "#fce4ec"
+        fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       bold: false
     }
   }
@@ -244,13 +222,24 @@ Section4: {
     style: {
         fill: "#d4e6f1"
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
+      bold: false
+    }
+  }
+  
+  tSNEReference: {
+    label: "t-SNE Reference \n (from BKT) \n Z_ref[uid] in R^2 \n \nCluster targets"
+    shape: cylinder
+    style: {
+        fill: "#fce4ec"
+      stroke: "#000000"
+      stroke-width: 2
       bold: false
     }
   }
   
   FinalParams: {
-    label: "Final Parameters \n p_L0 = sigma(mu + delta + epsilon)\n p_T = sigma(mu + delta + epsilon)"
+    label: "Final Parameters \n p_L0 = sigma(mu + delta + epsilon)\\np_T = sigma(mu + delta + epsilon)"
     shape: rectangle
     style: {
       fill: "#d4e6f1"
@@ -260,11 +249,11 @@ Section4: {
     }
   }
   
-  PopulationLevel -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-  StudentTraits -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-  SkillResiduals -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+  PopulationLevel -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
+  StudentTraits -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
+  SkillResiduals -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
   
-  TraitAggregator -> StudentTraits { style: { stroke-width: 4; stroke: "#000000" } }
+  tSNEReference -> StudentTraits: "L_tsne" { style: { stroke: "#e91e63"; stroke-dash: 5; font-size: 80 } }
 }
 
 # ============================================================================
@@ -285,7 +274,7 @@ Section5: {
     label: "Output Heads"
     style: {
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
@@ -301,7 +290,7 @@ Section5: {
       style: {
           fill: "#d4e6f1"
         stroke: "#000000"
-        stroke-width: 3
+        stroke-width: 2
       }
     }
     
@@ -317,36 +306,22 @@ Section5: {
       style: {
           fill: "#d4e6f1"
         stroke: "#000000"
-        stroke-width: 3
+        stroke-width: 2
       }
     }
     
     DiagnosticProbes: {
       label: |md
-        Learned Traits
+        Probe Grounding
         
-        δ_L0, δ_T
-        (2D trait space)
-      |
-      shape: rectangle
-      style: {
-          fill: "#fce4ec"
-        stroke: "#000000"
-        stroke-width: 3
-      }
-    }
-    
-    SkillResidOut: {
-      label: |md
-        Skill Residuals
-        
-        ε_L0, ε_T
+        Probe_L0(zₜ)
+        Probe_T(zₜ)
       |
       shape: rectangle
       style: {
           fill: "#d4e6f1"
         stroke: "#000000"
-        stroke-width: 3
+        stroke-width: 2
       }
     }
   }
@@ -355,58 +330,49 @@ Section5: {
     label: "Multi-Objective Loss"
     style: {
       stroke: "#000000"
-      stroke-width: 3
+      stroke-width: 2
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
     }
     
     LossSup: {
-      label: "ℒ_sup \n Supervised"
+      label: |md
+        ℒ_sup L
+      |
       shape: rectangle
       style: {
         fill: "#d4e6f1"
         stroke: "#000000"
-        stroke-width: 3
-        bold: false
+        stroke-width: 2
       }
     }
     
     LossRef: {
-      label: "ℒ_ref \n Interp. Fidelity"
+      label: |md
+        ℒ_ref L 
+      |
       shape: rectangle
       style: {
         fill: "#d4e6f1"
         stroke: "#000000"
-        stroke-width: 3
-        bold: false
+        stroke-width: 2
       }
     }
     
-    LossPCA: {
-      label: "ℒ_pca \n Cluster coherence \n \n L_pca = 0.2*L_mse + 0.8*L_pairwise"
+    LossProbe: {
+      label: "L_tsne\\nCluster coherence"
       shape: rectangle  
       style: {
         fill: "#fce4ec"
         stroke: "#e91e63"
-        stroke-width: 3
-        bold: false
-      }
-    }
-    
-    LossResid: {
-      label: "ℒ_resid \n Parsimony Reg."
-      shape: rectangle
-      style: {
-        fill: "#e8f4f8"
-        stroke: "#000000"
-        stroke-width: 3
+        stroke-width: 2
         bold: false
       }
     }
     
     TotalLoss: {
-      label: "Total Multi-Objective Loss\n L = λ_sup*L_sup + λ_ref*L_ref + λ_pca*L_pca + λ_resid*L_resid"
+      label: "Total Loss\\nL = lambda_sup * L_sup +\\nlambda_ref * L_ref +\\nlambda_tsne * L_tsne"
       shape: rectangle
       style: {
         fill: "#d4e6f1"
@@ -416,16 +382,14 @@ Section5: {
       }
     }
     
-    LossSup -> TotalLoss: "λ_sup" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-    LossRef -> TotalLoss: "λ_ref" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-    LossPCA -> TotalLoss: "λ_pca" { style: { stroke-width: 4; stroke: "#e91e63"; font-size: 80 } }
-    LossResid -> TotalLoss: "λ_resid" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+    LossSup -> TotalLoss: "lambda_sup" { style: { stroke: "#000000"; font-size: 80 } }
+    LossRef -> TotalLoss: "lambda_ref" { style: { stroke: "#000000"; font-size: 80 } }
+    LossProbe -> TotalLoss: "lambda_tsne" { style: { stroke: "#e91e63"; font-size: 80 } }
   }
   
-  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke-width: 4; stroke: "#000000" } }
-  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke-width: 4; stroke: "#000000" } }
-  Outputs.DiagnosticProbes -> Loss.LossPCA { style: { stroke-width: 4; stroke: "#e91e63"; stroke-dash: 5 } }
-  Outputs.SkillResidOut -> Loss.LossResid { style: { stroke-width: 4; stroke: "#000000" } }
+  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#000000" } }
+  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#000000" } }
+  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#e91e63"; stroke-dash: 5 } }
 }
 
 
@@ -435,25 +399,23 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section1.InputData: "p_L0, p_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r, p_L0, p_T)}" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section1.BKT -> Section1.InputData: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r, p_L0, p_T)}" { style: { stroke: "#000000"; font-size: 80 } }
 
 # 2 -> 3
-Section2.TaskHistoryEmb -> Section3.Encoder: "y'_{1:t-1}" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section2.TaskHistoryEmb -> Section3.Decoder: "x'ₜ" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section2.TaskHistoryEmb -> Section3.QuestionEmbed: "q_embed" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.Encoder: "y'_{1:t-1}" { style: { stroke: "#000000"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.Decoder: "x'ₜ" { style: { stroke: "#000000"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.QuestionEmbed: "q_embed" { style: { stroke: "#000000"; font-size: 80 } }
 
 # 3 -> 4
-Section1.BKT -> Section4.PopulationLevel: "mu_L0, mu_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section1.BKT -> Section1.PCAReference: "Z_pca" { style: { stroke-width: 4; stroke: "#e91e63"; font-size: 80 } }
-Section3.ContextVector -> Section4.TraitAggregator: "sequence z_1:t" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section4.SkillResiduals: "proj(z_t)" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section1.BKT -> Section4.PopulationLevel: "mu_L0, mu_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.BKT -> Section4.tSNEReference: "Z_ref" { style: { stroke: "#e91e63"; stroke-dash: 5; font-size: 80 } }
+Section3.ContextVector -> Section4.SkillResiduals: "proj(z)" { style: { stroke: "#000000"; font-size: 80 } }
 
 # 4 -> 5
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.SupervisedOut: "Direct MLP" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section4.StudentTraits -> Section5.Outputs.DiagnosticProbes: "delta traits" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section4.SkillResiduals -> Section5.Outputs.SkillResidOut: "epsilon" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "Direct MLP" { style: { stroke: "#000000"; font-size: 80 } }
+Section4.StudentTraits -> Section5.Outputs.DiagnosticProbes: "delta traits" { style: { stroke: "#000000"; font-size: 80 } }
 
 # Ground Truth -> Loss
 Section1.InputData -> Section5.Loss.LossSup: "y_true" {
@@ -464,12 +426,13 @@ Section1.InputData -> Section5.Loss.LossSup: "y_true" {
     stroke: "#000000"
   }
 }
-Section1.PCAReference -> Section5.Loss.LossPCA: "Z_pca" {
+Section1.BKT -> Section5.Loss.LossProbe: "p_L0, p_T" {
   style: {
+    stroke-dash: 5
+    opacity: 0.5
     font-size: 80
-    stroke: "#e91e63"
+    stroke: "#000000"
   }
 }
-
 
 
