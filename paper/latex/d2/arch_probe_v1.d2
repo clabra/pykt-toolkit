@@ -75,11 +75,14 @@ Section2: {
   
   TaskHistoryEmb: {
     label: |md
-      Task & History
+      Task & History Embeddings
+      (Theoretical Enrichment)
       
-      x'ₜ (Current Task)
+      x'ₜ = c + u·d + Proj(μ)
+      [Concept + Difficulty + Prior]
 
-      y'ₜ (History)
+      y'ₜ = e + u·f + Proj(μ)
+      [Response + Difficulty + Prior]
     |
     shape: rectangle
     style: {
@@ -143,8 +146,9 @@ Section3: {
   ContextVector: {
     label: |md
       Context Vector
+      zₜ = d_out ⊕ q_emb
 
-      zₜ
+      (High-dim Latent)
     |
     shape: rectangle
     style: {
@@ -176,10 +180,11 @@ Section4: {
   TheoryBase: {
     label: |md
       Theory Base
+      (Population Priors)
       
-      p_L0_base[q]
+      logit_base_L₀ = σ⁻¹(μ_L₀[q])
 
-      p_T_base[q]
+      logit_base_T = σ⁻¹(μ_T[q])
     |
     shape: rectangle
     style: {
@@ -192,10 +197,11 @@ Section4: {
   ContextualProjection: {
     label: |md
       Contextual Projection
+      (Linear Probes)
       
-      z · k_axis[q]
+      ΔL₀ = W_L0 · zₜ + b_L0
 
-      z · v_axis[q]
+      ΔT  = W_T · zₜ + b_T
     |
     shape: rectangle
     style: {
@@ -209,10 +215,11 @@ Section4: {
   FinalParams: {
     label: |md
       Final Parameters
+      (Sigmoid Activation)
       
-      p_L0 = σ(Base + Context)
+      p_L₀ = σ(logit_base_L₀ + ΔL₀)
       
-      p_T = σ(Base + Context)
+      p_T = σ(logit_base_T + ΔT)
     |
     shape: rectangle
     style: {
@@ -283,9 +290,10 @@ Section5: {
     DiagnosticProbes: {
       label: |md
         Probe Grounding
+        (Latent Diagnostics)
         
-        Probe_L0(zₜ)
-        Probe_T(zₜ)
+        p̂_L₀ = Linear(zₜ)
+        p̂_T  = Linear(zₜ)
       |
       shape: rectangle
       style: {
@@ -332,7 +340,11 @@ Section5: {
     
     LossProbe: {
       label: |md
-        ℒ_probe L
+        ℒ_probe
+        (Theoretical Alignment)
+        
+        MSE(p̂_L₀, μ_L₀) +
+        MSE(p̂_T,  μ_T)
       |
       shape: rectangle  
       style: {
