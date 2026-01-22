@@ -28,8 +28,8 @@
     "lambda_gap": 1e-05,
     "lambda_sup": 1.0,
     "lambda_ref": 0.5,
-    "lambda_initmastery": 0.1,
-    "lambda_rate": 0.1,
+    "lambda_initmastery": 0.0,
+    "lambda_rate": 0.0,
     "active_grounding": 0,
     "lambda_probe": 0.0,
     "theory_guided": 1,
@@ -201,7 +201,7 @@
       "recommended": true
     },
     "gtransformer_v2.0": {
-      "description": "Three-term decomposition with PCA cluster grounding (p = σ(μ + δ + ε))",
+      "description": "Three-term decomposition with PCA cluster grounding (p = \u03c3(\u03bc + \u03b4 + \u03b5))",
       "date_introduced": "2026-01-22",
       "parameters_added": [
         "lambda_pca",
@@ -347,5 +347,5 @@
       ]
     }
   },
-  "md5": "8122d0702aa3ee4edc880aa811daed23"
+  "md5": "0f120d9d8796231921f6fd9c0524f63e"
 }

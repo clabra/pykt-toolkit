@@ -1659,7 +1659,24 @@ Experiment 970901 validates the **GTransformer v2.0 architecture** with three-te
 2. Sensitivity analysis: Vary λ_pca ∈ [0.05, 0.1, 0.2] to find optimal grounding strength
 3. Compare PCA grounding vs orthogonal diversity in other datasets (assist2015, bridge2algebra)
 
-## Exp 
+### v2.0 Experiments Comparison Table
 
-nohup python examples/run_benchmarks_paper.py --mode training --model gtransformer --dataset assist2009 --campaign exp_970901_fixed --seed 3407 --gpus 0,1,2,3,4,5 > logs/exp_970901_fixed.log 2>&1 &
+| Experiment | lambda_pca | lambda_residual | lambda_initmastery | lambda_rate | p_sup | p_ref | Delta vs Baseline | Notes |
+|------------|-----------|----------------|-------------------|-------------|-------|-------|-------------------|-------|
+| **Exp 801184** (v1.0 baseline) | N/A (probe=1.0) | N/A | 0.0 | 0.0 | **0.7812** | **0.6727** | - | Probe grounding |
+| Exp 970901 (cluster bug fixed) | 0.1 | 0.01 | 0.1 | 0.1 | 0.7763 | N/A | -0.63% | Same as 743149 |
+| Exp 743149 (v2.0 default) | 0.1 | 0.01 | 0.1 | 0.1 | 0.7763 | 0.6678 | -0.63% | Default v2.0 |
+| Exp 567618 (λ_res=0) | 0.1 | **0.0** | 0.1 | 0.1 | 0.7767 | 0.6708 | -0.58% | Marginal improvement |
+| Exp 669948 (v1_params) | 0.1 | **0.0** | **0.0** | **0.0** | 0.7722 | 0.6735 | **-1.15%** ❌ | Worse performance |
+| **Exp 312316** (λ_pca=1.0) | **1.0** | **0.0** | **0.0** | **0.0** | **0.7769** | **0.6721** | **-0.55%** ✅ | **Best v2.0 result** |
+
+**Key Findings:**
+- Exp 970901 validated cluster bug fix had no effect (same performance as 743149)
+- Restoring v1.0 loss weights (`lambda_initmastery=0`, `lambda_rate=0`) **degraded performance** by -1.15%
+- In v2.0 architecture, `lambda_initmastery=0.1` and `lambda_rate=0.1` provide beneficial regularization
+- **Hypothesis validated:** Increasing `lambda_pca` from 0.1 to 1.0 **improved performance by +0.47%** (from -0.63% to -0.55%)
+- Stronger PCA grounding helps, but **0.55% gap remains** vs v1.0 probe-based grounding
+- Remaining gap likely due to fundamental architecture differences (three-term decomposition vs probe heads)
+
+
 

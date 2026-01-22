@@ -2416,3 +2416,79 @@ else:
 7. **New script**: `generate_pca_reference.py` for preprocessing
 8. **Updated training**: Multi-objective loss with PCA grounding
 
+## Metrics
+
+### Experimental Validation: Exp 743149 (v2.0 PCA Grounding)
+
+**Configuration:**
+- Model: GTransformer v2.0 with PCA-grounded three-term decomposition
+- Dataset: Assist2009 (5-fold CV)
+- Seed: 3407
+- PCA parameters: α=0.2, β=0.8, λ_pca=0.1, λ_residual=0.01
+- λ_ref=0.5, λ_initmastery=0.1, λ_rate=0.1
+
+### Per-Fold Results
+
+| Fold | p_sup (AUC) | p_ref (AUC) | Gap |
+|------|-------------|-------------|-----|
+| 0 | 0.7765 | 0.6679 | 0.1086 |
+| 1 | 0.7760 | 0.6680 | 0.1080 |
+| 2 | 0.7780 | 0.6680 | 0.1100 |
+| 3 | 0.7745 | 0.6678 | 0.1066 |
+| 4 | 0.7764 | 0.6675 | 0.1089 |
+| **Mean** | **0.7763 ± 0.0012** | **0.6678 ± 0.0002** | **0.1084** |
+
+### Comparison with v1.0 Baseline (Exp 801184)
+
+| Metric | v2.0 (Exp 743149) | v1.0 Baseline (Exp 801184) | Delta |
+|--------|-------------------|---------------------------|-------|
+| **p_sup** | 0.7763 ± 0.0012 | 0.7812 ± 0.0011 | **-0.0049** (-0.63%) |
+| **p_ref** | 0.6678 ± 0.0002 | 0.6727 ± 0.0001 | **-0.0049** (-0.73%) |
+| **Gap** | 0.1084 | 0.1085 | -0.0001 |
+
+### Analysis
+
+**Key Findings:**
+1. **Performance regression**: v2.0 shows -0.63% p_sup and -0.73% p_ref vs v1.0
+2. **Gap unchanged**: Interpretability gap remains ~0.108 (no improvement)
+3. **Low variance**: Both p_sup and p_ref have very tight confidence intervals
+
+**Root Cause Investigation:**
+- Cluster bug fix had no effect (student-level splitting + permutation-invariant β loss)
+- Regression likely due to: three-term decomposition overhead, PCA grounding constraints, or hyperparameter sensitivity
+
+### Suggestions for Improvement
+
+**1. `lambda_residual = 0` (HIGH PRIORITY)**
+- **Hypothesis**: Removing residual penalty lets ε capture more signal
+- **Current**: L_residual = mean(|ε_L0|) + mean(|ε_T|) pushes residuals toward 0
+- **With 0**: Model can use residuals freely → may improve p_sup
+- **Risk**: May reduce interpretability (δ traits become less meaningful)
+- **Status**: Experiment `exp_residual_0` launched (campaign 567618)
+
+**2. Lower `lambda_ref` (0.2 or 0.1)**
+- **Hypothesis**: Strong BKT alignment pressure may constrain supervised head
+- **Current**: λ_ref = 0.5 (relatively strong)
+- **Try**: 0.2 or 0.1 to give more freedom to supervised predictions
+- **Expected**: Higher p_sup, possibly lower p_ref
+
+**3. Adjust PCA loss ratio (`pca_alpha` / `pca_beta`)**
+- **Current**: α=0.2, β=0.8 (distances dominate)
+- **Try α=0.5, β=0.5**: Balance direct matching vs structure preservation
+- **Try α=0.0, β=1.0**: Pure distance preservation (fully permutation-invariant)
+- **Rationale**: β-dominated loss is already permutation-invariant; may not need α
+
+**4. Reduce `lambda_pca` (0.05 or 0)**
+- **Hypothesis**: PCA grounding may over-constrain trait learning
+- **Current**: λ_pca = 0.1 (10% of total loss)
+- **Try 0.05**: Lighter grounding
+- **Try 0**: Disable PCA grounding → ablation baseline
+- **Expected**: Higher p_sup if PCA constraints are too restrictive
+
+### Status
+
+- ✅ v2.0 architecture implemented and validated
+- ⚠️ Performance regression vs v1.0 (-0.63% p_sup)
+- 🔄 Hyperparameter tuning in progress (`exp_residual_0`)
+- ⏳ Additional experiments needed to close performance gap
+
