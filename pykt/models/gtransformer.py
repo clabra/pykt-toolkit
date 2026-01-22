@@ -99,11 +99,15 @@ class GTransformer(nn.Module):
             self.pca_alpha = kwargs['pca_alpha']  # MSE weight
             self.pca_beta = kwargs['pca_beta']   # Pairwise distance weight
             
-            # V2.0: Student Trait Encoder (context-based, no memorization)
-            # Projects aggregated context to 2D trait space: δ = [δ_L0, δ_T]
-            self.student_trait_encoder = nn.Linear(z_dim, 2)
-            nn.init.xavier_uniform_(self.student_trait_encoder.weight)
-            nn.init.zeros_(self.student_trait_encoder.bias)
+            # V2.0: Student Trait Encoders (context-based, no memorization)
+            # INDEPENDENT encoders for δ_L0 and δ_T (like V1.0 probes)
+            # This eliminates gradient competition and matches probe architecture capacity
+            self.trait_l0_encoder = nn.Linear(z_dim, 1)
+            self.trait_t_encoder = nn.Linear(z_dim, 1)
+            nn.init.xavier_uniform_(self.trait_l0_encoder.weight)
+            nn.init.xavier_uniform_(self.trait_t_encoder.weight)
+            nn.init.zeros_(self.trait_l0_encoder.bias)
+            nn.init.zeros_(self.trait_t_encoder.bias)
             
             # V2.0: Skill Residual Projectors
             # Per-interaction residuals: ε_L0, ε_T
@@ -374,14 +378,16 @@ class GTransformer(nn.Module):
             # Aggregate per-student: mean pool over sequence dimension
             z_student_agg = z_context.mean(dim=1)  # [BS, z_dim]
             
-            # Project to 2D trait space: [δ_L0, δ_T]
-            student_traits = self.student_trait_encoder(z_student_agg)  # [BS, 2]
+            # Project to 1D traits independently (matching V1.0 probe architecture)
+            delta_l0_1d = self.trait_l0_encoder(z_student_agg)  # [BS, 1]
+            delta_t_1d = self.trait_t_encoder(z_student_agg)    # [BS, 1]
             
-            # Expand to sequence: [BS, seqlen, 2]
-            student_traits_seq = student_traits.unsqueeze(1).expand(-1, z_context.size(1), -1)
+            # Concatenate for PCA loss (maintains 2D representation)
+            student_traits = torch.cat([delta_l0_1d, delta_t_1d], dim=1)  # [BS, 2]
             
-            delta_l0 = student_traits_seq[:, :, 0]  # [BS, seqlen]
-            delta_t = student_traits_seq[:, :, 1]   # [BS, seqlen]
+            # Expand to sequence: [BS, seqlen]
+            delta_l0 = delta_l0_1d.squeeze(-1).unsqueeze(1).expand(-1, z_context.size(1))
+            delta_t = delta_t_1d.squeeze(-1).unsqueeze(1).expand(-1, z_context.size(1))
         else:
             # No student data: δ = 0
             delta_l0 = torch.zeros_like(mu_l0_logits)

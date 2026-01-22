@@ -71,7 +71,7 @@
     "emb_path": "none",
     "add_uuid": 1,
     "dual_eval": true,
-    "lambda_pca": 0.1,
+    "lambda_pca": 1.0,
     "lambda_residual": 0.01,
     "use_population": true,
     "use_traits": true,
@@ -347,5 +347,5 @@
       ]
     }
   },
-  "md5": "0f120d9d8796231921f6fd9c0524f63e"
+  "md5": "ecc606e094cdf7b0ca0c1835b2e3e562"
 }
