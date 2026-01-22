@@ -2459,6 +2459,8 @@ else:
 
 ### Suggestions for Improvement
 
+#### **Parameters**
+
 **1. `lambda_residual = 0` (HIGH PRIORITY)**
 - **Hypothesis**: Removing residual penalty lets ε capture more signal
 - **Current**: L_residual = mean(|ε_L0|) + mean(|ε_T|) pushes residuals toward 0
@@ -2485,10 +2487,55 @@ else:
 - **Try 0**: Disable PCA grounding → ablation baseline
 - **Expected**: Higher p_sup if PCA constraints are too restrictive
 
-### Status
+#### **Possible Causes of -0.55% Gap**
 
-- ✅ v2.0 architecture implemented and validated
-- ⚠️ Performance regression vs v1.0 (-0.63% p_sup)
-- 🔄 Hyperparameter tuning in progress (`exp_residual_0`)
-- ⏳ Additional experiments needed to close performance gap
+**1. Information Bottleneck in 2D Trait Space**
+- **V1.0**: Probe heads extract BKT params directly from full $z$ context ($128D \rightarrow 1D$).
+- **V2.0**: Student traits compressed to 2D space first ($128D \rightarrow 2D \rightarrow 1D$).
+- **Diagnostic**: Check if 2D trait space loses predictive information.
+    - Plot explained variance of student-level PCA.
+    - Compare trait dimensionality: try 4D, 8D trait space.
+
+**2. Aggregation Loss in Student Traits**
+- **V2.0** computes $\delta$ from $mean(z)$ across all student interactions.
+- This averaging may "wash out" fine-grained temporal patterns or recent behavioral shifts.
+- **Diagnostic**:
+    - Compare per-interaction variance before/after aggregation.
+    - Test alternative aggregation: max pooling, attention-weighted mean.
+
+**3. Interaction-Level vs Student-Level Grounding**
+- **V1.0**: Probe loss applied per interaction (fine-grained supervision).
+- **V2.0**: PCA loss applied per student (coarse-grained supervision).
+- **Diagnostic**:
+    - Add per-interaction PCA loss variant.
+    - Compare gradient magnitudes: probe loss vs PCA loss.
+
+**4. PCA Grounding Signal Quality**
+- PCA clusters may be "noisier" targets than the direct BKT oracle.
+- PCA is derived from BKT params (indirect), whereas probes use BKT params directly (direct).
+- **Diagnostic**:
+    - Measure PCA reconstruction error.
+    - Compare BKT param variance within vs between clusters.
+
+**5. Three-Term Decomposition Constraints**
+- Forcing $p = \sigma(\mu + \delta + \epsilon)$ may be structurally too restrictive.
+- **V1.0** allows flexible composition: $p = \sigma(base + context \cdot axis)$.
+- **Diagnostic**:
+    - Ablate three-term: test $p = \sigma(\mu + \delta)$ only.
+    - Test multiplicative fusion: $p = \mu \cdot (1 + \delta + \epsilon)$.
+
+**6. Residual Suppression**
+- $\lambda_{residual}$ creates pressure to minimize $\epsilon$, which might capture vital prediction signals.
+- **Diagnostic**: 
+    - Already tested $\lambda_{residual}=0$ (marginal improvement).
+    - Try negative regularization: encourage larger residuals for edge cases.
+    - Analyze $\epsilon$ magnitude distribution across sequence length.
+
+#### Recommended Next Experiments
+
+- **Priority 1: Trait Dimensionality.** Increase trait space from 2D to 4D/8D to reduce the bottleneck.
+- **Priority 2: Per-Interaction PCA Loss.** Move from student-level to sequence-level grounding to increase supervision density.
+- **Priority 3: Hybrid Approach.** Test if combining direct probe loss with PCA grounding provides better stability.
+
+> **Summary**: The 0.55% gap likely stems from information loss in the 2D trait bottleneck combined with coarser supervision granularity (student-level vs interaction-level).
 
