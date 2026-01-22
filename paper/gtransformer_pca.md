@@ -15,6 +15,14 @@ This decomposition enables:
 - **Reproducibility**: Deterministic PCA (unlike stochastic t-SNE)
 - **Mathematical grounding**: PCA components have clear statistical meaning
 
+Ablation studies: 
+
+In order to be able to do ablation studies, we'll use "ablation parameters" to control the application of the 3 terms μ, δ, and ε and analyze to what extent each one is responsible for the model's performance.
+
+Modular PCA-based Loss Function: 
+
+The calculation of L_pca should be implemented as an independent function in such a way that, in the future, we can easily modify it to test different loss functions types.
+
 ## Key Design Decision: Context-Based Traits (No Memorization)
 
 **CRITICAL**: Unlike traditional personalization approaches that use static student embeddings (`nn.Embedding`), we compute student traits **dynamically from the Transformer's context vector**. This avoids:
