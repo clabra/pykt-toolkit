@@ -216,22 +216,11 @@ Section4: {
     }
   }
   
-  TraitAggregator: {
-    label: "Trait Aggregator \n (Attention Pooling) \n Q_trait attend(z_1:t)"
-    shape: rectangle
-    style: {
-      fill: "#fce4ec"
-      stroke: "#000000"
-      stroke-width: 3
-      bold: false
-    }
-  }
-  
   StudentTraits: {
-    label: "Per-Student Traits \n (Pooled Representation) \n delta = proj(z_student) \n \n R^2 per student"
+    label: "Per-Student Traits \n (from z context) \n delta = proj(mean(z)) \n \n R^2 per student"
     shape: rectangle
     style: {
-        fill: "#fce4ec"
+        fill: "#d4e6f1"
       stroke: "#000000"
       stroke-width: 3
       bold: false
@@ -263,8 +252,6 @@ Section4: {
   PopulationLevel -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
   StudentTraits -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
   SkillResiduals -> FinalParams: "+" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-  
-  TraitAggregator -> StudentTraits { style: { stroke-width: 4; stroke: "#000000" } }
 }
 
 # ============================================================================
@@ -330,7 +317,7 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#fce4ec"
+          fill: "#d4e6f1"
         stroke: "#000000"
         stroke-width: 3
       }
@@ -446,8 +433,8 @@ Section2.TaskHistoryEmb -> Section3.QuestionEmbed: "q_embed" { style: { stroke-w
 # 3 -> 4
 Section1.BKT -> Section4.PopulationLevel: "mu_L0, mu_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 Section1.BKT -> Section1.PCAReference: "Z_pca" { style: { stroke-width: 4; stroke: "#e91e63"; font-size: 80 } }
-Section3.ContextVector -> Section4.TraitAggregator: "sequence z_1:t" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section4.SkillResiduals: "proj(z_t)" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section4.StudentTraits: "proj(mean(z))" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section4.SkillResiduals: "proj(z)" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 
 # 4 -> 5
 Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }

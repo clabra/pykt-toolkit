@@ -1197,26 +1197,7 @@ def pca_alignment_loss_balanced(student_traits_batch, pca_reference, uid_batch,
 
 ## Suggestions for Refinement
 
-### 1. Upgraded Architecture (v2.1 Attention Pooling)
-The current approach uses `delta = proj(mean(z))` to aggregate history into student traits. It makes the "Student Traits" ($\delta$) much more robust to interaction noise. If a student guesses correctly on a hard question (an "outlier"), the Trait Aggregator can learn to discount that interaction, whereas the Simple Mean would be forced to shift the entire student profile toward higher mastery, creating "flicker" in the diagnostics.
-
-#### Evolutionary Roadmap:
-*   **GTransformer v2.0 (Arithmetic Mean)**:
-    *   `aggregation = mean(z)`
-    *   Pedagogy: All interactions are equally important for trait estimation.
-*   **GTransformer v2.1 (Intelligence Pooling Head)**:
-    *   `aggregation = AttentionPool(z)` using a learnable **Trait Query** ($Q_{trait}$).
-    *   Pedagogy: Specific "temporal signatures" (e.g., mastery shifts) are prioritized for diagnostic grounding.
-
-#### Technical Implementation Details:
-1.  **Trait Query ($Q_{\text{trait}}$)**: Initialize a learnable parameter `self.trait_query = nn.Parameter(torch.randn(1, 1, z_dim))`.
-2.  **Specialized Attention Head**: For a batch of student histories $H \in \mathbb{R}^{BS \times T \times z\_dim}$:
-    *   Compute attention weights: $\alpha = \text{Softmax}\left(\frac{Q_{\text{trait}} \cdot (W_K H)^\top}{\sqrt{d}}\right)$
-    *   $\alpha \in \mathbb{R}^{BS \times 1 \times T}$ represents the "diagnostic relevance" of each timestep.
-3.  **Weighted Aggregation**: The final trait vector $\mathbf{z}_{\text{student}} = \sum_{t=1}^T \alpha_t (W_V z_t)$.
-4.  **Benefits**: This "summarizes" the interaction sequence by prioritizing high-information moments over interaction noise, producing a cleaner, more stable input for the PCA grounding loss.
-
-### 2. The "Parsimony Ratio" Rule for $\epsilon$
+### 1. The "Parsimony Ratio" Rule for $\epsilon$
 To maintain the **Grounded-to-Heuristic Ratio** and prevent "Interpretability Leakage," the weight of the Skill Residuals ($\lambda_{residual}$) must be mathematically anchored to the PCA grounding weight ($\lambda_{pca}$). If $\epsilon$ is too unconstrained, the model may "cheat" by pushing all information into the residual term to maximize supervised AUC, effectively ignoring the grounded traits ($\delta$).
 
 *   **Heuristic**: Keep $\lambda_{residual}$ at approximately **10% of $\lambda_{pca}$**.
@@ -1224,14 +1205,14 @@ To maintain the **Grounded-to-Heuristic Ratio** and prevent "Interpretability Le
 *   **Contribution Hierarchy**: In the composition $p = \sigma(\mu + \delta + \epsilon)$, the influence should follow: **Fixed Theory ($\mu$)** $\rightarrow$ **Grounded Identity ($\delta$)** $\rightarrow$ **Contextual Nuance ($\epsilon$)**.
 *   **Warning**: If $\lambda_{residual} \ge \lambda_{pca}$, the model will likely collapse the 2D trait space into a single point and use $\epsilon$ for all personalization, reverting gTransformer into a black box.
 
-### 3. Interpretation of the Axes (Calibration Phase)
+### 2. Interpretation of the Axes (Calibration Phase)
 By grounding the latent space to PCA-derived coordinates, we expect the resulting axes to capture stable pedagogical constructs. We recommend a **Calibration Phase** after training to empirically validate these semantics:
 
 *   **PC1 (General Proficiency)**: This axis typically captures the student's initial mastery level. Validation: `Corr(PC1, GroundTruth_Initial_Correctness)`.
 *   **PC2 (Learning Momentum)**: This axis often captures the effective learning rate or the student's response to interventions. Validation: `Corr(PC2, GroundTruth_Learning_Gain)`.
 *   **Verification**: High correlations provide terminal proof that the multi-objective loss successfully forced the Transformer's latent representation to align with meaningful educational theory.
 
-### 4. Design Rationale: Gradient Integrity
+### 3. Design Rationale: Gradient Integrity
 A critical design choice is placing the **Trait Aggregator** (Attention Pooling) *outside* the core Transformer blocks. This maximizes gradient efficiency while protecting the "canonical" attention heads.
 
 #### 1. Additive vs. Disruptive Architecture
@@ -1244,3 +1225,4 @@ During the backwards pass, gradients flow from the diagnostic loss $\mathcal{L}_
 
 #### 3. Gradient Magnitude Control (Low-Pass Filtering)
 The $\lambda_{pca}$ coefficient ($0.1$) acts as a gradient low-pass filter. By ensuring the grounding signal is an order of magnitude smaller than the supervised signal, we prevent the "Tail from wagging the dog." The canonical attention heads remain primary driven by the sequence modeling task, with the PCA grounding actings as a secondary, structural bias.
+
