@@ -160,9 +160,27 @@ def train_worker(model, dataset, fold, gpu_id, start_delay=0, parent_folder=None
     
     # Add parameter overrides (zero hardcoded defaults philosophy)
     if param_overrides:
+        # Load defaults to identify booleans
+        defaults_path = Path(PROJECT_ROOT) / "configs" / "parameter_default.json"
+        with open(defaults_path) as f:
+            defaults = json.load(f)["defaults"]
+
         for param_name, param_value in param_overrides.items():
             if param_value is not None:
-                cmd.extend([f"--{param_name}", str(param_value)])
+                # Handle boolean flags specifically to match run_repro_experiment.py's parser
+                if isinstance(defaults.get(param_name), bool):
+                    # In run_benchmarks_paper, 1=Enable, 0=Disable (default is usually false)
+                    is_enabled = bool(int(param_value))
+                    default_val = defaults.get(param_name)
+                    
+                    if is_enabled != default_val:
+                        # Only pass the flag if it DIFFERS from default
+                        # If default=False and enabled=True -> pass --param
+                        # If default=True and enabled=False -> pass --param (which triggers action='store_false')
+                        cmd.append(f"--{param_name}")
+                else:
+                    # Regular parameter
+                    cmd.extend([f"--{param_name}", str(param_value)])
     
     # run_repro_experiment MUST be run from PROJECT_ROOT for path consistency
     cwd = Path(PROJECT_ROOT)
@@ -285,7 +303,7 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     # Also fix script paths to use relative paths from PROJECT_ROOT
     if "python" in eval_cmd:
         # Re-order to replace longer paths first and avoid double-replacement (e.g., /usr/bin/python3 -> /usr/bin/python33)
-        for old_path in ["/home/vscode/.pykt-env/bin/python3", "/usr/bin/python3", "/usr/bin/python"]:
+        for old_path in ["/home/vscode/.pykt-env/bin/python3", "/home/vscode/.pykt-env/bin/python", "/usr/bin/python3", "/usr/bin/python"]:
             if old_path in eval_cmd:
                 eval_cmd = eval_cmd.replace(old_path, sys.executable)
                 break # Only replace the first match to avoid corruption
@@ -540,6 +558,7 @@ def main():
     parser.add_argument("--lambda_initmastery", type=float, default=None, help="Override lambda_initmastery (L0 loss weight)")
     parser.add_argument("--lambda_rate", type=float, default=None, help="Override lambda_rate (T loss weight)")
     parser.add_argument("--personalization", type=int, default=None, help="Override personalization (0/1)")
+    parser.add_argument("--seed", type=int, default=None, help="Override random seed")
     
     args = parser.parse_args()
 
@@ -575,6 +594,8 @@ def main():
             param_overrides['lambda_rate'] = args.lambda_rate
         if args.personalization is not None:
             param_overrides['personalization'] = args.personalization
+        if args.seed is not None:
+            param_overrides['seed'] = args.seed
         
         if param_overrides:
             print(f"Parameter overrides: {param_overrides}")

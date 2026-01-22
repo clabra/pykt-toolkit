@@ -111,6 +111,7 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - Training and evaluation should be launched using the commands described in `examples/reproducibility.md`
 - Avoid launching commands that terminate scripts tha are running in the terminal
 - Launch scripts in such a way that we leverage available GPUs (around 75% if not set otherwise) and CPUs (around 75% of CPU power)
+- To launch experiments, use examples/run_benchmarks_paper.py (it has mode = train, evaluate, results)
 
 ### Code and Style Guidelines
 

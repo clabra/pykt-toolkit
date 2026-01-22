@@ -6,6 +6,7 @@ import math
 import torch.nn.functional as F
 from enum import IntEnum
 import numpy as np
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -16,7 +17,7 @@ class Dim(IntEnum):
 
 class GTransformer(nn.Module):
     def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff, 
-            kq_same, final_fc_dim, num_attn_heads, separate_qa, l2_rasch, emb_type, emb_path, pretrain_dim, ablation, n_uid, **kwargs):
+            kq_same, final_fc_dim, num_attn_heads, separate_qa, l2_rasch, emb_type, emb_path, pretrain_dim, ablation, n_uid, personalization, **kwargs):
         super().__init__()
         """
         Input:
@@ -37,6 +38,7 @@ class GTransformer(nn.Module):
         self.emb_type = emb_type
         self.ablation = ablation
         self.n_uid = n_uid
+        self.personalization = personalization
         
         # Loss component weights (Passed through from data_config/params)
         self.lambda_sup = kwargs.get('lambda_sup', 1.0)
@@ -66,20 +68,6 @@ class GTransformer(nn.Module):
                 
         # 2. Grounded Embeddings (Only if ablation != "all")
         if self.ablation != "all":
-            # Note: We use size 1 for bases (scalar logit) and size z_dim for axes (projection direction)
-            
-            # Relational Axes (Step 3: Texture)
-            # Directions in latent space corresponding to "More Knowledgeable" or "Faster Learner"
-            # Dimensions must match z_context (d_model + embed_l)
-            self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, z_dim) 
-            self.velocity_axis_emb = nn.Embedding(self.n_question + 1, z_dim)
-            nn.init.normal_(self.knowledge_axis_emb.weight, mean=0.0, std=0.02) # Axis implies direction, centered at 0
-            nn.init.normal_(self.velocity_axis_emb.weight, mean=0.0, std=0.02) # Axis implies direction, centered at 0
-            
-            # Theoretical Bases (Grounding points from BKT)
-            # These remain scalar logits
-            self.l0_base_emb = nn.Embedding(self.n_question + 1, 1) # L0_skill (Prior Base)
-            self.t_base_emb = nn.Embedding(self.n_question + 1, 1)  # T_skill (Velocity Base)
             
             # Buffers for population-level parameters (Guess/Slip)
             # These are loaded from pre-fit BKT and kept constant during Reference Output generation
@@ -88,14 +76,43 @@ class GTransformer(nn.Module):
             self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
             self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
             
-            if self.n_uid > 0:
+            if self.personalization and self.n_uid > 0:
                 self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
                 self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
             
-            # Phase 2: Probe Architecture
-            # Dedicated shared linear probe heads for Active Grounding
-            self.probe_l0 = nn.Linear(z_dim, 1)
-            self.probe_t = nn.Linear(z_dim, 1)
+            # V2.0: PCA Grounding Infrastructure
+            # Store PCA-derived student trait references for grounding loss
+            # Shape: [n_uid + 1, 2] where 2 = [PC1: General Proficiency, PC2: Learning Momentum]
+            self.register_buffer('pca_reference', torch.zeros(n_uid + 1, 2))
+            self.pca_reference_loaded = False  # Flag to track if PCA data is available
+            
+            # V2.0: Loss weights (NO DEFAULTS - must be in parameter_default.json)
+            self.lambda_pca = kwargs['lambda_pca']  # PCA cluster coherence
+            self.lambda_residual = kwargs['lambda_residual']  # Parsimony for residuals
+            
+            # V2.0: Ablation controls for three-term decomposition (NO DEFAULTS)
+            self.use_population = kwargs['use_population']  # μ term
+            self.use_traits = kwargs['use_traits']  # δ term  
+            self.use_residuals = kwargs['use_residuals']  # ε term
+            
+            # V2.0: PCA loss component weights (NO DEFAULTS)
+            self.pca_alpha = kwargs['pca_alpha']  # MSE weight
+            self.pca_beta = kwargs['pca_beta']   # Pairwise distance weight
+            
+            # V2.0: Student Trait Encoder (context-based, no memorization)
+            # Projects aggregated context to 2D trait space: δ = [δ_L0, δ_T]
+            self.student_trait_encoder = nn.Linear(z_dim, 2)
+            nn.init.xavier_uniform_(self.student_trait_encoder.weight)
+            nn.init.zeros_(self.student_trait_encoder.bias)
+            
+            # V2.0: Skill Residual Projectors
+            # Per-interaction residuals: ε_L0, ε_T
+            self.residual_l0_proj = nn.Linear(z_dim, 1)
+            self.residual_t_proj = nn.Linear(z_dim, 1)
+            nn.init.xavier_uniform_(self.residual_l0_proj.weight)
+            nn.init.xavier_uniform_(self.residual_t_proj.weight)
+            nn.init.zeros_(self.residual_l0_proj.bias)
+            nn.init.zeros_(self.residual_t_proj.bias)
 
         # Architecture Object. It contains stack of attention block
         self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=num_attn_heads, dropout=dropout,
@@ -104,10 +121,6 @@ class GTransformer(nn.Module):
         # Step 2: Parameter Projection Layers (The "Grounded Outputs")
         # z context vector is of dimension d_model + embed_l (concat of decoder output and question embedding)
         # z_dim = d_model + embed_l # Moved up
-        if self.ablation != "all":
-            # p_L0 and p_T Grounded Outputs (Projecting z context vector)
-            self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
-            self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
 
         self.out = nn.Sequential(
             nn.Linear(z_dim,
@@ -181,34 +194,104 @@ class GTransformer(nn.Module):
                 l0_p = extract(s_params, 'prior', global_params, 'prior')
                 t_p = extract(s_params, 'learns', global_params, 'learns')
                 
-                # Textured Grounding: 
-                # Instead of a constant vector, we use a small normal distribution 
-                # centered at the logit. This ensures non-zero variance per-student
-                # so LayerNorm doesn't zero out the features.
-                l0_logit = to_logit(l0_p)
-                t_logit = to_logit(t_p)
-                
-                # N(logit, 0.05)
-                # Ensure the parameters exist (they might not if self.ablation="all", but we checked above)
-                if hasattr(self, 'l0_base_emb'):
-                    self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
-                if hasattr(self, 't_base_emb'):
-                    self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
-
                 # Store population-level parameters for Reference Output
                 self.bkt_l0_pop[q_idx] = l0_p
                 self.bkt_t_pop[q_idx] = t_p
                 self.bkt_guess[q_idx] = s_params.get('guess', 0.2)
                 self.bkt_slip[q_idx] = s_params.get('slip', 0.1)
-            
-            # Initialize axes with orthogonal vectors for maximum initial diversity
-            # This helps prevent collapse, but diversity loss is still needed to maintain it
-            if hasattr(self, 'knowledge_axis_emb'):
-                nn.init.orthogonal_(self.knowledge_axis_emb.weight)
-            if hasattr(self, 'velocity_axis_emb'):
-                nn.init.orthogonal_(self.velocity_axis_emb.weight)
                 
-        print(f"  [GTransformer] Textured Theory Bases (N(logit, 0.05)), Relational Axes, and Population Parameters initialized.")
+        print(f"  [GTransformer] Population Parameters (μ) initialized from BKT.")
+
+    def load_pca_reference(self, pca_filepath):
+        """
+        Load PCA-derived student trait references for grounding loss.
+        
+        Args:
+            pca_filepath: Path to .pt file with shape [n_uid + 1, 2]
+                         PC1: General Proficiency, PC2: Learning Momentum
+        """
+        if not os.path.exists(pca_filepath):
+            print(f"  [GTransformer] WARNING: PCA reference not found at {pca_filepath}")
+            print(f"  [GTransformer] PCA grounding loss will be skipped during training.")
+            return
+        
+        pca_data = torch.load(pca_filepath, map_location=self.pca_reference.device)
+        
+        # Validate shape
+        expected_shape = (self.n_uid + 1, 2)
+        if pca_data.shape != expected_shape:
+            raise ValueError(
+                f"PCA reference shape mismatch: expected {expected_shape}, got {pca_data.shape}"
+            )
+        
+        # Load into buffer
+        self.pca_reference.copy_(pca_data)
+        self.pca_reference_loaded = True
+        
+        print(f"  [GTransformer] PCA reference loaded from {pca_filepath}")
+        print(f"  [GTransformer] Shape: {self.pca_reference.shape}, Device: {self.pca_reference.device}")
+
+    def compute_pca_loss(self, student_traits, uid_data):
+        """
+        Compute PCA cluster coherence loss.
+        
+        L_pca = α * MSE(traits, pca_ref) + β * ||D_pred - D_ref||²
+        
+        Args:
+            student_traits: [BS, 2] computed traits
+            uid_data: [BS] student IDs
+        
+        Returns:
+            pca_loss: scalar tensor
+        """
+        if not self.pca_reference_loaded or uid_data is None:
+            return torch.tensor(0.0, device=student_traits.device)
+        
+        # Lookup PCA references for batch
+        pca_ref = self.pca_reference[uid_data.long()]  # [BS, 2]
+        
+        # Component 1: MSE between predicted traits and PCA references
+        mse_loss = F.mse_loss(student_traits, pca_ref)
+        
+        # Component 2: Pairwise distance preservation
+        # Compute pairwise distances in predicted trait space
+        # student_traits: [BS, 2]
+        # Pairwise L2 distances: [BS, BS]
+        diff_pred = student_traits.unsqueeze(1) - student_traits.unsqueeze(0)  # [BS, BS, 2]
+        dist_pred = (diff_pred ** 2).sum(dim=-1)  # [BS, BS]
+        
+        # Pairwise distances in PCA reference space
+        diff_ref = pca_ref.unsqueeze(1) - pca_ref.unsqueeze(0)  # [BS, BS, 2]
+        dist_ref = (diff_ref ** 2).sum(dim=-1)  # [BS, BS]
+        
+        # MSE between distance matrices (preserve cluster structure)
+        dist_loss = F.mse_loss(dist_pred, dist_ref)
+        
+        # Weighted combination
+        pca_loss = self.pca_alpha * mse_loss + self.pca_beta * dist_loss
+        
+        return pca_loss
+
+    def compute_residual_loss(self, epsilon_l0, epsilon_t):
+        """
+        Compute parsimony regularization for skill residuals.
+        
+        L_residual = mean(|ε_L0|) + mean(|ε_T|)
+        
+        Encourages residuals to be small (near zero), promoting
+        interpretability via population and trait parameters.
+        
+        Args:
+            epsilon_l0: [BS, seqlen] residuals for L0
+            epsilon_t: [BS, seqlen] residuals for T
+        
+        Returns:
+            residual_loss: scalar tensor
+        """
+        l0_penalty = epsilon_l0.abs().mean()
+        t_penalty = epsilon_t.abs().mean()
+        
+        return l0_penalty + t_penalty
 
     def base_emb(self, q_data, target):
         q_embed_data = self.q_embed(q_data)  # BS, seqlen,  d_model# c_ct
@@ -264,87 +347,64 @@ class GTransformer(nn.Module):
             else:
                 return outputs, c_reg_loss, z_context
 
-        # 2. Step 2 & 3: Grounded Outputs via Semantic Axis Projection
-        # Get concept-specific axes and bases
-        # q_data: BS, seqlen
-        k_axis = self.knowledge_axis_emb(q_data) # BS, seqlen, z_dim
-        v_axis = self.velocity_axis_emb(q_data)  # BS, seqlen, z_dim
+        # ========== V2.0: Three-Term Decomposition ==========
+        # p = σ(μ + δ + ε)
+        # μ: Population parameters (from BKT)
+        # δ: Student trait parameters (context-based, NO embeddings)
+        # ε: Skill residuals (interaction-specific deviations)
         
-        l0_base = self.l0_base_emb(q_data).squeeze(-1) # BS, seqlen
-        t_base = self.t_base_emb(q_data).squeeze(-1)   # BS, seqlen
+        # Term 1: Population Parameters (μ)
+        # Fixed buffers from BKT: [BS, seqlen]
+        mu_l0_logits = torch.logit(self.bkt_l0_pop[q_data.long()], eps=1e-6)
+        mu_t_logits = torch.logit(self.bkt_t_pop[q_data.long()], eps=1e-6)
         
-        # Projection: Base + (z . Axis)
-        # z_context: BS, seqlen, z_dim
-        # Dot product along dim -1
-        l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
-        t_logits = t_base + (z_context * v_axis).sum(dim=-1)
-        
-        # Diversity Loss: Encourage semantic axes to be different across concepts
-        # This prevents all axes from collapsing to identical vectors
-        # Only apply when theory-guided mode is active (ablation != "all")
-        if self.ablation != "all":
-            unique_concepts = torch.unique(q_data)
-            if len(unique_concepts) > 1 and not qtest:  # Only during training
-                # Get axes for unique concepts in this batch
-                sampled_k_axes = self.knowledge_axis_emb(unique_concepts)  # [N_unique, z_dim]
-                sampled_v_axes = self.velocity_axis_emb(unique_concepts)  # [N_unique, z_dim]
-                
-                # Normalize to unit vectors for cosine similarity
-                k_normalized = sampled_k_axes / (sampled_k_axes.norm(dim=1, keepdim=True) + 1e-8)
-                v_normalized = sampled_v_axes / (sampled_v_axes.norm(dim=1, keepdim=True) + 1e-8)
-                
-                # Compute pairwise cosine similarities (should be low for diversity)
-                k_sim_matrix = k_normalized @ k_normalized.t()  # [N_unique, N_unique]
-                v_sim_matrix = v_normalized @ v_normalized.t()  # [N_unique, N_unique]
-                
-                # Penalize high off-diagonal similarities (we want orthogonal axes)
-                # Mask out diagonal (self-similarity = 1.0)
-                mask = ~torch.eye(len(unique_concepts), dtype=torch.bool, device=q_data.device)
-                
-                # Mean absolute cosine similarity (want this near 0)
-                k_diversity_loss = k_sim_matrix[mask].abs().mean()
-                v_diversity_loss = v_sim_matrix[mask].abs().mean()
-                
-                diversity_loss = 0.1 * (k_diversity_loss + v_diversity_loss)  # Weight to maintain orthogonality
-            else:
-                diversity_loss = torch.tensor(0.0, device=q_data.device)
+        # Term 2: Student Trait Parameters (δ)
+        # Context-based traits (NO student embeddings, generalizes to new students)
+        # Aggregate context over sequence via mean pooling
+        if uid_data is not None:
+            # z_context: [BS, seqlen, z_dim]
+            # Aggregate per-student: mean pool over sequence dimension
+            z_student_agg = z_context.mean(dim=1)  # [BS, z_dim]
+            
+            # Project to 2D trait space: [δ_L0, δ_T]
+            student_traits = self.student_trait_encoder(z_student_agg)  # [BS, 2]
+            
+            # Expand to sequence: [BS, seqlen, 2]
+            student_traits_seq = student_traits.unsqueeze(1).expand(-1, z_context.size(1), -1)
+            
+            delta_l0 = student_traits_seq[:, :, 0]  # [BS, seqlen]
+            delta_t = student_traits_seq[:, :, 1]   # [BS, seqlen]
         else:
-            diversity_loss = torch.tensor(0.0, device=q_data.device)
+            # No student data: δ = 0
+            delta_l0 = torch.zeros_like(mu_l0_logits)
+            delta_t = torch.zeros_like(mu_t_logits)
         
-        # Step 4: Individualization (Student-Specific scalars)
-        # Adds static student bias to the dynamic estimate
-        if self.n_uid > 0 and uid_data is not None:
-             # uid_data: BS (assumed constant per sequence or BS, seqlen if available)
-             # Expand to match sequence if necessary
-             if uid_data.dim() == 1:
-                 uid_seq = uid_data.unsqueeze(1).expand(-1, q_data.size(1))
-             else:
-                 uid_seq = uid_data
-                 
-             # Get student params: [BS, seqlen]
-             s_gap = self.student_gap_param(uid_seq).squeeze(-1)
-             s_vel = self.student_param(uid_seq).squeeze(-1)
-             
-             l0_logits = l0_logits + s_gap
-             t_logits = t_logits + s_vel
+        # Term 3: Skill Residuals (ε)
+        # Per-interaction deviations: [BS, seqlen]
+        epsilon_l0 = self.residual_l0_proj(z_context).squeeze(-1)
+        epsilon_t = self.residual_t_proj(z_context).squeeze(-1)
         
-        p_l0 = torch.sigmoid(l0_logits) # BS, seqlen
-        p_t = torch.sigmoid(t_logits)   # BS, seqlen
-
-        # Phase 2: Probe Outputs
-        # Compute probes for validation and active grounding
-        probe_l0_logits = self.probe_l0(z_context).squeeze(-1) # BS, seqlen
-        probe_t_logits = self.probe_t(z_context).squeeze(-1)   # BS, seqlen
+        # Combine terms with ablation controls
+        l0_logits = torch.zeros_like(mu_l0_logits)
+        t_logits = torch.zeros_like(mu_t_logits)
         
-        p_l0_probe = torch.sigmoid(probe_l0_logits)
-        p_t_probe = torch.sigmoid(probe_t_logits)
+        if self.use_population:
+            l0_logits = l0_logits + mu_l0_logits
+            t_logits = t_logits + mu_t_logits
+        
+        if self.use_traits:
+            l0_logits = l0_logits + delta_l0
+            t_logits = t_logits + delta_t
+        
+        if self.use_residuals:
+            l0_logits = l0_logits + epsilon_l0
+            t_logits = t_logits + epsilon_t
+        
+        # Final predictions
+        p_l0 = torch.sigmoid(l0_logits)  # [BS, seqlen]
+        p_t = torch.sigmoid(t_logits)    # [BS, seqlen]
 
         # Reference Output Generation via BKT Implementation
-        # We process the batch but since each timestep t uses a different p_l0_t and p_t_t
-        # were each prediction is the result of a BKT "walk" from 1 to t.
-        
-        # Initial Mastery State (L1) is the p_L0 generated at the current prediction timestep
-        # We implement this vectorized to maintain performance
         ref_preds = self._bkt_ref_output(q_data, target, p_l0, p_t)
 
         # Collect all outputs in a structured dictionary
@@ -352,13 +412,14 @@ class GTransformer(nn.Module):
             'predictions': preds,
             'p_l0': p_l0,
             'p_t': p_t,
-            'p_l0_probe': p_l0_probe,
-            'p_t_probe': p_t_probe,
-            'reference_preds': ref_preds,   # Reference Output (BKT Logic Wrapper)
+            'student_traits': student_traits if uid_data is not None else None,
+            'epsilon_l0': epsilon_l0,
+            'epsilon_t': epsilon_t,
+            'reference_preds': ref_preds,
         }
 
-        # Add diversity loss to regularization
-        total_reg_loss = c_reg_loss + diversity_loss
+        # Total regularization (c_reg_loss only, diversity loss removed)
+        total_reg_loss = c_reg_loss
 
         if not qtest:
             return outputs, total_reg_loss

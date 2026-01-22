@@ -70,7 +70,14 @@
     "pretrain_dim": 768,
     "emb_path": "none",
     "add_uuid": 1,
-    "dual_eval": true
+    "dual_eval": true,
+    "lambda_pca": 0.1,
+    "lambda_residual": 0.01,
+    "use_population": true,
+    "use_traits": true,
+    "use_residuals": true,
+    "pca_alpha": 0.2,
+    "pca_beta": 0.8
   },
   "types": {
     "launcher": [
@@ -148,7 +155,14 @@
       "kq_same",
       "separate_qa",
       "pretrain_dim",
-      "emb_path"
+      "emb_path",
+      "lambda_pca",
+      "lambda_residual",
+      "use_population",
+      "use_traits",
+      "use_residuals",
+      "pca_alpha",
+      "pca_beta"
     ]
   },
   "fixed": {

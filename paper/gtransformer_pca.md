@@ -1234,3 +1234,1185 @@ During the backwards pass, gradients flow from the diagnostic loss $\mathcal{L}_
 #### 3. Gradient Magnitude Control (Low-Pass Filtering)
 The $\lambda_{pca}$ coefficient ($0.1$) acts as a gradient low-pass filter. By ensuring the grounding signal is an order of magnitude smaller than the supervised signal, we prevent the "Tail from wagging the dog." The canonical attention heads remain primary driven by the sequence modeling task, with the PCA grounding actings as a secondary, structural bias.
 
+## Architectural Comparison: Current vs v2.0
+
+### Current Implementation (arch_sections.d2)
+
+**Section 4: Grounded Parameters (Two-Term Composition)**
+```
+TheoryBase (p_L0_base[q], p_T_base[q])  ← Learnable embeddings
+    +
+ContextualProjection (z · k_axis[q], z · v_axis[q])  ← Skill-specific axes
+    ↓
+FinalParams (p_L0 = σ(Base + Context), p_T = σ(Base + Context))
+```
+
+**Key characteristics:**
+- Theory base uses **learnable embeddings** initialized from BKT
+- Contextual component uses **skill-specific relational axes** (knowledge_axis, velocity_axis)
+- **Two-term additive** composition: Base + Context
+- Probe architecture for active grounding (L_probe loss)
+- Optional student embeddings for personalization
+
+### v2.0 Implementation (arch_pca.d2)
+
+**Section 4: Grounded Parameters (Three-Term Decomposition)**
+```
+PopulationLevel (mu_L0[q], mu_T[q])  ← Fixed from BKT
+    +
+StudentTraits (delta = proj(mean(z)))  ← Per-student, context-based
+    +
+SkillResiduals (epsilon = proj(z))  ← Per-interaction
+    ↓
+FinalParams (p_L0 = σ(μ + δ + ε), p_T = σ(μ + δ + ε))
+```
+
+**Key characteristics:**
+- Population level uses **fixed buffers** (not learnable)
+- Student traits computed from **aggregated history** (mean pooling)
+- Skill residuals from **current context** (per-timestep)
+- **Three-term additive** composition: μ + δ + ε
+- PCA grounding for student traits (L_pca loss)
+- Parsimony regularization for residuals (L_residual loss)
+- **No student embeddings** (context-based only)
+
+### Section 5: Loss Function Changes
+
+**Current:**
+```
+L_total = λ_sup·L_sup + λ_ref·L_ref + λ_probe·L_probe
+```
+
+**v2.0:**
+```
+L_total = λ_sup·L_sup + λ_ref·L_ref + λ_pca·L_pca + λ_residual·L_residual
+```
+
+**Changes:**
+- Remove: `L_probe` (active grounding via probes)
+- Add: `L_pca` (cluster coherence: 0.2·L_mse + 0.8·L_pairwise)
+- Add: `L_residual` (parsimony regularization for ε)
+
+### Output Heads Comparison
+
+**Current outputs:**
+```python
+{
+    'predictions': preds,           # Supervised MLP
+    'p_l0': p_l0,                  # Grounded parameters
+    'p_t': p_t,
+    'p_l0_probe': p_l0_probe,      # Probe outputs (REMOVE)
+    'p_t_probe': p_t_probe,        # Probe outputs (REMOVE)
+    'reference_preds': ref_preds   # BKT logic wrapper
+}
+```
+
+**v2.0 outputs:**
+```python
+{
+    'predictions': preds,           # Supervised MLP
+    'p_l0': p_l0,                  # Grounded parameters
+    'p_t': p_t,
+    'reference_preds': ref_preds,  # BKT logic wrapper
+    'student_traits': traits,      # [BS, 2] for L_pca (NEW)
+    'epsilon_l0': epsilon_l0,      # [BS, seqlen] for L_residual (NEW)
+    'epsilon_t': epsilon_t,        # [BS, seqlen] for L_residual (NEW)
+    'delta_l0': delta_l0,          # [BS, seqlen] for analysis (NEW)
+    'delta_t': delta_t             # [BS, seqlen] for analysis (NEW)
+}
+```
+
+### Key Architectural Transformations
+
+| Aspect | Current | v2.0 | Rationale |
+|--------|---------|------|-----------|
+| **Population params** | Learnable embeddings | Fixed buffers | BKT provides ground truth, not initial guess |
+| **Student personalization** | Skill-specific axes + optional embeddings | Context-based traits (δ) | No memorization, generalizes to new students |
+| **Interaction context** | Implicit in axis projection | Explicit residuals (ε) | Clear separation of stable traits vs. noise |
+| **Grounding mechanism** | Probe loss (L_probe) | PCA cluster loss (L_pca) | Aligns trait space to pedagogical dimensions |
+| **Interpretability** | Axes hard to interpret | 2D PCA space (Proficiency, Momentum) | Clear pedagogical meaning |
+| **Complexity** | 4 components (base, axes, probes, optional embeddings) | 3 components (μ, δ, ε) | Simpler, cleaner decomposition |
+
+### Input Data Requirements
+
+**IMPORTANT**: v2.0 does **NOT** require changes to the interaction-level input data format.
+
+#### Current Input Data (Unchanged)
+
+The model forward pass receives the same inputs as before:
+
+```python
+def forward(self, q_data, target, pid_data=None, uid_data=None, qtest=False):
+    # q_data: [BS, seqlen] - Question/skill IDs
+    # target: [BS, seqlen] - Response correctness (0/1)
+    # pid_data: [BS, seqlen] - Problem IDs (optional, for Rasch)
+    # uid_data: [BS] or [BS, seqlen] - Student IDs
+    # qtest: bool - Test mode flag
+```
+
+**No changes needed** to:
+- Interaction sequences (q_data, target)
+- Problem IDs (pid_data)
+- Student IDs (uid_data)
+- Data loading pipelines
+- Preprocessing scripts
+
+#### New Requirement: PCA Reference File (Student-Level)
+
+The **only** new data requirement is a **student-level** PCA reference file, loaded **once** at model initialization (not per-interaction).
+
+**File format**: JSON file with student PCA coordinates
+
+```json
+{
+  "student_coords": {
+    "0": [0.234, -0.156],     # uid -> [PC1, PC2]
+    "1": [-0.421, 0.089],
+    "2": [0.156, 0.234],
+    ...
+  },
+  "pca_components": [[...], [...]],  # Optional: PCA transformation matrix
+  "pca_mean": [0.5, 0.1],            # Optional: PCA center
+  "explained_variance_ratio": [0.68, 0.32]  # Optional: variance explained
+}
+```
+
+**Generation**: Created by `examples/generate_pca_reference.py` (Step 8) from BKT forward inference results.
+
+**Loading**: Called once during model initialization:
+
+```python
+# In training script initialization
+model = GTransformer(...)
+model.load_theory_params(bkt_skill_params)  # Existing
+
+# NEW: Load PCA reference
+with open(pca_reference_file, 'r') as f:
+    pca_data = json.load(f)
+model.load_pca_reference(pca_data)  # NEW method
+```
+
+**Storage**: Stored in model buffer `self.pca_reference[uid]` for fast lookup during training.
+
+#### Why No Interaction-Level Changes?
+
+1. **Population parameters (μ)**: Already loaded from BKT skill params (existing mechanism)
+2. **Student traits (δ)**: Computed dynamically from `z_context` (no input needed)
+3. **Skill residuals (ε)**: Computed dynamically from `z_context` (no input needed)
+4. **PCA targets**: Student-level (not interaction-level), loaded once at init
+
+#### Data Flow Comparison
+
+**Current (no changes):**
+```
+Interaction Data (q, r, pid, uid)
+    ↓
+Embeddings
+    ↓
+Transformer (produces z_context)
+    ↓
+Parameter Computation (uses z_context + skill-specific axes)
+```
+
+**v2.0 (same input, different computation):**
+```
+Interaction Data (q, r, pid, uid)  ← SAME INPUT
+    ↓
+Embeddings
+    ↓
+Transformer (produces z_context)
+    ↓
+Parameter Computation:
+  - μ: Lookup in bkt_l0_pop[q], bkt_t_pop[q]  ← From BKT (existing)
+  - δ: proj(mean(z_context))  ← Computed from z_context
+  - ε: proj(z_context)  ← Computed from z_context
+```
+
+#### Summary
+
+| Data Type | Current | v2.0 | Change Required? |
+|-----------|---------|------|------------------|
+| Interaction sequences | (q, r, pid, uid) | (q, r, pid, uid) | ❌ No |
+| BKT skill params | Loaded at init | Loaded at init | ❌ No |
+| PCA reference | N/A | Loaded at init | ✅ Yes (new file) |
+| Data preprocessing | Existing pipeline | Existing pipeline | ❌ No |
+| Batch format | [BS, seqlen] | [BS, seqlen] | ❌ No |
+
+**Bottom line**: The only new requirement is generating and loading the PCA reference file (student-level, one-time). All interaction-level data remains unchanged.
+
+## Prerequisites: Data Preparation Workflow
+
+Before implementing v2.0, you must prepare the PCA reference data. This is a **one-time preprocessing step** per dataset.
+
+### Required Workflow
+
+```
+1. Train BKT Model (existing)
+   ↓
+2. Generate BKT Forward Inference (existing)
+   ↓
+3. Generate PCA Reference (NEW - Step 8)
+   ↓
+4. Implement v2.0 Model (Steps 0-7, 9-10)
+   ↓
+5. Train v2.0 with PCA Grounding
+```
+
+### Step-by-Step Prerequisites
+
+#### Prerequisite 1: BKT Training (Existing)
+
+Train BKT model on your dataset to obtain skill-level parameters:
+
+```bash
+# Example for assist2009
+python examples/train_bkt.py \
+  --dataset assist2009 \
+  --fold 0
+```
+
+**Output**: `data/assist2009/bkt_skill_params.pkl`
+
+#### Prerequisite 2: BKT Forward Inference (Existing)
+
+Run BKT forward inference to get student-level parameters (p_L0, p_T per student per skill):
+
+```bash
+# Example for assist2009
+python examples/bkt_forward_inference.py \
+  --dataset assist2009 \
+  --fold 0 \
+  --bkt_params data/assist2009/bkt_skill_params.pkl
+```
+
+**Output**: `data/assist2009/bkt_forward.pkl`
+
+**Format**: 
+```python
+{
+  original_uid_1: {
+    skill_1: {'p_L0': 0.45, 'p_T': 0.12, ...},
+    skill_2: {'p_L0': 0.67, 'p_T': 0.08, ...},
+    ...
+  },
+  original_uid_2: {...},
+  ...
+}
+```
+
+#### Prerequisite 3: Generate PCA Reference (NEW - Step 8)
+
+Generate PCA reference coordinates from BKT forward inference:
+
+```bash
+# Example for assist2009
+python examples/generate_pca_reference.py \
+  --bkt_forward data/assist2009/bkt_forward.pkl \
+  --dataset_dir data/assist2009 \
+  --output data/assist2009/pca_reference.json
+```
+
+**Output**: `data/assist2009/pca_reference.json`
+
+**Format**:
+```json
+{
+  "student_coords": {
+    "0": [0.234, -0.156],  // Model index -> [PC1, PC2]
+    "1": [-0.421, 0.089],
+    ...
+  },
+  "metadata": {
+    "n_students": 1234,
+    "dataset": "assist2009"
+  }
+}
+```
+
+**Critical**: This file contains the **ground truth targets** for L_pca loss. The model will learn student traits (δ) and the PCA loss will align them to these coordinates.
+
+### How L_pca Uses PCA Reference
+
+During training, for each batch:
+
+1. **Model computes student traits**: `δ = proj(mean(z_context))` → `[BS, 2]`
+2. **Lookup PCA targets**: `Z_pca[uid_batch]` → `[BS, 2]` (from pca_reference.json)
+3. **Compute L_pca**: 
+   ```python
+   L_mse = MSE(δ, Z_pca)  # Direct alignment
+   L_pairwise = MSE(dist(δ), dist(Z_pca))  # Topology preservation
+   L_pca = 0.2 * L_mse + 0.8 * L_pairwise
+   ```
+
+### Verification Checklist
+
+Before training v2.0, verify:
+
+- [ ] BKT model trained: `bkt_skill_params.pkl` exists
+- [ ] BKT forward inference complete: `bkt_forward.pkl` exists
+- [ ] PCA reference generated: `pca_reference.json` exists
+- [ ] PCA reference has correct format (student_coords with model indices)
+- [ ] Number of students in PCA reference matches dataset
+- [ ] `n_uid` parameter in config matches max index in PCA reference + 1
+
+### Per-Dataset Requirements
+
+**IMPORTANT**: This workflow must be completed **for each dataset** you want to train on:
+
+| Dataset | BKT Params | BKT Forward | PCA Reference |
+|---------|------------|-------------|---------------|
+| assist2009 | `data/assist2009/bkt_skill_params.pkl` | `data/assist2009/bkt_forward.pkl` | `data/assist2009/pca_reference.json` |
+| assist2015 | `data/assist2015/bkt_skill_params.pkl` | `data/assist2015/bkt_forward.pkl` | `data/assist2015/pca_reference.json` |
+| bridge2algebra2006 | `data/bridge2algebra2006/bkt_skill_params.pkl` | `data/bridge2algebra2006/bkt_forward.pkl` | `data/bridge2algebra2006/pca_reference.json` |
+
+## Implementation Steps
+
+### Step 0: Remove Legacy Components from Current Implementation
+
+Before implementing v2.0, we need to remove components from the current gtransformer.py that are incompatible with the new three-term decomposition architecture.
+
+#### 0.1: Remove Probe Architecture (Active Grounding)
+
+**Location**: Lines 95-98, 334-340
+
+**Components to remove:**
+```python
+# In __init__:
+self.probe_l0 = nn.Linear(z_dim, 1)
+self.probe_t = nn.Linear(z_dim, 1)
+
+# In forward:
+probe_l0_logits = self.probe_l0(z_context).squeeze(-1)
+probe_t_logits = self.probe_t(z_context).squeeze(-1)
+p_l0_probe = torch.sigmoid(probe_l0_logits)
+p_t_probe = torch.sigmoid(probe_t_logits)
+```
+
+**Rationale**: v2.0 uses PCA grounding instead of probe-based active grounding. The probe architecture was designed to align learned parameters with BKT estimates, but v2.0 achieves this through the PCA cluster coherence loss.
+
+**Also remove from outputs dictionary:**
+```python
+# Remove these keys:
+'p_l0_probe': p_l0_probe,
+'p_t_probe': p_t_probe,
+```
+
+**Remove from loss computation** (in training script):
+```python
+# Remove:
+loss_probe_l0 = F.binary_cross_entropy(outputs['p_l0_probe'], outputs['p_l0'].detach())
+loss_probe_t = F.binary_cross_entropy(outputs['p_t_probe'], outputs['p_t'].detach())
+loss_probe = loss_probe_l0 + loss_probe_t
+```
+
+#### 0.2: Remove Relational Axes (Contextual Projection)
+
+**Location**: Lines 71-77, 270-280
+
+**Components to remove:**
+```python
+# In __init__:
+self.knowledge_axis_emb = nn.Embedding(self.n_question + 1, z_dim)
+self.velocity_axis_emb = nn.Embedding(self.n_question + 1, z_dim)
+nn.init.normal_(self.knowledge_axis_emb.weight, mean=0.0, std=0.02)
+nn.init.normal_(self.velocity_axis_emb.weight, mean=0.0, std=0.02)
+
+# In forward:
+k_axis = self.knowledge_axis_emb(q_data)  # BS, seqlen, z_dim
+v_axis = self.velocity_axis_emb(q_data)   # BS, seqlen, z_dim
+l0_logits = l0_base + (z_context * k_axis).sum(dim=-1)
+t_logits = t_base + (z_context * v_axis).sum(dim=-1)
+```
+
+**Rationale**: v2.0 uses a simpler decomposition where contextual information comes from:
+- Student traits (δ): Aggregated from history via mean pooling
+- Skill residuals (ε): Direct projection from current context
+
+The relational axes approach was too complex and didn't provide clear interpretability.
+
+#### 0.3: Remove Theoretical Bases Embeddings
+
+**Location**: Lines 79-82, 273-274
+
+**Components to remove:**
+```python
+# In __init__:
+self.l0_base_emb = nn.Embedding(self.n_question + 1, 1)
+self.t_base_emb = nn.Embedding(self.n_question + 1, 1)
+
+# In forward:
+l0_base = self.l0_base_emb(q_data).squeeze(-1)
+t_base = self.t_base_emb(q_data).squeeze(-1)
+```
+
+**Rationale**: v2.0 uses fixed population-level parameters (μ) loaded from BKT via buffers, not learnable embeddings. The buffers `bkt_l0_pop` and `bkt_t_pop` (lines 88-89) will be retained and used directly.
+
+#### 0.4: Remove Student-Specific Embeddings (if personalization disabled)
+
+**Location**: Lines 91-93, 316-329
+
+**Components to conditionally remove:**
+```python
+# In __init__ (only if n_uid > 0):
+self.student_param = nn.Embedding(self.n_uid + 1, 1)
+self.student_gap_param = nn.Embedding(self.n_uid + 1, 1)
+
+# In forward (only if n_uid > 0):
+if self.n_uid > 0 and uid_data is not None:
+    uid_seq = uid_data.unsqueeze(1).expand(-1, q_data.size(1))
+    s_gap = self.student_gap_param(uid_seq).squeeze(-1)
+    s_vel = self.student_param(uid_seq).squeeze(-1)
+    l0_logits = l0_logits + s_gap
+    t_logits = t_logits + s_vel
+```
+
+**Rationale**: v2.0 computes student traits dynamically from interaction history (context-based), not from static embeddings. This is a core design principle: no student memorization.
+
+**Exception**: Keep this code if we want to support a hybrid mode where both context-based traits (δ) and static embeddings coexist. For pure v2.0, remove it.
+
+#### 0.5: Remove Diversity Loss
+
+**Location**: Lines 282-312
+
+**Components to remove:**
+```python
+# Diversity Loss: Encourage semantic axes to be different across concepts
+if self.ablation != "all":
+    unique_concepts = torch.unique(q_data)
+    if len(unique_concepts) > 1 and not qtest:
+        sampled_k_axes = self.knowledge_axis_emb(unique_concepts)
+        sampled_v_axes = self.velocity_axis_emb(unique_concepts)
+        k_normalized = sampled_k_axes / (sampled_k_axes.norm(dim=1, keepdim=True) + 1e-8)
+        v_normalized = sampled_v_axes / (sampled_v_axes.norm(dim=1, keepdim=True) + 1e-8)
+        k_sim_matrix = k_normalized @ k_normalized.t()
+        v_sim_matrix = v_normalized @ v_normalized.t()
+        mask = ~torch.eye(len(unique_concepts), dtype=torch.bool, device=q_data.device)
+        k_diversity_loss = k_sim_matrix[mask].abs().mean()
+        v_diversity_loss = v_sim_matrix[mask].abs().mean()
+        diversity_loss = 0.1 * (k_diversity_loss + v_diversity_loss)
+    else:
+        diversity_loss = torch.tensor(0.0, device=q_data.device)
+else:
+    diversity_loss = torch.tensor(0.0, device=q_data.device)
+
+# In return:
+total_reg_loss = c_reg_loss + diversity_loss
+```
+
+**Rationale**: Diversity loss was specific to the relational axes architecture. v2.0 doesn't use skill-specific axes, so this loss is no longer needed.
+
+#### 0.6: Remove Duplicate Buffer Registrations
+
+**Location**: Lines 109-110
+
+**Components to remove:**
+```python
+# Duplicate registration (already done at lines 88-89)
+self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
+self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
+```
+
+**Rationale**: These buffers are already registered at lines 88-89. The duplicate registration at lines 109-110 should be removed.
+
+#### 0.7: Update Parameter Loading Method
+
+**Location**: Lines 193-196
+
+**Components to modify:**
+```python
+# OLD (loads into learnable embeddings):
+if hasattr(self, 'l0_base_emb'):
+    self.l0_base_emb.weight[q_idx].normal_(mean=l0_logit, std=0.05)
+if hasattr(self, 't_base_emb'):
+    self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
+
+# NEW (loads into fixed buffers):
+# Just update the buffers directly (already done at lines 199-200)
+self.bkt_l0_pop[q_idx] = l0_p
+self.bkt_t_pop[q_idx] = t_p
+```
+
+**Rationale**: v2.0 uses fixed population parameters, not learnable embeddings with textured initialization.
+
+#### 0.8: Remove Axes Initialization
+
+**Location**: Lines 204-209
+
+**Components to remove:**
+```python
+# Initialize axes with orthogonal vectors
+if hasattr(self, 'knowledge_axis_emb'):
+    nn.init.orthogonal_(self.knowledge_axis_emb.weight)
+if hasattr(self, 'velocity_axis_emb'):
+    nn.init.orthogonal_(self.velocity_axis_emb.weight)
+```
+
+**Rationale**: No axes in v2.0 architecture.
+
+### Summary of Removals
+
+| Component | Lines | Reason |
+|-----------|-------|--------|
+| Probe architecture | 95-98, 334-340 | Replaced by PCA grounding |
+| Relational axes | 71-77, 270-280 | Replaced by simple projections |
+| Theoretical base embeddings | 79-82, 273-274 | Replaced by fixed buffers |
+| Student embeddings | 91-93, 316-329 | Replaced by context-based traits |
+| Diversity loss | 282-312 | No longer needed |
+| Duplicate buffers | 109-110 | Already registered |
+| Axes initialization | 204-209 | No axes in v2.0 |
+
+**Total lines removed**: ~150 lines
+**Architecture simplification**: From 4-component system to clean 3-term decomposition
+
+#### 1.1: Add Parameters to `configs/parameter_default.json`
+
+**Location**: `configs/parameter_default.json` - `defaults` section
+
+Add the following v2.0 parameters:
+
+```json
+{
+  "defaults": {
+    ...existing parameters...,
+    "lambda_pca": 0.1,
+    "lambda_residual": 0.01,
+    "use_population": true,
+    "use_traits": true,
+    "use_residuals": true,
+    "pca_alpha": 0.2,
+    "pca_beta": 0.8,
+    "personalization": false,
+    "n_uid": 4163
+  }
+}
+```
+
+**IMPORTANT Notes:**
+
+1. **`personalization: false`**: Disables student-specific embeddings (student_param, student_gap_param)
+   - v2.0 uses context-based traits (δ), not memorized embeddings
+   - This is a core design principle: no student memorization
+
+2. **`n_uid: 4163`**: Number of students in the dataset (example for assist2009)
+   - **Required** for PCA reference buffer size: `self.pca_reference = torch.zeros(n_uid + 1, 2)`
+   - Must match the number of students in your dataset
+   - Set per-dataset (assist2009: 4163, assist2015: 19840, etc.)
+   - Get from `data/{dataset}/keyid2idx.json` → `len(users)`
+
+3. **Distinction**:
+   - `n_uid > 0`: Enables PCA reference buffer (REQUIRED for v2.0)
+   - `personalization = false`: Disables student embeddings (REQUIRED for v2.0)
+   - These are independent: we need the buffer but not the embeddings
+
+**Location**: `configs/parameter_default.json` - `types.model_config` section
+
+Add parameters to the model_config type list:
+
+```json
+{
+  "types": {
+    "model_config": [
+      ...existing parameters...,
+      "lambda_pca",
+      "lambda_residual",
+      "use_population",
+      "use_traits",
+      "use_residuals",
+      "pca_alpha",
+      "pca_beta",
+      "n_uid"
+    ]
+  }
+}
+```
+
+**After modification, update MD5 hash:**
+
+```bash
+python examples/parameters_audit.py --fix-md5
+```
+
+#### 1.2: Update Model `__init__` Method
+
+**Location**: `pykt/models/gtransformer.py` - `__init__` method (after line 89)
+
+**IMPORTANT**: Use `kwargs['key']` (fail-fast) instead of `kwargs.get('key', default)` (silent fallback)
+
+```python
+# PCA Grounding Infrastructure (v2.0)
+# Store PCA-derived student trait references for grounding loss
+# Shape: [n_uid + 1, 2] where 2 = [PC1: General Proficiency, PC2: Learning Momentum]
+self.register_buffer('pca_reference', torch.zeros(n_uid + 1, 2))
+self.pca_reference_loaded = False  # Flag to track if PCA data is available
+
+# Loss weights for v2.0 (NO DEFAULTS - must be in parameter_default.json)
+self.lambda_pca = kwargs['lambda_pca']  # PCA cluster coherence
+self.lambda_residual = kwargs['lambda_residual']  # Parsimony for residuals
+
+# Ablation controls for three-term decomposition (NO DEFAULTS)
+self.use_population = kwargs['use_population']  # μ term
+self.use_traits = kwargs['use_traits']  # δ term  
+self.use_residuals = kwargs['use_residuals']  # ε term
+
+# PCA loss component weights (NO DEFAULTS)
+self.pca_alpha = kwargs['pca_alpha']  # MSE weight
+self.pca_beta = kwargs['pca_beta']   # Pairwise distance weight
+```
+
+**Location**: After line 98 (probe architecture)
+
+```python
+# Student Trait Encoder (v2.0)
+# Projects aggregated context to 2D trait space: δ = [δ_L0, δ_T]
+self.student_trait_encoder = nn.Linear(z_dim, 2)
+nn.init.xavier_uniform_(self.student_trait_encoder.weight)
+nn.init.zeros_(self.student_trait_encoder.bias)
+
+# Skill Residual Projectors (v2.0)
+# Per-interaction residuals: ε_L0, ε_T
+self.residual_l0_proj = nn.Linear(z_dim, 1)
+self.residual_t_proj = nn.Linear(z_dim, 1)
+nn.init.xavier_uniform_(self.residual_l0_proj.weight)
+nn.init.xavier_uniform_(self.residual_t_proj.weight)
+nn.init.zeros_(self.residual_l0_proj.bias)
+nn.init.zeros_(self.residual_t_proj.bias)
+```
+
+### Step 2: Add PCA Reference Loading Method
+
+**Location**: After `load_theory_params` method (after line 211)
+
+```python
+def load_pca_reference(self, pca_data):
+    """
+    Load PCA-derived student trait references for grounding loss.
+    
+    Args:
+        pca_data: dict with keys:
+            - 'student_coords': dict mapping uid -> [PC1, PC2] coordinates
+            - 'pca_components': PCA transformation matrix (optional)
+            - 'pca_mean': PCA center point (optional)
+    """
+    if self.ablation == "all" or not self.use_traits:
+        print("  [GTransformer] PCA grounding disabled (ablation mode)")
+        return
+    
+    if pca_data is None:
+        print("  [GTransformer] No PCA data provided, skipping PCA reference loading")
+        return
+    
+    student_coords = pca_data.get('student_coords', {})
+    
+    if not student_coords:
+        print("  [GTransformer] Empty PCA student coordinates, skipping")
+        return
+    
+    with torch.no_grad():
+        for uid, coords in student_coords.items():
+            if isinstance(uid, str):
+                uid = int(uid)
+            if uid < self.pca_reference.size(0):
+                self.pca_reference[uid] = torch.tensor(coords, dtype=torch.float32)
+    
+    self.pca_reference_loaded = True
+    print(f"  [GTransformer] PCA reference loaded for {len(student_coords)} students")
+    print(f"  [GTransformer] PC1 range: [{self.pca_reference[:, 0].min():.3f}, {self.pca_reference[:, 0].max():.3f}]")
+    print(f"  [GTransformer] PC2 range: [{self.pca_reference[:, 1].min():.3f}, {self.pca_reference[:, 1].max():.3f}]")
+```
+
+### Step 3: Modify Forward Pass for Three-Term Decomposition
+
+**Location**: Replace lines 267-332 (current grounded parameter computation)
+
+```python
+# ============================================================================
+# V2.0: THREE-TERM DECOMPOSITION WITH PCA GROUNDING
+# ============================================================================
+
+# Step 1: Compute Student Traits (δ) from Aggregated Context
+# Aggregate context across sequence using simple mean (unbiased estimator)
+# z_context: [BS, seqlen, z_dim]
+z_agg = z_context.mean(dim=1)  # [BS, z_dim]
+
+# Project to 2D trait space: [δ_L0, δ_T]
+student_traits = self.student_trait_encoder(z_agg)  # [BS, 2]
+
+# Extract individual trait components
+delta_l0 = student_traits[:, 0:1].expand(-1, seqlen)  # [BS, seqlen]
+delta_t = student_traits[:, 1:2].expand(-1, seqlen)   # [BS, seqlen]
+
+# Step 2: Compute Skill Residuals (ε) from Per-Timestep Context
+epsilon_l0 = self.residual_l0_proj(z_context).squeeze(-1)  # [BS, seqlen]
+epsilon_t = self.residual_t_proj(z_context).squeeze(-1)    # [BS, seqlen]
+
+# Step 3: Get Population-Level Parameters (μ) from BKT
+mu_l0 = self.bkt_l0_pop[q_data.long()]  # [BS, seqlen]
+mu_t = self.bkt_t_pop[q_data.long()]    # [BS, seqlen]
+
+# Convert to logits for additive composition
+def prob_to_logit(p, eps=1e-6):
+    p = torch.clamp(p, eps, 1.0 - eps)
+    return torch.log(p / (1.0 - p))
+
+mu_l0_logit = prob_to_logit(mu_l0)
+mu_t_logit = prob_to_logit(mu_t)
+
+# Step 4: Three-Term Additive Composition (with ablation controls)
+l0_logits = torch.zeros_like(mu_l0_logit)
+t_logits = torch.zeros_like(mu_t_logit)
+
+if self.use_population:
+    l0_logits = l0_logits + mu_l0_logit
+    t_logits = t_logits + mu_t_logit
+
+if self.use_traits:
+    l0_logits = l0_logits + delta_l0
+    t_logits = t_logits + delta_t
+
+if self.use_residuals:
+    l0_logits = l0_logits + epsilon_l0
+    t_logits = t_logits + epsilon_t
+
+# Convert back to probabilities
+p_l0 = torch.sigmoid(l0_logits)  # [BS, seqlen]
+p_t = torch.sigmoid(t_logits)    # [BS, seqlen]
+```
+
+### Step 4: Add PCA Grounding Loss Function
+
+**Location**: After `_bkt_ref_output` method (after line 495)
+
+```python
+def compute_pca_loss(self, student_traits, uid_data, alpha=0.2, beta=0.8):
+    """
+    Compute PCA cluster coherence loss (L_pca).
+    
+    Combines two objectives:
+    1. L_mse: Direct MSE to PCA coordinates (keeps axes aligned)
+    2. L_pairwise: Preserves relative distances (allows rotation/translation)
+    
+    Args:
+        student_traits: [BS, 2] learned trait coordinates
+        uid_data: [BS] or [BS, seqlen] student IDs
+        alpha: Weight for L_mse (default: 0.2)
+        beta: Weight for L_pairwise (default: 0.8)
+    
+    Returns:
+        L_pca: Combined loss
+        loss_dict: Dictionary with individual loss components
+    """
+    if not self.pca_reference_loaded or not self.use_traits:
+        return torch.tensor(0.0, device=student_traits.device), {}
+    
+    # Get student IDs (handle both 1D and 2D uid_data)
+    if uid_data.dim() == 2:
+        uid_batch = uid_data[:, 0]  # Take first timestep (constant per sequence)
+    else:
+        uid_batch = uid_data
+    
+    # Get PCA reference coordinates for this batch
+    pca_ref_batch = self.pca_reference[uid_batch.long()]  # [BS, 2]
+    
+    # Component 1: Direct MSE (axis alignment)
+    L_mse = F.mse_loss(student_traits, pca_ref_batch)
+    
+    # Component 2: Pairwise distance preservation (topology preservation)
+    # Compute pairwise distances in learned space
+    D_learned = torch.cdist(student_traits, student_traits, p=2)  # [BS, BS]
+    
+    # Compute pairwise distances in reference space
+    D_ref = torch.cdist(pca_ref_batch, pca_ref_batch, p=2)  # [BS, BS]
+    
+    # MSE between distance matrices
+    L_pairwise = F.mse_loss(D_learned, D_ref)
+    
+    # Balanced combination
+    L_pca = alpha * L_mse + beta * L_pairwise
+    
+    return L_pca, {
+        'L_pca_mse': L_mse.item(),
+        'L_pca_pairwise': L_pairwise.item(),
+        'L_pca_total': L_pca.item()
+    }
+```
+
+### Step 5: Add Residual Parsimony Loss
+
+**Location**: After `compute_pca_loss` method
+
+```python
+def compute_residual_loss(self, epsilon_l0, epsilon_t):
+    """
+    Compute parsimony regularization for skill residuals.
+    Encourages the model to use δ (traits) as primary personalization,
+    keeping ε (residuals) small for interaction-specific noise only.
+    
+    Args:
+        epsilon_l0: [BS, seqlen] L0 residuals
+        epsilon_t: [BS, seqlen] T residuals
+    
+    Returns:
+        L_residual: L2 norm of residuals
+    """
+    if not self.use_residuals:
+        return torch.tensor(0.0, device=epsilon_l0.device)
+    
+    # L2 regularization on residuals
+    L_residual = (epsilon_l0 ** 2).mean() + (epsilon_t ** 2).mean()
+    
+    return L_residual
+```
+
+### Step 6: Update Forward Pass to Return New Outputs
+
+**Location**: Modify outputs dictionary (around line 351)
+
+```python
+# Collect all outputs in a structured dictionary
+outputs = {
+    'predictions': preds,
+    'p_l0': p_l0,
+    'p_t': p_t,
+    'p_l0_probe': p_l0_probe,
+    'p_t_probe': p_t_probe,
+    'reference_preds': ref_preds,
+    # V2.0 additions
+    'student_traits': student_traits,  # [BS, 2] for PCA loss
+    'epsilon_l0': epsilon_l0,          # [BS, seqlen] for residual loss
+    'epsilon_t': epsilon_t,            # [BS, seqlen] for residual loss
+    'delta_l0': delta_l0,              # [BS, seqlen] for analysis
+    'delta_t': delta_t,                # [BS, seqlen] for analysis
+}
+```
+
+### Step 7: Update Training Script to Compute New Losses
+
+**Location**: Training script (e.g., `examples/wandb_gtransformer_train.py`)
+
+```python
+# In training loop, after model forward pass:
+outputs, reg_loss = model(q, r, qshft, rshft, m, sm, q_data, pid_data, uid_data)
+
+# Compute multi-objective loss
+loss_sup = criterion(outputs['predictions'], target)
+
+# PCA grounding loss (v2.0)
+loss_pca, pca_metrics = model.compute_pca_loss(
+    outputs['student_traits'], 
+    uid_data,
+    alpha=0.2,  # MSE weight
+    beta=0.8    # Pairwise distance weight
+)
+
+# Residual parsimony loss (v2.0)
+loss_residual = model.compute_residual_loss(
+    outputs['epsilon_l0'],
+    outputs['epsilon_t']
+)
+
+# Reference fidelity loss (existing)
+loss_ref = F.binary_cross_entropy(
+    outputs['reference_preds'],
+    target,
+    reduction='mean'
+)
+
+# Probe grounding loss (existing)
+loss_probe_l0 = F.binary_cross_entropy(outputs['p_l0_probe'], outputs['p_l0'].detach())
+loss_probe_t = F.binary_cross_entropy(outputs['p_t_probe'], outputs['p_t'].detach())
+loss_probe = loss_probe_l0 + loss_probe_t
+
+# Total loss
+total_loss = (
+    model.lambda_sup * loss_sup +
+    model.lambda_ref * loss_ref +
+    model.lambda_pca * loss_pca +
+    model.lambda_residual * loss_residual +
+    model.lambda_probe * loss_probe +
+    reg_loss
+)
+
+# Log individual components
+wandb.log({
+    'loss/supervised': loss_sup.item(),
+    'loss/reference': loss_ref.item(),
+    'loss/pca': loss_pca.item(),
+    'loss/pca_mse': pca_metrics.get('L_pca_mse', 0),
+    'loss/pca_pairwise': pca_metrics.get('L_pca_pairwise', 0),
+    'loss/residual': loss_residual.item(),
+    'loss/probe': loss_probe.item(),
+    'loss/total': total_loss.item(),
+})
+```
+
+### Step 8: Create PCA Reference Generation Script
+
+**Location**: New file `examples/generate_pca_reference.py`
+
+**CRITICAL**: Must use dataset-specific `keyid2idx.json` mapping to convert original student IDs to zero-based indices.
+
+```python
+import torch
+import numpy as np
+from sklearn.decomposition import PCA
+import pickle
+import json
+import os
+
+def generate_pca_reference(bkt_forward_file, dataset_dir, output_file):
+    """
+    Generate PCA reference coordinates from BKT forward inference.
+    
+    IMPORTANT: Uses keyid2idx.json mapping to convert original student IDs
+    to zero-based indices used internally by the model.
+    
+    Args:
+        bkt_forward_file: Path to BKT forward inference results (pickle)
+        dataset_dir: Path to dataset directory (e.g., 'data/assist2009')
+        output_file: Path to save PCA reference data (JSON)
+    """
+    # Load dataset-specific student ID mapping
+    # This bidirectional mapping converts between original IDs and model indices
+    keyid2idx_file = os.path.join(dataset_dir, 'keyid2idx.json')
+    if not os.path.exists(keyid2idx_file):
+        raise FileNotFoundError(
+            f"keyid2idx.json not found at {keyid2idx_file}. "
+            f"This file is required to map student IDs to model indices."
+        )
+    
+    with open(keyid2idx_file, 'r') as f:
+        keyid2idx = json.load(f)
+    
+    # Extract student ID mapping (original_id -> model_index)
+    # keyid2idx structure: {"questions": {...}, "users": {...}}
+    user_mapping = keyid2idx.get('users', {})
+    if not user_mapping:
+        raise ValueError(
+            f"No 'users' mapping found in {keyid2idx_file}. "
+            f"Cannot map student IDs to model indices."
+        )
+    
+    print(f"Loaded student ID mapping: {len(user_mapping)} students")
+    
+    # Load BKT forward inference (p_L0, p_T per student per skill)
+    with open(bkt_forward_file, 'rb') as f:
+        bkt_data = pickle.load(f)
+    
+    print(f"Loaded BKT forward inference: {len(bkt_data)} students")
+    
+    # Extract student-level aggregates
+    # Aggregate across skills: mean(p_L0), mean(p_T) per student
+    student_features = {}
+    original_to_index = {}  # Track mapping for validation
+    
+    for original_uid, skill_params in bkt_data.items():
+        # Convert original UID to string for lookup
+        uid_str = str(original_uid)
+        
+        # Get model index from mapping
+        if uid_str not in user_mapping:
+            print(f"Warning: Student {uid_str} not in keyid2idx mapping, skipping")
+            continue
+        
+        model_idx = user_mapping[uid_str]
+        original_to_index[original_uid] = model_idx
+        
+        # Aggregate BKT parameters across skills
+        l0_values = [params['p_L0'] for params in skill_params.values()]
+        t_values = [params['p_T'] for params in skill_params.values()]
+        
+        student_features[model_idx] = [
+            np.mean(l0_values),  # Average initial mastery
+            np.mean(t_values)    # Average learning rate
+        ]
+    
+    print(f"Mapped {len(student_features)} students to model indices")
+    
+    # Convert to matrix (sorted by model index for reproducibility)
+    model_indices = sorted(student_features.keys())
+    X = np.array([student_features[idx] for idx in model_indices])
+    
+    print(f"Feature matrix shape: {X.shape}")
+    print(f"  PC1 (Initial Mastery) range: [{X[:, 0].min():.3f}, {X[:, 0].max():.3f}]")
+    print(f"  PC2 (Learning Rate) range: [{X[:, 1].min():.3f}, {X[:, 1].max():.3f}]")
+    
+    # Fit PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X)
+    
+    # Create student_coords mapping (model_index -> [PC1, PC2])
+    # CRITICAL: Keys are model indices (0-based), not original student IDs
+    student_coords = {
+        str(model_idx): X_pca[i].tolist() 
+        for i, model_idx in enumerate(model_indices)
+    }
+    
+    # Save PCA reference
+    pca_data = {
+        'student_coords': student_coords,
+        'pca_components': pca.components_.tolist(),
+        'pca_mean': pca.mean_.tolist(),
+        'explained_variance_ratio': pca.explained_variance_ratio_.tolist(),
+        'metadata': {
+            'n_students': len(student_coords),
+            'dataset': os.path.basename(dataset_dir),
+            'bkt_source': os.path.basename(bkt_forward_file),
+            'keyid2idx_source': os.path.basename(keyid2idx_file)
+        }
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(pca_data, f, indent=2)
+    
+    print(f"\n✅ PCA reference generated successfully")
+    print(f"  Students: {len(student_coords)}")
+    print(f"  PC1 explained variance: {pca.explained_variance_ratio_[0]:.3f}")
+    print(f"  PC2 explained variance: {pca.explained_variance_ratio_[1]:.3f}")
+    print(f"  Total explained variance: {pca.explained_variance_ratio_.sum():.3f}")
+    print(f"  Saved to: {output_file}")
+    
+    # Validation: Check index range
+    max_idx = max(int(k) for k in student_coords.keys())
+    print(f"\n📊 Index validation:")
+    print(f"  Model index range: [0, {max_idx}]")
+    print(f"  Expected n_uid parameter: {max_idx + 1}")
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Generate PCA reference from BKT forward inference',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate PCA reference for assist2009
+  python examples/generate_pca_reference.py \\
+    --bkt_forward data/assist2009/bkt_forward.pkl \\
+    --dataset_dir data/assist2009 \\
+    --output data/assist2009/pca_reference.json
+  
+  # Generate for assist2015
+  python examples/generate_pca_reference.py \\
+    --bkt_forward data/assist2015/bkt_forward.pkl \\
+    --dataset_dir data/assist2015 \\
+    --output data/assist2015/pca_reference.json
+
+Note: This script MUST be run separately for each dataset because
+      each dataset has its own keyid2idx.json mapping.
+        """
+    )
+    
+    parser.add_argument('--bkt_forward', required=True,
+                        help='Path to BKT forward inference pickle file')
+    parser.add_argument('--dataset_dir', required=True,
+                        help='Path to dataset directory (must contain keyid2idx.json)')
+    parser.add_argument('--output', required=True,
+                        help='Path to save PCA reference JSON file')
+    
+    args = parser.parse_args()
+    
+    generate_pca_reference(args.bkt_forward, args.dataset_dir, args.output)
+```
+
+**Usage per dataset:**
+
+```bash
+# assist2009
+python examples/generate_pca_reference.py \
+  --bkt_forward data/assist2009/bkt_forward.pkl \
+  --dataset_dir data/assist2009 \
+  --output data/assist2009/pca_reference.json
+
+# assist2015
+python examples/generate_pca_reference.py \
+  --bkt_forward data/assist2015/bkt_forward.pkl \
+  --dataset_dir data/assist2015 \
+  --output data/assist2015/pca_reference.json
+
+# bridge2algebra2006
+python examples/generate_pca_reference.py \
+  --bkt_forward data/bridge2algebra2006/bkt_forward.pkl \
+  --dataset_dir data/bridge2algebra2006 \
+  --output data/bridge2algebra2006/pca_reference.json
+```
+
+**Key points:**
+1. **Per-dataset requirement**: Each dataset has its own `keyid2idx.json` mapping
+2. **ID mapping**: Original student IDs → Model indices (0-based)
+3. **Validation**: Script prints expected `n_uid` parameter for verification
+4. **Metadata**: Output includes dataset name and source files for provenance
+
+    student_coords = {uid: X_pca[i].tolist() for i, uid in enumerate(uids)}
+    
+    # Save PCA reference
+    pca_data = {
+        'student_coords': student_coords,
+        'pca_components': pca.components_.tolist(),
+        'pca_mean': pca.mean_.tolist(),
+        'explained_variance_ratio': pca.explained_variance_ratio_.tolist()
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(pca_data, f, indent=2)
+    
+    print(f"PCA reference generated for {len(student_coords)} students")
+    print(f"Explained variance: PC1={pca.explained_variance_ratio_[0]:.3f}, PC2={pca.explained_variance_ratio_[1]:.3f}")
+    print(f"Saved to: {output_file}")
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 3:
+        print("Usage: python generate_pca_reference.py <bkt_forward_file> <output_file>")
+        sys.exit(1)
+    
+    generate_pca_reference(sys.argv[1], sys.argv[2])
+```
+
+### Step 9: Update Model Initialization in Training Script
+
+**Location**: Training script initialization
+
+```python
+# After model creation
+model = GTransformer(...)
+
+# Load BKT population parameters (existing)
+model.load_theory_params(bkt_skill_params)
+
+# Load PCA reference (v2.0)
+if os.path.exists(pca_reference_file):
+    with open(pca_reference_file, 'r') as f:
+        pca_data = json.load(f)
+    model.load_pca_reference(pca_data)
+else:
+    print(f"Warning: PCA reference file not found: {pca_reference_file}")
+```
+
+### Step 10: Add Ablation Study Support
+
+**Location**: Configuration file (`configs/parameter_default.json`)
+
+```json
+{
+  "lambda_pca": 0.1,
+  "lambda_residual": 0.01,
+  "use_population": true,
+  "use_traits": true,
+  "use_residuals": true,
+  "pca_alpha": 0.2,
+  "pca_beta": 0.8
+}
+```
+
+### Summary of Changes
+
+1. **New buffers**: `pca_reference` for student trait targets
+2. **New modules**: `student_trait_encoder`, `residual_l0_proj`, `residual_t_proj`
+3. **New methods**: `load_pca_reference()`, `compute_pca_loss()`, `compute_residual_loss()`
+4. **Modified forward**: Three-term decomposition with ablation controls
+5. **New outputs**: `student_traits`, `epsilon_l0`, `epsilon_t`, `delta_l0`, `delta_t`
+6. **New losses**: `L_pca` (cluster coherence), `L_residual` (parsimony)
+7. **New script**: `generate_pca_reference.py` for preprocessing
+8. **Updated training**: Multi-objective loss with PCA grounding
+

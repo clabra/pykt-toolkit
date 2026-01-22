@@ -187,18 +187,28 @@ def init_model(model_name, model_config, data_config, emb_type):
         _model_config.pop("emb_path", None)
         
         # Personalization control: enable/disable student-specific embeddings
-        # Backward compatibility: if personalization flag is not present, use explicit n_uid if provided
-        if "personalization" in _model_config:
-            # New behavior: use personalization flag
-            if _model_config.get("personalization", False):
-                _model_config["n_uid"] = data_config.get("n_uid", 0)
-            else:
-                _model_config["n_uid"] = 0
+        # n_uid and personalization are now independent:
+        #   - n_uid: Size of PCA reference buffer (0 or dataset student count)
+        #   - personalization: Enable/disable student embeddings (true/false)
+        # 
+        # v2.0 configuration: personalization=false, n_uid=dataset_student_count
+        #   - No student embeddings (context-based traits only)
+        #   - PCA reference buffer allocated for grounding loss
+        
+        # Set n_uid from model_config if explicitly provided, otherwise from data_config
+        if "n_uid" in _model_config:
+            # Explicit n_uid in model_config takes precedence
+            pass  # Keep the value from model_config
         else:
-            # Backward compatibility: use explicit n_uid from model_config or default to 0
-            if "n_uid" not in _model_config:
-                _model_config["n_uid"] = data_config.get("n_uid", 0)
-            # If n_uid is already in _model_config, keep it as is
+            # Fall back to data_config (default for most datasets)
+            _model_config["n_uid"] = data_config.get("n_uid", 0)
+        
+        # Personalization flag is independent of n_uid
+        # If not in model_config, default is already in parameter_default.json
+        if "personalization" not in _model_config:
+            # This should not happen if reproducibility is followed
+            # but we handle it for backward compatibility
+            _model_config["personalization"] = False
         
         model = GTransformer(data_config["num_c"], data_config["num_q"], **_model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
     else:
