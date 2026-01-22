@@ -143,8 +143,9 @@ def main(params):
             print(f"  [GTransformer] Loading PCA reference from {pca_path}")
             model.load_pca_reference(pca_path)
         else:
-            print(f"  [GTransformer] WARNING: No PCA reference found at {pca_path}")
-            print(f"  [GTransformer] PCA grounding loss will be skipped during training.")
+            if model.lambda_pca > 0:
+                raise FileNotFoundError(f"GTransformer: PCA reference file missing at {pca_path}. Cannot train with lambda_pca={model.lambda_pca} > 0. Please run generate_pca_reference.py first.")
+            print(f"  [GTransformer] WARNING: No PCA reference found at {pca_path}. Continuing since lambda_pca=0.")
 
     # Optimizer
     if optimizer == "adam":

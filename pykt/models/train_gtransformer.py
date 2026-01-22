@@ -140,17 +140,18 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None, uid
             y_ref = torch.masked_select(output_dict['reference_preds'], sm)
             loss_ref_sup = binary_cross_entropy(y_ref.double(), t.double())
             
-            # V2.0: PCA Grounding Loss (if student traits available)
-            if output_dict.get('student_traits') is not None and uid_data is not None:
+            # V2.0: PCA Grounding Loss
+            if model.lambda_pca > 0:
+                # model.compute_pca_loss will raise errors if reference data or uids are missing
                 loss_pca = model.compute_pca_loss(
                     output_dict['student_traits'], 
-                    uid_data
+                    uid_data # uid_data is already dcur["uids"].to(device) from model_forward
                 )
             else:
                 loss_pca = torch.tensor(0.0, device=y.device)
             
             # V2.0: Residual Parsimony Loss
-            if 'epsilon_l0' in output_dict and 'epsilon_t' in output_dict:
+            if model.lambda_residual > 0:
                 loss_residual = model.compute_residual_loss(
                     output_dict['epsilon_l0'],
                     output_dict['epsilon_t']
@@ -280,7 +281,7 @@ def model_forward(model, data, rel=None):
         perturb.requires_grad_()
         y, y2, y3, contrast_loss = model(dcur, train=True, perb=perturb)
         ys = [y[:,1:], y2, y3]
-        loss = cal_loss(model, ys, r, rshft, sm, preloss) + contrast_loss
+        loss = cal_loss(model, ys, r, rshft, sm, cshft, preloss) + contrast_loss
         loss /= step_m
         opt.zero_grad()
         for _ in range(step_m - 1):
@@ -290,7 +291,7 @@ def model_forward(model, data, rel=None):
             perturb.grad[:] = 0
             y, y2, y3, contrast_loss = model(dcur, train=True, perb=perturb)
             ys = [y[:,1:], y2, y3]
-            loss = cal_loss(model, ys, r, rshft, sm, preloss) + contrast_loss
+            loss = cal_loss(model, ys, r, rshft, sm, cshft, preloss) + contrast_loss
             loss /= step_m
         
         loss.backward()
@@ -374,7 +375,7 @@ def model_forward(model, data, rel=None):
             uid_data = dcur.get('uids', None)
             if uid_data is not None:
                 uid_data = uid_data.to(device)
-            return cal_loss(model, ys, r, rshft, sm, cshft, preloss, probe_targets, uid_data)
+            return cal_loss(model, ys, r, rshft, sm, cshft, preloss, probe_targets, uid_data=uid_data)
     elif model_name in ["atkt", "atktfix"]:
         y, features = model(c.long(), r.long())
         y = (y * one_hot(cshft.long(), model.num_c)).sum(-1)

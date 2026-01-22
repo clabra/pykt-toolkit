@@ -1659,3 +1659,7 @@ Experiment 970901 validates the **GTransformer v2.0 architecture** with three-te
 2. Sensitivity analysis: Vary λ_pca ∈ [0.05, 0.1, 0.2] to find optimal grounding strength
 3. Compare PCA grounding vs orthogonal diversity in other datasets (assist2015, bridge2algebra)
 
+## Exp 
+
+nohup python examples/run_benchmarks_paper.py --mode training --model gtransformer --dataset assist2009 --campaign exp_970901_fixed --seed 3407 --gpus 0,1,2,3,4,5 > logs/exp_970901_fixed.log 2>&1 &
+

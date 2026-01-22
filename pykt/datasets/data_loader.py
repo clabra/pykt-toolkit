@@ -135,10 +135,8 @@ class KTDataset(Dataset):
         df = pd.read_csv(sequence_path)#[0:1000]
         df = df[df["fold"].isin(folds)]
         
-        # Build student ID mapping from uid to sequential index
-        # This ensures consistent student indices across train/val/test
-        unique_uids = sorted(df["uid"].unique())
-        uid_to_index = {uid: idx for idx, uid in enumerate(unique_uids)}
+        # Use global UIDs from CSV directly to maintain student identity across folds
+        uid_to_index = None # Disable local mapping
         
         interaction_num = 0
         # seq_qidxs, seq_rests = [], []
@@ -157,8 +155,8 @@ class KTDataset(Dataset):
             dori["rseqs"].append([int(_) for _ in row["responses"].split(",")])
             dori["smasks"].append([int(_) for _ in row["selectmasks"].split(",")])
             
-            # Add student ID (mapped to sequential index)
-            dori["uids"].append(uid_to_index[row["uid"]])
+            # Add student ID (use global index from CSV)
+            dori["uids"].append(int(row["uid"]))
 
             interaction_num += dori["smasks"][-1].count(1)
 
@@ -194,12 +192,12 @@ class KTDataset(Dataset):
         dori["masks"] = mask_seqs
 
         dori["smasks"] = (dori["smasks"][:, 1:] != pad_val)
-        print(f"interaction_num: {interaction_num}, num_students: {len(uid_to_index)}")
+        print(f"interaction_num: {interaction_num}, students: {df['uid'].nunique()}")
         # print("load data tseqs: ", dori["tseqs"])
         
-        # Store the uid mapping for reference
-        dori["uid_to_index"] = uid_to_index
-        dori["num_students"] = len(uid_to_index)
+        # Store the global UID range info for reference
+        dori["uid_to_index"] = None  # No local mapping
+        dori["num_students"] = df['uid'].nunique()
 
         if self.qtest:
             for key in dqtest:

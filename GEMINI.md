@@ -155,6 +155,7 @@ When you are writing or fixing code (Coder Agent):
 - Follow the stricter `assistant/contribute.pdf` guidelines for code style.
 - **Do not** modify the `data_original` directory.
 - Always run a small test script (e.g., in `tmp/`) before committing major changes.
+- In general I prefer failing noisily and ASAP, to have the opportunity to fix the problem, than using a silent fallback that will produce incorrect metrics going into the paper. 
 
 #### 📝 For Documentation & Writing
 

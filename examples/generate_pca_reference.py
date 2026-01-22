@@ -123,18 +123,38 @@ def generate_pca_reference(bkt_forward_file, dataset_dir, output_file):
     print(f"   PC2 explained variance: {pca.explained_variance_ratio_[1]:.3f}")
     print(f"   Total explained variance: {pca.explained_variance_ratio_.sum():.3f}\n")
     
+    # Load n_uid from data_config.json to ensure buffer alignment
+    data_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'configs', 'data_config.json')
+    canonical_n_uid = None
+    if os.path.exists(data_config_path):
+        with open(data_config_path, 'r') as f:
+            data_configs = json.load(f)
+            dataset_name = os.path.basename(dataset_dir)
+            if dataset_name in data_configs:
+                canonical_n_uid = data_configs[dataset_name].get('n_uid')
+    
+    if canonical_n_uid:
+        print(f"📊 Using canonical n_uid from data_config.json: {canonical_n_uid}")
+        target_n_uid = canonical_n_uid
+    else:
+        max_idx = max(model_indices)
+        print(f"⚠️  data_config.json not found or dataset missing. Using max student index: {max_idx}")
+        target_n_uid = max_idx
+    
     # Create reference tensor: [n_uid + 1, 2]
     # Index 0: padding (zeros)
     # Indices 1 to n_uid: student PCA coordinates
-    max_idx = max(model_indices)
-    n_uid = max_idx + 1  # Account for zero-based indexing
+    pca_reference = torch.zeros(target_n_uid + 1, 2, dtype=torch.float32)
     
-    pca_reference = torch.zeros(n_uid, 2, dtype=torch.float32)
-    
-    # Fill in student coordinates (model_idx already in range [0, n_uid-1])
+    # Fill in student coordinates
     for i, model_idx in enumerate(model_indices):
-        pca_reference[model_idx, 0] = X_pca[i, 0]  # PC1
-        pca_reference[model_idx, 1] = X_pca[i, 1]  # PC2
+        if model_idx + 1 < pca_reference.shape[0]:
+            # We shift by 1 if PyKT uses 0 for padding. 
+            # In KTDataset, index 0 is used for the first student if keyid2idx starts at 0.
+            # However, standard GTransformer/PyKT treat 0 as padding.
+            # To be safe and consistent with fixed KTDataset, we'll use model_idx directly.
+            pca_reference[model_idx, 0] = X_pca[i, 0]  # PC1
+            pca_reference[model_idx, 1] = X_pca[i, 1]  # PC2
     
     # Save PCA reference tensor
     torch.save(pca_reference, output_file)

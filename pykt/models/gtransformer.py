@@ -244,9 +244,12 @@ class GTransformer(nn.Module):
         Returns:
             pca_loss: scalar tensor
         """
-        if not self.pca_reference_loaded or uid_data is None:
-            return torch.tensor(0.0, device=student_traits.device)
+        if not self.pca_reference_loaded:
+            raise RuntimeError("GTransformer: PCA reference buffer is empty. You must call load_pca_reference() before training with lambda_pca > 0.")
         
+        if uid_data is None:
+            raise ValueError("GTransformer: uid_data is missing during compute_pca_loss. Student-level grounding requires student IDs to lookup reference coordinates.")
+
         # Ensure uid_data is 1D
         if uid_data.ndim > 1:
             uid_data = uid_data.squeeze()
@@ -365,6 +368,7 @@ class GTransformer(nn.Module):
         # Term 2: Student Trait Parameters (δ)
         # Context-based traits (NO student embeddings, generalizes to new students)
         # Aggregate context over sequence via mean pooling
+        student_traits = None
         if uid_data is not None:
             # z_context: [BS, seqlen, z_dim]
             # Aggregate per-student: mean pool over sequence dimension

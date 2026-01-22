@@ -1,1 +1,1 @@
-../paper/gtransformer.md
+../paper/gtransformer_pca.md
