@@ -14,7 +14,7 @@ import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None):
+def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None, uid_data=None):
     model_name = model.model_name
 
     if model_name in ["atdkt", "simplekt", "stablekt", "datakt", "sparsekt", "cskt", "hcgkt"]:
@@ -140,10 +140,27 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None):
             y_ref = torch.masked_select(output_dict['reference_preds'], sm)
             loss_ref_sup = binary_cross_entropy(y_ref.double(), t.double())
             
-            # Phase 3: Active Grounding (Probing Loss)
-            # Use dedicated probing heads and compare with Oracle BKT targets
-            p_l0_probe = torch.masked_select(output_dict['p_l0_probe'], sm)
-            p_t_probe = torch.masked_select(output_dict['p_t_probe'], sm)
+            # V2.0: PCA Grounding Loss (if student traits available)
+            if output_dict.get('student_traits') is not None and uid_data is not None:
+                loss_pca = model.compute_pca_loss(
+                    output_dict['student_traits'], 
+                    uid_data
+                )
+            else:
+                loss_pca = torch.tensor(0.0, device=y.device)
+            
+            # V2.0: Residual Parsimony Loss
+            if 'epsilon_l0' in output_dict and 'epsilon_t' in output_dict:
+                loss_residual = model.compute_residual_loss(
+                    output_dict['epsilon_l0'],
+                    output_dict['epsilon_t']
+                )
+            else:
+                loss_residual = torch.tensor(0.0, device=y.device)
+            
+            # Standard Parameter Reference Losses (Targeting population BKT stats for BKT logic head)
+            p_l0 = torch.masked_select(output_dict['p_l0'], sm)
+            p_t = torch.masked_select(output_dict['p_t'], sm)
             
             # Check if probe_targets provided by dataloader, fallback to model-stored population params
             if probe_targets is not None:
@@ -153,24 +170,15 @@ def cal_loss(model, ys, r, rshft, sm, cshft, preloss=[], probe_targets=None):
                 l0_target = torch.masked_select(model.bkt_l0_pop[cshft.long()], sm)
                 t_target = torch.masked_select(model.bkt_t_pop[cshft.long()], sm)
             
-            # Standard Parameter Reference Losses (Targeting population BKT stats for BKT logic head)
-            p_l0 = torch.masked_select(output_dict['p_l0'], sm)
-            p_t = torch.masked_select(output_dict['p_t'], sm)
-            
             loss_l0_logic = F.mse_loss(p_l0, l0_target.float())
             loss_t_logic = F.mse_loss(p_t, t_target.float())
 
-            # Probing Loss (Active Grounding)
-            loss_probe_l0 = F.mse_loss(p_l0_probe, l0_target.float())
-            loss_probe_t = F.mse_loss(p_t_probe, t_target.float())
-            
-            loss_probe = loss_probe_l0 + loss_probe_t
-            
             # Combine losses
             loss = loss + model.lambda_ref * loss_ref_sup + \
                    model.lambda_initmastery * loss_l0_logic + \
                    model.lambda_rate * loss_t_logic + \
-                   model.lambda_probe * loss_probe
+                   model.lambda_pca * loss_pca + \
+                   model.lambda_residual * loss_residual
         
         # 3. Regularization from model forward
         loss = loss + preloss[0]
@@ -340,8 +348,16 @@ def model_forward(model, data, rel=None):
         outputs, reg_loss = model(cc.long(), cr.long(), cq.long(), uid_data=uid_data)
         if isinstance(outputs, dict):
             # Slice all sequence tensors within the dict [:, 1:]
-            y = {k: v[:, 1:] if isinstance(v, torch.Tensor) and len(v.shape) >= 2 else v 
-                 for k, v in outputs.items()}
+            # EXCEPT student_traits which is [BS, 2] not [BS, seqlen, ...]
+            y = {}
+            for k, v in outputs.items():
+                if k == 'student_traits':
+                    # Don't slice student_traits - it's [BS, 2] not a sequence
+                    y[k] = v
+                elif isinstance(v, torch.Tensor) and len(v.shape) >= 2:
+                    y[k] = v[:, 1:]
+                else:
+                    y[k] = v
         else:
             y = outputs[:, 1:]
         ys.append(y)
@@ -355,7 +371,10 @@ def model_forward(model, data, rel=None):
                     'l0': dcur['target_l0'].to(device),
                     't': dcur['target_t'].to(device)
                 }
-            return cal_loss(model, ys, r, rshft, sm, cshft, preloss, probe_targets)
+            uid_data = dcur.get('uids', None)
+            if uid_data is not None:
+                uid_data = uid_data.to(device)
+            return cal_loss(model, ys, r, rshft, sm, cshft, preloss, probe_targets, uid_data)
     elif model_name in ["atkt", "atktfix"]:
         y, features = model(c.long(), r.long())
         y = (y * one_hot(cshft.long(), model.num_c)).sum(-1)

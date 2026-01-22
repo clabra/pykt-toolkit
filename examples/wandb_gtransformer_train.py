@@ -136,6 +136,15 @@ def main(params):
             model.load_theory_params(bkt_params)
         else:
             print(f"  [GTransformer] WARNING: No BKT skill parameters found at {bkt_path}")
+        
+        # V2.0: Load PCA reference for student trait grounding
+        pca_path = os.path.join(dpath, "pca_reference.pt")
+        if os.path.exists(pca_path):
+            print(f"  [GTransformer] Loading PCA reference from {pca_path}")
+            model.load_pca_reference(pca_path)
+        else:
+            print(f"  [GTransformer] WARNING: No PCA reference found at {pca_path}")
+            print(f"  [GTransformer] PCA grounding loss will be skipped during training.")
 
     # Optimizer
     if optimizer == "adam":
@@ -250,7 +259,16 @@ if __name__ == "__main__":
     parser.add_argument("--_doc_grounding", type=str, required=True)
     parser.add_argument("--_doc_regularization", type=str, required=True)
     
-    # 7. Legacy mapping for model_name, etc.
+    # 7. V2.0: PCA Grounding and Three-Term Decomposition Parameters
+    parser.add_argument("--lambda_pca", type=float, required=True, help="Weight for PCA cluster coherence loss")
+    parser.add_argument("--lambda_residual", type=float, required=True, help="Weight for residual parsimony loss")
+    parser.add_argument("--pca_alpha", type=float, required=True, help="PCA loss MSE component weight")
+    parser.add_argument("--pca_beta", type=float, required=True, help="PCA loss pairwise distance component weight")
+    parser.add_argument("--use_population", action='store_true', help="Use population term (μ) in three-term decomposition")
+    parser.add_argument("--use_traits", action='store_true', help="Use student trait term (δ) in three-term decomposition")
+    parser.add_argument("--use_residuals", action='store_true', help="Use skill residual term (ε) in three-term decomposition")
+    
+    # 8. Legacy mapping for model_name, etc.
     parser.add_argument("--model_name", type=str, help="Legacy naming")
     parser.add_argument("--dataset_name", type=str, help="Legacy naming")
     parser.add_argument("--num_epochs", type=int, help="Legacy naming")

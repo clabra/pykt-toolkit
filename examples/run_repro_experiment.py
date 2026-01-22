@@ -382,7 +382,8 @@ def build_explicit_train_command(train_script, params, experiment_dir=None):
         'size_m', 'n_hidden', 'n_rnn_hidden', 'n_mlp_hidden', 'hidden_dim', 'num_attn_heads', 
         'num_en', 'skill_dim', 'attention_dim', 'dim_s', 'emb_size', 'fusion_type',
         'ablation', 'add_uuid', 'emb_path', 'kq_same', 'l2_rasch', 'n_uid', 'pretrain_dim', 'separate_qa',
-        'short_title', 'active_grounding', 'lambda_probe', 'prediction_type', 'dual_eval', 'personalization'
+        'short_title', 'active_grounding', 'lambda_probe', 'prediction_type', 'dual_eval', 'personalization',
+        'lambda_pca', 'lambda_residual', 'pca_alpha', 'pca_beta', 'use_population', 'use_traits', 'use_residuals'
     }
     
     if 'train_idkt.py' in train_script or is_standard_pykt:

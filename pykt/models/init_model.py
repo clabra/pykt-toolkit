@@ -196,11 +196,12 @@ def init_model(model_name, model_config, data_config, emb_type):
         #   - PCA reference buffer allocated for grounding loss
         
         # Set n_uid from model_config if explicitly provided, otherwise from data_config
-        if "n_uid" in _model_config:
-            # Explicit n_uid in model_config takes precedence
+        if "n_uid" in _model_config and _model_config["n_uid"] > 0:
+            # Explicit non-zero n_uid in model_config takes precedence
             pass  # Keep the value from model_config
         else:
             # Fall back to data_config (default for most datasets)
+            # This ensures v2.0 gets the correct n_uid for PCA reference buffer
             _model_config["n_uid"] = data_config.get("n_uid", 0)
         
         # Personalization flag is independent of n_uid

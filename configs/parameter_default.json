@@ -172,5 +172,180 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "0460fd71a4a3225fde17012f7d587404"
+  "versions": {
+    "gtransformer_v1.0": {
+      "description": "Active grounding with probing losses (minimalist approach)",
+      "date_introduced": "2026-01-18",
+      "parameters_added": [
+        "active_grounding",
+        "lambda_probe"
+      ],
+      "parameters_deprecated": [],
+      "parameters_modified": {
+        "lambda_initmastery": {
+          "old_default": 0.1,
+          "new_default": 0.0,
+          "rationale": "Minimalist grounding: probing losses alone are sufficient (Exp 533154)"
+        },
+        "lambda_rate": {
+          "old_default": 0.1,
+          "new_default": 0.0,
+          "rationale": "Minimalist grounding: probing losses alone are sufficient (Exp 533154)"
+        }
+      },
+      "validated_by_experiments": [
+        "334772",
+        "533154",
+        "801184"
+      ],
+      "recommended": true
+    },
+    "gtransformer_v2.0": {
+      "description": "Three-term decomposition with PCA cluster grounding (p = σ(μ + δ + ε))",
+      "date_introduced": "2026-01-22",
+      "parameters_added": [
+        "lambda_pca",
+        "lambda_residual",
+        "use_population",
+        "use_traits",
+        "use_residuals",
+        "pca_alpha",
+        "pca_beta"
+      ],
+      "parameters_deprecated": [
+        "active_grounding",
+        "lambda_probe",
+        "lambda_initmastery",
+        "lambda_rate"
+      ],
+      "parameters_modified": {
+        "active_grounding": {
+          "old_default": 1,
+          "new_default": 0,
+          "rationale": "V2.0 uses three-term decomposition instead of active grounding probes"
+        }
+      },
+      "validated_by_experiments": [
+        "970901"
+      ],
+      "recommended": false,
+      "status": "experimental",
+      "notes": "Context-based student traits (no memorization). PCA grounding for interpretable clustering. Currently being validated."
+    }
+  },
+  "parameter_usage": {
+    "gtransformer": [
+      "lambda_sup",
+      "lambda_ref",
+      "lambda_initmastery",
+      "lambda_rate",
+      "active_grounding",
+      "lambda_probe",
+      "lambda_pca",
+      "lambda_residual",
+      "use_population",
+      "use_traits",
+      "use_residuals",
+      "pca_alpha",
+      "pca_beta",
+      "theory_guided",
+      "calibrate",
+      "grounded_init",
+      "ablation",
+      "personalization",
+      "n_uid",
+      "d_model",
+      "n_heads",
+      "n_blocks",
+      "d_ff",
+      "dropout",
+      "final_fc_dim",
+      "l2",
+      "l2_rasch",
+      "lambda_student",
+      "lambda_gap",
+      "kq_same",
+      "separate_qa",
+      "pretrain_dim",
+      "emb_path",
+      "num_attn_heads"
+    ],
+    "akt": [
+      "d_model",
+      "n_heads",
+      "n_blocks",
+      "d_ff",
+      "dropout",
+      "l2",
+      "kq_same",
+      "separate_qa"
+    ],
+    "dkt": [
+      "emb_size",
+      "hidden_dim",
+      "n_rnn_hidden"
+    ],
+    "sakt": [
+      "d_model",
+      "n_heads",
+      "n_blocks",
+      "dropout"
+    ]
+  },
+  "hyperparameter_search_params": {
+    "gtransformer_v1.0": {
+      "architecture": [
+        "d_model",
+        "n_heads",
+        "n_blocks",
+        "d_ff",
+        "dropout"
+      ],
+      "training": [
+        "learning_rate",
+        "batch_size",
+        "weight_decay"
+      ],
+      "grounding": [
+        "lambda_sup",
+        "lambda_ref",
+        "lambda_probe"
+      ],
+      "ablation_controls": [
+        "active_grounding",
+        "lambda_initmastery",
+        "lambda_rate",
+        "ablation",
+        "personalization"
+      ]
+    },
+    "gtransformer_v2.0": {
+      "architecture": [
+        "d_model",
+        "n_heads",
+        "n_blocks",
+        "d_ff",
+        "dropout"
+      ],
+      "training": [
+        "learning_rate",
+        "batch_size",
+        "weight_decay"
+      ],
+      "grounding": [
+        "lambda_sup",
+        "lambda_pca",
+        "lambda_residual",
+        "pca_alpha",
+        "pca_beta"
+      ],
+      "ablation_controls": [
+        "use_population",
+        "use_traits",
+        "use_residuals",
+        "ablation"
+      ]
+    }
+  },
+  "md5": "8122d0702aa3ee4edc880aa811daed23"
 }

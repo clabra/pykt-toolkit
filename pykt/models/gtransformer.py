@@ -247,6 +247,10 @@ class GTransformer(nn.Module):
         if not self.pca_reference_loaded or uid_data is None:
             return torch.tensor(0.0, device=student_traits.device)
         
+        # Ensure uid_data is 1D
+        if uid_data.ndim > 1:
+            uid_data = uid_data.squeeze()
+        
         # Lookup PCA references for batch
         pca_ref = self.pca_reference[uid_data.long()]  # [BS, 2]
         

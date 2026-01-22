@@ -502,10 +502,12 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
         if "--fusion_type" not in eval_cmd:
             eval_cmd += " --fusion_type late_fusion"
         
-        # Add dual_eval flag if requested
-        if dual_eval:
-            eval_cmd += " --dual_eval"
+        # Add dual_eval flag if requested (check if not already present)
+        if dual_eval and "--dual_eval" not in eval_cmd:
+            eval_cmd += " --dual_eval 1"
             print(f"[DUAL EVAL] Enabled for {model} on {dataset} fold {fold}")
+        elif dual_eval:
+            print(f"[DUAL EVAL] Already present for {model} on {dataset} fold {fold}")
         
         # eval_cmd += " --use_all_in_one False" # wandb_predict.py does not support this
 

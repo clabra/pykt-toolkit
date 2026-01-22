@@ -97,6 +97,14 @@ def main(params):
             ckpt_path = os.path.dirname(ckpt_files[0])
             print(f"[Predict] Found checkpoint in subdirectory: {ckpt_path}")
 
+    # V2.0 compatibility: Merge v2.0 parameters from params into model_config
+    # During training, wandb_gtransformer_train.py does model_config = deepcopy(params)
+    # During evaluation, we need to ensure v2.0 parameters are in model_config
+    v2_params = ['lambda_pca', 'lambda_residual', 'use_population', 'use_traits', 'use_residuals', 'pca_alpha', 'pca_beta']
+    for param in v2_params:
+        if param in params and param not in model_config:
+            model_config[param] = params[param]
+    
     model = load_model(model_name, model_config, data_config, emb_type, ckpt_path)
 
     save_test_path = os.path.join(save_dir, model.emb_type+"_test_predictions.txt")
@@ -122,7 +130,14 @@ def main(params):
         print("="*80 + "\n")
         
         # Check if model is grounded (needed for p_ref)
-        is_grounded = (hasattr(model, 'active_grounding') and model.active_grounding) or params.get('active_grounding', 0) == 1
+        # v1.0: active_grounding=1 (probing losses)
+        # v2.0: use_population=true, use_traits=true, use_residuals=true (three-term decomposition)
+        is_grounded_v1 = (hasattr(model, 'active_grounding') and model.active_grounding) or params.get('active_grounding', 0) == 1
+        is_grounded_v2 = (hasattr(model, 'use_population') and model.use_population and 
+                          hasattr(model, 'use_traits') and model.use_traits)
+        is_grounded = is_grounded_v1 or is_grounded_v2
+        
+        print(f"Model grounding status: v1.0={is_grounded_v1}, v2.0={is_grounded_v2}, final={is_grounded}\n")
         
         # CRITICAL: Dual evaluation must use question-level late fusion protocol
         # This is the ONLY valid way to compare p_sup vs p_ref fairly
