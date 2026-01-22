@@ -174,7 +174,13 @@ Section3: {
   }
   
   ContextVector: {
-    label: "Context Vector\nz_t = [d_output concat q_embed]\n\nR^(2*d_model)"
+    label: |md
+      Context Vector
+
+      zₜ = d_out ⊕ q_emb
+
+      (Sequence: [BS, T, 2*d])
+    |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
@@ -206,7 +212,15 @@ Section4: {
   }
   
   PopulationLevel: {
-    label: "Population-Level \n (from BKT, fixed) \n mu_L0[q], mu_T[q] \n \nR^1 per skill"
+    label: |md
+      Population Priors (μ)
+
+      (Logit space, fixed)
+
+      μ_L₀ = σ⁻¹(BKT_prior)
+
+      μ_T  = σ⁻¹(BKT_learn)
+    |
     shape: rectangle
     style: {
         fill: "#d4e6f1"
@@ -217,7 +231,16 @@ Section4: {
   }
   
   StudentTraits: {
-    label: "Per-Student Traits \n (from z context) \n delta = proj(mean(z)) \n \n R^2 per student"
+    label: |md
+      Student Traits (δ)
+      (Temporal Aggregation)
+      
+      z_agg = mean(zₜ)
+      
+      δ_L₀ = W_L0 · z_agg + b_δL₀
+      
+      δ_T  = W_T · z_agg + b_δT
+    |
     shape: rectangle
     style: {
         fill: "#d4e6f1"
@@ -228,7 +251,16 @@ Section4: {
   }
   
   SkillResiduals: {
-    label: "Per-Skill Residuals \n (from z context) \n epsilon_L0 = proj(z) \n epsilon_T = proj(z) \n \n R^1 per interaction"
+    label: |md
+      Skill Residuals (ε)
+      (Interaction Dynamics)
+      
+      ε_L₀(t) = W_res_L0 · zₜ + b_εL₀
+      
+      ε_T(t)  = W_res_T · zₜ + b_εT
+      
+      [Per-interaction shift]
+    |
     shape: rectangle
     style: {
         fill: "#d4e6f1"
@@ -239,7 +271,14 @@ Section4: {
   }
   
   FinalParams: {
-    label: "Final Parameters \n p_L0 = sigma(mu + delta + epsilon)\n p_T = sigma(mu + delta + epsilon)"
+    label: |md
+      Final Parameters
+      (Interpretation Head)
+      
+      p_L₀ = σ(μ_L₀ + δ_L₀ + ε_L0)
+      
+      p_T  = σ(μ_T + δ_T + ε_T)
+    |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
@@ -433,7 +472,7 @@ Section2.TaskHistoryEmb -> Section3.QuestionEmbed: "q_embed" { style: { stroke-w
 # 3 -> 4
 Section1.BKT -> Section4.PopulationLevel: "mu_L0, mu_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 Section1.BKT -> Section1.PCAReference: "Z_pca" { style: { stroke-width: 4; stroke: "#e91e63"; font-size: 80 } }
-Section3.ContextVector -> Section4.StudentTraits: "proj(mean(z))" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section4.StudentTraits: "mean pooling" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 Section3.ContextVector -> Section4.SkillResiduals: "proj(z)" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 
 # 4 -> 5
