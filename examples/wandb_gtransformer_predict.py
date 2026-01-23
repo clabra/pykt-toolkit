@@ -100,7 +100,8 @@ def main(params):
     # V2.0 compatibility: Merge v2.0 parameters from params into model_config
     # During training, wandb_gtransformer_train.py does model_config = deepcopy(params)
     # During evaluation, we need to ensure v2.0 parameters are in model_config
-    v2_params = ['lambda_pca', 'lambda_residual', 'use_population', 'use_traits', 'use_residuals', 'pca_alpha', 'pca_beta']
+    v2_params = ['lambda_pca', 'lambda_residual', 'use_population', 'use_traits', 'use_residuals', 
+                 'pca_alpha', 'pca_beta', 'trait_aggregation', 'trait_window_size']
     for param in v2_params:
         if param in params and param not in model_config:
             model_config[param] = params[param]

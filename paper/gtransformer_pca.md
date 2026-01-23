@@ -2539,3 +2539,185 @@ else:
 
 > **Summary**: The 0.55% gap likely stems from information loss in the 2D trait bottleneck combined with coarser supervision granularity (student-level vs interaction-level).
 
+
+## Comparison v2 vs v1 - Conclusions
+
+### Performance Comparison
+
+**v1.0 Baseline (Exp 801184 - Probe Grounding):**
+- AUC (p_sup): **0.7812**
+- AUC (p_ref): **0.6727**
+- Method: Linear probe heads with active supervision (λ_probe=1.0)
+- Architecture: Direct latent-to-parameter projection with probe loss
+
+**v2.0 Best (Exp 312316 - PCA Grounding):**
+- AUC (p_sup): **0.7769** (-0.55%)
+- AUC (p_ref): **0.6722** (-0.07%)
+- Method: PCA cluster grounding with three-term decomposition (λ_pca=1.0)
+- Architecture: Population (μ) + Traits (δ) + Residuals (ε)
+
+**v2.0 Experimental (Exp 376720 - Separated Encoders + Attention):**
+- AUC (p_sup): **0.7766** (-0.59%)
+- AUC (p_ref): **0.6680** (-0.70%)
+- Method: Separated trait encoders with attention-based aggregation
+- Architecture: Individual L0 and T encoders + context-weighted pooling
+- **Status:** Incomplete (35% training) - results inconclusive
+
+### Architectural Differences
+
+**v1.0 (Probe-Based Grounding):**
+```
+z_context → Linear Probes → p_L0_probe, p_T_probe
+                ↓
+        ℒ_probe = MSE(probe_output, BKT_target)
+```
+- **Supervision:** Direct, interaction-level
+- **Parameter Extraction:** Single-path linear projection
+- **Interpretability:** Global linear decodability enforced via probe loss
+- **Complexity:** Simple, minimal preprocessing
+
+**v2.0 (PCA Cluster Grounding):**
+```
+BKT_params → PCA → Z_pca (cluster targets)
+z_context → Trait Encoder → Student Traits (δ)
+                ↓
+p_L0 = σ(μ_L0 + δ_L0 + ε_L0)  [Three-term decomposition]
+                ↓
+        ℒ_pca = MSE(δ, Z_pca) + Pairwise_Distance_Loss
+```
+- **Supervision:** Indirect, student-level cluster alignment
+- **Parameter Extraction:** Multi-term composition (population + individual + residual)
+- **Interpretability:** Cluster coherence + theoretical decomposition
+- **Complexity:** Requires PCA preprocessing, more parameters
+
+### Diagnostic Findings
+
+#### 1. Performance Cost is Modest (-0.55%)
+
+The gap between v1.0 and v2.0 narrows significantly with optimal hyperparameters:
+- Early experiments (λ_pca=0.1): **-0.63%** gap (Exp 743149)
+- Optimal configuration (λ_pca=1.0): **-0.55%** gap (Exp 312316)
+- Removing λ_initmastery/λ_rate: **-1.15%** gap (Exp 669948) ❌
+
+**Conclusion:** Stronger PCA grounding (λ_pca=1.0) and proper regularization (λ_initmastery=0.1, λ_rate=0.1) partially recover performance. The remaining 0.55% gap is likely due to:
+1. **2D trait bottleneck:** v2.0 compresses student variation into 2 dimensions
+2. **Coarser supervision:** Student-level PCA targets vs interaction-level probe targets
+3. **Indirect gradient flow:** PCA alignment is one step removed from parameter prediction
+
+#### 2. Interpretability Mostly Preserved
+
+Despite architectural changes, BKT parameter extraction quality remains high:
+- p_ref gap: **-0.07%** (0.6727 → 0.6722)
+- Interpretability gap: ~10.8% for both v1.0 and v2.0
+- Per-skill alignment: Mean concordance 0.776 (77.6% agreement with BKT)
+
+**Conclusion:** PCA grounding successfully maintains theoretical alignment. The three-term decomposition (μ + δ + ε) provides equivalent interpretability to direct probe supervision while offering cleaner conceptual separation.
+
+#### 3. Architectural Complexity Trade-off
+
+**v2.0 Advantages:**
+- ✅ **Cleaner decomposition:** Explicit separation of population, individual, and skill-specific effects
+- ✅ **Better theoretical grounding:** Aligns with educational theory (prior knowledge + aptitude + context)
+- ✅ **Richer analysis:** Can study student trait distributions, cluster membership, residual patterns
+- ✅ **Stable p_ref:** Extremely low variance (±0.0002) suggests robust parameter learning
+
+**v2.0 Disadvantages:**
+- ❌ **Implementation complexity:** Requires BKT pre-training, PCA computation, cluster reference storage
+- ❌ **Extra preprocessing:** Must generate PCA targets before training
+- ❌ **More hyperparameters:** λ_pca, pca_alpha, pca_beta, lambda_residual
+- ❌ **Performance cost:** -0.55% supervised AUC
+
+**Conclusion:** v2.0 offers better theoretical interpretability at the cost of implementation complexity and minor performance degradation. The trade-off is acceptable for research focused on understanding student learning patterns.
+
+#### 4. Over-Constraining Risk
+
+Experiments reveal v2.0 is more sensitive to regularization configuration:
+
+| Configuration | λ_initmastery | λ_rate | λ_residual | AUC Gap | Result |
+|---------------|---------------|--------|------------|---------|--------|
+| Exp 743149 (default) | 0.1 | 0.1 | 0.01 | -0.63% | Baseline |
+| Exp 567618 (no residual reg) | 0.1 | 0.1 | **0.0** | -0.58% | Marginal improvement |
+| Exp 669948 (v1 params) | **0.0** | **0.0** | 0.0 | -1.15% | ❌ Significant degradation |
+| Exp 312316 (optimal) | 0.1 | 0.1 | **0.0**, λ_pca=**1.0** | -0.55% | ✅ Best v2.0 |
+
+**Conclusion:** v2.0 architecture requires λ_initmastery=0.1 and λ_rate=0.1 to prevent under-regularization. PCA constraints alone are insufficient—additional grounding losses provide beneficial inductive bias. This contrasts with v1.0, which works well with λ_initmastery=0.0 and λ_rate=0.0.
+
+#### 5. Separated Encoders: Inconclusive Evidence
+
+Exp 376720 tested architectural refinement (separated `trait_l0_encoder` and `trait_t_encoder` + attention aggregation):
+- Training: **Only 35% complete** (64-74/200 epochs)
+- Partial results: -0.59% AUC gap, comparable to Exp 312316
+- Attention aggregation: Context-weighted pooling over 80-step window
+
+**Conclusion:** Cannot assess whether separated encoders + attention aggregation improve performance without complete training. Early results suggest no degradation, but benefits unclear.
+
+### Recommendations
+
+#### For Production/Baseline Use
+
+**Choose v1.0 (Exp 801184) with probe grounding** if:
+- Maximum predictive performance is required (0.7812 AUC)
+- Simpler implementation is preferred
+- Interaction-level interpretability is sufficient
+- Minimal preprocessing overhead is desired
+
+**Advantages:**
+- Highest supervised AUC
+- Simpler architecture (fewer hyperparameters)
+- Direct supervision (easier to debug)
+- Proven stability across datasets
+
+#### For Research/Interpretability Use
+
+**Choose v2.0 (Exp 312316) with PCA grounding** if:
+- Understanding student trait distributions is important
+- Theoretical decomposition (μ vs δ vs ε) provides research value
+- -0.55% performance cost is acceptable
+- Cluster-based analysis is needed (e.g., student grouping, personalization)
+
+**Advantages:**
+- Cleaner three-term decomposition
+- Explicit student trait modeling
+- Superior for analyzing individual differences
+- Better alignment with educational psychology theory
+
+#### For Future Work
+
+**Priority 1: Complete Exp 376720**
+- Finish 200-epoch training for separated encoders + attention aggregation
+- Assess whether architectural refinement provides benefit
+- Compare attention vs mean pooling for trait extraction
+
+**Priority 2: Hybrid Approach**
+```
+Combine probe supervision + PCA grounding:
+ℒ_total = λ_sup·ℒ_sup + λ_ref·ℒ_ref + λ_probe·ℒ_probe + λ_pca·ℒ_pca
+```
+- Test if dual grounding (direct probes + cluster alignment) improves stability
+- May capture benefits of both v1.0 (interaction-level) and v2.0 (student-level) supervision
+
+**Priority 3: Expand Trait Dimensionality**
+- Increase from 2D to 4D/8D to reduce information bottleneck
+- Test if higher-dimensional traits recover performance gap
+- Analyze whether additional dimensions capture meaningful student variation
+
+**Priority 4: Interaction-Level PCA Grounding**
+- Move from student-level cluster targets to per-interaction PCA supervision
+- Increase supervision density (from N_students to N_interactions)
+- May close the -0.55% gap while preserving v2.0's theoretical benefits
+
+**Priority 5: Cross-Dataset Validation**
+- Test both architectures on assist2015, bridge2algebra2006
+- Verify if performance gap generalizes or is dataset-specific
+- Assess whether PCA grounding scales better to larger student populations
+
+### Final Verdict
+
+**The 0.55% performance gap is acceptable** for gaining cleaner interpretable decomposition:
+- v1.0 remains the **recommended baseline for pure performance** (0.7812 AUC)
+- v2.0 is the **recommended choice for interpretability research** (0.7769 AUC, cleaner theory)
+- Both achieve ~10.8% interpretability gap, demonstrating BKT parameter extraction quality
+- Future work should explore hybrid approaches to capture benefits of both architectures
+
+The v2.0 architecture successfully achieves its design goal: **explicit theoretical grounding with minimal performance sacrifice**. The three-term decomposition (population priors + student traits + skill residuals) provides superior explanatory power for understanding individual learning differences, making it ideal for educational research applications.
+

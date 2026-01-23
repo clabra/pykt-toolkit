@@ -179,8 +179,8 @@ def extract_latent_and_l0(model, loader, device):
             # target_l0 is provided by GTransformerDataset
             l0_targets = data["target_l0"].to(device) # [BS, seqlen]
             
-            # Extract probe prediction from outputs
-            l0_preds = outputs["p_l0_probe"] # [BS, seqlen]
+            # Extract grounded L0 predictions from outputs (v2.0 uses p_l0 instead of p_l0_probe)
+            l0_preds = outputs.get("p_l0_probe", outputs.get("p_l0")) # [BS, seqlen]
             
             # Masked extraction
             mask = sm.bool() # [BS, seqlen]
@@ -261,6 +261,15 @@ def main():
     state_dict = checkpoint
     if 'model_state_dict' in state_dict:
         state_dict = state_dict['model_state_dict']
+
+    # Backward compatibility: Remap old student_trait_encoder to new split encoders
+    if 'student_trait_encoder.weight' in state_dict:
+        print("[Backward Compatibility] Remapping student_trait_encoder to trait_l0_encoder and trait_t_encoder")
+        state_dict['trait_l0_encoder.weight'] = state_dict.pop('student_trait_encoder.weight')
+        state_dict['trait_l0_encoder.bias'] = state_dict.pop('student_trait_encoder.bias')
+        # Initialize trait_t_encoder with the same values (reasonable initialization)
+        state_dict['trait_t_encoder.weight'] = state_dict['trait_l0_encoder.weight'].clone()
+        state_dict['trait_t_encoder.bias'] = state_dict['trait_l0_encoder.bias'].clone()
 
     # Skill params for initialization
     bkt_params_path = os.path.join(dpath, "bkt_skill_params.pkl")

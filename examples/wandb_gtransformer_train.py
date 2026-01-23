@@ -58,6 +58,12 @@ def main(params):
 
     with open("../configs/data_config.json") as fin:
         data_config = json.load(fin)
+    
+    # Handle S-protocol mapping (assist2009_S -> assist2009)
+    if dataset_name not in data_config and dataset_name.endswith("_S"):
+        print(f"  [Mapping] Dataset {dataset_name} not found, trying {dataset_name[:-2]}")
+        dataset_name = dataset_name[:-2]
+        
     if 'maxlen' in data_config[dataset_name]:
         train_config["seq_len"] = data_config[dataset_name]['maxlen']
     seq_len = train_config["seq_len"]
@@ -219,6 +225,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", type=int, required=True)
     parser.add_argument("--add_uuid", type=int, required=True)
     parser.add_argument("--save_dir", type=str, required=True)
+    parser.add_argument("--gpus", type=str, required=True, help="GPUs allocated for this run (for audit consistency)")
     parser.add_argument("--dual_eval", action='store_true', help="Whether to run dual evaluation")
     parser.add_argument("--personalization", action='store_true', help="Whether to use student personalization")
     parser.add_argument("--prediction_type", type=str, required=True, help="Type of prediction (supervised/reference)")
@@ -268,6 +275,8 @@ if __name__ == "__main__":
     parser.add_argument("--use_population", action='store_true', help="Use population term (μ) in three-term decomposition")
     parser.add_argument("--use_traits", action='store_true', help="Use student trait term (δ) in three-term decomposition")
     parser.add_argument("--use_residuals", action='store_true', help="Use skill residual term (ε) in three-term decomposition")
+    parser.add_argument("--trait_aggregation", type=str, required=True, help="Trait aggregation strategy: 'attention', 'recency', 'window', or 'mean'")
+    parser.add_argument("--trait_window_size", type=int, required=True, help="Window size for 'window' trait aggregation strategy")
     
     # 8. Legacy mapping for model_name, etc.
     parser.add_argument("--model_name", type=str, help="Legacy naming")

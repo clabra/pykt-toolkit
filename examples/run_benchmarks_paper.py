@@ -563,6 +563,8 @@ def main():
     parser.add_argument("--lambda_residual", type=float, default=None, help="Override lambda_residual (residual parsimony loss weight)")
     parser.add_argument("--pca_alpha", type=float, default=None, help="Override pca_alpha (PCA MSE component weight)")
     parser.add_argument("--pca_beta", type=float, default=None, help="Override pca_beta (PCA pairwise distance weight)")
+    parser.add_argument("--trait_aggregation", type=str, default=None, help="Override trait_aggregation strategy (attention/recency/window/mean)")
+    parser.add_argument("--trait_window_size", type=int, default=None, help="Override trait_window_size (for window strategy)")
     parser.add_argument("--personalization", type=int, default=None, help="Override personalization (0/1)")
     parser.add_argument("--seed", type=int, default=None, help="Override random seed")
     
@@ -606,6 +608,10 @@ def main():
             param_overrides['pca_alpha'] = args.pca_alpha
         if args.pca_beta is not None:
             param_overrides['pca_beta'] = args.pca_beta
+        if args.trait_aggregation is not None:
+            param_overrides['trait_aggregation'] = args.trait_aggregation
+        if args.trait_window_size is not None:
+            param_overrides['trait_window_size'] = args.trait_window_size
         if args.personalization is not None:
             param_overrides['personalization'] = args.personalization
         if args.seed is not None:

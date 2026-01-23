@@ -1,7 +1,7 @@
 {
   "defaults": {
     "model": "gtransformer",
-    "dataset": "assist2009_S",
+    "dataset": "assist2009",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
@@ -72,12 +72,15 @@
     "add_uuid": 1,
     "dual_eval": true,
     "lambda_pca": 1.0,
-    "lambda_residual": 0.01,
+    "lambda_residual": 0.0,
     "use_population": true,
     "use_traits": true,
     "use_residuals": true,
     "pca_alpha": 0.2,
-    "pca_beta": 0.8
+    "pca_beta": 0.8,
+    "trait_aggregation": "attention",
+    "trait_window_size": 80,
+    "gpus": "0,1,2,3,4,5"
   },
   "types": {
     "launcher": [
@@ -162,7 +165,9 @@
       "use_traits",
       "use_residuals",
       "pca_alpha",
-      "pca_beta"
+      "pca_beta",
+      "trait_aggregation",
+      "trait_window_size"
     ]
   },
   "fixed": {
@@ -347,5 +352,5 @@
       ]
     }
   },
-  "md5": "ecc606e094cdf7b0ca0c1835b2e3e562"
+  "md5": "b746ae63fa2442a8efdaac7c185df201"
 }

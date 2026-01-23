@@ -94,7 +94,7 @@
         "dropout": 0.1,
         "emb_type": "qid",
         "final_fc_dim": 512,
-        "l2": "1e-05",
+        "l2": 1e-05,
         "lambda_student": 1e-05,
         "lambda_gap": 1e-05,
         "lambda_ref": 0.1,
@@ -146,7 +146,7 @@
         "d_ff": 64,
         "dropout": 0.1,
         "final_fc_dim": 512,
-        "l2": "1e-05",
+        "l2": 1e-05,
         "num_attn_heads": 8
     },
     "data_config": {
@@ -204,7 +204,7 @@
         "dropout": 0.1,
         "emb_type": "qid",
         "final_fc_dim": 512,
-        "l2": "1e-05",
+        "l2": 1e-05,
         "lambda_student": 1e-05,
         "lambda_gap": 1e-05,
         "lambda_ref": 0.1,

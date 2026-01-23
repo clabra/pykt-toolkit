@@ -1668,7 +1668,8 @@ Experiment 970901 validates the **GTransformer v2.0 architecture** with three-te
 | Exp 743149 (v2.0 default) | 0.1 | 0.01 | 0.1 | 0.1 | 0.7763 | 0.6678 | -0.63% | Default v2.0 |
 | Exp 567618 (λ_res=0) | 0.1 | **0.0** | 0.1 | 0.1 | 0.7767 | 0.6708 | -0.58% | Marginal improvement |
 | Exp 669948 (v1_params) | 0.1 | **0.0** | **0.0** | **0.0** | 0.7722 | 0.6735 | **-1.15%** ❌ | Worse performance |
-| **Exp 312316** (λ_pca=1.0) | **1.0** | **0.0** | **0.0** | **0.0** | **0.7769** | **0.6721** | **-0.55%** ✅ | **Best v2.0 result** |
+| **Exp 312316** (λ_pca=1.0) | **1.0** | **0.0** | 0.1 | 0.1 | **0.7769** ± 0.0011 | **0.6722** ± 0.0002 | **-0.55%** ✅ | **Best v2.0 result**, single encoder, mean pooling |
+| **Exp 376720** (separated encoders) | **1.0** | 0.01 | 0.1 | 0.1 | **0.7766** ± 0.0018 | **0.6680** ± 0.0002 | **-0.59%** | Attention aggregation |
 
 **Key Findings:**
 - Exp 970901 validated cluster bug fix had no effect (same performance as 743149)
@@ -1678,5 +1679,105 @@ Experiment 970901 validates the **GTransformer v2.0 architecture** with three-te
 - Stronger PCA grounding helps, but **0.55% gap remains** vs v1.0 probe-based grounding
 - Remaining gap likely due to fundamental architecture differences (three-term decomposition vs probe heads)
 
+## Exp 312316
 
+**Configuration:**
+- Campaign: `20260122_165150_exp_pca_1_0_312316`
+- **Training timestamp**: 2026-01-22 16:51-17:15 UTC
+- **Code version**: Between commits `cb3f1630` and `698e1f9` (trained BEFORE trait encoder separation at 18:16)
+- Architecture: 2 blocks, 8 heads
+- Loss weights: `lambda_pca=1.0`, `lambda_residual=0.0`, `lambda_initmastery=0.1`, `lambda_rate=0.1`
+- PCA components: `pca_alpha=0.2` (MSE weight), `pca_beta=0.8` (pairwise distance weight)
+- Trait encoder: Single `student_trait_encoder: Linear(z_dim, 2)` (v2.0 architecture, pre-separation)
+- Trait aggregation: Simple mean pooling over sequence (no configurable strategies yet)
+
+**Results (5-fold CV on ASSIST2009):**
+
+| Fold | AUC (p_sup) | AUC (p_ref) | ACC |
+|:----:|:-----------:|:-----------:|:---:|
+| 0 | 0.7781 | 0.6719 | 0.7345 |
+| 1 | 0.7754 | 0.6723 | 0.7351 |
+| 2 | 0.7777 | 0.6722 | 0.7367 |
+| 3 | 0.7759 | 0.6723 | 0.7342 |
+| 4 | 0.7776 | 0.6720 | 0.7367 |
+| **Mean ± Std** | **0.7769 ± 0.0011** | **0.6722 ± 0.0002** | **0.7354 ± 0.0011** |
+
+**Analysis:**
+- Final validation of `lambda_pca=1.0` configuration
+- AUC (p_sup): 0.7769 confirms strong PCA grounding effect
+- AUC (p_ref): 0.6722 shows good BKT parameter extraction (comparable to v1.0's 0.6727)
+- Compared to baseline (0.7825): **-0.56%** performance cost
+- Compared to v2.0 minimalist (0.7812, Exp 801184): **-0.43%** difference
+- **Status:** Confirmed PCA grounding at λ=1.0 provides maximal cluster coherence while maintaining competitive performance
+- Per-skill alignment statistics available in `experiments/20260122_165150_exp_pca_1_0_312316/plots/`
+  - Mean concordance: 0.776 (77.6% alignment between model and BKT)
+  - 5 skills with excellent alignment (≥0.90), 39 with good alignment (0.80-0.90)
+
+**Architectural Notes:**
+- Trained with v2.0 architecture **before** trait encoder separation (commit `698e1f9`)
+- Used single `student_trait_encoder: Linear(z_dim, 2)` instead of separated `trait_l0_encoder` and `trait_t_encoder`
+- Mean pooling aggregation (no attention/recency/window strategies available yet)
+- **Not directly comparable** with future experiments using separated encoders + configurable aggregation
+
+## Exp 376720
+
+**Campaign:** `20260123_115524_twotraitencoders-attagg_376720`  
+**Training Date:** 2026-01-23 11:55 UTC  
+**Architecture:** 2 blocks, 8 heads (emb_size=256)  
+**Trait Encoders:** Separated (`trait_l0_encoder` + `trait_t_encoder`)  
+**Trait Aggregation:** Attention-based (`trait_aggregation=attention`, window_size=80)
+
+### Configuration
+
+**Loss Weights:**
+- `lambda_sup=1.0`, `lambda_ref=0.5`
+- `lambda_pca=1.0`, `lambda_residual=0.01`
+- `lambda_initmastery=0.1`, `lambda_rate=0.1`
+- `lambda_probe=0.0` (v2.0, no probe architecture)
+
+**PCA Grounding:**
+- `pca_alpha=0.2`, `pca_beta=0.8`
+- Three-term decomposition: μ (population) + δ (student traits) + ε (residuals)
+
+**Training:**
+- Optimizer: Adam, lr=0.0001
+- Batch size: 64
+- Epochs: 200 (target)
+
+
+### Results (Partial Training)
+
+**5-Fold Cross-Validation (assist2009):**
+
+| Fold | p_sup (AUC) | p_ref (AUC) | ACC |
+|------|-------------|-------------|-----|
+| 0    | 0.7782      | 0.6678      | 0.7348 |
+| 1    | 0.7771      | 0.6681      | 0.7342 |
+| 2    | 0.7770      | 0.6683      | 0.7351 |
+| 3    | 0.7730      | 0.6679      | 0.7307 |
+| 4    | 0.7776      | 0.6678      | 0.7352 |
+| **Mean** | **0.7766** | **0.6680** | **0.7340** |
+| **Std**  | **±0.0018** | **±0.0002** | **±0.0017** |
+
+**Comparison with Exp 312316 (Complete Training):**
+- **Exp 312316** (single encoder, mean pooling, 200 epochs): AUC=0.7769±0.0011
+- **Exp 376720** (separated encoders, attention aggregation, 64-74 epochs): AUC=0.7766±0.0018
+- Performance comparable 
+- Attention aggregation shows potential but requires full training for conclusive comparison
+
+### Analysis
+
+- Training stopped at 32-37% completion (64-74/200 epochs)
+- Early AUC values (0.77-0.78) suggest promising trajectory
+- Standard deviation similar to Exp 312316, indicating stable learning
+- Cannot conclusively assess benefit of architectural changes (separated encoders + attention aggregation)
+
+**Architectural Differences from Exp 312316:**
+1. **Separated Trait Encoders:** `trait_l0_encoder` and `trait_t_encoder` (post-698e1f9 commit)
+2. **Attention Aggregation:** Context-weighted sequence aggregation vs simple mean pooling
+3. **Attention Window:** 80-step rolling window for trait extraction
+
+**Recommendation:**
+- Relaunch full 200-epoch training to properly evaluate separated encoder + attention aggregation architecture
+- Current partial results suggest architectural changes do not harm performance, but benefits unclear
 

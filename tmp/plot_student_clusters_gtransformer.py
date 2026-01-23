@@ -151,6 +151,15 @@ def main():
     checkpoint = torch.load(CHECKPOINT, map_location='cpu')
     state_dict = checkpoint.get('model_state_dict', checkpoint)
     
+    # Backward compatibility: Remap old student_trait_encoder to new split encoders
+    if 'student_trait_encoder.weight' in state_dict:
+        print("[Backward Compatibility] Remapping student_trait_encoder to trait_l0_encoder and trait_t_encoder")
+        state_dict['trait_l0_encoder.weight'] = state_dict.pop('student_trait_encoder.weight')
+        state_dict['trait_l0_encoder.bias'] = state_dict.pop('student_trait_encoder.bias')
+        # Initialize trait_t_encoder with the same values (reasonable initialization)
+        state_dict['trait_t_encoder.weight'] = state_dict['trait_l0_encoder.weight'].clone()
+        state_dict['trait_t_encoder.bias'] = state_dict['trait_l0_encoder.bias'].clone()
+    
     bkt_params_path = os.path.join(dpath, "bkt_skill_params.pkl")
     with open(bkt_params_path, "rb") as f:
         bkt_skill_params = pickle.load(f)
@@ -171,10 +180,9 @@ def main():
         plot_subtitle = "Personalized (Learned Student Embeddings)"
         filename = "cluster_placement_pacing_personalized.png"
     else:
-        print(f"[NO PERSONALIZATION] Using probe predictions from temporal context (n_uid=0)")
-        alpha, beta, uids = extract_student_metrics_from_probes(model, loader, device)
-        plot_subtitle = "Contextual (Probe Predictions)"
-        filename = "cluster_placement_pacing_contextual.png"
+        print(f"[NO PERSONALIZATION] Skipping student clustering (n_uid=0, no probe outputs in v2.0)")
+        print(f"[PLOT] Student clustering plot requires personalization (n_uid > 0)")
+        return  # Skip this plot for non-personalized models
     
     print(f"--- STUDENT METRICS DEBUG ---")
     print(f"Alpha (Placement) - Mean: {alpha.mean():.4f}, Std: {alpha.std():.4f}, Range: [{alpha.min():.4f}, {alpha.max():.4f}]")

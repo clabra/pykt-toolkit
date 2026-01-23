@@ -99,6 +99,18 @@ class GTransformer(nn.Module):
             self.pca_alpha = kwargs['pca_alpha']  # MSE weight
             self.pca_beta = kwargs['pca_beta']   # Pairwise distance weight
             
+            # V2.0: Trait Aggregation Strategy (backward compatible default)
+            self.trait_aggregation = kwargs.get('trait_aggregation', 'mean')  # "attention", "recency", "window", "mean"
+            self.trait_window_size = kwargs.get('trait_window_size', 50)  # For window aggregation
+            
+            # V2.0: Attention-weighted Aggregation Module (if enabled)
+            if self.trait_aggregation == 'attention':
+                self.trait_attention = nn.Sequential(
+                    nn.Linear(z_dim, z_dim // 2),
+                    nn.Tanh(),
+                    nn.Linear(z_dim // 2, 1)
+                )
+            
             # V2.0: Student Trait Encoders (context-based, no memorization)
             # INDEPENDENT encoders for δ_L0 and δ_T (like V1.0 probes)
             # This eliminates gradient competition and matches probe architecture capacity
@@ -371,12 +383,39 @@ class GTransformer(nn.Module):
         
         # Term 2: Student Trait Parameters (δ)
         # Context-based traits (NO student embeddings, generalizes to new students)
-        # Aggregate context over sequence via mean pooling
+        # Aggregate context over sequence using configurable strategy
         student_traits = None
         if uid_data is not None:
             # z_context: [BS, seqlen, z_dim]
-            # Aggregate per-student: mean pool over sequence dimension
-            z_student_agg = z_context.mean(dim=1)  # [BS, z_dim]
+            # Aggregate per-student using selected strategy
+            if self.trait_aggregation == 'mean':
+                # Simple mean pooling (baseline)
+                z_student_agg = z_context.mean(dim=1)  # [BS, z_dim]
+            
+            elif self.trait_aggregation == 'attention':
+                # Attention-weighted aggregation (learns importance)
+                attn_scores = self.trait_attention(z_context)  # [BS, seqlen, 1]
+                attn_weights = torch.softmax(attn_scores, dim=1)  # [BS, seqlen, 1]
+                z_student_agg = (z_context * attn_weights).sum(dim=1)  # [BS, z_dim]
+            
+            elif self.trait_aggregation == 'recency':
+                # Exponential decay weighting (recent interactions weighted higher)
+                seqlen = z_context.size(1)
+                # Decay from oldest (0) to newest (seqlen-1): weights increase toward end
+                decay_weights = torch.exp(0.1 * torch.arange(seqlen, device=z_context.device, dtype=torch.float32))
+                decay_weights = decay_weights / decay_weights.sum()  # Normalize
+                decay_weights = decay_weights.view(1, seqlen, 1)  # [1, seqlen, 1]
+                z_student_agg = (z_context * decay_weights).sum(dim=1)  # [BS, z_dim]
+            
+            elif self.trait_aggregation == 'window':
+                # Last-N window (use only recent interactions)
+                seqlen = z_context.size(1)
+                window_size = min(self.trait_window_size, seqlen)
+                z_student_agg = z_context[:, -window_size:, :].mean(dim=1)  # [BS, z_dim]
+            
+            else:
+                raise ValueError(f"Unknown trait_aggregation: {self.trait_aggregation}. "
+                               f"Must be one of: 'mean', 'attention', 'recency', 'window'")
             
             # Project to 1D traits independently (matching V1.0 probe architecture)
             delta_l0_1d = self.trait_l0_encoder(z_student_agg)  # [BS, 1]

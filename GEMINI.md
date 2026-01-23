@@ -111,7 +111,11 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - Training and evaluation should be launched using the commands described in `examples/reproducibility.md`
 - Avoid launching commands that terminate scripts tha are running in the terminal
 - Launch scripts in such a way that we leverage available GPUs (around 75% if not set otherwise) and CPUs (around 75% of CPU power)
-- To launch experiments, use examples/run_benchmarks_paper.py (it has mode = train, evaluate, results)
+- To launch experiments, use 
+```
+nohup python examples/run_benchmarks_paper.py
+mode = train, evaluate, results
+```
 - The metric we are interested, the one used to do benchmarks comparing models and versions, is test AUC calculated at the question-levele, late-fusion (average) as described in "Evaluation Protocol" of /home/conchalabra/projects/dl/pykt-toolkit/assistant/quickstart.txt. It is saved as "oriauclate_mean" in eval_results.json of each experiment
 
 ### Code and Style Guidelines
