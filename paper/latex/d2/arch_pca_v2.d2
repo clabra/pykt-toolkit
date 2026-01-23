@@ -233,9 +233,10 @@ Section4: {
   StudentTraits: {
     label: |md
       Student Traits (δ)
-      (Temporal Aggregation)
+      (Attention-Weighted Aggregation)
       
-      z_agg = mean(zₜ)
+      α = softmax(W_attn · zₜ)
+      z_agg = Σ(αₜ · zₜ)
       
       δ_L₀ = W_L0 · z_agg + b_δL₀
       
@@ -472,7 +473,7 @@ Section2.TaskHistoryEmb -> Section3.QuestionEmbed: "q_embed" { style: { stroke-w
 # 3 -> 4
 Section1.BKT -> Section4.PopulationLevel: "mu_L0, mu_T" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 Section1.BKT -> Section1.PCAReference: "Z_pca" { style: { stroke-width: 4; stroke: "#e91e63"; font-size: 80 } }
-Section3.ContextVector -> Section4.StudentTraits: "mean pooling" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section4.StudentTraits: "attention-weighted" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 Section3.ContextVector -> Section4.SkillResiduals: "proj(z)" { style: { stroke-width: 4; stroke: "#000000"; font-size: 80 } }
 
 # 4 -> 5
