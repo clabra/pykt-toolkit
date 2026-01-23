@@ -1,0 +1,422 @@
+direction: up
+
+** {
+  style: {
+    font-size: 85
+  }
+}
+
+title: "Model Architecture" {
+  near: top-center
+  shape: text
+  style: {
+    font-size: 100
+  }
+}
+
+# ============================================================================
+# 1: INPUT COMPONENTS
+# ============================================================================
+
+Section1: {
+  label: "1: Input Components"
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#fafafa"
+    border-radius: 8
+    font-size: 100
+  }
+  
+  BKT: {
+    label: |md
+      BKT
+
+      Reference Model
+    |
+    shape: cylinder
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+
+
+  InputData: {
+    label: |md
+      Interaction 
+      
+      Data
+    |
+    shape: cylinder
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+
+}
+
+# ============================================================================
+# 2: EMBEDDINGS LAYER
+# ============================================================================
+
+Section2: {
+  label: "2: Embeddings Layer"
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#fafafa"
+    border-radius: 8
+    font-size: 100
+  }
+  
+  TaskHistoryEmb: {
+    label: |md
+      Task & History Embeddings
+      (Theoretical Enrichment)
+      
+      x'ₜ = c + u·d + Proj(μ)
+      [Concept + Difficulty + Prior]
+
+      y'ₜ = e + u·f + Proj(μ)
+      [Response + Difficulty + Prior]
+    |
+    shape: rectangle
+    style: {
+      fill: "#e8f4f8"
+      stroke: "#000000"
+      stroke-width: 2
+      3d: true
+    }
+  }
+  
+}
+
+# ============================================================================
+# 3: TRANSFORMER ARCHITECTURE
+# ============================================================================
+
+Section3: {
+  label: "3: Transformer Architecture"
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#fafafa"
+    border-radius: 8
+    font-size: 100
+  }
+  
+  Encoder: {
+    label: |md
+      Encoder
+
+      (Self-Attention)
+
+      y'_{1:t-1}
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+      multiple: true
+    }
+  }
+  
+  Decoder: {
+    label: |md
+      Decoder
+
+      (Cross-Attention)
+
+      x'ₜ
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+      multiple: true
+    }
+  }
+  
+  ContextVector: {
+    label: |md
+      Context Vector
+      zₜ = d_out ⊕ q_emb
+
+      (High-dim Latent)
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+      3d: true
+    }
+  }
+  
+  Encoder -> Decoder: "History Context" { style: { stroke: "#000000"; font-size: 80 } }
+  Decoder -> ContextVector { style: { stroke: "#000000" } }
+}
+
+# ============================================================================
+# 4: GROUNDED PARAMETERS (THREE-COMPONENT COMPOSITION)
+# ============================================================================
+
+Section4: {
+  label: "4: Grounded Parameters (Additive Composition)"
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#fafafa"
+    border-radius: 8
+    font-size: 100
+  }
+  
+  TheoryBase: {
+    label: |md
+      Theory Base
+      (Population Priors)
+      
+      logit_base_L₀ = σ⁻¹(μ_L₀[q])
+
+      logit_base_T = σ⁻¹(μ_T[q])
+    |
+    shape: rectangle
+    style: {
+        fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  
+  ContextualProjection: {
+    label: |md
+      Contextual Projection
+      (Linear Probes)
+      
+      ΔL₀ = W_L0 · zₜ + b_L0
+
+      ΔT  = W_T · zₜ + b_T
+    |
+    shape: rectangle
+    style: {
+        fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 2
+    }
+  }
+  
+  
+  FinalParams: {
+    label: |md
+      Final Parameters
+      (Sigmoid Activation)
+      
+      p_L₀ = σ(logit_base_L₀ + ΔL₀)
+      
+      p_T = σ(logit_base_T + ΔT)
+    |
+    shape: rectangle
+    style: {
+      fill: "#d4e6f1"
+      stroke: "#000000"
+      stroke-width: 3
+    }
+  }
+  
+  TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
+  ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
+}
+
+# ============================================================================
+# 5: OUTPUTS & MULTI-OBJECTIVE LOSS
+# ============================================================================
+
+Section5: {
+  label: "5: Outputs & Multi-Objective Loss"
+  style: {
+    stroke: "#000000"
+    stroke-width: 3
+    fill: "#fafafa"
+    border-radius: 8
+    font-size: 100
+  }
+  
+  Outputs: {
+    label: "Output Heads"
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      stroke-dash: 5
+      fill: "#ffffff"
+      font-size: 90
+    }
+    
+    SupervisedOut: {
+      label: |md
+        Supervised Prediction
+        
+        ŷ = MLP(zₜ)
+      |
+      shape: rectangle
+      style: {
+          fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+    
+    ReferenceOut: {
+      label: |md
+        Reference Output
+
+        (BKT Logic)
+        
+        ŷ_ref = BKT(p_L0, p_T)
+      |
+      shape: rectangle
+      style: {
+          fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+    
+    DiagnosticProbes: {
+      label: |md
+        Probe Grounding
+        (Latent Diagnostics)
+        
+        p̂_L₀ = Linear(zₜ)
+        p̂_T  = Linear(zₜ)
+      |
+      shape: rectangle
+      style: {
+          fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+  }
+  
+  Loss: {
+    label: "Multi-Objective Loss"
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      stroke-dash: 5
+      fill: "#ffffff"
+      font-size: 90
+    }
+    
+    LossSup: {
+      label: |md
+        ℒ_sup L
+      |
+      shape: rectangle
+      style: {
+        fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+    
+    LossRef: {
+      label: |md
+        ℒ_ref L 
+      |
+      shape: rectangle
+      style: {
+        fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+    
+    LossProbe: {
+      label: |md
+        ℒ_probe
+        (Theoretical Alignment)
+        
+        MSE(p̂_L₀, μ_L₀) +
+        MSE(p̂_T,  μ_T)
+      |
+      shape: rectangle  
+      style: {
+        fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 2
+      }
+    }
+    
+    TotalLoss: {
+      label: |md
+        Total Loss
+        
+        ℒ = λ_sup·ℒ_sup +
+            λ_ref·ℒ_ref +
+            λ_probe·ℒ_probe
+      |
+      shape: rectangle
+      style: {
+        fill: "#d4e6f1"
+        stroke: "#000000"
+        stroke-width: 3
+      }
+    }
+    
+    LossSup -> TotalLoss: "λ_sup" { style: { stroke: "#000000"; font-size: 80 } }
+    LossRef -> TotalLoss: "λ_ref" { style: { stroke: "#000000"; font-size: 80 } }
+    LossProbe -> TotalLoss: "λ_probe" { style: { stroke: "#000000"; font-size: 80 } }
+  }
+  
+  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#000000" } }
+  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#000000" } }
+  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#000000" } }
+}
+
+# ============================================================================
+# DATA FLOW CONNECTIONS BETWEEN SECTIONS
+# ============================================================================
+
+# 1 -> 2
+Section1.BKT -> Section1.InputData: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r, p_L0, p_T)}" { style: { stroke: "#000000"; font-size: 80 } }
+
+# 2 -> 3
+Section2.TaskHistoryEmb -> Section3.Encoder: "y'_{1:t-1}" { style: { stroke: "#000000"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.Decoder: "x'ₜ" { style: { stroke: "#000000"; font-size: 80 } }
+
+# 3 -> 4
+Section1.BKT -> Section4.TheoryBase: "μ_L0, μ_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section4.ContextualProjection: "z · Axis" { style: { stroke: "#000000"; font-size: 80 } }
+
+# 4 -> 5
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "Direct MLP" { style: { stroke: "#000000"; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "Linear Probe" { style: { stroke: "#000000"; font-size: 80 } }
+
+# Ground Truth -> Loss
+Section1.InputData -> Section5.Loss.LossSup: "y_true" {
+  style: {
+    stroke-dash: 5
+    opacity: 0.5
+    font-size: 80
+    stroke: "#000000"
+  }
+}
+Section1.BKT -> Section5.Loss.LossProbe: "p_L0, p_T" {
+  style: {
+    stroke-dash: 5
+    opacity: 0.5
+    font-size: 80
+    stroke: "#000000"
+  }
+}
+
+
