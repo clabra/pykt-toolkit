@@ -136,9 +136,6 @@
         "n_blocks": 2,
         "dropout": 0.1,
         "d_ff": 256,
-        "num_attn_heads": 8,
-        "lambda_ref": 0.5,
-        "lambda_initmastery": 0.1,
-        "lambda_rate": 0.1
+        "num_attn_heads": 8
     }
 }

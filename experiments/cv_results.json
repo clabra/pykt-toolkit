@@ -1,34 +1,41 @@
 {
-    "gtransformer": {
-        "assist2009": {
-            "status": "PASS",
-            "auc_mean": 0.781237659288993,
-            "auc_std": 0.0011023524662898516,
-            "acc_mean": 0.7375818119187049,
-            "acc_std": 0.0006286359755853478,
-            "folds_ok": 5,
-            "folds_running": 0,
-            "folds_total": 5,
-            "fold_data": {
-                "0": {
-                    "auc": 0.7815119908234999,
-                    "acc": 0.7366708768706702
-                },
-                "1": {
-                    "auc": 0.7827535268059604,
-                    "acc": 0.7385654686722548
-                },
-                "2": {
-                    "auc": 0.7803345269363388,
-                    "acc": 0.737225858307498
-                },
-                "3": {
-                    "auc": 0.7796775013452438,
-                    "acc": 0.7376468787078501
-                },
-                "4": {
-                    "auc": 0.7819107505339221,
-                    "acc": 0.7377999770352509
+    "generated_at": "2026-01-24T17:15:17.512421",
+    "campaign": "all_experiments",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "assist2009": {
+                "status": "PASS",
+                "auc_mean": 0.779491082175727,
+                "auc_std": 0.0010105681985447543,
+                "acc_mean": 0.7357101848662303,
+                "acc_std": 0.0010491983752666007,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7800843045288238,
+                        "acc": 0.7355226394151644
+                    },
+                    "1": {
+                        "auc": 0.7803560482323577,
+                        "acc": 0.7363646802158686
+                    },
+                    "2": {
+                        "auc": 0.7794306507769311,
+                        "acc": 0.737244995598423
+                    },
+                    "3": {
+                        "auc": 0.7775622347488149,
+                        "acc": 0.7341256171776324
+                    },
+                    "4": {
+                        "auc": 0.7800221725917083,
+                        "acc": 0.7352929919240633
+                    }
                 }
             }
         }

@@ -122,13 +122,38 @@ def main(params):
     if not os.path.isdir(ckpt_path):
         os.makedirs(ckpt_path)
     print(f"Start training model: {model_name}, embtype: {emb_type}, save_dir: {ckpt_path}, dataset_name: {dataset_name}")
-    print(f"model_config: {model_config}")
-    print(f"train_config: {train_config}")
+    
+    # Dump all parameters that will be used for training
+    print("\n" + "="*70)
+    print("TRAINING PARAMETERS DUMP (Final Configuration)")
+    print("="*70)
+    print("\nmodel_config (architecture parameters):")
+    for key in sorted(model_config.keys()):
+        print(f"  {key:25s} = {model_config[key]}")
+    print("\ntrain_config (training hyperparameters):")
+    for key in sorted(train_config.keys()):
+        print(f"  {key:25s} = {train_config[key]}")
+    print("\ndata_config (dataset parameters):")
+    for key in sorted(data_config[dataset_name].keys()):
+        print(f"  {key:25s} = {data_config[dataset_name][key]}")
+    print("="*70 + "\n")
 
     learning_rate = params["learning_rate"]
     for remove_item in ['use_wandb','learning_rate','add_uuid','l2','batch_size','num_epochs']:
         if remove_item in model_config:
             del model_config[remove_item]
+    
+    # === ABLATION CONTROL CENTER ===
+    # Note: The ablation control center is also called in init_model,
+    # but we call it here first to validate before saving config
+    from pykt.models.init_model import validate_and_apply_ablation_config
+    try:
+        model_config = validate_and_apply_ablation_config(model_config, source="command_line")
+    except ValueError as e:
+        print(str(e))
+        import sys
+        sys.exit(1)
+    # === END ABLATION CONTROL CENTER ===
     
     save_config(train_config, model_config, data_config[dataset_name], params, ckpt_path)
         

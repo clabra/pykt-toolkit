@@ -204,7 +204,7 @@ Our research is guided by three primary research questions:
 \begin{itemize}
 \item RQ1: \textbf{Theory-Based Interpretability Through Grounded Transformers}
 
-Can deep knowledge tracing models achieve state-of-the-art predictive performance while providing interpretability grounded in established principles and theories such as BKT? Can we design a transformer architecture that produces pedagogically meaningful mastery estimations whose values can be explained through interpretable logic?
+Can deep knowledge tracing models achieve state-of-the-art predictive performance while providing interpretability grounded in established principles and theories? Specifically, can we design a transformer architecture that produces pedagogically meaningful mastery estimations that are explainable through a causal and interpretable logic, such as Bayesian Knowledge Tracing?
 
 \item RQ2: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
 
@@ -212,8 +212,7 @@ How do the metrics of the supervised, interpretable, and BKT predictions compare
 
 \item RQ3: \textbf{Practical Value for Student-Centered Personalization}
 
-In addition to interpretable diagnostics, can the high capacity of gTransformer to process intricate data patterns provide greater benefits than traditional models? Can this be translated into improved student-centered personalization compared with population-based models such as BKT?. 
-
+Beyond providing interpretable diagnostics, does the high capacity of gTransformer to capture intricate interaction patterns offer advantages over traditional models? Specifically, can these capabilities be leveraged to enhance student-centered personalization relative to population-based models such as Bayesian Knowledge Tracing?
 \end{itemize}
 
 The remainder of this paper is structured as follows. Section~\ref{sec_related} reviews related work, while Section~\ref{sec_arch} describes the gTransformer model, detailing the construction of embeddings, the grounding mechanism, and the prediction logic. Section~\ref{sec_experiment} presents the experimental setup, followed by a discussion of the empirical results in Section~\ref{sec_results}. Finally, Section~\ref{sec_conclusions} provides the concluding remarks. 
@@ -395,11 +394,10 @@ where $u_q$ represents item difficulty variance, and $\{k_s, v_s\}$ are the stud
 
 \section{Experimental Setup} \label{sec_experiment}
 
-The experimental validation of gTransformer is guided by the following research questions:
 
 \subsection{Implementation Details}
 
-We implemented the gTransformer model in \texttt{PyTorch} and used the benchmark library \texttt{PYKT} \citep{liu2022pykt} to leverage standardized data preprocessing, dataset splitting and benchmarking of baseline models. For training, we used standard 5-fold cross-validation with an 80/20 train/test split. The model was trained using the Adam optimizer with a learning rate of $1e-4$, a batch size of 64, and a dropout rate of 0.2 to prevent overfitting. The maximum number of epochs was set to 200, with an early stopping mechanism (patience=10) to terminate training if validation performance plateaued.
+We implemented the gTransformer model in \texttt{PyTorch} and used the benchmark library \texttt{PYKT} \citep{liu2022pykt} to leverage standardized data preprocessing, dataset splitting and baseline models. For training, we used standard 5-fold cross-validation with an 80/20 train/test split. The model was trained using the Adam optimizer with a learning rate of $1e-4$, a batch size of 64, and a dropout rate of 0.2 to prevent overfitting. The maximum number of epochs was set to 200, with an early stopping mechanism (patience=10) to terminate training if validation performance plateaued.
 
 The Transformer architecture was configured with an embedding dimension $d_{model}$ of 256, 8 attention heads, and 4 encoder/decoder blocks. The feed-forward dimension $d_{ff}$ was set to 512. Regularization penalties for individualization parameters ($L_2$ on $u_q$, $k_s$, $v_s$) were all set to $1e-5$. For reproducibility, all experiments were seeded (seed=42) and executed on NVIDIA A100 GPU infrastructure. Predictive performance was evaluated using Area Under the ROC Curve (AUC) and Accuracy (ACC), while interpretability was assessed using the metrics defined in Section \ref{sec_validation}.
 

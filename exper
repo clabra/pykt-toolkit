@@ -1,0 +1,19 @@
+--- BENCHMARK TRAINING QUEUE (Concurrency=5) ---
+Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)
+[QUEUE] gtransformer on assist2009 fold 0 (GPU 1)
+[QUEUE] gtransformer on assist2009 fold 1 (GPU 2)
+[QUEUE] gtransformer on assist2009 fold 2 (GPU 3)
+[QUEUE] gtransformer on assist2009 fold 3 (GPU 4)
+[QUEUE] gtransformer on assist2009 fold 4 (GPU 5)
+Traceback (most recent call last):
+  File "examples/run_benchmarks_paper.py", line 1174, in <module>
+    main()
+  File "examples/run_benchmarks_paper.py", line 650, in main
+    for future in as_completed(futures):
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 244, in as_completed
+    waiter.event.wait(wait_timeout)
+  File "/usr/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/usr/lib/python3.8/threading.py", line 302, in wait
+    waiter.acquire()
+KeyboardInterrupt

@@ -929,6 +929,18 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
             overrides[param_name] = arg_value
             training_params[param_name] = arg_value
 
+    # === ABLATION CONTROL CENTER ===
+    # Apply ablation control logic IMMEDIATELY after all parameters are collected
+    # This ensures active_grounding and other ablation-controlled params are set correctly
+    # BEFORE any command construction or config saving
+    from pykt.models.init_model import validate_and_apply_ablation_config
+    try:
+        training_params = validate_and_apply_ablation_config(training_params, source="run_repro_experiment")
+    except ValueError as e:
+        print(f"❌ Ablation Config Error: {e}")
+        return (False, None)
+    # === END ABLATION CONTROL CENTER ===
+
     # Build input params for config
     input_params = {
         "short_title": short_title,
@@ -966,6 +978,7 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         "commands": {
             "train_explicit": train_command_explicit,
             "eval_explicit": eval_command_explicit,
+            "evaluate_explicit": eval_command_explicit,  # Alias for clarity and consistency with train_explicit
             "mastery_states": mastery_states_command,
             "plot_param_distribution": f"{python_path} examples/plot_param_distribution.py --experiment_dir {experiment_dir_abs}",
             "plot_mastery_mosaic": f"{python_path} examples/plot_mastery_mosaic.py --experiment_dir {experiment_dir_abs}",
@@ -974,7 +987,7 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
         "_documentation": {
             "purpose": "Complete reproducibility record for experiment",
             "train_command_info": "The train_explicit command contains ALL parameters used for training with explicit values (zero defaults)",
-            "eval_command_info": "The eval_explicit command contains ALL parameters needed for evaluation, synchronized with training parameters",
+            "eval_command_info": "The eval_explicit and evaluate_explicit commands (identical) contain ALL parameters needed for evaluation, synchronized with training parameters",
             "parameter_precedence": "Command line > ablation mode > config file defaults",
             "ablation_control": "Ablation mode automatically sets lambda_* and personalization parameters"
         }

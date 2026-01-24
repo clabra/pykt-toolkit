@@ -28,9 +28,32 @@ def main(params):
 
     save_dir, batch_size, fusion_type = params["save_dir"], params["bz"], params["fusion_type"].split(",")
 
+    # Dump all evaluation parameters being used
+    print("\n" + "="*70)
+    print("EVALUATION PARAMETERS DUMP (Command-Line Arguments)")
+    print("="*70)
+    for key in sorted(params.keys()):
+        print(f"  {key:25s} = {params[key]}")
+    print("="*70 + "\n")
+
     config_path = os.path.join(save_dir, "config.json")
     with open(config_path) as fin:
         config = json.load(fin)
+    
+    # Display loaded configuration from training
+    print("\n" + "="*70)
+    print("LOADED TRAINING CONFIGURATION (from config.json)")
+    print("="*70)
+    if "model_config" in config:
+        print("\nmodel_config (architecture from training):")
+        for key in sorted(config["model_config"].keys()):
+            if not key.startswith("_"):
+                print(f"  {key:25s} = {config['model_config'][key]}")
+    if "train_config" in config:
+        print("\ntrain_config (hyperparameters from training):")
+        for key in sorted(config["train_config"].keys()):
+            print(f"  {key:25s} = {config['train_config'][key]}")
+    print("="*70 + "\n")
     
     # Handle potentially missing model_config in some logging formats
     if "model_config" not in config:
@@ -77,7 +100,22 @@ def main(params):
     fold = params["fold"]
     model_name, dataset_name, emb_type = params["model_name"], params["dataset_name"], params["emb_type"]
 
-    with open("../configs/data_config.json") as fin:
+    # Find data_config.json (handle different working directories)
+    data_config_paths = [
+        "../configs/data_config.json",  # When running from examples/
+        "configs/data_config.json",      # When running from project root
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs/data_config.json")  # Absolute from script location
+    ]
+    data_config_path = None
+    for path in data_config_paths:
+        if os.path.exists(path):
+            data_config_path = path
+            break
+    
+    if data_config_path is None:
+        raise FileNotFoundError(f"Could not find data_config.json. Tried: {data_config_paths}")
+    
+    with open(data_config_path) as fin:
         curconfig = copy.deepcopy(json.load(fin))
         data_config = curconfig[dataset_name]
         data_config["dataset_name"] = dataset_name
@@ -279,9 +317,33 @@ if __name__ == "__main__":
                         help="supervised: neural head predictions (p_sup), reference: BKT logic predictions (p_ref)")
     parser.add_argument("--dual_eval", type=int, required=True, choices=[0, 1],
                         help="Run dual evaluation: measure both p_sup and p_ref (0=no, 1=yes)")
+    
+    # Ablation and grounding parameters (optional - will use values from config.json if not provided)
+    parser.add_argument("--ablation", type=str, default=None,
+                        help="Ablation mode (none, all, reference, probe, personalization)")
+    parser.add_argument("--lambda_sup", type=float, default=None,
+                        help="Supervised loss weight")
+    parser.add_argument("--lambda_ref", type=float, default=None,
+                        help="BKT reference loss weight")
+    parser.add_argument("--lambda_probe", type=float, default=None,
+                        help="Probing loss weight")
+    parser.add_argument("--lambda_initmastery", type=float, default=None,
+                        help="Initial mastery (L0) loss weight")
+    parser.add_argument("--lambda_rate", type=float, default=None,
+                        help="Learning rate (T) loss weight")
+    parser.add_argument("--n_uid", type=int, default=None,
+                        help="Number of unique user IDs")
+    parser.add_argument("--active_grounding", type=int, default=None,
+                        help="Active grounding flag (0 or 1)")
+    parser.add_argument("--personalization", type=int, default=None,
+                        help="Personalization flag (0 or 1)")
 
     args = parser.parse_args()
     params = vars(args)
     # Convert int to bool for dual_eval
     params['dual_eval'] = bool(params['dual_eval'])
+    
+    # Remove None values so config.json values take precedence
+    params = {k: v for k, v in params.items() if v is not None}
+    
     main(params)

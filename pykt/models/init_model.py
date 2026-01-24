@@ -48,6 +48,158 @@ from .gtransformer import GTransformer
 
 device = "cpu" if not torch.cuda.is_available() else "cuda"
 
+def validate_and_apply_ablation_config(model_config, source="config"):
+    """
+    Ablation Control Center: Validates and applies ablation mode parameter settings.
+    
+    Behavior:
+    - ablation='none': Uses parameters as-is from command/config (no overrides)
+    - ablation='all', 'reference', 'probe', 'personalization': Overrides specific parameters
+    
+    Parameter precedence (for ablation-related params only):
+    - ablation mode (from command-line/config) > command-line > config files
+    
+    Args:
+        model_config (dict): Model configuration dictionary (modified in-place)
+        source (str): Source of config ("config" or "command_line") for info messages
+    
+    Returns:
+        dict: Validated and updated model_config
+    """
+    
+    # Ablation mode parameter requirements (from Quick Reference Table)
+    ABLATION_CONFIGS = {
+        "all": {
+            "active_grounding": 0,
+            "lambda_sup": 1.0,
+            "lambda_ref": 0,
+            "lambda_probe": 0,
+            "lambda_initmastery": 0,
+            "lambda_rate": 0,
+            "personalization": False,
+            "description": "Pure Neural (AKT) - all grounding ablated"
+        },
+        "none": {
+            # Special mode: use lambda_* and personalization as-is, but enforce active_grounding
+            "active_grounding": 1,
+            "description": "No Ablation - use parameters as configured (enforces active_grounding=1)"
+        },
+        "reference": {
+            "active_grounding": 0,
+            "lambda_sup": 1.0,
+            "lambda_ref": 0,
+            "lambda_probe": 0,
+            "lambda_initmastery": 0,
+            "lambda_rate": 0,
+            "personalization": False,
+            "description": "No Reference Pipeline - BKT grounding ablated"
+        },
+        "probe": {
+            "active_grounding": 1,
+            "lambda_probe": 0,
+            "lambda_initmastery": 0,
+            "lambda_rate": 0,
+            "personalization": False,
+            "description": "No Probe Loss - probe training ablated"
+        },
+        "personalization": {
+            "active_grounding": 1,
+            "lambda_initmastery": 0,
+            "lambda_rate": 0,
+            "personalization": False,
+            "description": "No Personalization - student-specific parameters ablated"
+        }
+    }
+    
+    # Get ablation mode (default to "none" if not specified)
+    ablation = model_config.get("ablation", "none")
+    
+    # Validate ablation mode
+    if ablation not in ABLATION_CONFIGS:
+        valid_modes = ", ".join(ABLATION_CONFIGS.keys())
+        raise ValueError(
+            f"Invalid ablation mode '{ablation}'. "
+            f"Valid modes are: {valid_modes}"
+        )
+    
+    # Get configuration for this ablation mode
+    ablation_config = ABLATION_CONFIGS[ablation]
+    ablation_desc = ablation_config["description"]
+    
+    # Parameters that can be controlled by ablation
+    controlled_params = [
+        "active_grounding", "lambda_sup", "lambda_ref", "lambda_probe", 
+        "lambda_initmastery", "lambda_rate", "personalization"
+    ]
+    
+    print(f"\n{'='*70}")
+    print(f"ABLATION CONTROL CENTER")
+    print(f"{'='*70}")
+    print(f"Ablation mode: '{ablation}' ({ablation_desc})")
+    
+    # Special handling for 'none': enforce active_grounding, use others as-is
+    if ablation == "none":
+        print(f"Using parameters as configured (enforces active_grounding=1):")
+        print()
+        # Apply active_grounding override
+        old_active_grounding = model_config.get('active_grounding', 'not set')
+        model_config['active_grounding'] = 1
+        
+        for param in controlled_params:
+            value = model_config.get(param, None)
+            if value is None:
+                # Skip parameters not in model_config (they may be in train_config)
+                continue
+            if param == 'active_grounding' and old_active_grounding != 1:
+                print(f"  {param:20s} = {value}  (enforced: {old_active_grounding} → 1)")
+            else:
+                print(f"  {param:20s} = {value}")
+        print(f"{'='*70}\n")
+        return model_config
+    
+    # For other ablation modes: apply overrides
+    print(f"Applying ablation overrides (ablation config takes precedence):")
+    print()
+    
+    overrides_applied = []
+    for param in controlled_params:
+        if param in ablation_config:  # Only override if specified in ablation config
+            old_value = model_config.get(param, "not set")
+            new_value = ablation_config[param]
+            model_config[param] = new_value
+            
+            if old_value != "not set" and old_value != new_value:
+                # Type normalization for comparison
+                try:
+                    if isinstance(new_value, bool):
+                        old_normalized = bool(old_value)
+                    else:
+                        old_normalized = float(old_value)
+                        new_value_check = float(new_value)
+                    
+                    if (isinstance(new_value, bool) and old_normalized != new_value) or \
+                       (not isinstance(new_value, bool) and abs(old_normalized - new_value_check) > 1e-9):
+                        status = f"OVERRIDE: {old_value} → {new_value}"
+                        overrides_applied.append(param)
+                    else:
+                        status = f"✓ (unchanged: {new_value})"
+                except:
+                    status = f"OVERRIDE: {old_value} → {new_value}"
+                    overrides_applied.append(param)
+            else:
+                status = "✓ set" if old_value == "not set" else f"✓ (unchanged: {new_value})"
+            
+            print(f"  {param:20s} = {str(new_value):5}  {status}")
+    
+    print()
+    if overrides_applied:
+        print(f"Overridden parameters: {', '.join(overrides_applied)}")
+    else:
+        print(f"No overrides needed (all parameters already match ablation mode)")
+    print(f"{'='*70}\n")
+    
+    return model_config
+
 def init_model(model_name, model_config, data_config, emb_type):
     if model_name == "dkt":
         model = DKT(data_config["num_c"], **model_config, emb_type=emb_type, emb_path=data_config["emb_path"]).to(device)
@@ -185,6 +337,16 @@ def init_model(model_name, model_config, data_config, emb_type):
         _model_config = model_config.copy()
         _model_config.pop("emb_type", None)
         _model_config.pop("emb_path", None)
+        
+        # === ABLATION CONTROL CENTER ===
+        # Validate and apply ablation configuration
+        try:
+            _model_config = validate_and_apply_ablation_config(_model_config, source="init_model")
+        except ValueError as e:
+            print(str(e))
+            import sys
+            sys.exit(1)
+        # === END ABLATION CONTROL CENTER ===
         
         # Personalization control: enable/disable student-specific embeddings
         # Backward compatibility: if personalization flag is not present, use explicit n_uid if provided

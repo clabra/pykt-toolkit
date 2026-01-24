@@ -189,7 +189,22 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
             campaign_pattern = f"*{campaign_pattern}*"
         campaigns = sorted(list(base_path.glob(campaign_pattern)))
     else:
-        campaigns = sorted(list(base_path.glob("*_benchpaper*")))
+        # User wants most recent timestamped folder only
+        # Filter for timestamped folders (YYYYMMDD_HHMMSS format) and use the newest
+        all_dirs = [d for d in base_path.iterdir() if d.is_dir()]
+        timestamped_dirs = []
+        for d in all_dirs:
+            name = d.name
+            # Check if starts with timestamp pattern (YYYYMMDD_HHMMSS)
+            if len(name) >= 15 and name[:8].isdigit() and name[8] == '_' and name[9:15].isdigit():
+                timestamped_dirs.append(d)
+        
+        if timestamped_dirs:
+            # Sort by timestamp (folder name) and use only the most recent one
+            campaigns = [sorted(timestamped_dirs, key=lambda p: p.name)[-1]]
+        else:
+            # Fallback: no timestamped folders, use all directories
+            campaigns = sorted(all_dirs, key=lambda p: p.name)
     
     potential_folders = []
     
@@ -257,11 +272,14 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
 
 def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_eval=False, exp_dir_override=None):
     """
-    Worker that finds the experiment folder and runs its eval_explicit command.
+    Worker that finds the experiment folder and runs its evaluate_explicit command.
+    
+    All evaluation parameters (including dual_eval) are read from the eval_explicit 
+    command stored in config.json - single source of truth from training time.
     
     Args:
         campaign_pattern: Optional pattern to filter which campaign to evaluate (e.g., "*probing_benchpaper")
-        dual_eval: If True, add --dual_eval flag to evaluation command for p_sup + p_ref measurement
+        dual_eval: Deprecated - parameter is read from eval_explicit in config.json
         exp_dir_override: If provided, use this directory instead of searching
     """
     if exp_dir_override:
@@ -276,7 +294,8 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     config_path = exp_dir / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-        eval_cmd = config.get("commands", {}).get("eval_explicit")
+        # Try evaluate_explicit first (new standard), fall back to eval_explicit for backward compatibility
+        eval_cmd = config.get("commands", {}).get("evaluate_explicit") or config.get("commands", {}).get("eval_explicit")
     
     if not eval_cmd:
         return (model, dataset, fold, -1, "Eval command missing in config.json")
@@ -288,11 +307,24 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     # Log the explicit commands for audit trail
     train_cmd = config.get("commands", {}).get("train_explicit", "N/A")
     if exp_dir.name not in getattr(evaluate_worker, '_logged_configs', set()):
+        # Try to identify campaign root (Strategy: exp_dir / .. / .. if it exists)
+        campaign_root = "Individual Folder"
+        # Check if we are in a nested structure: campaign/model/dataset/fold_X
+        if exp_dir.parent.parent.parent.parent == Path(PROJECT_ROOT) / "experiments":
+             campaign_root = exp_dir.parent.parent.parent.name
+        # Check if we are in a flat structure: campaign/fold_X
+        elif exp_dir.parent.parent == Path(PROJECT_ROOT) / "experiments":
+             campaign_root = exp_dir.parent.name
+             
         print(f"\n{'='*80}")
+        print(f"CAMPAIGN: {campaign_root}")
         print(f"EXPERIMENT: {exp_dir.name}")
         print(f"{'='*80}")
-        print(f"Training command: {train_cmd[:150]}..." if len(train_cmd) > 150 else f"Training command: {train_cmd}")
-        print(f"Evaluation command: {eval_cmd[:150]}..." if len(eval_cmd) > 150 else f"Evaluation command: {eval_cmd}")
+        print(f"Training command (used to train this model):")
+        print(f"  {train_cmd}")
+        print(f"\nEvaluation command (will be executed now):")
+        print(f"  {eval_cmd}")
+        print(f"\nConfiguration loaded from: {config_path}")
         print(f"{'='*80}\n")
         if not hasattr(evaluate_worker, '_logged_configs'):
             evaluate_worker._logged_configs = set()
@@ -501,10 +533,8 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
         if "--fusion_type" not in eval_cmd:
             eval_cmd += " --fusion_type late_fusion"
         
-        # Add dual_eval flag if requested
-        if dual_eval:
-            eval_cmd += " --dual_eval"
-            print(f"[DUAL EVAL] Enabled for {model} on {dataset} fold {fold}")
+        # Note: dual_eval parameter is already in eval_explicit command from config.json
+        # No need to add it here - the stored command has all parameters
         
         # eval_cmd += " --use_all_in_one False" # wandb_predict.py does not support this
 
@@ -523,11 +553,6 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     import shlex
     eval_cmd_list = shlex.split(eval_cmd)
     
-    # Debug: Print the actual command being executed
-    if dual_eval:
-        print(f"[DEBUG] Eval command: {' '.join(eval_cmd_list)}")
-        print(f"[DEBUG] --dual_eval in command: {'--dual_eval' in eval_cmd_list}")
-    
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "w") as f:
         process = subprocess.Popen(eval_cmd_list, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=cwd, shell=False, start_new_session=True)
@@ -536,7 +561,10 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     return (model, dataset, fold, exit_code)
 
 def main():
-    parser = argparse.ArgumentParser(description="Reproducible multi-model benchmark scheduler.")
+    parser = argparse.ArgumentParser(
+        description="Reproducible multi-model benchmark scheduler.",
+        epilog="Any additional arguments (e.g., --n_blocks, --n_heads, --lambda_xxx) are passed through to run_repro_experiment.py"
+    )
     parser.add_argument("--mode", choices=["training", "evaluation", "results"], required=True)
     parser.add_argument("--gpus", default="0,1,2,3,4,5", help="6 GPUs to use")
     parser.add_argument("--dry_run", action="store_true", help="If set, only print commands without executing them.")
@@ -547,18 +575,43 @@ def main():
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
     parser.add_argument("--experiment_folder", type=str, default=None, help="Specific experiment folder to evaluate (for dual evaluation)")
-    parser.add_argument("--dual_eval", action="store_true", help="Run dual evaluation: measure both p_sup and p_ref")
+    parser.add_argument("--dual_eval", action="store_true", help="[DEPRECATED] dual_eval is read from eval_explicit in config.json")
     
-    # Parameter overrides (pass-through to run_repro_experiment.py)
-    parser.add_argument("--lambda_sup", type=float, default=None, help="Override lambda_sup (supervised loss weight)")
-    parser.add_argument("--lambda_ref", type=float, default=None, help="Override lambda_ref (BKT reference loss weight)")
-    parser.add_argument("--active_grounding", type=int, default=None, help="Override active_grounding (0 or 1)")
-    parser.add_argument("--lambda_probe", type=float, default=None, help="Override lambda_probe (probing loss weight)")
-    parser.add_argument("--lambda_initmastery", type=float, default=None, help="Override lambda_initmastery (L0 loss weight)")
-    parser.add_argument("--lambda_rate", type=float, default=None, help="Override lambda_rate (T loss weight)")
-    parser.add_argument("--personalization", type=int, default=None, help="Override personalization (0/1)")
+    # Use parse_known_args to accept any additional parameters
+    args, unknown_args = parser.parse_known_args()
+
+    # Parse unknown arguments (--param_name value format) into param_overrides
+    param_overrides = {}
+    i = 0
+    while i < len(unknown_args):
+        arg = unknown_args[i]
+        if arg.startswith('--'):
+            param_name = arg[2:]  # Remove '--' prefix
+            if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith('--'):
+                # Has a value
+                value_str = unknown_args[i + 1]
+                # Try to infer type
+                try:
+                    # Try int first
+                    param_overrides[param_name] = int(value_str)
+                except ValueError:
+                    try:
+                        # Try float
+                        param_overrides[param_name] = float(value_str)
+                    except ValueError:
+                        # Keep as string
+                        param_overrides[param_name] = value_str
+                i += 2
+            else:
+                # Boolean flag (no value)
+                param_overrides[param_name] = True
+                i += 1
+        else:
+            i += 1
     
-    args = parser.parse_args()
+    # Override epochs if specified
+    if args.epochs is not None:
+        param_overrides["epochs"] = args.epochs
 
     gpus = args.gpus.split(",")
     max_workers = len(gpus)
@@ -575,23 +628,6 @@ def main():
         
         print(f"--- BENCHMARK TRAINING QUEUE (Concurrency={max_workers}) ---")
         print(f"Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)")
-        
-        # Build parameter overrides dict from command-line arguments
-        param_overrides = {}
-        if args.lambda_sup is not None:
-            param_overrides['lambda_sup'] = args.lambda_sup
-        if args.lambda_ref is not None:
-            param_overrides['lambda_ref'] = args.lambda_ref
-        if args.active_grounding is not None:
-            param_overrides['active_grounding'] = args.active_grounding
-        if args.lambda_probe is not None:
-            param_overrides['lambda_probe'] = args.lambda_probe
-        if args.lambda_initmastery is not None:
-            param_overrides['lambda_initmastery'] = args.lambda_initmastery
-        if args.lambda_rate is not None:
-            param_overrides['lambda_rate'] = args.lambda_rate
-        if args.personalization is not None:
-            param_overrides['personalization'] = args.personalization
         
         if param_overrides:
             print(f"Parameter overrides: {param_overrides}")
@@ -709,15 +745,20 @@ def main():
         
         # 4. Header with Status column
         print(f"\n--- BENCHMARK RESULTS SUMMARY ---")
+        if args.campaign:
+            print(f"Filter: Campaign pattern matches '{args.campaign}'")
+        else:
+            print(f"Mode: Auto-discovery (searching newest directories in experiments/)")
         print(f"{'Model':<12} | {'Dataset':<22} | {'Status':<10} | {'AUC':<15} | {'ACC':<15} | {'Fold Details'}")
         print("-" * 140)
         
         all_results_data = {}
         for model in models_to_run:
             for dataset in datasets_to_run:
-                metrics = {"auc": [], "acc": []}
+                metrics = {"auc": [], "acc": [], "auc_ref": [], "acc_ref": []}
                 fold_results = {}
                 fold_details = []
+                has_ref_metrics = False
                 
                 missing_count = 0
                 err_count = 0
@@ -732,6 +773,8 @@ def main():
                         is_in_scheduler_scope = True
                         break
 
+                campaign_roots = set()
+
                 for fold in range(5):
                     exp_dir = find_experiment_folder(model, dataset, fold, args.campaign)
                     auc, acc = None, None
@@ -740,6 +783,14 @@ def main():
                     if exp_dir:
                         abs_exp_dir = str(exp_dir.resolve())
                         is_running = any(abs_exp_dir in d for d in running_dirs)
+                        
+                        # Identify campaign root for reporting
+                        if exp_dir.parent.parent.parent.parent == Path(PROJECT_ROOT) / "experiments":
+                            campaign_roots.add(exp_dir.parent.parent.parent.name)
+                        elif exp_dir.parent.parent == Path(PROJECT_ROOT) / "experiments":
+                            campaign_roots.add(exp_dir.parent.name)
+                        else:
+                            campaign_roots.add("Direct/Legacy")
 
                     if exp_dir:
                         # 1. Try Structured JSON first (Priority: Question-level Late Fusion)
@@ -751,6 +802,15 @@ def main():
                                     # Prioritize Question-level Late Fusion metrics as per benchmark protocol
                                     auc = d.get("oriauclate_mean", d.get("testauc", d.get("test_auc")))
                                     acc = d.get("oriacclate_mean", d.get("testacc", d.get("test_acc")))
+                                    
+                                    # Extract p_ref metrics if available (dual_eval with grounded model)
+                                    auc_ref = d.get("oriauclate_mean_ref")
+                                    acc_ref = d.get("oriacclate_mean_ref")
+                                    
+                                    if auc_ref is not None and acc_ref is not None:
+                                        has_ref_metrics = True
+                                        metrics["auc_ref"].append(auc_ref)
+                                        metrics["acc_ref"].append(acc_ref)
                             except: pass
 
                         # 2. Fallback to Log File (Regex parsing)
@@ -816,13 +876,26 @@ def main():
                 else:
                     auc_str, acc_str = "N/A", "N/A"
                 
-                details_str = " ".join(fold_details)
-                print(f"{model:<12} | {dataset:<22} | {status_val:<10} | {auc_str:<15} | {acc_str:<15} | {details_str}")
+                # Print result line
+                print(f"{model:<12} | {dataset:<22} | {status_val:<10} | {auc_str:<15} | {acc_str:<15} | {' '.join(fold_details)}")
+                
+                # Show p_ref metrics if available (grounded models with dual_eval)
+                if has_ref_metrics and metrics["auc_ref"]:
+                    m_auc_ref, s_auc_ref = np.mean(metrics["auc_ref"]), np.std(metrics["auc_ref"])
+                    m_acc_ref, s_acc_ref = np.mean(metrics["acc_ref"]), np.std(metrics["acc_ref"])
+                    auc_ref_str = f"{m_auc_ref:.4f}±{s_auc_ref:.4f}"
+                    acc_ref_str = f"{m_acc_ref:.4f}±{s_acc_ref:.4f}"
+                    print(f"  └ p_ref:    | {'':<22} | {'':<10} | {auc_ref_str:<15} | {acc_ref_str:<15} | (BKT logic predictions)")
+                
+                # Report which campaign folders were used
+                if campaign_roots:
+                    roots_str = ", ".join(sorted(list(campaign_roots)))
+                    print(f"  └ Source: {roots_str}")
                 
                 if model not in all_results_data:
                     all_results_data[model] = {}
                 
-                all_results_data[model][dataset] = {
+                result_dict = {
                     "status": status_val,
                     "auc_mean": float(np.mean(metrics["auc"])) if metrics["auc"] else None,
                     "auc_std": float(np.std(metrics["auc"])) if metrics["auc"] else None,
@@ -833,75 +906,277 @@ def main():
                     "folds_total": target_count,
                     "fold_data": fold_results
                 }
+                
+                # Add p_ref metrics if available (grounded models)
+                if has_ref_metrics and metrics["auc_ref"]:
+                    result_dict["auc_ref_mean"] = float(np.mean(metrics["auc_ref"]))
+                    result_dict["auc_ref_std"] = float(np.std(metrics["auc_ref"]))
+                    result_dict["acc_ref_mean"] = float(np.mean(metrics["acc_ref"]))
+                    result_dict["acc_ref_std"] = float(np.std(metrics["acc_ref"]))
+                
+                all_results_data[model][dataset] = result_dict
 
-        # Save results to JSON
-        json_path = Path(PROJECT_ROOT) / "experiments" / "cv_results.json"
-        with open(json_path, 'w') as f:
-            json.dump(all_results_data, f, indent=4)
-        print(f"\n[INFO] Complete results snapshot saved to: {json_path}")
-
-        # Post-process: Diagnostic Plots for GTransformer
+        # Determine save location for results (always inside experiment folder)
         if args.campaign:
-            campaign_path = Path(PROJECT_ROOT) / "experiments" / args.campaign
-            if campaign_path.exists():
-                plot_dir = campaign_path / "plots"
-                os.makedirs(plot_dir, exist_ok=True)
-                
-                print(f"\n--- GENERATING DIAGNOSTIC PLOTS ---")
-                for model, datasets in all_results_data.items():
-                    if model == "gtransformer":
-                        for dataset, data in datasets.items():
-                            if data.get("folds_ok", 0) > 0:
-                                # Use Fold 0 for representative plots
-                                fold_dir = find_experiment_folder(model, dataset, 0, args.campaign)
-                                if not fold_dir: 
-                                    # Fallback to any OK fold if Fold 0 is missing
-                                    for f_idx in range(5):
-                                        fold_dir = find_experiment_folder(model, dataset, f_idx, args.campaign)
-                                        if fold_dir: break
+            # Save to campaign folder if filtering by campaign
+            campaign_folders = list(Path(PROJECT_ROOT).glob(f"experiments/*{args.campaign}*"))
+            if campaign_folders:
+                campaign_folders.sort(key=lambda p: p.name, reverse=True)  # Most recent first
+                results_dir = campaign_folders[0]
+            else:
+                # Fallback if no campaign folder found
+                results_dir = Path(PROJECT_ROOT) / "experiments"
+        else:
+            # When no campaign specified, use the most recent timestamped experiment folder
+            base_path = Path(PROJECT_ROOT) / "experiments"
+            all_dirs = [d for d in base_path.iterdir() if d.is_dir()]
+            timestamped_dirs = []
+            for d in all_dirs:
+                name = d.name
+                # Check if starts with timestamp pattern (YYYYMMDD_HHMMSS)
+                if len(name) >= 15 and name[:8].isdigit() and name[8] == '_' and name[9:15].isdigit():
+                    timestamped_dirs.append(d)
+            
+            if timestamped_dirs:
+                # Use most recent timestamped experiment folder
+                results_dir = sorted(timestamped_dirs, key=lambda p: p.name)[-1]
+            else:
+                # Fallback to experiments root if no timestamped folders
+                results_dir = Path(PROJECT_ROOT) / "experiments"
+        
+        # Save results to JSON in experiment folder
+        json_path = results_dir / "cv_results.json"
+        results_metadata = {
+            "generated_at": datetime.now().isoformat(),
+            "campaign": args.campaign if args.campaign else "all_experiments",
+            "protocol": "question-level late fusion (mean)",
+            "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+            "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+            "results": all_results_data
+        }
+        with open(json_path, 'w') as f:
+            json.dump(results_metadata, f, indent=4)
+        print(f"\n[INFO] Complete results snapshot saved to: {json_path}")
+        print(f"[INFO] Protocol: Question-level Late Fusion (mean aggregation)")
+        print(f"[INFO] Metrics: oriauclate_mean (supervised), oriauclate_mean_ref (BKT reference)")
+
+        # Post-process: Analysis & Diagnostic Plots
+        print(f"\n{'='*70}")
+        print(f"ANALYSIS & VISUALIZATION")
+        print(f"{'='*70}")
+        
+        # Run analysis scripts for completed experiments
+        for model, datasets in all_results_data.items():
+            if model == "gtransformer":
+                for dataset, data in datasets.items():
+                    if data.get("folds_ok", 0) > 0:
+                        # Use Fold 0 for representative plots, fallback to any complete fold
+                        fold_dir = find_experiment_folder(model, dataset, 0, args.campaign)
+                        if not fold_dir:
+                            for f_idx in range(5):
+                                fold_dir = find_experiment_folder(model, dataset, f_idx, args.campaign)
+                                if fold_dir: break
+                        
+                        if fold_dir:
+                            # Create plots and analysis directories at CAMPAIGN level (not fold level)
+                            # Navigate up from fold_dir to campaign root
+                            # Structure: experiments/<campaign>/gtransformer/<dataset>/fold_X_<id>/
+                            campaign_dir = Path(fold_dir).parent.parent.parent
+                            plot_dir = campaign_dir / "plots"
+                            analysis_dir = campaign_dir / "analysis"
+                            os.makedirs(plot_dir, exist_ok=True)
+                            os.makedirs(analysis_dir, exist_ok=True)
+                            
+                            print(f"\n[ANALYSIS] Generating results for experiment:")
+                            print(f"  Campaign: {campaign_dir.name}")
+                            print(f"  Model: {model}")
+                            print(f"  Dataset: {dataset}")
+                            print(f"  Representative Fold: {Path(fold_dir).name}")
+                            print(f"  Output:")
+                            print(f"    - Plots: {plot_dir}")
+                            print(f"    - Analysis: {analysis_dir}")
+                            
+                            # 1. Generate interpretability analysis plots
+                            analysis_scripts = [
+                                {
+                                    "name": "Skill Alignment Heatmap",
+                                    "script": "examples/validation/generate_skill_alignment_heatmap.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir),
+                                        "--min_interactions": "8",
+                                        "--top_skills": "50",
+                                        "--top_students": "30"
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Latent Space PCA/t-SNE",
+                                    "script": "tmp/plot_latent_pca.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": []  # Auto-discovers .ckpt files
+                                },
+                                {
+                                    "name": "Prediction Envelope Gallery",
+                                    "script": "examples/validation/generate_prediction_envelope_gallery.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Cognitive Quadrants Mosaic",
+                                    "script": "examples/validation/generate_quadrant_analysis.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Skill Quadrant Comparison",
+                                    "script": "examples/validation/generate_skill_quadrant_comparison.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Personalization Mosaic",
+                                    "script": "examples/validation/generate_personalization_mosaic.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Initial Mastery Mosaic",
+                                    "script": "examples/validation/generate_initial_mastery_mosaic.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Envelope Distribution",
+                                    "script": "examples/validation/generate_envelope_distribution.py",
+                                    "args": {
+                                        "--exp_dir": str(fold_dir),
+                                        "--output_dir": str(plot_dir)
+                                    },
+                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                },
+                                {
+                                    "name": "Parameter Distribution",
+                                    "script": "examples/plot_param_distribution.py",
+                                    "args": {"--run_dir": str(fold_dir)},
+                                    "required_files": ["final_params.csv"]
+                                },
+                                {
+                                    "name": "Mastery Trajectories",
+                                    "script": "examples/plot_mastery_mosaic_real.py",
+                                    "args": {"--run_dir": str(fold_dir)},
+                                    "required_files": ["traj_mastery.csv"]
+                                },
+                                {
+                                    "name": "Learning Rate Correlation",
+                                    "script": "examples/plot_rate_correlation.py",
+                                    "args": {"--run_dir": str(fold_dir)},
+                                    "required_files": ["traj_rate.csv"]
+                                }
+                            ]
+                            
+                            # Track plot generation stats
+                            plots_generated = 0
+                            plots_skipped = 0
+                            plots_failed = 0
+                            
+                            for script_info in analysis_scripts:
+                                # Check if required files exist
+                                missing_files = []
+                                for req_file in script_info.get("required_files", []):
+                                    file_path = Path(fold_dir) / req_file
+                                    if not file_path.exists():
+                                        missing_files.append(req_file)
                                 
-                                if fold_dir:
-                                    print(f"[PLOT] Generating maps for {dataset} using {fold_dir}...")
-                                    # Run from PROJECT_ROOT
-                                    scripts = [
-                                        "tmp/plot_latent_pca.py",
-                                        "tmp/plot_student_clusters_gtransformer.py"
-                                    ]
-                                    for script in scripts:
-                                        full_script = Path(PROJECT_ROOT) / script
-                                        if full_script.exists():
-                                            cmd = [sys.executable, str(full_script), "--exp_dir", str(fold_dir), "--output_dir", str(plot_dir)]
-                                            subprocess.run(cmd, check=False)
-                                    
-                                    # Generate per-skill prediction alignment heatmaps
-                                    print(f"[PLOT] Generating per-skill alignment heatmaps for {dataset}...")
-                                    alignment_scripts = [
-                                        ("examples/validation/generate_skill_alignment_heatmap.py", {
-                                            "--exp_dir": str(fold_dir),
-                                            "--output_dir": str(plot_dir),
-                                            "--min_interactions": "8",
-                                            "--top_skills": "50",
-                                            "--top_students": "30"
-                                        }),
-                                        ("examples/validation/analyze_skill_alignment_detailed.py", {
-                                            "--exp_dir": str(fold_dir),
-                                            "--output_dir": str(plot_dir),
-                                            "--min_samples": "100"
-                                        })
-                                    ]
-                                    
-                                    for script_path, script_args in alignment_scripts:
-                                        full_script = Path(PROJECT_ROOT) / script_path
-                                        if full_script.exists():
-                                            cmd = [sys.executable, str(full_script)]
-                                            for arg_name, arg_val in script_args.items():
-                                                cmd.extend([arg_name, arg_val])
-                                            try:
-                                                subprocess.run(cmd, check=False, cwd=PROJECT_ROOT)
-                                            except Exception as e:
-                                                print(f"[WARN] Failed to run {script_path}: {e}")
-                
-                print(f"[INFO] All plots saved to: {plot_dir}")
+                                if missing_files:
+                                    # Check if missing file is due to dual_eval not being run
+                                    if "qid_test_question_predictions_reference.txt" in missing_files:
+                                        # Check if model was grounded to provide accurate guidance
+                                        eval_results_path = None
+                                        for root, dirs, files in os.walk(fold_dir):
+                                            if "eval_results.json" in files:
+                                                eval_results_path = Path(root) / "eval_results.json"
+                                                break
+                                        
+                                        is_grounded = False
+                                        if eval_results_path and eval_results_path.exists():
+                                            with open(eval_results_path, 'r') as f:
+                                                eval_results = json.load(f)
+                                                is_grounded = eval_results.get("grounded", False)
+                                        
+                                        print(f"  [WARNING] {script_info['name']} - Missing dual_eval output: {', '.join(missing_files)}")
+                                        if not is_grounded:
+                                            print(f"            This experiment was trained without grounding (active_grounding=0)")
+                                            print(f"            To generate this plot, retrain with ablation=none (default) which sets active_grounding=1")
+                                        else:
+                                            print(f"            This experiment was trained without dual_eval enabled")
+                                            print(f"            To generate this plot, retrain with dual_eval=true in configs/parameter_default.json")
+                                    else:
+                                        print(f"  [SKIP] {script_info['name']} (missing: {', '.join(missing_files)})")
+                                    plots_skipped += 1
+                                    continue
+                                
+                                script_path = Path(PROJECT_ROOT) / script_info["script"]
+                                if script_path.exists():
+                                    print(f"  [RUN] {script_info['name']}...")
+                                    cmd = [sys.executable, str(script_path)]
+                                    for arg_name, arg_val in script_info["args"].items():
+                                        cmd.extend([arg_name, arg_val])
+                                    try:
+                                        result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
+                                                              capture_output=True, text=True, timeout=300)
+                                        if result.returncode != 0:
+                                            print(f"    [WARN] Script exited with code {result.returncode}")
+                                            if result.stderr:
+                                                print(f"    Error: {result.stderr[:200]}")
+                                            plots_failed += 1
+                                        else:
+                                            print(f"    [OK] Completed successfully")
+                                            plots_generated += 1
+                                    except subprocess.TimeoutExpired:
+                                        print(f"    [WARN] Timeout (300s)")
+                                        plots_failed += 1
+                                    except Exception as e:
+                                        print(f"    [WARN] Failed: {e}")
+                                        plots_failed += 1
+                                else:
+                                    print(f"  [SKIP] {script_info['name']} (script not found)")
+                                    plots_skipped += 1
+                            
+                            # Print summary
+                            print(f"\n  Plot Generation Summary:")
+                            print(f"    ✓ Generated: {plots_generated}")
+                            print(f"    ✗ Skipped: {plots_skipped}")
+                            print(f"    ⚠ Failed: {plots_failed}")
+                            if plots_skipped > 0:
+                                print(f"\n  Note: Most plots require 'qid_test_question_predictions_reference.txt'")
+                                print(f"        which is only generated when dual_eval is enabled at training time.")
+                                print(f"        Check configs/parameter_default.json: \"dual_eval\": true")
+        
+        print(f"\n{'='*70}")
+        print(f"ANALYSIS COMPLETE")
+        print(f"{'='*70}")
+        print(f"Results summary saved to: {json_path}")
+        print(f"Individual experiment plots and analysis saved to respective experiment folders")
+        print(f"{'='*70}\n")
 
 if __name__ == "__main__":
     main()

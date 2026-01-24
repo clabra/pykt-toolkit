@@ -1,14 +1,119 @@
 # GTransformer (Grounded Transformer)
 
-The GTransformer model is a "Grounded" version of the Context-Aware Attentive Knowledge Tracing (AKT) architecture. It grounds output estimations of parameter values given by an intrinsic interpretable reference model like Bayesian Knowledge Tracing (BKT). This allows the model to learn context-aware BKT parameters (initial mastery and learning rate) that are anchored to established pedagogical theory while maintaining the predictive power of Transformers. By anchoring deep representations to defined concepts through **active probing**, gTransformer offers a pedagogically interpretable alternative that combines neural expressiveness with theoretical grounding.
+The GTransformer model is a "Grounded" version of the Context-Aware Attentive Knowledge Tracing (AKT) architecture. It grounds deep learning representations to established Bayesian Knowledge Tracing (BKT) theory through **active probing** and **output constraints**, enabling context-aware diagnostic predictions that are both pedagogically interpretable and predictively powerful.
+
+**Architecture Overview**: GTransformer consists of five key components:
+
+1. **Input Components**: Interaction data (questions, responses) + BKT reference model (population-level parameters)
+2. **Embeddings Layer**: Theory-enriched task and history embeddings incorporating BKT priors
+3. **Transformer Architecture**: Encoder-decoder with self/cross-attention producing high-dimensional context vectors
+4. **Grounded Parameters**: Three-component composition (Theory Base + Contextual Projection → Final Parameters)
+5. **Multi-Objective Loss**: Supervised prediction + Reference BKT logic + Diagnostic probes
 
 **Baseline Configuration** (Validated in Exp 533154):
 - **Probing-Only Grounding**: Global latent space supervision via diagnostic probes ($\lambda_{probe}=1.0$)
 - **No Parameter Losses**: Removed local parameter constraints ($\lambda_{L0}=0.0$, $\lambda_T=0.0$)
 - **No Personalization**: Context-only inference without student IDs ($n_{uid}=0$)
+- **Active Grounding**: Enabled ($active\_grounding=1$)
 - **Results**: Test AUC = 0.7790 ± 0.0015 (p_sup), 0.6756 ± 0.0028 (p_ref)
 
 The main difference between gtransformer and the `pykt/models/idkt.py` implementation is that `idkt` grounded inputs/embeddings, whereas `gtransformer` grounds the **output parameter estimation**. The latent context vector $z$ is projected into enriched context-aware parameters ($p_{L0}, p_T$), which are then fed into a differentiable BKT logic layer.
+
+## Architecture Components (D2 Diagram)
+
+The architecture follows a five-section design as specified in `paper/latex/d2/arch_probe_v1.d2`:
+
+### 1. Input Components
+- **BKT Reference Model**: Pre-fit population-level parameters ($\mu_{L0}$, $\mu_T$, $G$, $S$) per skill
+- **Interaction Data**: Student sequences of (question, concept, response) tuples
+
+**Data Flow**: BKT parameters are merged with interaction data to create theory-enriched inputs.
+
+### 2. Embeddings Layer - Theory-Guided Task Embeddings
+
+**Task History Embeddings** with theoretical enrichment:
+```
+x'ₜ = c + u·d + Proj(μ)     # Question embedding
+  [Concept + Difficulty + BKT Prior]
+
+y'ₜ = e + u·f + Proj(μ)     # Response embedding
+  [Response + Difficulty + BKT Prior]
+```
+
+**Components**:
+- `c`, `e`: Base concept and response embeddings
+- `u·d`, `u·f`: Rasch difficulty modulation (scalar gating)
+- `Proj(μ)`: Projection of BKT population priors into embedding space
+
+### 3. Transformer Architecture
+
+**Encoder**: Self-attention over historical responses `y'_{1:t-1}`
+- Multi-head attention with monotonic masking
+- Processes student's learning trajectory
+
+**Decoder**: Cross-attention between current question `x'ₜ` and encoder output
+- Fuses question context with historical knowledge state
+- Produces high-dimensional latent representation
+
+**Context Vector**: `zₜ = d_out ⊕ q_emb`
+- Concatenation of decoder output and question embedding
+- High-dimensional latent encoding of current cognitive state
+
+### 4. Grounded Parameters - Additive Three-Component Composition
+
+**Theory Base** (Population Priors):
+```
+logit_base_L₀ = σ⁻¹(μ_L₀[q])    # Initial mastery logit
+logit_base_T  = σ⁻¹(μ_T[q])     # Learning rate logit
+```
+- Converts BKT probabilities to logit space
+- Provides pedagogically-sound initialization
+
+**Contextual Projection** (Linear Probes):
+```
+ΔL₀ = W_L0 · zₜ + b_L0    # Context-dependent mastery adjustment
+ΔT  = W_T · zₜ + b_T      # Context-dependent learning adjustment
+```
+- Projects latent context onto semantic axes
+- Learned through probe supervision ($\mathcal{L}_{probe}$)
+
+**Final Parameters** (Sigmoid Activation):
+```
+p_L₀ = σ(logit_base_L₀ + ΔL₀)    # Context-aware initial mastery
+p_T  = σ(logit_base_T + ΔT)      # Context-aware learning rate
+```
+- Additive composition ensures pedagogical anchoring
+- Sigmoid constrains to valid probability range [0,1]
+
+### 5. Outputs & Multi-Objective Loss
+
+**Three Output Heads**:
+
+1. **Supervised Prediction**: `ŷ = MLP(zₜ)`
+   - Direct neural prediction of correctness
+   - Optimized via $\mathcal{L}_{sup}$ (BCE)
+
+2. **Reference Output**: `ŷ_ref = BKT(p_L0, p_T, G, S)`
+   - Differentiable BKT logic using grounded parameters
+   - Optimized via $\mathcal{L}_{ref}$ (BCE)
+
+3. **Diagnostic Probes**: `p̂_L₀ = Linear(zₜ)`, `p̂_T = Linear(zₜ)`
+   - Linear extraction of BKT parameters from latent space
+   - Optimized via $\mathcal{L}_{probe}$ (MSE against BKT targets)
+
+**Total Loss** (Multi-Objective):
+```
+ℒ = λ_sup·ℒ_sup + λ_ref·ℒ_ref + λ_probe·ℒ_probe
+```
+
+**Default Weights** (Minimalist Grounding):
+- `λ_sup = 1.0`: Supervised prediction
+- `λ_ref = 0.5`: Reference BKT logic
+- `λ_probe = 1.0`: Diagnostic probing
+- `λ_initmastery = 0.0`: No explicit L0 constraint
+- `λ_rate = 0.0`: No explicit T constraint
+
+**Key Insight**: Probing losses alone ($\mathcal{L}_{probe}$) are sufficient for grounding the latent space. Once representations are properly structured, projection layers naturally learn to extract valid parameters without additional local supervision.
 
 ## Theory-Guided Strategy
 
@@ -1621,3 +1726,204 @@ Me falta:
 - Afinar las Probing Loss y las metricas Probing 
 
 
+## Plot Scripts
+
+The GTransformer visualization pipeline generates 11 types of plots organized into three categories: **Latent Space Analysis** (1 plot), **Dual Evaluation Diagnostics** (7 plots), and **Trajectory Analysis** (3 plots). Plots are generated automatically via `python examples/run_benchmarks_paper.py --mode results` and saved to `experiments/<campaign>/plots/`.
+
+### Current Available Plots (Last Experiment)
+
+**Location**: `/home/conchalabra/projects/dl/pykt-toolkit/experiments/last_experiment/plots/`
+
+The following 4 plots are available from experiments run with `active_grounding=1`:
+
+---
+
+### 1. **Latent Space PCA Map**
+**File**: `latent_pca_map.png`
+
+**Script**: `tmp/plot_latent_pca.py`
+
+**Description**: 2D projection of the transformer's latent context vectors ($z_t$) using Principal Component Analysis (PCA), colored by BKT difficulty ($L_0$). Extracts embeddings from ~8000 test interactions, showing how the model organizes its internal representations.
+
+**What it shows**:
+- **X-axis**: First principal component (explains ~40-50% of variance)
+- **Y-axis**: Second principal component (explains ~30-40% of variance)
+- **Color**: BKT Initial Mastery ($L_0$) from 0 (hard/dark) to 1 (easy/bright)
+- **Pattern**: Reveals whether difficulty information is linearly separable in the latent space
+
+**Interpretation**: If difficult questions (dark points) cluster separately from easy questions (bright points), the model has learned to encode difficulty as a distinct dimension in its latent space.
+
+**Requirements**: Model checkpoint (`.ckpt` file) - **No dual_eval needed**
+
+**Command**:
+```bash
+python tmp/plot_latent_pca.py \
+  --exp_dir experiments/<campaign>/gtransformer/<dataset>/fold_0_<id> \
+  --output_dir experiments/<campaign>/plots
+```
+
+---
+
+### 2. **Latent Space t-SNE Map (by Difficulty)**
+**File**: `latent_tsne_map.png`
+
+**Script**: `tmp/plot_latent_pca.py` (same script generates both)
+
+**Description**: Non-linear 2D projection using t-SNE (t-Distributed Stochastic Neighbor Embedding), preserving local neighborhood structure better than PCA. Colored by BKT difficulty ($L_0$).
+
+**What it shows**:
+- **Non-linear projection**: t-SNE reveals clusters and manifold structure invisible to PCA
+- **Color gradient**: Same BKT difficulty coloring (dark=hard, bright=easy)
+- **Perplexity=30**: Balances local vs global structure preservation
+
+**Interpretation**: Reveals if the latent space has natural "clusters" of similar questions, and whether difficulty forms a smooth manifold or discrete regions.
+
+**Requirements**: Model checkpoint (`.ckpt` file) - **No dual_eval needed**
+
+---
+
+### 3. **Latent Space t-SNE Map (by Skill)**
+**File**: `latent_tsne_map_by_skill.png`
+
+**Script**: `tmp/plot_latent_pca.py` (same script, different coloring)
+
+**Description**: Same t-SNE projection as above, but colored by **skill ID** instead of difficulty. Shows top 10 most frequent skills in distinct colors, with other skills grayed out.
+
+**What it shows**:
+- **Skill separation**: Whether different skills (e.g., "Fractions" vs "Algebra") occupy different regions of latent space
+- **Skill overlap**: Questions from the same skill should cluster together if the model has learned skill-specific representations
+- **Top 10 skills**: Annotated in legend with format "ID: Name" (e.g., "42: Fraction Addition")
+
+**Interpretation**: Strong skill clustering indicates the model encodes skill identity as a primary organizing principle. Mixed clusters suggest the model focuses more on difficulty or context than skill boundaries.
+
+**Requirements**: Model checkpoint + skill mapping (`keyid2idx.json`) - **No dual_eval needed**
+
+---
+
+### 4. **Probe Parity Plot (Recovery Diagonal)**
+**File**: `probe_parity_plot.png`
+
+**Script**: `tmp/plot_latent_pca.py` (same script, third output)
+
+**Description**: Validates that linear probes can recover BKT parameters from the latent space. Plots BKT estimations (x-axis) vs probe predictions (y-axis) with binned aggregation.
+
+**What it shows**:
+- **X-axis**: BKT population-level estimation ($\mu_{L0}$ or $\mu_T$)
+- **Y-axis**: Mean probe prediction ($\hat{p}_{L0}$ or $\hat{p}_T$) for each x-bin
+- **Red diagonal**: Perfect recovery (y=x)
+- **Point size**: Number of samples in each bin (larger = more data)
+- **R² value**: Coefficient of determination (0.51 in baseline)
+
+**Interpretation**: 
+- Points near the diagonal = probes successfully recover BKT parameters
+- High R² (>0.5) = latent space is linearly organized around pedagogical concepts
+- Validates the "Theoretical Diagonal" hypothesis from active probing
+
+**Requirements**: Model checkpoint + BKT targets - **No dual_eval needed**
+
+---
+
+### Plots Requiring Dual Evaluation (`active_grounding=1` + `dual_eval=1`)
+
+The following 7 plots compare supervised neural predictions ($\hat{y}_{sup}$) against BKT reference predictions ($\hat{y}_{ref}$), requiring both prediction files:
+
+#### 5. **Skill Alignment Heatmap**
+**Script**: `examples/validation/generate_skill_alignment_heatmap.py`
+
+**Description**: Shows per-skill agreement between supervised and reference predictions, revealing which skills benefit most from BKT grounding.
+
+**Requirements**: 
+- `qid_test_question_predictions_supervised.txt`
+- `qid_test_question_predictions_reference.txt`
+
+#### 6. **Prediction Envelope Gallery**
+**Script**: `examples/validation/generate_prediction_envelope_gallery.py`
+
+**Description**: Visualizes the "prediction envelope" (gap between $\hat{y}_{sup}$ and $\hat{y}_{ref}$) across different students and skills.
+
+#### 7. **Cognitive Quadrants Mosaic**
+**Script**: `examples/validation/generate_quadrant_analysis.py`
+
+**Description**: 2D histogram classifying predictions into four quadrants based on supervised vs reference agreement.
+
+#### 8. **Skill Quadrant Comparison**
+**Script**: `examples/validation/generate_skill_quadrant_comparison.py`
+
+**Description**: Per-skill breakdown of quadrant distributions, identifying skills where neural and BKT predictions diverge.
+
+#### 9. **Personalization Mosaic**
+**Script**: `examples/validation/generate_personalization_mosaic.py`
+
+**Description**: Student-level analysis showing how personalization affects prediction envelope.
+
+#### 10. **Initial Mastery Mosaic**
+**Script**: `examples/validation/generate_initial_mastery_mosaic.py`
+
+**Description**: Distribution of predicted $p_{L0}$ values across students and skills.
+
+#### 11. **Envelope Distribution**
+**Script**: `examples/validation/generate_envelope_distribution.py`
+
+**Description**: Statistical distribution of the prediction envelope ($|\hat{y}_{sup} - \hat{y}_{ref}|$).
+
+**Note**: These 7 plots require experiments trained with `active_grounding=1` (for grounded parameters) and evaluated with `dual_eval=1` (to generate reference prediction files). Current experiment `last_experiment` has grounding but was run with the old buggy code (`active_grounding=0`), so these plots cannot be generated.
+
+---
+
+### Plots Requiring Trajectory Evaluation
+
+The following 3 plots require special evaluation modes that save parameter trajectories:
+
+#### 12. **Parameter Distribution**
+**Script**: `examples/plot_param_distribution.py`
+
+**Requirements**: `final_params.csv` (generated with trajectory logging)
+
+**Description**: Distribution of learned $p_{L0}$ and $p_T$ parameters across all skills.
+
+#### 13. **Mastery Trajectories**
+**Script**: `examples/plot_mastery_mosaic_real.py`
+
+**Requirements**: `traj_mastery.csv`
+
+**Description**: Temporal evolution of mastery estimates for selected students.
+
+#### 14. **Learning Rate Correlation**
+**Script**: `examples/plot_rate_correlation.py`
+
+**Requirements**: `traj_rate.csv`
+
+**Description**: Correlation between predicted learning rates and actual skill acquisition speed.
+
+---
+
+### Plot Generation Summary
+
+**Automatic Generation**: All plots are generated by `run_benchmarks_paper.py --mode results`
+
+**Output Location**: `experiments/<campaign>/plots/` (campaign-level, not fold-level)
+
+**Current Status**:
+- ✅ **Generated (4 plots)**: Latent space visualizations (PCA, t-SNE, probe parity)
+- ❌ **Skipped (7 plots)**: Dual evaluation diagnostics (missing `qid_test_question_predictions_reference.txt`)
+- ❌ **Skipped (3 plots)**: Trajectory analysis (missing trajectory CSV files)
+
+**To generate all 11 plots**: Train new experiment with `ablation=none` (default, sets `active_grounding=1`) and `dual_eval=true` in `configs/parameter_default.json`.
+
+**Example**:
+```bash
+# Train with grounding + dual eval
+python examples/run_benchmarks_paper.py \
+  --mode training \
+  --model gtransformer \
+  --dataset assist2009 \
+  --short_title test \
+  --epochs 200 \
+  --fold 0
+
+# Generate all plots
+python examples/run_benchmarks_paper.py \
+  --mode results \
+  --model gtransformer \
+  --dataset assist2009
+```

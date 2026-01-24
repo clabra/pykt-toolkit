@@ -28,10 +28,10 @@
     "lambda_gap": 1e-05,
     "lambda_sup": 1.0,
     "lambda_ref": 0.5,
-    "lambda_initmastery": 0.1,
-    "lambda_rate": 0.1,
-    "active_grounding": 0,
-    "lambda_probe": 0.0,
+    "lambda_initmastery": 0.0,
+    "lambda_rate": 0.0,
+    "active_grounding": 1,
+    "lambda_probe": 1.0,
     "theory_guided": 1,
     "calibrate": 1,
     "grounded_init": 0,
@@ -407,5 +407,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "0460fd71a4a3225fde17012f7d587404"
+  "md5": "d29b183eb42742964198c143930468da"
 }
