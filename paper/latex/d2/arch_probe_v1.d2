@@ -6,13 +6,15 @@ direction: up
   }
 }
 
-title: "Model Architecture" {
-  near: top-center
-  shape: text
+MainContainer: {
+  label: "Model Architecture"
   style: {
+    stroke: "#333333"
+    stroke-width: 3
+    fill: "#ffffff"
+    border-radius: 12
     font-size: 100
   }
-}
 
 # ============================================================================
 # 1: INPUT COMPONENTS
@@ -21,24 +23,29 @@ title: "Model Architecture" {
 Section1: {
   label: "1: Input Components"
   style: {
-    stroke: "#000000"
+    stroke: "#333333"
     stroke-width: 3
-    fill: "#fafafa"
+    fill: "#ffffff"
     border-radius: 8
     font-size: 100
+    stroke-dash: 5
   }
   
   BKT: {
     label: |md
-      BKT
 
       Reference Model
+
+      BKT
+
+      p<sub>L₀</sub>, p<sub>T</sub>
     |
     shape: cylinder
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
+      shadow: true
     }
   }
 
@@ -48,12 +55,15 @@ Section1: {
       Interaction 
       
       Data
+
+      {(q, c, r, p<sub>L₀</sub>, p<sub>T</sub>)}
     |
     shape: cylinder
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
+      shadow: true
     }
   }
 
@@ -66,30 +76,61 @@ Section1: {
 Section2: {
   label: "2: Embeddings Layer"
   style: {
-    stroke: "#000000"
+    stroke: "#333333"
     stroke-width: 3
-    fill: "#fafafa"
+    fill: "#ffffff"
     border-radius: 8
     font-size: 100
+    stroke-dash: 5
   }
   
   TaskHistoryEmb: {
     label: |md
-      Task & History Embeddings
-      (Theoretical Enrichment)
+      History Embeddings
+      (Response + Difficulty)
       
-      x'ₜ = c + u·d + Proj(μ)
-      [Concept + Difficulty + Prior]
+      y'<sub>t</sub> = e + u·f [Response + Difficulty]
+      
+      <span style="color:#666">e, f: [d]</span>
 
-      y'ₜ = e + u·f + Proj(μ)
-      [Response + Difficulty + Prior]
+      <span style="color:#666">y': [d]</span>
+
+      <span style="color:#666">u: scalar</span>
+
+      <span style="color:#666">[B, S, d]</span>
     |
     shape: rectangle
     style: {
       fill: "#e8f4f8"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
       3d: true
+      shadow: true
+    }
+  }
+  
+  TaskHistoryEmb2: {
+    label: |md
+      Task Embeddings
+      (Standard + Difficulty)
+      
+      x'<sub>t</sub> = c + u·d [Concept + Difficulty]
+      
+      <span style="color:#666">c, d: [d]</span>
+
+      <span style="color:#666">x': [d]</span>
+
+      <span style="color:#666">u: scalar</span>
+
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#e8f4f8"
+      stroke: "#333333"
+      stroke-width: 3
+      3d: true
+      shadow: true
     }
   }
   
@@ -102,11 +143,12 @@ Section2: {
 Section3: {
   label: "3: Transformer Architecture"
   style: {
-    stroke: "#000000"
+    stroke: "#333333"
     stroke-width: 3
-    fill: "#fafafa"
+    fill: "#ffffff"
     border-radius: 8
     font-size: 100
+    stroke-dash: 5
   }
   
   Encoder: {
@@ -115,14 +157,17 @@ Section3: {
 
       (Self-Attention)
 
-      y'_{1:t-1}
+      y'<sub>1:t-1</sub>
+      
+      <span style="color:#666">[B, S, d]</span>
     |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
       multiple: true
+      shadow: true
     }
   }
   
@@ -132,35 +177,43 @@ Section3: {
 
       (Cross-Attention)
 
-      x'ₜ
+      x'<sub>t</sub>
+      
+      <span style="color:#666">[B, S, d]</span>
     |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
       multiple: true
+      shadow: true
     }
   }
   
   ContextVector: {
     label: |md
       Context Vector
-      zₜ = d_out ⊕ q_emb
+
+      z<sub>t</sub> = d<sub>out</sub> ⊕ q<sub>emb</sub>
 
       (High-dim Latent)
+      
+      <span style="color:#666">[B, S, z]</span>
+
+      <span style="color:#666">z = d + e</span>
     |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
-      3d: true
+      stroke: "#333333"
+      stroke-width: 3
+      shadow: true
     }
   }
   
-  Encoder -> Decoder: "History Context" { style: { stroke: "#000000"; font-size: 80 } }
-  Decoder -> ContextVector { style: { stroke: "#000000" } }
+  Encoder -> Decoder: "History Context" { style: { stroke: "#333333"; font-size: 80 } }
+  Decoder -> ContextVector { style: { stroke: "#333333" } }
 }
 
 # ============================================================================
@@ -170,44 +223,55 @@ Section3: {
 Section4: {
   label: "4: Grounded Parameters (Additive Composition)"
   style: {
-    stroke: "#000000"
+    stroke: "#333333"
     stroke-width: 3
-    fill: "#fafafa"
+    fill: "#ffffff"
     border-radius: 8
     font-size: 100
+    stroke-dash: 5
   }
   
   TheoryBase: {
     label: |md
       Theory Base
+
       (Population Priors)
       
-      logit_base_L₀ = σ⁻¹(μ_L₀[q])
+      ℓ<sub>L₀</sub> = σ⁻¹(μ<sub>L₀</sub>[q])
 
-      logit_base_T = σ⁻¹(μ_T[q])
+      ℓ<sub>T</sub> = σ⁻¹(μ<sub>T</sub>[q])
+      
+      <span style="color:#666">[B, S]</span>
     |
     shape: rectangle
     style: {
         fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
+      shadow: true
     }
   }
   
   ContextualProjection: {
     label: |md
       Contextual Projection
+
       (Linear Probes)
       
-      ΔL₀ = W_L0 · zₜ + b_L0
+      Δ<sub>L₀</sub> = W<sub>L₀</sub> · z<sub>t</sub> + b<sub>L₀</sub>
 
-      ΔT  = W_T · zₜ + b_T
+      Δ<sub>T</sub>  = W<sub>T</sub> · z<sub>t</sub> + b<sub>T</sub>
+      
+      <span style="color:#666">W: [z, 1], b: [1]</span>
+
+      <span style="color:#666">Δ: [B, S]</span>
     |
     shape: rectangle
     style: {
         fill: "#d4e6f1"
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
+      shadow: true
     }
   }
   
@@ -215,22 +279,26 @@ Section4: {
   FinalParams: {
     label: |md
       Final Parameters
+
       (Sigmoid Activation)
       
-      p_L₀ = σ(logit_base_L₀ + ΔL₀)
+      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub> + Δ<sub>L₀</sub>)
+
+      p<sub>T</sub> = σ(ℓ<sub>T</sub> + Δ<sub>T</sub>)
       
-      p_T = σ(logit_base_T + ΔT)
+      <span style="color:#666">[B, S]</span>
     |
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#000000"
+      stroke: "#333333"
       stroke-width: 3
+      shadow: true
     }
   }
   
-  TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
-  ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; font-size: 80 } }
+  TheoryBase -> FinalParams: "+" { style: { stroke: "#333333"; font-size: 80 } }
+  ContextualProjection -> FinalParams: "+" { style: { stroke: "#333333"; font-size: 80 } }
 }
 
 # ============================================================================
@@ -240,18 +308,19 @@ Section4: {
 Section5: {
   label: "5: Outputs & Multi-Objective Loss"
   style: {
-    stroke: "#000000"
+    stroke: "#333333"
     stroke-width: 3
-    fill: "#fafafa"
+    fill: "#ffffff"
     border-radius: 8
     font-size: 100
+    stroke-dash: 5
   }
   
   Outputs: {
     label: "Output Heads"
     style: {
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
@@ -261,13 +330,16 @@ Section5: {
       label: |md
         Supervised Prediction
         
-        ŷ = MLP(zₜ)
+        ŷ<sub>t</sub> = MLP(z<sub>t</sub>)
+        
+        <span style="color:#666">[B, S]</span>
       |
       shape: rectangle
       style: {
           fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
     
@@ -277,29 +349,37 @@ Section5: {
 
         (BKT Logic)
         
-        ŷ_ref = BKT(p_L0, p_T)
+        ŷ<sub>ref</sub> = BKT(p<sub>L₀</sub>, p<sub>T</sub>)
+        
+        <span style="color:#666">[B, S]</span>
       |
       shape: rectangle
       style: {
           fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
     
     DiagnosticProbes: {
       label: |md
-        Probe Grounding
+        Diagnostic Probes
+
         (Latent Diagnostics)
         
-        p̂_L₀ = Linear(zₜ)
-        p̂_T  = Linear(zₜ)
+        p̂<sub>L₀</sub> = Linear(z<sub>t</sub>)
+
+        p̂<sub>T</sub>  = Linear(z<sub>t</sub>)
+        
+        <span style="color:#666">[B, S]</span>
       |
       shape: rectangle
       style: {
           fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
   }
@@ -307,8 +387,8 @@ Section5: {
   Loss: {
     label: "Multi-Objective Loss"
     style: {
-      stroke: "#000000"
-      stroke-width: 2
+      stroke: "#333333"
+      stroke-width: 3
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
@@ -316,41 +396,50 @@ Section5: {
     
     LossSup: {
       label: |md
-        ℒ_sup L
+        ℒ<sub>sup</sub>
+        
+        <span style="color:#666">Scalar</span>
       |
       shape: rectangle
       style: {
         fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
     
     LossRef: {
       label: |md
-        ℒ_ref L 
+        ℒ<sub>ref</sub>
+        
+        <span style="color:#666">Scalar</span>
       |
       shape: rectangle
       style: {
         fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
     
     LossProbe: {
       label: |md
-        ℒ_probe
-        (Theoretical Alignment)
+        ℒ<sub>probe</sub>
+
+        (Probe Alignment)
         
-        MSE(p̂_L₀, μ_L₀) +
-        MSE(p̂_T,  μ_T)
+        MSE(p̂<sub>L₀</sub>, μ<sub>L₀</sub>) + MSE(p̂<sub>T</sub>, μ<sub>T</sub>)
+        
+        <span style="color:#666">Scalar</span>
       |
       shape: rectangle  
       style: {
         fill: "#d4e6f1"
-        stroke: "#000000"
-        stroke-width: 2
+        stroke: "#333333"
+        stroke-width: 3
+        shadow: true
       }
     }
     
@@ -358,26 +447,27 @@ Section5: {
       label: |md
         Total Loss
         
-        ℒ = λ_sup·ℒ_sup +
-            λ_ref·ℒ_ref +
-            λ_probe·ℒ_probe
+        ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>ref</sub>·ℒ<sub>ref</sub> + λ<sub>probe</sub>·ℒ<sub>probe</sub>
+        
+        <span style="color:#666">Scalar</span>
       |
       shape: rectangle
       style: {
         fill: "#d4e6f1"
-        stroke: "#000000"
+        stroke: "#333333"
         stroke-width: 3
+        shadow: true
       }
     }
     
-    LossSup -> TotalLoss: "λ_sup" { style: { stroke: "#000000"; font-size: 80 } }
-    LossRef -> TotalLoss: "λ_ref" { style: { stroke: "#000000"; font-size: 80 } }
-    LossProbe -> TotalLoss: "λ_probe" { style: { stroke: "#000000"; font-size: 80 } }
+    LossSup -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
+    LossRef -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
+    LossProbe -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
   }
   
-  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#000000" } }
-  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#000000" } }
-  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#000000" } }
+  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#333333" } }
+  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#333333" } }
+  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#333333" } }
 }
 
 # ============================================================================
@@ -385,38 +475,39 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section1.InputData: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
-Section1.InputData -> Section2.TaskHistoryEmb: "{(q, c, r, p_L0, p_T)}" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.BKT -> Section1.InputData: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section1.InputData -> Section2.TaskHistoryEmb: "" { style: { stroke: "#333333"; font-size: 80 } }
 
 # 2 -> 3
-Section2.TaskHistoryEmb -> Section3.Encoder: "y'_{1:t-1}" { style: { stroke: "#000000"; font-size: 80 } }
-Section2.TaskHistoryEmb -> Section3.Decoder: "x'ₜ" { style: { stroke: "#000000"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section2.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#333333"; font-size: 80 } }
 
 # 3 -> 4
-Section1.BKT -> Section4.TheoryBase: "μ_L0, μ_T" { style: { stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section4.ContextualProjection: "z · Axis" { style: { stroke: "#000000"; font-size: 80 } }
+Section1.BKT -> Section4.TheoryBase: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section3.ContextVector -> Section4.ContextualProjection: "" { style: { stroke: "#333333"; font-size: 80 } }
 
 # 4 -> 5
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L0, p_T" { style: { stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.SupervisedOut: "Direct MLP" { style: { stroke: "#000000"; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "Linear Probe" { style: { stroke: "#000000"; font-size: 80 } }
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#333333"; font-size: 80 } }
 
 # Ground Truth -> Loss
-Section1.InputData -> Section5.Loss.LossSup: "y_true" {
+Section1.InputData -> Section5.Loss.LossSup: "y" {
   style: {
     stroke-dash: 5
     opacity: 0.5
     font-size: 80
-    stroke: "#000000"
+    stroke: "#333333"
   }
 }
-Section1.BKT -> Section5.Loss.LossProbe: "p_L0, p_T" {
+Section1.BKT -> Section5.Loss.LossProbe: "" {
   style: {
     stroke-dash: 5
     opacity: 0.5
     font-size: 80
-    stroke: "#000000"
+    stroke: "#333333"
   }
 }
 
+}
 
