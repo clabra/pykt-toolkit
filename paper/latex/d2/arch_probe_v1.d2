@@ -9,9 +9,9 @@ direction: up
 MainContainer: {
   label: "Model Architecture"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
-    fill: "#ffffff"
+    stroke: "#666666"
+    stroke-width: 4
+    fill: "#f9f9f9"
     border-radius: 12
     font-size: 100
   }
@@ -23,8 +23,8 @@ MainContainer: {
 Section1: {
   label: "1: Input Components"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
+    stroke: "#000000"
+    stroke-width: 4
     fill: "#ffffff"
     border-radius: 8
     font-size: 100
@@ -43,8 +43,8 @@ Section1: {
     shape: cylinder
     style: {
       fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -61,8 +61,8 @@ Section1: {
     shape: cylinder
     style: {
       fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -76,8 +76,8 @@ Section1: {
 Section2: {
   label: "2: Embeddings Layer"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
+    stroke: "#000000"
+    stroke-width: 4
     fill: "#ffffff"
     border-radius: 8
     font-size: 100
@@ -102,9 +102,8 @@ Section2: {
     shape: rectangle
     style: {
       fill: "#e8f4f8"
-      stroke: "#333333"
-      stroke-width: 3
-      3d: true
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -127,9 +126,8 @@ Section2: {
     shape: rectangle
     style: {
       fill: "#e8f4f8"
-      stroke: "#333333"
-      stroke-width: 3
-      3d: true
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -143,8 +141,8 @@ Section2: {
 Section3: {
   label: "3: Transformer Architecture"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
+    stroke: "#000000"
+    stroke-width: 4
     fill: "#ffffff"
     border-radius: 8
     font-size: 100
@@ -164,8 +162,8 @@ Section3: {
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       multiple: true
       shadow: true
     }
@@ -184,8 +182,8 @@ Section3: {
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       multiple: true
       shadow: true
     }
@@ -206,14 +204,14 @@ Section3: {
     shape: rectangle
     style: {
       fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
   
-  Encoder -> Decoder: "History Context" { style: { stroke: "#333333"; font-size: 80 } }
-  Decoder -> ContextVector { style: { stroke: "#333333" } }
+  Encoder -> Decoder: "History Context" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+  Decoder -> ContextVector { style: { stroke: "#000000"; stroke-width: 4 } }
 }
 
 # ============================================================================
@@ -223,8 +221,8 @@ Section3: {
 Section4: {
   label: "4: Grounded Parameters (Additive Composition)"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
+    stroke: "#000000"
+    stroke-width: 4
     fill: "#ffffff"
     border-radius: 8
     font-size: 100
@@ -245,9 +243,9 @@ Section4: {
     |
     shape: rectangle
     style: {
-        fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+        fill: "#d4edda"
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -268,9 +266,9 @@ Section4: {
     |
     shape: rectangle
     style: {
-        fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+        fill: "#d4edda"
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
@@ -290,15 +288,15 @@ Section4: {
     |
     shape: rectangle
     style: {
-      fill: "#d4e6f1"
-      stroke: "#333333"
-      stroke-width: 3
+      fill: "#d4edda"
+      stroke: "#000000"
+      stroke-width: 4
       shadow: true
     }
   }
   
-  TheoryBase -> FinalParams: "+" { style: { stroke: "#333333"; font-size: 80 } }
-  ContextualProjection -> FinalParams: "+" { style: { stroke: "#333333"; font-size: 80 } }
+  TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+  ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 }
 
 # ============================================================================
@@ -308,8 +306,8 @@ Section4: {
 Section5: {
   label: "5: Outputs & Multi-Objective Loss"
   style: {
-    stroke: "#333333"
-    stroke-width: 3
+    stroke: "#000000"
+    stroke-width: 4
     fill: "#ffffff"
     border-radius: 8
     font-size: 100
@@ -319,8 +317,8 @@ Section5: {
   Outputs: {
     label: "Output Heads"
     style: {
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
@@ -337,8 +335,8 @@ Section5: {
       shape: rectangle
       style: {
           fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -355,9 +353,9 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+          fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -376,9 +374,9 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+          fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -387,8 +385,8 @@ Section5: {
   Loss: {
     label: "Multi-Objective Loss"
     style: {
-      stroke: "#333333"
-      stroke-width: 3
+      stroke: "#000000"
+      stroke-width: 4
       stroke-dash: 5
       fill: "#ffffff"
       font-size: 90
@@ -403,8 +401,8 @@ Section5: {
       shape: rectangle
       style: {
         fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -417,9 +415,9 @@ Section5: {
       |
       shape: rectangle
       style: {
-        fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+        fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -436,9 +434,9 @@ Section5: {
       |
       shape: rectangle  
       style: {
-        fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+        fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
@@ -454,20 +452,20 @@ Section5: {
       shape: rectangle
       style: {
         fill: "#d4e6f1"
-        stroke: "#333333"
-        stroke-width: 3
+        stroke: "#000000"
+        stroke-width: 4
         shadow: true
       }
     }
     
-    LossSup -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
-    LossRef -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
-    LossProbe -> TotalLoss: "" { style: { stroke: "#333333"; font-size: 80 } }
+    LossSup -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+    LossRef -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+    LossProbe -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
   }
   
-  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#333333" } }
-  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#333333" } }
-  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#333333" } }
+  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#000000"; stroke-width: 4 } }
+  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#000000"; stroke-width: 4 } }
+  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#000000"; stroke-width: 4 } }
 }
 
 # ============================================================================
@@ -475,37 +473,35 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section1.InputData: "" { style: { stroke: "#333333"; font-size: 80 } }
-Section1.InputData -> Section2.TaskHistoryEmb: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section1.BKT -> Section1.InputData: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section1.InputData -> Section2.TaskHistoryEmb: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
 # 2 -> 3
-Section2.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#333333"; font-size: 80 } }
-Section2.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section2.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section2.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
 # 3 -> 4
-Section1.BKT -> Section4.TheoryBase: "" { style: { stroke: "#333333"; font-size: 80 } }
-Section3.ContextVector -> Section4.ContextualProjection: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section1.BKT -> Section4.TheoryBase: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section4.ContextualProjection: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
 # 4 -> 5
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#333333"; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#333333"; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#333333"; font-size: 80 } }
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
 # Ground Truth -> Loss
 Section1.InputData -> Section5.Loss.LossSup: "y" {
   style: {
-    stroke-dash: 5
-    opacity: 0.5
     font-size: 80
-    stroke: "#333333"
+    stroke: "#000000"
+    stroke-width: 4
   }
 }
 Section1.BKT -> Section5.Loss.LossProbe: "" {
   style: {
-    stroke-dash: 5
-    opacity: 0.5
     font-size: 80
-    stroke: "#333333"
+    stroke: "#000000"
+    stroke-width: 4
   }
 }
 
