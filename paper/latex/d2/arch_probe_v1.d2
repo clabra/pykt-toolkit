@@ -42,7 +42,7 @@ Section1: {
     |
     shape: cylinder
     style: {
-      fill: "#d4e6f1"
+      fill: "#d4edda"
       stroke: "#000000"
       stroke-width: 4
       shadow: true
@@ -56,7 +56,7 @@ Section1: {
       
       Data
 
-      {(q, c, r, p<sub>L₀</sub>, p<sub>T</sub>)}
+      {(q, c, r)}
     |
     shape: cylinder
     style: {
@@ -84,52 +84,125 @@ Section2: {
     stroke-dash: 5
   }
   
-  TaskHistoryEmb: {
-    label: |md
-      History Embeddings
-      (Response + Difficulty)
-      
-      y'<sub>t</sub> = e + u·f [Response + Difficulty]
-      
-      <span style="color:#666">e, f: [d]</span>
-
-      <span style="color:#666">y': [d]</span>
-
-      <span style="color:#666">u: scalar</span>
-
-      <span style="color:#666">[B, S, d]</span>
-    |
-    shape: rectangle
+  StandardEmbeddings: {
+    label: "Standard Track (Blue)"
     style: {
-      fill: "#e8f4f8"
-      stroke: "#000000"
-      stroke-width: 4
-      shadow: true
+      stroke: "#2874A6"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#EBF5FB"
+      font-size: 90
+    }
+    
+    TaskHistoryEmb: {
+      label: |md
+        History Embeddings
+        (Response + Difficulty)
+        
+        y'<sub>t</sub> = e + u·f
+        
+        e: Interaction = qa_emb(r) + q_emb(q)
+
+        f: Interaction Variation = qa_diff(r) + q_diff(q)
+
+        u: Problem Difficulty (scalar)
+        
+        <span style="color:#666">e, f: [d]    u: scalar    y': [d]</span>
+
+        <span style="color:#666">[B, S, d]</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#e8f4f8"
+        stroke: "#000000"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    TaskHistoryEmb2: {
+      label: |md
+        Task Embeddings
+        (Question + Difficulty)
+        
+        x'<sub>t</sub> = c + u·d
+        
+        c: Question/Skill Embedding = q_emb(q)
+
+        d: Question Variation = q_diff(q)
+
+        u: Problem Difficulty (scalar)
+        
+        <span style="color:#666">c, d: [d]    u: scalar    x': [d]</span>
+
+        <span style="color:#666">[B, S, d]</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#e8f4f8"
+        stroke: "#000000"
+        stroke-width: 4
+        shadow: true
+      }
     }
   }
   
-  TaskHistoryEmb2: {
-    label: |md
-      Task Embeddings
-      (Standard + Difficulty)
-      
-      x'<sub>t</sub> = c + u·d [Concept + Difficulty]
-      
-      <span style="color:#666">c, d: [d]</span>
-
-      <span style="color:#666">x': [d]</span>
-
-      <span style="color:#666">u: scalar</span>
-
-      <span style="color:#666">[B, S, d]</span>
-    |
-    shape: rectangle
+  InterpretableEmbeddings: {
+    label: "Interpretable Track (Green)"
     style: {
-      fill: "#e8f4f8"
-      stroke: "#000000"
-      stroke-width: 4
-      shadow: true
+      stroke: "#229954"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#EAFAF1"
+      font-size: 90
     }
+    
+    TheoryBases: {
+      label: |md
+        Theory Bases
+        (BKT Priors)
+        
+        L₀<sub>base</sub>[q] ~ N(σ⁻¹(BKT_L₀[q]), 0.05)
+
+        T<sub>base</sub>[q] ~ N(σ⁻¹(BKT_T[q]), 0.05)
+        
+        <span style="color:#666">Textured logits from BKT</span>
+
+        <span style="color:#666">[n_question+1, 1]</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    SemanticAxes: {
+      label: |md
+        Semantic Axes
+        (Relational Directions)
+        
+        K<sub>axis</sub>[q]: Knowledge Direction
+
+        V<sub>axis</sub>[q]: Velocity Direction
+        
+        <span style="color:#666">Init: Orthogonal(0, 0.02)</span>
+
+        <span style="color:#666">[n_question+1, z]</span>
+
+        <span style="color:#666">z = d + e</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#d4edda"
+        stroke: "#000000"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
   }
   
 }
@@ -219,7 +292,7 @@ Section3: {
 # ============================================================================
 
 Section4: {
-  label: "4: Grounded Parameters (Additive Composition)"
+  label: "4: Grounded Parameters (Base + Projection)"
   style: {
     stroke: "#000000"
     stroke-width: 4
@@ -231,14 +304,16 @@ Section4: {
   
   TheoryBase: {
     label: |md
-      Theory Base
+      1. Theory Base
 
-      (Population Priors)
+      (BKT Prior Embeddings)
       
-      ℓ<sub>L₀</sub> = σ⁻¹(μ<sub>L₀</sub>[q])
+      ℓ<sub>L₀</sub>[q] = L₀<sub>base</sub>[q]
 
-      ℓ<sub>T</sub> = σ⁻¹(μ<sub>T</sub>[q])
+      ℓ<sub>T</sub>[q] = T<sub>base</sub>[q]
       
+      <span style="color:#666">Textured logits ~ N(σ⁻¹(BKT), 0.05)</span>
+
       <span style="color:#666">[B, S]</span>
     |
     shape: rectangle
@@ -250,19 +325,19 @@ Section4: {
     }
   }
   
-  ContextualProjection: {
+  SemanticProjection: {
     label: |md
-      Contextual Projection
+      2. Semantic Axis Projection
 
-      (Linear Probes)
+      (Context · Relational Direction)
       
-      Δ<sub>L₀</sub> = W<sub>L₀</sub> · z<sub>t</sub> + b<sub>L₀</sub>
+      Δ<sub>L₀</sub> = z<sub>t</sub> · K<sub>axis</sub>[q]
 
-      Δ<sub>T</sub>  = W<sub>T</sub> · z<sub>t</sub> + b<sub>T</sub>
+      Δ<sub>T</sub> = z<sub>t</sub> · V<sub>axis</sub>[q]
       
-      <span style="color:#666">W: [z, 1], b: [1]</span>
+      <span style="color:#666">Dot product: sum(z ⊙ axis, dim=-1)</span>
 
-      <span style="color:#666">Δ: [B, S]</span>
+      <span style="color:#666">[B, S]</span>
     |
     shape: rectangle
     style: {
@@ -273,16 +348,15 @@ Section4: {
     }
   }
   
-  
   FinalParams: {
     label: |md
-      Final Parameters
+      2. Final Parameters
 
       (Sigmoid Activation)
       
-      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub> + Δ<sub>L₀</sub>)
+      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub>)
 
-      p<sub>T</sub> = σ(ℓ<sub>T</sub> + Δ<sub>T</sub>)
+      p<sub>T</sub> = σ(ℓ<sub>T</sub>)
       
       <span style="color:#666">[B, S]</span>
     |
@@ -295,8 +369,8 @@ Section4: {
     }
   }
   
-  TheoryBase -> FinalParams: "+" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-  ContextualProjection -> FinalParams: "+" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+  TheoryBase -> FinalParams: "Base +" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+  SemanticProjection -> FinalParams: "Context Projection " { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 }
 
 # ============================================================================
@@ -451,7 +525,7 @@ Section5: {
       |
       shape: rectangle
       style: {
-        fill: "#d4e6f1"
+        fill: "#d4edda"
         stroke: "#000000"
         stroke-width: 4
         shadow: true
@@ -473,21 +547,23 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section1.InputData: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section1.InputData -> Section2.TaskHistoryEmb: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section1.BKT -> Section1.InputData: "Priors" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "Load" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
 
 # 2 -> 3
-Section2.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section2.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section2.StandardEmbeddings.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
-# 3 -> 4
-Section1.BKT -> Section4.TheoryBase: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section4.ContextualProjection: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+# 3 -> 4 (Grounded Parameters)
+Section2.InterpretableEmbeddings.TheoryBases -> Section4.TheoryBase: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "K,V axes" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section4.SemanticProjection: "z" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
-# 4 -> 5
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+# 4 -> 5 (Outputs)
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L₀, p_T" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#2874A6"; stroke-width: 4; font-size: 80 } }
+Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
 
 # Ground Truth -> Loss
 Section1.InputData -> Section5.Loss.LossSup: "y" {
@@ -497,10 +573,10 @@ Section1.InputData -> Section5.Loss.LossSup: "y" {
     stroke-width: 4
   }
 }
-Section1.BKT -> Section5.Loss.LossProbe: "" {
+Section1.BKT -> Section5.Loss.LossProbe: "BKT targets" {
   style: {
     font-size: 80
-    stroke: "#000000"
+    stroke: "#229954"
     stroke-width: 4
   }
 }
