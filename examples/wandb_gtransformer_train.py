@@ -20,10 +20,30 @@ device = "cpu" if not torch.cuda.is_available() else "cuda"
 os.environ['CUBLAS_WORKSPACE_CONFIG']=':4096:2'
 
 def save_config(train_config, model_config, data_config, params, save_dir):
-    d = {"train_config": train_config, 'model_config': model_config, "data_config": data_config, "params": params}
+    """Save configuration with explicit documentation for reproducibility."""
+    import sys
+    
+    # Build explicit command string from current invocation
+    train_command = " ".join(sys.argv)
+    
+    d = {
+        "train_config": train_config, 
+        'model_config': model_config, 
+        "data_config": data_config, 
+        "params": params,
+        "commands": {
+            "train_explicit": train_command,
+            "launched_at": datetime.datetime.now().isoformat()
+        },
+        "_documentation": {
+            "purpose": "Configuration checkpoint for model training",
+            "train_command_info": "The train_explicit command shows the exact command used to launch this training run",
+            "note": "For evaluation, use the config.json in the parent experiment folder which contains the complete eval_explicit command"
+        }
+    }
     save_path = os.path.join(save_dir, "config.json")
     with open(save_path, "w") as fout:
-        json.dump(d, fout)
+        json.dump(d, fout, indent=2)
 
 def main(params):
     if "use_wandb" not in params:

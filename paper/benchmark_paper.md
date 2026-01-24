@@ -10,30 +10,35 @@ For comparison with SOTA models, we can use the results from Exp 123509	that ove
 
 Complete summary of all experiments documented in this paper.
 
-| Short Title | Exp ID | n_blocks | n_heads | Grounded | Probing | Personalization | λ_sup | λ_ref | λ_probe | λ_init | λ_rate | Exp Folder | AUC (p_sup) | AUC (p_ref) | Description |
+| Short Title | Exp ID | n_blocks | n_heads | Ablation | Probing | Personalization | λ_sup | λ_ref | λ_probe | λ_init | λ_rate | Exp Folder | AUC (p_sup) | AUC (p_ref) | Description |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :--- |
-| **Baseline (Step 0)** | - | 4 | 4 | ❌ | ❌ | ❌ | 1.0 | - | - | - | - | `20260113_1814...baseline` | **0.7825** ± 0.0017 | - | Black-box AKT-equivalent, unconstrained neural baseline |
-| **Grounded (2/8)** | 090230 | 2 | 8 | ✅ | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260115_090230` | **0.7800** ± 0.0013 | - | Shallow grounded model, "Interpretability for Free" |
-| **Grounded (4/8)** | 102914 | 4 | 8 | ✅ | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260114_102914` | **0.7795** ± 0.0009 | - | Deep grounded model, improved stability |
-| **Parity (4/4)** | 112429 | 4 | 4 | ✅ | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260115_112429` | **0.7769** ± 0.0007 | - | True parity with baseline architecture, measures Cost of Interpretability |
-| **Ablation (4/4)** | 123509 | 4 | 4 | ❌ | ❌ | ❌ | 1.0 | - | - | 0.1 | 0.1 | `20260115_123509...baseline` | **0.7838** ± 0.0017 ✅ | - | Validation: ablation reproduces baseline, confirms no code regression |
-| **Ablation (2/8)** | 133835 | 2 | 8 | ❌ | ❌ | ❌ | 1.0 | - | - | 0.1 | 0.1 | `20260115_133835` | **0.7803** ± 0.0016 ✅ | - | Neural ceiling for optimal architecture, measures marginal cost |
-| **Active Grounding** | 636452 | 2 | 8 | ✅ | ✅ | ❌ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260115_183344...636452` | **0.7758** ± 0.0037 | - | Probing-guided training, global linear interpretability |
-| **Pure Interpretability** | 474858 | 2 | 8 | ✅ | ✅ | ❌ | **0.0** | 1.0 | 1.0 | 0.1 | 0.1 | `20260116_084144...474858` | **0.5130** ± 0.0002 ❌ | - | FAILURE: Supervised loss is critical, grounding alone insufficient |
-| **Aligned Grounding** | 334772 | 2 | 8 | ✅ | ✅ | ❌ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260116_101107...334772` | **0.7788** ± 0.0003 | **0.6822** ± 0.0005 | BKT labels aligned with evaluation protocol |
-| **Minimalist Grounding** | 533154 | 2 | 8 | ✅ | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260118_203059...533154` | **0.7790** ± 0.0015 ✅ | **0.6756** ± 0.0028 ✅ | New Baseline: Probing-only grounding (without parameter losses), achieves full diagnostic variance without the need of Personalization |
-| **Personalization** | 948799 | 2 | 8 | ✅ | ✅ | ✅ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260116_120815...948799` | **0.7784** ± 0.0003 | **0.6837** ± 0.0011 | Student embeddings enable individualized diagnostics |
-| **Orthogonal Init + Diversity** | 801184 | 2 | 8 | ✅ | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260119_110013...801184` | **0.7812** ± 0.0012 ✅ | **0.6727** ± 0.0002 ✅ | Orthogonal initialization + diversity loss for semantic axis stability |
+| **Baseline (Step 0)** | - | 4 | 4 | all | ❌ | ❌ | 1.0 | - | - | - | - | `20260113_1814...baseline` | **0.7825** ± 0.0017 | - | Black-box AKT-equivalent, unconstrained neural baseline |
+| **Grounded (2/8)** | 090230 | 2 | 8 | none | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260115_090230` | **0.7800** ± 0.0013 | - | Shallow grounded model, "Interpretability for Free" |
+| **Grounded (4/8)** | 102914 | 4 | 8 | none | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260114_102914` | **0.7795** ± 0.0009 | - | Deep grounded model, improved stability |
+| **Parity (4/4)** | 112429 | 4 | 4 | none | ❌ | ❌ | 1.0 | 0.5 | - | 0.1 | 0.1 | `20260115_112429` | **0.7769** ± 0.0007 | - | True parity with baseline architecture, measures Cost of Interpretability |
+| **Ablation (4/4)** | 123509 | 4 | 4 | all | ❌ | ❌ | 1.0 | - | - | 0.1 | 0.1 | `20260115_123509...baseline` | **0.7838** ± 0.0017 ✅ | - | Validation: ablation reproduces baseline, confirms no code regression |
+| **Ablation (2/8)** | 133835 | 2 | 8 | all | ❌ | ❌ | 1.0 | - | - | 0.1 | 0.1 | `20260115_133835` | **0.7803** ± 0.0016 ✅ | - | Neural ceiling for optimal architecture, measures marginal cost |
+| **Active Grounding** | 636452 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260115_183344...636452` | **0.7758** ± 0.0037 | - | Probing-guided training, global linear interpretability |
+| **Pure Interpretability** | 474858 | 2 | 8 | none | ✅ | ❌ | **0.0** | 1.0 | 1.0 | 0.1 | 0.1 | `20260116_084144...474858` | **0.5130** ± 0.0002 ❌ | - | FAILURE: Supervised loss is critical, grounding alone insufficient |
+| **Aligned Grounding** | 334772 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260116_101107...334772` | **0.7788** ± 0.0003 | **0.6822** ± 0.0005 | BKT labels aligned with evaluation protocol |
+| **Minimalist Grounding** | 533154 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260118_203059...533154` | **0.7790** ± 0.0015 ✅ | **0.6756** ± 0.0028 ✅ | New Baseline: Probing-only grounding (without parameter losses), achieves full diagnostic variance without the need of Personalization |
+| **Personalization** | 948799 | 2 | 8 | none | ✅ | ✅ | 1.0 | 0.5 | 1.0 | 0.1 | 0.1 | `20260116_120815...948799` | **0.7784** ± 0.0003 | **0.6837** ± 0.0011 | Student embeddings enable individualized diagnostics |
+| **Orthogonal Init + Diversity** | 801184 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260119_110013...801184` | **0.7812** ± 0.0012 ✅ | **0.6727** ± 0.0002 ✅ | Orthogonal initialization + diversity loss for semantic axis stability |
 | **BKT Skill-Level** | 304787 | - | - | - | - | - | - | - | - | - | - | `bkt_skill_mode` | **0.7144** ± 0.0005 | - | Classical BKT with sequential belief updates |
 | **BKT Question-Level** | 305377 | - | - | - | - | - | - | - | - | - | - | `bkt_question_mode_fixed` | **0.6097** ± 0.0008 | - | BKT with late fusion, no test-time updates |
 
 **Legend:**
 
-- **Grounded** (✅): Model uses BKT-based grounding losses to constrain outputs toward pedagogically interpretable values
-  - **What it does**: Forces predictions to align with BKT theory via differentiable wrapper
-  - **Losses used**: λ_ref (reference loss), λ_init (initial mastery), λ_rate (learning rate)
-  - **Result**: Interpretable predictions (output-level interpretability)
-  - **Example**: Exp 090230 can explain *what* it predicts using BKT parameters
+- **Ablation**: Controls which grounding components are active in the model architecture
+  - **`all`**: Ablates (removes) ALL grounding components → Pure neural baseline (black-box)
+    - No BKT embeddings, no semantic axes, no theory-guided constraints
+    - Pure AKT-equivalent architecture optimized only for prediction accuracy
+  - **`none`**: No ablation → Full grounding enabled (theory-guided model)
+    - Includes: BKT base embeddings, knowledge/velocity axes, theory parameters
+    - Enables: Interpretable outputs via λ_ref, λ_init, λ_rate losses
+    - Result: Model predictions align with BKT pedagogical theory
+  - **Parameter**: `--ablation {all|none}` in training command
+  - **Code**: `self.ablation` in `pykt/models/gtransformer.py`
 
 - **Probing** (✅): Model uses probing losses to make BKT parameters linearly extractable from internal representations
   - **What it does**: Trains linear probes to recover $p_{L0}$ and $p_T$ directly from latent vectors

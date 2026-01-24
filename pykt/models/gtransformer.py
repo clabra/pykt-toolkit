@@ -37,6 +37,9 @@ class GTransformer(nn.Module):
         self.emb_type = emb_type
         self.ablation = ablation
         self.n_uid = n_uid
+        # Personalization flag: controls whether student-specific parameters are enabled
+        # Derived from n_uid for backward compatibility
+        self.personalization = (n_uid > 0)
         
         # Loss component weights (Passed through from data_config/params)
         self.lambda_sup = kwargs.get('lambda_sup', 1.0)
@@ -88,7 +91,7 @@ class GTransformer(nn.Module):
             self.register_buffer('bkt_l0_pop', torch.ones(n_question + 1) * 0.5)
             self.register_buffer('bkt_t_pop', torch.ones(n_question + 1) * 0.1)
             
-            if self.n_uid > 0:
+            if self.personalization:
                 self.student_param = nn.Embedding(self.n_uid + 1, 1) # Student learning velocity scalar (v_s)
                 self.student_gap_param = nn.Embedding(self.n_uid + 1, 1) # Student knowledge gap scalar (k_c)
             
@@ -313,7 +316,7 @@ class GTransformer(nn.Module):
         
         # Step 4: Individualization (Student-Specific scalars)
         # Adds static student bias to the dynamic estimate
-        if self.n_uid > 0 and uid_data is not None:
+        if self.personalization and uid_data is not None:
              # uid_data: BS (assumed constant per sequence or BS, seqlen if available)
              # Expand to match sequence if necessary
              if uid_data.dim() == 1:

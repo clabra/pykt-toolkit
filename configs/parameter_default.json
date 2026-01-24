@@ -103,53 +103,302 @@
       "bkt_guess_threshold",
       "bkt_slip_threshold"
     ],
-    "model_config": [
-      "seq_len",
-      "d_model",
-      "n_heads",
-      "n_blocks",
-      "d_ff",
-      "dropout",
-      "emb_type",
-      "final_fc_dim",
-      "l2",
-      "l2_rasch",
-      "lambda_student",
-      "lambda_gap",
-      "lambda_ref",
-      "lambda_initmastery",
-      "lambda_rate",
-      "active_grounding",
-      "lambda_probe",
-      "theory_guided",
-      "size_m",
-      "graph_type",
-      "answer_dim",
-      "epsilon",
-      "beta",
-      "lambda_r",
-      "lambda_w1",
-      "lambda_w2",
-      "n_hidden",
-      "n_rnn_hidden",
-      "n_mlp_hidden",
-      "hidden_dim",
-      "num_attn_heads",
-      "num_en",
-      "skill_dim",
-      "attention_dim",
-      "dim_s",
-      "emb_size",
-      "fusion_type",
-      "use_wandb",
-      "add_uuid",
-      "ablation",
-      "personalization",
-      "kq_same",
-      "separate_qa",
-      "pretrain_dim",
-      "emb_path"
-    ]
+    "model_config": {
+      "seq_len": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "reference"
+        ],
+        "description": "Maximum sequence length for input interactions."
+      },
+      "d_model": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Inner model dimension for embeddings and attention."
+      },
+      "n_heads": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Number of attention heads (canonical parameter)."
+      },
+      "n_blocks": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Number of Transformer blocks (encoder and decoder-like stacks)."
+      },
+      "d_ff": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Hidden dimension of the position-wise feed-forward network."
+      },
+      "dropout": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Dropout probability for regularization."
+      },
+      "emb_type": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Type of ID embedding logic (e.g. qid for concept-based)."
+      },
+      "final_fc_dim": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Dimension of the final fully connected layers before prediction."
+      },
+      "l2": {
+        "deprecated": true,
+        "ablation": [
+          "grounded"
+        ],
+        "description": "Deprecated: legacy L2 weight (superseded by specialized grounding losses)."
+      },
+      "l2_rasch": {
+        "deprecated": false,
+        "ablation": [
+          "grounded"
+        ],
+        "description": "L2 regularization weight for Rasch-style difficulty parameters."
+      },
+      "lambda_student": {
+        "deprecated": true,
+        "ablation": [
+          "personalization"
+        ],
+        "description": "Deprecated: legacy student trait regularization."
+      },
+      "lambda_gap": {
+        "deprecated": true,
+        "ablation": [
+          "personalization"
+        ],
+        "description": "Deprecated: legacy knowledge gap regularization."
+      },
+      "lambda_ref": {
+        "deprecated": false,
+        "ablation": [
+          "reference"
+        ],
+        "description": "Supervised loss weight for Bayesian Knowledge Tracing reference predictions."
+      },
+      "lambda_initmastery": {
+        "deprecated": false,
+        "ablation": [
+          "grounded"
+        ],
+        "description": "Representational grounding weight for L0 (Initial Mastery) parameters."
+      },
+      "lambda_rate": {
+        "deprecated": false,
+        "ablation": [
+          "grounded"
+        ],
+        "description": "Representational grounding weight for T (Learning Rate) parameters."
+      },
+      "active_grounding": {
+        "deprecated": false,
+        "ablation": [
+          "probing"
+        ],
+        "description": "Toggle to enable/disable active grounding using probing dataset targets."
+      },
+      "lambda_probe": {
+        "deprecated": false,
+        "ablation": [
+          "probing"
+        ],
+        "description": "Loss weight for the dedicated linear probing heads."
+      },
+      "theory_guided": {
+        "deprecated": true,
+        "ablation": [
+          "grounded",
+          "reference"
+        ],
+        "description": "Deprecated: legacy toggle for theory-based logic (superseded by ablation tokens)."
+      },
+      "size_m": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: memory size for legacy DKT-based models."
+      },
+      "graph_type": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: graph structure type for legacy GKT models."
+      },
+      "answer_dim": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: legacy dimension for answer-specific embeddings."
+      },
+      "epsilon": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: adversarial epsilon for legacy ATKT models."
+      },
+      "beta": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: adversarial weight for legacy ATKT models."
+      },
+      "lambda_r": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: logic regularization for legacy DKT+ models."
+      },
+      "lambda_w1": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: smoothness weight for legacy DKT+ models."
+      },
+      "lambda_w2": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: reconstruction weight for legacy DKT+ models."
+      },
+      "n_hidden": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: hidden dimension for legacy RNN models."
+      },
+      "n_rnn_hidden": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: recurrent hidden dimension."
+      },
+      "n_mlp_hidden": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: dimension for legacy MLP layers."
+      },
+      "hidden_dim": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: legacy hidden state dimension."
+      },
+      "num_attn_heads": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Number of attention heads (canonical parameter for Transformers)."
+      },
+      "num_en": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: number of encoder layers for legacy SAKT/SAINT."
+      },
+      "skill_dim": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: skill embedding dimension."
+      },
+      "attention_dim": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: attention projection dimension."
+      },
+      "dim_s": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: student summary dimension."
+      },
+      "emb_size": {
+        "deprecated": true,
+        "ablation": [],
+        "description": "Deprecated: generic embedding size."
+      },
+      "fusion_type": {
+        "deprecated": false,
+        "ablation": [
+          "reference"
+        ],
+        "description": "Policy for combining multiple estimates (e.g. late_fusion)."
+      },
+      "use_wandb": {
+        "deprecated": false,
+        "ablation": [],
+        "description": "Toggle for Weights & Biases experiment tracking."
+      },
+      "add_uuid": {
+        "deprecated": false,
+        "ablation": [],
+        "description": "Whether to append UUID to run names for collision avoidance."
+      },
+      "ablation": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "reference",
+          "probing",
+          "personalization"
+        ],
+        "description": "Master ablation control (none=all active, all=blackbox baseline)."
+      },
+      "personalization": {
+        "deprecated": false,
+        "ablation": [
+          "personalization"
+        ],
+        "description": "Whether to enable student-level diagnostic parameters (uids)."
+      },
+      "kq_same": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Whether Key and Query use shared projection weights."
+      },
+      "separate_qa": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Whether Question and Answer ids are embedded in separate subspaces."
+      },
+      "pretrain_dim": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Dimension of external pretrained embeddings (if provided)."
+      },
+      "emb_path": {
+        "deprecated": false,
+        "ablation": [
+          "grounded",
+          "probing"
+        ],
+        "description": "Absolute or relative path to pretrained embedding weights."
+      }
+    }
   },
   "fixed": {
     "idkt_baseline": {

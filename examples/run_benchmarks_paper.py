@@ -280,6 +280,23 @@ def evaluate_worker(model, dataset, fold, gpu_id, campaign_pattern=None, dual_ev
     
     if not eval_cmd:
         return (model, dataset, fold, -1, "Eval command missing in config.json")
+    
+    # Verify config.json has proper structure for reproducibility
+    if "_documentation" not in config:
+        print(f"  ⚠️  Warning: {exp_dir.name} has legacy config format (missing _documentation section)")
+    
+    # Log the explicit commands for audit trail
+    train_cmd = config.get("commands", {}).get("train_explicit", "N/A")
+    if exp_dir.name not in getattr(evaluate_worker, '_logged_configs', set()):
+        print(f"\n{'='*80}")
+        print(f"EXPERIMENT: {exp_dir.name}")
+        print(f"{'='*80}")
+        print(f"Training command: {train_cmd[:150]}..." if len(train_cmd) > 150 else f"Training command: {train_cmd}")
+        print(f"Evaluation command: {eval_cmd[:150]}..." if len(eval_cmd) > 150 else f"Evaluation command: {eval_cmd}")
+        print(f"{'='*80}\n")
+        if not hasattr(evaluate_worker, '_logged_configs'):
+            evaluate_worker._logged_configs = set()
+        evaluate_worker._logged_configs.add(exp_dir.name)
 
     # Force use of current sys.executable to ensure correct environment (fix ModuleNotFoundError)
     # Also fix script paths to use relative paths from PROJECT_ROOT

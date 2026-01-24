@@ -614,6 +614,20 @@ def build_explicit_eval_command(eval_script, experiment_folder, params):
         dual_eval_int = 1 if params.get('dual_eval', False) else 0
         cmd_parts.append(f"--dual_eval {dual_eval_int}")
         
+        # For gtransformer, include ablation and personalization parameters for full synchronization
+        if model == "gtransformer":
+            gtransformer_params = ['ablation', 'personalization', 'lambda_sup', 'lambda_ref', 
+                                   'lambda_probe', 'lambda_initmastery', 'lambda_rate', 
+                                   'n_uid', 'active_grounding']
+            for key in gtransformer_params:
+                if key in params:
+                    value = params[key]
+                    if isinstance(value, bool):
+                        if value:  # Only add flag if True
+                            cmd_parts.append(f"--{key}")
+                    else:
+                        cmd_parts.append(f"--{key} {value}")
+        
         return " ".join(cmd_parts)
 
 def build_eval_command(eval_script, model_path):
@@ -942,11 +956,13 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
             "id": experiment_id,
             "created": datetime.now().isoformat(),
             "repro_command": " ".join(sys.argv), 
-            "parent_folder": str(parent_folder) if parent_folder else None
+            "parent_folder": str(parent_folder) if parent_folder else None,
+            "description": f"Training {model_name} on {dataset} fold {fold} - {short_title}"
         },
         "input": input_params,
         "defaults": defaults_config["defaults"],
         "train_config": training_params,
+        "params": training_params,  # Alias for compatibility with evaluation scripts
         "commands": {
             "train_explicit": train_command_explicit,
             "eval_explicit": eval_command_explicit,
@@ -954,6 +970,13 @@ def run_train_fold(args, defaults_config, fold, model_name, dataset, short_title
             "plot_param_distribution": f"{python_path} examples/plot_param_distribution.py --experiment_dir {experiment_dir_abs}",
             "plot_mastery_mosaic": f"{python_path} examples/plot_mastery_mosaic.py --experiment_dir {experiment_dir_abs}",
             "train_probe": f"{python_path} examples/train_probe.py --experiment_dir {experiment_dir_abs} --dimension difficult"
+        },
+        "_documentation": {
+            "purpose": "Complete reproducibility record for experiment",
+            "train_command_info": "The train_explicit command contains ALL parameters used for training with explicit values (zero defaults)",
+            "eval_command_info": "The eval_explicit command contains ALL parameters needed for evaluation, synchronized with training parameters",
+            "parameter_precedence": "Command line > ablation mode > config file defaults",
+            "ablation_control": "Ablation mode automatically sets lambda_* and personalization parameters"
         }
     }
     

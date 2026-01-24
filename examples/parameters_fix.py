@@ -36,10 +36,14 @@ def main():
             data['defaults'][k] = v
             print(f"Added {k}={v} to defaults")
 
-    # Ensure they are in model_config type list
+    # Ensure they are in model_config type dictionary
     for k in new_params:
         if k not in data['types']['model_config']:
-            data['types']['model_config'].append(k)
+            data['types']['model_config'][k] = {
+                "deprecated": False,
+                "ablation": [],
+                "description": f"Internal parameter: {k}"
+            }
 
     # Recompute MD5
     data['md5'] = compute_md5(data['defaults'])

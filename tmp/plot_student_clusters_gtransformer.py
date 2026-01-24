@@ -132,7 +132,15 @@ def main():
     dataset_name = model_config.get("dataset", config.get("params", {}).get("dataset_name", config.get("input", {}).get("dataset", "assist2009")))
     fold = model_config.get("fold", config.get("params", {}).get("fold", config.get("input", {}).get("fold", 0)))
     batch_size = model_config.get("batch_size", 64)
+    
+    # Determine personalization: check flag first, then fall back to n_uid
+    personalization = model_config.get("personalization", None)
     n_uid = model_config.get("n_uid", 0)
+    if personalization is None:
+        # Backward compatibility: infer from n_uid
+        has_personalization = (n_uid > 0)
+    else:
+        has_personalization = personalization
     
     # Load data config
     data_config_path = os.path.join(project_root, 'configs/data_config.json')
@@ -162,9 +170,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
-    # Detect personalization and extract accordingly
-    has_personalization = n_uid > 0
-    
+    # Use has_personalization determined from config above
     if has_personalization:
         print(f"[PERSONALIZATION DETECTED] Using learned student embeddings (n_uid={n_uid})")
         alpha, beta, uids = extract_student_embeddings(model, loader, device, n_uid)
