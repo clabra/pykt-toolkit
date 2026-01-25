@@ -454,6 +454,7 @@ Section5: {
         shadow: true
       }
     }
+      
   }
   
   Loss: {
@@ -547,9 +548,8 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.BKT -> Section1.InputData: "Priors" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "Load" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
 
 # 2 -> 3
 Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
@@ -561,7 +561,7 @@ Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "K
 Section3.ContextVector -> Section4.SemanticProjection: "z" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
 
 # 4 -> 5 (Outputs)
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "p_L₀, p_T" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
 Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#2874A6"; stroke-width: 4; font-size: 80 } }
 Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
 
