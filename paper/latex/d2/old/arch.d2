@@ -1,0 +1,297 @@
+direction: up
+
+BKT: {
+  class: input
+  label: Reference Model \n (BKT)
+}
+
+Oracle: {
+  class: input
+  label: Reference Labels
+}
+
+InputData: {
+  class: input
+  label: Interactions \\n Data
+}
+InputData.shape: cylinder
+
+StudentIDs: {
+  class: input
+  label: Student IDs \\n (if personalization=true)
+  style: {
+    stroke-dash: 3
+  }
+}
+StudentIDs.shape: cylinder
+
+# 1. Embeddings Layer
+
+EmbeddingsLayer: {
+  class: layer
+  label: Embeddings
+  Embeddings: {
+    class: embeddings
+    label: |md
+      Task & History Embeddings
+
+      x'ₜ (Current Task)
+
+      y'ₜ (History)
+    |
+  }
+  
+  StudentEmbeddings: {
+    class: embeddings
+    label: |md
+      Student Memory
+      (if personalization=true)
+      
+      s_gap[uid] (Knowledge Bias)
+      s_vel[uid] (Learning Rate Bias)
+    |
+    style: {
+      stroke-dash: 3
+    }
+  }
+
+  Embeddings.shape: rectangle
+  StudentEmbeddings.shape: rectangle
+}
+
+# 3. Attention Heads (Transformer)
+Transformer: {
+  class: transformer
+
+  Encoder: {
+    class: transformer_component
+    style.multiple: true
+    label: "Encoder\\n(Self-Attention on y'_{1:t-1})"
+  }
+
+  Decoder: {
+    class: transformer_component
+    style.multiple: true
+    label: "Decoder\\n(Cross-Attention + x'ₜ)"
+  }
+
+  # 4. Intermediate Context Vector
+  zt: {
+    class: transformer_component
+    label: "zₜ \\n Context Vector"
+  }
+
+  Encoder -> Decoder: "History Context"
+  Decoder -> zt
+}
+
+# 5. Output Layer
+Outputs: {
+  class: layer
+
+  SupervisedOut: {
+    class: component
+    label: "Supervised \\n Prediction"
+  }
+
+  GroundedParams: {
+    label: Grounded Parameters
+    class: component
+    
+    TheoryBase: {
+      label: |md
+        Theory Base
+        (Always Active)
+        
+        p_L0_base, p_T_base
+      |
+    }
+    
+    ContextualProjection: {
+      label: |md
+        Contextual Projection
+        (Always Active)
+        
+        z · k_axis, z · v_axis
+      |
+    }
+    
+    StudentMemory: {
+      label: |md
+        Student Memory
+        (if personalization=true)
+        
+        s_gap[uid], s_vel[uid]
+      |
+      style: {
+        stroke-dash: 3
+      }
+    }
+    
+    FinalParams: {
+      label: |md
+        Final Parameters
+        
+        p_L0 = σ(Base + Context + Student)
+        p_T = σ(Base + Context + Student)
+      |
+    }
+    
+    TheoryBase -> FinalParams: "+"
+    ContextualProjection -> FinalParams: "+"
+    StudentMemory -> FinalParams: "+ (if enabled)" {
+      style: {
+        stroke-dash: 3
+      }
+    }
+  }
+
+  ReferenceOut: {
+    class: component
+    label: "Reference Logic \\n (BKT)"
+  }
+
+  DiagnosticProbes: {
+    label: Active Grounding
+    class: component
+    
+    probe_L0: "Logit Probe (L0)"
+    probe_T: "Logit Probe (T)"
+  }
+}
+
+# 6. Multi-objective Loss Functions
+
+LossLayer: {
+  label: Total Loss (L)
+  class: layer
+  LossSupervised: {
+    label: + \n Sup
+    class: loss
+  }
+  LossReference: {
+    label: + \n Ref
+    class: loss
+  }
+
+  LossProbing: {
+    label: + \n Probe
+    class: loss
+  }
+}
+
+# Relationships / Flow
+BKT -> EmbeddingsLayer.Embeddings: p_l0, p_T
+BKT -> Oracle
+InputData -> EmbeddingsLayer.Embeddings: "{(q, c, r)}"
+StudentIDs -> EmbeddingsLayer.StudentEmbeddings: "uid (if enabled)" {
+  style: {
+    stroke-dash: 3
+  }
+}
+StudentIDs -> Outputs.GroundedParams.StudentMemory: "uid (if enabled)" {
+  style: {
+    stroke-dash: 3
+  }
+}
+EmbeddingsLayer.Embeddings -> Transformer.Encoder: "y'_{1:t-1}"
+EmbeddingsLayer.Embeddings -> Transformer.Decoder: "x'ₜ"
+
+Transformer.zt -> Outputs.SupervisedOut: Standard MLP
+Transformer.zt -> Outputs.GroundedParams.TheoryBase: "BKT Priors"
+Transformer.zt -> Outputs.GroundedParams.ContextualProjection: "z · Axis"
+EmbeddingsLayer.StudentEmbeddings -> Outputs.GroundedParams.StudentMemory: "s_gap, s_vel" {
+  style: {
+    stroke-dash: 3
+  }
+}
+Transformer.zt -> Outputs.DiagnosticProbes: "Active Alignment \n Linear Probe (W . z + b)"
+
+Outputs.GroundedParams.FinalParams -> Outputs.ReferenceOut: "p_L0, p_T"
+Outputs.ReferenceOut -> LossLayer.LossReference
+
+# Loss functions
+Outputs.SupervisedOut -> LossLayer.LossSupervised
+
+Outputs.DiagnosticProbes -> LossLayer.LossProbing: "Active Verification" {
+  style: {
+
+    #stroke-dash: 3
+  }
+}
+
+# Supervision and Grounding Labels
+InputData -> LossLayer.LossSupervised: y_true
+Oracle -> LossLayer.LossProbing: "Oracle Targets" {
+  style: {
+    #stroke-dash: 3
+  }
+}
+BKT -> Outputs.GroundedParams: "Theory Priors"
+
+# Define Classes for visual consistency
+classes: {
+  layer: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      border-radius: 8
+      stroke-dash: 5
+      shadow: true
+    }
+  }
+
+  component: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  loss: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+    shape: circle
+  }
+
+  transformer: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  transformer_component: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  input: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+    }
+  }
+
+  embeddings: {
+    style: {
+      stroke: "#000000"
+      stroke-width: 2
+      shadow: true
+      3d: true
+    }
+  }
+}
+
