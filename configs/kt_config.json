@@ -133,9 +133,9 @@
     "gtransformer": {
         "learning_rate": 0.0001,
         "d_model": 64,
-        "n_blocks": 2,
+        "n_blocks": 4,
         "dropout": 0.1,
         "d_ff": 256,
-        "num_attn_heads": 8
+        "num_attn_heads": 4
     }
 }

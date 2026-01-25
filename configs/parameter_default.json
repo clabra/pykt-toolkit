@@ -16,8 +16,8 @@
     "gradient_clip": 1.0,
     "seq_len": 200,
     "d_model": 64,
-    "n_heads": 8,
-    "n_blocks": 2,
+    "n_heads": 4,
+    "n_blocks": 4,
     "d_ff": 256,
     "dropout": 0.1,
     "emb_type": "qid",
@@ -54,7 +54,6 @@
     "n_rnn_hidden": 128,
     "n_mlp_hidden": 128,
     "hidden_dim": 64,
-    "num_attn_heads": 8,
     "num_en": 4,
     "skill_dim": 256,
     "attention_dim": 64,
@@ -70,7 +69,8 @@
     "pretrain_dim": 768,
     "emb_path": "none",
     "add_uuid": 1,
-    "dual_eval": true
+    "dual_eval": true,
+    "num_attn_heads": 8
   },
   "types": {
     "launcher": [
@@ -299,14 +299,6 @@
         "ablation": [],
         "description": "Deprecated: legacy hidden state dimension."
       },
-      "num_attn_heads": {
-        "deprecated": false,
-        "ablation": [
-          "grounded",
-          "probing"
-        ],
-        "description": "Number of attention heads (canonical parameter for Transformers)."
-      },
       "num_en": {
         "deprecated": true,
         "ablation": [],
@@ -397,6 +389,11 @@
           "probing"
         ],
         "description": "Absolute or relative path to pretrained embedding weights."
+      },
+      "num_attn_heads": {
+        "deprecated": false,
+        "ablation": [],
+        "description": "Internal parameter: num_attn_heads"
       }
     }
   },
@@ -407,5 +404,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "d29b183eb42742964198c143930468da"
+  "md5": "14606ec7f774b0a28d36e33d0f6c88e1"
 }

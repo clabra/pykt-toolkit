@@ -795,7 +795,7 @@ def main():
                     if exp_dir:
                         # 1. Try Structured JSON first (Priority: Question-level Late Fusion)
                         res_files = list(exp_dir.glob("**/eval_results.json"))
-                        if res_files and not is_running:
+                        if res_files:
                             try:
                                 with open(res_files[0]) as f:
                                     d = json.load(f)
@@ -811,12 +811,16 @@ def main():
                                         has_ref_metrics = True
                                         metrics["auc_ref"].append(auc_ref)
                                         metrics["acc_ref"].append(acc_ref)
+                                    
+                                    # If metrics found, this fold is complete regardless of ps detection
+                                    if auc is not None:
+                                        is_running = False
                             except: pass
 
                         # 2. Fallback to Log File (Regex parsing)
                         if auc is None:
                             log_file = exp_dir / "eval_benchmark.log"
-                            if log_file.exists() and not is_running:
+                            if log_file.exists():
                                 with open(log_file, "r") as f:
                                     lines = f.readlines()
                                     for line in reversed(lines):
@@ -825,6 +829,9 @@ def main():
                                         mac = re.search(r"testacc: (0\.\d+)", line)
                                         if ma and mac:
                                             auc, acc = float(ma.group(1)), float(mac.group(1))
+                                            # If metrics found in log, mark as complete
+                                            if auc is not None:
+                                                is_running = False
 
                         if auc is not None:
                             metrics["auc"].append(auc)
@@ -1167,9 +1174,15 @@ def main():
                             print(f"    ✗ Skipped: {plots_skipped}")
                             print(f"    ⚠ Failed: {plots_failed}")
                             if plots_skipped > 0:
-                                print(f"\n  Note: Most plots require 'qid_test_question_predictions_reference.txt'")
-                                print(f"        which is only generated when dual_eval is enabled at training time.")
-                                print(f"        Check configs/parameter_default.json: \"dual_eval\": true")
+                                # Check if any skipped plots were due to missing reference predictions
+                                ref_required = any("qid_test_question_predictions_reference.txt" in 
+                                                  script_info.get("required_files", []) 
+                                                  for script_info in analysis_scripts)
+                                if ref_required:
+                                    print(f"\n  Note: Most plots require 'qid_test_question_predictions_reference.txt'")
+                                    print(f"        This file requires BOTH:")
+                                    print(f"          1. Model trained with grounding (ablation=none, not ablation=all)")
+                                    print(f"          2. Evaluation with dual_eval=true in configs/parameter_default.json")
         
         print(f"\n{'='*70}")
         print(f"ANALYSIS COMPLETE")

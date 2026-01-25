@@ -16,13 +16,13 @@ class Dim(IntEnum):
 
 class GTransformer(nn.Module):
     def __init__(self, n_question, n_pid, d_model, n_blocks, dropout, d_ff, 
-            kq_same, final_fc_dim, num_attn_heads, separate_qa, l2_rasch, emb_type, emb_path, pretrain_dim, ablation, n_uid, **kwargs):
+            kq_same, final_fc_dim, n_heads, separate_qa, l2_rasch, emb_type, emb_path, pretrain_dim, ablation, n_uid, **kwargs):
         super().__init__()
         """
         Input:
             d_model: dimension of attention block
             final_fc_dim: dimension of final fully connected net before prediction
-            num_attn_heads: number of heads in multi-headed attention
+            n_heads: number of heads in multi-headed attention
             d_ff : dimension for fully conntected net inside the basic block
             kq_same: if key query same, kq_same=1, else = 0
         """
@@ -101,8 +101,8 @@ class GTransformer(nn.Module):
             self.probe_t = nn.Linear(z_dim, 1)
 
         # Architecture Object. It contains stack of attention block
-        self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=num_attn_heads, dropout=dropout,
-                                    d_model=d_model, d_feature=d_model / num_attn_heads, d_ff=d_ff,  kq_same=self.kq_same, model_type=self.model_type, emb_type=self.emb_type)
+        self.model = Architecture(n_question=n_question, n_blocks=n_blocks, n_heads=n_heads, dropout=dropout,
+                                    d_model=d_model, d_feature=d_model / n_heads, d_ff=d_ff,  kq_same=self.kq_same, model_type=self.model_type, emb_type=self.emb_type)
 
         # Step 2: Parameter Projection Layers (The "Grounded Outputs")
         # z context vector is of dimension d_model + embed_l (concat of decoder output and question embedding)

@@ -26,7 +26,10 @@ Complete summary of all experiments documented in this paper.
 | **Orthogonal Init + Diversity** | 801184 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260119_110013...801184` | **0.7812** ± 0.0012 | **0.6727** ± 0.0002 | Orthogonal initialization + diversity loss for semantic axis stability |
 | **BKT Skill-Level** | 304787 | - | - | - | - | - | - | - | - | - | - | `bkt_skill_mode` | **0.7144** ± 0.0005 | - | Classical BKT with sequential belief updates |
 | **BKT Question-Level** | 305377 | - | - | - | - | - | - | - | - | - | - | `bkt_question_mode_fixed` | **0.6097** ± 0.0008 | - | BKT with late fusion, no test-time updates |
-| **Ablation None** | 656644 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260124_182807...656644` | **0.7812** ± 0.0011 ✅ | **0.6727** ± 0.0001 ✅ | Validated 5-fold CV without parameter grounding losses (λ_initmastery=0.0, λ_rate=0.0) and confirmed functional interpretability with BKT target loading (active_grounding=1) |
+| **Ablation None** | 656644 | 2 | 8 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260124_182807...656644` | **0.7812** ± 0.0011 | **0.6727** ± 0.0001 | Validated 5-fold CV without parameter grounding losses (λ_initmastery=0.0, λ_rate=0.0) and confirmed functional interpretability with BKT target loading (active_grounding=1) |
+| **Ablation None (4/4)** | 481134 | 4 | 4 | none | ✅ | ❌ | 1.0 | 0.5 | 1.0 | **0.0** | **0.0** | `20260124_234359...481134` | **0.7824** ± 0.0012 ✅ | **0.6733** ± 0.0001 ✅ | Grounded model with 4/4 architecture and active probing, achieves parity with baseline while enabling BKT-aligned reference predictions |
+| **Ablation All (4/4)** | 730307 | 4 | 4 | all | ❌ | ❌ | 1.0 | - | - | - | - | `20260124_230425...730307` | **0.7838** ± 0.0015 ✅ | - | Black-box baseline with 4/4 architecture, validates ablation reproduces pure neural performance |
+| **Ablation Probe (4/4)** | 219592 | 4 | 4 | probe | ❌ | ❌ | 1.0 | 0.5 | - | **0.0** | **0.0** | `20260125_080748...219592` | **0.7812** ± 0.0012 ✅ | **0.6732** ± 0.0003 ✅ | Ablation study: probing grounding disabled (λ_probe=0) while keeping reference path active, validates probe contribution to performance |
 
 **Legend:**
 

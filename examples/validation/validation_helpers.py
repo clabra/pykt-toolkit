@@ -33,22 +33,23 @@ def load_model_from_dir(exp_dir, device):
     mc = config.get('model_config', config.get('train_config', config.get('params', {})))
     dataset_name = config.get('dataset_name', config.get('params', {}).get('dataset_name', 'assist2009'))
     
-    # Robust defaults for older configs
+    # Extract critical architecture params from config (prioritize actual training values)
+    for k in ['d_model', 'n_blocks', 'dropout', 'd_ff', 'final_fc_dim', 'n_heads', 'ablation']:
+        if k not in mc:
+            for src in ['params', 'train_config', 'input', 'defaults']:
+                if src in config and k in config[src]:
+                    mc[k] = config[src][k]
+                    break
+    
+    # Apply defaults only for missing values
     defaults = {
         'kq_same': 1, 'separate_qa': 0, 'l2_rasch': 0.0, 
         'pretrain_dim': 768, 'ablation': 'none', 'n_uid': 0,
-        'num_attn_heads': 8, 'final_fc_dim': 512,
-        'd_model': 64, 'n_blocks': 2, 'd_ff': 256, 'dropout': 0.1
+        'final_fc_dim': 512, 'd_model': 64, 'n_blocks': 2, 'd_ff': 256, 'dropout': 0.1, 'n_heads': 8
     }
     for k, v in defaults.items():
         if k not in mc: 
             mc[k] = v
-    
-    # Force alignment between num_attn_heads and n_heads
-    if 'n_heads' in mc:
-        mc['num_attn_heads'] = mc['n_heads']
-    elif 'num_attn_heads' in mc:
-        mc['n_heads'] = mc['num_attn_heads']
         
     # Data config for model init (dimensions)
     data_config_path = os.path.join(PROJECT_ROOT, "configs/data_config.json")
