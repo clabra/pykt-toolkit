@@ -160,15 +160,16 @@ Section2: {
     TheoryBases: {
       label: |md
         Theory Bases
-        (BKT Priors)
+        (BKT Priors Embeddings)
         
         L₀<sub>base</sub>[q] ~ N(σ⁻¹(BKT_L₀[q]), 0.05)
 
         T<sub>base</sub>[q] ~ N(σ⁻¹(BKT_T[q]), 0.05)
         
+        <span style="color:#666">[n_question, 1]</span>
+        
         <span style="color:#666">Textured logits from BKT</span>
 
-        <span style="color:#666">[n_question+1, 1]</span>
       |
       shape: rectangle
       style: {
@@ -182,7 +183,6 @@ Section2: {
     SemanticAxes: {
       label: |md
         Semantic Axes
-        (Relational Directions)
         
         K<sub>axis</sub>[q]: Knowledge Direction
 
@@ -283,8 +283,14 @@ Section3: {
     }
   }
   
-  Encoder -> Decoder: "History Context" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-  Decoder -> ContextVector { style: { stroke: "#000000"; stroke-width: 4 } }
+  Encoder -> Decoder: "History Context" {
+    style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  Decoder -> ContextVector {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
 }
 
 # ============================================================================
@@ -304,17 +310,15 @@ Section4: {
   
   TheoryBase: {
     label: |md
-      1. Theory Base
+      Theory Base
 
-      (BKT Prior Embeddings)
+      (BKT Prior Embeddings Lookup)
       
       ℓ<sub>L₀</sub>[q] = L₀<sub>base</sub>[q]
 
       ℓ<sub>T</sub>[q] = T<sub>base</sub>[q]
       
-      <span style="color:#666">Textured logits ~ N(σ⁻¹(BKT), 0.05)</span>
-
-      <span style="color:#666">[B, S]</span>
+      <span style="color:#666">[n_question, 1] → [B, S]</span>
     |
     shape: rectangle
     style: {
@@ -327,9 +331,7 @@ Section4: {
   
   SemanticProjection: {
     label: |md
-      2. Semantic Axis Projection
-
-      (Context · Relational Direction)
+      Context Projection on Semantic Axis 
       
       Δ<sub>L₀</sub> = z<sub>t</sub> · K<sub>axis</sub>[q]
 
@@ -350,13 +352,13 @@ Section4: {
   
   FinalParams: {
     label: |md
-      2. Final Parameters
+      Final Parameters
 
-      (Sigmoid Activation)
+      (Base + Context Projection)
       
-      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub>)
+      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub> + Δ<sub>L₀</sub>)
 
-      p<sub>T</sub> = σ(ℓ<sub>T</sub>)
+      p<sub>T</sub> = σ(ℓ<sub>T</sub> + Δ<sub>T</sub>)
       
       <span style="color:#666">[B, S]</span>
     |
@@ -369,8 +371,14 @@ Section4: {
     }
   }
   
-  TheoryBase -> FinalParams: "Base +" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-  SemanticProjection -> FinalParams: "Context Projection " { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+  TheoryBase -> FinalParams: "Base" {
+    style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  SemanticProjection -> FinalParams: "Context Projection " {
+    style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
 }
 
 # ============================================================================
@@ -436,9 +444,7 @@ Section5: {
     
     DiagnosticProbes: {
       label: |md
-        Diagnostic Probes
-
-        (Latent Diagnostics)
+        Probes
         
         p̂<sub>L₀</sub> = Linear(z<sub>t</sub>)
 
@@ -500,8 +506,6 @@ Section5: {
     LossProbe: {
       label: |md
         ℒ<sub>probe</sub>
-
-        (Probe Alignment)
         
         MSE(p̂<sub>L₀</sub>, μ<sub>L₀</sub>) + MSE(p̂<sub>T</sub>, μ<sub>T</sub>)
         
@@ -533,14 +537,32 @@ Section5: {
       }
     }
     
-    LossSup -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-    LossRef -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-    LossProbe -> TotalLoss: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+    LossSup -> TotalLoss: "" {
+      style: { stroke: "#000000"; stroke-width: 6; font-size: 80 }
+      target-arrowhead: { shape: arrow }
+    }
+    LossRef -> TotalLoss: "" {
+      style: { stroke: "#000000"; stroke-width: 6; font-size: 80 }
+      target-arrowhead: { shape: arrow }
+    }
+    LossProbe -> TotalLoss: "" {
+      style: { stroke: "#000000"; stroke-width: 6; font-size: 80 }
+      target-arrowhead: { shape: arrow }
+    }
   }
   
-  Outputs.SupervisedOut -> Loss.LossSup { style: { stroke: "#000000"; stroke-width: 4 } }
-  Outputs.ReferenceOut -> Loss.LossRef { style: { stroke: "#000000"; stroke-width: 4 } }
-  Outputs.DiagnosticProbes -> Loss.LossProbe { style: { stroke: "#000000"; stroke-width: 4 } }
+  Outputs.SupervisedOut -> Loss.LossSup {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
+  Outputs.ReferenceOut -> Loss.LossRef {
+    style: { stroke: "#229954"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
+  Outputs.DiagnosticProbes -> Loss.LossProbe {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
 }
 
 # ============================================================================
@@ -548,37 +570,69 @@ Section5: {
 # ============================================================================
 
 # 1 -> 2
-Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
 
 # 2 -> 3
-Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
-Section2.StandardEmbeddings.TaskHistoryEmb2 -> Section3.Decoder: "" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section2.StandardEmbeddings.TaskHistoryEmb2 -> Section3.Decoder: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
 
 # 3 -> 4 (Grounded Parameters)
-Section2.InterpretableEmbeddings.TheoryBases -> Section4.TheoryBase: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
-Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "K,V axes" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section4.SemanticProjection: "z" { style: { stroke: "#000000"; stroke-width: 4; font-size: 80 } }
+Section2.InterpretableEmbeddings.TheoryBases -> Section4.TheoryBase: "" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "K,V axes" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section4.SemanticProjection: "z" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
 
 # 4 -> 5 (Outputs)
-Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" { style: { stroke: "#2874A6"; stroke-width: 4; font-size: 80 } }
-Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" { style: { stroke: "#229954"; stroke-width: 4; font-size: 80 } }
+Section4.FinalParams -> Section5.Outputs.ReferenceOut: "" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section5.Outputs.SupervisedOut: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section5.Outputs.DiagnosticProbes: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
 
 # Ground Truth -> Loss
 Section1.InputData -> Section5.Loss.LossSup: "y" {
   style: {
     font-size: 80
-    stroke: "#000000"
-    stroke-width: 4
+    stroke: "#2874A6"
+    stroke-width: 6
   }
+  target-arrowhead: { shape: arrow }
 }
 Section1.BKT -> Section5.Loss.LossProbe: "BKT targets" {
   style: {
     font-size: 80
     stroke: "#229954"
-    stroke-width: 4
+    stroke-width: 6
   }
+  target-arrowhead: { shape: arrow }
 }
 
 }
