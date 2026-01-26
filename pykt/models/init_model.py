@@ -338,6 +338,11 @@ def init_model(model_name, model_config, data_config, emb_type):
         _model_config.pop("emb_type", None)
         _model_config.pop("emb_path", None)
         
+        # Parameter name normalization: handle legacy config files
+        # Some configs use num_attn_heads instead of n_heads
+        if "n_heads" not in _model_config and "num_attn_heads" in _model_config:
+            _model_config["n_heads"] = _model_config.pop("num_attn_heads")
+        
         # === ABLATION CONTROL CENTER ===
         # Validate and apply ablation configuration
         try:

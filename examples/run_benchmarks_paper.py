@@ -70,7 +70,7 @@ BENCHMARK_MODELS = [
 
 # 4 'S' datasets (truncated to sequence length 200)
 BENCHMARK_DATASETS = [
-    "assist2009", "assist2015", "bridge2algebra2006", "nips_task34"
+    "assist2009", "assist2015", "bridge2algebra2006", "nips_task34", "algebra2005"
 ]
 
 #BENCHMARK_DATASETS = [
@@ -240,6 +240,10 @@ def find_experiment_folder(model, dataset, fold, campaign_pattern=None):
     # Filter by valid config.json (Validation)
     valid_matches = []
     for m in potential_folders:
+        # Skip backup directories
+        if "_backup" in str(m):
+            continue
+            
         config_path = Path(m) / "config.json"
         if not config_path.exists():
             continue
@@ -576,6 +580,8 @@ def main():
     parser.add_argument("--campaign", type=str, default=None, help="Campaign pattern to filter experiments (e.g., '*probing_benchpaper')")
     parser.add_argument("--experiment_folder", type=str, default=None, help="Specific experiment folder to evaluate (for dual evaluation)")
     parser.add_argument("--dual_eval", action="store_true", help="[DEPRECATED] dual_eval is read from eval_explicit in config.json")
+    parser.add_argument("--plots", type=lambda x: x.lower() in ['true', '1', 'yes'], default=True, 
+                        help="Generate validation plots in results mode (default: true)")
     
     # Use parse_known_args to accept any additional parameters
     args, unknown_args = parser.parse_known_args()
@@ -737,7 +743,7 @@ def main():
         except Exception: pass
 
         # 2. Define Sort Order
-        DATASET_ORDER = ["assist2009", "assist2015", "assist2009", "assist2015", "bridge2algebra2006", "nips_task34"]
+        DATASET_ORDER = ["assist2009", "assist2015", "algebra2005", "bridge2algebra2006", "nips_task34"]
         
         # 3. Sort datasets and models
         datasets_to_run = sorted(datasets_to_run, key=lambda d: DATASET_ORDER.index(d) if d in DATASET_ORDER else 999)
@@ -967,12 +973,12 @@ def main():
         print(f"[INFO] Protocol: Question-level Late Fusion (mean aggregation)")
         print(f"[INFO] Metrics: oriauclate_mean (supervised), oriauclate_mean_ref (BKT reference)")
 
-        # Post-process: Analysis & Diagnostic Plots
+        # Post-process: Validation & Diagnostic Plots
         print(f"\n{'='*70}")
-        print(f"ANALYSIS & VISUALIZATION")
+        print(f"VALIDATION & VISUALIZATION")
         print(f"{'='*70}")
         
-        # Run analysis scripts for completed experiments
+        # Run validation scripts for completed experiments
         for model, datasets in all_results_data.items():
             if model == "gtransformer":
                 for dataset, data in datasets.items():
@@ -985,210 +991,292 @@ def main():
                                 if fold_dir: break
                         
                         if fold_dir:
-                            # Create plots and analysis directories at CAMPAIGN level (not fold level)
+                            # Create plots and validation directories at CAMPAIGN level (not fold level)
                             # Navigate up from fold_dir to campaign root
                             # Structure: experiments/<campaign>/gtransformer/<dataset>/fold_X_<id>/
                             campaign_dir = Path(fold_dir).parent.parent.parent
                             plot_dir = campaign_dir / "plots"
-                            analysis_dir = campaign_dir / "analysis"
+                            validation_dir = campaign_dir / "validation"
                             os.makedirs(plot_dir, exist_ok=True)
-                            os.makedirs(analysis_dir, exist_ok=True)
+                            os.makedirs(validation_dir, exist_ok=True)
                             
-                            print(f"\n[ANALYSIS] Generating results for experiment:")
+                            print(f"\n[VALIDATION] Generating results for experiment:")
                             print(f"  Campaign: {campaign_dir.name}")
                             print(f"  Model: {model}")
                             print(f"  Dataset: {dataset}")
                             print(f"  Representative Fold: {Path(fold_dir).name}")
                             print(f"  Output:")
                             print(f"    - Plots: {plot_dir}")
-                            print(f"    - Analysis: {analysis_dir}")
+                            print(f"    - Validation: {validation_dir}")
                             
-                            # 1. Generate interpretability analysis plots
-                            analysis_scripts = [
-                                {
-                                    "name": "Skill Alignment Heatmap",
-                                    "script": "examples/validation/generate_skill_alignment_heatmap.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir),
-                                        "--min_interactions": "8",
-                                        "--top_skills": "50",
-                                        "--top_students": "30"
+                            # Conditional plot generation based on --plots flag
+                            if args.plots:
+                                # 1. Generate interpretability validation plots
+                                validation_scripts = [
+                                    {
+                                        "name": "Skill Alignment Heatmap",
+                                        "script": "examples/results/generate_skill_alignment_heatmap.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir),
+                                            "--min_interactions": "8",
+                                            "--top_skills": "50",
+                                            "--top_students": "30"
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                        },
+                                    {
+                                        "name": "Structural Encoding Validation (H1.1)",
+                                        "script": "examples/results/structural_encoding_validation.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir)
+                                        },
+                                        "required_files": []  # Auto-discovers .ckpt files
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Latent Space PCA/t-SNE",
-                                    "script": "tmp/plot_latent_pca.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Prediction Envelope Gallery",
+                                        "script": "examples/results/generate_prediction_envelope_gallery.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": []  # Auto-discovers .ckpt files
-                                },
-                                {
-                                    "name": "Prediction Envelope Gallery",
-                                    "script": "examples/validation/generate_prediction_envelope_gallery.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Cognitive Quadrants Mosaic",
+                                        "script": "examples/results/generate_quadrant_analysis.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Cognitive Quadrants Mosaic",
-                                    "script": "examples/validation/generate_quadrant_analysis.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Skill Quadrant Comparison",
+                                        "script": "examples/results/generate_skill_quadrant_comparison.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Skill Quadrant Comparison",
-                                    "script": "examples/validation/generate_skill_quadrant_comparison.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Personalization Mosaic",
+                                        "script": "examples/results/generate_personalization_mosaic.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Personalization Mosaic",
-                                    "script": "examples/validation/generate_personalization_mosaic.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Initial Mastery Mosaic",
+                                        "script": "examples/results/generate_initial_mastery_mosaic.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Initial Mastery Mosaic",
-                                    "script": "examples/validation/generate_initial_mastery_mosaic.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Envelope Distribution",
+                                        "script": "examples/results/generate_envelope_distribution.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Envelope Distribution",
-                                    "script": "examples/validation/generate_envelope_distribution.py",
-                                    "args": {
-                                        "--exp_dir": str(fold_dir),
-                                        "--output_dir": str(plot_dir)
+                                    {
+                                        "name": "Parameter Distribution",
+                                        "script": "examples/plot_param_distribution.py",
+                                        "args": {"--run_dir": str(fold_dir)},
+                                        "required_files": ["final_params.csv"]
                                     },
-                                    "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
-                                },
-                                {
-                                    "name": "Parameter Distribution",
-                                    "script": "examples/plot_param_distribution.py",
-                                    "args": {"--run_dir": str(fold_dir)},
-                                    "required_files": ["final_params.csv"]
-                                },
-                                {
-                                    "name": "Mastery Trajectories",
-                                    "script": "examples/plot_mastery_mosaic_real.py",
-                                    "args": {"--run_dir": str(fold_dir)},
-                                    "required_files": ["traj_mastery.csv"]
-                                },
-                                {
-                                    "name": "Learning Rate Correlation",
-                                    "script": "examples/plot_rate_correlation.py",
-                                    "args": {"--run_dir": str(fold_dir)},
-                                    "required_files": ["traj_rate.csv"]
-                                }
-                            ]
-                            
-                            # Track plot generation stats
-                            plots_generated = 0
-                            plots_skipped = 0
-                            plots_failed = 0
-                            
-                            for script_info in analysis_scripts:
-                                # Check if required files exist
-                                missing_files = []
-                                for req_file in script_info.get("required_files", []):
-                                    file_path = Path(fold_dir) / req_file
-                                    if not file_path.exists():
-                                        missing_files.append(req_file)
+                                    {
+                                        "name": "Mastery Trajectories",
+                                        "script": "examples/plot_mastery_mosaic_real.py",
+                                        "args": {"--run_dir": str(fold_dir)},
+                                        "required_files": ["traj_mastery.csv"]
+                                    },
+                                    {
+                                        "name": "Learning Rate Correlation",
+                                        "script": "examples/plot_rate_correlation.py",
+                                        "args": {"--run_dir": str(fold_dir)},
+                                        "required_files": ["traj_rate.csv"]
+                                    },
+                                    {
+                                        "name": "Student Clustering Visualization",
+                                        "script": "examples/results/plot_student_clusters_gtransformer.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(plot_dir)
+                                        },
+                                        "required_files": []  # Auto-discovers checkpoint and config
+                                    }
+                                ]
                                 
-                                if missing_files:
-                                    # Check if missing file is due to dual_eval not being run
-                                    if "qid_test_question_predictions_reference.txt" in missing_files:
-                                        # Check if model was grounded to provide accurate guidance
-                                        eval_results_path = None
-                                        for root, dirs, files in os.walk(fold_dir):
-                                            if "eval_results.json" in files:
-                                                eval_results_path = Path(root) / "eval_results.json"
-                                                break
-                                        
-                                        is_grounded = False
-                                        if eval_results_path and eval_results_path.exists():
-                                            with open(eval_results_path, 'r') as f:
-                                                eval_results = json.load(f)
-                                                is_grounded = eval_results.get("grounded", False)
-                                        
-                                        print(f"  [WARNING] {script_info['name']} - Missing dual_eval output: {', '.join(missing_files)}")
-                                        if not is_grounded:
-                                            print(f"            This experiment was trained without grounding (active_grounding=0)")
-                                            print(f"            To generate this plot, retrain with ablation=none (default) which sets active_grounding=1")
+                                # Track plot generation stats
+                                plots_generated = 0
+                                plots_skipped = 0
+                                plots_failed = 0
+                                missing_ref_predictions = False  # Track if reference predictions were missing
+                                
+                                for script_info in validation_scripts:
+                                    # Check if required files exist
+                                    missing_files = []
+                                    for req_file in script_info.get("required_files", []):
+                                        file_path = Path(fold_dir) / req_file
+                                        if not file_path.exists():
+                                            missing_files.append(req_file)
+                                    
+                                    if missing_files:
+                                        # Check if missing file is due to dual_eval not being run
+                                        if "qid_test_question_predictions_reference.txt" in missing_files:
+                                            missing_ref_predictions = True
+                                            # Check if model was grounded to provide accurate guidance
+                                            eval_results_path = None
+                                            for root, dirs, files in os.walk(fold_dir):
+                                                if "eval_results.json" in files:
+                                                    eval_results_path = Path(root) / "eval_results.json"
+                                                    break
+                                            
+                                            is_grounded = False
+                                            if eval_results_path and eval_results_path.exists():
+                                                with open(eval_results_path, 'r') as f:
+                                                    eval_results = json.load(f)
+                                                    is_grounded = eval_results.get("grounded", False)
+                                            
+                                            print(f"  [WARNING] {script_info['name']} - Missing dual_eval output: {', '.join(missing_files)}")
+                                            if not is_grounded:
+                                                print(f"            This experiment was trained without grounding (active_grounding=0)")
+                                                print(f"            To generate this plot, retrain with ablation=none (default) which sets active_grounding=1")
+                                            else:
+                                                print(f"            This experiment was trained without dual_eval enabled")
+                                                print(f"            To generate this plot, retrain with dual_eval=true in configs/parameter_default.json")
                                         else:
-                                            print(f"            This experiment was trained without dual_eval enabled")
-                                            print(f"            To generate this plot, retrain with dual_eval=true in configs/parameter_default.json")
-                                    else:
-                                        print(f"  [SKIP] {script_info['name']} (missing: {', '.join(missing_files)})")
-                                    plots_skipped += 1
-                                    continue
-                                
-                                script_path = Path(PROJECT_ROOT) / script_info["script"]
-                                if script_path.exists():
-                                    print(f"  [RUN] {script_info['name']}...")
-                                    cmd = [sys.executable, str(script_path)]
-                                    for arg_name, arg_val in script_info["args"].items():
-                                        cmd.extend([arg_name, arg_val])
-                                    try:
-                                        result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
-                                                              capture_output=True, text=True, timeout=300)
-                                        if result.returncode != 0:
-                                            print(f"    [WARN] Script exited with code {result.returncode}")
-                                            if result.stderr:
-                                                print(f"    Error: {result.stderr[:200]}")
+                                            print(f"  [SKIP] {script_info['name']} (missing: {', '.join(missing_files)})")
+                                        plots_skipped += 1
+                                        continue
+                                    
+                                    script_path = Path(PROJECT_ROOT) / script_info["script"]
+                                    if script_path.exists():
+                                        print(f"  [RUN] {script_info['name']}...")
+                                        cmd = [sys.executable, str(script_path)]
+                                        for arg_name, arg_val in script_info["args"].items():
+                                            cmd.extend([arg_name, arg_val])
+                                        try:
+                                            result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
+                                                                  capture_output=True, text=True, timeout=300)
+                                            if result.returncode != 0:
+                                                print(f"    [WARN] Script exited with code {result.returncode}")
+                                                if result.stderr:
+                                                    print(f"    Error: {result.stderr[:200]}")
+                                                plots_failed += 1
+                                            else:
+                                                print(f"    [OK] Completed successfully")
+                                                plots_generated += 1
+                                        except subprocess.TimeoutExpired:
+                                            print(f"    [WARN] Timeout (300s)")
                                             plots_failed += 1
-                                        else:
-                                            print(f"    [OK] Completed successfully")
-                                            plots_generated += 1
-                                    except subprocess.TimeoutExpired:
-                                        print(f"    [WARN] Timeout (300s)")
-                                        plots_failed += 1
-                                    except Exception as e:
-                                        print(f"    [WARN] Failed: {e}")
-                                        plots_failed += 1
-                                else:
-                                    print(f"  [SKIP] {script_info['name']} (script not found)")
-                                    plots_skipped += 1
-                            
-                            # Print summary
-                            print(f"\n  Plot Generation Summary:")
-                            print(f"    ✓ Generated: {plots_generated}")
-                            print(f"    ✗ Skipped: {plots_skipped}")
-                            print(f"    ⚠ Failed: {plots_failed}")
-                            if plots_skipped > 0:
-                                # Check if any skipped plots were due to missing reference predictions
-                                ref_required = any("qid_test_question_predictions_reference.txt" in 
-                                                  script_info.get("required_files", []) 
-                                                  for script_info in analysis_scripts)
-                                if ref_required:
-                                    print(f"\n  Note: Most plots require 'qid_test_question_predictions_reference.txt'")
+                                        except Exception as e:
+                                            print(f"    [WARN] Failed: {e}")
+                                            plots_failed += 1
+                                    else:
+                                        print(f"  [SKIP] {script_info['name']} (script not found)")
+                                        plots_skipped += 1
+                                # Print summary
+                                print(f"\n  Plot Generation Summary:")
+                                print(f"    ✓ Generated: {plots_generated}")
+                                print(f"    ✗ Skipped: {plots_skipped}")
+                                print(f"    ⚠ Failed: {plots_failed}")
+                                if missing_ref_predictions:
+                                    print(f"\n  Note: Some plots were skipped due to missing 'qid_test_question_predictions_reference.txt'")
                                     print(f"        This file requires BOTH:")
                                     print(f"          1. Model trained with grounding (ablation=none, not ablation=all)")
                                     print(f"          2. Evaluation with dual_eval=true in configs/parameter_default.json")
+                            else:
+                                print(f"\n  [INFO] Plot generation skipped (--plots=false)")
+                            
+                            # 2. Generate diagnostic probing results for validation
+                            print(f"\n  Diagnostic Probing Analysis:")
+                            validation_dir = campaign_dir / "validation"
+                            validation_dir.mkdir(parents=True, exist_ok=True)
+                            
+                            # Check if this is a grounded model (gtransformer with active grounding)
+                            eval_results_path = None
+                            for root, dirs, files in os.walk(fold_dir):
+                                if "eval_results.json" in files:
+                                    eval_results_path = Path(root) / "eval_results.json"
+                                    break
+                            
+                            is_grounded = False
+                            if eval_results_path and eval_results_path.exists():
+                                with open(eval_results_path, 'r') as f:
+                                    eval_results = json.load(f)
+                                    is_grounded = eval_results.get("grounded", False)
+                            
+                            if not is_grounded:
+                                print(f"  [SKIP] Probing analysis (model not grounded)")
+                                print(f"         This experiment was trained without active grounding")
+                                print(f"         Probing requires ablation=none (default) which sets active_grounding=1")
+                            else:
+                                # Find checkpoint file
+                                checkpoint_path = None
+                                for root, dirs, files in os.walk(fold_dir):
+                                    for f in files:
+                                        if f.endswith(".ckpt") or f == "model_best.pth":
+                                            checkpoint_path = Path(root) / f
+                                            break
+                                    if checkpoint_path:
+                                        break
+                                
+                                if not checkpoint_path or not checkpoint_path.exists():
+                                    print(f"  [SKIP] Parameter recovery validation (checkpoint not found)")
+                                else:
+                                    print(f"  [RUN] Validating parameter recovery...")
+                                    print(f"        Checkpoint: {checkpoint_path.name}")
+                                    print(f"        Output: {validation_dir}")
+                                    
+                                    validation_script = Path(PROJECT_ROOT) / "examples" / "results" / "validate_parameter_recovery.py"
+                                    if validation_script.exists():
+                                        cmd = [
+                                            sys.executable, 
+                                            str(validation_script),
+                                            "--exp_dir", str(fold_dir),
+                                            "--output_dir", str(validation_dir)
+                                        ]
+                                        
+                                        try:
+                                            result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
+                                                                  capture_output=True, text=True, timeout=600)
+                                            if result.returncode != 0:
+                                                print(f"    [WARN] Validation exited with code {result.returncode}")
+                                                if result.stderr:
+                                                    print(f"    Error: {result.stderr[:300]}")
+                                            else:
+                                                print(f"    [OK] Validation completed successfully")
+                                                # Check if results were generated
+                                                recovery_file = validation_dir / "recovery_summary.json"
+                                                if recovery_file.exists():
+                                                    with open(recovery_file, 'r') as f:
+                                                        recovery_results = json.load(f)
+                                                    print(f"    Results:")
+                                                    print(f"      L0 Probe r:   {recovery_results.get('l0_probe', {}).get('pearson_r', 'N/A'):.4f}")
+                                                    print(f"      T Probe r:    {recovery_results.get('t_probe', {}).get('pearson_r', 'N/A'):.4f}")
+                                                    print(f"      Samples:      {recovery_results.get('n_samples', 'N/A')}")
+                                        except subprocess.TimeoutExpired:
+                                            print(f"    [WARN] Validation timeout (600s)")
+                                        except Exception as e:
+                                            print(f"    [WARN] Validation failed: {e}")
+                                    else:
+                                        print(f"  [SKIP] Validation script not found: {validation_script}")
         
         print(f"\n{'='*70}")
-        print(f"ANALYSIS COMPLETE")
+        print(f"VALIDATION COMPLETE")
         print(f"{'='*70}")
         print(f"Results summary saved to: {json_path}")
-        print(f"Individual experiment plots and analysis saved to respective experiment folders")
+        print(f"Individual experiment plots and validation results saved to respective experiment folders")
         print(f"{'='*70}\n")
 
 if __name__ == "__main__":
