@@ -1927,3 +1927,392 @@ python examples/run_benchmarks_paper.py \
   --model gtransformer \
   --dataset assist2009
 ```
+
+---
+
+## BKT Prerequisites: Generating Required Files
+
+GTransformer's grounding mechanism requires pre-computed BKT parameters and target labels. This section documents how to generate all necessary BKT files for training, validation, and visualization.
+
+### Overview of Required BKT Files
+
+For each dataset, you need:
+
+1. **BKT Skill Parameters** (`bkt_skill_params.pkl`): Population-level parameters ($L_0$, $T$, $G$, $S$) per skill
+2. **BKT Target Labels** (`bkt_targets_train_valid.npz`, `bkt_targets_test.npz`): Ground truth labels for parameter recovery validation
+3. **BKT Mastery States** (`bkt_mastery_states.pkl`): Optional, for trajectory analysis
+
+### Step 1: Train BKT Model (Generate Skill Parameters)
+
+The BKT model provides population-level parameters used for theory-guided initialization.
+
+```bash
+# Train BKT on a dataset
+python examples/train_bkt.py --dataset <dataset_name>
+
+# Examples for supported datasets
+python examples/train_bkt.py --dataset assist2009
+python examples/train_bkt.py --dataset assist2015
+python examples/train_bkt.py --dataset algebra2005
+python examples/train_bkt.py --dataset bridge2algebra2006
+python examples/train_bkt.py --dataset nips_task34
+```
+
+**Output**: Creates `data/<dataset>/bkt_skill_params.pkl` containing:
+```python
+{
+    'params': {
+        skill_id: {
+            'prior': float,    # P(L₀) - Initial mastery probability
+            'learns': float,   # P(T) - Learning rate
+            'guesses': float,  # P(G) - Guess probability
+            'slips': float     # P(S) - Slip probability
+        },
+        ...
+    },
+    'global': {  # Fallback parameters for unknown skills
+        'prior': float,
+        'learns': float
+    }
+}
+```
+
+**File Locations**:
+- Most datasets: `data/<dataset>/bkt_skill_params.pkl`
+- nips_task34: `data/nips_task34/bkt_skill_params.pkl` (parent of train_data/)
+
+**Dataset Statistics** (as of Jan 2026):
+| Dataset | Skills | File Size | Location |
+|---------|--------|-----------|----------|
+| assist2009 | 123 | 40K | `data/assist2009/` |
+| assist2015 | 100 | 9.1K | `data/assist2015/` |
+| algebra2005 | 112 | 36K | `data/algebra2005/` |
+| bridge2algebra2006 | 488 | 153K | `data/bridge2algebra2006/` |
+| nips_task34 | 57 | 18K | `data/nips_task34/` |
+
+### Step 2: Generate BKT Target Labels (For Validation)
+
+BKT targets are per-timestep ground truth labels used for:
+- **Parameter Recovery Validation**: Measuring how well the model recovers BKT parameters
+- **Structural Encoding Validation**: Assessing latent space alignment with pedagogical theory
+
+```bash
+# Generate BKT soft labels for a dataset
+python examples/generate_bkt_soft_labels.py --dataset <dataset_name>
+
+# Examples
+python examples/generate_bkt_soft_labels.py --dataset assist2009
+python examples/generate_bkt_soft_labels.py --dataset algebra2005
+python examples/generate_bkt_soft_labels.py --dataset nips_task34
+```
+
+**Output**: Creates two files per dataset:
+1. `bkt_targets_train_valid.npz`: Targets for 5-fold cross-validation
+2. `bkt_targets_test.npz`: Targets for benchmark evaluation
+
+**File Contents**:
+```python
+targets = np.load('data/<dataset>/bkt_targets_train_valid.npz')
+# Contains:
+#   target_l0: [num_sequences, max_seq_len] - Initial mastery estimates
+#   target_t: [num_sequences, max_seq_len] - Learning rate estimates
+```
+
+**File Sizes** (as of Jan 2026):
+| Dataset | train_valid | test | Location |
+|---------|-------------|------|----------|
+| assist2009 | - | - | Not yet generated |
+| assist2015 | 24M | 5.9M | `data/assist2015/` |
+| algebra2005 | 6.1M | 107M | `data/algebra2005/` |
+| bridge2algebra2006 | 12M | 2.9M | `data/bridge2algebra2006/` |
+| nips_task34 | 12M | 13M | `data/nips_task34/train_data/` |
+
+**Implementation Details**:
+
+The script performs **Late Fusion (Mean Aggregation)** for multi-skill questions:
+```python
+# For a question with skills [c1, c2, c3]
+# Average BKT parameters across skills
+l0_question = mean([l0(c1), l0(c2), l0(c3)])
+t_question = mean([t(c1), t(c2), t(c3)])
+```
+
+This ensures:
+- Question-level alignment with model predictions
+- Consistent evaluation protocol (same as `examples/results/validate_parameter_recovery.py`)
+
+**Troubleshooting**:
+
+If BKT parameters are not found, the script checks multiple locations:
+```python
+# Search order:
+1. data/<dataset>/bkt_skill_params.pkl
+2. data/<dataset>/bkt/bkt_skill_params.pkl
+3. data/<dataset>/../bkt_skill_params.pkl  (parent directory)
+4. data/<dataset>/../bkt/bkt_skill_params.pkl
+```
+
+For nips_task34, where `dpath = data/nips_task34/train_data/`, the script automatically finds parameters in the parent directory.
+
+### Step 3: Verify BKT Files
+
+Check that all required files exist:
+
+```bash
+# Quick verification script
+for dataset in assist2009 assist2015 algebra2005 bridge2algebra2006 nips_task34; do
+  echo "=== $dataset ==="
+  
+  # Check BKT parameters
+  if [ -f "data/$dataset/bkt_skill_params.pkl" ]; then
+    echo "  ✓ BKT parameters found"
+  else
+    echo "  ✗ BKT parameters MISSING"
+  fi
+  
+  # Check BKT targets (handle nips_task34 special case)
+  if [ "$dataset" = "nips_task34" ]; then
+    target_dir="data/$dataset/train_data"
+  else
+    target_dir="data/$dataset"
+  fi
+  
+  if [ -f "$target_dir/bkt_targets_train_valid.npz" ]; then
+    echo "  ✓ Train/valid targets found"
+  else
+    echo "  ✗ Train/valid targets MISSING"
+  fi
+  
+  if [ -f "$target_dir/bkt_targets_test.npz" ]; then
+    echo "  ✓ Test targets found"
+  else
+    echo "  ✗ Test targets MISSING"
+  fi
+done
+```
+
+### Step 4: Run Validation & Generate Plots
+
+With BKT files in place, you can now generate validation results and plots.
+
+#### Parameter Recovery Validation
+
+Validates that the model's grounded parameter estimates ($p_{L0}$, $p_T$) recover the BKT oracle values:
+
+```bash
+# Run for a specific experiment fold
+python examples/results/validate_parameter_recovery.py \
+  --exp_dir experiments/<campaign>/gtransformer/<dataset>/fold_0_*
+
+# Example
+python examples/results/validate_parameter_recovery.py \
+  --exp_dir experiments/20260125_191032_ablation-none-assist2009_481134/gtransformer/assist2009/fold_0_945266
+```
+
+**Output**: `experiments/<campaign>/validation/parameter_recovery_results/`
+- `grounded_vs_oracle_l0.png`: Parity plot comparing $p_{L0}$ vs BKT $L_0$
+- `grounded_vs_oracle_t.png`: Parity plot comparing $p_T$ vs BKT $T$
+- `recovery_statistics.json`: Correlation metrics (Pearson r, Spearman ρ)
+
+**Expected Results** (for well-trained models):
+- **Constant Predictions**: Pearson r = NaN (dataset has no skill variance)
+- **Good Recovery**: Pearson r > 0.5 for both L0 and T
+- **Excellent Recovery**: Pearson r > 0.7 for both parameters
+
+#### Structural Encoding Validation
+
+Validates that the latent space $z$ structurally encodes pedagogical constructs:
+
+```bash
+# Run structural encoding validation
+python examples/results/structural_encoding_validation.py \
+  --exp_dir experiments/<campaign>/gtransformer/<dataset>/fold_0_*
+
+# Example
+python examples/results/structural_encoding_validation.py \
+  --exp_dir experiments/20260125_191032_ablation-none-algebra2005_220246/gtransformer/algebra2005/fold_0_400171
+```
+
+**Output**: `experiments/<campaign>/validation/`
+- `structural_encoding_fold_0.json`: Fidelity and selectivity metrics
+- `h1_structural_fidelity_l0_fold_0.png`: Ridge regression parity plot for L0
+- `h1_structural_fidelity_t_fold_0.png`: Ridge regression parity plot for T
+
+**Output**: `experiments/<campaign>/plots/`
+- `h1_latent_pca_l0_fold_0.png`: PCA visualization colored by L0 values
+- `h1_latent_tsne_l0_fold_0.png`: t-SNE visualization with skill annotations
+- `h1_latent_pca_t_fold_0.png`: PCA visualization colored by T values
+- `h1_latent_tsne_t_fold_0.png`: t-SNE visualization with skill annotations
+
+**Metrics**:
+```json
+{
+  "h1_structural_encoding": {
+    "l0": {
+      "fidelity": {
+        "r2": 0.172,          // How well z predicts L0 (Ridge regression)
+        "pearson_r": 0.429    // Linear correlation
+      },
+      "selectivity": {
+        "standard_delta_r2": 0.191,   // R² drop with shuffled observations
+        "strict_delta_r2": -0.705,    // R² drop with skill-shuffled labels
+        "control_r2_obs": -0.019,     // Baseline R² (random labels)
+        "control_r2_skill": 0.877     // Baseline R² (skill-consistent shuffle)
+      }
+    },
+    "t": { ... }  // Same structure for learning rate
+  }
+}
+```
+
+**Interpretation**:
+- **Fidelity R²**: Proportion of parameter variance explained by latent space
+  - R² > 0.3: Good structural encoding
+  - R² > 0.5: Excellent structural encoding
+- **Selectivity (Standard)**: R² drop when labels are completely randomized
+  - Positive: Model learns task-specific patterns (good)
+  - Negative: Model overfits to noise (bad)
+- **Selectivity (Strict)**: R² drop when skill means are shuffled but variance preserved
+  - More stringent test of skill-specific encoding
+
+#### Complete Benchmark Results Pipeline
+
+Generate all plots and validation results for a campaign:
+
+```bash
+# Full pipeline: results + validation
+python examples/run_benchmarks_paper.py \
+  --mode results \
+  --model gtransformer \
+  --dataset <dataset> \
+  --campaign <campaign_id>
+
+# Example
+python examples/run_benchmarks_paper.py \
+  --mode results \
+  --model gtransformer \
+  --dataset algebra2005 \
+  --campaign 20260125_191032_ablation-none-algebra2005_220246
+```
+
+**Generated Artifacts**:
+
+1. **Campaign-Level Metrics**: `experiments/<campaign>/cv_results.json`
+   - Cross-validation summary (mean ± std across folds)
+   - AUC, ACC for supervised and reference predictions
+
+2. **Validation Results**: `experiments/<campaign>/validation/`
+   - Parameter recovery statistics
+   - Structural encoding metrics
+   - Aggregated results across folds
+
+3. **Visualization Plots**: `experiments/<campaign>/plots/`
+   - Skill alignment heatmaps
+   - Envelope distribution plots
+   - Latent space PCA/t-SNE visualizations
+   - Parameter recovery parity plots
+
+### Common Issues & Solutions
+
+#### Issue 1: Missing BKT Targets
+
+**Error**:
+```
+FileNotFoundError: [Errno 2] No such file or directory: 
+'data/<dataset>/bkt_targets_train_valid.npz'
+```
+
+**Solution**:
+```bash
+python examples/generate_bkt_soft_labels.py --dataset <dataset>
+```
+
+#### Issue 2: Dimension Mismatch in Validation
+
+**Error**:
+```
+RuntimeError: size mismatch for bkt_guess: copying a param with shape 
+torch.Size([58]) from checkpoint, the shape in current model is torch.Size([124])
+```
+
+**Cause**: Global `data_config.json` was updated after training, causing dimension mismatch between checkpoint and current config.
+
+**Solution**: Fixed automatically in validation scripts (as of Jan 2026). Scripts now:
+1. Load checkpoint first
+2. Infer dimensions from checkpoint parameter shapes
+3. Override `data_config` with checkpoint dimensions
+
+No user action required—scripts handle this automatically.
+
+#### Issue 3: Constant Predictions (NaN Correlations)
+
+**Symptoms**:
+```json
+{
+  "pearson_r": NaN,
+  "r2": 1.0
+}
+```
+
+**Cause**: Missing BKT target files cause dataset to return zeros/constants.
+
+**Solution**: Ensure BKT targets exist (see Issue 1).
+
+#### Issue 4: Dataset Name Detection Failure
+
+**Error**: Script processes wrong dataset (e.g., defaults to assist2009).
+
+**Cause**: Experiment config doesn't contain `dataset_name` field.
+
+**Solution**: Fixed automatically in validation scripts. Scripts now infer dataset from directory path structure:
+```
+experiments/<campaign>/gtransformer/<dataset>/fold_0_*/
+                                     ^^^^^^^^
+                                     Extracted as dataset_name
+```
+
+### Best Practices
+
+1. **Generate BKT files BEFORE training**: Ensures theory-guided initialization works correctly
+2. **Regenerate targets after data changes**: If you reprocess datasets, regenerate BKT parameters and targets
+3. **Check file locations**: Some datasets (nips_task34) have different directory structures
+4. **Verify dimensions match**: Run validation on at least one fold to ensure no dimension mismatches
+5. **Save BKT files to version control**: Include in `.gitignore` exceptions if using git-lfs for reproducibility
+
+### Quick Start Checklist
+
+For a new dataset, follow this order:
+
+```bash
+# 1. Train BKT model (population parameters)
+python examples/train_bkt.py --dataset <dataset>
+
+# 2. Generate BKT target labels (validation ground truth)
+python examples/generate_bkt_soft_labels.py --dataset <dataset>
+
+# 3. Verify files exist
+ls -lh data/<dataset>/bkt_skill_params.pkl
+ls -lh data/<dataset>/bkt_targets_*.npz
+
+# 4. Train GTransformer model
+python examples/run_benchmarks_paper.py \
+  --mode training \
+  --model gtransformer \
+  --dataset <dataset> \
+  --short_title myexp \
+  --epochs 200
+
+# 5. Generate validation results and plots
+python examples/run_benchmarks_paper.py \
+  --mode results \
+  --model gtransformer \
+  --dataset <dataset>
+```
+
+**Estimated Time** (per dataset):
+- BKT training: 5-30 minutes (depending on dataset size)
+- Target generation: 1-5 minutes
+- GTransformer training: 2-8 hours (5 folds, 200 epochs each)
+- Validation/plotting: 5-15 minutes
+
+---
