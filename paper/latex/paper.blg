@@ -8,45 +8,45 @@ Warning--empty booktitle in Pandey2019384
 Warning--can't use both volume and number fields in chen2023improving
 Warning--empty school in sutskever2013training
 Warning--empty author in raissi2019physics
-You've used 40 entries,
+You've used 41 entries,
             2887 wiz_defined-function locations,
-            792 strings with 13188 characters,
-and the built_in function-call counts, 19707 in all, are:
-= -- 1684
-> -- 1384
-< -- 25
-+ -- 603
-- -- 375
-* -- 1604
-:= -- 2926
-add.period$ -- 124
-call.type$ -- 40
-change.case$ -- 40
-chr.to.int$ -- 40
-cite$ -- 46
-duplicate$ -- 886
-empty$ -- 1457
-format.name$ -- 460
-if$ -- 4265
+            796 strings with 13287 characters,
+and the built_in function-call counts, 20034 in all, are:
+= -- 1715
+> -- 1391
+< -- 26
++ -- 607
+- -- 377
+* -- 1629
+:= -- 2974
+add.period$ -- 126
+call.type$ -- 41
+change.case$ -- 41
+chr.to.int$ -- 41
+cite$ -- 47
+duplicate$ -- 904
+empty$ -- 1492
+format.name$ -- 463
+if$ -- 4334
 int.to.chr$ -- 1
-int.to.str$ -- 40
-missing$ -- 39
-newline$ -- 202
-num.names$ -- 119
-pop$ -- 480
+int.to.str$ -- 41
+missing$ -- 40
+newline$ -- 206
+num.names$ -- 122
+pop$ -- 487
 preamble$ -- 0
-purify$ -- 40
+purify$ -- 41
 quote$ -- 0
-skip$ -- 706
+skip$ -- 715
 stack$ -- 0
-substring$ -- 907
-swap$ -- 274
+substring$ -- 934
+swap$ -- 278
 text.length$ -- 16
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 277
+type$ -- 284
 warning$ -- 5
-while$ -- 145
+while$ -- 149
 width$ -- 0
-write$ -- 497
+write$ -- 507
 (There were 5 warnings)

@@ -14,7 +14,7 @@ from sklearn.manifold import TSNE
 import pickle
 
 # Add project root to path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, project_root)
 
 from pykt.models import init_model
@@ -327,7 +327,11 @@ def main():
     output_tsne = os.path.join(OUTPUT_DIR, "latent_tsne_map.png")
     plot_manifold_tsne(X, y, s, output_tsne, skill_names=skill_names_map)
     
-    output_parity = os.path.join(OUTPUT_DIR, "probe_parity_plot.png")
+    # Save probe_parity_plot to validation folder instead of plots folder
+    # Navigate from OUTPUT_DIR (plots/) to validation/ at same level
+    validation_dir = os.path.join(os.path.dirname(OUTPUT_DIR), "validation")
+    os.makedirs(validation_dir, exist_ok=True)
+    output_parity = os.path.join(validation_dir, "probe_parity_plot.png")
     plot_parity(y, y_pred, output_parity)
 
 if __name__ == "__main__":

@@ -1141,3 +1141,11 @@ This section provides a centralized gallery of all validation visualizations gen
       --output_dir experiments/20260119_110013_orthogonal_diversity_baseline_801184/plots
   ```
 
+
+## Results Scripts
+
+### Structural Encoding (H1.1)
+- **structural_encoding_validation.py**: Comprehensive script for H1.1 validation. Calculates structural fidelity (R2, Pearson) and selectivity (Standard, Strict) for both L0 and T constructs. Generates parity recovery plots and latent space manifold visualizations (PCA, t-SNE).
+  - Usage: `python examples/results/structural_encoding_validation.py --exp_dir experiments/[CAMPAIGN]/gtransformer/[DATASET]/fold_[N]_...`
+- **aggregate_structural_validation.py**: Utility script to aggregate structural encoding metrics across multiple folds to provide mean and standard deviation for the paper.
+  - Usage: `python examples/results/aggregate_structural_validation.py --campaign_dir experiments/[CAMPAIGN]`

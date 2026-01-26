@@ -10,7 +10,9 @@ from pathlib import Path
 def load_bkt_params(dataset_path):
     possible_paths = [
         dataset_path / 'bkt_skill_params.pkl',
-        dataset_path / 'bkt' / 'bkt_skill_params.pkl'
+        dataset_path / 'bkt' / 'bkt_skill_params.pkl',
+        dataset_path.parent / 'bkt_skill_params.pkl',  # Check parent directory
+        dataset_path.parent / 'bkt' / 'bkt_skill_params.pkl'
     ]
     
     for path in possible_paths:
@@ -19,7 +21,7 @@ def load_bkt_params(dataset_path):
                 data = pickle.load(f)
                 return data['params']
     
-    raise FileNotFoundError(f"BKT parameters not found in {dataset_path}")
+    raise FileNotFoundError(f"BKT parameters not found in {dataset_path} or parent directory")
 
 def generate_targets(df, bkt_params, max_seq_len=200):
     """

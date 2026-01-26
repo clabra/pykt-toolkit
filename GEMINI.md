@@ -131,6 +131,7 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
     - Use "learning situations" instead of "student archetypes" or "cognitive profiles"
     - Use "prior knowledge" instead of "cognitive profile"
     - Focus on what educators can do (provide support, accelerate pacing, prevent unnecessary remediation) rather than what students are
+- If code or scripts need something and don't have or find it, then throw an exception and fail ASAP. Avoid fallbacks that hide error or produce unrealiable results. 
 
 
 ## Models architecture and implementation

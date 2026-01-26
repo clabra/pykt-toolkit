@@ -253,9 +253,9 @@ Feng, M.; Heffernan, N.; Koedinger, K.
   19},~243--266.
 
 \bibitem[Stamper et~al.(2010)Stamper, Niculescu-Mizil, Ritter, Gordon, and
-  Koedinger]{stamper2010bridge}
+  Koedinger]{stamper2010algebra}
 Stamper, J.; Niculescu-Mizil, A.; Ritter, S.; Gordon, G.; Koedinger, K.
-\newblock Bridge to algebra 2006-2007.
+\newblock Algebra I 2005-2006 and bridge to algebra 2006-2007.
 \newblock {\em Development data sets from KDD Cup} {\bf 2010}.
 
 \bibitem[Wang et~al.(2020)Wang, Lamb, Saveliev, Cameron, Zaykov,
@@ -275,6 +275,10 @@ Hewitt, J.; Liang, P.
   Methods in Natural Language Processing and the 9th International Joint
   Conference on Natural Language Processing (EMNLP-IJCNLP); Inui, K.; Jiang,
   J.; Ng, V.; Wan, X., Eds., Hong Kong, China,  2019; pp. 2733--2743.
-\newblock {\url{https://doi.org/10.18653/v1/D19-1275}}.
+
+\bibitem[Belinkov(2022)]{belinkov2022probing}
+Belinkov, Y.
+\newblock Probing classifiers: Promises, shortcomings, and advances.
+\newblock {\em Computational Linguistics} {\bf 2022}, {\em 48},~207--219.
 
 \end{thebibliography}
