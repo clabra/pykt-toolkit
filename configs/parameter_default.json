@@ -1,7 +1,7 @@
 {
   "defaults": {
     "model": "gtransformer",
-    "dataset": "assist2009_S",
+    "dataset": "assist2009",
     "fold": 0,
     "seed": 42,
     "short_title": "test",
@@ -404,5 +404,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "14606ec7f774b0a28d36e33d0f6c88e1"
+  "md5": "f091078d90ae18f906b065398aa25d80"
 }

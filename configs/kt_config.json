@@ -134,8 +134,12 @@
         "learning_rate": 0.0001,
         "d_model": 64,
         "n_blocks": 4,
+        "n_heads": 4,
         "dropout": 0.1,
         "d_ff": 256,
-        "num_attn_heads": 4
+        "num_attn_heads": 4,
+        "emb_type": "qid",
+        "seed": 3407
     }
 }
+
