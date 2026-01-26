@@ -1,42 +1,21 @@
 {
-    "generated_at": "2026-01-24T17:15:17.512421",
-    "campaign": "all_experiments",
+    "generated_at": "2026-01-26T09:54:40.158873",
+    "campaign": "20260125_191032_ablation-none-datasets_algebra2005_220246",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
         "gtransformer": {
-            "assist2009": {
-                "status": "PASS",
-                "auc_mean": 0.779491082175727,
-                "auc_std": 0.0010105681985447543,
-                "acc_mean": 0.7357101848662303,
-                "acc_std": 0.0010491983752666007,
-                "folds_ok": 5,
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
                 "folds_running": 0,
                 "folds_total": 5,
-                "fold_data": {
-                    "0": {
-                        "auc": 0.7800843045288238,
-                        "acc": 0.7355226394151644
-                    },
-                    "1": {
-                        "auc": 0.7803560482323577,
-                        "acc": 0.7363646802158686
-                    },
-                    "2": {
-                        "auc": 0.7794306507769311,
-                        "acc": 0.737244995598423
-                    },
-                    "3": {
-                        "auc": 0.7775622347488149,
-                        "acc": 0.7341256171776324
-                    },
-                    "4": {
-                        "auc": 0.7800221725917083,
-                        "acc": 0.7352929919240633
-                    }
-                }
+                "fold_data": {}
             }
         }
     }
