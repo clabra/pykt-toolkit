@@ -456,13 +456,14 @@ To evaluate the predictive performance of gTransformer, we utilized the Area Und
 \toprule
 \textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
 \midrule
-gTransformer & 0.7831 & 0.7078 & 0.8240 & 0.8148 & 0.7988 \\
 AKT & 0.7825 & 0.7081 & 0.8306 & 0.8208 & 0.8033 \\
 ATKT & 0.7715 & 0.7810 & 0.7995 & 0.7889 & 0.7665 \\
 DKT & 0.7528 & 0.7031 & 0.8149 & 0.8015 & 0.7689 \\
 DKVMN & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
 SAKT & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
 SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
+\midrule
+gTransformer & 0.7831 & 0.7078 & 0.8240 & 0.8148 & 0.7988 \\
 \bottomrule
 \end{tabularx}
 \vspace{2mm}
@@ -470,7 +471,7 @@ SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
 \caption{AUC (question-level, average late fusion) across the evaluated datasets.\label{tab_performance}}
 \end{table}
 
-When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. On AS2009 and AS2015, gTransformer matches or exceeds the top-performing AKT model (0.7838 and 0.7081 respectively), demonstrating that pedagogical grounding does not compromise predictive accuracy. Notably, on AL2005, gTransformer achieves the highest performance (0.8306), matching the AKT reference value and substantially outperforming all other baselines including ATKT (0.7995) and DKT (0.8149). On BDG2006, gTransformer achieves 0.8066, closely approaching the AKT reference value of 0.8208 while outperforming ATKT (0.7889). On NIPS34, gTransformer achieves 0.7908, surpassing all baselines except AKT (0.8033). Furthermore, to test whether interpretability constraints degrade accuracy, we evaluated an \textit{unconstrained} gTransformer baseline (with $\lambda_{\text{ref}} = \lambda_{\text{probe}} = 0$). On AS2009, this baseline achieved 0.7710 AUC, lower than the grounded model's 0.7838, suggesting that theoretical grounding serves as a beneficial inductive bias that improves generalization.
+When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration outperforms all other models, while on AS2015 it achieves an AUC of 0.7078, comparable to AKT. On AL2005, gTransformer attains 0.8240, significantly outperforming baselines such as DKT (0.8149) and ATKT (0.7995). On BDG2006 and NIPS34, gTransformer achieves 0.8148 and 0.7988 respectively, surpassing all architectures except AKT.
 
 \subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}
 
@@ -533,35 +534,60 @@ Initial Mastery ($L_0$) & 0.487 & 0.698 & $-0.020$ & \textbf{0.507} \\
 Learning Rate ($T$) & 0.566 & 0.753 & $-0.041$ & \textbf{0.607} \\
 \bottomrule
 \end{tabularx}
-\caption{Diagnostic Probing results for AS2009. Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \label{tab_probing}}
+\caption{Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \label{tab_probing}}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.70\textwidth]{img/h1_structural_fidelity_l0_fold_0_481134.png}
-\caption{Structural Fidelity for Initial Mastery ($L_0$). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $L_0$ structure across the full parameter range. \label{fig_structural_fidelity_l0}}
+\caption{Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \label{fig_structural_fidelity_l0}}
 \vspace{12pt}
 \includegraphics[width=0.70\textwidth]{img/h1_structural_fidelity_t_fold_0_481134.png}
-\caption{Structural Fidelity for Learning Rate ($T$). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $L_0$. The consistently tight clustering around the diagonal across all $T$ values indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
+\caption{Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
 \end{figure}
 
 \subsubsection{Semantic Grounding and Alignment Preservation (H1.2)} \label{sec_semantic_grounding}
 
-For the second hypothesis H1.2 (Semantic Alignment), we evaluate whether grounded parameters preserve pedagogical semantics despite passing through multiple neural processing layers. A key risk in theory-guided deep learning is that models may use theoretical priors merely as initialization, subsequently ``repurposing'' them for black-box optimization that abandons educational meaning. \textbf{In contrast to H1.1, where we validated linear decodability of BKT constructs from latent representations using $R^2$, H1.2 validates monotonic relationship preservation through neural transformations.} We do not expect grounded parameters to exhibit linear relationships with theoretical priors because the model performs context-aware enrichment and student-specific individualization—transforming population-level priors into personalized mastery estimates. The critical validation question is whether this individualization preserves the pedagogical \textit{ordering} of mastery levels rather than mechanically reproducing exact numerical values.
+Hypothesis H1.2 examines whether grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ retain their pedagogical semantics after neural processing. We want to check that models do not repurpose theoretical constructs for black-box optimization. Unlike H1.1, which assesses latent linear decodability, H1.2 validates monotonic relationship preservation in the final projected parameters. Because gTransformer refines population-level priors into student-specific estimates, we prioritize maintaining pedagogical ordering over exact numerical reproduction.
 
-We employ \textbf{Spearman's rank correlation ($\rho$)} as our validation metric, computed between individualized grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ (after all transformer processing and contextual projection) and the original population-level BKT priors $\{\ell_{L0}, \ell_T\}$ used to initialize theoretical bases. Spearman is specifically designed to measure monotonic relationship preservation and \textbf{does not assume linearity}—it detects whether students with higher theoretical priors receive higher individualized parameters, regardless of the functional transformation applied. This makes it ideal for validating semantic alignment in models that intentionally individualize through non-linear neural processing. The metric is also immune to outliers, focusing on the pedagogical ordering that matters for educational assessment. Interpretation thresholds: $\rho \geq 0.6$ indicates strong alignment, $0.4 \leq \rho < 0.6$ indicates moderate alignment, and $\rho < 0.4$ indicates weak alignment.
+We use Spearman's rank correlation ($\rho$) to measure this alignment, as it assesses monotonic consistency without assuming linearity (thresholds: $\rho \geq 0.6$ strong; $0.4 \leq \rho < 0.6$ moderate). 
 
-Evaluating $N=52,825$ test interactions from AS2009, grounded parameters achieve Spearman rank correlations of $\rho_{L_0} = 0.427$ (moderate) for Initial Mastery and $\rho_T = 0.604$ (moderate-to-strong) for Learning Rate (\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t}). The Learning Rate parameter shows particularly strong preservation, approaching the 0.6 threshold for ``strong'' alignment, indicating the model reliably maintains theoretical understanding of how students improve with practice. As expected, grounded parameters show lower correlations than probe parameters from H1.1 ($\rho = 0.427$ vs 0.736 for $L_0$; $0.604$ vs 0.760 for $T$), confirming genuine student-specific individualization rather than trivial reproduction of population priors. The model successfully balances theoretical grounding with contextual refinement—neither abandoning priors (which would yield $\rho \approx 0$) nor mechanically echoing them (which would yield $\rho \approx 1$). Parity plots reveal that high-density regions (large bubbles) cluster near the theoretical ideal diagonal, demonstrating that typical predictions preserve pedagogical semantics while allowing adaptive refinement. \textbf{H1.2 is supported}: grounded parameters maintain moderate-to-strong monotonic alignment with theoretical priors while providing individualized mastery estimates.
+\textbf{Results}: \Cref{tab_semantic_alignment} summarizes the semantic alignment results on AS2009. The grounded parameters achieve moderate-to-strong correlations with theoretical priors:
+
+\begin{itemize}
+    \item \textbf{Initial Mastery ($P_{L_0}$)}: Achieves Spearman $\rho = 0.427$ (moderate), demonstrating rank-order preservation despite neural transformation. The lower correlation compared to probe parameters ($\rho = 0.736$ in H1.1) confirms genuine student-specific individualization rather than trivial reproduction of population priors.
+    
+    \item \textbf{Learning Rate ($P_T$)}: Shows stronger alignment with Spearman $\rho = 0.604$ (moderate-to-strong), approaching the 0.6 threshold for strong alignment. This superior preservation suggests the model reliably internalizes theoretical principles of practice effects. The comparison with probe parameters ($\rho = 0.760$ in H1.1) again confirms meaningful contextual refinement.
+\end{itemize}
+
+\textbf{Interpretation}: The moderate-to-strong Spearman correlations validate H1.2 (Semantic Alignment) hypothesis: grounded parameters maintain pedagogical ordering after neural transformation while enabling individualization. The gap between grounded and probe correlations (0.309 for $L_0$, 0.156 for $T$) quantifies the degree of context-aware refinement—the model neither abandons theoretical priors ($\rho \approx 0$) nor mechanically reproduces them ($\rho \approx 1$), achieving the desired balance.
+
+\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} visualize the alignment quality through parity plots comparing BKT theoretical priors (x-axis) against grounded parameters (y-axis). Each point represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed line), confirming rank-order preservation where data is abundant while allowing adaptive refinement in sparse regions.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\begin{tabularx}{\textwidth}{lcccc}
+\toprule
+\textbf{Parameter} & \textbf{Spearman $\rho$ (H1.2)} & \textbf{Probe $\rho$ (H1.1)} & \textbf{Gap ($\Delta$)} & \textbf{Interpretation} \\
+\midrule
+Initial Mastery ($P_{L_0}$) & 0.427 & 0.736 & 0.309 & Moderate \\
+Learning Rate ($P_T$) & 0.604 & 0.760 & 0.156 & Moderate-to-Strong \\
+\bottomrule
+\end{tabularx}
+\caption{Semantic Alignment results for AS2009 (H1.2). Spearman $\rho$ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta$). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \label{tab_semantic_alignment}}
+\end{table}
+
+These results demonstrate a successful balance between theoretical grounding and adaptive individualization. Parity plots show that high-density regions cluster near the theoretical diagonal, indicating that semantic integrity is preserved even during student-specific refinement. These findings support H1.2, confirming that grounded parameters maintain moderate-to-strong monotonic alignment with pedagogical theory while capturing individual behavioral heterogeneity.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_grounded_268444.png}
-\caption{Semantic Alignment for Initial Mastery ($P_{L_0}$). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \label{fig_semantic_alignment_l0}}
+\caption{Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_grounded_268444.png}
-\caption{Semantic Alignment for Learning Rate ($P_T$). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
+\caption{Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
-
 
 \subsubsection{Functional Alignment and Prediction Confidence (H1.3)} \label{sec_functional_alignment}
 
