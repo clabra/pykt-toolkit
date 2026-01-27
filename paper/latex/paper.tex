@@ -177,7 +177,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\section{Introduction}
+\section{Introduction} \label{sec_intro}
 
 Knowledge Tracing (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Artiﬁcial Intelligence in Education. It is formally defined as the supervised sequence modeling task of estimating a student's evolving mastery based on their historical interactions. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question (or skill) $q_i$ and the student's binary response $r_i \in \{0, 1\}$. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalized instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and diverse, the ability to accurately track and interpret student mastery is not merely a technical optimization but a critical requirement for effective, scalable, and learner-centred education.
 
@@ -425,7 +425,7 @@ Dropout rate & 0.1 \\
 Epochs & 200 (10 early stopping)\\
 \bottomrule
 \end{tabular}
-\caption{Parameter values used for gTransformer architecture and training}
+\caption{Parameter values used to train gTransformer on AS2009}
 \label{tab:implementation_params}
 \end{table}
 
@@ -474,7 +474,7 @@ When comparing these results with baseline architectures, we observe that gTrans
 
 \subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}
 
-Theory-based interpretability can be validated through a dual approach: 
+We will use the following hypotheses to validate the RQ1 research question posed in section \ref{sec_intro}: 
 
 \begin{itemize}
 \item \textbf{H1.1: Structural Encoding}
@@ -483,19 +483,24 @@ Latent representations in the gTransformer model are structurally organized arou
 
 \item \textbf{H1.2: Semantic Alignment}
 
-The extracted parameters are semantically aligned with established educational priors. 
+The extracted parameters are semantically aligned with meaningful BKT priors. 
+
+\item \textbf{H1.3: Functional Alignment}
+
+The extracted parameters produce mastery estimations that are explainable through the causal, interpretable logic of the reference model. 
 
 \end{itemize}
 
-Together, these demonstrate that grounding constraints actively shape the model's internal structure, not merely correlate with outputs, while maintaining competitive predictive performance. This dual hypothesis addresses a fundamental challenge in educational AI: whether neural models can internalize pedagogical theory rather than learning arbitrary features that happen to predict well, and whether such interpretability can be achieved without sacrificing the representational power that makes deep learning effective.
+The objective of this triple validation is to demonstrate that grounding constraints actively shape the model's internal structure, not merely correlate with outputs, producing interpretable mastery estimations. It addresses a fundamental challenge in educational AI: whether neural models can internalize pedagogical theory rather than learning arbitrary features that happen to predict well, and whether such interpretability can be achieved without sacrificing the representational power that makes deep learning effective.
 
-To validate these hypotheses, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing} to test structural encoding and \textit{parameter correlation analysis} to test semantic alignment. For structural validation, we train linear probes to recover BKT parameters from the model's hidden representations, comparing performance on true parameters against randomly shuffled controls to measure selectivity ($\Delta R^2 = R^2_{\text{true}} - R^2_{\text{control}}$). The rationale is that high selectivity ($> 0.5$) proves BKT constructs are the primary organizing axis rather than incidental patterns—if probes perform equally well on shuffled targets, the representations would contain no genuine structural encoding. For semantic validation, we compute Pearson correlations between probe-extracted parameters and population-level BKT priors fitted on training data, where high correlation ($r > 0.7$) proves parameters have pedagogically meaningful values reflecting established educational theory. We complement these with performance comparison against unconstrained baselines to verify that interpretability is achieved without accuracy sacrifice (gap $< 0.5$ percentage points), and comparison between active grounding (constraints enforced during training) versus post-hoc probing (probes fitted to frozen baseline representations) to confirm that interpretability must be designed into the architecture rather than retrofitted. The following subsections present the experimental evidence obtained. 
 
-\subsubsection{Structural Alignment via Diagnostic Probing} \label{sec_structural_alignment}
+\subsubsection{Structural Alignment via Diagnostic Probing (H1.1)} \label{sec_structural_alignment}
 
-To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ diagnostic probing with control tasks \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models ($\alpha=1.0$) to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
+To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models ($\alpha=1.0$) to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
 
 \textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$ using an 80/20 train-test split. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. This distinction verifies whether probes exploit genuine BKT structure rather than arbitrary patterns.  
+
+The rationale is that high selectivity ($> 0.5$) proves BKT constructs are the primary organizing axis rather than incidental patterns—if probes perform equally well on shuffled targets, the representations would contain no genuine structural encoding. 
 
 \begin{itemize}
     \item \textbf{Fidelity}: The $R^2$ (coefficient of determination) is calculated on the test set, representing the proportion of the variance in the theoretical parameters that is predictable from the gTransformer's latent space:
@@ -541,13 +546,16 @@ Learning Rate ($T$) & 0.566 & 0.753 & $-0.041$ & \textbf{0.607} \\
 \caption{Structural Fidelity for Learning Rate ($T$). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $L_0$. The consistently tight clustering around the diagonal across all $T$ values indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
 \end{figure}
 
-\subsubsection{Semantic Grounding and Convergent Validity} \label{sec_semantic_grounding}
+\subsubsection{Semantic Grounding and Convergent Validity (H1.2)} \label{sec_semantic_grounding}
 
-Beyond structural recovery, we evaluate the semantic alignment between the model's projected parameters and theoretical priors. For each student interaction, we analyze the distribution of individualized grounded parameters $p_{L_0,t}$ and $p_{T,t}$. We measure \textit{Representational Convergence} ($\mathcal{I}_1$) as the Pearson correlation between these grounded parameters and the population-level BKT priors ($\ell_{L0}$, $\ell_T$).
+For the second hypothesis H1.2 (Semantic Alignment), we evaluate the alignment between the model's projected parameters and theoretical priors. To this end we compute the Pearson correlations between probe-extracted parameters and population-level BKT priors fitted on training data, where high correlation ($r > 0.7$) proves parameters have pedagogically meaningful values reflecting established educational theory. We complement these with performance comparison against unconstrained baselines to verify that interpretability is achieved without accuracy sacrifice (gap $< 0.5$ percentage points), and comparison between active grounding (constraints enforced during training) versus post-hoc probing (probes fitted to frozen baseline representations) to confirm that interpretability must be designed into the architecture rather than retrofitted. The following subsections present the experimental evidence obtained. 
+
+
+ For each student interaction, we analyze the distribution of individualized grounded parameters $p_{L_0,t}$ and $p_{T,t}$. We measure \textit{Representational Convergence} ($\mathcal{I}_1$) as the Pearson correlation between these grounded parameters and the population-level BKT priors ($\ell_{L0}$, $\ell_T$).
 
 Results across multiple datasets (\Cref{tab_interpretability}) show consistently high correlations ($\mathcal{I}_1 > 0.82$), indicating that gTransformer's individualization mechanism preserves the semantic meaning of the underlying theory. The model does not "repurpose" these parameters for black-box optimization but rather refines them within the pedagogical bounds established by the reference model.
 
-\subsubsection{Functional Alignment and Predictor Equivalence} \label{sec_functional_alignment}
+\subsubsection{Functional Alignment and Predictor Equivalence (H1.3)} \label{sec_functional_alignment}
 
 Finally, we assess whether gTransformer can achieve \textit{Predictor Equivalence} ($\mathcal{I}_2$)---the ability of an interpretable sub-component to emulate the full neural model's behavior. We pass the grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ through the standard BKT transition and emission equations to generate "interpretable" predictions $\hat{y}_{ref}$. We then measure the functional alignment $\mathcal{I}_2$ as the correlation between the neural supervised predictions $\hat{y}_{sup}$ and these theory-derived predictions $\hat{y}_{ref}$.
 

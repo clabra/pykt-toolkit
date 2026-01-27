@@ -1026,6 +1026,18 @@ def main():
                                         "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                         },
                                     {
+                                        "name": "H1.3 Functional Alignment Confidence Heatmap",
+                                        "script": "examples/validation/generate_skill_alignment_heatmap_h13.py",
+                                        "args": {
+                                            "--exp_dir": str(fold_dir),
+                                            "--output_dir": str(validation_dir),
+                                            "--min_interactions": "5",
+                                            "--top_skills": "40",
+                                            "--top_students": "25"
+                                        },
+                                        "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
+                                    },
+                                    {
                                         "name": "Structural Encoding Validation (H1.1)",
                                         "script": "examples/results/structural_encoding_validation.py",
                                         "args": {

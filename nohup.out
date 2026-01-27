@@ -1,0 +1,4 @@
+--- BENCHMARK TRAINING QUEUE (Concurrency=5) ---
+Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)
+Parameter overrides: {'n_blocks': 4, 'num_attn_heads': 4, 'ablation': 'none'}
+[QUEUE] gtransformer on assist2015 fold 0 (GPU 1)
