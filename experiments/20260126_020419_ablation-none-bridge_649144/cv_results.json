@@ -1,0 +1,47 @@
+{
+    "generated_at": "2026-01-26T12:48:47.543680",
+    "campaign": "20260126_020419_ablation-none-bridge_649144",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "bridge2algebra2006": {
+                "status": "PASS",
+                "auc_mean": 0.8120063288565487,
+                "auc_std": 0.0009144994810254162,
+                "acc_mean": 0.8567261685160485,
+                "acc_std": 0.00048473770643536014,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.811935474797018,
+                        "acc": 0.8562987768538752
+                    },
+                    "1": {
+                        "auc": 0.8125459795549947,
+                        "acc": 0.8570706927377473
+                    },
+                    "2": {
+                        "auc": 0.812775784474339,
+                        "acc": 0.8568266310979936
+                    },
+                    "3": {
+                        "auc": 0.8102632349669752,
+                        "acc": 0.8560603910662088
+                    },
+                    "4": {
+                        "auc": 0.8125111704894158,
+                        "acc": 0.8573743508244175
+                    }
+                },
+                "auc_ref_mean": 0.5559251921124329,
+                "auc_ref_std": 0.0003846686031448234,
+                "acc_ref_mean": 0.838917047421744,
+                "acc_ref_std": 4.827478201881541e-05
+            }
+        }
+    }
+}

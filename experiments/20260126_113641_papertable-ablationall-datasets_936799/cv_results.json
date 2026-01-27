@@ -1,0 +1,22 @@
+{
+    "generated_at": "2026-01-26T14:09:00.595141",
+    "campaign": "20260126_113641_papertable-ablationall-datasets_936799",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "algebra2005": {
+                "status": "FAIL",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        }
+    }
+}

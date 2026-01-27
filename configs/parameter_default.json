@@ -16,7 +16,6 @@
     "gradient_clip": 1.0,
     "seq_len": 200,
     "d_model": 64,
-    "n_heads": 4,
     "n_blocks": 4,
     "d_ff": 256,
     "dropout": 0.1,
@@ -70,7 +69,7 @@
     "emb_path": "none",
     "add_uuid": 1,
     "dual_eval": true,
-    "num_attn_heads": 8
+    "num_attn_heads": 4
   },
   "types": {
     "launcher": [
@@ -121,7 +120,7 @@
         "description": "Inner model dimension for embeddings and attention."
       },
       "n_heads": {
-        "deprecated": false,
+        "deprecated": true,
         "ablation": [
           "grounded",
           "probing"
@@ -404,5 +403,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "f091078d90ae18f906b065398aa25d80"
+  "md5": "a0236c4bae2e6ac1a21695032e91d08f"
 }

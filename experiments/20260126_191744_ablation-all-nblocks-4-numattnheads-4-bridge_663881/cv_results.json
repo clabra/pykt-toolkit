@@ -1,0 +1,43 @@
+{
+    "generated_at": "2026-01-27T09:36:10.139845",
+    "campaign": "20260126_191744_ablation-all-nblocks-4-numattnheads-4-bridge_663881",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "bridge2algebra2006": {
+                "status": "PASS",
+                "auc_mean": 0.814794272638881,
+                "auc_std": 0.0005582927439751327,
+                "acc_mean": 0.8556341345744529,
+                "acc_std": 0.0006661825717762164,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8147140281832317,
+                        "acc": 0.855938360246332
+                    },
+                    "1": {
+                        "auc": 0.8151858115273025,
+                        "acc": 0.8560660669182961
+                    },
+                    "2": {
+                        "auc": 0.8156389588079496,
+                        "acc": 0.8562533700371768
+                    },
+                    "3": {
+                        "auc": 0.8141238924956185,
+                        "acc": 0.8543916905525442
+                    },
+                    "4": {
+                        "auc": 0.814308672180303,
+                        "acc": 0.8555211851179159
+                    }
+                }
+            }
+        }
+    }
+}

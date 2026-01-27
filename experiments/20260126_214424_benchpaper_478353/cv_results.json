@@ -1,0 +1,47 @@
+{
+    "generated_at": "2026-01-27T09:55:58.872558",
+    "campaign": "20260126_214424_benchpaper_478353",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "assist2009": {
+                "status": "PASS",
+                "auc_mean": 0.7782922727349669,
+                "auc_std": 0.0009484583272143207,
+                "acc_mean": 0.7376392237914802,
+                "acc_std": 0.0008094508518779569,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7783212656262323,
+                        "acc": 0.7367282887434454
+                    },
+                    "1": {
+                        "auc": 0.7776554799269749,
+                        "acc": 0.7374937803804493
+                    },
+                    "2": {
+                        "auc": 0.7796195460713434,
+                        "acc": 0.7391587246909328
+                    },
+                    "3": {
+                        "auc": 0.7769149298110276,
+                        "acc": 0.7373406820530486
+                    },
+                    "4": {
+                        "auc": 0.7789501422392571,
+                        "acc": 0.7374746430895243
+                    }
+                },
+                "auc_ref_mean": 0.6731503833658026,
+                "auc_ref_std": 0.0001706305659923151,
+                "acc_ref_mean": 0.6984498794350672,
+                "acc_ref_std": 0.0004156626637650704
+            }
+        }
+    }
+}

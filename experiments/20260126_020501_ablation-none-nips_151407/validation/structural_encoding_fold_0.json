@@ -1,0 +1,30 @@
+{
+    "fold": 0,
+    "dataset": "nips_task34",
+    "h1_structural_encoding": {
+        "l0": {
+            "fidelity": {
+                "r2": 0.4708572098790228,
+                "pearson_r": 0.6865288264444961
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.5213492871503757,
+                "strict_delta_r2": -0.5213688180409146,
+                "control_r2_obs": -0.05049207727135285,
+                "control_r2_skill": 0.9922260279199374
+            }
+        },
+        "t": {
+            "fidelity": {
+                "r2": -0.031072606396017166,
+                "pearson_r": 0.10306665225885406
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.033688974617342105,
+                "strict_delta_r2": -1.0196665228471273,
+                "control_r2_obs": -0.06476158101335927,
+                "control_r2_skill": 0.9885939164511103
+            }
+        }
+    }
+}

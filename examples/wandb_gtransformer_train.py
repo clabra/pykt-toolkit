@@ -236,7 +236,7 @@ if __name__ == "__main__":
     # 3. Model architecture
     parser.add_argument("--d_model", type=int, required=True)
     parser.add_argument("--d_ff", type=int, required=True)
-    parser.add_argument("--n_heads", type=int, required=True, help="Canonical naming for num_attn_heads")
+    parser.add_argument("--n_heads", type=int, required=False, help="Internal parameter (use --num_attn_heads instead)")
     parser.add_argument("--n_blocks", type=int, required=True)
     parser.add_argument("--dropout", type=float, required=True)
     parser.add_argument("--final_fc_dim", type=int, required=True)
@@ -307,6 +307,7 @@ if __name__ == "__main__":
     if 'model' in params: params['model_name'] = params['model']
     if 'dataset' in params: params['dataset_name'] = params['dataset']
     if 'epochs' in params: params['num_epochs'] = params['epochs']
-    if 'n_heads' in params: params['num_attn_heads'] = params['n_heads']
+    if 'num_attn_heads' in params and params['num_attn_heads'] is not None: 
+        params['n_heads'] = params['num_attn_heads']
     
     main(params)

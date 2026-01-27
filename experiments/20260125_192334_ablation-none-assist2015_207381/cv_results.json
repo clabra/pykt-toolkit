@@ -1,0 +1,43 @@
+{
+    "generated_at": "2026-01-26T12:28:38.240896",
+    "campaign": "20260125_192334_ablation-none-assist2015_207381",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "assist2015": {
+                "status": "PARTIAL",
+                "auc_mean": 0.7066767957075321,
+                "auc_std": 0.00034962490859295227,
+                "acc_mean": 0.678322669057113,
+                "acc_std": 0.0008673559366731477,
+                "folds_ok": 4,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7064952461243034,
+                        "acc": 0.677907947204105
+                    },
+                    "1": {
+                        "auc": 0.7071953413106287,
+                        "acc": 0.6771351735649593
+                    },
+                    "2": {
+                        "auc": 0.7062530357199459,
+                        "acc": 0.6793916725912645
+                    },
+                    "3": {
+                        "auc": 0.7067635596752501,
+                        "acc": 0.6788558828681236
+                    }
+                },
+                "auc_ref_mean": 0.6218469346407733,
+                "auc_ref_std": 0.000505099951755785,
+                "acc_ref_mean": 0.6631943371147723,
+                "acc_ref_std": 0.00018038743160963592
+            }
+        }
+    }
+}

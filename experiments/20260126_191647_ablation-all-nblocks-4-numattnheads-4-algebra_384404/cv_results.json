@@ -1,0 +1,43 @@
+{
+    "generated_at": "2026-01-27T09:32:25.119400",
+    "campaign": "20260126_191647_ablation-all-nblocks-4-numattnheads-4-algebra_384404",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "algebra2005": {
+                "status": "PASS",
+                "auc_mean": 0.8239747909855801,
+                "auc_std": 0.0007818110327180689,
+                "acc_mean": 0.8064640378718597,
+                "acc_std": 0.0002382978010635706,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8247030139414484,
+                        "acc": 0.8066921297541557
+                    },
+                    "1": {
+                        "auc": 0.822628970174433,
+                        "acc": 0.8061864543547259
+                    },
+                    "2": {
+                        "auc": 0.8235616519136677,
+                        "acc": 0.806788961213621
+                    },
+                    "3": {
+                        "auc": 0.8245698680621047,
+                        "acc": 0.806251008661036
+                    },
+                    "4": {
+                        "auc": 0.8244104508362464,
+                        "acc": 0.8064016353757598
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,47 @@
+{
+    "generated_at": "2026-01-26T12:35:12.074530",
+    "campaign": "20260125_191032_ablation-none-algebra2005_220246",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "algebra2005": {
+                "status": "PASS",
+                "auc_mean": 0.825128448181028,
+                "auc_std": 0.001819735586685317,
+                "acc_mean": 0.8084480068857929,
+                "acc_std": 0.0011661223180091953,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8225332302084871,
+                        "acc": 0.807714239604067
+                    },
+                    "1": {
+                        "auc": 0.82481544096618,
+                        "acc": 0.8069503469793964
+                    },
+                    "2": {
+                        "auc": 0.8245626922774949,
+                        "acc": 0.8087686266071332
+                    },
+                    "3": {
+                        "auc": 0.8281634576272131,
+                        "acc": 0.8104255204690947
+                    },
+                    "4": {
+                        "auc": 0.8255674198257652,
+                        "acc": 0.8083813007692722
+                    }
+                },
+                "auc_ref_mean": 0.5990999737613208,
+                "auc_ref_std": 0.0005067067225046548,
+                "acc_ref_mean": 0.7487976760449728,
+                "acc_ref_std": 0.00013000210848988967
+            }
+        }
+    }
+}

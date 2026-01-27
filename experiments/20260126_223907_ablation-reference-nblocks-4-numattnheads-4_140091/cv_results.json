@@ -1,0 +1,43 @@
+{
+    "generated_at": "2026-01-27T09:53:02.817264",
+    "campaign": "20260126_223907_ablation-reference-nblocks-4-numattnheads-4_140091",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "assist2009": {
+                "status": "PASS",
+                "auc_mean": 0.7819611851127504,
+                "auc_std": 0.001125972081324121,
+                "acc_mean": 0.7395491254258048,
+                "acc_std": 0.0006367399744878286,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7825664612348475,
+                        "acc": 0.7405174723466146
+                    },
+                    "1": {
+                        "auc": 0.7812600523055524,
+                        "acc": 0.7385846059631799
+                    },
+                    "2": {
+                        "auc": 0.7811995673577548,
+                        "acc": 0.7394457840548092
+                    },
+                    "3": {
+                        "auc": 0.780884361568521,
+                        "acc": 0.7393309603092586
+                    },
+                    "4": {
+                        "auc": 0.7838954830970758,
+                        "acc": 0.7398668044551613
+                    }
+                }
+            }
+        }
+    }
+}

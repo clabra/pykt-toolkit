@@ -1,0 +1,43 @@
+{
+    "generated_at": "2026-01-27T09:37:27.178515",
+    "campaign": "20260126_191854_ablation-all-nblocks-4-numattnheads-4-nips_498903",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "nips_task34": {
+                "status": "PASS",
+                "auc_mean": 0.7988099063685556,
+                "auc_std": 0.00020259164102928476,
+                "acc_mean": 0.7287122573787495,
+                "acc_std": 0.0002088930304428409,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7989435716285117,
+                        "acc": 0.7286480381772081
+                    },
+                    "1": {
+                        "auc": 0.7985623729520946,
+                        "acc": 0.7286148213488247
+                    },
+                    "2": {
+                        "auc": 0.7985728640229167,
+                        "acc": 0.7287033995578471
+                    },
+                    "3": {
+                        "auc": 0.7990498577714792,
+                        "acc": 0.7284893355527096
+                    },
+                    "4": {
+                        "auc": 0.7989208654677757,
+                        "acc": 0.7291056922571573
+                    }
+                }
+            }
+        }
+    }
+}

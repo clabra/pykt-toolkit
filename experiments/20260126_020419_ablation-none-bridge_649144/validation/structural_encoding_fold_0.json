@@ -1,0 +1,30 @@
+{
+    "fold": 0,
+    "dataset": "bridge2algebra2006",
+    "h1_structural_encoding": {
+        "l0": {
+            "fidelity": {
+                "r2": 1.0,
+                "pearson_r": NaN
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.0,
+                "strict_delta_r2": 0.0,
+                "control_r2_obs": 1.0,
+                "control_r2_skill": 1.0
+            }
+        },
+        "t": {
+            "fidelity": {
+                "r2": 0.0,
+                "pearson_r": NaN
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.0,
+                "strict_delta_r2": -0.26322115384615385,
+                "control_r2_obs": 0.0,
+                "control_r2_skill": 0.26322115384615385
+            }
+        }
+    }
+}

@@ -68,6 +68,7 @@ examples/experiments/**/*.pth
 experiments/**/*.pt
 experiments/**/roster*.csv
 experiments/**/*.ckpt
+experiments/**/*.txt
 node_modules/
 .gemini/
 *.mp4
@@ -84,3 +85,4 @@ pyBKT/
 
 !data/assist2009/keyid2idx.json
 !data/assist2015/keyid2idx.json
+

@@ -6,7 +6,30 @@ Exp 948799 (Personalization) is the current best model. It applies Probing Groun
 
 For comparison with SOTA models, we can use the results from Exp 123509	that overcomes all of them, including AKT (0.7838 vs 0.7825). 
 
-### Quick Reference Table
+## Quick Reference Table (without n_heads bug)
+
+| Short Title | Exp ID | d_model | n_blocks | n_heads | Ablation | Probing | Personalization | λ_sup | λ_ref | λ_probe | λ_init | λ_rate | Exp Folder | AUC (p_sup) | AUC (p_ref) | Description |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :--- |
+| **Ablation All (4/4) A09** | 697945 | 64* | 4* | 4* | all* | ❌ | ❌ | 1.0* | 0* | 0* | 0* | 0* | `20260126_191440...697945` | **0.7831** ± 0.0012 ✅ | - | Black-box baseline (assist2009) with 4/4 architecture (fixed n_heads bug) |
+| **Ablation All (2/8) A09** | 731501 | 64* | 2* | 8* | all* | ❌ | ❌ | 1.0* | 0* | 0* | 0* | 0* | `20260126_202534...731501` | **0.7783** ± 0.0012 | - | Black-box baseline (assist2009) with 2/8 architecture (fixed n_heads bug) |
+| **Ablation All (4/8) A09** | 990507 | 64* | 4* | 8* | all* | ❌ | ❌ | 1.0* | 0* | 0* | 0* | 0* | `20260126_202615...990507` | **0.7770** ± 0.0014 | - | Black-box baseline (assist2009) with 4/8 architecture (fixed n_heads bug) |
+| **Ablation None (4/4) A09** | 268444 | 64* | 4* | 4* | none* | ✅ | ❌ | 1.0* | 0.5* | 1.0* | 0.0* | 0.0* | `20260126_212614...268444` | **0.7783** ± 0.0009 ✅ | **0.6732** ± 0.0002 ✅ | Grounded model with 4/4 architecture and active probing (fixed n_heads bug) |
+| **Ablation Reference (4/4) A09** | 140091 | 64* | 4* | 4* | reference* | ❌ | ❌ | 1.0* | 0* | 0* | 0* | 0* | `20260126_223907...140091` | **0.7820** ± 0.0011 ✅ | - | Reference path only, no probing (fixed n_heads bug) |
+| **Ablation Probe (4/4) A09** | 774696 | 64* | 4* | 4* | probe* | ❌ | ❌ | 1.0* | 0.5* | 0* | 0* | 0* | `20260126_224017...774696` | **0.7819** ± 0.0011 ✅ | **0.6736** ± 0.0002 ✅ | Probing grounding disabled (λ_probe=0) while keeping reference path active (fixed n_heads bug) |
+
+### AUC Benchmark
+
+| Short Title | Exp ID | Dataset | d_model | n_blocks | n_heads | Ablation | λ_sup | Exp Folder | AUC | Description |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- | :---: | :--- |
+| **Ablation All (4/4)** | 697945 | assist2009 | 64* | 4* | 4* | all* | 1.0* | `20260126_191440...697945` | **0.7831** ± 0.0012 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) |
+| **Ablation All (4/4)** | 589915 | assist2015 | 64* | 4* | 4* | all* | 1.0* | `20260126_191539...589915` | **0.7078** ± 0.0006 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) |
+| **Ablation All (4/4)** | 384404 | algebra2005 | 64* | 4* | 4* | all* | 1.0* | `20260126_191647...384404` | **0.8240** ± 0.0008 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) |
+| **Ablation All (4/4)** | 663881 | bridge2algebra2006 | 64* | 4* | 4* | all* | 1.0* | `20260126_191744...663881` | **0.8148** ± 0.0006 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) |
+| **Ablation All (4/4)** | 498903 | nips_task34 | 64* | 4* | 4* | all* | 1.0* | `20260126_191854...498903` | **0.7988** ± 0.0002 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | 
+
+
+
+### Quick Reference Table (with n_heads bug)
 
 Complete summary of all experiments documented in this paper.
 
