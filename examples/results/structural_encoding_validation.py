@@ -318,13 +318,14 @@ def main():
     # 3. Visualizations (H1.1)
     print("\nGenerating Visualizations...")
     # Parity Plots (saved to validation folder)
-    X_tr, X_te, y_tr_l0, y_te_l0 = train_test_split(X, y_l0, test_size=0.2, random_state=42)
-    p_l0 = Ridge().fit(X_tr, y_tr_l0).predict(X_te)
-    plot_parity_recovery(y_te_l0, p_l0, os.path.join(VALIDATION_DIR, f"h1_structural_fidelity_l0_fold_{fold}.png"), f"Structural Fidelity (L0)")
-    
-    X_tr_t, X_te_t, y_tr_t, y_te_t = train_test_split(X, y_t, test_size=0.2, random_state=42)
-    p_t = Ridge().fit(X_tr_t, y_tr_t).predict(X_te_t)
-    plot_parity_recovery(y_te_t, p_t, os.path.join(VALIDATION_DIR, f"h1_structural_fidelity_t_fold_{fold}.png"), f"Structural Fidelity (T)")
+    # NOTE: Commented out - using validate_parameter_recovery.py for H1.2 alignment plots instead
+    # X_tr, X_te, y_tr_l0, y_te_l0 = train_test_split(X, y_l0, test_size=0.2, random_state=42)
+    # p_l0 = Ridge().fit(X_tr, y_tr_l0).predict(X_te)
+    # plot_parity_recovery(y_te_l0, p_l0, os.path.join(VALIDATION_DIR, f"h1_structural_fidelity_l0_fold_{fold}.png"), f"Structural Fidelity (L0)")
+    # 
+    # X_tr_t, X_te_t, y_tr_t, y_te_t = train_test_split(X, y_t, test_size=0.2, random_state=42)
+    # p_t = Ridge().fit(X_tr_t, y_tr_t).predict(X_te_t)
+    # plot_parity_recovery(y_te_t, p_t, os.path.join(VALIDATION_DIR, f"h1_structural_fidelity_t_fold_{fold}.png"), f"Structural Fidelity (T)")
     
     # PCA and t-SNE Maps (saved to plots folder)
     skill_names = get_skill_names(dpath)
@@ -351,9 +352,9 @@ def main():
     
     print(f"\nCOMPLETED Structural Encoding Validation for Fold {fold}")
     print(f"Metrics saved to: {output_path}")
-    print(f"Parity plots saved to:")
-    print(f"  - {VALIDATION_DIR}/h1_structural_fidelity_l0_fold_{fold}.png")
-    print(f"  - {VALIDATION_DIR}/h1_structural_fidelity_t_fold_{fold}.png")
+    # print(f"Parity plots saved to:")
+    # print(f"  - {VALIDATION_DIR}/h1_structural_fidelity_l0_fold_{fold}.png")
+    # print(f"  - {VALIDATION_DIR}/h1_structural_fidelity_t_fold_{fold}.png")
     print(f"Latent space visualizations saved to:")
     print(f"  - {PLOT_DIR}/h1_latent_pca_l0_fold_{fold}.png")
     print(f"  - {PLOT_DIR}/h1_latent_pca_t_fold_{fold}.png")

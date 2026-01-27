@@ -1250,7 +1250,7 @@ def main():
                                     print(f"        Checkpoint: {checkpoint_path.name}")
                                     print(f"        Output: {validation_dir}")
                                     
-                                    validation_script = Path(PROJECT_ROOT) / "examples" / "results" / "validate_parameter_recovery.py"
+                                    validation_script = Path(PROJECT_ROOT) / "examples" / "validation" / "validate_parameter_recovery.py"
                                     if validation_script.exists():
                                         cmd = [
                                             sys.executable, 

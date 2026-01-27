@@ -480,15 +480,15 @@ def main():
     )
     
     # Plot heatmap
-    heatmap_path = os.path.join(args.output_dir, 'skill_confidence_heatmap_h13.png')
+    heatmap_path = os.path.join(args.output_dir, 'h13_skill_confidence_heatmap.png')
     plot_confidence_heatmap(pivot, stats, heatmap_path)
     
     # Plot distribution
-    dist_path = os.path.join(args.output_dir, 'skill_confidence_distribution_h13.png')
+    dist_path = os.path.join(args.output_dir, 'h13_skill_confidence_distribution.png')
     plot_confidence_distribution(df_sup, df_ref, dist_path)
     
     # Save statistics
-    stats_path = os.path.join(args.output_dir, 'confidence_statistics_h13.json')
+    stats_path = os.path.join(args.output_dir, 'h13_confidence_statistics.json')
     with open(stats_path, 'w') as f:
         json.dump(stats, f, indent=2)
     print(f"✓ Saved statistics to {stats_path}")
@@ -497,9 +497,9 @@ def main():
     print("ANALYSIS COMPLETE")
     print(f"{'='*80}")
     print(f"Output directory: {args.output_dir}")
-    print(f"  - skill_confidence_heatmap_h13.png")
-    print(f"  - skill_confidence_distribution_h13.png")
-    print(f"  - confidence_statistics_h13.json")
+    print(f"  - h13_skill_confidence_heatmap.png")
+    print(f"  - h13_skill_confidence_distribution.png")
+    print(f"  - h13_confidence_statistics.json")
     print(f"\n💡 Interpretation:")
     print(f"  🟢 Green cells: High confidence - p_ref is trustworthy")
     print(f"  🟡 Yellow cells: Medium confidence - use with caution")
