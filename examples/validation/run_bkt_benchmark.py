@@ -195,45 +195,89 @@ def run_fold(dataset, fold, output_dir, mode='skill'):
     fold_dir = Path(output_dir) / f"fold_{fold}"
     fold_dir.mkdir(parents=True, exist_ok=True)
     
+    # Helper function to find data files with various naming conventions
+    def find_data_file(base_dir, filename_patterns):
+        """Search for data files in base_dir and subdirectories."""
+        for pattern in filename_patterns:
+            # Try base directory first
+            candidate = base_dir / pattern
+            if candidate.exists():
+                return candidate
+            # Try common subdirectories
+            for subdir in ['train_data', 'test_data', '.']:
+                candidate = base_dir / subdir / pattern
+                if candidate.exists():
+                    return candidate
+        return None
+    
     # Load training data (folds 0-4 except current fold)
+    train_valid_file = find_data_file(data_dir, ['train_valid_sequences.csv', 'train_valid_sequences_quelevel.csv'])
+    if not train_valid_file:
+        print(f"Error: Could not find train_valid_sequences.csv in {data_dir}")
+        sys.exit(1)
+    
     train_dfs = []
     for f in range(5):
         if f != fold:
-            fold_file = data_dir / "train_valid_sequences.csv"
-            if fold_file.exists():
-                df = pd.read_csv(fold_file)
-                # Filter by fold
-                df_fold = df[df['fold'] == f]
+            df = pd.read_csv(train_valid_file)
+            # Filter by fold
+            df_fold = df[df['fold'] == f]
+            if len(df_fold) > 0:
                 train_dfs.append(df_fold)
+    
+    if len(train_dfs) == 0:
+        print(f"Error: No training data found for fold {fold}")
+        sys.exit(1)
     
     train_df = pd.concat(train_dfs, ignore_index=True)
     print(f"Training data: {len(train_df)} sequences")
     
     # Load validation data (same as neural models - from train_valid with current fold)
-    valid_file = data_dir / "train_valid_sequences.csv"
-    valid_df = pd.read_csv(valid_file)
+    valid_df = pd.read_csv(train_valid_file)
     valid_df = valid_df[valid_df['fold'] == fold]
     print(f"Validation data: {len(valid_df)} sequences")
     
     # Load test data based on mode
     if mode == 'question':
-        # Question-level evaluation: use test_question_sequences.csv
-        test_file = data_dir / "test_question_sequences.csv"
-        if not test_file.exists():
-            print(f"Error: {test_file} not found for question-level evaluation")
+        # Question-level evaluation: MUST have 'questions' column, not just 'concepts'
+        # Try files in order of preference
+        test_file = find_data_file(data_dir, [
+            'test_question_sequences.csv',  # Most explicit - has questions column
+            'test_sequences.csv'            # Generic - check if it has questions column
+        ])
+        
+        if not test_file:
+            print(f"Error: Could not find test question sequences file in {data_dir}")
+            print(f"Tried: test_question_sequences.csv, test_sequences.csv")
+            print(f"Note: test_sequences_quelevel.csv typically lacks 'questions' column needed for question-level eval")
             sys.exit(1)
+        
+        # Verify the file has the required 'questions' column
         test_df = pd.read_csv(test_file)
-        test_df = test_df[test_df['fold'] == -1]
-        print(f"Test data (question-level): {len(test_df)} sequences")
+        if 'questions' not in test_df.columns:
+            print(f"Error: {test_file} does not have 'questions' column required for question-level evaluation")
+            print(f"Available columns: {list(test_df.columns)}")
+            print(f"For question-level BKT evaluation, need test file with question IDs, not just skill/concept IDs")
+            sys.exit(1)
+        
+        # Filter for test fold (usually -1, but some datasets might use different convention)
+        if 'fold' in test_df.columns:
+            test_df = test_df[test_df['fold'] == -1]
+        print(f"Test data (question-level): {len(test_df)} sequences from {test_file}")
     else:
         # Skill-level evaluation: use test_sequences.csv
-        test_file = data_dir / "test_sequences.csv"
-        if not test_file.exists():
-            # Fallback to test_question_sequences.csv
-            test_file = data_dir / "test_question_sequences.csv"
+        test_file = find_data_file(data_dir, [
+            'test_sequences.csv',
+            'test_question_sequences.csv',
+            'test_sequences_quelevel.csv'
+        ])
+        if not test_file:
+            print(f"Error: Could not find test sequences file in {data_dir}")
+            sys.exit(1)
         test_df = pd.read_csv(test_file)
-        test_df = test_df[test_df['fold'] == -1]
-        print(f"Test data (skill-level): {len(test_df)} sequences")
+        if 'fold' in test_df.columns:
+            test_df = test_df[test_df['fold'] == -1]
+        print(f"Test data (skill-level): {len(test_df)} sequences from {test_file}")
     
     # Prepare BKT format
     print("\nPreparing data for BKT...")

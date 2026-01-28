@@ -27,6 +27,21 @@ For comparison with SOTA models, we can use the results from Exp 123509	that ove
 | **Ablation All (4/4)** | 663881 | bridge2algebra2006 | 64* | 4* | 4* | all* | 1.0* | `20260126_191744...663881` | **0.8148** ± 0.0006 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) |
 | **Ablation All (4/4)** | 498903 | nips_task34 | 64* | 4* | 4* | all* | 1.0* | `20260126_191854...498903` | **0.7988** ± 0.0002 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | 
 
+### AUC Per Dataset
+
+| Short Title | Exp ID | Dataset | d_model | n_blocks | n_heads | Ablation | Exp Folder | AUC (p_sup) | AUC (p_ref) | AUC (p_bkt) | Cost of Interpretability | Gain from Personalization | Description |
+| :--- | :---: | :--- | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Ablation None (4/4)** | 268444 | assist2009 | 64 | 4 | 4 | none | `20260126_212614...268444` | **0.7783** ± 0.0009 ✅ | **0.6732** ± 0.0002 ✅ | **0.6097** ± 0.0008 ✅ | 0.1051 (13.5%) | 0.0635 (10.4%) | Grounded model with 4/4 architecture and active probing (fixed n_heads bug) |
+| **Ablation None (4/4)** | 878655 | algebra2005 | 64 | 4 | 4 | none | `20260127_130756...878655` | **0.8219** ± 0.0011 | **0.5989** ± 0.0003 | **0.7215** ± 0.0014 ✅ | 0.2230 (27.1%) | -0.1226 (-17.0%) | Grounded model with 4/4 architecture across multiple datasets |
+| **Ablation None (4/4)** | 878655 | assist2015 | 64 | 4 | 4 | none | `20260127_130756...878655` | **0.7073** ± 0.0007 | **0.6233** ± 0.0009 | N/A* | 0.0840 (11.9%) | N/A* | Grounded model with 4/4 architecture across multiple datasets |
+| **Ablation None (4/4)** | 878655 | bridge2algebra2006 | 64 | 4 | 4 | none | `20260127_130756...878655` | **0.8120** ± 0.0009 | **0.5559** ± 0.0004 | **0.6756** ± 0.0017 ✅ | 0.2561 (31.5%) | -0.1197 (-17.7%) | Grounded model with 4/4 architecture across multiple datasets |
+| **Ablation None (4/4)** | 878655 | nips_task34 | 64 | 4 | 4 | none | `20260127_130756...878655` | **0.7990** ± 0.0005 | **0.7020** ± 0.0004 | **0.5729** ± 0.0004 ✅ | 0.0970 (12.1%) | 0.1291 (22.5%) | Grounded model with 4/4 architecture across multiple datasets |
+
+**Notes:**
+- **Cost of Interpretability** = p_sup - p_ref (performance sacrificed for interpretability)
+- **Gain from Personalization** = p_ref - p_bkt (improvement from neural individualization over population-level BKT)
+- \*assist2015: Dataset lacks question IDs in test files; only skill/concept IDs available. Question-level BKT evaluation not possible.
+- Negative gains (algebra2005, bridge2algebra2006) indicate p_ref underperforms classical BKT, suggesting these datasets may benefit from skill-level rather than question-level evaluation, or that the grounding constraints are too restrictive for these particular skill structures.
 
 
 ### Quick Reference Table (with n_heads bug)

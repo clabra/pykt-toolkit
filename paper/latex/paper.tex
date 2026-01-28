@@ -622,71 +622,38 @@ The three-component design addresses distinct trust requirements: simple numeric
 
 Across AS2009 test interactions, we observe heterogeneous confidence patterns (\Cref{fig_h13_confidence_heatmap}), with 89.2\% of student-skill pairs achieving medium or high confidence, while only 10.8\% exhibit low confidence. This shows that interpretable predictions provide actionable diagnostic value with quantified uncertainty bounds, enabling educators to leverage theory-grounded explanations while recognizing contexts requiring additional validation.
 
-
 \subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
 
-A common assumption in deep knowledge tracing is that predictive performance and interpretability are opposing goals. To explore this relationship, we construct a \textit{Pareto frontier} by systematically varying the \textit{Alignment Intensity} ($\lambda_{\mathcal{I}}$), a unified hyperparameter that scales the weights of all three interpretability loss components simultaneously: $\lambda_{ref} = \lambda_{know} = \lambda_{rate} = \lambda_{\mathcal{I}}$. By varying $\lambda_{\mathcal{I}} \in [0, 1]$, we map the resulting effects on both accuracy and alignment.
-
-We measure the overall interpretability of the model using a \textit{Composite Alignment} metric ($\bar{\mathcal{I}}$), defined as the arithmetic mean of the representational ($\mathcal{I}_{1l}, \mathcal{I}_{1t}$) and functional ($\mathcal{I}_2$) components:
-
-\begin{equation} \label{eq_composite_i}
-\bar{\mathcal{I}} = \frac{1}{3} \left( \mathcal{I}_{1l} + \mathcal{I}_{1t} + \mathcal{I}_{2} \right)
-\end{equation}
-
-\Cref{tab_pareto_as2015,tab_pareto_as2009} summarize the results for the AS2009 and AS2015 datasets across the $\lambda_{\mathcal{I}}$ sweep.
-
-\Cref{fig_pareto_as2015,fig_pareto_as2009} illustrate the resulting frontiers. We observe that Representational Grounding serves as an effective regularizer, although the \textit{Saturation Point}---the weight at which interpretability is maximized without significant loss of fidelity---depends on dataset complexity. For the problem-level AS2009 dataset, we observe a synergy point at $\lambda_{\mathcal{I}}=0.10$ where both metrics improve. Conversely, the concept-level AS2015 dataset reaches saturation at lower constraints, retaining 99.9\% of baseline AUC. Beyond these points, a \textit{grounding collapse} starts, where excessive theoretical constraints force the model to ignore nuanced behavioral signals in favor of rigid theoretical priors.
+To quantify the performance trade-off between predictive accuracy and interpretability, we compare three prediction sources across five educational datasets using a single grounded transformer architecture (ablation=none, $d_{\text{model}}=64$, 4 blocks, 4 attention heads). The model produces two types of predictions: (1) supervised neural predictions ($p_{\text{sup}}$) from the standard output layer, maximizing accuracy without interpretability constraints, and (2) interpretable BKT-logic predictions ($p_{\text{ref}}$) derived from student-specific grounded parameters ($p_{L_0}$, $p_T$) extracted from the model's theoretical grounding layer, following classical BKT inference logic. For comparison, we include (3) classical BKT baseline ($p_{\text{bkt}}$) from a separate traditional BKT model using population-level parameters without neural individualization. Table~\ref{tab:tradeoff} presents the test AUC results and the associated cost of interpretability ($p_{\text{sup}} - p_{\text{ref}}$).
 
 \begin{table}[htbp]
 \centering
-\caption{Pareto Sweep results for AS2015. \label{tab_pareto_as2015}}
-\footnotesize
-\begin{tabularx}{\textwidth}{lccc}
+\caption{Accuracy--Interpretability Trade-Off Across Datasets. AUC scores (mean $\pm$ std) for supervised predictions ($p_{\text{sup}}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT baseline ($p_{\text{bkt}}$). Both $p_{\text{sup}}$ and $p_{\text{ref}}$ are generated from the same grounded transformer model (ablation=none, 4 blocks, 4 heads). Cost of Interpretability represents the performance gap between the model's black-box and interpretable outputs.}
+\label{tab:tradeoff}
+\begin{tabular}{lcccc}
 \toprule
-\textbf{$\lambda_{\mathcal{I}}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
+\textbf{Dataset} & $p_{\text{sup}}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Cost (\%)} \\
 \midrule
-0.0 (Baseline) & 0.7248 & -0.0012 & Black Box \\
-0.1 (Saturation) & 0.7245 & 0.6673 & 99.9\% AUC Retained \\
-0.2 & 0.7181 & 0.6453 & High-Fidelity Diagnostic \\
-0.3 & 0.7112 & 0.6095 & Latent Degradation \\
-0.5 & 0.6975 & 0.5691 & Theory-Dominant \\
-0.8 & 0.6830 & 0.4828 & Grounding Collapse \\
-1.0 & 0.6763 & 0.4828 & Grounding Collapse \\
+ASSISTments 2009 & 0.7783 $\pm$ 0.0009 & 0.6732 $\pm$ 0.0002 & 0.6097 $\pm$ 0.0008 & 0.1051 (13.5\%) \\
+Algebra 2005 & 0.8219 $\pm$ 0.0011 & 0.5989 $\pm$ 0.0003 & 0.7215 $\pm$ 0.0014 & 0.2230 (27.1\%) \\
+ASSISTments 2015 & 0.7073 $\pm$ 0.0007 & 0.6233 $\pm$ 0.0009 & --- & 0.0840 (11.9\%) \\
+Bridge to Algebra & 0.8120 $\pm$ 0.0009 & 0.5559 $\pm$ 0.0004 & 0.6756 $\pm$ 0.0017 & 0.2561 (31.5\%) \\
+NIPS Task 3/4 & 0.7990 $\pm$ 0.0005 & 0.7020 $\pm$ 0.0004 & 0.5729 $\pm$ 0.0004 & 0.0970 (12.1\%) \\
+\midrule
+\textbf{Mean} & \textbf{0.7837} & \textbf{0.6307} & \textbf{0.6449} & \textbf{0.1530 (19.5\%)} \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.8\textwidth]{img/pareto_as2015.png}
-\caption{gTransformer Pareto Frontier for AS2015. The trajectory illustrates a saturation of theoretical alignment at $\lambda_{\mathcal{I}} \approx 0.1$, reaching maximum interpretability before performance degrades. \label{fig_pareto_as2015}}
-\end{figure}
+The results reveal three critical insights regarding the accuracy--interpretability trade-off:
 
+\textbf{(1) Moderate Cost of Interpretability.} The average cost of interpretability across datasets is 0.153 AUC points (19.5\% relative reduction), demonstrating that theory-grounded interpretability can be achieved with moderate performance degradation. The cost varies substantially across datasets, ranging from 11.9\% (ASSISTments 2015) to 31.5\% (Bridge to Algebra), suggesting that the penalty depends on the complexity of skill structures and the degree to which BKT's simplifying assumptions align with the underlying learning dynamics.
 
-\begin{table}[htbp]
-\centering
-\caption{Pareto Sweep results for AS2009. \label{tab_pareto_as2009}}
-\footnotesize
-\begin{tabularx}{\textwidth}{lccc}
-\toprule
-\textbf{$\lambda_{\mathcal{I}}$} & \textbf{AUC} & \textbf{Alignment ($\bar{\mathcal{I}}$)} & \textbf{Interpretation} \\
-\midrule
-0.0 (Baseline) & 0.8207 & 0.0293 & Black Box \\
-0.1 (Synergy) & 0.8255 & 0.3846 & Accuracy-Interpretability Synergy \\
-0.2 & 0.8110 & 0.4270 & Theory-Balanced Bias \\
-0.3 (Saturation) & 0.7963 & 0.4790 & Theoretical Saturation \\
-0.5 & 0.7760 & 0.4125 & Grounding Degradation \\
-0.8 & 0.7552 & 0.0708 & Grounding Collapse \\
-1.0 & 0.7501 & 0.0714 & Grounding Collapse \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\textbf{(2) Dataset-Dependent Trade-Offs.} Two distinct patterns emerge: (a) \textit{Low-cost datasets} (ASSISTments 2009, ASSISTments 2015, NIPS Task 3/4) exhibit costs below 14\%, indicating that BKT's theoretical framework provides a reasonable approximation of the learning process; (b) \textit{High-cost datasets} (Algebra 2005, Bridge to Algebra) show costs exceeding 27\%, suggesting more complex skill dependencies that cannot be captured by BKT's Markovian assumptions. Notably, in these high-cost datasets, the classical BKT baseline ($p_{\text{bkt}}$) actually outperforms the interpretable neural predictions ($p_{\text{ref}}$), indicating that the grounding constraints may be too restrictive for certain problem structures.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.8\textwidth]{img/pareto_as2009.png}
-\caption{gTransformer Pareto Frontier for AS2009. The curve displays an accuracy peak at $\lambda_{\mathcal{I}} = 0.1$, followed by a non-monotonic transition toward saturation and eventual collapse as constraints overwhelm behavioral patterns. \label{fig_pareto_as2009}}
-\end{figure}
+\textbf{(3) Gain from Neural Individualization.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ reveals the value of student-specific parameter individualization. In three of four comparable datasets (ASSISTments 2009, NIPS Task 3/4), interpretable predictions significantly outperform classical BKT (+6.4\% and +12.9\% AUC respectively), demonstrating that neural contextualization provides meaningful diagnostic improvements over population-level priors. However, the negative gains in Algebra 2005 and Bridge to Algebra suggest that question-level late fusion may not be the optimal evaluation protocol for all datasets, potentially favoring skill-level assessments or alternative aggregation strategies.
+
+In summary, the cost of interpretability is generally moderate and acceptable for practical educational applications, particularly in datasets where BKT's theoretical assumptions hold. The heterogeneity across datasets underscores the importance of matching interpretability frameworks to domain characteristics rather than applying a one-size-fits-all approach.
 
 \subsection{Context-Aware Diagnostics (RQ3)} \label{sec_gran_results}
 

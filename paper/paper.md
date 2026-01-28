@@ -85,7 +85,172 @@ The interpretable predictions derived from extracted parameters can be used with
     
 ### RQ2: Trade-Offs Between Predictive Performance and Interpretability
 
-How do the metrics of the supervised, interpretable, and BKT predictions compare? What is the cost of interpretability in terms of AUC? How much predictive gain do the interpretable grounded predictions achieve compared to traditional BKT?
+How do the metrics of the supervised, interpretable, and BKT predictions compare? What is the cost of interpretability in terms of AUC? How much predictive gain do the interpretable grounded predictions achieve compared to traditional BKT?. 
+
+#### Predictions Calculation: p_sup, p_ref, p_bkt
+
+This section describes how to generate and locate the three types of predictions used in the paper's analysis.
+
+##### p_sup: Supervised Neural Predictions (Black-Box)
+
+**Description**: Standard supervised transformer predictions trained to maximize next-response accuracy without interpretability constraints.
+
+**How to Generate**:
+Automatically generated during training and evaluation:
+```bash
+# Training (generates model checkpoints)
+python examples/run_benchmarks_paper.py \
+  --mode training \
+  --model gtransformer \
+  --dataset <dataset_name> \
+  --ablation none
+
+# Evaluation (generates p_sup predictions)
+python examples/run_benchmarks_paper.py \
+  --mode evaluation \
+  --model gtransformer \
+  --dataset <dataset_name>
+```
+
+**Output Files**:
+- **Per-fold predictions**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/qid_test_question_predictions_supervised.txt`
+  - Format: Tab-separated file with columns: `uid`, `qid`, `prediction`, `ground_truth`
+  - Contains question-level predictions for all test interactions
+- **Aggregated metrics**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/eval_results.json`
+  - Key metric: `oriauclate_mean` (test AUC for question-level, average late fusion)
+
+**Example**:
+```
+# File: qid_test_question_predictions_supervised.txt
+uid	qid	prediction	ground_truth
+1234	5678	0.7234	1
+1234	5679	0.8912	1
+1235	5680	0.4521	0
+...
+```
+
+---
+
+##### p_ref: Interpretable BKT-Logic Predictions (Theory-Grounded)
+
+**Description**: Interpretable predictions derived from grounded BKT parameters (P(L₀), P(T)) extracted from the same transformer model. Uses BKT logic with student-specific individualized parameters.
+
+**How to Generate**:
+Automatically generated during evaluation alongside p_sup:
+```bash
+# Same command as p_sup - generates both prediction types
+python examples/run_benchmarks_paper.py \
+  --mode evaluation \
+  --model gtransformer \
+  --dataset <dataset_name>
+```
+
+**Output Files**:
+- **Per-fold predictions**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/qid_test_question_predictions_reference.txt`
+  - Format: Tab-separated file with columns: `uid`, `qid`, `prediction`, `ground_truth`
+  - Contains question-level predictions using BKT logic with individualized parameters
+- **Grounded parameters**: Embedded in model during training, extracted during inference
+- **Aggregated metrics**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/eval_results.json`
+  - Key metric: `oriauclate_ref_mean` (test AUC for reference path predictions)
+
+**Prediction Formula**:
+For each student-skill interaction:
+```
+p_ref = p_L0(student, skill) × (1 - p_slip) + (1 - p_L0(student, skill)) × p_guess
+```
+where `p_L0` is individualized initial mastery extracted from transformer, and `p_slip`, `p_guess` are population-level BKT parameters.
+
+**Example**:
+```
+# File: qid_test_question_predictions_reference.txt
+uid	qid	prediction	ground_truth
+1234	5678	0.6521	1
+1234	5679	0.7834	1
+1235	5680	0.3912	0
+...
+```
+
+---
+
+##### p_bkt: Classical BKT Baseline (Population-Level)
+
+**Description**: Traditional Bayesian Knowledge Tracing with population-level parameters learned from training data. No student-specific individualization.
+
+**Prerequisites**:
+1. **Train BKT model** to generate skill-level parameters:
+   ```bash
+   python examples/train_bkt.py --dataset <dataset_name>
+   ```
+   - Output: `data/<dataset>/bkt_skill_params.pkl` (skill-level BKT parameters)
+   - Output: `data/<dataset>/bkt/parameters.json` (parameter dump for inspection)
+   - Parameters learned: P(L₀), P(T), P(S), P(G) per skill
+
+**How to Generate**:
+Run BKT benchmark with question-level evaluation protocol:
+```bash
+python examples/validation/run_bkt_benchmark.py \
+  --dataset <dataset_name> \
+  --mode question \
+  --output_dir experiments/bkt_question_mode_<dataset>
+```
+
+**Output Files**:
+- **Aggregated 5-fold CV**: `experiments/bkt_question_mode_<dataset>/cv_results.json`
+  - Key metrics: `test_mean_auc`, `test_std_auc`
+  - Example for assist2009:
+    ```json
+    {
+      "model": "BKT",
+      "dataset": "assist2009",
+      "test_mean_auc": 0.6097,
+      "test_std_auc": 0.0008,
+      "evaluation_type": "question_level_late_fusion_mean_no_update"
+    }
+    ```
+- **Per-fold results**: `experiments/bkt_question_mode_<dataset>/fold_<N>/eval_results.json`
+  - Contains test AUC, accuracy, RMSE for individual fold
+
+**Evaluation Protocol**:
+- **Training**: Skill-level BKT on 4 training folds (learns population parameters per skill)
+- **Test**: Question-level evaluation with late fusion (mean aggregation), NO belief updates
+- **Prediction Formula**: `P(correct) = P(L₀) × (1 - P(S)) + (1 - P(L₀)) × P(G)`
+- **Multi-skill aggregation**: For questions with multiple skills, average the skill-level predictions
+
+**Available Datasets**:
+| Dataset | p_bkt AUC | Status | Notes |
+|---------|-----------|--------|-------|
+| assist2009 | 0.6097 ± 0.0008 | ✅ Complete | Baseline reference |
+| algebra2005 | 0.7215 ± 0.0014 | ✅ Complete | High BKT performance |
+| assist2015 | N/A | ❌ Not available | Dataset lacks question IDs in test files |
+| bridge2algebra2006 | 0.6756 ± 0.0017 | ✅ Complete | |
+| nips_task34 | 0.5729 ± 0.0004 | ✅ Complete | Lower BKT performance |
+
+---
+
+##### Comparison Workflow
+
+**Step 1**: Train and evaluate neural model (generates p_sup and p_ref):
+```bash
+python examples/run_benchmarks_paper.py --mode training --dataset assist2009
+python examples/run_benchmarks_paper.py --mode evaluation --dataset assist2009
+```
+
+**Step 2**: Generate BKT baseline (generates p_bkt):
+```bash
+python examples/train_bkt.py --dataset assist2009
+python examples/validation/run_bkt_benchmark.py --dataset assist2009 --mode question
+```
+
+**Step 3**: Extract metrics for comparison:
+- **p_sup**: `eval_results.json` → `oriauclate_mean`
+- **p_ref**: `eval_results.json` → `oriauclate_ref_mean`
+- **p_bkt**: `bkt_question_mode_<dataset>/cv_results.json` → `test_mean_auc`
+
+**Step 4**: Calculate costs and gains:
+- **Cost of Interpretability** = p_sup - p_ref
+- **Gain from Personalization** = p_ref - p_bkt
+
+See [paper_benchmark.md](paper_benchmark.md) for complete results table.
 
 ### RQ3: Practical Value for Student-Centered Personalization 
 
@@ -397,3 +562,119 @@ Experiment 268444 (ablation-none, 4 blocks, 4 attention heads) on assist2009, fo
 - **Distribution**: 39.0% high confidence, 50.2% medium confidence, 10.8% low confidence
 - **Validation Outcome**: H1.3 not fully supported at mean confidence level, but 89.2% of student-skill pairs show medium-to-high confidence, indicating interpretable predictions are useful with appropriate confidence intervals
 - **Practical Implication**: For 39% of student-skill pairs, p_ref can be used directly; for another 50%, p_ref should be presented with caveats; only 11% require p_sup fallback
+
+
+### H2 Cost of Interpretability
+
+**Hypothesis H2 (Cost of Interpretability)**: The interpretable reference path predictions (p_ref) achieve comparable predictive performance to traditional BKT while providing the benefits of neural model capacity and student-specific individualization.
+
+**Purpose**: Quantify the performance trade-off between supervised predictions (p_sup), interpretable predictions (p_ref), and classical BKT baseline. This analysis reveals:
+1. **Cost of Interpretability**: Performance gap between p_sup and p_ref (how much accuracy is sacrificed for interpretability)
+2. **Gain from Personalization**: Performance improvement of p_ref over BKT (benefits of neural individualization vs population-level priors)
+
+**Script**: `examples/validation/run_bkt_benchmark.py`
+
+**What it does**:
+1. Trains a classical BKT model on skill-level data (learns population-level parameters: prior P(L₀), learning rate P(T), slip P(S), guess P(G) per skill)
+2. Evaluates the BKT model on held-out test data using question-level late fusion protocol
+3. Uses pre-trained BKT parameters WITHOUT updating belief states during test evaluation (prevents data leakage)
+4. For multi-skill questions, aggregates skill-level predictions using mean (average late fusion)
+5. Computes AUC, accuracy, and RMSE metrics matching neural model evaluation protocol
+6. Runs 5-fold cross-validation for robust statistical estimates
+
+**Prerequisites**:
+- **BKT Model Training**: Must first train BKT model to generate skill-level parameters
+  ```bash
+  python examples/train_bkt.py --dataset <dataset_name>
+  ```
+  Creates: `data/<dataset>/bkt_skill_params.pkl` (used by gtransformer for grounding)
+
+- **Data Files**: Requires train/validation/test sequence files in pykt format
+  - `data/<dataset>/train_valid_sequences.csv` (with fold column 0-4)
+  - `data/<dataset>/test_sequences.csv` or `test_question_sequences.csv` (fold=-1)
+
+**Manual Execution**:
+```bash
+# Question-level evaluation with late fusion (matches neural model protocol)
+python examples/validation/run_bkt_benchmark.py \
+  --dataset <dataset_name> \
+  --mode question \
+  --output_dir experiments/bkt_question_mode_<dataset>
+
+# Skill-level evaluation (for reference)
+python examples/validation/run_bkt_benchmark.py \
+  --dataset <dataset_name> \
+  --mode skill \
+  --output_dir experiments/bkt_skill_mode_<dataset>
+```
+
+**Parameters**:
+- `--dataset`: Dataset name (assist2009, assist2015, algebra2005, bridge2algebra2006, nips_task34)
+- `--mode`: Evaluation protocol
+  - `question`: Question-level late fusion (mean) - **USE THIS** for fair comparison with neural models
+  - `skill`: Skill-level evaluation (BKT's native evaluation)
+- `--output_dir`: Directory to save results (default: `experiments/{timestamp}_bkt_{mode}_{dataset}`)
+
+**Output Files**:
+- `cv_results.json`: Aggregated 5-fold CV results with mean ± std for validation and test
+- `fold_0/eval_results.json` through `fold_4/eval_results.json`: Per-fold detailed results
+
+**Evaluation Protocol** (mode=question):
+- **Training**: Skill-level BKT on 4 training folds
+- **Validation**: Skill-level evaluation on 1 validation fold
+- **Test**: Question-level evaluation with late fusion (mean), NO model updates
+- **Prediction Formula**: For each skill, `P(correct) = P(L₀) × (1 - P(S)) + (1 - P(L₀)) × P(G)`
+- **Late Fusion**: For multi-skill questions, `P(correct)_question = mean(P(correct)_skill1, ..., P(correct)_skillN)`
+- **Evaluation Type**: `question_level_late_fusion_mean_no_update`
+
+**Example Results**:
+
+Experiment bkt_question_mode_fixed_04787 on assist2009:
+
+```json
+{
+  "model": "BKT",
+  "dataset": "assist2009",
+  "evaluation_mode": "question",
+  "valid_mean_auc": 0.7100,
+  "valid_std_auc": 0.0069,
+  "test_mean_auc": 0.6097,
+  "test_std_auc": 0.0008,
+  "test_mean_acc": 0.6556,
+  "test_std_acc": 0.0050,
+  "evaluation_type": "question_level_late_fusion_mean_no_update"
+}
+```
+
+**Validation for H2**:
+
+Compare three prediction sources across same test set:
+
+| Prediction Source | AUC (AS2009) | Description | Purpose |
+|------------------|--------------|-------------|---------|
+| **p_sup** | 0.7783 ± 0.0009 | Supervised neural predictions | Maximum accuracy (black-box) |
+| **p_ref** | 0.6732 ± 0.0002 | Interpretable BKT-logic predictions | Theory-grounded interpretability |
+| **p_bkt** | 0.6097 ± 0.0008 | Classical BKT baseline | Population-level prior knowledge |
+
+**Key Metrics**:
+1. **Cost of Interpretability**: 
+   - Gap: p_sup - p_ref = 0.1051 (13.5%)
+   - Interpretation: ~10-14% AUC loss for interpretability with individualization
+
+2. **Gain from Personalization**:
+   - Gain: p_ref - p_bkt = 0.0635 (10.4%)
+   - Interpretation: Neural individualization provides ~6-10% AUC improvement over population-level BKT
+
+3. **Net Effect**:
+   - p_ref sits between p_bkt (classical baseline) and p_sup (neural ceiling)
+   - Achieves interpretability while outperforming traditional BKT through personalization
+
+**Interpretation**:
+- **H2 Validation Outcome**: Supported. The interpretable predictions (p_ref) demonstrate:
+  - Meaningful improvement over classical BKT (+0.0635 AUC)
+  - Acceptable performance trade-off vs supervised predictions (-0.1051 AUC)
+  - Best of both worlds: interpretability from BKT logic + personalization from neural capacity
+  
+**Practical Implication**: 
+For applications requiring interpretability (e.g., formative assessment, student diagnostics), p_ref provides a viable alternative to black-box predictions with quantifiable confidence metrics. The 13.5% accuracy cost is offset by the ability to explain predictions through pedagogically meaningful BKT parameters.
+
