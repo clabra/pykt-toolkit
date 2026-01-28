@@ -1,0 +1,16 @@
+{
+  "fold": 2,
+  "valid_auc": 0.7347315608315801,
+  "valid_rmse": 0.351176390467241,
+  "valid_acc": 0.8380498287997582,
+  "test_auc": 0.6746975093004033,
+  "test_rmse": 0.3588422681394659,
+  "test_acc": 0.835742333187902,
+  "num_train": 1164472,
+  "num_valid": 304322,
+  "num_test": 355265,
+  "evaluation_type": "question_level_late_fusion_mean_no_update",
+  "evaluation_mode": "question",
+  "model": "BKT",
+  "library": "pyBKT"
+}
