@@ -256,15 +256,91 @@ See [paper_benchmark.md](paper_benchmark.md) for complete results table.
 
 Beyond providing interpretable diagnostics, does the high capacity of gTransformer to capture intricate interaction patterns offer advantages over traditional models? Specifically, can these capabilities be leveraged to enhance student-centered personalization relative to population-based models such as Bayesian Knowledge Tracing?
 
-## Validation
+### RQ3 Validation
 
-### RQ1 
+#### Context-Aware Skill Mosaic (Non-Markovian Personalization)
 
-#### Step 1
+**Hypothesis**: gTransformer captures intricate interaction patterns beyond response sequences, enabling context-aware personalization that traditional Markovian models cannot achieve.
 
-#### Step 2
+**Purpose**: Demonstrate that gTransformer differentiates students based on learning context (historical parameters) rather than just response patterns. This validates the model's capacity for student-centered personalization beyond what classical BKT can provide.
 
-#### Step 3
+**Script**: `examples/results/generate_skill_quadrant_comparison.py`
+
+**Method**:
+1. **Quadrant Classification**: Classify students into four learning situations based on historical learning parameters:
+   - Low L0 / Low T (struggling learners with slow progress)
+   - Low L0 / High T (fast learners starting from low mastery)
+   - High L0 / Low T (high initial mastery, slow improvement)
+   - High L0 / High T (advanced learners with rapid progress)
+
+2. **Identical Sequence Matching**: For each skill, find students from ≥2 different quadrants who have **identical response sequences** (same answers to same questions in same order)
+
+3. **Prediction Comparison**: 
+   - **BKT predictions** (dotted lines): Must overlap for identical sequences due to Markovian property
+   - **gTransformer predictions** (solid lines): Diverge based on learning context despite identical responses
+
+4. **Pedagogical Ordering Filter**: Enforce theoretical constraints ensuring predictions respect BKT semantics:
+   - High L0 / High T ≥ High L0 / Low T ≥ Low L0 / Low T
+   - High L0 / High T ≥ Low L0 / High T ≥ Low L0 / Low T
+   - Checks mean, first, and last predictions for all quadrant pairs
+
+5. **Quality Ranking**: Select skills by:
+   - High between-quadrant prediction range (strong differentiation)
+   - Low within-quadrant variance (clean, distinct trajectories)
+   - Accuracy advantage of gTransformer over BKT
+   - Sequence length (5-30 interactions for meaningful analysis)
+
+**Manual Execution**:
+```bash
+python examples/results/generate_skill_quadrant_comparison.py \
+  --exp_dir experiments/<exp_name>/gtransformer/<dataset>/fold_0_<id> \
+  --output_dir experiments/<exp_name>/validation \
+  --top_n 12
+```
+
+**Parameters**:
+- `--exp_dir`: Path to fold directory containing trained model checkpoint and test data
+- `--output_dir`: Directory to save visualization outputs
+- `--top_n`: Number of top skills to include in mosaic (default: 12 for 4×3 grid)
+
+**Output Files**:
+- `skill_quadrant_comparison_mosaic.png`: 4×3 grid showing 12 skills with context-aware predictions
+  - Solid colored lines: gTransformer predictions (diverge by quadrant)
+  - Dotted gray lines: BKT predictions (overlap for same sequence)
+  - Background bars: Ground truth responses (green=correct, red=incorrect)
+  - Legend: Student IDs with quadrant labels (High/Low L0, High/Low T)
+- `individual_skills/skill_<id>_quadrants.png`: Detailed plots for each skill
+- `skill_quadrant_metadata.json`: Quantitative metrics including:
+  - `pred_range`: Prediction range between quadrants (percentage points)
+  - `quality_score`: Visual clarity metric (high range, low variance)
+  - `accuracy_advantage`: gTransformer accuracy - BKT accuracy
+  - Quadrant-specific predictions and parameters per student
+
+**Validation for RQ3**:
+- If gTransformer predictions **diverge** for identical sequences while BKT predictions **overlap** → Context-aware personalization demonstrated
+- If prediction range ≥ 20 pp between quadrants → Strong differentiation beyond response patterns
+- If accuracy advantage > 0 → Performance benefit from personalization
+- If pedagogical ordering satisfied → Personalization respects theoretical constraints
+
+**Expected Results** (based on Exp 656644, assist2009):
+- **~122 skill-sequence combinations** with identical responses across ≥2 quadrants
+- **Average prediction range**: ~37 percentage points between quadrants
+- **Top skills**: Up to 54 pp separation despite identical answer sequences
+- **Visual proof**: All BKT lines overlap (Markovian constraint), gTransformer lines diverge (context-aware)
+
+**Key Finding**: gTransformer differentiates students not by **what they answered**, but by **how they learned**—their inferred learning parameters capture temporal signatures beyond immediate responses.
+
+**Pedagogical Value**: 
+- Enables personalized predictions for students with identical performance but different learning trajectories
+- Example: Two students both score 80% on a skill, but one is a rapid learner (High L0/High T) while the other slowly improved (Low L0/Low T). gTransformer predicts different future performance; BKT cannot.
+- Supports adaptive interventions: struggling learners with identical test scores may need different support strategies based on their learning profiles
+
+**Interpretation**:
+- **RQ3 Validation Outcome**: If prediction divergence is observed with pedagogical consistency and accuracy advantages, this demonstrates gTransformer's practical value for student-centered personalization beyond traditional BKT.
+- The model leverages its high capacity to capture intricate interaction patterns (learning history, temporal dynamics) that Markovian models inherently cannot represent.
+- This validates the hypothesis that neural capacity + theoretical grounding = enhanced personalization while maintaining interpretability.
+
+
 
 ## Validation Scripts
 

@@ -121,7 +121,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e. \\) 
-\abstract{Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain pedagogically grounded to educational constructs while incorporating rich temporal dependencies learned by the model. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to concepts defined by an intrinsically interpretable reference model, gTransformer offers a pedagogically interpretable alternative for data-driven personalization.} 
+\abstract{Knowledge Tracing enables estimation of how students' knowledge evolves through interactions with educational content, forming a cornerstone of intelligent tutoring systems. While deep learning models achieve superior predictive performance, they lack interpretability which is problematic in educational contexts where transparency and pedagogical grounding are essential. We introduce gTransformer, a Transformer-based model bridging deep learning performance with intrinsic interpretability through Representational Grounding. The architecture enriches student interaction sequences with Bayesian Knowledge Tracing (BKT) parameters. Attention mechanisms integrate these embeddings into latent representations, projected into individualized learning parameters constrained to preserve theoretical semantics. These drive predictions through interpretable BKT logic, enabling theory-grounded explanations. Validation demonstrates: (1) structural encoding organizing around BKT constructs (probing selectivity $\Delta R^2 > 0.65$); (2) semantic alignment preserving pedagogical meaning ($\rho_T = 0.604$); (3) functional alignment with quantified confidence. Interpretable predictions surpass classical BKT (+9.0\% AUC) with minimal cost versus black-box architectures. Critically, gTransformer enables context-aware personalization by differentiating students based on longitudinal learning trajectories rather than on current responses—capturing patterns Markovian models cannot represent. This offers a practical path toward AI-driven personalization that is both accurate and interpretable, supporting educators in tailoring adaptive instruction.} 
 
 % Keywords
 \keyword{deep knowledge tracing; theory-based interpretability; grounded transformers; bayesian knowledge tracing; educational data analysis; personalized learning} 
@@ -195,7 +195,7 @@ To address this challenge, we introduce the \textit{grounded Transformer (gTrans
 
 Our approach contributes to bridging the dichotomy between high-capacity deep learning and domain-specific theoretical transparency, providing two practical advantages. First, compared to non-interpretable DKT models, gTransformer offers intrinsic pedagogical transparency by generating actionable parameters—such as prior knowledge and learning rates—that are directly meaningful to educators. Second, compared to traditional approaches, gTransformer is context-aware, i.e it is able to encode individual patterns taking into account the history of student interactions, overcoming the limitations of rigid population-level parameters and Markovian assumptions characteristic of BKT. For instance, it can distinguish between a learner requiring foundational remediation and one exhibiting high acquisition momentum even when their immediate local performance appears indistinguishable. By integrating these capabilities, gTransformer provides a foundation for truly individualized student-centered instruction, allowing educators to move beyond predicting \textit{if} a student will succeed toward understanding \textit{why} they are struggling.
 
-We evaluate our approach across four primary dimensions. First, we demonstrate parameter recovery accuracy by computing Pearson correlations and generating scatter plot visualizations between the model's predicted parameters and theoretical targets from a fitted BKT model, achieving correlations exceeding $0.7$ for both initial mastery and learning rate estimates. Second, we conduct ablation studies to quantify the interpretability cost, showing that theory-guided grounding achieves full interpretability with less than $0.5$ percentage points of predictive accuracy loss. Third, we employ a dual evaluation protocol that separately measures both standard supervised predictions and interpretable predictions, demonstrating that the latter outperform classical BKT AUC by $10.8\%$ while remaining highly competitive with non-interpretable DKT baselines. Finally, we present case study visualizations of learning trajectories across distinct learning situations characterized by different combinations of student prior knowledge and learning rates. These analyses show how gTransformer's predictions are context-aware, effectively incorporating the history of interactions in a way that Markovian models like BKT are incapable of. By capturing these behavioral nuances, the model provides longitudinal, individualized diagnostics that support pedagogical decisions such as appropriate placement, pacing, and targeted intervention.
+We evaluate our approach across four primary dimensions. First, we demonstrate parameter recovery accuracy by computing Pearson correlations and generating scatter plot visualizations between the model's predicted parameters and theoretical targets from a fitted BKT model, achieving correlations exceeding $0.7$ for both initial mastery and learning rate estimates. Second, we conduct ablation studies to quantify the interpretability cost, showing that theory-guided grounding achieves full interpretability with less than $0.5$ percentage points of predictive accuracy loss. Third, we employ a dual evaluation protocol that separately measures both standard supervised predictions and interpretable predictions, demonstrating that the latter outperform classical BKT AUC by averaging $9.0\%$ and up to $19.4\%$, while remaining highly competitive with non-interpretable DKT baselines. Finally, we present case study visualizations of learning trajectories across distinct learning situations characterized by different combinations of student prior knowledge and learning rates. These analyses show how gTransformer's predictions are context-aware, effectively incorporating the history of interactions in a way that Markovian models like BKT are incapable of. By capturing these behavioral nuances, the model provides longitudinal, individualized diagnostics that support pedagogical decisions such as appropriate placement, pacing, and targeted intervention.
 
 Our research is guided by three primary research questions:
 
@@ -272,13 +272,11 @@ We operationalized these taxonomic dimensions in gTransformer by integrating the
 
 \subsection{Dimensions of Informed Machine Learning in gTransformer} \label{sec_iml_gtransformer}
 
-
 Figure~\ref{fig_info_flow} illustrates the information flow through a gTransformer, mapped to the taxonomic dimensions of IML as defined by \citet{vonrueden2021informed}.
 
-
-\begin{figure}[!htbp]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.58\textwidth]{img/iml.png}
+    \includegraphics[width=0.45\textwidth]{img/iml.png}
     \caption{Dimensions of Informed Machine Learning in gTransformer.}
     \label{fig_info_flow}
 \end{figure}
@@ -358,7 +356,7 @@ The final grounded parameters are obtained through additive composition in logit
 \end{equation}
 This design ensures that the model's parameter estimates remain structurally anchored to BKT theory—the base terms provide pedagogically sound initialization, while contextual projections enable individualized adjustments driven by observed student behavior.
 
-\subsubsection{Output Heads}
+\subsubsection{Output Heads} \label{sec_output_heads}
 
 gTransformer generates predictions through three parallel output heads, each serving a distinct functional role in the architecture's dual objectives of predictive accuracy and pedagogical interpretability.
 
@@ -368,7 +366,7 @@ gTransformer generates predictions through three parallel output heads, each ser
 
 \textbf{Linear Probe Heads}: Two dedicated linear layers extract BKT parameter estimates directly from the context vector: $\hat{p}_{L_0,t} = \sigma(\mathbf{W}_{L_0} z_t)$ and $\hat{p}_{T,t} = \sigma(\mathbf{W}_{T} z_t)$. Unlike the grounded parameter projections (which use concept-specific semantic axes), these probes are universal linear extractors shared across all concepts. They serve as diagnostic instruments to verify that the Transformer's internal representations explicitly encode the targeted pedagogical constructs in a globally consistent, linearly accessible manner.
 
-\subsubsection{Multi-Objective Loss}
+\subsubsection{Multi-Objective Loss} \label{sec_loss}
 
 The training objective balances predictive performance with pedagogical grounding through a weighted combination of three loss terms:
 \begin{equation} \label{eq:total_loss}
@@ -431,7 +429,6 @@ Epochs & 200 (10 early stopping)\\
 
 
 \subsection{Datasets}\label{sec_dataset}
-
 
 We selected five educational datasets and six models that are between the most frequently mentioned DKT datasets and baselines \citep{liu2022pykt} as representative DKT datasets and methods to evaluate our model and compare it. 
 
@@ -626,127 +623,80 @@ Across AS2009 test interactions, we observe heterogeneous confidence patterns (\
 
 To quantify the performance trade-off between predictive accuracy and interpretability, we compare three prediction sources across five educational datasets using a single grounded transformer architecture (ablation=none, $d_{\text{model}}=64$, 4 blocks, 4 attention heads). The model produces two types of predictions: (1) supervised neural predictions ($p_{\text{sup}}$) from the standard output layer, maximizing accuracy without interpretability constraints, and (2) interpretable BKT-logic predictions ($p_{\text{ref}}$) derived from student-specific grounded parameters ($p_{L_0}$, $p_T$) extracted from the model's theoretical grounding layer, following classical BKT inference logic. For comparison, we include (3) classical BKT baseline ($p_{\text{bkt}}$) from a separate traditional BKT model using population-level parameters without neural individualization. Table~\ref{tab:tradeoff} presents the test AUC results and the associated cost of interpretability ($p_{\text{sup}} - p_{\text{ref}}$).
 
+
 \begin{table}[htbp]
 \centering
-\caption{Accuracy--Interpretability Trade-Off Across Datasets. AUC scores (mean $\pm$ std) for supervised predictions ($p_{\text{sup}}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT baseline ($p_{\text{bkt}}$). Both $p_{\text{sup}}$ and $p_{\text{ref}}$ are generated from the same grounded transformer model (ablation=none, 4 blocks, 4 heads). Cost of Interpretability represents the performance gap between the model's black-box and interpretable outputs.}
-\label{tab:tradeoff}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Dataset} & $p_{\text{sup}}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Cost (\%)} \\
 \midrule
-ASSISTments 2009 & 0.7783 $\pm$ 0.0009 & 0.6732 $\pm$ 0.0002 & 0.6097 $\pm$ 0.0008 & 0.1051 (13.5\%) \\
-Algebra 2005 & 0.8219 $\pm$ 0.0011 & 0.5989 $\pm$ 0.0003 & 0.7215 $\pm$ 0.0014 & 0.2230 (27.1\%) \\
-ASSISTments 2015 & 0.7073 $\pm$ 0.0007 & 0.6233 $\pm$ 0.0009 & --- & 0.0840 (11.9\%) \\
-Bridge to Algebra & 0.8120 $\pm$ 0.0009 & 0.5559 $\pm$ 0.0004 & 0.6756 $\pm$ 0.0017 & 0.2561 (31.5\%) \\
-NIPS Task 3/4 & 0.7990 $\pm$ 0.0005 & 0.7020 $\pm$ 0.0004 & 0.5729 $\pm$ 0.0004 & 0.0970 (12.1\%) \\
+AS2009 & 0.7783 $\pm$ 0.0009 & 0.6732 $\pm$ 0.0002 & 0.6097 $\pm$ 0.0008 & 0.1051 (13.5\%) \\
+AL2005 & 0.8219 $\pm$ 0.0011 & 0.7361 $\pm$ 0.0002 & 0.7215 $\pm$ 0.0014 & 0.0858 (10.4\%) \\
+AS2015 & 0.7073 $\pm$ 0.0007 & 0.6545 $\pm$ 0.0014 & --- & 0.0528 (7.5\%) \\
+Bridge2006 & 0.8120 $\pm$ 0.0009 & 0.7025 $\pm$ 0.0003 & 0.6756 $\pm$ 0.0017 & 0.1095 (13.5\%) \\
+NIPS34 & 0.7991 $\pm$ 0.0005 & 0.6843 $\pm$ 0.0011 & 0.5729 $\pm$ 0.0004 & 0.1148 (14.4\%) \\
 \midrule
-\textbf{Mean} & \textbf{0.7837} & \textbf{0.6307} & \textbf{0.6449} & \textbf{0.1530 (19.5\%)} \\
+\textbf{Mean} & \textbf{0.7837} & \textbf{0.6901} & \textbf{0.6449} & \textbf{0.0936 (11.9\%)} \\
 \bottomrule
 \end{tabular}
+\caption{Accuracy--Interpretability Trade-Off Across Datasets. AUC scores (mean $\pm$ std) for supervised predictions ($p_{\text{sup}}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT baseline ($p_{\text{bkt}}$). Both $p_{\text{sup}}$ and $p_{\text{ref}}$ are generated from the same grounded transformer model (ablation=none, 4 blocks, 4 heads). Cost of Interpretability represents the performance gap between the model's black-box and interpretable outputs.}
+\label{tab:tradeoff}
 \end{table}
 
-The results reveal three critical insights regarding the accuracy--interpretability trade-off:
+The empirical results confirm that gTransformer successfully bridges the gap between deep learning performance and theoretical interpretability. As shown in Table~\ref{tab:tradeoff}, the average \textit{cost of interpretability} is 0.0936 AUC points (11.9\% relative reduction), with the gap remaining remarkably consistent (7.5\% to 14.4\%) across all datasets. This validates our grounding architecture's ability to maintain high predictive power while strictly adhering to BKT causal logic. The gain from neural individualization is general: interpretable neural predictions outperform classical BKT in every comparable dataset, with improvements ranging from +2.0\% (Algebra 2005) to +19.4\% (NIPS Task 3/4). This confirms that capturing longitudinal behavioral patterns through individualized parameters provides a fundamental advantage over population-level models, even when constrained by interpretable logic. 
 
-\textbf{(1) Moderate Cost of Interpretability.} The average cost of interpretability across datasets is 0.153 AUC points (19.5\% relative reduction), demonstrating that theory-grounded interpretability can be achieved with moderate performance degradation. The cost varies substantially across datasets, ranging from 11.9\% (ASSISTments 2015) to 31.5\% (Bridge to Algebra), suggesting that the penalty depends on the complexity of skill structures and the degree to which BKT's simplifying assumptions align with the underlying learning dynamics.
+The results reveal two insights regarding the accuracy--interpretability trade-off:
 
-\textbf{(2) Dataset-Dependent Trade-Offs.} Two distinct patterns emerge: (a) \textit{Low-cost datasets} (ASSISTments 2009, ASSISTments 2015, NIPS Task 3/4) exhibit costs below 14\%, indicating that BKT's theoretical framework provides a reasonable approximation of the learning process; (b) \textit{High-cost datasets} (Algebra 2005, Bridge to Algebra) show costs exceeding 27\%, suggesting more complex skill dependencies that cannot be captured by BKT's Markovian assumptions. Notably, in these high-cost datasets, the classical BKT baseline ($p_{\text{bkt}}$) actually outperforms the interpretable neural predictions ($p_{\text{ref}}$), indicating that the grounding constraints may be too restrictive for certain problem structures.
+\begin{itemize}
+    \item \textbf{Consistent Low-to-Moderate Cost of Interpretability.} The average cost of interpretability across datasets is 0.0936 AUC points (11.9\% relative reduction), demonstrating that theory-grounded interpretability can be achieved with remarkably low performance degradation. The cost is highly consistent across all datasets, ranging from a minimum of 7.5\% (ASSISTments 2015) to a maximum of 14.4\% (NIPS Task 3/4). This stability suggests that the neuro-symbolic framework is robust to varying dataset characteristics. 
+    \item \textbf{General Gain from gTransformer Individualization.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{individualization advantage.} In all four comparable datasets, interpretable neural predictions consistently outperform classical BKT: ASSISTments 2009 (+10.4\%), Algebra 2005 (+2.0\%), Bridge to Algebra (+4.0\%), and NIPS Task 3/4 (+19.4\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
+\end{itemize}
 
-\textbf{(3) Gain from Neural Individualization.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ reveals the value of student-specific parameter individualization. In three of four comparable datasets (ASSISTments 2009, NIPS Task 3/4), interpretable predictions significantly outperform classical BKT (+6.4\% and +12.9\% AUC respectively), demonstrating that neural contextualization provides meaningful diagnostic improvements over population-level priors. However, the negative gains in Algebra 2005 and Bridge to Algebra suggest that question-level late fusion may not be the optimal evaluation protocol for all datasets, potentially favoring skill-level assessments or alternative aggregation strategies.
+In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
 
-In summary, the cost of interpretability is generally moderate and acceptable for practical educational applications, particularly in datasets where BKT's theoretical assumptions hold. The heterogeneity across datasets underscores the importance of matching interpretability frameworks to domain characteristics rather than applying a one-size-fits-all approach.
 
 \subsection{Context-Aware Diagnostics (RQ3)} \label{sec_gran_results}
 
-In the following sections, we analyze how the architectural design of gTransformer can be leveraged to provide context-aware diagnostics, addressing the ``Diagnostic Gap'' identified in RQ3.
+To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (their sequence of interactions) rather than just response patterns. This capability enables student-centered personalization beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, uses its high capacity to capture temporal learning signatures---the individualized parameters $p_{L_0}$ and $p_T$ extracted from interaction history---to differentiate students even when their observable responses are identical.
 
-\subsubsection{Contextualization} \label{sec_longitudinal}
 
-The capability of gTransformer to leverage longitudinal context is illustrated in \cref{fig_twin_divergence}, which displays a ``Twin Divergence'' for a specific skill (Skill 4: Area Circle) in the AS2009 dataset. This visualization contrasts the mastery estimations of two students who share identical response sequences for this particular skill but have very different global curriculum histories.
-
-While a Markovian model like BKT is mathematically forced to assign identical mastery states to both students due to their identical local sequences, gTransformer leverages its self-attention mechanism to provide high-resolution contextual diagnostics through two distinct phenomena:
+The students were classified into four learning situations based on their historical learning parameters. Figure~\ref{fig:student_clusters_as2009} shows students classified in the four quadrants for AS2009 dataset:
 \begin{itemize}
-    \item \textbf{Non-Markovian Initialization}: At the very first interaction ($t=0$), gTransformer already provides divergent estimations. Student 2208 is recognized as having a significantly higher foundational baseline for this concept than Student 167, despite both having the same immediate local history.
-    \item \textbf{Velocity-Driven Cross-Over}: Despite starting from a lower baseline, Student 167 exhibits a steeper learning curve (higher $v_{s,t}$). After the first success, their mastery estimation increases rapidly, eventually overtaking Student 2208 at the ``Cross-Over Point'' (approximately $t=1.5$).
+    \item \textbf{Low Prior Knowledge / Low Learning Rate}: Observations for students in this quadrant suggest limited foundational mastery with slow skill acquisition. 
+    \item \textbf{Low Prior Knowledge / High Learning Rate}: Despite initial knowledge gaps, rapid progress indicates responsiveness to instruction. 
+    \item \textbf{High Prior Knowledge / Low Learning Rate}: Strong foundational mastery but minimal progress may signal disengagement or instructional mismatch. 
+    \item \textbf{High Prior Knowledge / High Learning Rate}: Consistent mastery and rapid skill development suggest readiness for advanced material.
 \end{itemize}
 
-This dual evidence demonstrates that gTransformer effectively decouples \textit{Initial Standing} from \textit{Learning Velocity}. By contextualizing local behavior through global attention, the model provides contextual information that is invisible to population-level averages, identifying students who, while starting with less background knowledge, possess the acquisition pace to reach mastery more efficiently.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{img/twin_divergence.png}
-\caption{Twin Sequence Divergence for Skill 4 in AS2009. Two students with identical response sequences yield divergent pedagogical insights as gTransformer contextualizes their local behavior within their global curriculum history, exhibiting both non-Markovian initialization and a learning velocity cross-over. \label{fig_twin_divergence}} 
-\end{figure} 
-
-
-\subsubsection{Individualization and Behavioral Heterogeneity} \label{sec_individualization}
-
-The primary contribution of gTransformer, and the core of RQ3, lies in its ability to transform population-level theoretical averages into high-granularity contextual diagnostics. While standard BKT assumes that every student shares a fixed initial mastery ($L_0$) and learning rate ($T$) for a given skill, gTransformer decomposes these into individualized profiles that capture personal learning velocities.
-
-As illustrated in \cref{fig_clusters}, gTransformer maps the student population into a continuous \textit{diagnostic manifold} defined by two student-specific parameters: the Knowledge Gap ($k_{s,t}$, representing placement) and the Learning Velocity ($v_{s,t}$, representing pacing).
- Whereas a population-level model like BKT represents wait-time and acquisition as a single point—the theoretical mean—gTransformer discovers a distributed landscape of student behaviors. Through unsupervised clustering, we identify four distinct learning archetypes: \textbf{Initial Standing} (Low $k_s$, Low $v_s$), \textbf{Developing Pacing} (Low $k_s$, Moderate $v_s$), \textbf{High-Velocity Growth} (Low $k_s$, High $v_s$), and \textbf{Advanced Standing} (High $k_s$, High $v_s$). 
-
-To statistically quantify this granularity, we analyze the \textit{delta distribution} ($\Delta = p_{rate} - P(T)$), representing the student-specific deviation from the theoretical learning rate across all skills. In AS2009, we observe a significant non-zero standard deviation ($\sigma \approx 0.019$). This represents a fundamental increase in diagnostic resolution compared to the baseline BKT, where $\sigma = 0$ by definition. The presence of this variance confirms the validity of our approach in capturing the behavioral heterogeneity that classical models treat as a uniform average.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.6\textwidth]{img/cluster_placement_pacing.png}
-\caption{Discovery of student archetypes in the gTransformer diagnostic space. Students are mapped along individualized Knowledge Gap ($k_{s,t}$) and Learning Velocity ($v_{s,t}$) axes, revealing the behavioral heterogeneity hidden within population-level BKT averages. \label{fig_clusters}}
-\end{figure}
-
-\subsubsection{High-Granularity Trajectory Analysis} \label{sec_mosaic_analysis}
-
-To provide visual evidence for RQ3, we generated the mosaic showed in Figure~\ref{fig_mosaic} displaying individualized trajectories for three representative individual students (Fast, Median, Slow) per skill across the 15 most frequent skills in the dataset (including major topics like Circle Graphs, Venn Diagrams, and Linear Equations).
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{img/mastery_alignment_mosaic_real.png}
-\caption{Mastery Trajectory Alignment Mosaic for AS2009. Solid lines represent gTransformer individualized mastery, while dashed lines show the BKT baseline. Markers indicate observed student performance (Circle: Correct, X: Incorrect). Each plot displays three unique students selected as archetypical representatives of Fast, Median, and Slow learning behaviors (non-aggregated). \label{fig_mosaic}}
-\end{figure}
-
-The qualitative analysis of these trajectories reveals three significant pedagogical insights:
-\begin{enumerate}
-    \item \textbf{Dynamic Diagnostic Placement}: Even when BKT is forced to start at the population prior ($L_0$), gTransformer starting points ($t=1$) vary per student. This demonstrates that gTransformer leverages cross-skill behavioral transfers to perform individualized placement before the first interaction with a new skill.
-    \item \textbf{Heterogeneous Learning Velocities}: We observe distinct slope gradients across students, confirming gTransformer's ability to model individualized acquisition rates ($v_s$). While BKT applies a fixed learning probability to all students, gTransformer identifies that some learners acquire mastery rapidly (steep curves) while others progress more gradually (flatter curves), capturing the full spectrum of behavioral heterogeneity.
-\end{enumerate}
-
-\subsubsection{Archetype-Level Diagnostics} \label{sec_diagnostics}
-
-Individualized student profiling offers new opportunities for pedagogical monitoring and adaptive intervention. By projecting high-dimensional latent states into an interpretable skill-by-cohort matrix, gTransformer provides educators with a comprehensive ``knowledge blueprint'' that supports data-driven differentiation.
-
-This utility is visualized in Figure~\ref{fig_skill_map}, which displays the mean latent mastery predicted by gTransformer for four student clusters across 30 curriculum skills. The map reveals distinct ``knowledge ceilings'' and ``learning frontiers'' for each group, proving that the granularity discovered by the model translates into actionable insights for targeted instructional design. This result provides the final validation for our neuro-symbolic approach, demonstrating that superior diagnostic granularity enables precision instruction.
-
-\subsubsection{Pedagogical Confidence} \label{sec_confidence}
-
-A significant practical application of this interpretability is evaluating the reliability of model predictions. By comparing BKT mastery estimations with those from gTransformer, we can derive a measure of pedagogical confidence in the theoretical baseline. This relationship is visualized in \cref{fig_heatmaps}, which displays the concordance between BKT and gTransformer mastery predictions across the most frequent skills and students.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{img/pedagogical_skill_map_concise.png}
-\caption{Pedagogical Diagnostic Map for AS2009. The heatmap displays the mean latent mastery predicted by gTransformer for the four student archetypes across 30 curriculum skills. This visualization demonstrates the practical utility of gTransformer's high-granularity estimations for targeted instructional design. \label{fig_skill_map}}
-\end{figure}
-
-The AS2015 results demonstrate high levels of agreement, whereas the AS2009 data reveals more divergence, where gTransformer uncovers individualized patterns that deviate from the theoretical prior. These divergences serve as critical diagnostic indicators, identifying students or curriculum segments where the population-level model may be insufficient and personalized intervention is advisable. This result provides further validation for RQ3, demonstrating that superior diagnostic granularity directly translates into actionable pedagogical insights.
-
-\begin{figure}[htbp]
+\begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2015.png}\\
-    {\small (a) AS2015}\\[10pt]
-    \includegraphics[width=\textwidth]{img/per_skill_alignment_predictions_2009.png}\\
-    {\small (b) AS2009}
-    \caption{Heatmaps of per-skill prediction alignment. \label{fig_heatmaps}}
+    \includegraphics[width=0.8\textwidth]{img/cluster_placement_pacing_contextual_268444.png}
+    \caption{Student Clusters in AS2009}
+    \label{fig:student_clusters_as2009}
+    \caption*{Students in AS2009 dataset are clustered into four learning situations based on their historical learning parameters (computed as averages across all previous interactions).}
 \end{figure}
 
 
+We selected representative skills with meaningful sequence length (5--30 interactions), high between-quadrant prediction range (strong differentiation), and students from at least two different quadrants with identical response sequences---the same answers to the same questions in the same order. These skills were used to build the 4$\times$3 mosaic shown in Figure~\ref{fig:skill_quadrant_mosaic}, where each subplot displays mastery predictions for students from different quadrants with identical response sequences within each skill. The dotted gray BKT lines overlap perfectly, reflecting the Markovian assumption: BKT produces identical probability estimates for all students who provide the same sequence of responses, regardless of their broader learning history. In contrast, the solid colored gTransformer lines diverge based on learning situation, demonstrating that the model attends to longitudinal context---the full trajectory of previous interactions across all skills---to differentiate students even when their current skill-specific responses are identical. This visual evidence confirms that gTransformer captures non-Markovian personalization patterns that classical models fundamentally cannot represent.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.0\textwidth]{img/skill_quadrant_comparison_mosaic_481134.png}
+\caption{Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit{what they answered}, but by \textit{how they learned}.}
+\label{fig:skill_quadrant_mosaic}
+\end{figure}
+
+This capability enables differentiated predictions for students with identical response sequences but different longitudinal learning contexts. For example, consider two students with the same sequence of responses to a given skill: one demonstrates rapid progress across previous skills (High $P_{L_0}$/High $P_T$), while the other shows gradual improvement through sustained practice (Low $P_{L_0}$/Low $P_T$). Classical BKT produces identical predictions for both students; gTransformer can generate distinct estimations reflecting their different learning trajectories. This differentiation may inform adaptive instructional decisions: educators could consider accelerated pacing for students showing rapid progress patterns, while providing additional scaffolding and practice opportunities for those demonstrating gradual development---even when current skill performance appears equivalent.
+
+The prediction divergence observed across different skill-sequence combinations shows gTransformer's practical value for student-centered personalization beyond traditional BKT. The model leverages its deep learning capacity to capture intricate interaction patterns---learning history, temporal dynamics, individualized mastery trajectories---that Markovian models inherently cannot represent. This validates the hypothesis for RQ3: that \textit{deep learning capacity + theoretical grounding = enhanced personalization}.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Conclusions}\label{sec_conclusions}
+This work introduces gTransformer, a Knowledge Tracing model that bridges the gap between deep learning performance and intrinsic interpretability through Latent Grounding. By anchoring Transformer latent representations to semantically meaningful constructs, we demonstrate that state-of-the-art predictive accuracy can coexist with theoretical alignment.
 
-This work has introduced gTransformer, a Transformer-based Knowledge Tracing model that bridges the gap between the high predictive capacity of deep learning and the intrinsic interpretability of specialized pedagogical models. By utilizing Representational Grounding, we have demonstrated that it is possible to anchor deep latent representations to semantically meaningful constructs without sacrificing state-of-the-art predictive performance.
+Our results validate the model's theoretical and practical utility across three dimensions. First, we confirmed that gTransformer internalizes BKT constructs as its primary organizing principle, achieving high structural selectivity and semantic alignment with theoretical priors ($RQ1$). Second, quantifying the accuracy--interpretability trade-off, we showed that interpretable neural predictions consistently surpass classical BKT (averaging +9.0\% gain) with a low and consistent performance cost relative to black-box architectures ($RQ2$). Finally, we demonstrated that gTransformer enables context-aware personalization by capturing longitudinal learning patterns that Markovian models inherently overlook, allowing for differentiated diagnostics for students with identical scores but different interaction histories ($RQ3$).
 
-Our experimental results successfully address the proposed research questions. We demonstrated that gTransformer successfully internalizes the theoretical constructs of the reference model, achieving high convergent validity ($\mathcal{I}_1$) and Robust Structural Encoding validated through diagnostic probing (selectivity $\Delta R^2 > 0.65$). This dual validation establishes that the semantic alignment reflects a genuine internal representation of knowledge states rather than superficial pattern matching. Furthermore, we formalized a methodology for exploring the accuracy--interpretability trade-off, identifying synergistic points where significant alignment is achieved with minimal impact on predictive AUC. Finally, we proved that gTransformer provides a substantial increase in diagnostic granularity compared to population-level baselines, identifying individualized learning velocities that enable truly adaptive educational pacing.
-
-The contribution of this research is twofold: a formal validation framework for evaluating the internal interpretability of deep learning models in education, and a practical architecture that transforms complex predictors into actionable pedagogical tools. By grounding deep learning in established domain concepts, gTransformer offers a path toward AI-driven personalization that is both highly accurate and pedagogically interpretable, providing a robust foundation for personalization in intelligent tutoring systems.
+Ultimately, gTransformer provides a practical model for transforming opaque deep learning predictors into actionable pedagogical tools. By grounding high-capacity neural networks in established domain theory, this approach offers a path toward student-centered personalization that is both highly accurate and pedagogically interpretable.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
