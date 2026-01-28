@@ -158,12 +158,16 @@ class GTransformer(nn.Module):
 
                 all_priors = [get_val(p, 'prior', 0.5) for p in params_dict.values()]
                 all_learns = [get_val(p, 'learns', 0.1) for p in params_dict.values()]
+                all_guesses = [get_val(p, 'guesses', get_val(p, 'guess', 0.2)) for p in params_dict.values()]
+                all_slips = [get_val(p, 'slips', get_val(p, 'slip', 0.1)) for p in params_dict.values()]
                 global_params = {
                     'prior': np.mean(all_priors) if all_priors else 0.5,
-                    'learns': np.mean(all_learns) if all_learns else 0.1
+                    'learns': np.mean(all_learns) if all_learns else 0.1,
+                    'guesses': np.mean(all_guesses) if all_guesses else 0.2,
+                    'slips': np.mean(all_slips) if all_slips else 0.1
                 }
             else:
-                global_params = {'prior': 0.5, 'learns': 0.1}
+                global_params = {'prior': 0.5, 'learns': 0.1, 'guesses': 0.2, 'slips': 0.1}
         
         def to_logit(p, eps=1e-6):
             p = np.clip(p, eps, 1.0 - eps)
@@ -175,14 +179,15 @@ class GTransformer(nn.Module):
                 s_params = params_dict.get(q_idx, params_dict.get(str(q_idx), global_params))
                 
                 # Retrieve values, handling possible array/scalar types from pyBKT
-                def extract(d, k, fallback_d, fallback_k):
-                    v = d.get(k, fallback_d.get(fallback_k, 0.5))
+                # Support both plural ('guesses', 'slips') and singular ('guess', 'slip') keys
+                def extract(d, k_plural, k_singular, fallback_d, fallback_k):
+                    v = d.get(k_plural, d.get(k_singular, fallback_d.get(fallback_k, 0.5)))
                     if isinstance(v, (np.ndarray, list)):
                         return float(v[0])
                     return float(v)
 
-                l0_p = extract(s_params, 'prior', global_params, 'prior')
-                t_p = extract(s_params, 'learns', global_params, 'learns')
+                l0_p = extract(s_params, 'prior', 'prior', global_params, 'prior')
+                t_p = extract(s_params, 'learns', 'learns', global_params, 'learns')
                 
                 # Textured Grounding: 
                 # Instead of a constant vector, we use a small normal distribution 
@@ -199,10 +204,11 @@ class GTransformer(nn.Module):
                     self.t_base_emb.weight[q_idx].normal_(mean=t_logit, std=0.05)
 
                 # Store population-level parameters for Reference Output
+                # Note: pyBKT uses 'guesses' and 'slips' as keys
                 self.bkt_l0_pop[q_idx] = l0_p
                 self.bkt_t_pop[q_idx] = t_p
-                self.bkt_guess[q_idx] = s_params.get('guess', 0.2)
-                self.bkt_slip[q_idx] = s_params.get('slip', 0.1)
+                self.bkt_guess[q_idx] = extract(s_params, 'guesses', 'guess', global_params, 'guesses')
+                self.bkt_slip[q_idx] = extract(s_params, 'slips', 'slip', global_params, 'slips')
             
             # Initialize axes with orthogonal vectors for maximum initial diversity
             # This helps prevent collapse, but diversity loss is still needed to maintain it
@@ -441,24 +447,27 @@ class GTransformer(nn.Module):
         # This might be memory intensive (BS*200*200). 
         # For seqlen=200, BS=64, it's 2.5M floats per level. Very doable.
         
-        # current_L_retrospective: BS, seqlen_t (context), seqlen_i (history)
-        L = p_l0.unsqueeze(-1).expand(bs, seqlen, seqlen).clone() # Initialized with p_l0[t] for all history i
-        # NOTE: Removed static T_rate expansion - now using time-varying p_t[i] in loop
+        # current_L retrospective belief: BS, seqlen_t (context), seqlen_i (history step)
+        # We start with p_L0[t] as the initial mastery for the skill practiced at time t.
+        L = p_l0.unsqueeze(-1).expand(bs, seqlen, seqlen).clone() # [BS, seqlen_t, seqlen_i]
         
-        # Iterative update for history i
+        # Skill identity for contexts
+        # q_data: [BS, seqlen]
+        q_future = q_data.unsqueeze(-1) # [BS, seqlen_t, 1]
+        
+        # Iterative update for history step i
         for i in range(seqlen - 1):
-            # Mastery belief at history step i: L[:, :, i]
+            # Mastery belief for all future skills t at history step i: L[:, :, i]
             # Observation at history step i: target[:, i]
             # We want to update Mastery for history step i+1: L[:, :, i+1]
             
             # 1. Bayes Update (Post-observation)
-            obs = target[:, i].view(bs, 1, 1).expand(bs, seqlen, 1) # History evidence at i
-            
-            # Skill params at history step i
+            # Using the skill parameters (G/S) corresponding to the skill practiced at history step i
+            obs = target[:, i].view(bs, 1, 1).expand(bs, seqlen, 1) # [BS, seqlen_t, 1]
             g_i = gs[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
             s_i = ss[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
             
-            L_i = L[:, :, i:i+1] # BS, seqlen_t, 1
+            L_i = L[:, :, i:i+1] # [BS, seqlen_t, 1]
             
             # Likelihoods
             prob_correct = L_i * (1 - s_i) + (1 - L_i) * g_i
@@ -469,26 +478,25 @@ class GTransformer(nn.Module):
             
             L_post = torch.where(obs > 0.5, L_post_1, L_post_0)
             
-            # 2. Learning Transition (TIME-VARYING FIX)
-            # Use HISTORICAL transition rate p_t[i] at this specific timestep
-            # Shape: p_t[:, i:i+1] = [BS, 1] -> unsqueeze -> [BS, 1, 1] -> expand -> [BS, seqlen_t, 1]
-            T_rate_i = p_t[:, i:i+1].unsqueeze(-1).expand(bs, seqlen, 1)
+            # 2. Learning Transition
+            # We use the transition rate p_T[t] estimated for context t to explain the whole journey
+            # This ensures that for a given diagnostic context, the student's learning rate is semantically constant.
+            T_context = p_t.unsqueeze(-1) # [BS, seqlen_t, 1]
             
-            # Validation: Check tensor shapes (only on first iteration to avoid overhead)
-            if i == 0:
-                assert T_rate_i.shape == (bs, seqlen, 1), f"T_rate_i shape mismatch: {T_rate_i.shape} vs expected ({bs}, {seqlen}, 1)"
-                assert L_post.shape == (bs, seqlen, 1), f"L_post shape mismatch: {L_post.shape}"
+            L_next = L_post + (1 - L_post) * T_context
             
-            L_next = L_post + (1 - L_post) * T_rate_i
+            # 3. Structural Masking (BKT THEORY COMPLIANCE)
+            # Mastery of skill S only updates when the student interacts with skill S.
+            # If the skill at history step i matches the skill at context t, we apply the update.
+            # Otherwise, the mastery belief carries forward unchanged.
+            q_current = q_data[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
+            match = (q_future == q_current) # [BS, seqlen_t, 1]
             
-            # Fill the next history step for all contexts
-            # But only for contexts t > i (where this history is relevant)
-            # However, filling the whole block is faster in Torch
-            L[:, :, i+1:i+2] = L_next
+            L[:, :, i+1:i+2] = torch.where(match, L_next, L_i)
 
         # Now, for each context t, the mastery for the prediction at t is L[:, t, t]
-        # Diagonal extraction
-        idx = torch.arange(seqlen).to(device)
+        # (This is the posterior and transitioned belief after history 0...t-1)
+        idx = torch.arange(seqlen).to(p_l0.device)
         L_at_t = L[:, idx, idx] # BS, seqlen
         
         # Final Output Emission

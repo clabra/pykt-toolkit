@@ -471,7 +471,7 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
                 fontsize=16, fontweight='bold', y=0.99)
     plt.subplots_adjust(top=0.96)
     
-    output_path = os.path.join(output_dir, "skill_quadrant_comparison_mosaic.png")
+    output_path = os.path.join(output_dir, "h3_skill_quadrant_comparison_mosaic.png")
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"\nSaved {n_rows}x{n_cols} skill mosaic to {output_path}")
     plt.close()
@@ -547,7 +547,7 @@ def plot_individual_skill(skill_data, bkt_params, output_dir, quadrant_colors, q
     ax.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
-    output_path = os.path.join(output_dir, f"skill_{skill_id}_quadrants.png")
+    output_path = os.path.join(output_dir, f"h3_skill_{skill_id}_quadrants.png")
     plt.savefig(output_path, dpi=200, bbox_inches='tight')
     plt.close()
 

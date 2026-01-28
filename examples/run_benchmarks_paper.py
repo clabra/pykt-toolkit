@@ -1065,10 +1065,10 @@ def main():
                                     },
                                     {
                                         "name": "Skill Quadrant Comparison",
-                                        "script": "examples/results/generate_skill_quadrant_comparison.py",
+                                        "script": "examples/validation/generate_skill_quadrant_comparison.py",
                                         "args": {
                                             "--exp_dir": str(fold_dir),
-                                            "--output_dir": str(plot_dir)
+                                            "--output_dir": str(validation_dir)
                                         },
                                         "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
@@ -1181,9 +1181,13 @@ def main():
                                             result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
                                                                   capture_output=True, text=True, timeout=300)
                                             if result.returncode != 0:
-                                                print(f"    [WARN] Script exited with code {result.returncode}")
-                                                if result.stderr:
-                                                    print(f"    Error: {result.stderr[:200]}")
+                                                # Check for specific known issues
+                                                if "Model architecture mismatch" in result.stderr or "size mismatch" in result.stderr:
+                                                    print(f"    [SKIP] Model architecture mismatch - incompatible checkpoint")
+                                                else:
+                                                    print(f"    [WARN] Script exited with code {result.returncode}")
+                                                    if result.stderr:
+                                                        print(f"    Error: {result.stderr[:200]}")
                                                 plots_failed += 1
                                             else:
                                                 print(f"    [OK] Completed successfully")

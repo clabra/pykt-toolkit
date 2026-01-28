@@ -1,126 +1,70 @@
 {
-    "generated_at": "2026-01-27T22:37:49.108678",
-    "campaign": "20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655",
+    "generated_at": "2026-01-28T04:27:55.196151",
+    "campaign": "all_experiments",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
-        "gtransformer": {
-            "assist2015": {
-                "status": "PASS",
-                "auc_mean": 0.7073044359571548,
-                "auc_std": 0.0006738200570950281,
-                "acc_mean": 0.6786539313570936,
-                "acc_std": 0.0006691694200361034,
-                "folds_ok": 5,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {
-                    "0": {
-                        "auc": 0.7077028206754917,
-                        "acc": 0.6775061049117492
-                    },
-                    "1": {
-                        "auc": 0.7078816519842233,
-                        "acc": 0.6783613077390704
-                    },
-                    "2": {
-                        "auc": 0.7062530357199459,
-                        "acc": 0.6793916725912645
-                    },
-                    "3": {
-                        "auc": 0.7067635596752501,
-                        "acc": 0.6788558828681236
-                    },
-                    "4": {
-                        "auc": 0.707921111730863,
-                        "acc": 0.6791546886752599
-                    }
-                },
-                "auc_ref_mean": 0.623328492266584,
-                "auc_ref_std": 0.0008682386633304869,
-                "acc_ref_mean": 0.6631057257374836,
-                "acc_ref_std": 0.00021589524657591422
-            },
-            "algebra2005": {
-                "status": "PASS",
-                "auc_mean": 0.8218859872769879,
-                "auc_std": 0.0011053887204916716,
-                "acc_mean": 0.8074237452256711,
-                "acc_std": 0.0004409898656607507,
-                "folds_ok": 5,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {
-                    "0": {
-                        "auc": 0.8214284819599931,
-                        "acc": 0.807283877561999
-                    },
-                    "1": {
-                        "auc": 0.8204095721584155,
-                        "acc": 0.8071332508472753
-                    },
-                    "2": {
-                        "auc": 0.8214154663499711,
-                        "acc": 0.8077034805530152
-                    },
-                    "3": {
-                        "auc": 0.8236396829457949,
-                        "acc": 0.8068750336220345
-                    },
-                    "4": {
-                        "auc": 0.8225367329707655,
-                        "acc": 0.8081230835440314
-                    }
-                },
-                "auc_ref_mean": 0.5989415288745761,
-                "auc_ref_std": 0.00033182254072761856,
-                "acc_ref_mean": 0.7485330033891011,
-                "acc_ref_std": 0.0002349910741377769
-            },
-            "bridge2algebra2006": {
-                "status": "PASS",
-                "auc_mean": 0.8120063288565487,
-                "auc_std": 0.0009144994810254162,
-                "acc_mean": 0.8567261685160485,
-                "acc_std": 0.00048473770643536014,
-                "folds_ok": 5,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {
-                    "0": {
-                        "auc": 0.811935474797018,
-                        "acc": 0.8562987768538752
-                    },
-                    "1": {
-                        "auc": 0.8125459795549947,
-                        "acc": 0.8570706927377473
-                    },
-                    "2": {
-                        "auc": 0.812775784474339,
-                        "acc": 0.8568266310979936
-                    },
-                    "3": {
-                        "auc": 0.8102632349669752,
-                        "acc": 0.8560603910662088
-                    },
-                    "4": {
-                        "auc": 0.8125111704894158,
-                        "acc": 0.8573743508244175
-                    }
-                },
-                "auc_ref_mean": 0.5559251921124329,
-                "auc_ref_std": 0.0003846686031448234,
-                "acc_ref_mean": 0.838917047421744,
-                "acc_ref_std": 4.827478201881541e-05
-            },
+        "akt": {
             "nips_task34": {
-                "status": "PASS",
-                "auc_mean": 0.7990483689099339,
-                "auc_std": 0.000525763901644306,
-                "acc_mean": 0.7290495927247764,
-                "acc_std": 0.0004240384622796221,
-                "folds_ok": 5,
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "atkt": {
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkt": {
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkvmn": {
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "gtransformer": {
+            "nips_task34": {
+                "status": "PARTIAL",
+                "auc_mean": 0.7993053118658381,
+                "auc_std": 0.0003337053527809864,
+                "acc_mean": 0.7292434805823033,
+                "acc_std": 0.00020048970730501467,
+                "folds_ok": 3,
                 "folds_running": 0,
                 "folds_total": 5,
                 "fold_data": {
@@ -135,20 +79,38 @@
                     "2": {
                         "auc": 0.798972847898394,
                         "acc": 0.7290614031526461
-                    },
-                    "3": {
-                        "auc": 0.7991887457818833,
-                        "acc": 0.7292570133642373
-                    },
-                    "4": {
-                        "auc": 0.7981371631702722,
-                        "acc": 0.7282605085127349
                     }
                 },
-                "auc_ref_mean": 0.7020150988622457,
-                "auc_ref_std": 0.0003630480911925139,
-                "acc_ref_mean": 0.6653714564102943,
-                "acc_ref_std": 0.00025740865812658853
+                "auc_ref_mean": 0.6849173086854371,
+                "auc_ref_std": 0.0006865056563669121,
+                "acc_ref_mean": 0.6311025157441614,
+                "acc_ref_std": 0.000224142490597722
+            }
+        },
+        "saint": {
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "sakt": {
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
             }
         }
     }

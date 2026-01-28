@@ -86,7 +86,14 @@ def load_model_from_dir(exp_dir, device):
         raise FileNotFoundError(f"No checkpoint found in {exp_dir}")
 
     ckpt = torch.load(checkpoint_path, map_location='cpu')
-    model.load_state_dict(ckpt['model_state_dict'] if 'model_state_dict' in ckpt else ckpt, strict=False)
+    try:
+        model.load_state_dict(ckpt['model_state_dict'] if 'model_state_dict' in ckpt else ckpt, strict=False)
+    except RuntimeError as e:
+        if "size mismatch" in str(e):
+            print(f"WARNING: Model architecture mismatch in checkpoint. Skipping this validation.")
+            print(f"Error details: {e}")
+            raise RuntimeError(f"Model architecture mismatch - cannot load checkpoint from {checkpoint_path}") from e
+        raise
     model.to(device)
     model.eval()
 

@@ -1,11 +1,11 @@
 {
-  "mean_concordance": 0.8116564161739245,
-  "median_concordance": 0.8244513851067751,
-  "std_concordance": 0.10020685081994617,
-  "min_concordance": 0.3617799999999999,
-  "max_concordance": 0.9916444444444444,
+  "mean_concordance": 0.875317916226584,
+  "median_concordance": 0.910428418216351,
+  "std_concordance": 0.09447593994979704,
+  "min_concordance": 0.3393071428571428,
+  "max_concordance": 0.9703,
   "n_students": 30,
-  "n_skills": 49,
-  "n_pairs": 1230,
+  "n_skills": 50,
+  "n_pairs": 640,
   "min_interactions": 8
 }
