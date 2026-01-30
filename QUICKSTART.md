@@ -364,9 +364,131 @@ python examples/run_repro_experiment.py --dataset <dataset_name>
 
 The training script will automatically use the `*_bkt.csv` files when available.
 
+## Hyperparameter Tuning
+
+### Automated Hyperparameter Sweep
+
+For systematic hyperparameter optimization, use the sweep script to test multiple configurations:
+
+```bash
+# Make script executable
+chmod +x examples/sweep_benchmarks.sh
+
+# Run sweep with default parameters
+./examples/sweep_benchmarks.sh
+```
+
+#### Configuration
+
+Edit `examples/sweep_benchmarks.sh` to customize your search space:
+
+```bash
+# Parameter search space
+NUM_BLOCKS=(2 4 6)           # Number of transformer blocks
+NUM_HEADS=(2 4 8)            # Attention heads per block
+EMB_SIZES=(64 128)           # Embedding dimensions
+DROPOUT_RATES=(0.1 0.2)      # Dropout rates
+LEARNING_RATES=(1e-4 5e-4)   # Learning rates
+
+# Configuration
+DATASETS="assist2009"        # Dataset(s) to use
+GPUS="1,2,3,4,5"            # GPU IDs
+MODE="training"              # training, evaluation, or results
+
+# Optional: Limit runs for quick testing
+MAX_RUNS=10                  # Comment out for full grid search
+```
+
+#### What It Does
+
+1. Generates all parameter combinations from the search space
+2. Runs each combination as a separate benchmark campaign
+3. Performs full 5-fold cross-validation for each configuration
+4. Creates unique experiment directories for each run
+
+#### Output
+
+Each configuration creates a dedicated experiment directory:
+```
+experiments/YYYYMMDD_HHMMSS_sweep_b4_h8_e64_d0.1_lr1e-4_<id>/
+├── fold_0_<id>/
+│   ├── config.json
+│   ├── eval_results.json
+│   └── model_best.pth
+├── fold_1_<id>/
+├── ...
+└── cv_results.json  # After running with --mode results
+```
+
+#### Analyzing Results
+
+**Quick comparison (requires `jq`):**
+```bash
+# Show top 10 configurations by test AUC
+for dir in experiments/*/; do
+  if [ -f "$dir/cv_results.json" ]; then
+    echo "$dir: $(jq -r '.test_mean_auc // "N/A"' $dir/cv_results.json)"
+  fi
+done | sort -t: -k2 -rn | head -10
+```
+
+**Detailed analysis with Python:**
+```python
+import json
+import glob
+from pathlib import Path
+
+results = []
+for exp_dir in glob.glob('experiments/*/cv_results.json'):
+    with open(exp_dir) as f:
+        data = json.load(f)
+        results.append({
+            'experiment': Path(exp_dir).parent.name,
+            'test_auc': data.get('test_mean_auc', 0),
+            'test_acc': data.get('test_mean_acc', 0)
+        })
+
+# Sort by AUC
+results.sort(key=lambda x: x['test_auc'], reverse=True)
+
+print('\nTop 5 Configurations:')
+for i, r in enumerate(results[:5], 1):
+    print(f'{i}. {r["experiment"]}')
+    print(f'   AUC: {r["test_auc"]:.4f}, ACC: {r["test_acc"]:.4f}')
+```
+
+#### Workflow
+
+1. **Training**: Run sweep with `MODE="training"`
+   ```bash
+   ./examples/sweep_benchmarks.sh
+   ```
+
+2. **Evaluation**: After training, evaluate all models
+   ```bash
+   # Edit sweep_benchmarks.sh: MODE="evaluation"
+   ./examples/sweep_benchmarks.sh
+   ```
+
+3. **Results**: Generate cross-validation summaries
+   ```bash
+   # Edit sweep_benchmarks.sh: MODE="results"
+   ./examples/sweep_benchmarks.sh
+   ```
+
+4. **Analysis**: Compare configurations and select the best one
+
+#### Tips
+
+- **Quick testing**: Set `MAX_RUNS=3` and use small parameter lists
+- **Resource management**: Adjust `GPUS` based on available hardware
+- **Background execution**: Use `nohup ./examples/sweep_benchmarks.sh > sweep.log 2>&1 &`
+- **Monitor progress**: `tail -f sweep.log` or check experiment directories
+
 ## Next Steps
 
 - Review the documentation in `docs/` for detailed model information
 - Check `examples/` for training and evaluation scripts
 - Read `contribute.pdf` for guidelines on adding new models
 - See `examples/reproducibility.md` for experiment best practices
+
