@@ -205,10 +205,17 @@ class GTransformer(nn.Module):
 
                 # Store population-level parameters for Reference Output
                 # Note: pyBKT uses 'guesses' and 'slips' as keys
+                # CRITICAL: Clamp guess and slip to valid probability ranges [eps, 1-eps]
+                # Extreme values (0.0 or 1.0) cause numerical instability in BKT updates
+                eps = 1e-3
                 self.bkt_l0_pop[q_idx] = l0_p
                 self.bkt_t_pop[q_idx] = t_p
-                self.bkt_guess[q_idx] = extract(s_params, 'guesses', 'guess', global_params, 'guesses')
-                self.bkt_slip[q_idx] = extract(s_params, 'slips', 'slip', global_params, 'slips')
+                
+                # Extract and clamp to safe range
+                guess_val = extract(s_params, 'guesses', 'guess', global_params, 'guesses')
+                slip_val = extract(s_params, 'slips', 'slip', global_params, 'slips')
+                self.bkt_guess[q_idx] = float(np.clip(guess_val, eps, 1.0 - eps))
+                self.bkt_slip[q_idx] = float(np.clip(slip_val, eps, 1.0 - eps))
             
             # Initialize axes with orthogonal vectors for maximum initial diversity
             # This helps prevent collapse, but diversity loss is still needed to maintain it
@@ -265,6 +272,18 @@ class GTransformer(nn.Module):
         # 1. Supervised Output (Standard AKT logic)
         output = self.out(z_context).squeeze(-1)
         preds = torch.sigmoid(output)
+        
+        # Debug: Check for invalid values before clamping
+        if torch.isnan(preds).any() or torch.isinf(preds).any():
+            print(f"WARNING: NaN or Inf detected in predictions!")
+            print(f"  output min/max: {output.min().item():.6f} / {output.max().item():.6f}")
+            print(f"  preds min/max: {preds.min().item():.6f} / {preds.max().item():.6f}")
+        if (preds < 0).any() or (preds > 1).any():
+            print(f"WARNING: Predictions outside [0,1]!")
+            print(f"  preds min/max: {preds.min().item():.6f} / {preds.max().item():.6f}")
+            print(f"  Count < 0: {(preds < 0).sum().item()}, Count > 1: {(preds > 1).sum().item()}")
+        
+        preds = torch.clamp(preds, 1e-7, 1.0 - 1e-7)
 
         if self.ablation == "all":
             outputs = {'predictions': preds}
@@ -462,19 +481,26 @@ class GTransformer(nn.Module):
             # We want to update Mastery for history step i+1: L[:, :, i+1]
             
             # 1. Bayes Update (Post-observation)
-            # Using the skill parameters (G/S) corresponding to the skill practiced at history step i
+            # CRITICAL FIX: Use the skill parameters (G/S) corresponding to EACH TARGET SKILL t,
+            # not the skill practiced at history step i. This ensures numerically valid updates.
             obs = target[:, i].view(bs, 1, 1).expand(bs, seqlen, 1) # [BS, seqlen_t, 1]
-            g_i = gs[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
-            s_i = ss[:, i].view(bs, 1, 1).expand(bs, seqlen, 1)
+            
+            # Use parameters for each target skill (dimension 1), not the practiced skill at step i
+            g_t = gs.unsqueeze(-1)  # [BS, seqlen_t, 1]
+            s_t = ss.unsqueeze(-1)  # [BS, seqlen_t, 1]
             
             L_i = L[:, :, i:i+1] # [BS, seqlen_t, 1]
             
             # Likelihoods
-            prob_correct = L_i * (1 - s_i) + (1 - L_i) * g_i
+            prob_correct = L_i * (1 - s_t) + (1 - L_i) * g_t
             # P(L|Y=1)
-            L_post_1 = (L_i * (1 - s_i)) / torch.clamp(prob_correct, min=1e-6)
+            L_post_1 = (L_i * (1 - s_t)) / torch.clamp(prob_correct, min=1e-6)
             # P(L|Y=0)
-            L_post_0 = (L_i * s_i) / torch.clamp(1 - prob_correct, min=1e-6)
+            L_post_0 = (L_i * s_t) / torch.clamp(1 - prob_correct, min=1e-6)
+            
+            # Clamp to ensure numerical stability
+            L_post_1 = torch.clamp(L_post_1, 0.0, 1.0)
+            L_post_0 = torch.clamp(L_post_0, 0.0, 1.0)
             
             L_post = torch.where(obs > 0.5, L_post_1, L_post_0)
             
@@ -484,6 +510,8 @@ class GTransformer(nn.Module):
             T_context = p_t.unsqueeze(-1) # [BS, seqlen_t, 1]
             
             L_next = L_post + (1 - L_post) * T_context
+            # Clamp to ensure numerical stability
+            L_next = torch.clamp(L_next, 0.0, 1.0)
             
             # 3. Structural Masking (BKT THEORY COMPLIANCE)
             # Mastery of skill S only updates when the student interacts with skill S.
@@ -502,6 +530,19 @@ class GTransformer(nn.Module):
         # Final Output Emission
         # Note: we use Guess/Slip for the skill at index t
         ref_preds = L_at_t * (1 - ss) + (1 - L_at_t) * gs
+        
+        # Debug: Check for invalid values in BKT reference predictions
+        if torch.isnan(ref_preds).any() or torch.isinf(ref_preds).any():
+            print(f"WARNING: NaN or Inf detected in BKT reference predictions!")
+            print(f"  L_at_t min/max: {L_at_t.min().item():.6f} / {L_at_t.max().item():.6f}")
+            print(f"  gs min/max: {gs.min().item():.6f} / {gs.max().item():.6f}")
+            print(f"  ss min/max: {ss.min().item():.6f} / {ss.max().item():.6f}")
+        if (ref_preds < 0).any() or (ref_preds > 1).any():
+            print(f"WARNING: BKT reference predictions outside [0,1]!")
+            print(f"  ref_preds min/max: {ref_preds.min().item():.6f} / {ref_preds.max().item():.6f}")
+            print(f"  L_at_t min/max: {L_at_t.min().item():.6f} / {L_at_t.max().item():.6f}")
+        
+        ref_preds = torch.clamp(ref_preds, 1e-7, 1.0 - 1e-7)
         
         return ref_preds
 
