@@ -1,0 +1,20 @@
+{
+    "testauc": 0.7996742914443593,
+    "testacc": 0.7295891816480714,
+    "window_testauc": 0.8067719924468785,
+    "window_testacc": 0.7351773915698118,
+    "prediction_type": "supervised",
+    "dual_eval": true,
+    "protocol": "question-level late fusion (mean)",
+    "oriaucconcepts": 0.7983677152436408,
+    "oriauclate_mean": 0.7996742914443593,
+    "oriauclate_vote": 0.7990604883695893,
+    "oriauclate_all": 0.7998623200521299,
+    "oriaccconcepts": 0.728736864366609,
+    "oriacclate_mean": 0.7295891816480714,
+    "oriacclate_vote": 0.7290097325307163,
+    "oriacclate_all": 0.7301538677305893,
+    "testauc_sequence_level": 0.8046942964349245,
+    "testacc_sequence_level": 0.7333158324582896,
+    "grounded": false
+}

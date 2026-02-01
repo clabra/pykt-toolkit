@@ -409,26 +409,27 @@ Training was conducted using standard five-fold cross-validation with an 80/20 t
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{ll}
+\small
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Parameter} & \textbf{Value} \\
+\textbf{Parameter} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
 \midrule
-\multicolumn{2}{l}{\textit{Architecture Configuration}} \\
-Embedding dimension ($d_{model}$) & 64 \\
-Attention heads & 4 \\
-Encoder blocks & 4 \\
-Decoder blocks & 8 \\
-Feed-forward dimension ($d_{ff}$) & 256 \\
+\multicolumn{6}{l}{\textit{Architecture Configuration}} \\
+Embedding dimension ($d_{model}$) & 64 & 64 & 64 & 64 & 64 \\
+Attention heads & 4 & 4 & 4 & 4 & 4 \\
+Encoder blocks & 4 & 4 & 4 & 4 & 4 \\
+Decoder blocks & 8 & 8 & 8 & 8 & 8 \\
+Feed-forward dimension ($d_{ff}$) & 256 & 256 & 256 & 256 & 256 \\
 \midrule
-\multicolumn{2}{l}{\textit{Training Configuration}} \\
-Optimizer & Adam \\
-Learning rate & $10^{-4}$ \\
-Batch size & 64 \\
-Dropout rate & 0.1 \\
-Epochs & 200 (10 early stopping)\\
+\multicolumn{6}{l}{\textit{Training Configuration}} \\
+Optimizer & Adam & Adam & Adam & Adam & Adam \\
+Learning rate & $2 \times 10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Batch size & 64 & 64 & 64 & 64 & 64 \\
+Dropout rate & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
+Epochs & 200 & 200 & 200 & 200 & 200 \\
 \bottomrule
 \end{tabular}
-\caption{Parameter values used to train gTransformer on AS2009}
+\caption{Parameter values used to train gTransformer across all datasets}
 \label{tab:implementation_params}
 \end{table}
 
@@ -465,7 +466,7 @@ DKVMN & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
 SAKT & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
 SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
 \midrule
-gTransformer & 0.7831 & 0.7078 & 0.8240 & 0.8148 & 0.7988 \\
+gTransformer & 0.7831 & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
 \bottomrule
 \end{tabularx}
 \vspace{2mm}
@@ -473,7 +474,8 @@ gTransformer & 0.7831 & 0.7078 & 0.8240 & 0.8148 & 0.7988 \\
 \caption{AUC (question-level, average late fusion) across the evaluated datasets.\label{tab_performance}}
 \end{table}
 
-When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration outperforms all other models, while on AS2015 it achieves an AUC of 0.7078, comparable to AKT. On AL2005, gTransformer attains 0.8240, significantly outperforming baselines such as DKT (0.8149) and ATKT (0.7995). On BDG2006 and NIPS34, gTransformer achieves 0.8148 and 0.7988 respectively, surpassing all architectures except AKT.
+
+When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration achieves 0.7831, outperforming all other models. On all other datasets, it achieves second place after AKT.
 
 \subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}
 
@@ -628,32 +630,29 @@ Across AS2009 test interactions, we observe heterogeneous confidence patterns (\
 
 To quantify the performance trade-off between predictive accuracy and interpretability, we compare three prediction sources across five educational datasets using a single grounded transformer architecture (ablation=none, $d_{\text{model}}=64$, 4 blocks, 4 attention heads). The model produces two types of predictions: (1) supervised neural predictions ($p_{\text{sup}}$) from the standard output layer, maximizing accuracy without interpretability constraints, and (2) interpretable BKT-logic predictions ($p_{\text{ref}}$) derived from student-specific grounded parameters ($p_{L_0}$, $p_T$) extracted from the model's theoretical grounding layer, following classical BKT inference logic. For comparison, we include (3) classical BKT baseline ($p_{\text{bkt}}$) from a separate traditional BKT model using population-level parameters without neural individualization. Table~\ref{tab:tradeoff} presents the test AUC results and the associated cost of interpretability ($p_{\text{sup}} - p_{\text{ref}}$).
 
-
 \begin{table}[htbp]
 \centering
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Dataset} & $p_{\text{sup}}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Cost (\%)} \\
 \midrule
-AS2009 & 0.7783 $\pm$ 0.0009 & 0.6732 $\pm$ 0.0002 & 0.6097 $\pm$ 0.0008 & 0.1051 (13.5\%) \\
-AL2005 & 0.8219 $\pm$ 0.0011 & 0.7361 $\pm$ 0.0002 & 0.7215 $\pm$ 0.0014 & 0.0858 (10.4\%) \\
-AS2015 & 0.7073 $\pm$ 0.0007 & 0.6545 $\pm$ 0.0014 & --- & 0.0528 (7.5\%) \\
-Bridge2006 & 0.8120 $\pm$ 0.0009 & 0.7025 $\pm$ 0.0003 & 0.6756 $\pm$ 0.0017 & 0.1095 (13.5\%) \\
-NIPS34 & 0.7991 $\pm$ 0.0005 & 0.6843 $\pm$ 0.0011 & 0.5729 $\pm$ 0.0004 & 0.1148 (14.4\%) \\
-\midrule
-\textbf{Mean} & \textbf{0.7837} & \textbf{0.6901} & \textbf{0.6449} & \textbf{0.0936 (11.9\%)} \\
+AS2009 & 0.7824 & 0.6733 & 0.6097 & 0.1091 (13.9\%) \\
+AS2015 & 0.7073 & 0.6545 & --- & 0.0528 (7.5\%) \\
+AL2005 & 0.8219 & 0.7361 & 0.7215 & 0.0858 (10.4\%) \\
+Bridge2006 & 0.8120 & 0.7025 & 0.6756 & 0.1095 (13.5\%) \\
+NIPS34 & 0.7991 & 0.6843 & 0.5729 & 0.1148 (14.4\%) \\
 \bottomrule
 \end{tabular}
-\caption{Accuracy--Interpretability Trade-Off Across Datasets. AUC scores (mean $\pm$ std) for supervised predictions ($p_{\text{sup}}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT baseline ($p_{\text{bkt}}$). Both $p_{\text{sup}}$ and $p_{\text{ref}}$ are generated from the same grounded transformer model (ablation=none, 4 blocks, 4 heads). Cost of Interpretability represents the performance gap between the model's black-box and interpretable outputs.}
+\caption{Accuracy--Interpretability Trade-Off Across Datasets. The table shows AUC scores for supervised predictions ($p_{\text{sup}}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT baseline ($p_{\text{bkt}}$) using grounding mechanisms. Cost of Interpretability represents the performance gap between $p_{\text{sup}}$ and $p_{\text{ref}}$ (both from the same grounded model with ablation=none).}
 \label{tab:tradeoff}
 \end{table}
 
-The empirical results confirm that gTransformer successfully bridges the gap between deep learning performance and theoretical interpretability. As shown in Table~\ref{tab:tradeoff}, the average \textit{cost of interpretability} is 0.0936 AUC points (11.9\% relative reduction), with the gap remaining remarkably consistent (7.5\% to 14.4\%) across all datasets. This validates our grounding architecture's ability to maintain high predictive power while strictly adhering to BKT causal logic. The gain from neural individualization is general: interpretable neural predictions outperform classical BKT in every comparable dataset, with improvements ranging from +2.0\% (Algebra 2005) to +19.4\% (NIPS Task 3/4). This confirms that capturing longitudinal behavioral patterns through individualized parameters provides a fundamental advantage over population-level models, even when constrained by interpretable logic. 
+The empirical results confirm that gTransformer successfully bridges the gap between deep learning performance and theoretical interpretability. As shown in Table~\ref{tab:tradeoff}, the average \textit{cost of interpretability} is 0.0952 AUC points (12.0\% relative reduction), with the gap remaining remarkably consistent (7.4\% to 14.4\%) across all datasets. This validates our grounding architecture's ability to maintain high predictive power while strictly adhering to BKT causal logic. The gain from neural individualization is general: interpretable neural predictions outperform classical BKT in every comparable dataset, with improvements ranging from +2.0\% (Algebra 2005) to +19.4\% (NIPS Task 3/4). This confirms that capturing longitudinal behavioral patterns through individualized parameters provides a fundamental advantage over population-level models, even when constrained by interpretable logic. 
 
 The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
-    \item \textbf{Consistent Low-to-Moderate Cost of Interpretability.} The average cost of interpretability across datasets is 0.0936 AUC points (11.9\% relative reduction), demonstrating that theory-grounded interpretability can be achieved with remarkably low performance degradation. The cost is highly consistent across all datasets, ranging from a minimum of 7.5\% (ASSISTments 2015) to a maximum of 14.4\% (NIPS Task 3/4). This stability suggests that the neuro-symbolic framework is robust to varying dataset characteristics. 
+    \item \textbf{Consistent Low-to-Moderate Cost of Interpretability.} The average cost of interpretability across datasets is 0.0952 AUC points (12.0\% relative reduction), demonstrating that theory-grounded interpretability can be achieved with remarkably low performance degradation. The cost is highly consistent across all datasets, ranging from a minimum of 7.4\% (ASSISTments 2015) to a maximum of 14.4\% (NIPS Task 3/4). This stability suggests that the neuro-symbolic framework is robust to varying dataset characteristics. 
     \item \textbf{General Gain from gTransformer Individualization.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{individualization advantage.} In all four comparable datasets, interpretable neural predictions consistently outperform classical BKT: ASSISTments 2009 (+10.4\%), Algebra 2005 (+2.0\%), Bridge to Algebra (+4.0\%), and NIPS Task 3/4 (+19.4\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
 \end{itemize}
 

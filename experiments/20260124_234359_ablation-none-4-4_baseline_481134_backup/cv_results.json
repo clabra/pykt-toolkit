@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-01-26T00:53:48.294135",
+    "generated_at": "2026-01-31T20:32:38.826341",
     "campaign": "20260124_234359_ablation-none-4-4_baseline_481134",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",

@@ -1457,5 +1457,62 @@
             "start": 50,
             "learning_rate": 0.001
         }
+    },
+    "gtransformer": {
+        "0": {
+            "n_blocks": 4,
+            "num_attn_heads": 4,
+            "d_model": 64,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "lambda_ref": 0.5,
+            "d_ff": 256,
+            "emb_type": "qid",
+            "seed": 42
+        },
+        "1": {
+            "n_blocks": 4,
+            "num_attn_heads": 4,
+            "d_model": 64,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "lambda_ref": 0.5,
+            "d_ff": 256,
+            "emb_type": "qid",
+            "seed": 42
+        },
+        "2": {
+            "n_blocks": 4,
+            "num_attn_heads": 4,
+            "d_model": 64,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "lambda_ref": 0.5,
+            "d_ff": 256,
+            "emb_type": "qid",
+            "seed": 42
+        },
+        "3": {
+            "n_blocks": 4,
+            "num_attn_heads": 4,
+            "d_model": 64,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "lambda_ref": 0.5,
+            "d_ff": 256,
+            "emb_type": "qid",
+            "seed": 42
+        },
+        "4": {
+            "n_blocks": 4,
+            "num_attn_heads": 4,
+            "d_model": 64,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "lambda_ref": 0.5,
+            "d_ff": 256,
+            "emb_type": "qid",
+            "seed": 3407
+        }
     }
 }

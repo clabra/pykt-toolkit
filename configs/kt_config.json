@@ -129,6 +129,15 @@
         "d_ff": 768,
         "dropout": 0.2,
         "seq_len": 200
+    },
+    "gtransformer": {
+        "learning_rate": 0.0002,
+        "d_model": 64,
+        "num_attn_heads": 4,
+        "n_blocks": 4,
+        "d_ff": 256,
+        "dropout": 0.1,
+        "lambda_ref": 0.5
     }
 }
 

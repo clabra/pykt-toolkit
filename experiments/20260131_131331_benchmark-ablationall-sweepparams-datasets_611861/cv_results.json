@@ -1,0 +1,513 @@
+{
+    "generated_at": "2026-01-31T16:09:34.897058",
+    "campaign": "20260131_131331_benchmark-ablationall-datasets_611861",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "akt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "atkt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkvmn": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "gtransformer": {
+            "assist2009": {
+                "status": "PASS",
+                "auc_mean": 0.783202615586199,
+                "auc_std": 0.0015407654524784158,
+                "acc_mean": 0.7394649213457344,
+                "acc_std": 0.0009960219960545985,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7843050543032241,
+                        "acc": 0.7399050790370115
+                    },
+                    "1": {
+                        "auc": 0.7830598382172802,
+                        "acc": 0.7380678991082023
+                    },
+                    "2": {
+                        "auc": 0.7826234670865408,
+                        "acc": 0.7410341792015922
+                    },
+                    "3": {
+                        "auc": 0.7807511397567302,
+                        "acc": 0.7394457840548092
+                    },
+                    "4": {
+                        "auc": 0.7852735785672196,
+                        "acc": 0.7388716653270563
+                    }
+                }
+            },
+            "assist2015": {
+                "status": "PASS",
+                "auc_mean": 0.7069905338807966,
+                "auc_std": 0.0005914548647470034,
+                "acc_mean": 0.6790372270821099,
+                "acc_std": 0.0002862560515047899,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7071136161389076,
+                        "acc": 0.6789177047592553
+                    },
+                    "1": {
+                        "auc": 0.7078270071328242,
+                        "acc": 0.6793710652942206
+                    },
+                    "2": {
+                        "auc": 0.7062163769208171,
+                        "acc": 0.6792886361060452
+                    },
+                    "3": {
+                        "auc": 0.7073548642719643,
+                        "acc": 0.6790413485415185
+                    },
+                    "4": {
+                        "auc": 0.70644080493947,
+                        "acc": 0.6785673807095093
+                    }
+                }
+            },
+            "algebra2005": {
+                "status": "PASS",
+                "auc_mean": 0.8235218417143131,
+                "auc_std": 0.0007120242483420561,
+                "acc_mean": 0.8063392328796601,
+                "acc_std": 0.0004110126488604942,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8224263607110757,
+                        "acc": 0.8057022970573995
+                    },
+                    "1": {
+                        "auc": 0.8234821074238767,
+                        "acc": 0.8061649362526225
+                    },
+                    "2": {
+                        "auc": 0.8240374979205457,
+                        "acc": 0.806681370703104
+                    },
+                    "3": {
+                        "auc": 0.8231700295582657,
+                        "acc": 0.8068750336220345
+                    },
+                    "4": {
+                        "auc": 0.8244932129578013,
+                        "acc": 0.8062725267631395
+                    }
+                }
+            },
+            "bridge2algebra2006": {
+                "status": "PASS",
+                "auc_mean": 0.8131626489995443,
+                "auc_std": 0.0010862821132320093,
+                "acc_mean": 0.8552430683656382,
+                "acc_std": 0.0006134779590425932,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8137644653954322,
+                        "acc": 0.8549677895394046
+                    },
+                    "1": {
+                        "auc": 0.8142953814109368,
+                        "acc": 0.8544399352952862
+                    },
+                    "2": {
+                        "auc": 0.8136085834113914,
+                        "acc": 0.8549138689445753
+                    },
+                    "3": {
+                        "auc": 0.8129885589667787,
+                        "acc": 0.8557709226097567
+                    },
+                    "4": {
+                        "auc": 0.8111562558131816,
+                        "acc": 0.8561228254391691
+                    }
+                }
+            },
+            "nips_task34": {
+                "status": "PASS",
+                "auc_mean": 0.7998394535574531,
+                "auc_std": 0.00041895754091083963,
+                "acc_mean": 0.7293027787722322,
+                "acc_std": 0.00034059604391548917,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7994039129286901,
+                        "acc": 0.7289580619087865
+                    },
+                    "1": {
+                        "auc": 0.8002232429180034,
+                        "acc": 0.7296629968222568
+                    },
+                    "2": {
+                        "auc": 0.7996742914443593,
+                        "acc": 0.7295891816480714
+                    },
+                    "3": {
+                        "auc": 0.8004428006206936,
+                        "acc": 0.7294710773693748
+                    },
+                    "4": {
+                        "auc": 0.7994530198755194,
+                        "acc": 0.7288325761126715
+                    }
+                }
+            }
+        },
+        "saint": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "sakt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "assist2015": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        }
+    }
+}

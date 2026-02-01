@@ -1,0 +1,22 @@
+{
+    "generated_at": "2026-01-31T23:57:55.170382",
+    "campaign": "20260131_232237_sweep-nips-2-8_112389",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "nips_task34": {
+                "status": "RE-RUN",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 1,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        }
+    }
+}
