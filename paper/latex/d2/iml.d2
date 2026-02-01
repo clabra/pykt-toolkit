@@ -10,11 +10,10 @@ MainContainer: {
   label: ""
   direction: down
   style: {
-    stroke: "#666666"
+    stroke: "#3d3d3d"
     stroke-width: 4
     fill: "#f9f9f9"
     border-radius: 12
-    font-size: 100
   }
 
   # ============================================================================
@@ -23,7 +22,7 @@ MainContainer: {
   
   PriorKnowledge: {
     label: |md
-      **Prior Knowledge**
+      <center><span style="font-size: 90px; color: #000000">Prior Knowledge</span></center>
       
       Interpretable Reference Model
       
@@ -31,9 +30,11 @@ MainContainer: {
     |
     shape: cylinder
     style: {
-      fill: "#D6EAF8"
+      fill: "#EBF5FB"
       stroke: "#333333"
       stroke-width: 4
+      font-size: 80
+      font-color: "#000000"
     }
   }
 
@@ -43,7 +44,7 @@ MainContainer: {
   
   Data: {
     label: |md
-      **Data**
+      <center><span style="font-size: 90px; color: #000000">Data</span></center>
       
       Student Interaction Sequences
       
@@ -51,9 +52,11 @@ MainContainer: {
     |
     shape: cylinder
     style: {
-      fill: "#D6EAF8"
+      fill: "#EBF5FB"
       stroke: "#333333"
       stroke-width: 4
+      font-size: 80
+      font-color: "#000000"
     }
   }
 
@@ -69,7 +72,7 @@ MainContainer: {
       stroke-width: 4
       fill: "#ffffff"
       border-radius: 8
-      font-size: 100
+      font-size: 80
       stroke-dash: 5
     }
 
@@ -79,7 +82,7 @@ MainContainer: {
 
     TrainingData: {
       label: |md
-        **Training Data**
+        <center><span style="font-size: 90px; color: #000000">Training Data</span></center>
         
         Student Interaction Sequences
         
@@ -89,9 +92,11 @@ MainContainer: {
       |
       shape: cylinder
       style: {
-        fill: "#D6EAF8"
+        fill: "#EBF5FB"
         stroke: "#333333"
         stroke-width: 4
+        font-size: 80
+        font-color: "#000000"
       }
     }
 
@@ -101,7 +106,7 @@ MainContainer: {
 
     HypothesisSet: {
       label: |md
-        **Hypothesis Set**
+        <center><span style="font-size: 90px; color: #000000">Hypothesis Set</span></center>
 
         Attention-based Encode-Decoder + 
         
@@ -109,10 +114,12 @@ MainContainer: {
       |
       shape: rectangle
       style: {
-        fill: "#D6EAF8"
+        fill: "#EBF5FB"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
+        font-size: 80
+        font-color: "#000000"
       }
     }
 
@@ -122,7 +129,7 @@ MainContainer: {
 
     LearningAlgorithm: {
       label: |md
-        **Learning Algorithm**
+        <center><span style="font-size: 90px; color: #000000">Learning Algorithm</span></center>
         
         Multi-Objective Loss: 
         
@@ -132,10 +139,12 @@ MainContainer: {
       |
       shape: rectangle
       style: {
-        fill: "#D6EAF8"
+        fill: "#EBF5FB"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
+        font-size: 80
+        font-color: "#000000"
       }
     }
 
@@ -145,7 +154,7 @@ MainContainer: {
 
     FinalHypothesis: {
       label: |md
-        **Final Hypothesis**
+        <center><span style="font-size: 90px; color: #000000">Final Hypothesis</span></center>
         
         Learned Weights
 
@@ -153,10 +162,12 @@ MainContainer: {
       |
       shape: rectangle
       style: {
-        fill: "#D6EAF8"
+        fill: "#EBF5FB"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
+        font-size: 80
+        font-color: "#000000"
       }
     }
 
@@ -203,7 +214,7 @@ MainContainer: {
   MasteryEstimations: {
 
     label: |md
-      **Mastery Estimations**
+      <center><span style="font-size: 90px; color: #000000">Mastery Estimations</span></center>
       
       Interpretable Predictions {ŷ<sub>t</sub>}
 
@@ -215,11 +226,12 @@ MainContainer: {
 
     shape: rectangle
     style: {
-      fill: "#D6EAF8"
+      fill: "#EBF5FB"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
-      font-size: 100
+      font-size: 80
+      font-color: "#000000"
     }
   }
 

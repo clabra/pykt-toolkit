@@ -9,7 +9,7 @@ direction: up
 MainContainer: {
   label: ""
   style: {
-    stroke: "#666666"
+    stroke: "#2d2d2d"
     stroke-width: 4
     fill: "#f9f9f9"
     border-radius: 12
@@ -34,13 +34,13 @@ Section1: {
   
   InputData: {
     label: |md
-      Interaction Data
+      <center><span style="font-size: 95px">Interaction Data</span></center>
 
       {(q, c, r)}
     |
     shape: cylinder
     style: {
-      fill: "#D6EAF8"
+      fill: "#E8E8E8"
       stroke: "#333333"
       stroke-width: 4
     }
@@ -49,15 +49,15 @@ Section1: {
   BKT: {
     label: |md
 
-      Reference Model
+      <center><span style="font-size: 95px">Reference Model</span></center>
 
-      BKT
+      <center>BKT</center>
 
       p<sub>L₀</sub>, p<sub>T</sub>
     |
     shape: cylinder
     style: {
-      fill: "#d4edda"
+      fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
     }
@@ -82,19 +82,19 @@ Section2: {
   }
   
   StandardEmbeddings: {
-    label: "Standard Track (Blue)"
+    label: "Standard Track"
     style: {
-      stroke: "#2874A6"
+      stroke: "#666666"
       stroke-width: 3
       stroke-dash: 5
-      fill: "#EBF5FB"
+      fill: "#E8E8E8"
       font-size: 90
     }
     
     TaskHistoryEmb: {
       label: |md
-        History Embeddings
-        (Response + Difficulty)
+        <center><span style="font-size: 95px">History Embeddings</span></center>
+        <center>(Response + Difficulty)</center>
         
         y'<sub>t</sub> = e + u·f
         
@@ -110,7 +110,7 @@ Section2: {
       |
       shape: rectangle
       style: {
-        fill: "#D6EAF8"
+        fill: "#E8E8E8"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -119,8 +119,8 @@ Section2: {
     
     TaskHistoryEmb2: {
       label: |md
-        Task Embeddings
-        (Question + Difficulty)
+        <center><span style="font-size: 95px">Task Embeddings</span></center>
+        <center>(Question + Difficulty)</center>
         
         x'<sub>t</sub> = c + u·d
         
@@ -136,7 +136,7 @@ Section2: {
       |
       shape: rectangle
       style: {
-        fill: "#D6EAF8"
+        fill: "#E8E8E8"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -145,19 +145,19 @@ Section2: {
   }
   
   InterpretableEmbeddings: {
-    label: "Interpretable Track (Green)"
+    label: "Interpretable Track"
     style: {
-      stroke: "#229954"
+      stroke: "#2874A6"
       stroke-width: 3
       stroke-dash: 5
-      fill: "#EAFAF1"
+      fill: "#E3F2FD"
       font-size: 90
     }
     
     TheoryBases: {
       label: |md
-        Theory Bases
-        (BKT Priors Embeddings)
+        <center><span style="font-size: 95px">Theory Bases</span></center>
+        <center>(BKT Priors Embeddings)</center>
         
         L₀<sub>base</sub>[q] ~ N(σ⁻¹(BKT_L₀[q]), 0.05)
 
@@ -170,7 +170,7 @@ Section2: {
       |
       shape: rectangle
       style: {
-        fill: "#d4edda"
+        fill: "#E3F2FD"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -179,21 +179,19 @@ Section2: {
     
     SemanticAxes: {
       label: |md
-        Semantic Axes
+        <center><span style="font-size: 95px">Semantic Axes</span></center>
         
         K<sub>axis</sub>[q]: Knowledge Direction
 
         V<sub>axis</sub>[q]: Velocity Direction
         
-        <span style="color:#666">Init: Orthogonal(0, 0.02)</span>
-
         <span style="color:#666">[n_question, z]</span>
 
         <span style="color:#666">z = d + dim(q_embed)</span>
       |
       shape: rectangle
       style: {
-        fill: "#d4edda"
+        fill: "#E3F2FD"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -222,7 +220,7 @@ Section3: {
   
   Encoder: {
     label: |md
-      Encoder
+      <center><span style="font-size: 95px">Encoder</span></center>
 
       (Self-Attention)
 
@@ -234,7 +232,7 @@ Section3: {
     |
     shape: rectangle
     style: {
-      fill: "#D6EAF8"
+      fill: "#E8E8E8"
       stroke: "#333333"
       stroke-width: 4
       multiple: true
@@ -245,7 +243,7 @@ Section3: {
   
   Decoder: {
     label: |md
-      Decoder
+      <center><span style="font-size: 95px">Decoder</span></center>
 
       (Cross-Attention)
 
@@ -257,7 +255,7 @@ Section3: {
     |
     shape: rectangle
     style: {
-      fill: "#D6EAF8"
+      fill: "#E8E8E8"
       stroke: "#333333"
       stroke-width: 4
       multiple: true
@@ -268,7 +266,7 @@ Section3: {
   
   ContextVector: {
     label: |md
-      Context Vector
+      <center><span style="font-size: 95px">Context Vector</span></center>
 
       z<sub>t</sub> = d<sub>out</sub> ⊕ q<sub>emb</sub>
 
@@ -280,7 +278,7 @@ Section3: {
     |
     shape: rectangle
     style: {
-      fill: "#D6EAF8"
+      fill: "#E8E8E8"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -288,11 +286,11 @@ Section3: {
   }
   
   Encoder -> Decoder: "History Context" {
-    style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
   Decoder -> ContextVector {
-    style: { stroke: "#2874A6"; stroke-width: 6 }
+    style: { stroke: "#666666"; stroke-width: 8 }
     target-arrowhead: { shape: arrow }
   }
 }
@@ -315,7 +313,7 @@ Section4: {
   
   TheoryBase: {
     label: |md
-      Theory Base
+      <center><span style="font-size: 95px">Theory Base</span></center>
 
       (BKT Prior Embeddings Lookup)
       
@@ -327,7 +325,7 @@ Section4: {
     |
     shape: rectangle
     style: {
-        fill: "#d4edda"
+        fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -336,7 +334,7 @@ Section4: {
   
   SemanticProjection: {
     label: |md
-      Context Projection on Semantic Axis 
+      <center><span style="font-size: 95px">Context Projection</span></center>
       
       Δ<sub>L₀</sub> = z<sub>t</sub> · K<sub>axis</sub>[q]
 
@@ -348,7 +346,7 @@ Section4: {
     |
     shape: rectangle
     style: {
-        fill: "#d4edda"
+        fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -357,7 +355,7 @@ Section4: {
   
   FinalParams: {
     label: |md
-      Final Parameters
+      <center><span style="font-size: 95px">Final Parameters</span></center>
 
       (Base + Context Projection)
       
@@ -369,7 +367,7 @@ Section4: {
     |
     shape: rectangle
     style: {
-      fill: "#d4edda"
+      fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -377,11 +375,11 @@ Section4: {
   }
   
   TheoryBase -> FinalParams: "" {
-    style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
   SemanticProjection -> FinalParams: "" {
-    style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
 }
@@ -407,7 +405,7 @@ Section5: {
 
       SupervisedOut: {
       label: |md
-        Supervised Prediction
+        <center><span style="font-size: 95px">Supervised Prediction</span></center>
         
         ŷ<sub>t</sub> = MLP(z<sub>t</sub>)
         
@@ -415,7 +413,7 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#D6EAF8"
+          fill: "#E8E8E8"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -424,7 +422,7 @@ Section5: {
     
     ReferenceOut: {
       label: |md
-        Reference Output
+        <center><span style="font-size: 95px">Reference Output</span></center>
         
         ŷ<sub>ref</sub> = BKT(p<sub>L₀</sub>, p<sub>T</sub>)
         
@@ -432,7 +430,7 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#d4edda"
+          fill: "#E3F2FD"
         stroke: "#000000"
         stroke-width: 4
         shadow: true
@@ -441,7 +439,7 @@ Section5: {
     
     DiagnosticProbes: {
       label: |md
-        Probes
+        <center><span style="font-size: 95px">Probes</span></center>
         
         p̂<sub>L₀</sub> = Linear(z<sub>t</sub>)
 
@@ -451,7 +449,7 @@ Section5: {
       |
       shape: rectangle
       style: {
-          fill: "#d4edda"
+          fill: "#E3F2FD"
         stroke: "#333333"
         stroke-width: 4
         shadow: true
@@ -479,13 +477,13 @@ Section6: {
 
 LossSup: {
     label: |md
-      ℒ<sub>sup</sub>
+      <center><span style="font-size: 95px">ℒ<sub>sup</sub></span></center>
       
       <span style="color:#666">Scalar</span>
     |
     shape: rectangle
     style: {
-      fill: "#D6EAF8"
+      fill: "#E8E8E8"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -494,13 +492,13 @@ LossSup: {
   
   LossRef: {
     label: |md
-      ℒ<sub>ref</sub>
+      <center><span style="font-size: 95px">ℒ<sub>ref</sub></span></center>
       
       <span style="color:#666">Scalar</span>
     |
     shape: rectangle
     style: {
-      fill: "#d4edda"
+      fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -509,7 +507,7 @@ LossSup: {
   
   LossProbe: {
     label: |md
-      ℒ<sub>probe</sub>
+      <center><span style="font-size: 95px">ℒ<sub>probe</sub></span></center>
       
       MSE(p̂<sub>L₀</sub>, μ<sub>L₀</sub>) + MSE(p̂<sub>T</sub>, μ<sub>T</sub>)
       
@@ -517,7 +515,7 @@ LossSup: {
     |
     shape: rectangle  
     style: {
-      fill: "#d4edda"
+      fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -526,7 +524,7 @@ LossSup: {
   
   TotalLoss: {
     label: |md
-      Total Loss
+      <center><span style="font-size: 95px">Total Loss</span></center>
       
       ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>ref</sub>·ℒ<sub>ref</sub> + λ<sub>probe</sub>·ℒ<sub>probe</sub>
       
@@ -534,7 +532,7 @@ LossSup: {
     |
     shape: rectangle
     style: {
-      fill: "#d4edda"
+      fill: "#E3F2FD"
       stroke: "#333333"
       stroke-width: 4
       shadow: true
@@ -542,30 +540,30 @@ LossSup: {
   }
   
   LossSup -> TotalLoss: "" {
-    style: { stroke: "#333333"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
   LossRef -> TotalLoss: "" {
-    style: { stroke: "#333333"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
   LossProbe -> TotalLoss: "" {
-    style: { stroke: "#333333"; stroke-width: 6; font-size: 80 }
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
     target-arrowhead: { shape: arrow }
   }
     
 }
 
 Section5.SupervisedOut -> Section6.LossSup {
-    style: { stroke: "#2874A6"; stroke-width: 6 }
+    style: { stroke: "#666666"; stroke-width: 8 }
     target-arrowhead: { shape: arrow }
   }
   Section5.ReferenceOut -> Section6.LossRef {
-    style: { stroke: "#229954"; stroke-width: 6 }
+    style: { stroke: "#2874A6"; stroke-width: 8 }
     target-arrowhead: { shape: arrow }
   }
   Section5.DiagnosticProbes -> Section6.LossProbe {
-    style: { stroke: "#2874A6"; stroke-width: 6 }
+    style: { stroke: "#666666"; stroke-width: 8 }
     target-arrowhead: { shape: arrow }
   }
 
@@ -575,49 +573,49 @@ Section5.SupervisedOut -> Section6.LossSup {
 
 # 1 -> 2
 Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" {
-  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 
 # 2 -> 3
 Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section2.StandardEmbeddings.TaskHistoryEmb2 -> Section3.Decoder: "Current Question" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 
 # 3 -> 4 (Grounded Parameters)
 Section2.InterpretableEmbeddings.TheoryBases -> Section4.TheoryBase: "" {
-  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "" {
-  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section3.ContextVector -> Section4.SemanticProjection: "z" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 
 # 4 -> 5 (Outputs)
 Section4.FinalParams -> Section5.ReferenceOut: "" {
-  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section3.ContextVector -> Section5.SupervisedOut: "" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 Section3.ContextVector -> Section5.DiagnosticProbes: "" {
-  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
 
@@ -625,23 +623,23 @@ Section3.ContextVector -> Section5.DiagnosticProbes: "" {
 Section1.InputData -> Section6.LossSup: "y" {
   style: {
     font-size: 80
-    stroke: "#2874A6"
-    stroke-width: 6
+    stroke: "#666666"
+    stroke-width: 8
   }
   target-arrowhead: { shape: arrow }
 }
 Section1.BKT -> Section6.LossProbe: "BKT parameters" {
   style: {
     font-size: 80
-    stroke: "#229954"
-    stroke-width: 6
+    stroke: "#2874A6"
+    stroke-width: 8
   }
   target-arrowhead: { shape: arrow }
 }
 Section1.BKT -> Section5.ReferenceOut: "BKT Logic" {
   style: {
-    stroke: "#229954"
-    stroke-width: 6
+    stroke: "#2874A6"
+    stroke-width: 8
     font-size: 80
   }
   target-arrowhead: { shape: arrow }

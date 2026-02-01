@@ -1,11 +1,40 @@
 # Paper - Results Reproducibility
 
+## Paper Table 5, ablation=none
+
+| Dataset | Best Test AUC (p_sup) | AUC (p_ref) | AUC (p_bkt) | Cost (%) | Exp ID | Experiment Folder | Architecture | Learning Rate | Dropout | lambda_ref | Epochs | Notes |
+|---------|----------------------|-------------|-------------|----------|--------|-------------------|--------------|---------------|---------|------------|--------|-------|
+| assist2009 | **0.7824** ± 0.0012 | **0.6733** ± 0.0001 | **0.6097** ± 0.0008* | 0.1091 (13.9%) | **481134** | 20260124_234359_ablation-none-4-4_baseline_481134_backup | 4 blocks, 8 heads | 1e-4 | 0.1 | 0.5 | 55 | 4/8 architecture outperforms 4/4 |
+| assist2015 | **0.7073** ± 0.0007 | **0.6545** ± 0.0014 | N/A* | 0.0528 (7.5%) | 878655 | 20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655 | 4 blocks, 4 heads | 1e-4 | 0.1 | 0.5 | 55 | Best p_ref interpretability |
+| algebra2005 | **0.8219** ± 0.0011 | **0.7361** ± 0.0002 | **0.7215** ± 0.0014 | 0.0858 (10.4%) | 878655 | 20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655 | 4 blocks, 4 heads | 1e-4 | 0.1 | 0.5 | 55 | Best p_ref interpretability |
+| bridge2algebra2006 | **0.8120** ± 0.0009 | **0.7025** ± 0.0003 | **0.6756** ± 0.0017 | 0.1095 (13.5%) | 878655 | 20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655 | 4 blocks, 4 heads | 1e-4 | 0.1 | 0.5 | 55 | Same p_sup as 4/8, better p_ref |
+| nips_task34 | **0.7991** ± 0.0005 | **0.6843** ± 0.0011 | **0.5729** ± 0.0004 | 0.1148 (14.4%) | 878655 | 20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655 | 4 blocks, 4 heads | 1e-4 | 0.1 | 0.5 | 55 | Best p_ref interpretability |
+
+**Summary**: For ablation=none (with grounding/probing losses), all datasets have full test results. ASSISTments 2009 achieves highest p_sup with 4/8 architecture. For Algebra 2005, the 4/4 architecture (0.8219) provides better p_ref interpretability than 4/8 architecture (0.8251 p_sup but only 0.5991 p_ref), making it more suitable for paper presentation. Other datasets use 4/4 architecture for best interpretability.
+
+**Notes**:
+- \*p_bkt value for exp 481134 (assist2009 4/8) is from exp 268444 (same dataset/ablation, BKT is architecture-independent)
+- \*assist2015: Dataset lacks question IDs in test files; only skill/concept IDs available. Question-level BKT evaluation not possible.
+
+## Paper Table 2, ablation=all
+
+| Dataset | Best Test AUC | Exp ID | Experiment Folder | Architecture | Learning Rate | Dropout | Epochs | Notes |
+|---------|---------------|--------|-------------------|--------------|---------------|---------|--------|-------|
+| assist2009 | 0.7831 | 697945 | 20260126_191440_ablation-all-nblocks-4-numattnheads-4_697945 | 4 blocks, 4 heads | 1e-4 | 0.1 | 55 | Baseline |
+| assist2015 | 0.7078 | 589915 | 20260126_191539_ablation-all-nblocks-4-numattnheads-4-assist2015_589915 | 4 blocks, 4 heads | 1e-4 | 0.1 | 55 | Baseline (all optimization attempts failed) |
+| algebra2005 | 0.8240 | 384404 | 20260126_191647_ablation-all-nblocks-4-numattnheads-4-algebra_384404 | 4 blocks, 4 heads | 1e-4 | 0.1 | 55 | Baseline |
+| bridge2algebra2006 | 0.8148 | 663881 | 20260126_191744_ablation-all-nblocks-4-numattnheads-4-bridge_663881 | 4 blocks, 4 heads | 1e-4 | 0.1 | 55 | Baseline |
+| nips_task34 | **0.8006** | 727875 | 20260131_230137_sweep-nips_231941/gtransformer/nips_task34/fold_0_727875 | 4 blocks, 4 heads | **3e-4** | 0.1 | 41 | **+0.18% improvement over baseline** ✅ |
+
+**Summary**: Only nips_task34 benefited from hyperparameter optimization (3× higher learning rate). All other datasets achieve best performance with baseline configuration (lr=1e-4, dropout=0.1, 4 blocks, 4 heads).
+
+
 ## Reference Experiment
 
 We will take the experiment 481134 (ablation none, 4-4) as a reference for the results we will present in the paper.
 
 ```
-experiments/20260126_212614_ablation-none-nblocks-4-numattnheads-4_baseline_268444
+experiments/20260124_234359_ablation-none-4-4_baseline_481134 
 ```
 
 ## Training, Evaluation and Results

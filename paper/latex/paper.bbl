@@ -18,11 +18,13 @@ Cen, H.; Koedinger, K.; Junker, B.
 \newblock In Proceedings of the International conference on intelligent
   tutoring systems. Springer,  2008, pp. 796--798.
 
-\bibitem[Pavlik~Jr et~al.(2009)Pavlik~Jr, Cen, and
-  Koedinger]{pavlik2009performance}
-Pavlik~Jr, P.I.; Cen, H.; Koedinger, K.R.
-\newblock Performance Factors Analysis--A New Alternative to Knowledge Tracing.
-\newblock {\em Online submission} {\bf 2009}.
+\bibitem[Pavlik et~al.(2009)Pavlik, Cen, and Koedinger]{pavlik2009performance}
+Pavlik, P.I.; Cen, H.; Koedinger, K.R.
+\newblock Performance factors analysis - A new alternative to knowledge
+  tracing.
+\newblock {\em Frontiers in Artificial Intelligence and Applications} {\bf
+  2009}, {\em 200},~531 – 538.
+\newblock Cited by: 410, {\url{https://doi.org/10.3233/978-1-60750-028-5-531}}.
 
 \bibitem[Vie and Kashima(2019)]{vie2019knowledge}
 Vie, J.J.; Kashima, H.
@@ -36,11 +38,12 @@ Embretson, S.E.; Reise, S.P.
 \newblock {\em Item response theory for psychologists}; Psychology Press,
   2013.
 
-\bibitem[Šarić Grgić et~al.(2022)Šarić Grgić, Grubišić, and
-  Gašpar]{twenty_five_years_of_bkt}
-Šarić Grgić, I.; Grubišić, A.; Gašpar, A.
-\newblock Twenty-five years of Bayesian knowledge tracing: a systematic review,
-   2022.
+\bibitem[Ines et~al.(2024)Ines, Ani, and Angelina]{twenty_five_years_of_bkt}
+Ines, {\v{S}ari\'c-Grgi\'c}.; Ani, G.; Angelina, G.
+\newblock Twenty-Five Years of Bayesian knowledge tracing: a systematic review.
+\newblock {\em User Modeling and User-Adapted Interaction} {\bf 2024}, {\em
+  34},~1127 – 1173.
+\newblock Cited by: 16, {\url{https://doi.org/10.1007/s11257-023-09389-4}}.
 
 \bibitem[Piech et~al.(2015)Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and
   Sohl-Dickstein]{piech2015deep}
@@ -57,6 +60,17 @@ Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
 \newblock Attention is all you need.
 \newblock {\em Advances in neural information processing systems} {\bf 2017},
   {\em 30}.
+
+\bibitem[Holmes et~al.(2022)Holmes, Porayska-Pomsta, Holstein, Sutherland,
+  Baker, Shum, Santos, Rodrigo, Cukurova, Bittencourt, and
+  Koedinger]{Holmes2022504}
+Holmes, W.; Porayska-Pomsta, K.; Holstein, K.; Sutherland, E.; Baker, T.; Shum,
+  S.B.; Santos, O.C.; Rodrigo, M.T.; Cukurova, M.; Bittencourt, I.I.;  et~al.
+\newblock Ethics of AI in Education: Towards a Community-Wide Framework.
+\newblock {\em International Journal of Artificial Intelligence in Education}
+  {\bf 2022}, {\em 32},~504 – 526.
+\newblock Cited by: 636; All Open Access, Hybrid Gold Open Access,
+  {\url{https://doi.org/10.1007/s40593-021-00239-1}}.
 
 \bibitem[Bai et~al.(2024)Bai, Zhao, Wei, Cai, and He]{bai2024survey}
 Bai, Y.; Zhao, J.; Wei, T.; Cai, Q.; He, L.
@@ -80,7 +94,8 @@ Ghosh, A.; Heffernan, N.; Lan, A.S.
 Yeung, C.K.
 \newblock Deep-IRT: Make deep learning based knowledge tracing explainable
   using item response theory.
-\newblock {\em arXiv preprint arXiv:1904.11738} {\bf 2019}.
+\newblock International Educational Data Mining Society,  2019, p. 683 – 686.
+\newblock Cited by: 86.
 
 \bibitem[Su et~al.(2021)Su, Cheng, Luo, Wu, Zhang, Liu, and Wang]{su2021time}
 Su, Y.; Cheng, Z.; Luo, P.; Wu, J.; Zhang, L.; Liu, Q.; Wang, S.
@@ -156,9 +171,10 @@ Gan, W.; Sun, Y.; Sun, Y.
 
 \bibitem[Zhou et~al.(2021)Zhou, Li, Cao, Zhao, Ye, and Lv]{zhou2021lana}
 Zhou, Y.; Li, X.; Cao, Y.; Zhao, X.; Ye, Q.; Lv, J.
-\newblock LANA: towards personalized deep knowledge tracing through
-  distinguishable interactive sequences.
-\newblock {\em arXiv preprint arXiv:2105.06266} {\bf 2021}.
+\newblock LANA: Towards Personalized Deep Knowledge Tracing Through
+  Distinguishable Interactive Sequences.
+\newblock International Educational Data Mining Society,  2021, p. 602 – 608.
+\newblock Cited by: 4.
 
 \bibitem[Liu et~al.(2022)Liu, Yu, Li, Liang, Zhang, Shen, and
   Sun]{liu2022ability}
@@ -259,14 +275,15 @@ Stamper, J.; Niculescu-Mizil, A.; Ritter, S.; Gordon, G.; Koedinger, K.
 \newblock {\em Development data sets from KDD Cup} {\bf 2010}.
 
 \bibitem[Wang et~al.(2020)Wang, Lamb, Saveliev, Cameron, Zaykov,
-  Hern{\'a}ndez-Lobato, Turner, Baraniuk, Barton, Jones,
-  et~al.]{wang2020instructions}
+  Hern{\'a}ndez-Lobato, Turner, Baraniuk, Barton, Jones, Woodhead, and
+  Zhang]{wang2020instructions}
 Wang, Z.; Lamb, A.; Saveliev, E.; Cameron, P.; Zaykov, Y.;
   Hern{\'a}ndez-Lobato, J.M.; Turner, R.E.; Baraniuk, R.G.; Barton, C.; Jones,
   S.P.;  et~al.
-\newblock Instructions and guide for diagnostic questions: The neurips 2020
-  education challenge.
-\newblock {\em arXiv preprint arXiv:2007.12061} {\bf 2020}.
+\newblock Results and Insights from Diagnostic Questions: The NeurIPS 2020
+  Education Challenge.
+\newblock ML Research Press,  2020, Vol. 133, p. 191 – 205.
+\newblock Cited by: 16.
 
 \bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
 Hewitt, J.; Liang, P.
