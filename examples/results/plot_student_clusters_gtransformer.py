@@ -203,8 +203,8 @@ def main():
     sorted_clusters = np.array([remap[c] for c in original_clusters])
     
     df = pd.DataFrame({
-        'Placement (Mean Probe L0)': alpha,
-        'Pacing (Mean Probe T)': beta,
+        'Initial Knowledge (Mean Probe L0)': alpha,
+        'Learning Rate (Mean Probe T)': beta,
         'Cluster': [f'Cluster {c}' for c in sorted_clusters]
     })
     
@@ -246,15 +246,23 @@ def main():
     cluster_pcts = {cluster: (count / total_students * 100) for cluster, count in cluster_counts.items()}
     
     # Create labels with percentages and descriptions
+    # Map clusters to L0/T combinations based on sorted order
+    cluster_l0_t_labels = {
+        'Cluster 0': 'Low L0-Low T',
+        'Cluster 1': 'Low L0-High T',
+        'Cluster 2': 'High L0-Low T',
+        'Cluster 3': 'High L0-High T'
+    }
+    
     if cluster_labels:
         legend_labels = {
-            cluster: f"{cluster} ({cluster_pcts[cluster]:.0f}%): {cluster_labels[cluster]}"
+            cluster: f"{cluster_l0_t_labels[cluster]} ({cluster_pcts[cluster]:.0f}%): {cluster_labels[cluster]}"
             for cluster in df['Cluster'].unique()
         }
         df['Cluster_Label'] = df['Cluster'].map(legend_labels)
     else:
         legend_labels = {
-            cluster: f"{cluster} ({cluster_pcts[cluster]:.0f}%)"
+            cluster: f"{cluster_l0_t_labels[cluster]} ({cluster_pcts[cluster]:.0f}%)"
             for cluster in df['Cluster'].unique()
         }
         df['Cluster_Label'] = df['Cluster'].map(legend_labels)
@@ -270,12 +278,12 @@ def main():
         point_alpha = 0.7
     
     # 1. Plot Density Contours (KDE) to show the underlying mass
-    sns.kdeplot(data=df, x='Placement (Mean Probe L0)', y='Pacing (Mean Probe T)',
+    sns.kdeplot(data=df, x='Initial Knowledge (Mean Probe L0)', y='Learning Rate (Mean Probe T)',
                 hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
                 alpha=0.3, levels=5, thresh=0.1, fill=True, legend=False)
 
     # 2. Plot the individual student points
-    sns.scatterplot(data=df.sort_values('Cluster'), x='Placement (Mean Probe L0)', y='Pacing (Mean Probe T)', 
+    sns.scatterplot(data=df.sort_values('Cluster'), x='Initial Knowledge (Mean Probe L0)', y='Learning Rate (Mean Probe T)', 
                     hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
                     s=point_size, alpha=point_alpha, edgecolors='black', linewidth=0.5)
 
@@ -295,14 +303,14 @@ def main():
     # if not has_personalization:
     #     plt.yscale('log')
 
-    plt.title("Student Situational Clustering (Sqrt Scale)", fontsize=16, fontweight='bold', pad=20)
+    plt.title("Placement and Pacing Clusters", fontsize=16, fontweight='bold', pad=20)
     
     if has_personalization:
         plt.xlabel("Student Embedding PC1 (Placement-related)", fontsize=14)
         plt.ylabel("Student Embedding PC2 (Pacing-related)", fontsize=14)
     else:
-        plt.xlabel("Student Placement (Estimated Mean Difficulty Encountered)", fontsize=14)
-        plt.ylabel("Student Pacing (Estimated Mean Learning Rate)", fontsize=14)
+        plt.xlabel("Mean Initial Mastery (L0)", fontsize=14)
+        plt.ylabel("Mean Learning Rate (T)", fontsize=14)
     
     # Remove explicit xticks/yticks to allow the new scale to handle formatting
     # plt.xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], fontsize=12)

@@ -415,8 +415,11 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
         # Find max sequence length for x-axis
         max_len = max(len(quadrants[q]['response_seq']) for q in present_quadrants)
         
+        # Collect data for annotations
+        annotation_data = []
+        
         # Plot GTransformer predictions for each quadrant (only present ones)
-        for quad_name in present_quadrants:
+        for quad_idx, quad_name in enumerate(present_quadrants):
             student = quadrants[quad_name]
             color = quadrant_colors[quad_name]
             response_seq = student['response_seq']
@@ -428,25 +431,32 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
                 bar_color = 'lightgreen' if val == 1 else 'lightcoral'
                 ax.axvline(x=i, ymin=0, ymax=0.1, color=bar_color, alpha=0.3, linewidth=2)
             
-            # Create legend label with student characteristics
-            l0_level = "High L0" if "High L0" in quad_name else "Low L0"
-            t_level = "High T" if "High T" in quad_name else "Low T"
-            legend_label = f"id: {student['uid']} ({l0_level}, {t_level})"
-            
-            # Plot GTransformer predictions with markers (thicker, more visible)
+            # Plot GTransformer predictions with markers (thicker, more visible) - NO LABEL
             ax.plot(x, student['preds'], color=color, linewidth=2.5, 
-                   alpha=0.85, zorder=1, label=legend_label)
+                   alpha=0.85, zorder=1)
             for i, p in enumerate(student['preds']):
                 marker = 'o' if p > 0.5 else 'x'
                 markersize = 7 if p > 0.5 else 8
                 ax.plot(i, p, marker=marker, color=color, markersize=markersize, 
                        alpha=1.0, zorder=2)
             
-            # BKT baseline for this student's sequence with markers (more visible)
+            # Store annotation info for GTransformer line
+            l0_level = "High" if "High L0" in quad_name else "Low"
+            t_level = "High" if "High T" in quad_name else "Low"
+            annotation_data.append({
+                'type': 'gtransformer',
+                'uid': student['uid'],
+                'l0': l0_level,
+                't': t_level,
+                'color': color,
+                'preds': student['preds'],
+                'quad_idx': quad_idx
+            })
+            
+            # BKT baseline for this student's sequence with markers (more visible) - NO LABEL
             bkt_preds = calculate_bkt_trajectory(bkt_params, skill_id, response_seq)
-            bkt_label = f"id: {student['uid']} (Classical BKT)"
             ax.plot(x, bkt_preds, color='#555555', linestyle=':', linewidth=2.0, 
-                   alpha=0.6, zorder=0, label=bkt_label)
+                   alpha=0.6, zorder=0)
             for i, p in enumerate(bkt_preds):
                 marker = 'o' if p > 0.5 else 'x'
                 markersize = 5 if p > 0.5 else 6
@@ -455,20 +465,34 @@ def plot_skill_quadrant_mosaic(selected_skills, bkt_params, output_dir):
         
         # Title with skill info
         ax.set_title(f"Skill {skill_id}", 
-                    fontsize=10, fontweight='bold')
+                    fontsize=14, fontweight='bold')
         ax.set_ylim(-0.05, 1.05)
-        ax.set_ylabel("P(Correct)", fontsize=8)
-        ax.set_xlabel("Time-step", fontsize=8)
+        ax.set_ylabel("P(Correct)", fontsize=12, fontweight='bold')
+        ax.set_xlabel("Time-step", fontsize=12, fontweight='bold')
         ax.set_xticks(np.arange(0, max_len, 1))
-        ax.tick_params(axis='both', which='major', labelsize=7)
+        ax.tick_params(axis='both', which='major', labelsize=10)
         
-        # Always show legend with student info
-        ax.legend(loc='upper right', fontsize=6, framealpha=0.95)
+        # Create legend for GTransformer and BKT lines (upper right, transparent background)
+        from matplotlib.patches import Patch
+        legend_elements = []
+        for anno in annotation_data:
+            l0_level = "High" if anno['l0'] == "High" else "Low"
+            t_level = "High" if anno['t'] == "High" else "Low"
+            label = f"{l0_level} L0, {t_level} T - ID: {anno['uid']}"
+            legend_elements.append(Patch(facecolor=anno['color'], edgecolor=anno['color'], label=label))
+        
+        # Add BKT to legend
+        bkt_ids = [quadrants[q]['uid'] for q in present_quadrants]
+        bkt_ids_str = ', '.join(map(str, bkt_ids))
+        legend_elements.append(Patch(facecolor='#555555', edgecolor='#555555', label=f"BKT - IDs: {bkt_ids_str}"))
+        
+        ax.legend(handles=legend_elements, loc='upper right', fontsize=12, 
+                 framealpha=0.65, ncol=1, handlelength=1.5, handleheight=1.2)
         
         ax.grid(True, alpha=0.2)
     
     plt.suptitle("Context-Aware Predictions for Students with Same Response Sequence vs BKT Identical Predictions",
-                fontsize=16, fontweight='bold', y=0.99)
+                fontsize=18, fontweight='bold', y=0.99)
     plt.subplots_adjust(top=0.96)
     
     output_path = os.path.join(output_dir, "h3_skill_quadrant_comparison_mosaic.png")
@@ -538,12 +562,31 @@ def plot_individual_skill(skill_data, bkt_params, output_dir, quadrant_colors, q
                    alpha=0.6, zorder=0)
     
     ax.set_title("Context-Aware Predictions for Students with Same Response Sequence vs BKT Identical Predictions",
-                fontsize=14, fontweight='bold', pad=15)
-    ax.set_xlabel("Time-step", fontsize=12, fontweight='bold')
+                fontsize=16, fontweight='bold', pad=15)
+    ax.set_xlabel("Time-step", fontsize=14, fontweight='bold')
     ax.set_xticks(np.arange(0, max_len, 1))
-    ax.set_ylabel("P(Correct)", fontsize=12, fontweight='bold')
+    ax.set_ylabel("P(Correct)", fontsize=14, fontweight='bold')
     ax.set_ylim(-0.05, 1.05)
-    ax.legend(loc='upper right', fontsize=11, framealpha=0.95, ncol=2)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    
+    # Create legend with new format including BKT
+    from matplotlib.patches import Patch
+    legend_elements = []
+    for quad_name in present_quadrants:
+        color = quadrant_colors[quad_name]
+        uid = quadrants[quad_name]['uid']
+        l0_level = "High" if "High L0" in quad_name else "Low"
+        t_level = "High" if "High T" in quad_name else "Low"
+        label = f"{l0_level} L0, {t_level} T - ID: {uid}"
+        legend_elements.append(Patch(facecolor=color, edgecolor=color, label=label))
+    
+    # Add BKT to legend
+    bkt_ids = [quadrants[q]['uid'] for q in present_quadrants]
+    bkt_ids_str = ', '.join(map(str, bkt_ids))
+    legend_elements.append(Patch(facecolor='#555555', edgecolor='#555555', label=f"BKT - IDs: {bkt_ids_str}"))
+    
+    legend = ax.legend(handles=legend_elements, loc='upper right', fontsize=14, framealpha=0.65, ncol=1)
+    
     ax.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
