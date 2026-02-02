@@ -404,14 +404,14 @@ The default configuration uses weight coefficients $\lambda_{\text{sup}} = 1.0$,
 
 \section{Experimental Setup} \label{sec_experiment}
 
-This section describes the experimental setup used to evaluate gTransformer. We first detail the architecture configuration and training protocol, including the set of hyperparameters and the cross-validation procedure. We then describe the five educational datasets used for evaluation.
+This section details the experimental framework employed to evaluate gTransformer, covering training configurations, five benchmark educational datasets, and the baseline models selected for comparison.
 
 
 \subsection{Training Setup}
 
-The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline model implementation. 
+The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline models implementation. 
 
-Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using the Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for all models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison, specific parameters for gTransformer are detailed in \cref{tab:implementation_params}. All experiments were conducted on a high-performance computing node equipped with two Intel(R) Xeon(R) Platinum 8168 CPUs (providing 40 physical cores), 661 GB of RAM, and eight NVIDIA Tesla V100-SXM2 GPUs (32 GB HBM2 each).
+Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using the Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for baseline models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison. Parameters for gTransformer are detailed in \cref{tab:implementation_params} and \cref{tab:interpretabilityparams}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
 
 \subsection{Datasets}\label{sec_dataset}
 
@@ -440,7 +440,7 @@ BDG2006 & 1,146 & 493 & 207,856 & 3,679,199 \\
 NIPS34 & 4,918 & 57 & 948 & 1,382,727 \\
 \bottomrule
 \end{tabularx}
-\caption{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \label{tab_datasets}}
+\caption{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts or skills), unique questions, and student-item interactions, respectively. \label{tab_datasets}}
 \end{table}
 
 \subsection{Baseline Models}\label{sec_models}
@@ -475,7 +475,7 @@ gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
 \caption{AUC across the datasets evaluated on questions level with mean late fusion. \label{tab_performance}}
 \end{table}
 
-When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other models. It ranks second on AL2005, BDG2006, and NIPS34, following AKT, and third on AS2015, following ATKT and AKT. These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance alongside theory-based interpretability, offering a robust and transparent alternative for high-stakes educational scenarios where pedagogical grounding is paramount.
+Comparing these results with baseline models, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0$ and $\lambda_{\text{probe}} = 0$), functioning as a pure neural model to establish its maximum representational capacity. The hyperparameter configurations used for each dataset are shown in \cref{tab:implementation_params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other models. It ranks second on AL2005, BDG2006, and NIPS34, surpassed only by AKT, and third on AS2015, behind ATKT and AKT. These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance alongside theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
 
 \begin{table}[htbp]
 \centering
@@ -486,23 +486,26 @@ When comparing these results with baseline architectures, we observe that gTrans
 \midrule
 \multicolumn{6}{l}{\textit{Architecture Configuration}} \\
 Embedding dimension ($d_{model}$) & 64 & 64 & 64 & 64 & 64 \\
-Attention heads & 4 & 4 & 4 & 4 & 4 \\
-Encoder blocks & 4 & 4 & 4 & 4 & 4 \\
-Decoder blocks & 8 & 8 & 8 & 8 & 8 \\
+Transformer blocks ($n_{blocks}$) & 4 & 4 & 4 & 4 & 4 \\
+Attention heads ($num\_attn\_heads$) & 4 & 4 & 4 & 4 & 4 \\
 Feed-forward dimension ($d_{ff}$) & 256 & 256 & 256 & 256 & 256 \\
 \midrule
 \multicolumn{6}{l}{\textit{Training Configuration}} \\
-Optimizer & Adam & Adam & Adam & Adam & Adam \\
-Learning rate & $2 \times 10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
-Batch size & 64 & 64 & 64 & 64 & 64 \\
-Dropout rate & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
-Epochs & 200 & 200 & 200 & 200 & 200 \\
+Optimizer ($optimizer$) & Adam & Adam & Adam & Adam & Adam \\
+Learning rate ($learning\_rate$) & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $3 \times 10^{-4}$ \\
+Batch size ($batch\_size$) & 64 & 64 & 64 & 64 & 64 \\
+Dropout rate ($dropout$) & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
+Epochs ($epochs$) & 200 & 200 & 200 & 200 & 200 \\
+\midrule
+\multicolumn{6}{l}{\textit{Loss Weights}} \\
+Supervised ($\lambda_{sup}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
+Reference ($\lambda_{ref}$) & 0 & 0 & 0 & 0 & 0 \\
+Probing ($\lambda_{probe}$) & 0 & 0 & 0 & 0 & 0 \\
 \bottomrule
 \end{tabular}
-\caption{Parameter values used to train gTransformer across all datasets}
+\caption{Parameter values used to train gTransformer across all datasets in ablated mode.}
 \label{tab:implementation_params}
 \end{table}
-
 
 
 \subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}
@@ -689,6 +692,37 @@ The results reveal two insights regarding the accuracy--interpretability trade-o
 \end{itemize}
 
 In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Parameter} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
+\midrule
+\multicolumn{6}{l}{\textit{Architecture Configuration}} \\
+Embedding dimension ($d_{model}$) & 64 & 64 & 64 & 64 & 64 \\
+Transformer blocks ($n_{blocks}$) & 4 & 4 & 4 & 4 & 4 \\
+Attention heads & 8 & 4 & 4 & 4 & 4 \\
+Feed-forward dimension ($d_{ff}$) & 256 & 256 & 256 & 256 & 256 \\
+\midrule
+\multicolumn{6}{l}{\textit{Training Configuration}} \\
+Optimizer & Adam & Adam & Adam & Adam & Adam \\
+Learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Batch size & 64 & 64 & 64 & 64 & 64 \\
+Dropout rate & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
+Epochs & 200 & 200 & 200 & 200 & 200 \\
+\midrule
+\multicolumn{6}{l}{\textit{Loss Functions}} \\
+Ablation mode & none & none & none & none & none \\
+Supervised loss weight ($\lambda_{sup}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
+Reference loss weight ($\lambda_{ref}$) & 0.5 & 0.5 & 0.5 & 0.5 & 0.5 \\
+Probing loss weight ($\lambda_{probe}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
+\bottomrule
+\end{tabular}
+\caption{Parameter values used to train gTransformer across all datasets.}
+\label{tab:interpretabilityparams}
+\end{table}
 
 
 \subsection{Context-Aware Diagnostics (RQ3)} \label{sec_gran_results}

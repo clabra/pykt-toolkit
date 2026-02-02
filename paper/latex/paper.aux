@@ -165,8 +165,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Datasets}{13}{subsection.4.2}\protected@file@percent }
 \newlabel{sec_dataset}{{4.2}{13}{Datasets}{subsection.4.2}{}}
 \newlabel{sec_dataset@cref}{{[subsection][2][4]4.2}{[1][13][]13}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \relax }}{13}{table.caption.3}\protected@file@percent }
-\newlabel{tab_datasets}{{1}{13}{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \relax }{table.caption.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts or skills), unique questions, and student-item interactions, respectively. \relax }}{13}{table.caption.3}\protected@file@percent }
+\newlabel{tab_datasets}{{1}{13}{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts or skills), unique questions, and student-item interactions, respectively. \relax }{table.caption.3}{}}
 \newlabel{tab_datasets@cref}{{[table][1][]1}{[1][13][]13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Baseline Models}{13}{subsection.4.3}\protected@file@percent }
 \newlabel{sec_models}{{4.3}{13}{Baseline Models}{subsection.4.3}{}}
@@ -180,8 +180,8 @@
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AUC across the datasets evaluated on questions level with mean late fusion. \relax }}{14}{table.caption.4}\protected@file@percent }
 \newlabel{tab_performance}{{2}{14}{AUC across the datasets evaluated on questions level with mean late fusion. \relax }{table.caption.4}{}}
 \newlabel{tab_performance@cref}{{[table][2][]2}{[1][13][]14}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Parameter values used to train gTransformer across all datasets\relax }}{14}{table.caption.5}\protected@file@percent }
-\newlabel{tab:implementation_params}{{3}{14}{Parameter values used to train gTransformer across all datasets\relax }{table.caption.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Parameter values used to train gTransformer across all datasets in ablated mode.\relax }}{14}{table.caption.5}\protected@file@percent }
+\newlabel{tab:implementation_params}{{3}{14}{Parameter values used to train gTransformer across all datasets in ablated mode.\relax }{table.caption.5}{}}
 \newlabel{tab:implementation_params@cref}{{[table][3][]3}{[1][14][]14}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Theory-Based Interpretability Through Grounded Transformers (RQ1)}{14}{subsection.5.2}\protected@file@percent }
 \newlabel{sec_validation}{{5.2}{14}{Theory-Based Interpretability Through Grounded Transformers (RQ1)}{subsection.5.2}{}}
@@ -226,17 +226,20 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Context-Aware Diagnostics (RQ3)}{21}{subsection.5.4}\protected@file@percent }
 \newlabel{sec_gran_results}{{5.4}{21}{Context-Aware Diagnostics (RQ3)}{subsection.5.4}{}}
 \newlabel{sec_gran_results@cref}{{[subsection][4][5]5.4}{[1][21][]21}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Student Clusters in AS2009\relax }}{22}{figure.caption.12}\protected@file@percent }
-\newlabel{fig:student_clusters_as2009}{{8}{22}{Student Clusters in AS2009\relax }{figure.caption.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Parameter values used to train gTransformer across all datasets.\relax }}{22}{table.caption.12}\protected@file@percent }
+\newlabel{tab:interpretabilityparams}{{7}{22}{Parameter values used to train gTransformer across all datasets.\relax }{table.caption.12}{}}
+\newlabel{tab:interpretabilityparams@cref}{{[table][7][]7}{[1][21][]22}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Student Clusters in AS2009\relax }}{22}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:student_clusters_as2009}{{8}{22}{Student Clusters in AS2009\relax }{figure.caption.13}{}}
 \newlabel{fig:student_clusters_as2009@cref}{{[figure][8][]8}{[1][22][]22}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit  {what they answered}, but by \textit  {how they learned}.\relax }}{23}{figure.caption.13}\protected@file@percent }
-\newlabel{fig:skill_quadrant_mosaic}{{9}{23}{Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit {what they answered}, but by \textit {how they learned}.\relax }{figure.caption.13}{}}
-\newlabel{fig:skill_quadrant_mosaic@cref}{{[figure][9][]9}{[1][22][]23}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{23}{section.6}\protected@file@percent }
+\newlabel{sec_conclusions}{{6}{23}{Conclusions}{section.6}{}}
+\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][23][]23}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit  {what they answered}, but by \textit  {how they learned}.\relax }}{24}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:skill_quadrant_mosaic}{{9}{24}{Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit {what they answered}, but by \textit {how they learned}.\relax }{figure.caption.14}{}}
+\newlabel{fig:skill_quadrant_mosaic@cref}{{[figure][9][]9}{[1][23][]24}}
 \bibdata{biblio}
 \bibcite{corbett1994knowledge}{{1}{1994}{{Corbett and Anderson}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{24}{section.6}\protected@file@percent }
-\newlabel{sec_conclusions}{{6}{24}{Conclusions}{section.6}{}}
-\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][24][]24}}
 \bibcite{Romero2020}{{2}{2020}{{Romero and Ventura}}{{}}}
 \bibcite{abdelrahman2023knowledge}{{3}{2023}{{Abdelrahman et~al.}}{{Abdelrahman, Wang, and Nunes}}}
 \bibcite{cen2008comparing}{{4}{2008}{{Cen et~al.}}{{Cen, Koedinger, and Junker}}}
@@ -251,6 +254,7 @@
 \bibcite{Pandey2019384}{{13}{2019}{{Pandey and Karypis}}{{}}}
 \bibcite{ghosh2020context}{{14}{2020}{{Ghosh et~al.}}{{Ghosh, Heffernan, and Lan}}}
 \bibcite{yeung2019deep}{{15}{2019}{{Yeung}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}References}{25}{section.7}\protected@file@percent }
 \bibcite{su2021time}{{16}{2021}{{Su et~al.}}{{Su, Cheng, Luo, Wu, Zhang, Liu, and Wang}}}
 \bibcite{chen2023improving}{{17}{2023}{{Chen et~al.}}{{Chen, Liu, Huang, Liu, and Luo}}}
 \bibcite{rudin2019stop}{{18}{2019}{{Rudin}}{{}}}
@@ -260,7 +264,6 @@
 \bibcite{Pascanu20132347}{{22}{2013}{{Pascanu et~al.}}{{Pascanu, Mikolov, and Bengio}}}
 \bibcite{choi2020towards}{{23}{2020}{{Choi et~al.}}{{Choi, Lee, Cho, Baek, Kim, Cha, Shin, Bae, and Heo}}}
 \bibcite{bach2015pixel}{{24}{2015}{{Bach et~al.}}{{Bach, Binder, Montavon, Klauschen, M{\"u}ller, and Samek}}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}References}{25}{section.7}\protected@file@percent }
 \bibcite{ribeiro2016should}{{25}{2016}{{Ribeiro et~al.}}{{Ribeiro, Singh, and Guestrin}}}
 \bibcite{gan2020knowledge}{{26}{2020}{{Gan et~al.}}{{Gan, Sun, and Sun}}}
 \bibcite{zhou2021lana}{{27}{2021}{{Zhou et~al.}}{{Zhou, Li, Cao, Zhao, Ye, and Lv}}}
@@ -284,6 +287,6 @@
 \bibcite{GuoHZTL21}{{45}{2021}{{Guo et~al.}}{{Guo, Huang, Zhou, Lang, et~al.}}}
 \bibcite{hewitt2019designing}{{46}{2019}{{Hewitt and Liang}}{{}}}
 \bibcite{belinkov2022probing}{{47}{2022}{{Belinkov}}{{}}}
-\newlabel{LastPage}{{}{26}{}{page.26}{}}
-\xdef\lastpage@lastpage{26}
-\xdef\lastpage@lastpageHy{26}
+\newlabel{LastPage}{{}{27}{}{page.27}{}}
+\xdef\lastpage@lastpage{27}
+\xdef\lastpage@lastpageHy{27}

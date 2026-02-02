@@ -17,15 +17,15 @@ For comparison with SOTA models, we can use the results from Exp 123509	that ove
 | **Ablation Reference (4/4) A09** | 140091 | 64* | 4* | 4* | 256* | 0.1* | 0.0* | reference* | ❌ | ❌ | 1.0* | 0* | 0* | 0* | 0* | `20260126_223907...140091` | **0.7820** ± 0.0011 ✅ | - | Reference path only, no probing (fixed n_heads bug) |
 | **Ablation Probe (4/4) A09** | 774696 | 64* | 4* | 4* | 256* | 0.1* | 0.5* | probe* | ❌ | ❌ | 1.0* | 0.5* | 0* | 0* | 0* | `20260126_224017...774696` | **0.7819** ± 0.0011 ✅ | **0.6736** ± 0.0002 ✅ | Probing grounding disabled (λ_probe=0) while keeping reference path active (fixed n_heads bug) |
 
-### Table 2: Paper (Table 2) - 5 Datasets, ablation=all, n_blocks 4, n_attn_heads 4
 
-| Short Title | Exp ID | Dataset | AUC | Ablation | Description | Exp Folder | d_model | n_blocks | num_attn_heads | d_ff | dropout | lambda_ref | λ_sup | λ_probe | λ_init | λ_rate |
-| :--- | :---: | :---: | :---: | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Ablation All (4/4)** | 697945 | assist2009 | **0.7831** ± 0.0012 ✅ | all* | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191440...697945` | 64* | 4* | 4* | 256* | 0.1* | 0.0* | 1.0* | 0* | 0* | 0* |
-| **Ablation All (4/4)** | 589915 | assist2015 | **0.7078** ± 0.0006 ✅ | all* | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191539...589915` | 64* | 4* | 4* | 256* | 0.1* | 0.0* | 1.0* | 0* | 0* | 0* |
-| **Ablation All (4/4)** | 384404 | algebra2005 | **0.8240** ± 0.0008 ✅ | all* | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191647...384404` | 64* | 4* | 4* | 256* | 0.1* | 0.0* | 1.0* | 0* | 0* | 0* |
-| **Ablation All (4/4)** | 663881 | bridge2algebra2006 | **0.8148** ± 0.0006 ✅ | all* | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191744...663881` | 64* | 4* | 4* | 256* | 0.1* | 0.0* | 1.0* | 0* | 0* | 0* |
-| **Ablation All (4/4)** | 498903 | nips_task34 | **0.7988** ± 0.0002 ✅ | all* | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191854...498903` | 64* | 4* | 4* | 256* | 0.1* | 0.0* | 1.0* | 0* | 0* | 0* | 
+| Short Title | Exp ID | Dataset | AUC | Description | Exp Folder | **Architecture Configuration** |  |  |  | **Training Configuration** |  |  |  | **Loss Functions** |  |  |  |
+| :--- | :---: | :---: | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|  |  |  |  |  |  | d_model | n_blocks | num_attn_heads | d_ff | learning_rate | optimizer | epochs | dropout | ablation | λ_sup | λ_ref | λ_probe |
+| **Ablation All (4/4)** | 697945 | assist2009 | **0.7831** ± 0.0012 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191440...697945` | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 |
+| **Ablation All (4/4)** | 589915 | assist2015 | **0.7078** ± 0.0006 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191539...589915` | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 |
+| **Ablation All (4/4)** | 384404 | algebra2005 | **0.8240** ± 0.0008 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191647...384404` | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 |
+| **Ablation All (4/4)** | 663881 | bridge2algebra2006 | **0.8148** ± 0.0006 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191744...663881` | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 |
+| **Ablation All (4/4)** | 498903 | nips_task34 | **0.7988** ± 0.0002 ✅ | Black-box baseline with 4/4 architecture (fixed n_heads bug) | `20260126_191854...498903` | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | 
 
 ### Table 3: All Datasets, ablation=none, n_blocks 4, n_attn_heads 4
 
@@ -92,21 +92,6 @@ For comparison with SOTA models, we can use the results from Exp 123509	that ove
 | **Ablation None (4/8)** | 151407 | NIPS 2020 Education Challenge | **0.7988** ± 0.0006 | **0.7015** ± 0.0003 | none | Grounded model with 4/8 architecture | `20260126_020501...151407` | 64 | 4 | 8 | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
 
 *Note: AUC values are question-level averages using the late fusion (mean) protocol. p_ref metrics available only for grounded models with dual evaluation.*
-
-
-## Table 6: Paper (Table 5) - All Datasets, ablation=none (Best Performance)
-
-| Short Title | Exp ID | Dataset | AUC (p_sup) | AUC (p_ref) | AUC (p_bkt) | Ablation | Description | Exp Folder | d_model | n_blocks | num_attn_heads | d_ff | dropout | lambda_ref | λ_sup | λ_probe | λ_init | λ_rate | Folds | Status |
-| :--- | :---: | :--- | :---: | :---: | :---: | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Ablation None (4/8)** | 481134 | ASSISTments 2009 | **0.7824** ± 0.0012 | **0.6733** ± 0.0001 | **0.6097** ± 0.0008* | none | Grounded model with 4/8 architecture | `20260124_234359...481134` | 64 | 4 | 8 | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
-| **Ablation None (<span style="color:red">4/4</span>)** | 878655 | Algebra 2005 | **0.8219** ± 0.0011 | **0.7361** ± 0.0002 | **0.7215** ± 0.0014 | none | Grounded model with <span style="color:red">4/4</span> architecture across multiple datasets | `20260127_130756...878655` | 64 | 4 | <span style="color:red">4</span> | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
-| **Ablation None (<span style="color:red">4/4</span>)** | 878655 | ASSISTments 2015 | **0.7073** ± 0.0007 | **0.6545** ± 0.0014 | N/A* | none | Grounded model with <span style="color:red">4/4</span> architecture across multiple datasets | `20260127_130756...878655` | 64 | 4 | <span style="color:red">4</span> | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
-| **Ablation None (<span style="color:red">4/4</span>)** | 878655 | Bridge to Algebra 2006 | **0.8120** ± 0.0009 | **0.7025** ± 0.0003 | **0.6756** ± 0.0017 | none | Grounded model with <span style="color:red">4/4</span> architecture across multiple datasets | `20260127_130756...878655` | 64 | 4 | <span style="color:red">4</span> | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
-| **Ablation None (<span style="color:red">4/4</span>)** | 878655 | NIPS 2020 Education Challenge | **0.7991** ± 0.0005 | **0.6843** ± 0.0011 | **0.5729** ± 0.0004 | none | Grounded model with <span style="color:red">4/4</span> architecture across multiple datasets | `20260127_130756...878655` | 64 | 4 | <span style="color:red">4</span> | 256 | 0.1 | 0.5 | 1.0 | 1.0 | 0.0 | 0.0 | 5/5 | ✅ Complete |
-
-*Note: This table shows the best performing experiment (highest AUC p_sup) for each dataset with ablation=none. For ASSISTments 2009, the 4/8 architecture performed better. For all other datasets (Algebra 2005, ASSISTments 2015, Bridge to Algebra 2006, NIPS 2020), the 4/4 architecture was selected due to better p_ref interpretability and comparable or better p_sup performance.*
-
-*\*p_bkt value for exp 481134 is from exp 268444 (same dataset/ablation, BKT is architecture-independent)*
 
 
 ## Table 7: AKT Config - All Datasets, ablation=all (2/8 architecture)
