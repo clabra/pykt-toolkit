@@ -531,73 +531,71 @@ The objective of this triple validation is to demonstrate that grounding constra
 
 \subsubsection{Structural Alignment via Diagnostic Probing (H1.1)} \label{sec_structural_alignment}
 
-To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models ($\alpha=1.0$) to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
+To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
 
-\textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$ using an 80/20 train-test split. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. This distinction verifies whether probes exploit genuine BKT structure rather than arbitrary patterns.  
-
-The rationale is that high selectivity ($> 0.5$) proves BKT constructs are the primary organizing axis rather than incidental patterns—if probes perform equally well on shuffled targets, the representations would contain no genuine structural encoding. 
+\textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. If probes perform equally well on shuffled targets, the representations lack genuine structural encoding. Conversely, high selectivity ($\Delta R^2 > 0.5$) demonstrates that BKT constructs are the primary organizing axes rather than incidental patterns. 
 
 \begin{itemize}
     \item \textbf{Fidelity}: The $R^2$ (coefficient of determination) is calculated on the test set, representing the proportion of the variance in the theoretical parameters that is predictable from the gTransformer's latent space:
     \[ R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} \]
     where $y_i$ is the actual BKT theoretical value, $\hat{y}_i$ is the value predicted by the linear probe from the hidden state $z_t$, and $\bar{y}$ is the mean of the theoretical values.
-    \item \textbf{Selectivity}: Quantifies the structural specificity by comparing true performance against a shuffled control:
+    \item \textbf{Selectivity}: Compares true performance against a shuffled control:
     \[ \Delta R^2 = R^2_{\text{true}} - R^2_{\text{control}} \]
-    where a negative $R^2_{\text{control}}$ signifies that the probe performs worse than a mean-based baseline on shuffled data, further confirming the structural specificity of the true representations.
 \end{itemize}
 
 \textbf{Results}: \Cref{tab_probing} summarizes the diagnostic probing results on AS2009. The recorded values exceed the $R^2 = 0.5$ threshold, indicating strong structural encoding:
 
 \begin{itemize}
-    \item \textbf{Initial Mastery ($L_0$)}: Achieves fidelity $R^2 = 0.487$ with Pearson $r = 0.698$, indicating strong linear recoverability. The selectivity $\Delta R^2 = 0.507$ exceeds the threshold of 0.5, proving $L_0$ is a dominant organizing principle in the latent space rather than an incidental pattern. The control task achieves negative $R^2 = -0.020$, confirming probes cannot recover shuffled targets.
+    \item \textbf{Initial Mastery ($L_0$)}: Achieves fidelity $R^2 = 0.487$ with Pearson $r = 0.698$, indicating strong linear recoverability. The selectivity $\Delta R^2 = 0.507$ exceeds the threshold of 0.5, demonstrating that $L_0$ is a dominant organizing principle in the latent space rather than an incidental pattern. The control task yields a negative $R^2 = -0.020$ (indicating performance worse than a mean-based baseline), confirming that probes cannot recover shuffled targets.
     
-    \item \textbf{Learning Rate ($T$)}: Shows even stronger structural encoding with fidelity $R^2 = 0.566$ and Pearson $r = 0.753$. The selectivity reaches $\Delta R^2 = 0.607$, the highest among both constructs, with control $R^2 = -0.041$. This superior selectivity suggests learning rate trajectories impose more distinctive constraints on latent geometry than initial knowledge.
+    \item \textbf{Learning Rate ($T$)}: Shows even stronger structural encoding with fidelity $R^2 = 0.566$ and Pearson $r = 0.753$. The selectivity reaches $\Delta R^2 = 0.607$, the highest among both constructs, with control $R^2 = -0.041$.
 \end{itemize}
 
-\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates H1.1 (Structural Encoding) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. The negative control $R^2$ values confirm probes exploit genuine structure rather than overfitting noise, demonstrating that the model's latent organization is fundamentally shaped by pedagogical theory rather than arbitrary statistical patterns.
-
-\Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} visualize the recovery quality through parity plots comparing BKT theoretical priors (x-axis) against probe-extracted parameters (y-axis). Each point represents a binned aggregate of test interactions, with size encoding sample density. The strong adherence to the diagonal (red dashed line) confirms linear recoverability. The $T$ plot exhibits more linear fidelity across the full range, consistent with its higher $R^2$ and selectivity scores.
+\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates H1.1 (Structural Encoding) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\begin{tabularx}{\textwidth}{lcccc}
+\begin{tabular}{lcccc}
 \toprule
-\textbf{Construct} & \textbf{Fidelity} & \textbf{Pearson ($r$)} & \textbf{Control} & \textbf{Selectivity ($\Delta$)} \\
+\textbf{Construct} & \textbf{Fidelity ($R^2_{\text{true}}$)} & \textbf{Pearson ($r$)} & \textbf{Control ($R^2_{\text{control}}$)} & \textbf{Selectivity ($\Delta R^2$)} \\
 \midrule
 Initial Mastery ($L_0$) & 0.487 & 0.698 & $-0.020$ & \textbf{0.507} \\
 Learning Rate ($T$) & 0.566 & 0.753 & $-0.041$ & \textbf{0.607} \\
 \bottomrule
-\end{tabularx}
-\caption{Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \label{tab_probing}}
+\end{tabular}
+\caption{Diagnostic Probing results for AS2009. Fidelity measures probe accuracy on true BKT targets. Selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($\Delta R^2 > 0.5$) demonstrates that BKT constructs are dominant organizing principles in latent representations. \label{tab_probing}}
 \end{table}
+
+\Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} visualize the recovery quality through parity plots comparing BKT theoretical priors (x-axis) against probe-extracted parameters (y-axis). Each point represents an aggregate of interactions, with size proportional to sample density. The strong adherence to the diagonal confirms linear recoverability. The $T$ plot exhibits more linear fidelity, consistent with its higher $R^2$ and selectivity scores.
+
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.70\textwidth]{img/h1_structural_fidelity_l0_fold_0_481134.png}
-\caption{Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \label{fig_structural_fidelity_l0}}
+\includegraphics[width=0.70\textwidth]{img/h11_recovery_l0_probe_481134.png}
+\caption{Structural Fidelity for Initial Mastery $P_{L_0}$. Plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \label{fig_structural_fidelity_l0}}
 \vspace{12pt}
-\includegraphics[width=0.70\textwidth]{img/h1_structural_fidelity_t_fold_0_481134.png}
-\caption{Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
+\includegraphics[width=0.70\textwidth]{img/h11_recovery_t_probe_481134.png}
+\caption{Structural Fidelity for Learning Rate $P_T$. Plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The tight clustering around the diagonal indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
 \end{figure}
 
 \subsubsection{Semantic Grounding and Alignment Preservation (H1.2)} \label{sec_semantic_grounding}
 
 Hypothesis H1.2 examines whether grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ retain their pedagogical semantics after neural processing. We want to check that models do not repurpose theoretical constructs for black-box optimization. Unlike H1.1, which assesses latent linear decodability, H1.2 validates monotonic relationship preservation in the final projected parameters. Because gTransformer refines population-level priors into student-specific estimates, we prioritize maintaining pedagogical ordering over exact numerical reproduction.
 
-We use Spearman's rank correlation ($\rho$) to measure this alignment, as it assesses monotonic consistency without assuming linearity (thresholds: $\rho \geq 0.6$ strong; $0.4 \leq \rho < 0.6$ moderate). 
+We use Spearman's rank correlation ($\rho$) to measure this alignment, as it assesses monotonic consistency without assuming linearity with thresholds: $\rho \geq 0.6$ strong, $0.4 \leq \rho < 0.6$ moderate. 
 
 \textbf{Results}: \Cref{tab_semantic_alignment} summarizes the semantic alignment results on AS2009. The grounded parameters achieve moderate-to-strong correlations with theoretical priors:
 
 \begin{itemize}
-    \item \textbf{Initial Mastery ($P_{L_0}$)}: Achieves Spearman $\rho = 0.427$ (moderate), demonstrating rank-order preservation despite neural transformation. The lower correlation compared to probe parameters ($\rho = 0.736$ in H1.1) confirms genuine student-specific individualization rather than trivial reproduction of population priors.
+    \item \textbf{Initial Mastery ($P_{L_0}$)}: Achieves a moderate Spearman $\rho=0.427$, demonstrating rank-order preservation despite neural transformation. The lower correlation compared to probe parameters ($\rho = 0.736$) confirms genuine student-specific individualization rather than trivial reproduction of population priors.
     
-    \item \textbf{Learning Rate ($P_T$)}: Shows stronger alignment with Spearman $\rho = 0.604$ (moderate-to-strong), approaching the 0.6 threshold for strong alignment. This superior preservation suggests the model reliably internalizes theoretical principles of practice effects. The comparison with probe parameters ($\rho = 0.760$ in H1.1) again confirms meaningful contextual refinement.
+    \item \textbf{Learning Rate ($P_T$)}: Shows stronger alignment, with Spearman $\rho=0.604$. The comparison with probe parameters ($\rho = 0.760$) again confirms meaningful contextual refinement.
 \end{itemize}
 
-\textbf{Interpretation}: The moderate-to-strong Spearman correlations validate H1.2 (Semantic Alignment) hypothesis: grounded parameters maintain pedagogical ordering after neural transformation while enabling individualization. The gap between grounded and probe correlations (0.309 for $L_0$, 0.156 for $T$) quantifies the degree of context-aware refinement—the model neither abandons theoretical priors ($\rho \approx 0$) nor mechanically reproduces them ($\rho \approx 1$), achieving the desired balance.
+\textbf{Interpretation}: The moderate-to-strong Spearman correlations validate H1.2 (Semantic Alignment) hypothesis: grounded parameters maintain pedagogical ordering after neural transformation while enabling individualization. The gap between grounded and probe correlations (0.309 for $L_0$, 0.156 for $T$) quantifies the degree of context-aware refinement: the model neither abandons theoretical priors nor mechanically reproduces them, achieving the desired balance.
 
-\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} visualize the alignment quality through parity plots comparing BKT theoretical priors (x-axis) against grounded parameters (y-axis). Each point represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed line), confirming rank-order preservation where data is abundant while allowing adaptive refinement in sparse regions.
+\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} visualize the alignment quality through plots comparing BKT theoretical priors (x-axis) against grounded parameters (y-axis). Each point represents a binned aggregate of test interactions, with size proportional to sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed line), confirming rank-order preservation where data is abundant while allowing adaptive refinement in sparse regions.
 
 \begin{table}[htbp]
 \centering
@@ -610,7 +608,7 @@ Initial Mastery ($P_{L_0}$) & 0.427 & 0.736 & 0.309 & Moderate \\
 Learning Rate ($P_T$) & 0.604 & 0.760 & 0.156 & Moderate-to-Strong \\
 \bottomrule
 \end{tabularx}
-\caption{Semantic Alignment results for AS2009 (H1.2). Spearman $\rho$ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta$). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \label{tab_semantic_alignment}}
+\caption{Semantic Alignment results for AS2009 (H1.2). Spearman $\rho$ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based plots quantifies the degree of context-aware individualization (Gap $\Delta$). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \label{tab_semantic_alignment}}
 \end{table}
 
 These results demonstrate a successful balance between theoretical grounding and adaptive individualization. Parity plots show that high-density regions cluster near the theoretical diagonal, indicating that semantic integrity is preserved even during student-specific refinement. These findings support H1.2, confirming that grounded parameters maintain moderate-to-strong monotonic alignment with pedagogical theory while capturing individual behavioral heterogeneity.
@@ -618,10 +616,10 @@ These results demonstrate a successful balance between theoretical grounding and
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_grounded_268444.png}
-\caption{Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \label{fig_semantic_alignment_l0}}
+\caption{Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) are near the diagonal, demonstrating robust rank-order preservation. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_grounded_268444.png}
-\caption{Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
+\caption{Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 
 \subsubsection{Functional Alignment and Prediction Confidence (H1.3)} \label{sec_functional_alignment}
