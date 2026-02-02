@@ -315,6 +315,23 @@ Wang, Z.; Lamb, A.; Saveliev, E.; Cameron, P.; Zaykov, Y.;
   Research Press,  2020, Vol. 133, pp. 191--205.
 \newblock Cited by: 16.
 
+\bibitem[Zhang et~al.(2017)Zhang, Shi, King, and Yeung]{zhang2017dynamic}
+Zhang, J.; Shi, X.; King, I.; Yeung, D.Y.
+\newblock Dynamic key-value memory networks for knowledge tracing.
+\newblock In Proceedings of the Proceedings of the 26th international
+  conference on World Wide Web,  2017, pp. 765--774.
+
+\bibitem[Pandey and Karypis(2019)]{pandey2019self}
+Pandey, S.; Karypis, G.
+\newblock A self-attentive model for knowledge tracing.
+\newblock {\em arXiv preprint arXiv:1907.06837} {\bf 2019}.
+
+\bibitem[Guo et~al.(2021)Guo, Huang, Zhou, Lang, et~al.]{GuoHZTL21}
+Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  et~al.
+\newblock Enhancing Knowledge Tracing via Adversarial Training.
+\newblock In Proceedings of the Proceedings of the 27th ACM SIGKDD Conference
+  on Knowledge Discovery \& Data Mining,  2021.
+
 \bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
 Hewitt, J.; Liang, P.
 \newblock Designing and Interpreting Probes with Control Tasks.

@@ -404,13 +404,78 @@ The default configuration uses weight coefficients $\lambda_{\text{sup}} = 1.0$,
 
 \section{Experimental Setup} \label{sec_experiment}
 
-This section describes the experimental setup used to evaluate gTransformer. We first detail the architecture configuration and training protocol, including the set of hyperparameters and the cross-validation procedure. We then describe the five educational datasets used for evaluation, which are among the most commonly used in DKT benchmarks.
+This section describes the experimental setup used to evaluate gTransformer. We first detail the architecture configuration and training protocol, including the set of hyperparameters and the cross-validation procedure. We then describe the five educational datasets used for evaluation.
 
-\subsection{Architecture and Training Setup}
 
-The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline models. Baseline models were configured using hyperparameter tuning results from the official pyKT repository. As detailed in Table~\ref{tab:implementation_params}, the gTransformer architecture was configured with an embedding dimension $d_{model} = 64$, four attention heads, four encoder blocks, and eight decoder blocks, with a feed-forward dimension $d_{ff} = 256$.
+\subsection{Training Setup}
 
-Training was conducted using standard five-fold cross-validation with an 80/20 train/test split. We employed the Adam optimizer with a learning rate of $10^{-4}$, a batch size of 64, and a dropout rate of 0.2 to mitigate overfitting. Training was limited to a maximum of 200 epochs, with an early stopping patience of 10 epochs. Predictive performance was evaluated using the Area Under the Curve (AUC) following the question-level average late-fusion protocol recommended in \citep{liu2022pykt}, while interpretability was assessed via the metrics defined in \cref{sec_validation}.
+The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline model implementation. 
+
+Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using the Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for all models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison, specific parameters for gTransformer are detailed in \cref{tab:implementation_params}. All experiments were conducted on a high-performance computing node equipped with two Intel(R) Xeon(R) Platinum 8168 CPUs (providing 40 physical cores), 661 GB of RAM, and eight NVIDIA Tesla V100-SXM2 GPUs (32 GB HBM2 each).
+
+\subsection{Datasets}\label{sec_dataset}
+
+We evaluated gTransformer using five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}. 
+
+\begin{itemize}
+    \item \textbf{ASSISTments 2009 (AS2009)}: Collected from the ASSISTments platform during the 2009-2010 school year, this dataset consists of math exercises and has served as the de facto standard benchmark for KT research for the past decade \citep{feng2009addressing}.
+    \item \textbf{ASSISTments 2015 (AS2015)}: A larger release from the same platform (2015), featuring the highest volume of students among the ASSISTments datasets while focusing on a specific set of 100 knowledge concepts \citep{feng2009addressing}.
+    \item \textbf{Algebra 2005 (AL2005)}: Released as part of the KDD Cup 2010 EDM Challenge, it contains detailed step-level responses from 13-14 year old students solving Algebra problems \citep{stamper2010algebra}.
+    \item \textbf{Bridge to Algebra 2006 (BDG2006)}: Also from the KDD Cup 2010 Challenge, this dataset focuses on the Bridge to Algebra tutoring system and features a significantly higher number of total interactions \citep{stamper2010algebra}.
+    \item \textbf{NeurIPS 2020 Education Challenge (NIPS34)}: A more recent diagnostic dataset from the Eedi platform containing student answers to multiple-choice math questions, characterized by high-quality subjects trees used for concept mapping \citep{wang2020instructions}.
+\end{itemize}
+
+The characteristics of the datasets are summarized in Table~\ref{tab_datasets}: 
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{lcccc}
+\toprule
+\textbf{Dataset} & \textbf{Sequences ($N_s$)} & \textbf{Concepts ($N_c$)} & \textbf{Questions ($N_q$)} & \textbf{Interactions ($N_i$)} \\
+\midrule
+AS2009 & 4,217 & 123 & 26,688 & 346,860 \\
+AS2015 & 19,917 & 100 & --- & 708,631 \\
+AL2005 & 574 & 112 & 210,710 & 809,694 \\
+BDG2006 & 1,146 & 493 & 207,856 & 3,679,199 \\
+NIPS34 & 4,918 & 57 & 948 & 1,382,727 \\
+\bottomrule
+\end{tabularx}
+\caption{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \label{tab_datasets}}
+\end{table}
+
+\subsection{Baseline Models}\label{sec_models}
+
+For the comparative analysis, we selected six models that are among the most frequently mentioned baselines \citep{liu2022pykt}: DKT \citep{piech2015deep}, DKVMN \citep{zhang2017dynamic}, SAKT \citep{pandey2019self}, SAINT \citep{choi2020towards}, AKT \citep{ghosh2020context}, and ATKT \citep{GuoHZTL21}. These models represent a comprehensive cross-section of the recurrent (DKT), memory-augmented (DKVMN), adversarial (ATKT), and attention-based (SAKT, SAINT, AKT) paradigms, providing a robust and diverse benchmark for evaluating gTransformer.
+
+
+\section{Results and Discussion} \label{sec_results}
+
+\subsection{Predictive Performance} \label{sec_performance}
+
+To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across the five benchmark datasets described in \cref{sec_dataset}. The experimental results are summarized in Table~\ref{tab_performance}.
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{lccccc}
+\toprule
+\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
+\midrule
+AKT & 0.7825 & 0.7081 & \textbf{0.8306} & \textbf{0.8208} & \textbf{0.8033} \\
+ATKT & 0.7715 & \textbf{0.7810} & 0.7995 & 0.7889 & 0.7665 \\
+DKT & 0.7528 & 0.7031 & 0.8149 & 0.8015 & 0.7689 \\
+DKVMN & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
+SAKT & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
+SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
+\midrule
+gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
+\bottomrule
+\end{tabularx}
+\vspace{2mm}
+\raggedright
+\caption{AUC across the datasets evaluated on questions level with mean late fusion. \label{tab_performance}}
+\end{table}
+
+When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other models. It ranks second on AL2005, BDG2006, and NIPS34, following AKT, and third on AS2015, following ATKT and AKT. These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance alongside theory-based interpretability, offering a robust and transparent alternative for high-stakes educational scenarios where pedagogical grounding is paramount.
 
 \begin{table}[htbp]
 \centering
@@ -438,47 +503,6 @@ Epochs & 200 & 200 & 200 & 200 & 200 \\
 \label{tab:implementation_params}
 \end{table}
 
-
-\subsection{Datasets}\label{sec_dataset}
-
-We selected five educational datasets and six models that are between the most frequently mentioned DKT datasets and baselines \citep{liu2022pykt} as representative DKT datasets and methods to evaluate our model and compare it. 
-
-\begin{itemize}
-    \item ASSISTments 2009 (AS2009): A benchmark dataset from the ASSISTments platform (2009-2010), representing a standard for KT evaluation \citep{feng2009addressing}.
-    \item ASSISTments 2015 (AS2015): A large-scale release from the same platform with a high volume of student records \citep{feng2009addressing}.
-    \item Algebra 2005 (AL2005): From the KDD Cup 2010 EDM Challenge, containing 13-14 year old students' responses to Algebra questions with detailed step-level student responses \citep{stamper2010algebra}.
-    \item Bridge to Algebra 2006 (Bridge2006): A dataset from the KDD Cup 2010 EDM Challenge focused on the Carnegie Learning Bridge to Algebra system \citep{stamper2010algebra}.
-    \item NeurIPS 2020 Education Challenge (NIPS34): A diagnostic dataset from the Eedi platform containing multiple-choice math questions \citep{wang2020instructions}.
-\end{itemize}
-
-\section{Results and Discussion} \label{sec_results}
-
-\subsection{Predictive Performance}
-
-To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across five benchmark datasets as described in \cref{sec_experiment}. The experimental results are summarized in Table~\ref{tab_performance}.
-
-\begin{table}[htbp]
-\centering
-\begin{tabularx}{\textwidth}{lccccc}
-\toprule
-\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
-\midrule
-AKT & 0.7825 & 0.7081 & \textbf{0.8306} & \textbf{0.8208} & \textbf{0.8033} \\
-ATKT & 0.7715 & \textbf{0.7810} & 0.7995 & 0.7889 & 0.7665 \\
-DKT & 0.7528 & 0.7031 & 0.8149 & 0.8015 & 0.7689 \\
-DKVMN & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
-SAKT & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
-SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
-\midrule
-gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
-\bottomrule
-\end{tabularx}
-\vspace{2mm}
-\raggedright
-\caption{AUC across the datasets evaluated on questions level with mean late fusion. \label{tab_performance}}
-\end{table}
-
-When comparing these results with baseline architectures, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version of gTransformer with interpretability mechanisms ablated, functioning as a pure neural model to establish its maximum representational capacity. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other models. It ranks second on AL2005, BDG2006, and NIPS34, following AKT, and third on AS2015, following ATKT and AKT. These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance alongside theory-based interpretability, offering a robust and transparent alternative for high-stakes educational scenarios where pedagogical grounding is paramount.
 
 
 \subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}

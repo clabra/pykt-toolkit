@@ -148,80 +148,95 @@
 \@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Setup}{12}{section.4}\protected@file@percent }
 \newlabel{sec_experiment}{{4}{12}{Experimental Setup}{section.4}{}}
 \newlabel{sec_experiment@cref}{{[section][4][]4}{[1][12][]12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Architecture and Training Setup}{12}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Training Setup}{12}{subsection.4.1}\protected@file@percent }
 \citation{liu2022pykt}
 \citation{feng2009addressing}
 \citation{feng2009addressing}
 \citation{stamper2010algebra}
 \citation{stamper2010algebra}
 \citation{wang2020instructions}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Parameter values used to train gTransformer across all datasets\relax }}{13}{table.caption.3}\protected@file@percent }
-\newlabel{tab:implementation_params}{{1}{13}{Parameter values used to train gTransformer across all datasets\relax }{table.caption.3}{}}
-\newlabel{tab:implementation_params@cref}{{[table][1][]1}{[1][13][]13}}
+\citation{liu2022pykt}
+\citation{piech2015deep}
+\citation{zhang2017dynamic}
+\citation{pandey2019self}
+\citation{choi2020towards}
+\citation{ghosh2020context}
+\citation{GuoHZTL21}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Datasets}{13}{subsection.4.2}\protected@file@percent }
 \newlabel{sec_dataset}{{4.2}{13}{Datasets}{subsection.4.2}{}}
 \newlabel{sec_dataset@cref}{{[subsection][2][4]4.2}{[1][13][]13}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \relax }}{13}{table.caption.3}\protected@file@percent }
+\newlabel{tab_datasets}{{1}{13}{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts), unique questions, and student-item interactions, respectively. \relax }{table.caption.3}{}}
+\newlabel{tab_datasets@cref}{{[table][1][]1}{[1][13][]13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Baseline Models}{13}{subsection.4.3}\protected@file@percent }
+\newlabel{sec_models}{{4.3}{13}{Baseline Models}{subsection.4.3}{}}
+\newlabel{sec_models@cref}{{[subsection][3][4]4.3}{[1][13][]13}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Results and Discussion}{13}{section.5}\protected@file@percent }
 \newlabel{sec_results}{{5}{13}{Results and Discussion}{section.5}{}}
 \newlabel{sec_results@cref}{{[section][5][]5}{[1][13][]13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Predictive Performance}{13}{subsection.5.1}\protected@file@percent }
-\citation{hewitt2019designing,belinkov2022probing}
+\newlabel{sec_performance}{{5.1}{13}{Predictive Performance}{subsection.5.1}{}}
+\newlabel{sec_performance@cref}{{[subsection][1][5]5.1}{[1][13][]13}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AUC across the datasets evaluated on questions level with mean late fusion. \relax }}{14}{table.caption.4}\protected@file@percent }
 \newlabel{tab_performance}{{2}{14}{AUC across the datasets evaluated on questions level with mean late fusion. \relax }{table.caption.4}{}}
 \newlabel{tab_performance@cref}{{[table][2][]2}{[1][13][]14}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Parameter values used to train gTransformer across all datasets\relax }}{14}{table.caption.5}\protected@file@percent }
+\newlabel{tab:implementation_params}{{3}{14}{Parameter values used to train gTransformer across all datasets\relax }{table.caption.5}{}}
+\newlabel{tab:implementation_params@cref}{{[table][3][]3}{[1][14][]14}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Theory-Based Interpretability Through Grounded Transformers (RQ1)}{14}{subsection.5.2}\protected@file@percent }
 \newlabel{sec_validation}{{5.2}{14}{Theory-Based Interpretability Through Grounded Transformers (RQ1)}{subsection.5.2}{}}
 \newlabel{sec_validation@cref}{{[subsection][2][5]5.2}{[1][14][]14}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Structural Alignment via Diagnostic Probing (H1.1)}{14}{subsubsection.5.2.1}\protected@file@percent }
-\newlabel{sec_structural_alignment}{{5.2.1}{14}{Structural Alignment via Diagnostic Probing (H1.1)}{subsubsection.5.2.1}{}}
-\newlabel{sec_structural_alignment@cref}{{[subsubsection][1][5,2]5.2.1}{[1][14][]14}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \relax }}{15}{table.caption.5}\protected@file@percent }
-\newlabel{tab_probing}{{3}{15}{Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \relax }{table.caption.5}{}}
-\newlabel{tab_probing@cref}{{[table][3][]3}{[1][15][]15}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \relax }}{16}{figure.caption.6}\protected@file@percent }
-\newlabel{fig_structural_fidelity_l0}{{3}{16}{Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \relax }{figure.caption.6}{}}
-\newlabel{fig_structural_fidelity_l0@cref}{{[figure][3][]3}{[1][15][]16}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \relax }}{16}{figure.caption.6}\protected@file@percent }
-\newlabel{fig_structural_fidelity_t}{{4}{16}{Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \relax }{figure.caption.6}{}}
-\newlabel{fig_structural_fidelity_t@cref}{{[figure][4][]4}{[1][15][]16}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Semantic Grounding and Alignment Preservation (H1.2)}{17}{subsubsection.5.2.2}\protected@file@percent }
-\newlabel{sec_semantic_grounding}{{5.2.2}{17}{Semantic Grounding and Alignment Preservation (H1.2)}{subsubsection.5.2.2}{}}
-\newlabel{sec_semantic_grounding@cref}{{[subsubsection][2][5,2]5.2.2}{[1][15][]17}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Semantic Alignment results for AS2009 (H1.2). Spearman $\rho $ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta $). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \relax }}{17}{table.caption.7}\protected@file@percent }
-\newlabel{tab_semantic_alignment}{{4}{17}{Semantic Alignment results for AS2009 (H1.2). Spearman $\rho $ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta $). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \relax }{table.caption.7}{}}
-\newlabel{tab_semantic_alignment@cref}{{[table][4][]4}{[1][17][]17}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \relax }}{18}{figure.caption.8}\protected@file@percent }
-\newlabel{fig_semantic_alignment_l0}{{5}{18}{Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \relax }{figure.caption.8}{}}
-\newlabel{fig_semantic_alignment_l0@cref}{{[figure][5][]5}{[1][17][]18}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \relax }}{18}{figure.caption.8}\protected@file@percent }
-\newlabel{fig_semantic_alignment_t}{{6}{18}{Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \relax }{figure.caption.8}{}}
-\newlabel{fig_semantic_alignment_t@cref}{{[figure][6][]6}{[1][17][]18}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Functional Alignment and Prediction Confidence (H1.3)}{19}{subsubsection.5.2.3}\protected@file@percent }
-\newlabel{sec_functional_alignment}{{5.2.3}{19}{Functional Alignment and Prediction Confidence (H1.3)}{subsubsection.5.2.3}{}}
-\newlabel{sec_functional_alignment@cref}{{[subsubsection][3][5,2]5.2.3}{[1][19][]19}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Accuracy--Interpretability Trade-Off (RQ2)}{19}{subsection.5.3}\protected@file@percent }
-\newlabel{sec_tradeoff}{{5.3}{19}{Accuracy--Interpretability Trade-Off (RQ2)}{subsection.5.3}{}}
-\newlabel{sec_tradeoff@cref}{{[subsection][3][5]5.3}{[1][19][]19}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Student × Skill confidence heatmap for AS2009. Green cells indicate high confidence ($\geq 0.8$) where interpretable predictions can be trusted; yellow shows medium confidence requiring caution; red indicates low confidence pairs. \relax }}{20}{figure.caption.9}\protected@file@percent }
-\newlabel{fig_h13_confidence_heatmap}{{7}{20}{Student × Skill confidence heatmap for AS2009. Green cells indicate high confidence ($\geq 0.8$) where interpretable predictions can be trusted; yellow shows medium confidence requiring caution; red indicates low confidence pairs. \relax }{figure.caption.9}{}}
-\newlabel{fig_h13_confidence_heatmap@cref}{{[figure][7][]7}{[1][19][]20}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the ablated neural baseline ($p_{\text  {sup}1}$), grounded neural predictions ($p_{\text  {sup}2}$), interpretable BKT-logic predictions ($p_{\text  {ref}}$), and classical BKT baseline ($p_{\text  {bkt}}$). \textit  {Pred. Cost} represents the performance difference between $p_{\text  {sup}1}$ and $p_{\text  {ref}}$, while \textit  {Int. Gain} measures the predictive performance gained by using gTransformer compared to a traditional BKT model.\relax }}{20}{table.caption.10}\protected@file@percent }
-\newlabel{tab:tradeoff}{{5}{20}{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the ablated neural baseline ($p_{\text {sup}1}$), grounded neural predictions ($p_{\text {sup}2}$), interpretable BKT-logic predictions ($p_{\text {ref}}$), and classical BKT baseline ($p_{\text {bkt}}$). \textit {Pred. Cost} represents the performance difference between $p_{\text {sup}1}$ and $p_{\text {ref}}$, while \textit {Int. Gain} measures the predictive performance gained by using gTransformer compared to a traditional BKT model.\relax }{table.caption.10}{}}
-\newlabel{tab:tradeoff@cref}{{[table][5][]5}{[1][20][]20}}
+\citation{hewitt2019designing,belinkov2022probing}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Structural Alignment via Diagnostic Probing (H1.1)}{15}{subsubsection.5.2.1}\protected@file@percent }
+\newlabel{sec_structural_alignment}{{5.2.1}{15}{Structural Alignment via Diagnostic Probing (H1.1)}{subsubsection.5.2.1}{}}
+\newlabel{sec_structural_alignment@cref}{{[subsubsection][1][5,2]5.2.1}{[1][15][]15}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \relax }}{16}{table.caption.6}\protected@file@percent }
+\newlabel{tab_probing}{{4}{16}{Diagnostic Probing results for AS2009 (H1.1). Fidelity measures probe accuracy on true BKT targets; selectivity quantifies performance advantage over randomly shuffled controls. High selectivity ($>0.5$) proves BKT constructs are dominant organizing principles in latent representations, while negative control $R^2$ confirms probes cannot recover arbitrary patterns. \relax }{table.caption.6}{}}
+\newlabel{tab_probing@cref}{{[table][4][]4}{[1][16][]16}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Semantic Grounding and Alignment Preservation (H1.2)}{16}{subsubsection.5.2.2}\protected@file@percent }
+\newlabel{sec_semantic_grounding}{{5.2.2}{16}{Semantic Grounding and Alignment Preservation (H1.2)}{subsubsection.5.2.2}{}}
+\newlabel{sec_semantic_grounding@cref}{{[subsubsection][2][5,2]5.2.2}{[1][16][]16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \relax }}{17}{figure.caption.7}\protected@file@percent }
+\newlabel{fig_structural_fidelity_l0}{{3}{17}{Structural Fidelity for Initial Mastery $P_{L_0}$ (H1.1). Parity plot showing strong linear recoverability ($r=0.698$, $R^2=0.487$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal (red dashed) validates that latent representations preserve $P_{L_0}$ structure across the full parameter range. \relax }{figure.caption.7}{}}
+\newlabel{fig_structural_fidelity_l0@cref}{{[figure][3][]3}{[1][16][]17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \relax }}{17}{figure.caption.7}\protected@file@percent }
+\newlabel{fig_structural_fidelity_t}{{4}{17}{Structural Fidelity for Learning Rate $P_T$ (H1.1). Parity plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The consistently tight clustering around the diagonal across all $P_T$ values indicates the model encodes learning rate dynamics with high precision. \relax }{figure.caption.7}{}}
+\newlabel{fig_structural_fidelity_t@cref}{{[figure][4][]4}{[1][16][]17}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Semantic Alignment results for AS2009 (H1.2). Spearman $\rho $ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta $). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \relax }}{18}{table.caption.8}\protected@file@percent }
+\newlabel{tab_semantic_alignment}{{5}{18}{Semantic Alignment results for AS2009 (H1.2). Spearman $\rho $ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Comparison with probe-based correlations from H1.1 quantifies the degree of context-aware individualization (Gap $\Delta $). Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \relax }{table.caption.8}{}}
+\newlabel{tab_semantic_alignment@cref}{{[table][5][]5}{[1][18][]18}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Functional Alignment and Prediction Confidence (H1.3)}{18}{subsubsection.5.2.3}\protected@file@percent }
+\newlabel{sec_functional_alignment}{{5.2.3}{18}{Functional Alignment and Prediction Confidence (H1.3)}{subsubsection.5.2.3}{}}
+\newlabel{sec_functional_alignment@cref}{{[subsubsection][3][5,2]5.2.3}{[1][18][]18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \relax }}{19}{figure.caption.9}\protected@file@percent }
+\newlabel{fig_semantic_alignment_l0}{{5}{19}{Semantic Alignment for Initial Mastery $P_{L_0}$ (H1.2). Parity plot showing moderate monotonic relationship preservation (Spearman $\rho = 0.427$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. High-density regions (large bubbles) cluster near the diagonal (red dashed), demonstrating that rank-order preservation is robust where data is abundant while allowing individualization in sparse regions. \relax }{figure.caption.9}{}}
+\newlabel{fig_semantic_alignment_l0@cref}{{[figure][5][]5}{[1][18][]19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \relax }}{19}{figure.caption.9}\protected@file@percent }
+\newlabel{fig_semantic_alignment_t}{{6}{19}{Semantic Alignment for Learning Rate $P_{T}$ (H1.2). Parity plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \relax }{figure.caption.9}{}}
+\newlabel{fig_semantic_alignment_t@cref}{{[figure][6][]6}{[1][18][]19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Student × Skill confidence heatmap for AS2009. Green cells indicate high confidence ($\geq 0.8$) where interpretable predictions can be trusted; yellow shows medium confidence requiring caution; red indicates low confidence pairs. \relax }}{20}{figure.caption.10}\protected@file@percent }
+\newlabel{fig_h13_confidence_heatmap}{{7}{20}{Student × Skill confidence heatmap for AS2009. Green cells indicate high confidence ($\geq 0.8$) where interpretable predictions can be trusted; yellow shows medium confidence requiring caution; red indicates low confidence pairs. \relax }{figure.caption.10}{}}
+\newlabel{fig_h13_confidence_heatmap@cref}{{[figure][7][]7}{[1][20][]20}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Accuracy--Interpretability Trade-Off (RQ2)}{20}{subsection.5.3}\protected@file@percent }
+\newlabel{sec_tradeoff}{{5.3}{20}{Accuracy--Interpretability Trade-Off (RQ2)}{subsection.5.3}{}}
+\newlabel{sec_tradeoff@cref}{{[subsection][3][5]5.3}{[1][20][]20}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the ablated neural baseline ($p_{\text  {sup}1}$), grounded neural predictions ($p_{\text  {sup}2}$), interpretable BKT-logic predictions ($p_{\text  {ref}}$), and classical BKT baseline ($p_{\text  {bkt}}$). \textit  {Pred. Cost} represents the performance difference between $p_{\text  {sup}1}$ and $p_{\text  {ref}}$, while \textit  {Int. Gain} measures the predictive performance gained by using gTransformer compared to a traditional BKT model.\relax }}{21}{table.caption.11}\protected@file@percent }
+\newlabel{tab:tradeoff}{{6}{21}{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the ablated neural baseline ($p_{\text {sup}1}$), grounded neural predictions ($p_{\text {sup}2}$), interpretable BKT-logic predictions ($p_{\text {ref}}$), and classical BKT baseline ($p_{\text {bkt}}$). \textit {Pred. Cost} represents the performance difference between $p_{\text {sup}1}$ and $p_{\text {ref}}$, while \textit {Int. Gain} measures the predictive performance gained by using gTransformer compared to a traditional BKT model.\relax }{table.caption.11}{}}
+\newlabel{tab:tradeoff@cref}{{[table][6][]6}{[1][20][]21}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Context-Aware Diagnostics (RQ3)}{21}{subsection.5.4}\protected@file@percent }
 \newlabel{sec_gran_results}{{5.4}{21}{Context-Aware Diagnostics (RQ3)}{subsection.5.4}{}}
 \newlabel{sec_gran_results@cref}{{[subsection][4][5]5.4}{[1][21][]21}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Student Clusters in AS2009\relax }}{22}{figure.caption.11}\protected@file@percent }
-\newlabel{fig:student_clusters_as2009}{{8}{22}{Student Clusters in AS2009\relax }{figure.caption.11}{}}
-\newlabel{fig:student_clusters_as2009@cref}{{[figure][8][]8}{[1][21][]22}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{22}{section.6}\protected@file@percent }
-\newlabel{sec_conclusions}{{6}{22}{Conclusions}{section.6}{}}
-\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][22][]22}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit  {what they answered}, but by \textit  {how they learned}.\relax }}{23}{figure.caption.12}\protected@file@percent }
-\newlabel{fig:skill_quadrant_mosaic}{{9}{23}{Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit {what they answered}, but by \textit {how they learned}.\relax }{figure.caption.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Student Clusters in AS2009\relax }}{22}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:student_clusters_as2009}{{8}{22}{Student Clusters in AS2009\relax }{figure.caption.12}{}}
+\newlabel{fig:student_clusters_as2009@cref}{{[figure][8][]8}{[1][22][]22}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit  {what they answered}, but by \textit  {how they learned}.\relax }}{23}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:skill_quadrant_mosaic}{{9}{23}{Context-aware skill mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles (quadrants). BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical learning parameters ($P_{L_0}$, $P_T$). This demonstrates that gTransformer differentiates students not by \textit {what they answered}, but by \textit {how they learned}.\relax }{figure.caption.13}{}}
 \newlabel{fig:skill_quadrant_mosaic@cref}{{[figure][9][]9}{[1][22][]23}}
 \bibdata{biblio}
 \bibcite{corbett1994knowledge}{{1}{1994}{{Corbett and Anderson}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{24}{section.6}\protected@file@percent }
+\newlabel{sec_conclusions}{{6}{24}{Conclusions}{section.6}{}}
+\newlabel{sec_conclusions@cref}{{[section][6][]6}{[1][24][]24}}
 \bibcite{Romero2020}{{2}{2020}{{Romero and Ventura}}{{}}}
 \bibcite{abdelrahman2023knowledge}{{3}{2023}{{Abdelrahman et~al.}}{{Abdelrahman, Wang, and Nunes}}}
 \bibcite{cen2008comparing}{{4}{2008}{{Cen et~al.}}{{Cen, Koedinger, and Junker}}}
@@ -232,7 +247,6 @@
 \bibcite{piech2015deep}{{9}{2015}{{Piech et~al.}}{{Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and Sohl-Dickstein}}}
 \bibcite{vaswani2017attention}{{10}{2017}{{Vaswani et~al.}}{{Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, and Polosukhin}}}
 \bibcite{Holmes2022504}{{11}{2022}{{Holmes et~al.}}{{Holmes, Porayska-Pomsta, Holstein, Sutherland, Baker, Shum, Santos, Rodrigo, Cukurova, Bittencourt, and Koedinger}}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}References}{24}{section.7}\protected@file@percent }
 \bibcite{bai2024survey}{{12}{2024}{{Bai et~al.}}{{Bai, Zhao, Wei, Cai, and He}}}
 \bibcite{Pandey2019384}{{13}{2019}{{Pandey and Karypis}}{{}}}
 \bibcite{ghosh2020context}{{14}{2020}{{Ghosh et~al.}}{{Ghosh, Heffernan, and Lan}}}
@@ -246,6 +260,7 @@
 \bibcite{Pascanu20132347}{{22}{2013}{{Pascanu et~al.}}{{Pascanu, Mikolov, and Bengio}}}
 \bibcite{choi2020towards}{{23}{2020}{{Choi et~al.}}{{Choi, Lee, Cho, Baek, Kim, Cha, Shin, Bae, and Heo}}}
 \bibcite{bach2015pixel}{{24}{2015}{{Bach et~al.}}{{Bach, Binder, Montavon, Klauschen, M{\"u}ller, and Samek}}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}References}{25}{section.7}\protected@file@percent }
 \bibcite{ribeiro2016should}{{25}{2016}{{Ribeiro et~al.}}{{Ribeiro, Singh, and Guestrin}}}
 \bibcite{gan2020knowledge}{{26}{2020}{{Gan et~al.}}{{Gan, Sun, and Sun}}}
 \bibcite{zhou2021lana}{{27}{2021}{{Zhou et~al.}}{{Zhou, Li, Cao, Zhao, Ye, and Lv}}}
@@ -264,8 +279,11 @@
 \bibcite{feng2009addressing}{{40}{2009}{{Feng et~al.}}{{Feng, Heffernan, and Koedinger}}}
 \bibcite{stamper2010algebra}{{41}{2010}{{Stamper et~al.}}{{Stamper, Niculescu-Mizil, Ritter, Gordon, and Koedinger}}}
 \bibcite{wang2020instructions}{{42}{2020}{{Wang et~al.}}{{Wang, Lamb, Saveliev, Cameron, Zaykov, Hern{\'a}ndez-Lobato, Turner, Baraniuk, Barton, Jones, Woodhead, and Zhang}}}
-\bibcite{hewitt2019designing}{{43}{2019}{{Hewitt and Liang}}{{}}}
-\bibcite{belinkov2022probing}{{44}{2022}{{Belinkov}}{{}}}
+\bibcite{zhang2017dynamic}{{43}{2017}{{Zhang et~al.}}{{Zhang, Shi, King, and Yeung}}}
+\bibcite{pandey2019self}{{44}{2019}{{Pandey and Karypis}}{{}}}
+\bibcite{GuoHZTL21}{{45}{2021}{{Guo et~al.}}{{Guo, Huang, Zhou, Lang, et~al.}}}
+\bibcite{hewitt2019designing}{{46}{2019}{{Hewitt and Liang}}{{}}}
+\bibcite{belinkov2022probing}{{47}{2022}{{Belinkov}}{{}}}
 \newlabel{LastPage}{{}{26}{}{page.26}{}}
 \xdef\lastpage@lastpage{26}
 \xdef\lastpage@lastpageHy{26}
