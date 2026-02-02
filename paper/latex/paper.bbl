@@ -6,6 +6,14 @@ Corbett, A.T.; Anderson, J.R.
 \newblock {\em User modeling and user-adapted interaction} {\bf 1994}, {\em
   4},~253--278.
 
+\bibitem[Romero and Ventura(2020)]{Romero2020}
+Romero, C.; Ventura, S.
+\newblock Educational data mining and learning analytics: An updated survey.
+\newblock {\em Wiley Interdisciplinary Reviews: Data Mining and Knowledge
+  Discovery} {\bf 2020}, {\em 10}.
+\newblock Cited by: 759; All Open Access, Green Open Access,
+  {\url{https://doi.org/10.1002/widm.1355}}.
+
 \bibitem[Abdelrahman et~al.(2023)Abdelrahman, Wang, and
   Nunes]{abdelrahman2023knowledge}
 Abdelrahman, G.; Wang, Q.; Nunes, B.
@@ -30,8 +38,8 @@ Pavlik, P.I.; Cen, H.; Koedinger, K.R.
 Vie, J.J.; Kashima, H.
 \newblock Knowledge tracing machines: Factorization machines for knowledge
   tracing.
-\newblock In Proceedings of the Proceedings of the AAAI conference on
-  artificial intelligence,  2019, Vol.~33, pp. 750--757.
+\newblock In Proceedings of the Proceedings of the AAAI Conference on
+  Artificial Intelligence,  2019, Vol.~33, pp. 750--757.
 
 \bibitem[Embretson and Reise(2013)]{embretson2013item}
 Embretson, S.E.; Reise, S.P.
@@ -80,21 +88,24 @@ Bai, Y.; Zhao, J.; Wei, T.; Cai, Q.; He, L.
 \bibitem[Pandey and Karypis(2019)]{Pandey2019384}
 Pandey, S.; Karypis, G.
 \newblock A self-attentive model for knowledge tracing.
-\newblock International Educational Data Mining Society,  2019, p. 384 – 389.
+\newblock In Proceedings of the Proceedings of the 12th International
+  Conference on Educational Data Mining (EDM 2019). International Educational
+  Data Mining Society,  2019, pp. 384--389.
 \newblock Cited by: 270.
 
 \bibitem[Ghosh et~al.(2020)Ghosh, Heffernan, and Lan]{ghosh2020context}
 Ghosh, A.; Heffernan, N.; Lan, A.S.
 \newblock Context-aware attentive knowledge tracing.
-\newblock In Proceedings of the Proceedings of the 26th ACM SIGKDD
-  international conference on knowledge discovery \& data mining,  2020, pp.
-  2330--2339.
+\newblock In Proceedings of the 26th ACM SIGKDD international conference on
+  knowledge discovery \& data mining,  2020, pp. 2330--2339.
 
 \bibitem[Yeung(2019)]{yeung2019deep}
 Yeung, C.K.
 \newblock Deep-IRT: Make deep learning based knowledge tracing explainable
   using item response theory.
-\newblock International Educational Data Mining Society,  2019, p. 683 – 686.
+\newblock In Proceedings of the Proceedings of the 12th International
+  Conference on Educational Data Mining (EDM 2019). International Educational
+  Data Mining Society,  2019, pp. 683--686.
 \newblock Cited by: 86.
 
 \bibitem[Su et~al.(2021)Su, Cheng, Luo, Wu, Zhang, Liu, and Wang]{su2021time}
@@ -107,8 +118,8 @@ Su, Y.; Cheng, Z.; Luo, P.; Wu, J.; Zhang, L.; Liu, Q.; Wang, S.
 Chen, J.; Liu, Z.; Huang, S.; Liu, Q.; Luo, W.
 \newblock Improving interpretability of deep sequential knowledge tracing
   models with question-centric cognitive representations.
-\newblock In Proceedings of the Proceedings of the AAAI conference on
-  artificial intelligence,  2023, Vol.~37, pp. 14196--14204.
+\newblock In Proceedings of the Proceedings of the AAAI Conference on
+  Artificial Intelligence,  2023, Vol.~37, pp. 14196--14204.
 
 \bibitem[Rudin(2019)]{rudin2019stop}
 Rudin, C.
@@ -126,6 +137,16 @@ Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
 \newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
   p. 1–1.
 
+\bibitem[Arnau-González et~al.(2025)Arnau-González, Wu, Solera-Monforte,
+  Arnau, and Arevalillo-Herráez]{Arnau-Gonzalez2025195}
+Arnau-González, P.; Wu, Y.; Solera-Monforte, S.; Arnau, D.;
+  Arevalillo-Herráez, M.
+\newblock Predicting User Actions in Algebra Intelligent Tutoring Systems
+  with Markov Models.
+\newblock {\em Lecture Notes in Computer Science} {\bf 2025}, {\em 15881
+  LNAI},~195 – 202.
+\newblock Cited by: 0, {\url{https://doi.org/10.1007/978-3-031-98462-4_25}}.
+
 \bibitem[Yudelson et~al.(2013)Yudelson, Koedinger, and
   Gordon]{yudelson2013individualized}
 Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
@@ -133,10 +154,13 @@ Yudelson, M.V.; Koedinger, K.R.; Gordon, G.J.
 \newblock In Proceedings of the International conference on artificial
   intelligence in education. Springer,  2013, pp. 171--180.
 
-\bibitem[Sutskever(2013)]{sutskever2013training}
-Sutskever, I.
-\newblock Training recurrent neural networks.
-\newblock PhD thesis,  2013.
+\bibitem[Pascanu et~al.(2013)Pascanu, Mikolov, and Bengio]{Pascanu20132347}
+Pascanu, R.; Mikolov, T.; Bengio, Y.
+\newblock On the difficulty of training recurrent neural networks.
+\newblock In Proceedings of the Proceedings of the 30th International
+  Conference on Machine Learning (ICML 2013). International Machine Learning
+  Society (IMLS),  2013, pp. 2347--2355.
+\newblock Cited by: 1907.
 
 \bibitem[Choi et~al.(2020)Choi, Lee, Cho, Baek, Kim, Cha, Shin, Bae, and
   Heo]{choi2020towards}
@@ -173,7 +197,9 @@ Gan, W.; Sun, Y.; Sun, Y.
 Zhou, Y.; Li, X.; Cao, Y.; Zhao, X.; Ye, Q.; Lv, J.
 \newblock LANA: Towards Personalized Deep Knowledge Tracing Through
   Distinguishable Interactive Sequences.
-\newblock International Educational Data Mining Society,  2021, p. 602 – 608.
+\newblock In Proceedings of the Proceedings of the 14th International
+  Conference on Educational Data Mining (EDM 2021). International Educational
+  Data Mining Society,  2021, pp. 602--608.
 \newblock Cited by: 4.
 
 \bibitem[Liu et~al.(2022)Liu, Yu, Li, Liang, Zhang, Shen, and
@@ -241,10 +267,13 @@ Jia, X.; Willard, J.; Karpatne, A.; Read, J.S.; Zwart, J.A.; Steinbach, M.;
 \newblock {\em ACM/IMS Transactions on Data Science} {\bf 2021}, {\em
   2},~1--26.
 
-\bibitem[rai(2019)]{raissi2019physics}
-Physics-informed neural networks: A deep learning framework for solving forward
-  and inverse problems involving nonlinear partial differential equations.
-\newblock {\em Journal of Computational physics} {\bf 2019}, {\em
+\bibitem[Raissi et~al.(2019)Raissi, Perdikaris, and
+  Karniadakis]{raissi2019physics}
+Raissi, M.; Perdikaris, P.; Karniadakis, G.E.
+\newblock Physics-informed neural networks: A deep learning framework for
+  solving forward and inverse problems involving nonlinear partial differential
+  equations.
+\newblock {\em Journal of Computational Physics} {\bf 2019}, {\em
   378},~686--707.
 
 \bibitem[Willard et~al.(2022)Willard, Jia, Xu, Steinbach, and
@@ -282,7 +311,8 @@ Wang, Z.; Lamb, A.; Saveliev, E.; Cameron, P.; Zaykov, Y.;
   S.P.;  et~al.
 \newblock Results and Insights from Diagnostic Questions: The NeurIPS 2020
   Education Challenge.
-\newblock ML Research Press,  2020, Vol. 133, p. 191 – 205.
+\newblock In Proceedings of the Proceedings of Machine Learning Research. ML
+  Research Press,  2020, Vol. 133, pp. 191--205.
 \newblock Cited by: 16.
 
 \bibitem[Hewitt and Liang(2019)]{hewitt2019designing}

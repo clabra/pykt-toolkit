@@ -108,7 +108,7 @@ MainContainer: {
       label: |md
         <center><span style="font-size: 90px; color: #000000">Hypothesis Set</span></center>
 
-        Attention-based Encode-Decoder + 
+        Attention-based Encoder-Decoder + 
         
         Grounding Induction
       |
@@ -133,9 +133,9 @@ MainContainer: {
         
         Multi-Objective Loss: 
         
-        ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>int</sub>·ℒ<sub>int</sub>
+        ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>ref</sub>·ℒ<sub>ref</sub>
         
-        Balances Prediction and Interpretability
+        Balances Accuracy and Grounding
       |
       shape: rectangle
       style: {
@@ -158,7 +158,7 @@ MainContainer: {
         
         Learned Weights
 
-        Sequence-aware Grounded Parameters 
+        Context-aware Grounded Parameters 
       |
       shape: rectangle
       style: {
@@ -216,7 +216,7 @@ MainContainer: {
     label: |md
       <center><span style="font-size: 90px; color: #000000">Mastery Estimations</span></center>
       
-      Interpretable Predictions {ŷ<sub>t</sub>}
+      Interpretable Predictions {ŷ<sub>ref</sub>}
 
       Derived from Grounded Parameters 
       
