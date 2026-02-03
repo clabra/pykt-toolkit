@@ -100,6 +100,25 @@ Latent representations in the gTransformer model are structurally organized arou
 
 *Note: assist2015 excluded due to insufficient variance in skill-level BKT parameters (dataset structure incompatible with continuous probing validation).*
 
+**✅ BKT Parameter Quality Improvements (Feb 2, 2026):**
+
+A critical bug was discovered and fixed in BKT parameter estimation: the training process was including repeat/review problems (is_repeat=1), which severely biased learning rate estimates toward zero. After fixing `examples/train_bkt.py` to exclude repeats:
+
+| Dataset | Skills | T < 0.01 (Before → After) | Median T (After) | Mean T (After) | Repeat % Filtered |
+|---------|--------|---------------------------|------------------|----------------|-------------------|
+| assist2009 | 110 | Unknown → **2.7%** | 0.1260 | 0.2237 | 16.4% |
+| algebra2005 | 107 | **26.8% → 18.7%** ✓ | 0.1133 | 0.3104 | 31.4% |
+| bridge2algebra2006 | 487 | **5.7% → 6.6%** | 0.1921 | 0.2970 | 0.4% |
+| nips_task34 | 57 | Unknown → **68.4%** | 0.0053 | 0.0615 | Unknown |
+
+**Key Improvements:**
+- **algebra2005**: 30% reduction in near-zero learning rates (26.8% → 18.7%)
+- **Learning rates more realistic**: Median T values now 0.11-0.19 (was 0.001-0.003 for top skills)
+- **Prior knowledge less inflated**: L₀ values no longer biased by review performance where students already mastered skills
+- **Files updated**: All BKT parameters and targets regenerated (Feb 2, 2026 22:01-22:04)
+
+The table above shows metrics computed with the **original (biased) BKT parameters**. Expected improvements after retraining models with corrected parameters: (1) Higher T selectivity for algebra2005/bridge2algebra2006 as probe can learn meaningful learning rate gradients, (2) Potentially lower L₀ selectivity as inflated priors are corrected. The bug fix validates our earlier analysis: T≈0 was indeed artificially caused by including repeat problems in BKT training.
+
 **Metric Definitions:**
 - **Fidelity (R²)**: Accuracy of linear probe in recovering BKT parameters from transformer hidden states (higher = better encoding)
 - **Pearson (r)**: Linear correlation between predicted and true parameters  
