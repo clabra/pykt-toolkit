@@ -215,18 +215,25 @@ def main():
     args = parser.parse_args()
 
     EXP_DIR = args.exp_dir.rstrip('/')
-    # Campaign level is 3 levels up from fold: Campaign/model/dataset/fold
-    # But usually user passes something like experiments/CAMPAIGN/gtransformer/assist2009/fold_0_...
-    # So we find the campaign root by looking for 'experiments' in path or going back
+    # Dataset level is 1 level up from fold: Campaign/model/dataset/fold
+    # Save results to dataset-specific validation folder
+    # Path structure: experiments/CAMPAIGN/gtransformer/DATASET/fold_X_ID
     parts = EXP_DIR.split('/')
+    
+    # Find dataset directory (parent of fold directory)
+    dataset_dir = os.path.dirname(EXP_DIR)
+    
+    # Also get campaign dir for plots (shared across datasets)
     if 'experiments' in parts:
         idx = parts.index('experiments')
         campaign_dir = '/'.join(parts[:idx+2])
     else:
-        # Fallback to model level validation if campaign can't be inferred safely
+        # Fallback: go 3 levels up from fold
         campaign_dir = os.path.dirname(os.path.dirname(os.path.dirname(EXP_DIR)))
     
-    VALIDATION_DIR = os.path.join(campaign_dir, "validation")
+    # Save validation results to dataset-specific folder
+    VALIDATION_DIR = os.path.join(dataset_dir, "validation")
+    # Keep plots at campaign level for aggregation
     PLOT_DIR = os.path.join(campaign_dir, "plots")
     os.makedirs(VALIDATION_DIR, exist_ok=True)
     os.makedirs(PLOT_DIR, exist_ok=True)

@@ -1,0 +1,202 @@
+nohup: ignoring input
+Auto-detected datasets: algebra2005, assist2015, bridge2algebra2006, nips_task34
+
+======================================================================
+H1.1 Structural Encoding Validation Campaign
+======================================================================
+Campaign: 20260202_222106_benchpaper_698838
+Datasets: algebra2005, assist2015, bridge2algebra2006, nips_task34
+======================================================================
+
+
+──────────────────────────────────────────────────────────────────────
+Processing dataset: algebra2005
+──────────────────────────────────────────────────────────────────────
+  Found 5 folds
+
+  [fold_0_833615]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005/fold_0_833615
+  ✓ Completed validation for fold_0_833615
+
+  [fold_1_945184]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005/fold_1_945184
+  ✓ Completed validation for fold_1_945184
+
+  [fold_2_315421]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005/fold_2_315421
+  ✓ Completed validation for fold_2_315421
+
+  [fold_3_172849]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005/fold_3_172849
+  ✓ Completed validation for fold_3_172849
+
+  [fold_4_709666]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005/fold_4_709666
+  ✓ Completed validation for fold_4_709666
+
+  Completed 5/5 folds
+
+  Aggregating results for algebra2005...
+  Aggregating results: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/aggregate_structural_validation.py --campaign_dir experiments/20260202_222106_benchpaper_698838/gtransformer/algebra2005
+
+──────────────────────────────────────────────────────────────────────
+Processing dataset: assist2015
+──────────────────────────────────────────────────────────────────────
+  Found 5 folds
+
+  [fold_0_745337]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_0_745337
+  ERROR: Validation failed for experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_0_745337
+  STDERR: Traceback (most recent call last):
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 365, in <module>
+    main()
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 312, in main
+    X, y_l0, y_t, skills = extract_all(model, loader, device, n_samples=3000)
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 195, in extract_all
+    _, _, z_context = model(c, r, pid_data=q, qtest=True)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspaces/pykt-toolkit/pykt/models/gtransformer.py", line 249, in forward
+    q_embed_data = q_embed_data + pid_embed_data * \
+RuntimeError: The size of tensor a (0) must match the size of tensor b (199) at non-singleton dimension 1
+
+
+  [fold_1_381834]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_1_381834
+  ERROR: Validation failed for experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_1_381834
+  STDERR: Traceback (most recent call last):
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 365, in <module>
+    main()
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 312, in main
+    X, y_l0, y_t, skills = extract_all(model, loader, device, n_samples=3000)
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 195, in extract_all
+    _, _, z_context = model(c, r, pid_data=q, qtest=True)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspaces/pykt-toolkit/pykt/models/gtransformer.py", line 249, in forward
+    q_embed_data = q_embed_data + pid_embed_data * \
+RuntimeError: The size of tensor a (0) must match the size of tensor b (199) at non-singleton dimension 1
+
+
+  [fold_2_681384]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_2_681384
+  ERROR: Validation failed for experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_2_681384
+  STDERR: Traceback (most recent call last):
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 365, in <module>
+    main()
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 312, in main
+    X, y_l0, y_t, skills = extract_all(model, loader, device, n_samples=3000)
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 195, in extract_all
+    _, _, z_context = model(c, r, pid_data=q, qtest=True)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspaces/pykt-toolkit/pykt/models/gtransformer.py", line 249, in forward
+    q_embed_data = q_embed_data + pid_embed_data * \
+RuntimeError: The size of tensor a (0) must match the size of tensor b (199) at non-singleton dimension 1
+
+
+  [fold_3_409068]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_3_409068
+  ERROR: Validation failed for experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_3_409068
+  STDERR: Traceback (most recent call last):
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 365, in <module>
+    main()
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 312, in main
+    X, y_l0, y_t, skills = extract_all(model, loader, device, n_samples=3000)
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 195, in extract_all
+    _, _, z_context = model(c, r, pid_data=q, qtest=True)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspaces/pykt-toolkit/pykt/models/gtransformer.py", line 249, in forward
+    q_embed_data = q_embed_data + pid_embed_data * \
+RuntimeError: The size of tensor a (0) must match the size of tensor b (199) at non-singleton dimension 1
+
+
+  [fold_4_181770]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_4_181770
+  ERROR: Validation failed for experiments/20260202_222106_benchpaper_698838/gtransformer/assist2015/fold_4_181770
+  STDERR: Traceback (most recent call last):
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 365, in <module>
+    main()
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 312, in main
+    X, y_l0, y_t, skills = extract_all(model, loader, device, n_samples=3000)
+  File "/workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py", line 195, in extract_all
+    _, _, z_context = model(c, r, pid_data=q, qtest=True)
+  File "/home/vscode/.pykt-env/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspaces/pykt-toolkit/pykt/models/gtransformer.py", line 249, in forward
+    q_embed_data = q_embed_data + pid_embed_data * \
+RuntimeError: The size of tensor a (0) must match the size of tensor b (199) at non-singleton dimension 1
+
+
+  Completed 0/5 folds
+
+──────────────────────────────────────────────────────────────────────
+Processing dataset: bridge2algebra2006
+──────────────────────────────────────────────────────────────────────
+  Found 5 folds
+
+  [fold_0_338204]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006/fold_0_338204
+  ✓ Completed validation for fold_0_338204
+
+  [fold_1_689508]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006/fold_1_689508
+  ✓ Completed validation for fold_1_689508
+
+  [fold_2_102827]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006/fold_2_102827
+  ✓ Completed validation for fold_2_102827
+
+  [fold_3_428917]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006/fold_3_428917
+  ✓ Completed validation for fold_3_428917
+
+  [fold_4_215326]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006/fold_4_215326
+  ✓ Completed validation for fold_4_215326
+
+  Completed 5/5 folds
+
+  Aggregating results for bridge2algebra2006...
+  Aggregating results: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/aggregate_structural_validation.py --campaign_dir experiments/20260202_222106_benchpaper_698838/gtransformer/bridge2algebra2006
+
+──────────────────────────────────────────────────────────────────────
+Processing dataset: nips_task34
+──────────────────────────────────────────────────────────────────────
+  Found 5 folds
+
+  [fold_0_532458]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34/fold_0_532458
+  ✓ Completed validation for fold_0_532458
+
+  [fold_1_976348]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34/fold_1_976348
+  ✓ Completed validation for fold_1_976348
+
+  [fold_2_205905]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34/fold_2_205905
+  ✓ Completed validation for fold_2_205905
+
+  [fold_3_931056]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34/fold_3_931056
+  ✓ Completed validation for fold_3_931056
+
+  [fold_4_533007]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34/fold_4_533007
+  ✓ Completed validation for fold_4_533007
+
+  Completed 5/5 folds
+
+  Aggregating results for nips_task34...
+  Aggregating results: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/aggregate_structural_validation.py --campaign_dir experiments/20260202_222106_benchpaper_698838/gtransformer/nips_task34
+
+======================================================================
+Generating campaign-level summary...
+======================================================================
+Warning: No results to summarize
+
+======================================================================
+Campaign validation complete!
+======================================================================
+

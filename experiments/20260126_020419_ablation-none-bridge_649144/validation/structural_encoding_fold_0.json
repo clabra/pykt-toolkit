@@ -4,26 +4,26 @@
     "h1_structural_encoding": {
         "l0": {
             "fidelity": {
-                "r2": 1.0,
-                "pearson_r": NaN
+                "r2": 0.2748626777043134,
+                "pearson_r": 0.5276679207460703
             },
             "selectivity": {
-                "standard_delta_r2": 0.0,
-                "strict_delta_r2": 0.0,
-                "control_r2_obs": 1.0,
-                "control_r2_skill": 1.0
+                "standard_delta_r2": 0.32714262815927253,
+                "strict_delta_r2": -0.19751604267229672,
+                "control_r2_obs": -0.052279950454959145,
+                "control_r2_skill": 0.4723787203766101
             }
         },
         "t": {
             "fidelity": {
-                "r2": 0.0,
-                "pearson_r": NaN
+                "r2": 0.28673433636892687,
+                "pearson_r": 0.5430514103583972
             },
             "selectivity": {
-                "standard_delta_r2": 0.0,
-                "strict_delta_r2": -0.26322115384615385,
-                "control_r2_obs": 0.0,
-                "control_r2_skill": 0.26322115384615385
+                "standard_delta_r2": 0.35804300505517894,
+                "strict_delta_r2": -0.3357094534067432,
+                "control_r2_obs": -0.07130866868625207,
+                "control_r2_skill": 0.62244378977567
             }
         }
     }

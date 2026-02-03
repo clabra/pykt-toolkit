@@ -1,0 +1,14 @@
+nohup: ignoring input
+--- BENCHMARK TRAINING QUEUE (Concurrency=2) ---
+Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)
+Parameter overrides: {'d_model': 64, 'n_blocks': 4, 'num_attn_heads': 8, 'd_ff': 256, 'learning_rate': 0.0001, 'optimizer': 'adam', 'dropout': 0.1, 'ablation': 'none', 'lambda_sup': 1.0, 'lambda_ref': 0.5, 'lambda_probe': 1.0, 'epochs': 200}
+[QUEUE] gtransformer on assist2009 fold 0 (GPU 6)
+[QUEUE] gtransformer on assist2009 fold 1 (GPU 7)
+[QUEUE] gtransformer on assist2009 fold 2 (GPU 6)
+[QUEUE] gtransformer on assist2009 fold 3 (GPU 7)
+[QUEUE] gtransformer on assist2009 fold 4 (GPU 6)
+[COMPLETE] ('gtransformer', 'assist2009', 0, 0)
+[COMPLETE] ('gtransformer', 'assist2009', 1, 0)
+[COMPLETE] ('gtransformer', 'assist2009', 2, 0)
+[COMPLETE] ('gtransformer', 'assist2009', 3, 0)
+[COMPLETE] ('gtransformer', 'assist2009', 4, 0)

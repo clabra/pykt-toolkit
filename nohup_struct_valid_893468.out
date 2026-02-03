@@ -1,0 +1,50 @@
+nohup: ignoring input
+Auto-detected datasets: assist2009
+
+======================================================================
+H1.1 Structural Encoding Validation Campaign
+======================================================================
+Campaign: 20260202_222258_benchpaper_893468
+Datasets: assist2009
+======================================================================
+
+
+──────────────────────────────────────────────────────────────────────
+Processing dataset: assist2009
+──────────────────────────────────────────────────────────────────────
+  Found 5 folds
+
+  [fold_0_377291]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/fold_0_377291
+  ✓ Completed validation for fold_0_377291
+
+  [fold_1_799280]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/fold_1_799280
+  ✓ Completed validation for fold_1_799280
+
+  [fold_2_635015]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/fold_2_635015
+  ✓ Completed validation for fold_2_635015
+
+  [fold_3_475642]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/fold_3_475642
+  ✓ Completed validation for fold_3_475642
+
+  [fold_4_405551]
+  Running: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/structural_encoding_validation.py --exp_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/fold_4_405551
+  ✓ Completed validation for fold_4_405551
+
+  Completed 5/5 folds
+
+  Aggregating results for assist2009...
+  Aggregating results: /home/vscode/.pykt-env/bin/python /workspaces/pykt-toolkit/examples/results/aggregate_structural_validation.py --campaign_dir experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009
+
+======================================================================
+Generating campaign-level summary...
+======================================================================
+Warning: No results to summarize
+
+======================================================================
+Campaign validation complete!
+======================================================================
+

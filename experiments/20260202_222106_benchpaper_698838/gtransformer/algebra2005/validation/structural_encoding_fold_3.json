@@ -1,0 +1,30 @@
+{
+    "fold": 3,
+    "dataset": "algebra2005",
+    "h1_structural_encoding": {
+        "l0": {
+            "fidelity": {
+                "r2": 0.38856378785475454,
+                "pearson_r": 0.6301800237132531
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.4514581361173142,
+                "strict_delta_r2": -0.6013084525243124,
+                "control_r2_obs": -0.06289434826255969,
+                "control_r2_skill": 0.989872240379067
+            }
+        },
+        "t": {
+            "fidelity": {
+                "r2": 0.21614045492067202,
+                "pearson_r": 0.4729093059828204
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.30843369008595034,
+                "strict_delta_r2": -0.7717693156203658,
+                "control_r2_obs": -0.09229323516527832,
+                "control_r2_skill": 0.9879097705410378
+            }
+        }
+    }
+}

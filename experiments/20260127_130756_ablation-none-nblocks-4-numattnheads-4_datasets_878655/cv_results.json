@@ -1,116 +1,46 @@
 {
-    "generated_at": "2026-01-28T04:27:55.196151",
-    "campaign": "all_experiments",
+    "generated_at": "2026-02-02T20:53:11.351869",
+    "campaign": "20260127_130756_ablation-none-nblocks-4-numattnheads-4_datasets_878655",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
-        "akt": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            }
-        },
-        "atkt": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            }
-        },
-        "dkt": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            }
-        },
-        "dkvmn": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            }
-        },
         "gtransformer": {
-            "nips_task34": {
-                "status": "PARTIAL",
-                "auc_mean": 0.7993053118658381,
-                "auc_std": 0.0003337053527809864,
-                "acc_mean": 0.7292434805823033,
-                "acc_std": 0.00020048970730501467,
-                "folds_ok": 3,
+            "assist2015": {
+                "status": "PASS",
+                "auc_mean": 0.7073044359571548,
+                "auc_std": 0.0006738200570950281,
+                "acc_mean": 0.6786539313570936,
+                "acc_std": 0.0006691694200361034,
+                "folds_ok": 5,
                 "folds_running": 0,
                 "folds_total": 5,
                 "fold_data": {
                     "0": {
-                        "auc": 0.7991814754499103,
-                        "acc": 0.7291462906029592
+                        "auc": 0.7077028206754917,
+                        "acc": 0.6775061049117492
                     },
                     "1": {
-                        "auc": 0.7997616122492102,
-                        "acc": 0.7295227479913046
+                        "auc": 0.7078816519842233,
+                        "acc": 0.6783613077390704
                     },
                     "2": {
-                        "auc": 0.798972847898394,
-                        "acc": 0.7290614031526461
+                        "auc": 0.7062530357199459,
+                        "acc": 0.6793916725912645
+                    },
+                    "3": {
+                        "auc": 0.7067635596752501,
+                        "acc": 0.6788558828681236
+                    },
+                    "4": {
+                        "auc": 0.707921111730863,
+                        "acc": 0.6791546886752599
                     }
                 },
-                "auc_ref_mean": 0.6849173086854371,
-                "auc_ref_std": 0.0006865056563669121,
-                "acc_ref_mean": 0.6311025157441614,
-                "acc_ref_std": 0.000224142490597722
-            }
-        },
-        "saint": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            }
-        },
-        "sakt": {
-            "nips_task34": {
-                "status": "PENDING",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
+                "auc_ref_mean": 0.6545304733911169,
+                "auc_ref_std": 0.0014045899212494683,
+                "acc_ref_mean": 0.633002586215779,
+                "acc_ref_std": 0.0031066578484266476
             }
         }
     }
