@@ -605,6 +605,7 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/mathpazo/fplmri.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplri8r.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr8c.vf
+INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr8t.vf
 INPUT /workspaces/pykt-toolkit/paper/latex/img/cluster_placement_pacing_contextual_481134.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/cluster_placement_pacing_contextual_481134.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/cluster_placement_pacing_contextual_481134.png

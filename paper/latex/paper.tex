@@ -580,6 +580,7 @@ NIPSTasks34 & Learning Rate ($T$) & $-0.031$ & $0.103$ & $-0.065$ & 0.034 \\
 \caption{Diagnostic Probing results across four datasets. Fidelity measures probe accuracy on true BKT targets. Selectivity quantifies performance advantage over randomly shuffled controls. High selectivity (\textbf{$\Delta R^2 > 0.5$}, shown in bold) demonstrates that BKT constructs are dominant organizing principles in latent representations. AS2009 reports 5-fold CV mean $\pm$ std; other datasets show single-fold estimates. Negative control $R^2$ values confirm task-specific encoding rather than dataset artifacts. \label{tab_probing}}
 \end{table}
 
+
 \Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} visualize the recovery quality through parity plots comparing BKT theoretical priors (x-axis) against probe-extracted parameters (y-axis). Each point represents an aggregate of interactions, with size proportional to sample density. The strong adherence to the diagonal confirms linear recoverability. The $T$ plot exhibits more linear fidelity, consistent with its higher $R^2$ and selectivity scores.
 
 
@@ -685,30 +686,33 @@ Across AS2009 test interactions, we observe heterogeneous confidence patterns (\
 
 To quantify the performance trade-off between predictive accuracy and interpretability, we compare various prediction sources using a gTransformer architecture with the hyperparameter configuration shown in Table \ref{tab:interpretabilityparams}. The model produces different types of predictions: (1) predictions ($p_{\text{sup}}$) from the standard output layer, maximizing accuracy without interpretability constraints, (2) interpretable BKT-logic predictions ($p_{\text{ref}}$) derived from student-specific grounded parameters ($p_{L_0}$, $p_T$) extracted from the model's theoretical grounding layer, following classical BKT inference logic. For comparison, we include (3) the classical BKT baseline ($p_{\text{bkt}}$) from a separate traditional BKT model using population-level parameters. This baseline is omitted for AS2015 because the test data does not include the question column required for standardized question-level evaluation. \Cref{tab:tradeoff} presents the test AUC results, quantifying the Interpretability Cost ($p_{\text{sup}1} - p_{\text{ref}}$) incurred by the interpretable output and the Interpretability Gain ($p_{\text{ref}} - p_{\text{bkt}}$) achieved relative to the classical BKT baseline. 
 
-\begin{table}[htbp]
+
+\begin{table*}[htbp]
 \centering
+\footnotesize
 \begin{tabular}{lccccccc}
 \toprule
-\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
+\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop (\%)} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
 \midrule
-AS2009 & 0.7831 & 0.7824 & 0.6733 & 0.6097 & 0.0007 & 0.1098 (14.0\%) & 0.0636 (10.4\%) \\
-AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0138 (2.0\%) & --- \\
-AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 & 0.0440 (5.3\%) & 0.0585 (8.1\%) \\
-Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 & 0.0338 (4.1\%) & 0.1054 (15.6\%) \\
-NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0340 (4.2\%) & 0.1937 (33.8\%) \\
+AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 (0.2\%) & 0.0395 (5.0\%) & 0.1339 (22.0\%) \\
+AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 (0.1\%) & 0.0138 (1.9\%) & --- \\
+AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 (0.0\%) & 0.0440 (5.3\%) & 0.0585 (8.1\%) \\
+Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 (0.5\%) & 0.0338 (4.1\%) & 0.1054 (15.6\%) \\
+NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 (0.2\%) & 0.0340 (4.2\%) & 0.1937 (33.8\%) \\
 \midrule
-\textbf{Mean} & 0.7861 & 0.7845 & 0.7390 & 0.6449 & 0.0016 & 0.0471 (5.9\%) & 0.1053 (17.0\%) \\
+\textbf{Mean} & 0.7861 & 0.7843 & 0.7530 & 0.6449 & 0.0018 (0.2\%) & 0.0330 (4.1\%) & 0.1229 (19.9\%) \\
 \bottomrule
 \end{tabular}
 \caption{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} measures the representational cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} measures total interpretability cost ($p_{\text{sup}1} - p_{\text{ref}}$), while \textit{Int. Gain} measures ($p_{\text{ref}} - p_{\text{bkt}}$).}
 \label{tab:tradeoff}
-\end{table}
+\end{table*}
+
 
 The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
-    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0016 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0471 AUC points (5.9\% relative reduction), ranging from a minimum of 2.0\% (AS2015) to a maximum of 14.0\% (AS2009), which is highly acceptable given the substantial gains in transparency.
-    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable neural predictions consistently outperform classical BKT: AS2009 (+10.4\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
+    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0330 AUC points (4.1\% relative reduction), ranging from a minimum of 1.9\% (AS2015) to a maximum of 5.3\% (AL2005), which is highly acceptable given the substantial gains in transparency.
+    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable neural predictions consistently outperform classical BKT: AS2009 (+22.0\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
 \end{itemize}
 
 In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
