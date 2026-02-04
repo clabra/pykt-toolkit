@@ -1,0 +1,30 @@
+{
+    "fold": 0,
+    "dataset": "assist2015",
+    "h1_structural_encoding": {
+        "l0": {
+            "fidelity": {
+                "r2": 0.6735078436794679,
+                "pearson_r": 0.8212165300432551
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.7091090540880047,
+                "strict_delta_r2": -0.16495244236556394,
+                "control_r2_obs": -0.03560121040853681,
+                "control_r2_skill": 0.8384602860450319
+            }
+        },
+        "t": {
+            "fidelity": {
+                "r2": 0.6734597932271779,
+                "pearson_r": 0.8279032456756119
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.7352425767754823,
+                "strict_delta_r2": -0.22972220403969257,
+                "control_r2_obs": -0.061782783548304465,
+                "control_r2_skill": 0.9031819972668704
+            }
+        }
+    }
+}

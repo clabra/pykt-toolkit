@@ -192,7 +192,9 @@ def extract_all(model, loader, device, n_samples=8000):
         for data in loader:
             q, c, r, sm = data["qseqs"].long().to(device), data["cseqs"].long().to(device), \
                           data["rseqs"].long().to(device), data["smasks"].long().to(device)
-            _, _, z_context = model(c, r, pid_data=q, qtest=True)
+            # Use concepts if questions not available (num_q=0 datasets like assist2015)
+            q_input = c if q.sum() == 0 else q
+            _, _, z_context = model(q_input, r, pid_data=q_input, qtest=True)
             mask = sm.bool()
             
             all_z.append(z_context[mask].cpu().numpy())
@@ -233,8 +235,8 @@ def main():
     
     # Save validation results to dataset-specific folder
     VALIDATION_DIR = os.path.join(dataset_dir, "validation")
-    # Keep plots at campaign level for aggregation
-    PLOT_DIR = os.path.join(campaign_dir, "plots")
+    # Save plots to dataset-specific folder for consistency
+    PLOT_DIR = os.path.join(dataset_dir, "plots")
     os.makedirs(VALIDATION_DIR, exist_ok=True)
     os.makedirs(PLOT_DIR, exist_ok=True)
 

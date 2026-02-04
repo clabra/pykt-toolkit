@@ -1048,6 +1048,16 @@ def main():
                                         "required_files": []  # Auto-discovers .ckpt files
                                     },
                                     {
+                                        "name": "Parameter Recovery Validation (H1.2)",
+                                        "script": "examples/validation/validate_parameter_recovery.py",
+                                        "args": {
+                                            "--exp_dir": str(dataset_dir),  # Run at dataset level (parent of folds)
+                                            "--output_dir": str(validation_dir)
+                                        },
+                                        "required_files": [],  # Auto-discovers .ckpt files across all folds
+                                        "run_once": True  # Only run once per dataset, not per fold
+                                    },
+                                    {
                                         "name": "Prediction Envelope Gallery",
                                         "script": "examples/results/generate_prediction_envelope_gallery.py",
                                         "args": {
@@ -1136,7 +1146,19 @@ def main():
                                 plots_failed = 0
                                 missing_ref_predictions = False  # Track if reference predictions were missing
                                 
+                                # Track scripts that should only run once per dataset
+                                run_once_executed = set()
+                                
                                 for script_info in validation_scripts:
+                                    # Skip scripts marked as run_once if already executed
+                                    if script_info.get("run_once", False):
+                                        script_name = script_info["name"]
+                                        if script_name in run_once_executed:
+                                            print(f"  [SKIP] {script_name} (already run at dataset level)")
+                                            plots_skipped += 1
+                                            continue
+                                        run_once_executed.add(script_name)
+                                    
                                     # Check if required files exist
                                     missing_files = []
                                     for req_file in script_info.get("required_files", []):

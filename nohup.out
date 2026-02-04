@@ -461,3 +461,129 @@ Parameter overrides: {'model_name': 'gtransformer', 'datasets': 'assist2015', 'f
 [COMPLETE] ('gtransformer', 'nips_task34', 2, 2)
 [COMPLETE] ('gtransformer', 'nips_task34', 3, 2)
 [COMPLETE] ('gtransformer', 'nips_task34', 4, 2)
+--- BENCHMARK TRAINING QUEUE (Concurrency=6) ---
+Engine: run_repro_experiment.py (Scientific Alignment Mode, Grouped Folds)
+[QUEUE] gtransfo on assist2009 fold 0 (GPU 0)
+[QUEUE] gtransfo on assist2009 fold 1 (GPU 1)
+[QUEUE] gtransfo on assist2009 fold 2 (GPU 2)
+[QUEUE] gtransfo on assist2009 fold 3 (GPU 3)
+[QUEUE] gtransfo on assist2009 fold 4 (GPU 4)
+[QUEUE] gtransfo on assist2015 fold 0 (GPU 5)
+[QUEUE] gtransfo on assist2015 fold 1 (GPU 0)
+[QUEUE] gtransfo on assist2015 fold 2 (GPU 1)
+[QUEUE] gtransfo on assist2015 fold 3 (GPU 2)
+[QUEUE] gtransfo on assist2015 fold 4 (GPU 3)
+[QUEUE] gtransfo on bridge2algebra2006 fold 0 (GPU 4)
+[QUEUE] gtransfo on bridge2algebra2006 fold 1 (GPU 5)
+[QUEUE] gtransfo on bridge2algebra2006 fold 2 (GPU 0)
+[QUEUE] gtransfo on bridge2algebra2006 fold 3 (GPU 1)
+[QUEUE] gtransfo on bridge2algebra2006 fold 4 (GPU 2)
+[QUEUE] gtransfo on nips_task34 fold 0 (GPU 3)
+[QUEUE] gtransfo on nips_task34 fold 1 (GPU 4)
+[QUEUE] gtransfo on nips_task34 fold 2 (GPU 5)
+[QUEUE] gtransfo on nips_task34 fold 3 (GPU 0)
+[QUEUE] gtransfo on nips_task34 fold 4 (GPU 1)
+[QUEUE] gtransfo on algebra2005 fold 0 (GPU 2)
+[QUEUE] gtransfo on algebra2005 fold 1 (GPU 3)
+[QUEUE] gtransfo on algebra2005 fold 2 (GPU 4)
+[QUEUE] gtransfo on algebra2005 fold 3 (GPU 5)
+[QUEUE] gtransfo on algebra2005 fold 4 (GPU 0)
+[COMPLETE] Error: No script for gtransfo
+[COMPLETE] Error: No script for gtransfo
+Traceback (most recent call last):
+  File "examples/run_benchmarks_paper.py", line 664, in main
+    for future in as_completed(futures):
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 244, in as_completed
+    waiter.event.wait(wait_timeout)
+  File "/usr/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/usr/lib/python3.8/threading.py", line 302, in wait
+    waiter.acquire()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "examples/run_benchmarks_paper.py", line 1309, in <module>
+    main()
+  File "examples/run_benchmarks_paper.py", line 665, in main
+    print(f"[COMPLETE] {future.result()}")
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 644, in __exit__
+    self.shutdown(wait=True)
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 686, in shutdown
+    self._queue_management_thread.join()
+  File "/usr/lib/python3.8/threading.py", line 1011, in join
+    self._wait_for_tstate_lock()
+  File "/usr/lib/python3.8/threading.py", line 1027, in _wait_for_tstate_lock
+    elif lock.acquire(block, timeout):
+KeyboardInterrupt
+Error in atexit._run_exitfuncs:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 104, in _python_exit
+    t.join()
+  File "/usr/lib/python3.8/threading.py", line 1011, in join
+    self._wait_for_tstate_lock()
+  File "/usr/lib/python3.8/threading.py", line 1027, in _wait_for_tstate_lock
+    elif lock.acquire(block, timeout):
+KeyboardInterrupt
+Error in atexit._run_exitfuncs:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/popen_fork.py", line 27, in poll
+    pid, sts = os.waitpid(self.pid, flag)
+KeyboardInterrupt
+Process ForkProcess-6:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 233, in _process_worker
+    call_item = call_queue.get(block=True)
+  File "/usr/lib/python3.8/multiprocessing/queues.py", line 96, in get
+    with self._rlock:
+  File "/usr/lib/python3.8/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkProcess-1:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 233, in _process_worker
+    call_item = call_queue.get(block=True)
+  File "/usr/lib/python3.8/multiprocessing/queues.py", line 96, in get
+    with self._rlock:
+  File "/usr/lib/python3.8/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkProcess-3:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 233, in _process_worker
+    call_item = call_queue.get(block=True)
+  File "/usr/lib/python3.8/multiprocessing/queues.py", line 96, in get
+    with self._rlock:
+  File "/usr/lib/python3.8/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkProcess-5:
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.8/concurrent/futures/process.py", line 233, in _process_worker
+    call_item = call_queue.get(block=True)
+  File "/usr/lib/python3.8/multiprocessing/queues.py", line 97, in get
+    res = self._recv_bytes()
+  File "/usr/lib/python3.8/multiprocessing/connection.py", line 216, in recv_bytes
+    buf = self._recv_bytes(maxlength)
+  File "/usr/lib/python3.8/multiprocessing/connection.py", line 414, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/lib/python3.8/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+KeyboardInterrupt

@@ -8,7 +8,7 @@
     "train_script": "examples/wandb_gtransformer_train.py",
     "eval_script": "examples/wandb_gtransformer_predict.py",
     "epochs": 200,
-    "patience": 10,
+    "patience": 5,
     "batch_size": 64,
     "learning_rate": 0.0002,
     "weight_decay": 0.0,
@@ -403,5 +403,5 @@
       "validated_by_experiments": []
     }
   },
-  "md5": "176237a506521f415a1698672816136e"
+  "md5": "9c15ed815c8a0d8e84cc0dfad795926f"
 }

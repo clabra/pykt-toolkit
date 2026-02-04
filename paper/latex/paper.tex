@@ -546,13 +546,13 @@ To verify whether gTransformer's latent representations genuinely internalize pe
 \textbf{Results}: \Cref{tab_probing} summarizes the diagnostic probing results across four datasets with varying structural properties. We observe strong evidence of BKT construct encoding, with selectivity patterns revealing both model capabilities and fundamental dataset characteristics:
 
 \begin{itemize}
-    \item \textbf{AS2009 (Strong encoding for both parameters)}: Initial Mastery achieves fidelity $R^2 = 0.549 \pm 0.064$ with Pearson $r = 0.743 \pm 0.041$, yielding selectivity $\Delta R^2 = 0.619 \pm 0.073$ that substantially exceeds the 0.5 threshold. Learning Rate shows comparable performance with fidelity $R^2 = 0.515 \pm 0.080$, Pearson $r = 0.721 \pm 0.050$, and selectivity $\Delta R^2 = 0.570 \pm 0.070$. Both parameters demonstrate that BKT constructs are dominant organizing principles in the latent space.
+    \item \textbf{AS2009 (Strong encoding for both parameters)}: Initial Mastery achieves fidelity $R^2 = 0.549 \pm 0.064$ with Pearson $r = 0.743 \pm 0.041$, yielding selectivity $\Delta R^2 = 0.616 \pm 0.065$ that substantially exceeds the 0.5 threshold. Learning Rate shows comparable performance with fidelity $R^2 = 0.515 \pm 0.080$, Pearson $r = 0.721 \pm 0.050$, and selectivity $\Delta R^2 = 0.570 \pm 0.080$. Both parameters demonstrate that BKT constructs are dominant organizing principles in the latent space.
     
-    \item \textbf{Algebra2005 (Asymmetric encoding)}: Exhibits strong Learning Rate encoding ($\Delta R^2 = 0.574$, $r = 0.739$) but weak Initial Mastery encoding ($\Delta R^2 = 0.200$, $r = 0.429$). This asymmetry reflects dataset structure: multi-skill questions average multiple $L_0$ values, causing variance collapse that limits recoverability, while practice dynamics ($T$) remain robustly encoded.
+    \item \textbf{Algebra2005 (Asymmetric encoding)}: Exhibits moderate Initial Mastery encoding ($\Delta R^2 = 0.420 \pm 0.074$, $r = 0.610 \pm 0.051$) but weak Learning Rate encoding ($\Delta R^2 = 0.248 \pm 0.120$, $r = 0.435 \pm 0.111$). This asymmetry reflects dataset structure: multi-skill questions (1,546 questions per skill on average) introduce averaging artifacts that reduce probe signal, with $T$ particularly affected by the high proportion of near-zero learning rates.
     
-    \item \textbf{Bridge2Algebra2006 (Moderate encoding)}: Shows moderate selectivity for both Initial Mastery ($\Delta R^2 = 0.327$) and Learning Rate ($\Delta R^2 = 0.358$), indicating BKT constructs contribute to latent organization but compete with other task-relevant features in this complex multi-concept dataset.
+    \item \textbf{Bridge2Algebra2006 (Moderate encoding)}: Shows moderate selectivity for both Initial Mastery ($\Delta R^2 = 0.433 \pm 0.153$, $r = 0.625 \pm 0.117$) and strong Learning Rate encoding ($\Delta R^2 = 0.539 \pm 0.147$, $r = 0.683 \pm 0.115$), indicating BKT constructs serve as organizing principles despite this complex multi-concept dataset with 493 skills.
     
-    \item \textbf{NIPSTasks34 (Complementary encoding)}: Demonstrates strong Initial Mastery encoding ($\Delta R^2 = 0.521$, $r = 0.687$) but minimal Learning Rate encoding ($\Delta R^2 = 0.034$). The extreme bimodal $T$ distribution (68\% of skills have $T < 0.01$) creates a near-discrete parameter that offers limited continuous variance for probing.
+    \item \textbf{NIPSTasks34 (Complementary encoding)}: Demonstrates strong Initial Mastery encoding ($\Delta R^2 = 0.513 \pm 0.040$, $r = 0.678 \pm 0.026$) but catastrophic Learning Rate encoding failure ($\Delta R^2 = 0.006 \pm 0.025$, $r = 0.065 \pm 0.032$). The extreme bimodal $T$ distribution (68\% of skills have $T < 0.01$, yielding 92.5\% of training observations at T$\approx$0) creates insufficient variance for continuous parameter recovery. This represents an encoding failure rather than a probe limitation: the model does not encode $T$ structure because it provides negligible predictive value for the primary task in this short-sequence dataset.
 \end{itemize}
 
 \textbf{Interpretation}: The heterogeneous selectivity patterns validate H1.1 (Structural Encoding) while revealing that probe performance depends on both model architecture and data distribution properties. At least one BKT parameter achieves strong encoding ($\Delta R^2 > 0.5$) in all datasets, confirming that pedagogical constructs serve as organizing principles. Variation reflects fundamental recoverability constraints: multi-skill averaging (Algebra2005 $L_0$), near-zero learning rates (NIPSTasks34 $T$), and skill imbalance all reduce probe selectivity independently of model quality. These results demonstrate that gTransformer successfully internalizes BKT structure where data distributions permit continuous parameter recovery. 
@@ -564,20 +564,20 @@ To verify whether gTransformer's latent representations genuinely internalize pe
 \toprule
 \textbf{Dataset} & \textbf{Construct} & \textbf{Fidelity ($R^2$)} & \textbf{Pearson ($r$)} & \textbf{Control ($R^2$)} & \textbf{Selectivity ($\Delta R^2$)} \\
 \midrule
-AS2009 & Initial Mastery ($L_0$) & $0.549 \pm 0.064$ & $0.743 \pm 0.041$ & $-0.069$ & \textbf{0.619 $\pm$ 0.073} \\
-AS2009 & Learning Rate ($T$) & $0.515 \pm 0.080$ & $0.721 \pm 0.050$ & $-0.055$ & \textbf{0.570 $\pm$ 0.070} \\
+AS2009 & Initial Mastery ($L_0$) & $0.549 \pm 0.064$ & $0.743 \pm 0.041$ & $-0.360$ & \textbf{0.616 $\pm$ 0.065} \\
+AS2009 & Learning Rate ($T$) & $0.515 \pm 0.080$ & $0.721 \pm 0.050$ & $-0.373$ & \textbf{0.570 $\pm$ 0.080} \\
 \midrule
-Algebra2005 & Initial Mastery ($L_0$) & $0.172$ & $0.429$ & $-0.028$ & 0.200 \\
-Algebra2005 & Learning Rate ($T$) & $0.539$ & $0.739$ & $-0.035$ & \textbf{0.574} \\
+Algebra2005 & Initial Mastery ($L_0$) & $0.367 \pm 0.067$ & $0.610 \pm 0.051$ & $-0.053$ & 0.420 $\pm$ 0.074 \\
+Algebra2005 & Learning Rate ($T$) & $0.163 \pm 0.122$ & $0.435 \pm 0.111$ & $-0.085$ & 0.248 $\pm$ 0.120 \\
 \midrule
-Bridge2Algebra & Initial Mastery ($L_0$) & $0.275$ & $0.528$ & $-0.052$ & 0.327 \\
-Bridge2Algebra & Learning Rate ($T$) & $0.287$ & $0.543$ & $-0.071$ & 0.358 \\
+Bridge2Algebra & Initial Mastery ($L_0$) & $0.393 \pm 0.145$ & $0.625 \pm 0.117$ & $-0.040$ & 0.433 $\pm$ 0.153 \\
+Bridge2Algebra & Learning Rate ($T$) & $0.468 \pm 0.162$ & $0.683 \pm 0.115$ & $-0.071$ & \textbf{0.539 $\pm$ 0.147} \\
 \midrule
-NIPSTasks34 & Initial Mastery ($L_0$) & $0.471$ & $0.687$ & $-0.050$ & \textbf{0.521} \\
-NIPSTasks34 & Learning Rate ($T$) & $-0.031$ & $0.103$ & $-0.065$ & 0.034 \\
+NIPSTasks34 & Initial Mastery ($L_0$) & $0.452 \pm 0.038$ & $0.678 \pm 0.026$ & $-0.061$ & \textbf{0.513 $\pm$ 0.040} \\
+NIPSTasks34 & Learning Rate ($T$) & $-0.043 \pm 0.042$ & $0.065 \pm 0.032$ & $-0.049$ & 0.006 $\pm$ 0.025 \\
 \bottomrule
 \end{tabular}
-\caption{Diagnostic Probing results across four datasets. Fidelity measures probe accuracy on true BKT targets. Selectivity quantifies performance advantage over randomly shuffled controls. High selectivity (\textbf{$\Delta R^2 > 0.5$}, shown in bold) demonstrates that BKT constructs are dominant organizing principles in latent representations. AS2009 reports 5-fold CV mean $\pm$ std; other datasets show single-fold estimates. Negative control $R^2$ values confirm task-specific encoding rather than dataset artifacts. \label{tab_probing}}
+\caption{Diagnostic Probing results across four datasets using 5-fold cross-validation (mean $\pm$ std). Fidelity measures probe accuracy on true BKT targets. Selectivity quantifies performance advantage over randomly shuffled controls. High selectivity (\textbf{$\Delta R^2 > 0.5$}, shown in bold) demonstrates that BKT constructs are dominant organizing principles in latent representations. Negative control $R^2$ values confirm task-specific encoding rather than dataset artifacts. \label{tab_probing}}
 \end{table}
 
 
@@ -602,13 +602,13 @@ We use Spearman's rank correlation ($\rho$) to measure this alignment, as it ass
 \textbf{Results}: \Cref{tab_semantic_alignment} summarizes semantic alignment results across four datasets. Grounded parameters exhibit heterogeneous alignment patterns that reveal dataset-specific characteristics:
 
 \begin{itemize}
-    \item \textbf{AS2009}: Moderate alignment for both parameters ($L_0$: $\rho=0.399$, weak; $T$: $\rho=0.544$, moderate). Learning rate shows stronger preservation of pedagogical ordering than initial mastery. Good MAE values (0.160 for $L_0$, 0.102 for $T$) confirm individualization occurs within pedagogical bounds.
+    \item \textbf{AS2009}: Weak-to-moderate alignment ($L_0$: $\rho=0.372 \pm 0.046$, weak; $T$: $\rho=0.532 \pm 0.027$, moderate). Learning rate shows stronger preservation of pedagogical ordering than initial mastery. Excellent MAE values ($0.156 \pm 0.009$ for $L_0$, $0.094 \pm 0.006$ for $T$) confirm individualization occurs within pedagogical bounds.
     
-    \item \textbf{Algebra2005}: Weak alignment for both parameters ($L_0$: $\rho=0.214$; $T$: $\rho=0.171$), indicating strong individualization dominates over prior preservation. MAE values (0.205, 0.166) remain acceptable, validating pedagogical semantics are not abandoned.
+    \item \textbf{Algebra2005}: Weak alignment for both parameters ($L_0$: $\rho=0.174 \pm 0.051$; $T$: $\rho=0.111 \pm 0.018$), indicating strong individualization dominates over prior preservation. MAE values ($0.224 \pm 0.010$, $0.162 \pm 0.004$) remain acceptable, validating pedagogical semantics are not abandoned.
     
-    \item \textbf{Bridge2Algebra2006}: Weak $L_0$ alignment ($\rho=0.281$) but \textbf{strong $T$ alignment ($\rho=0.691$)}—the highest across all datasets. Despite low Pearson correlation (r=0.287), the strong Spearman correlation indicates robust rank-order preservation with non-linear transformation. MAE=0.110 for $T$ demonstrates excellent semantic preservation.
+    \item \textbf{Bridge2Algebra2006}: Weak $L_0$ alignment ($\rho=0.191 \pm 0.021$) but \textbf{strong $T$ alignment ($\rho=0.671 \pm 0.016$)}—the highest across all datasets. Despite low Pearson correlation ($r=0.295 \pm 0.020$), the strong Spearman correlation indicates robust rank-order preservation with non-linear transformation. Exceptional consistency across folds (std=0.016). MAE=$0.117 \pm 0.004$ for $T$ demonstrates excellent semantic preservation.
     
-    \item \textbf{NIPSTasks34}: Weak-to-moderate alignment ($L_0$: $\rho=0.312$; $T$: $\rho=0.416$). Notably, $T$ shows near-zero Pearson correlation (r=0.003) but moderate Spearman, confirming monotonic relationship preservation despite non-linear grounding. Very low MAE for $T$ (0.015) reflects bimodal distribution with most skills near zero.
+    \item \textbf{NIPSTasks34}: Weak-to-moderate alignment ($L_0$: $\rho=0.212 \pm 0.091$; $T$: $\rho=0.436 \pm 0.047$). Notably, $T$ shows near-zero Pearson correlation ($r=0.009 \pm 0.006$) but moderate Spearman, confirming monotonic relationship preservation despite non-linear grounding. Very low MAE for $T$ ($0.015 \pm 0.001$) reflects bimodal distribution with most skills near zero. High variance for $L_0$ (std=0.091) suggests inconsistent preservation across folds.
 \end{itemize}
 
 \textbf{Interpretation}: The heterogeneous alignment patterns validate H1.2 while revealing genuine individualization. Learning rate ($T$) consistently shows better preservation than initial mastery ($L_0$) across datasets (3/4 datasets achieve moderate-to-strong $T$ alignment vs 0/4 for $L_0$), confirming the model reliably captures practice effects while individualizing prior knowledge estimates. The gap between grounded and probe correlations quantifies context-aware refinement: the model neither abandons theoretical priors nor mechanically reproduces them. Weak $L_0$ alignment with good MAE scores (0.10-0.20 range) demonstrates the model refines priors within pedagogical bounds rather than repurposing them for black-box optimization.
@@ -622,17 +622,17 @@ We use Spearman's rank correlation ($\rho$) to measure this alignment, as it ass
 \toprule
 \textbf{Dataset} & \textbf{Parameter} & \textbf{Spearman $\rho$} & \textbf{Pearson $r$} & \textbf{MAE} & \textbf{Alignment} \\
 \midrule
-AS2009 & Initial Mastery ($L_0$) & 0.399 & 0.432 & 0.160 & Weak \\
-AS2009 & Learning Rate ($T$) & 0.544 & 0.499 & 0.102 & Moderate \\
-Algebra2005 & Initial Mastery ($L_0$) & 0.214 & 0.225 & 0.205 & Weak \\
-Algebra2005 & Learning Rate ($T$) & 0.171 & 0.088 & 0.166 & Weak \\
-Bridge2Algebra & Initial Mastery ($L_0$) & 0.281 & 0.239 & 0.160 & Weak \\
-Bridge2Algebra & Learning Rate ($T$) & \textbf{0.691} & 0.287 & 0.110 & \textbf{Strong} \\
-NIPSTasks34 & Initial Mastery ($L_0$) & 0.312 & 0.292 & 0.201 & Weak \\
-NIPSTasks34 & Learning Rate ($T$) & 0.416 & 0.003 & 0.015 & Moderate \\
+AS2009 & Initial Mastery ($L_0$) & $0.372 \pm 0.046$ & $0.390 \pm 0.045$ & $0.156 \pm 0.009$ & Weak \\
+AS2009 & Learning Rate ($T$) & $0.532 \pm 0.027$ & $0.479 \pm 0.060$ & $0.094 \pm 0.006$ & Moderate \\
+Algebra2005 & Initial Mastery ($L_0$) & $0.174 \pm 0.051$ & $0.173 \pm 0.052$ & $0.224 \pm 0.010$ & Weak \\
+Algebra2005 & Learning Rate ($T$) & $0.111 \pm 0.018$ & $0.086 \pm 0.012$ & $0.162 \pm 0.004$ & Weak \\
+Bridge2Algebra & Initial Mastery ($L_0$) & $0.191 \pm 0.021$ & $0.182 \pm 0.014$ & $0.177 \pm 0.008$ & Weak \\
+Bridge2Algebra & Learning Rate ($T$) & $\mathbf{0.671 \pm 0.016}$ & $0.295 \pm 0.020$ & $0.117 \pm 0.004$ & \textbf{Strong} \\
+NIPSTasks34 & Initial Mastery ($L_0$) & $0.212 \pm 0.091$ & $0.217 \pm 0.072$ & $0.179 \pm 0.011$ & Weak \\
+NIPSTasks34 & Learning Rate ($T$) & $0.436 \pm 0.047$ & $0.009 \pm 0.006$ & $0.015 \pm 0.001$ & Moderate \\
 \bottomrule
 \end{tabular}
-\caption{Semantic Alignment results across four datasets. Spearman $\rho$ (primary metric) measures monotonic relationship preservation between grounded parameters and BKT theoretical priors, robust to non-linear transformations. Pearson $r$ measures linear correlation. MAE (Mean Absolute Error) validates pedagogical bounds are maintained (good range: 0.1-0.2). Alignment categories: Strong ($\rho \geq 0.6$), Moderate ($0.4 \leq \rho < 0.6$), Weak ($\rho < 0.4$). AS2009 reports 5-fold CV mean; other datasets show single-fold estimates. Learning rate ($T$) consistently better preserved than initial mastery ($L_0$), confirming the model captures practice effects while individualizing prior knowledge. \label{tab_semantic_alignment}}
+\caption{Semantic Alignment results across four datasets. Spearman $\rho$ (primary metric) measures monotonic relationship preservation between grounded parameters and BKT theoretical priors, robust to non-linear transformations. Pearson $r$ measures linear correlation. MAE (Mean Absolute Error) validates pedagogical bounds are maintained (good range: 0.1-0.2). Alignment categories: Strong ($\rho \geq 0.6$), Moderate ($0.4 \leq \rho < 0.6$), Weak ($\rho < 0.4$). All datasets report 5-fold CV statistics (mean $\pm$ std). Learning rate ($T$) consistently better preserved than initial mastery ($L_0$), confirming the model captures practice effects while individualizing prior knowledge. \label{tab_semantic_alignment}}
 \end{table}
 
 These findings support H1.2 across all datasets, confirming grounded parameters preserve pedagogical semantics (MAE within bounds) while enabling genuine individualization (weak-to-moderate correlations). The consistent pattern of stronger $T$ preservation validates the model's capacity to capture practice effects as a reliable theoretical construct.

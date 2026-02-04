@@ -280,6 +280,8 @@ There are three ways to compile the LaTeX documents:
 
 - **Base Image**: The environment is built into the `.devcontainer/Dockerfile`.
 - **Path Translation**: Host shims automatically translate absolute paths (e.g., `/home/username/...` to `/workspaces/...`) to maintain compatibility between host and container filesystems.
+
+
 ## Additional Preprocessing for iDKT Model
 
 The **iDKT (Interpretable Deep Knowledge Tracing)** model requires additional preprocessing steps to augment datasets with BKT (Bayesian Knowledge Tracing) parameters. This enables the model to ground its deep learning representations in classical psychometric theory.
