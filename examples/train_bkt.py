@@ -65,10 +65,18 @@ def prepare_bkt_data(df):
     """
     Convert pykt sequence format to pyBKT format.
     
-    Input: dataframe with uid (user_id), concepts (skill_name), responses (correct), selectmasks (order_id)
-    Output: pyBKT format with user_id, skill_name, correct, order_id
+    CRITICAL FIX: Exclude repeat/review problems (is_repeat=1) from BKT training.
+    BKT models initial learning, not review. Including repeats inflates prior 
+    knowledge (L0) and suppresses learning rates (T), leading to T≈0 estimates.
+    
+    Input: dataframe with uid (user_id), concepts (skill_name), responses (correct), 
+           selectmasks (order_id), is_repeat (0=first attempt, 1=repeat)
+    Output: pyBKT format with user_id, skill_name, correct, order_id (repeats excluded)
     """
     records = []
+    
+    # Check if is_repeat column exists
+    has_repeat_col = 'is_repeat' in df.columns
     
     for idx, row in df.iterrows():
         uid = row['uid']
@@ -76,9 +84,15 @@ def prepare_bkt_data(df):
         responses = [int(r) for r in row['responses'].split(',') if r != '-1']
         selectmasks = [int(m) for m in row['selectmasks'].split(',') if m != '-1']
         
-        # Convert to row-per-interaction format
-        for order_id, (skill, response, mask) in enumerate(zip(concepts, responses, selectmasks)):
-            if mask == 1:
+        # Parse is_repeat if available
+        if has_repeat_col:
+            is_repeats = [int(r) for r in row['is_repeat'].split(',') if r != '-1']
+        else:
+            is_repeats = [0] * len(concepts)  # Assume no repeats if column missing
+        
+        # Convert to row-per-interaction format, EXCLUDING REPEATS
+        for order_id, (skill, response, mask, is_repeat) in enumerate(zip(concepts, responses, selectmasks, is_repeats)):
+            if mask == 1 and is_repeat == 0:  # CRITICAL: Exclude repeats (is_repeat=1)
                 records.append({
                     'user_id': uid,
                     'skill_name': skill,
@@ -90,6 +104,14 @@ def prepare_bkt_data(df):
             print(f"  Prepared {idx + 1}/{len(df)} students...", flush=True)
     
     bkt_df = pd.DataFrame(records)
+    
+    if has_repeat_col:
+        # Calculate how many observations were filtered
+        total_masked = sum(len([x for x in row['selectmasks'].split(',') if x != '-1' and int(x) == 1]) 
+                          for _, row in df.iterrows())
+        filtered = total_masked - len(bkt_df)
+        print(f"  Filtered out {filtered:,} repeat observations ({filtered/total_masked*100:.1f}%)")
+    
     return bkt_df
 
 def main():

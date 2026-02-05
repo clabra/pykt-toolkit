@@ -70,7 +70,10 @@ def generate_targets(df, bkt_params, max_seq_len=200):
                     l0_vals.append(bkt_params[s]['prior'])
                     t_vals.append(bkt_params[s]['learns'])
                 else:
-                    raise ValueError(f"CRITICAL ERROR: Skill ID {s} not found in BKT parameters! (Row {idx})")
+                    # Use default BKT values for skills with no first-attempt data (all repeats)
+                    # This happens when a skill only appears in repeat/review problems
+                    l0_vals.append(0.5)  # Neutral prior
+                    t_vals.append(0.1)   # Low learning rate
             
             # Late Fusion: Mean
             mean_l0 = np.mean(l0_vals)

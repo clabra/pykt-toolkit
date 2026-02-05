@@ -991,12 +991,13 @@ def main():
                                 if fold_dir: break
                         
                         if fold_dir:
-                            # Create plots and validation directories at CAMPAIGN level (not fold level)
-                            # Navigate up from fold_dir to campaign root
+                            # Create plots and validation directories at DATASET level (not campaign level)
+                            # Navigate up from fold_dir to dataset directory
                             # Structure: experiments/<campaign>/gtransformer/<dataset>/fold_X_<id>/
-                            campaign_dir = Path(fold_dir).parent.parent.parent
-                            plot_dir = campaign_dir / "plots"
-                            validation_dir = campaign_dir / "validation"
+                            dataset_dir = Path(fold_dir).parent
+                            campaign_dir = dataset_dir.parent.parent
+                            plot_dir = dataset_dir / "plots"
+                            validation_dir = dataset_dir / "validation"
                             os.makedirs(plot_dir, exist_ok=True)
                             os.makedirs(validation_dir, exist_ok=True)
                             
@@ -1004,6 +1005,7 @@ def main():
                             print(f"  Campaign: {campaign_dir.name}")
                             print(f"  Model: {model}")
                             print(f"  Dataset: {dataset}")
+                            print(f"  Dataset Directory: {dataset_dir}")
                             print(f"  Representative Fold: {Path(fold_dir).name}")
                             print(f"  Output:")
                             print(f"    - Plots: {plot_dir}")
@@ -1216,8 +1218,7 @@ def main():
                             
                             # 2. Generate diagnostic probing results for validation
                             print(f"\n  Diagnostic Probing Analysis:")
-                            validation_dir = campaign_dir / "validation"
-                            validation_dir.mkdir(parents=True, exist_ok=True)
+                            # validation_dir already created at dataset level above
                             
                             # Check if this is a grounded model (gtransformer with active grounding)
                             eval_results_path = None
