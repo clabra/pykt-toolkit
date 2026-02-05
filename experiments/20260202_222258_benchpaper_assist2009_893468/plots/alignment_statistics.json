@@ -1,0 +1,11 @@
+{
+  "mean_concordance": 0.8354362216812834,
+  "median_concordance": 0.84603,
+  "std_concordance": 0.07172513998794634,
+  "min_concordance": 0.5308485207100593,
+  "max_concordance": 0.9735,
+  "n_students": 30,
+  "n_skills": 50,
+  "n_pairs": 865,
+  "min_interactions": 8
+}

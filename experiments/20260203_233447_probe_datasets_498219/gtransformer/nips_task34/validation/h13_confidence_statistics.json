@@ -1,0 +1,14 @@
+{
+  "mean_confidence": 0.698912440998123,
+  "median_confidence": 0.6951731467507185,
+  "std_confidence": 0.14127031074653135,
+  "min_confidence": 0.42909843472270426,
+  "max_confidence": 0.96980768530654,
+  "n_students": 25,
+  "n_skills": 40,
+  "n_pairs": 957,
+  "min_interactions": 5,
+  "high_confidence_pct": 27.586206896551722,
+  "medium_confidence_pct": 67.60710553814002,
+  "low_confidence_pct": 4.806687565308255
+}

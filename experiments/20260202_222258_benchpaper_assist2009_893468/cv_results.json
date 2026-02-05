@@ -1,0 +1,55 @@
+{
+    "generated_at": "2026-02-03T07:35:09.676148",
+    "campaign": "all_experiments",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "gtransformer": {
+            "assist2015": {
+                "status": "QUEUED",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "algebra2005": {
+                "status": "QUEUED",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "bridge2algebra2006": {
+                "status": "QUEUED",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            },
+            "nips_task34": {
+                "status": "QUEUED",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        }
+    }
+}

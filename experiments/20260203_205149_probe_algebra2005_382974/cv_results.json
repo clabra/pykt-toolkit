@@ -1,0 +1,125 @@
+{
+    "generated_at": "2026-02-04T07:54:39.275678",
+    "campaign": "20260203_205149_probe_algebra2005_382974",
+    "protocol": "question-level late fusion (mean)",
+    "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
+    "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
+    "results": {
+        "akt": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "atkt": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkt": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkvmn": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "gtransformer": {
+            "algebra2005": {
+                "status": "PASS",
+                "auc_mean": 0.8232277793765019,
+                "auc_std": 0.0014516255175049094,
+                "acc_mean": 0.8076905696917531,
+                "acc_std": 0.001015358046242741,
+                "folds_ok": 5,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {
+                    "0": {
+                        "auc": 0.8234759088249699,
+                        "acc": 0.8076604443488085
+                    },
+                    "1": {
+                        "auc": 0.8219880905629349,
+                        "acc": 0.8084028188713756
+                    },
+                    "2": {
+                        "auc": 0.8212669312906951,
+                        "acc": 0.8057668513637097
+                    },
+                    "3": {
+                        "auc": 0.8240980101058639,
+                        "acc": 0.8080154930335145
+                    },
+                    "4": {
+                        "auc": 0.8253099560980456,
+                        "acc": 0.8086072408413578
+                    }
+                },
+                "auc_ref_mean": 0.7863244235536219,
+                "auc_ref_std": 0.004031881978203741,
+                "acc_ref_mean": 0.7964193878099952,
+                "acc_ref_std": 0.00014473223278969752
+            }
+        },
+        "saint": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "sakt": {
+            "algebra2005": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        }
+    }
+}

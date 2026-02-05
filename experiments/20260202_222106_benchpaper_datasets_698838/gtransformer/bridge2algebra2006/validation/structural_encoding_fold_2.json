@@ -1,0 +1,30 @@
+{
+    "fold": 2,
+    "dataset": "bridge2algebra2006",
+    "h1_structural_encoding": {
+        "l0": {
+            "fidelity": {
+                "r2": 0.47844078052580474,
+                "pearson_r": 0.6944355957499901
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.5101054315001438,
+                "strict_delta_r2": -0.15945475856028168,
+                "control_r2_obs": -0.031664650974339015,
+                "control_r2_skill": 0.6378955390860864
+            }
+        },
+        "t": {
+            "fidelity": {
+                "r2": 0.5653394683874162,
+                "pearson_r": 0.7526962528239862
+            },
+            "selectivity": {
+                "standard_delta_r2": 0.6374579175456183,
+                "strict_delta_r2": -0.24241975678561622,
+                "control_r2_obs": -0.07211844915820209,
+                "control_r2_skill": 0.8077592251730324
+            }
+        }
+    }
+}
