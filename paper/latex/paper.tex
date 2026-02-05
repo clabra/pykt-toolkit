@@ -668,13 +668,13 @@ To quantify the performance trade-off between predictive accuracy and interpreta
 \toprule
 \textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
 \midrule
-AS2009 & 0.7831 & 0.7824 & 0.6733 & 0.6097 & 0.0007 & 0.1098 (14.0\%) & 0.0636 (10.4\%) \\
-AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0138 (2.0\%) & --- \\
+AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 & 0.0395 (5.0\%) & 0.1339 (22.0\%) \\
+AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0138 (1.9\%) & --- \\
 AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 & 0.0440 (5.3\%) & 0.0585 (8.1\%) \\
 Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 & 0.0338 (4.1\%) & 0.1054 (15.6\%) \\
 NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0340 (4.2\%) & 0.1937 (33.8\%) \\
 \midrule
-\textbf{Mean} & 0.7861 & 0.7845 & 0.7390 & 0.6449 & 0.0016 & 0.0471 (5.9\%) & 0.1053 (17.0\%) \\
+\textbf{Mean} & 0.7861 & 0.7845 & 0.7530 & 0.6449 & 0.0018 & 0.0330 (4.1\%) & 0.1229 (19.9\%) \\
 \bottomrule
 \end{tabular}
 \caption{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} measures the representational cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} measures total interpretability cost ($p_{\text{sup}1} - p_{\text{ref}}$), while \textit{Int. Gain} measures ($p_{\text{ref}} - p_{\text{bkt}}$).}
@@ -684,8 +684,8 @@ NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0340 (4.2\%) & 0.1937 (3
 The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
-    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0016 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0471 AUC points (5.9\% relative reduction), ranging from a minimum of 2.0\% (AS2015) to a maximum of 14.0\% (AS2009), which is highly acceptable given the substantial gains in transparency.
-    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable neural predictions consistently outperform classical BKT: AS2009 (+10.4\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
+    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0330 AUC points (4.1\% relative reduction), ranging from a minimum of 1.9\% (AS2015) to a maximum of 5.3\% (AL2005), which is highly acceptable given the substantial gains in transparency.
+    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable neural predictions consistently outperform classical BKT: AS2009 (+22.0\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
 \end{itemize}
 
 In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
