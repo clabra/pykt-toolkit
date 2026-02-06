@@ -274,7 +274,7 @@ python examples/validation/validate_parameter_recovery.py \
 
 </div>
 
-*L₀ Parameter Recovery*: Spearman ρ = 0.311 ± 0.039 (weak), MAE = 0.181 ± 0.013 (good). Weak correlation indicates genuine student-specific individualization while MAE confirms pedagogical bounds are maintained.
+*L₀ Parameter Recovery*: Spearman ρ = 0.360 ± 0.020 (weak), MAE = 0.168 ± 0.009 (good). Weak correlation indicates genuine student-specific individualization while MAE confirms pedagogical bounds are maintained.
 
 <div style="width: 60%;">
 
@@ -282,7 +282,7 @@ python examples/validation/validate_parameter_recovery.py \
 
 </div>
 
-*T Parameter Recovery*: Spearman ρ = 0.528 ± 0.090 (moderate), MAE = 0.095 ± 0.009 (excellent). Moderate alignment with strong semantic preservation for learning rate.
+*T Parameter Recovery*: Spearman ρ = 0.544 ± 0.046 (moderate), MAE = 0.092 ± 0.005 (excellent). Moderate alignment with strong semantic preservation for learning rate.
 
 **Probe Parameter Recovery** (for comparison with grounded parameters):
 
@@ -292,7 +292,7 @@ python examples/validation/validate_parameter_recovery.py \
 
 </div>
 
-*L₀ Probe Recovery*: Shows correlation between BKT theoretical L₀ and probe-predicted L₀ from latent states. Higher correlation than grounded L₀ indicates probes can recover theoretical structure, while lower grounded correlation reflects individualization.
+*L₀ Probe Recovery*: R² = 0.549 ± 0.064, Pearson r = 0.743 ± 0.041, Selectivity Δ = 0.619 ± 0.061. Shows strong correlation between BKT theoretical L₀ and probe-predicted L₀ from latent states. Higher correlation than grounded L₀ indicates probes can recover theoretical structure, while lower grounded correlation reflects individualization.
 
 <div style="width: 60%;">
 
@@ -300,7 +300,7 @@ python examples/validation/validate_parameter_recovery.py \
 
 </div>
 
-*T Probe Recovery*: Shows correlation between BKT theoretical T and probe-predicted T from latent states. Comparison between probe and grounded recovery reveals how much the model refines theoretical priors during neural processing.
+*T Probe Recovery*: R² = 0.515 ± 0.080, Pearson r = 0.721 ± 0.050, Selectivity Δ = 0.570 ± 0.080. Shows strong correlation between BKT theoretical T and probe-predicted T from latent states. Comparison between probe and grounded recovery reveals how much the model refines theoretical priors during neural processing.
 
 ---
 

@@ -104,7 +104,9 @@ def compute_control_and_selectivity(y_true, y_pred):
     }
 
 def plot_recovery(y_true, y_pred, title, output_path, color='royalblue', label_prefix="", show_metrics=False, 
-                  fidelity_r2=None, control_r2=None, selectivity=None, spearman_rho=None):
+                  fidelity_r2=None, fidelity_r2_std=None, pearson_r=None, pearson_r_std=None,
+                  control_r2=None, selectivity=None, selectivity_std=None, 
+                  spearman_rho=None, spearman_rho_std=None):
     """Generate parity plot using binned aggregates with bubble sizes for sample density."""
     
     # Create DataFrame and bin the true values
@@ -146,20 +148,26 @@ def plot_recovery(y_true, y_pred, title, output_path, color='royalblue', label_p
         props = dict(boxstyle='round', facecolor='white', alpha=0.8)
         plt.text(0.05, 0.95, textstr, fontsize=12, verticalalignment='top', bbox=props)
     
-    # Add Fidelity, Control, and Selectivity metrics if provided
+    # Add Fidelity, Control, and Selectivity metrics if provided (for probe plots)
     if fidelity_r2 is not None and control_r2 is not None and selectivity is not None:
-        metrics_text = (
-            f"Fidelity ($R^2$): {fidelity_r2:.3f}\n"
-            f"Control ($R^2_{{control}}$): {control_r2:.3f}\n"
-            f"Selectivity ($\\Delta R^2$): {selectivity:.3f}"
-        )
+        # Format with uncertainties if provided
+        r2_str = f"{fidelity_r2:.3f} ± {fidelity_r2_std:.3f}" if fidelity_r2_std is not None else f"{fidelity_r2:.3f}"
+        r_str = f"{pearson_r:.3f} ± {pearson_r_std:.3f}" if pearson_r is not None and pearson_r_std is not None else ""
+        sel_str = f"{selectivity:.3f} ± {selectivity_std:.3f}" if selectivity_std is not None else f"{selectivity:.3f}"
+        
+        metrics_text = f"$R^2$ = {r2_str}\n"
+        if r_str:
+            metrics_text += f"Pearson $r$ = {r_str}\n"
+        metrics_text += f"$\\Delta R^2$ = {sel_str}"
+        
         props = dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='gray', linewidth=1.2)
         plt.text(0.05, 0.95, metrics_text, fontsize=12, verticalalignment='top', 
                 bbox=props, transform=plt.gca().transAxes)
     
     # Add Spearman correlation if provided (for grounded parameter plots)
     if spearman_rho is not None:
-        spearman_text = f"Spearman $\\rho$: {spearman_rho:.3f}"
+        rho_str = f"{spearman_rho:.3f} ± {spearman_rho_std:.3f}" if spearman_rho_std is not None else f"{spearman_rho:.3f}"
+        spearman_text = f"Spearman $\\rho$ = {rho_str}"
         props = dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='gray', linewidth=1.2)
         plt.text(0.05, 0.95, spearman_text, fontsize=12, verticalalignment='top', 
                 bbox=props, transform=plt.gca().transAxes)
@@ -519,36 +527,52 @@ def main():
         with open(structural_file, 'r') as f:
             structural_results = json.load(f)
         
-        # Compute means from fold arrays - use selectivity_std (standard) not selectivity_strict
-        l0_fidelity = np.mean(structural_results['results']['l0']['fidelity_r2'])
-        l0_selectivity_std = np.mean(structural_results['results']['l0']['selectivity_std'])
+        # Compute means AND stds from fold arrays - use selectivity_std (standard) not selectivity_strict
+        l0_fidelity_r2_mean = np.mean(structural_results['results']['l0']['fidelity_r2'])
+        l0_fidelity_r2_std = np.std(structural_results['results']['l0']['fidelity_r2'])
+        l0_pearson_mean = np.mean(structural_results['results']['l0']['fidelity_pearson'])
+        l0_pearson_std = np.std(structural_results['results']['l0']['fidelity_pearson'])
+        l0_selectivity_mean = np.mean(structural_results['results']['l0']['selectivity_std'])
+        l0_selectivity_std = np.std(structural_results['results']['l0']['selectivity_std'])
         # Control R² = Fidelity R² - Selectivity
-        l0_control = l0_fidelity - l0_selectivity_std
+        l0_control = l0_fidelity_r2_mean - l0_selectivity_mean
         
-        t_fidelity = np.mean(structural_results['results']['t']['fidelity_r2'])
-        t_selectivity_std = np.mean(structural_results['results']['t']['selectivity_std'])
-        t_control = t_fidelity - t_selectivity_std
+        t_fidelity_r2_mean = np.mean(structural_results['results']['t']['fidelity_r2'])
+        t_fidelity_r2_std = np.std(structural_results['results']['t']['fidelity_r2'])
+        t_pearson_mean = np.mean(structural_results['results']['t']['fidelity_pearson'])
+        t_pearson_std = np.std(structural_results['results']['t']['fidelity_pearson'])
+        t_selectivity_mean = np.mean(structural_results['results']['t']['selectivity_std'])
+        t_selectivity_std = np.std(structural_results['results']['t']['selectivity_std'])
+        t_control = t_fidelity_r2_mean - t_selectivity_mean
         
         l0_probe_metrics = {
-            'fidelity_r2': l0_fidelity,
+            'fidelity_r2': l0_fidelity_r2_mean,
+            'fidelity_r2_std': l0_fidelity_r2_std,
+            'pearson_r': l0_pearson_mean,
+            'pearson_r_std': l0_pearson_std,
             'control_r2': l0_control,
-            'selectivity': l0_selectivity_std
+            'selectivity': l0_selectivity_mean,
+            'selectivity_std': l0_selectivity_std
         }
         t_probe_metrics = {
-            'fidelity_r2': t_fidelity,
+            'fidelity_r2': t_fidelity_r2_mean,
+            'fidelity_r2_std': t_fidelity_r2_std,
+            'pearson_r': t_pearson_mean,
+            'pearson_r_std': t_pearson_std,
             'control_r2': t_control,
-            'selectivity': t_selectivity_std
+            'selectivity': t_selectivity_mean,
+            'selectivity_std': t_selectivity_std
         }
         
         print("\n" + "="*80)
         print("Probe Metrics (from structural_encoding_aggregated.json)")
         print("="*80)
-        print(f"L0 Probe - Fidelity R²: {l0_probe_metrics['fidelity_r2']:.3f}, "
-              f"Control R²: {l0_probe_metrics['control_r2']:.3f}, "
-              f"Selectivity: {l0_probe_metrics['selectivity']:.3f}")
-        print(f"T Probe  - Fidelity R²: {t_probe_metrics['fidelity_r2']:.3f}, "
-              f"Control R²: {t_probe_metrics['control_r2']:.3f}, "
-              f"Selectivity: {t_probe_metrics['selectivity']:.3f}")
+        print(f"L0 Probe - Fidelity R²: {l0_probe_metrics['fidelity_r2']:.3f} ± {l0_probe_metrics['fidelity_r2_std']:.3f}, "
+              f"Pearson r: {l0_probe_metrics['pearson_r']:.3f} ± {l0_probe_metrics['pearson_r_std']:.3f}, "
+              f"Selectivity: {l0_probe_metrics['selectivity']:.3f} ± {l0_probe_metrics['selectivity_std']:.3f}")
+        print(f"T Probe  - Fidelity R²: {t_probe_metrics['fidelity_r2']:.3f} ± {t_probe_metrics['fidelity_r2_std']:.3f}, "
+              f"Pearson r: {t_probe_metrics['pearson_r']:.3f} ± {t_probe_metrics['pearson_r_std']:.3f}, "
+              f"Selectivity: {t_probe_metrics['selectivity']:.3f} ± {t_probe_metrics['selectivity_std']:.3f}")
     else:
         print(f"⚠️  Warning: {structural_file} not found. Computing probe metrics on-the-fly...")
         l0_probe_metrics = compute_control_and_selectivity(combined_results["l0_true"], combined_results["l0_probe"])
@@ -570,29 +594,39 @@ def main():
                   os.path.join(args.output_dir, "h12_recovery_l0_probe.png"), 
                   color='royalblue', label_prefix="Probe", show_metrics=False,
                   fidelity_r2=l0_probe_metrics['fidelity_r2'],
+                  fidelity_r2_std=l0_probe_metrics.get('fidelity_r2_std'),
+                  pearson_r=l0_probe_metrics.get('pearson_r'),
+                  pearson_r_std=l0_probe_metrics.get('pearson_r_std'),
                   control_r2=l0_probe_metrics['control_r2'],
-                  selectivity=l0_probe_metrics['selectivity'])
+                  selectivity=l0_probe_metrics['selectivity'],
+                  selectivity_std=l0_probe_metrics.get('selectivity_std'))
     
     plot_recovery(combined_results["t_true"], combined_results["t_probe"], 
                   "Learning Rate Structural Encoding P(T)", 
                   os.path.join(args.output_dir, "h12_recovery_t_probe.png"), 
                   color='royalblue', label_prefix="Probe", show_metrics=False,
                   fidelity_r2=t_probe_metrics['fidelity_r2'],
+                  fidelity_r2_std=t_probe_metrics.get('fidelity_r2_std'),
+                  pearson_r=t_probe_metrics.get('pearson_r'),
+                  pearson_r_std=t_probe_metrics.get('pearson_r_std'),
                   control_r2=t_probe_metrics['control_r2'],
-                  selectivity=t_probe_metrics['selectivity'])
+                  selectivity=t_probe_metrics['selectivity'],
+                  selectivity_std=t_probe_metrics.get('selectivity_std'))
     
     # Generate Grounded Parameter Plots (for H1.2 Semantic Alignment) with Spearman ρ
     plot_recovery(combined_results["l0_true"], combined_results["l0_grounded"], 
                   "Initial Mastery Semantic Alignment P(L0)", 
                   os.path.join(args.output_dir, "h12_recovery_l0_grounded.png"), 
                   color='royalblue', label_prefix="Grounded", show_metrics=False,
-                  spearman_rho=aggregated['l0_grounded']['spearman_r']['mean'])
+                  spearman_rho=aggregated['l0_grounded']['spearman_r']['mean'],
+                  spearman_rho_std=aggregated['l0_grounded']['spearman_r']['std'])
     
     plot_recovery(combined_results["t_true"], combined_results["t_grounded"], 
                   "Learning Rate Semantic Alignment P(T)", 
                   os.path.join(args.output_dir, "h12_recovery_t_grounded.png"), 
                   color='royalblue', label_prefix="Grounded", show_metrics=False,
-                  spearman_rho=aggregated['t_grounded']['spearman_r']['mean'])
+                  spearman_rho=aggregated['t_grounded']['spearman_r']['mean'],
+                  spearman_rho_std=aggregated['t_grounded']['spearman_r']['std'])
 
     print(f"✅ Plots saved to: {args.output_dir}/h12_recovery_*.png")
     print("\n" + "="*80)
