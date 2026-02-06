@@ -223,18 +223,10 @@ def main():
     # Find dataset directory (parent of fold directory)
     dataset_dir = os.path.dirname(EXP_DIR)
     
-    # Also get campaign dir for plots (shared across datasets)
-    if 'experiments' in parts:
-        idx = parts.index('experiments')
-        campaign_dir = '/'.join(parts[:idx+2])
-    else:
-        # Fallback: go 3 levels up from fold
-        campaign_dir = os.path.dirname(os.path.dirname(os.path.dirname(EXP_DIR)))
-    
     # Save validation results to dataset-specific folder
     VALIDATION_DIR = os.path.join(dataset_dir, "validation")
-    # Keep plots at campaign level for aggregation
-    PLOT_DIR = os.path.join(campaign_dir, "plots")
+    # Save plots to dataset-specific folder (not campaign level to avoid overwriting when multiple datasets)
+    PLOT_DIR = os.path.join(dataset_dir, "plots")
     os.makedirs(VALIDATION_DIR, exist_ok=True)
     os.makedirs(PLOT_DIR, exist_ok=True)
 

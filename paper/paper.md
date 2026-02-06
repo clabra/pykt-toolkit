@@ -1,15 +1,15 @@
 # Paper - Results Reproducibility
 
-## Paper Table 5, ablation=none
+## Paper Table 4 - Trade-off (paper.tex label: tab:tradeoff)
 
 | Dataset | Best Test AUC (p_sup) | AUC (p_ref) | AUC (p_bkt) | Cost (%) | Exp ID | Experiment Folder | **Architecture Configuration** |  |  |  | **Training Configuration** |  |  |  | **Loss Functions** |  |  |  | Notes |
 |---------|----------------------|-------------|-------------|----------|--------|-------------------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|-------|
 |  |  |  |  |  |  |  | d_model | n_blocks | num_attn_heads | d_ff | learning_rate | optimizer | epochs | dropout | ablation | λ_sup | λ_ref | λ_probe |  |
-| assist2009 | **0.7824** ± 0.0012 | **0.6733** ± 0.0001 | **0.6097** ± 0.0008* | 0.1091 (13.9%) | **893468** | 20260202_222258_benchpaper_893468 | 64 | 4 | 8 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, 4/8 architecture** |
-| assist2015 | **0.7070** ± 0.0009 | **0.6940** ± 0.0008 | N/A* | 0.0130 (1.8%) | **698838** | 20260202_222106_benchpaper_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0395 p_ref improvement** ✅ |
-| algebra2005 | **0.8237** ± 0.0023 | **0.7800** ± 0.0042 | **0.7215** ± 0.0014 | 0.0437 (5.3%) | **698838** | 20260202_222106_benchpaper_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0439 p_ref improvement** ✅ |
-| bridge2algebra2006 | **0.8107** ± 0.0021 | **0.7810** ± 0.0012 | **0.6756** ± 0.0017 | 0.0297 (3.7%) | **698838** | 20260202_222106_benchpaper_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0785 p_ref improvement** ✅ |
-| nips_task34 | **0.7987** ± 0.0005 | **0.7666** ± 0.0029 | **0.5729** ± 0.0004 | 0.0321 (4.0%) | **698838** | 20260202_222106_benchpaper_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0823 p_ref improvement** ✅ |
+| assist2009 | **0.7814** ± 0.0015 | **0.7436** ± 0.0008 | **0.6097** ± 0.0008* | 0.0378 (4.8%) | **893468** | 20260202_222258_benchpaper_assist2009_893468 | 64 | 4 | 8 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, 8 heads architecture** |
+| assist2015 | **0.7070** ± 0.0009 | **0.6940** ± 0.0008 | N/A* | 0.0130 (1.8%) | **698838** | 20260202_222106_benchpaper_datasets_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0395 p_ref improvement** ✅ |
+| algebra2005 | **0.8237** ± 0.0023 | **0.7800** ± 0.0042 | **0.7215** ± 0.0014 | 0.0437 (5.3%) | **698838** | 20260202_222106_benchpaper_datasets_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0439 p_ref improvement** ✅ |
+| bridge2algebra2006 | **0.8107** ± 0.0021 | **0.7810** ± 0.0012 | **0.6756** ± 0.0017 | 0.0297 (3.7%) | **698838** | 20260202_222106_benchpaper_datasets_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0785 p_ref improvement** ✅ |
+| nips_task34 | **0.7987** ± 0.0005 | **0.7666** ± 0.0029 | **0.5729** ± 0.0004 | 0.0321 (4.0%) | **698838** | 20260202_222106_benchpaper_datasets_698838 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | none | 1.0 | 0.5 | 1.0 | **Bug-fixed BKT, +0.0823 p_ref improvement** ✅ |
 
 **Summary**: All datasets trained with **bug-fixed BKT parameters** (Feb 2-3, 2026). The BKT bug fix (excluding repeat problems from training) dramatically improved interpretable predictions (p_ref):
 - **assist2015**: +0.0395 AUC (+6.0%), cost reduced from 7.5% → 1.8%
@@ -17,30 +17,52 @@
 - **bridge2algebra2006**: +0.0785 AUC (+11.2%), cost reduced from 13.5% → 3.7%
 - **nips_task34**: +0.0823 AUC (+12.0%), cost reduced from 14.4% → 4.0%
 
-The corrected BKT parameters enable the model to achieve state-of-the-art predictive performance while maintaining strong interpretability (cost of interpretability now <6% for all datasets except assist2009).
+The corrected BKT parameters enable the model to achieve state-of-the-art predictive performance while maintaining strong interpretability (cost of interpretability now <6% for all datasets).
 
 **Notes**:
 - All experiments use **corrected BKT parameters** (excluded repeat/review problems from BKT training, Feb 2, 2026)
 - \*assist2015: Dataset lacks question IDs in test files; only skill/concept IDs available. Question-level BKT evaluation not possible.
-- \*assist2009: Using 8 attention heads (893468), bug-fixed BKT maintains same p_sup and p_ref as original
+- \*assist2009: Using 8 attention heads (893468), bug-fixed BKT shows p_sup=0.7814±0.0015, p_ref=0.7436±0.0008, cost=4.8%
 
-## Paper Table 2, ablation=all
+## Paper Table 2 - Predictive Performance  (paper.tex label: tab_performance)
 
 | Dataset | Best Test AUC | Exp ID | Experiment Folder | **Architecture Configuration** |  |  |  | **Training Configuration** |  |  |  | **Loss Functions** |  |  |  | Notes |
 |---------|---------------|--------|-------------------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|-------|
 |  |  |  |  | d_model | n_blocks | num_attn_heads | d_ff | learning_rate | optimizer | epochs | dropout | ablation | λ_sup | λ_ref | λ_probe |  |
-| assist2009 | 0.7831 | 697945 | 20260126_191440_ablation-all-nblocks-4-numattnheads-4_697945 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
-| assist2015 | 0.7078 | 589915 | 20260126_191539_ablation-all-nblocks-4-numattnheads-4-assist2015_589915 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
-| algebra2005 | 0.8240 | 384404 | 20260126_191647_ablation-all-nblocks-4-numattnheads-4-algebra_384404 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
-| bridge2algebra2006 | 0.8148 | 663881 | 20260126_191744_ablation-all-nblocks-4-numattnheads-4-bridge_663881 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
+| assist2009 | **0.7831** | 697945 | 20260126_191440_ablation-all-nblocks-4-numattnheads-4_697945 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
+| assist2015 | **0.7078** | 589915 | 20260126_191539_ablation-all-nblocks-4-numattnheads-4-assist2015_589915 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
+| algebra2005 | **0.8240** | 384404 | 20260126_191647_ablation-all-nblocks-4-numattnheads-4-algebra_384404 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
+| bridge2algebra2006 | **0.8148** | 663881 | 20260126_191744_ablation-all-nblocks-4-numattnheads-4-bridge_663881 | 64 | 4 | 4 | 256 | 0.0001 | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | Baseline |
 | nips_task34 | **0.8006** | 727875 | 20260131_230137_sweep-nips_231941/gtransformer/nips_task34/fold_0_727875 | 64 | 4 | 4 | 256 | **0.0003** | adam | 200 | 0.1 | all | 1.0 | 0 | 0 | **+0.18% improvement over baseline** ✅ |
 
 **Summary**: Only nips_task34 benefited from hyperparameter optimization (3× higher learning rate). All other datasets achieve best performance with baseline configuration (lr=1e-4, dropout=0.1, 4 blocks, 4 heads).
 
+## Hyperparameters Table
 
-## Paper Table 4 (New)
+| Hyperparameter | Table 2 (Performance) | Table 4 (Trade-off) |
+|----------------|----------------------|---------------------|
+| **ablation** | `all` | `none` |
+| **λ_sup** | 1.0 | 1.0 |
+| **λ_ref** | **0** | 0.5 |
+| **λ_probe** | **0** | 1.0 |
+| **d_model** | 64 | 64 |
+| **n_blocks** | 4 | 4 |
+| **d_ff** | 256 | 256 |
+| **num_attn_heads** | 4 | AS2009: 8<br>others: 4 |
+| **learning_rate** | NIPS34: 0.0003<br>others: 0.0001 | 0.0001 |
+| **batch_size** | 64 | 64 |
+| **optimizer** | adam | adam |
+| **epochs** | 200 | 200 |
+| **dropout** | 0.1 | 0.1 |
 
-### H1.1: Diagnostic Probing with Control Tasks (Structural Alignment)
+**Notes**:
+- Table 2 uses **ablation=all** (disables grounding and probing for maximum predictive performance)
+- Table 4 uses **full interpretability** (ablation=none, λ_ref=0.5, λ_probe=1.0)
+- Table 4 uses **8 attention heads** for assist2009 only; all other experiments use 4 heads
+
+
+
+## Paper Table 6 - Probing (paper.tex label: tab_probing)
 
 | Dataset | Construct | Fidelity (R²) | Pearson (r) | Control (R²) | Selectivity (Δ R²) | N | Experiment ID |
 |---------|-----------|---------------|-------------|--------------|-------------------|------|---------------|
@@ -50,8 +72,8 @@ The corrected BKT parameters enable the model to achieve state-of-the-art predic
 | algebra2005 | Learning Rate (T) | 0.539 | 0.739 | -0.035 | **0.574** | 164,550 | 698838 |
 | bridge2algebra2006 | Initial Mastery (L₀) | 0.275 | 0.528 | -0.052 | **0.327** | 277,809 | 698838 |
 | bridge2algebra2006 | Learning Rate (T) | 0.287 | 0.543 | -0.071 | **0.358** | 277,809 | 698838 |
-| nips_task34 | Initial Mastery (L₀) | 0.471 | 0.687 | -0.050 | **0.521** | 223,341 | 698838 |
-| nips_task34 | Learning Rate (T) | -0.031 | 0.103 | -0.065 | **0.034** | 223,341 | 698838 |
+| NIPS34 | Initial Mastery (L₀) | 0.471 | 0.687 | -0.050 | **0.521** | 223,341 | 698838 |
+| NIPS34 | Learning Rate (T) | -0.031 | 0.103 | -0.065 | **0.034** | 223,341 | 698838 |
 
 **Notes**:
 - **Fidelity (R²)**: Coefficient of determination measuring linear probe accuracy in recovering BKT theoretical parameters from transformer latent states. Higher values indicate better structural encoding.
@@ -68,20 +90,18 @@ The corrected BKT parameters enable the model to achieve state-of-the-art predic
 - **Weak encoding (Δ ≤ 0.3)**: algebra2005 L₀ (0.200), nips_task34 T (0.034)
 
 
-## Paper Table 5 (New)
-
-### H1.2: Semantic Grounding and Alignment Preservation
+## Paper Table 7 - Alignment (paper.tex label: tab_semantic_alignment)
 
 | Dataset | Parameter | Spearman ρ | Pearson r | MAE | RMSE | N | Alignment | Experiment ID |
 |---------|-----------|------------|-----------|------|------|------|-----------|---------------|
-| assist2009 | Initial Mastery (L₀) | 0.399 | 0.432 | 0.160 | 0.194 | 52,825 | Weak | 893468 |
-| assist2009 | Learning Rate (T) | 0.544 | 0.499 | 0.102 | 0.156 | 52,825 | Moderate | 893468 |
-| algebra2005 | Initial Mastery (L₀) | 0.214 | 0.225 | 0.205 | 0.258 | 164,550 | Weak | 698838 |
-| algebra2005 | Learning Rate (T) | 0.171 | 0.088 | 0.166 | 0.308 | 164,550 | Weak | 698838 |
-| bridge2algebra2006 | Initial Mastery (L₀) | 0.281 | 0.239 | 0.160 | 0.222 | 277,809 | Weak | 698838 |
-| bridge2algebra2006 | Learning Rate (T) | **0.691** | 0.287 | 0.110 | 0.210 | 277,809 | **Strong** | 698838 |
-| nips_task34 | Initial Mastery (L₀) | 0.312 | 0.292 | 0.201 | 0.251 | 223,341 | Weak | 698838 |
-| nips_task34 | Learning Rate (T) | 0.416 | 0.003 | 0.015 | 0.086 | 223,341 | Moderate | 698838 |
+| assist2009 | Initial Mastery (L₀) | 0.311 ± 0.039 | 0.353 ± 0.047 | 0.181 ± 0.013 | 0.224 ± 0.013 | 270,850 | Weak | 893468 |
+| assist2009 | Learning Rate (T) | 0.528 ± 0.090 | 0.470 ± 0.034 | 0.095 ± 0.009 | 0.154 ± 0.012 | 270,850 | Moderate | 893468 |
+| algebra2005 | Initial Mastery (L₀) | 0.245 ± 0.033 | 0.238 ± 0.036 | 0.231 ± 0.009 | 0.283 ± 0.009 | 822,750 | Weak | 698838 |
+| algebra2005 | Learning Rate (T) | 0.093 ± 0.075 | 0.103 ± 0.055 | 0.157 ± 0.016 | 0.287 ± 0.020 | 822,750 | Weak | 698838 |
+| bridge2algebra2006 | Initial Mastery (L₀) | 0.221 ± 0.048 | 0.194 ± 0.050 | 0.166 ± 0.011 | 0.225 ± 0.013 | 1,389,045 | Weak | 698838 |
+| bridge2algebra2006 | Learning Rate (T) | **0.681 ± 0.037** | 0.313 ± 0.075 | 0.113 ± 0.006 | 0.216 ± 0.011 | 1,389,045 | **Strong** | 698838 |
+| nips_task34 | Initial Mastery (L₀) | 0.258 ± 0.063 | 0.265 ± 0.060 | 0.180 ± 0.011 | 0.222 ± 0.012 | 1,116,705 | Weak | 698838 |
+| nips_task34 | Learning Rate (T) | 0.423 ± 0.050 | 0.022 ± 0.026 | 0.018 ± 0.002 | 0.087 ± 0.005 | 1,116,705 | Moderate | 698838 |
 
 **Notes**:
 - **Spearman ρ** (primary metric): Rank-order correlation measuring monotonic relationship preservation between grounded parameters (after all neural processing) and BKT theoretical priors. Robust to outliers and non-linear transformations.
@@ -89,20 +109,22 @@ The corrected BKT parameters enable the model to achieve state-of-the-art predic
 - **MAE** (Mean Absolute Error): Average absolute deviation between grounded and theoretical parameters. Validates pedagogical bounds are maintained (good range: 0.1-0.2).
 - **RMSE** (Root Mean Squared Error): Penalizes large deviations more heavily than MAE.
 - **Alignment Categories**: Strong (ρ ≥ 0.6), Moderate (0.4 ≤ ρ < 0.6), Weak (ρ < 0.4)
+- **N**: Total number of test interactions across all 5 folds
+- All metrics reported as **5-fold CV mean ± std** for robust statistical validation
 
 **Interpretation**:
-- **Learning Rate (T) better preserved than Initial Mastery (L₀)**: Across datasets, T shows stronger monotonic alignment (3/4 datasets have moderate-to-strong T alignment vs 0/4 for L₀). The model reliably captures practice effects while individualizing initial knowledge estimates.
-- **bridge2algebra2006 T shows strongest alignment (ρ=0.691)**: Despite low Pearson r (0.287), the strong Spearman correlation indicates robust rank-order preservation with non-linear transformation.
-- **MAE validates pedagogical semantics**: Average deviations 0.10-0.20 for most parameters confirm the model refines priors within reasonable pedagogical bounds rather than abandoning theory.
-- **Weak L₀ alignment expected**: Lower correlations for grounded vs probe parameters (see H1.1) indicate genuine student-specific individualization—the model neither trivially reproduces priors nor repurposes them for black-box optimization.
+- **Learning Rate (T) better preserved than Initial Mastery (L₀)**: Across datasets, T shows stronger monotonic alignment (2/4 datasets have moderate-to-strong T alignment: assist2009 ρ=0.528, nips_task34 ρ=0.423 vs 0/4 for L₀). The model reliably captures practice effects while individualizing initial knowledge estimates.
+- **bridge2algebra2006 T shows strongest alignment (ρ=0.681±0.037)**: Despite moderate Pearson r (0.313±0.075), the strong Spearman correlation indicates robust rank-order preservation with non-linear transformation. This is the only parameter achieving "Strong" alignment category.
+- **MAE validates pedagogical semantics**: Average deviations 0.09-0.18 for most parameters confirm the model refines priors within reasonable pedagogical bounds rather than abandoning theory. Particularly good for T parameters (0.095-0.157).
+- **Weak L₀ alignment across all datasets (ρ=0.221-0.311)**: Lower correlations for grounded vs probe parameters (see H1.1) indicate genuine student-specific individualization—the model neither trivially reproduces priors nor repurposes them for black-box optimization. This validates the model's capacity to adapt initial mastery estimates to individual students.
 
 
 ## Reference Experiment
 
-We will take the experiment 481134 (ablation none, 4-4) as a reference for the results we will present in the paper.
+We will take the experiment 893468 (ablation none, 4-8) as a reference for the results we will present in the paper.
 
 ```
-experiments/20260124_234359_ablation-none-4-4_baseline_481134 
+experiments/20260202_222258_benchpaper_assist2009_893468
 ```
 
 ## Training, Evaluation and Results
@@ -137,36 +159,9 @@ nohup python examples/run_benchmarks_paper.py  --mode training --model gtransfor
 python examples/run_benchmarks_paper.py  --mode evaluation --model gtransformer --dataset assist2015,algebra2005 --campaign 20260126_113641_papertable-ablationall-datasets_936799
 ```
 
-## Results 
+## Bug
 
-## RQs
-
-### RQ1: Theory-Based Interpretability Through Grounded Transformers
-
-Can deep knowledge tracing models achieve state-of-the-art predictive performance while providing interpretability grounded in established principles and theories? Specifically, can we design a transformer architecture that produces pedagogically meaningful mastery estimations that are explainable through a causal and interpretable logic, such as Bayesian Knowledge Tracing?
-
-We will use the following hypotheses to validate the RQ1 research questions: 
-
-#### H1.1: Structural Encoding
-
-Latent representations in the gTransformer model are structurally organized around BKT constructs (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
-
-**Structural Encoding Probing Metrics (Test Sets, ablation=none):**
-
-| Dataset | Construct | Fidelity (R²) | Pearson (r) | Control (R²) | Selectivity (Δ) |
-|---------|-----------|---------------|-------------|--------------|-----------------|
-| assist2009 | Initial Mastery (L₀) | 0.535 | 0.733 | -0.091 | **0.626** |
-| assist2009 | Learning Rate (T) | 0.554 | 0.747 | -0.068 | **0.622** |
-| algebra2005 | Initial Mastery (L₀) | 0.172 | 0.429 | -0.028 | **0.200** |
-| algebra2005 | Learning Rate (T) | 0.539 | 0.739 | -0.035 | **0.574** |
-| bridge2algebra2006 | Initial Mastery (L₀) | 0.275 | 0.528 | -0.052 | **0.327** |
-| bridge2algebra2006 | Learning Rate (T) | 0.287 | 0.543 | -0.071 | **0.358** |
-| nips_task34 | Initial Mastery (L₀) | 0.471 | 0.687 | -0.050 | **0.521** |
-| nips_task34 | Learning Rate (T) | -0.031 | 0.103 | -0.065 | **0.034** |
-
-*Note: assist2015 excluded due to insufficient variance in skill-level BKT parameters (dataset structure incompatible with continuous probing validation).*
-
-**✅ BKT Parameter Quality Improvements (Feb 2, 2026):**
+**BKT Parameter Quality Improvements (Feb 2, 2026):**
 
 A critical bug was discovered and fixed in BKT parameter estimation: the training process was including repeat/review problems (is_repeat=1), which severely biased learning rate estimates toward zero. After fixing `examples/train_bkt.py` to exclude repeats:
 
@@ -217,685 +212,497 @@ The dramatic difference in selectivity scores reveals fundamental dataset charac
 **Implications:** Selectivity metrics measure not just model architecture quality, but the *fundamental recoverability* of BKT parameters from the data distribution. assist2009 is uniquely suited for continuous BKT probing, while other datasets present structural challenges (multi-skill averaging, near-zero learning rates) that inherently limit what can be recovered through linear probes.
 
 
-
-#### H1.2: Semantic Alignment
-
- For the second hypothesis H1.2 (Semantic Alignment), we evaluate whether grounded parameters preserve pedagogical semantics despite passing through multiple neural processing layers. A key risk in theory-guided deep learning is that models may use theoretical priors merely as initialization, subsequently "repurposing" them for black-box optimization that abandons educational meaning.
-
-**H1.2 Summary**: The model preserves pedagogical semantics from BKT theoretical priors through neural processing layers, with alignment strength varying by dataset and parameter type. Grounded parameters show lower correlation than probe parameters, validating genuine student-specific individualization while maintaining pedagogical bounds (as evidenced by good MAE scores). See **Paper Table - H1.2 Semantic Alignment Metrics** above for complete multi-dataset results.
-
-#### H1.3: Functional Alignment
-
-The interpretable predictions derived from extracted parameters can be used with quantified confidence, enabling educators to identify when theory-grounded explanations are trustworthy versus when additional validation is recommended.
-    
-### RQ2: Trade-Offs Between Predictive Performance and Interpretability
-
-How do the metrics of the supervised, interpretable, and BKT predictions compare? What is the cost of interpretability in terms of AUC? How much predictive gain do the interpretable grounded predictions achieve compared to traditional BKT?. 
-
-#### Predictions Calculation: p_sup, p_ref, p_bkt
-
-This section describes how to generate and locate the three types of predictions used in the paper's analysis.
-
-##### p_sup: Supervised Neural Predictions (Black-Box)
-
-**Description**: Standard supervised transformer predictions trained to maximize next-response accuracy without interpretability constraints.
-
-**How to Generate**:
-Automatically generated during training and evaluation:
-```bash
-# Training (generates model checkpoints)
-python examples/run_benchmarks_paper.py \
-  --mode training \
-  --model gtransformer \
-  --dataset <dataset_name> \
-  --ablation none
-
-# Evaluation (generates p_sup predictions)
-python examples/run_benchmarks_paper.py \
-  --mode evaluation \
-  --model gtransformer \
-  --dataset <dataset_name>
-```
-
-**Output Files**:
-- **Per-fold predictions**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/qid_test_question_predictions_supervised.txt`
-  - Format: Tab-separated file with columns: `uid`, `qid`, `prediction`, `ground_truth`
-  - Contains question-level predictions for all test interactions
-- **Aggregated metrics**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/eval_results.json`
-  - Key metric: `oriauclate_mean` (test AUC for question-level, average late fusion)
-
-**Example**:
-```
-# File: qid_test_question_predictions_supervised.txt
-uid	qid	prediction	ground_truth
-1234	5678	0.7234	1
-1234	5679	0.8912	1
-1235	5680	0.4521	0
-...
-```
-
----
-
-##### p_ref: Interpretable BKT-Logic Predictions (Theory-Grounded)
-
-**Description**: Interpretable predictions derived from grounded BKT parameters (P(L₀), P(T)) extracted from the same transformer model. Uses BKT logic with student-specific individualized parameters.
-
-**How to Generate**:
-Automatically generated during evaluation alongside p_sup:
-```bash
-# Same command as p_sup - generates both prediction types
-python examples/run_benchmarks_paper.py \
-  --mode evaluation \
-  --model gtransformer \
-  --dataset <dataset_name>
-```
-
-**Output Files**:
-- **Per-fold predictions**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/qid_test_question_predictions_reference.txt`
-  - Format: Tab-separated file with columns: `uid`, `qid`, `prediction`, `ground_truth`
-  - Contains question-level predictions using BKT logic with individualized parameters
-- **Grounded parameters**: Embedded in model during training, extracted during inference
-- **Aggregated metrics**: `experiments/<exp_folder>/gtransformer/<dataset>/fold_<N>_<id>/eval_results.json`
-  - Key metric: `oriauclate_ref_mean` (test AUC for reference path predictions)
-
-**Prediction Formula**:
-For each student-skill interaction:
-```
-p_ref = p_L0(student, skill) × (1 - p_slip) + (1 - p_L0(student, skill)) × p_guess
-```
-where `p_L0` is individualized initial mastery extracted from transformer, and `p_slip`, `p_guess` are population-level BKT parameters.
-
-**Example**:
-```
-# File: qid_test_question_predictions_reference.txt
-uid	qid	prediction	ground_truth
-1234	5678	0.6521	1
-1234	5679	0.7834	1
-1235	5680	0.3912	0
-...
-```
-
----
-
-##### p_bkt: Classical BKT Baseline (Population-Level)
-
-**Description**: Traditional Bayesian Knowledge Tracing with population-level parameters learned from training data. No student-specific individualization.
-
-**Prerequisites**:
-1. **Train BKT model** to generate skill-level parameters:
-   ```bash
-   python examples/train_bkt.py --dataset <dataset_name>
-   ```
-   - Output: `data/<dataset>/bkt_skill_params.pkl` (skill-level BKT parameters)
-   - Output: `data/<dataset>/bkt/parameters.json` (parameter dump for inspection)
-   - Parameters learned: P(L₀), P(T), P(S), P(G) per skill
-
-**How to Generate**:
-Run BKT benchmark with question-level evaluation protocol:
-```bash
-python examples/validation/run_bkt_benchmark.py \
-  --dataset <dataset_name> \
-  --mode question \
-  --output_dir experiments/bkt_question_mode_<dataset>
-```
-
-**Output Files**:
-- **Aggregated 5-fold CV**: `experiments/bkt_question_mode_<dataset>/cv_results.json`
-  - Key metrics: `test_mean_auc`, `test_std_auc`
-  - Example for assist2009:
-    ```json
-    {
-      "model": "BKT",
-      "dataset": "assist2009",
-      "test_mean_auc": 0.6097,
-      "test_std_auc": 0.0008,
-      "evaluation_type": "question_level_late_fusion_mean_no_update"
-    }
-    ```
-- **Per-fold results**: `experiments/bkt_question_mode_<dataset>/fold_<N>/eval_results.json`
-  - Contains test AUC, accuracy, RMSE for individual fold
-
-**Evaluation Protocol**:
-- **Training**: Skill-level BKT on 4 training folds (learns population parameters per skill)
-- **Test**: Question-level evaluation with late fusion (mean aggregation), NO belief updates
-- **Prediction Formula**: `P(correct) = P(L₀) × (1 - P(S)) + (1 - P(L₀)) × P(G)`
-- **Multi-skill aggregation**: For questions with multiple skills, average the skill-level predictions
-
-**Available Datasets**:
-| Dataset | p_bkt AUC | Status | Notes |
-|---------|-----------|--------|-------|
-| assist2009 | 0.6097 ± 0.0008 | ✅ Complete | Baseline reference |
-| algebra2005 | 0.7215 ± 0.0014 | ✅ Complete | High BKT performance |
-| assist2015 | N/A | ❌ Not available | Dataset lacks question IDs in test files |
-| bridge2algebra2006 | 0.6756 ± 0.0017 | ✅ Complete | |
-| nips_task34 | 0.5729 ± 0.0004 | ✅ Complete | Lower BKT performance |
-
----
-
-##### Comparison Workflow
-
-**Step 1**: Train and evaluate neural model (generates p_sup and p_ref):
-```bash
-python examples/run_benchmarks_paper.py --mode training --dataset assist2009
-python examples/run_benchmarks_paper.py --mode evaluation --dataset assist2009
-```
-
-**Step 2**: Generate BKT baseline (generates p_bkt):
-```bash
-python examples/train_bkt.py --dataset assist2009
-python examples/validation/run_bkt_benchmark.py --dataset assist2009 --mode question
-```
-
-**Step 3**: Extract metrics for comparison:
-- **p_sup**: `eval_results.json` → `oriauclate_mean`
-- **p_ref**: `eval_results.json` → `oriauclate_ref_mean`
-- **p_bkt**: `bkt_question_mode_<dataset>/cv_results.json` → `test_mean_auc`
-
-**Step 4**: Calculate costs and gains:
-- **Cost of Interpretability** = p_sup - p_ref
-- **Gain from Personalization** = p_ref - p_bkt
-
-See [paper_benchmark.md](paper_benchmark.md) for complete results table.
-
-### RQ3: Practical Value for Student-Centered Personalization 
-
-Beyond providing interpretable diagnostics, does the high capacity of gTransformer to capture intricate interaction patterns offer advantages over traditional models? Specifically, can these capabilities be leveraged to enhance student-centered personalization relative to population-based models such as Bayesian Knowledge Tracing?
-
-### RQ3 Validation
-
-#### Context-Aware Skill Mosaic (Non-Markovian Personalization)
-
-**Hypothesis**: gTransformer captures intricate interaction patterns beyond response sequences, enabling context-aware personalization that traditional Markovian models cannot achieve.
-
-**Purpose**: Demonstrate that gTransformer differentiates students based on learning context (historical parameters) rather than just response patterns. This validates the model's capacity for student-centered personalization beyond what classical BKT can provide.
-
-**Script**: `examples/results/generate_skill_quadrant_comparison.py`
-
-**Method**:
-1. **Quadrant Classification**: Classify students into four learning situations based on historical learning parameters:
-   - Low L0 / Low T (struggling learners with slow progress)
-   - Low L0 / High T (fast learners starting from low mastery)
-   - High L0 / Low T (high initial mastery, slow improvement)
-   - High L0 / High T (advanced learners with rapid progress)
-
-2. **Identical Sequence Matching**: For each skill, find students from ≥2 different quadrants who have **identical response sequences** (same answers to same questions in same order)
-
-3. **Prediction Comparison**: 
-   - **BKT predictions** (dotted lines): Must overlap for identical sequences due to Markovian property
-   - **gTransformer predictions** (solid lines): Diverge based on learning context despite identical responses
-
-4. **Pedagogical Ordering Filter**: Enforce theoretical constraints ensuring predictions respect BKT semantics:
-   - High L0 / High T ≥ High L0 / Low T ≥ Low L0 / Low T
-   - High L0 / High T ≥ Low L0 / High T ≥ Low L0 / Low T
-   - Checks mean, first, and last predictions for all quadrant pairs
-
-5. **Quality Ranking**: Select skills by:
-   - High between-quadrant prediction range (strong differentiation)
-   - Low within-quadrant variance (clean, distinct trajectories)
-   - Accuracy advantage of gTransformer over BKT
-   - Sequence length (5-30 interactions for meaningful analysis)
-
-**Manual Execution**:
-```bash
-python examples/results/generate_skill_quadrant_comparison.py \
-  --exp_dir experiments/<exp_name>/gtransformer/<dataset>/fold_0_<id> \
-  --output_dir experiments/<exp_name>/validation \
-  --top_n 12
-```
-
-**Parameters**:
-- `--exp_dir`: Path to fold directory containing trained model checkpoint and test data
-- `--output_dir`: Directory to save visualization outputs
-- `--top_n`: Number of top skills to include in mosaic (default: 12 for 4×3 grid)
-
-**Output Files**:
-- `skill_quadrant_comparison_mosaic.png`: 4×3 grid showing 12 skills with context-aware predictions
-  - Solid colored lines: gTransformer predictions (diverge by quadrant)
-  - Dotted gray lines: BKT predictions (overlap for same sequence)
-  - Background bars: Ground truth responses (green=correct, red=incorrect)
-  - Legend: Student IDs with quadrant labels (High/Low L0, High/Low T)
-- `individual_skills/skill_<id>_quadrants.png`: Detailed plots for each skill
-- `skill_quadrant_metadata.json`: Quantitative metrics including:
-  - `pred_range`: Prediction range between quadrants (percentage points)
-  - `quality_score`: Visual clarity metric (high range, low variance)
-  - `accuracy_advantage`: gTransformer accuracy - BKT accuracy
-  - Quadrant-specific predictions and parameters per student
-
-**Validation for RQ3**:
-- If gTransformer predictions **diverge** for identical sequences while BKT predictions **overlap** → Context-aware personalization demonstrated
-- If prediction range ≥ 20 pp between quadrants → Strong differentiation beyond response patterns
-- If accuracy advantage > 0 → Performance benefit from personalization
-- If pedagogical ordering satisfied → Personalization respects theoretical constraints
-
-**Expected Results** (based on Exp 656644, assist2009):
-- **~122 skill-sequence combinations** with identical responses across ≥2 quadrants
-- **Average prediction range**: ~37 percentage points between quadrants
-- **Top skills**: Up to 54 pp separation despite identical answer sequences
-- **Visual proof**: All BKT lines overlap (Markovian constraint), gTransformer lines diverge (context-aware)
-
-**Key Finding**: gTransformer differentiates students not by **what they answered**, but by **how they learned**—their inferred learning parameters capture temporal signatures beyond immediate responses.
-
-**Pedagogical Value**: 
-- Enables personalized predictions for students with identical performance but different learning trajectories
-- Example: Two students both score 80% on a skill, but one is a rapid learner (High L0/High T) while the other slowly improved (Low L0/Low T). gTransformer predicts different future performance; BKT cannot.
-- Supports adaptive interventions: struggling learners with identical test scores may need different support strategies based on their learning profiles
-
-**Interpretation**:
-- **RQ3 Validation Outcome**: If prediction divergence is observed with pedagogical consistency and accuracy advantages, this demonstrates gTransformer's practical value for student-centered personalization beyond traditional BKT.
-- The model leverages its high capacity to capture intricate interaction patterns (learning history, temporal dynamics) that Markovian models inherently cannot represent.
-- This validates the hypothesis that neural capacity + theoretical grounding = enhanced personalization while maintaining interpretability.
-
-
-
 ## Validation Scripts
 
-### H1.2 Semantic Alignment - Parameter Recovery Validation
+This section documents the validation and visualization scripts automatically executed by `examples/run_benchmarks_paper.py --mode results`. All scripts are run on a representative fold (typically fold_0) and aggregated across all 5 folds where applicable.
 
-**Hypothesis H1.2 (Semantic Alignment)**: Grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ preserve pedagogical semantics from population-level BKT priors $\{\ell_{L0}, \ell_T\}$ despite passing through multiple neural processing layers.
+### H1.1: Structural Encoding Validation (Diagnostic Probing)
 
-**Purpose**: Validate that the model does not "repurpose" theoretical priors for black-box optimization. Instead, it should refine parameters within pedagogically meaningful bounds, maintaining correlation with original theoretical bases.
+**Script**: `examples/validation/run_structural_validation_campaign.py`
+
+**Purpose**: Validates that latent representations are structurally organized around BKT constructs (L₀ and T) using linear probing with control tasks.
+
+**Command**:
+```bash
+python examples/validation/run_structural_validation_campaign.py \
+  --campaign_dir experiments/20260202_222258_benchpaper_assist2009_893468 \
+  --datasets assist2009 \
+  --skip_existing
+```
+
+**Output**:
+- Per-fold results: `validation/structural_encoding_fold_0.json` through `fold_4.json`
+- Aggregated results: `validation/structural_encoding_aggregated.json`
+
+**Results (assist2009, Exp 893468)**:
+
+| Parameter | Fidelity (R²) | Pearson (r) | Selectivity (Δ) | Evidence |
+|-----------|---------------|-------------|-----------------|----------|
+| L₀ (Initial Mastery) | 0.549 ± 0.064 | 0.743 ± 0.041 | 0.619 ± 0.073 | **Strong** |
+| T (Learning Rate) | 0.515 ± 0.080 | 0.721 ± 0.050 | 0.570 ± 0.070 | **Strong** |
+
+**Interpretation**: Both BKT parameters show strong structural encoding (Δ > 0.5), indicating they are dominant organizing principles in the latent space.
+
+---
+
+### H1.2: Semantic Alignment (Parameter Recovery)
 
 **Script**: `examples/validation/validate_parameter_recovery.py`
 
-**What it does**:
-1. Loads trained model checkpoint from experiment directory
-2. Runs inference on test data to extract grounded parameters ($p_{L_0}$, $p_T$) after all transformer processing
-3. Loads population-level BKT theoretical priors (target_l0, target_t) used to initialize theoretical bases
-4. Computes multiple correlation metrics: Pearson r (standard), Spearman ρ (robust to outliers), weighted Pearson, plus R², MAE, RMSE
-5. Generates parity plots using binned aggregates with bubble sizes encoding sample density (matching H1.1 structural fidelity plot aesthetic)
-6. Saves quantitative metrics to recovery_summary.json and per-skill breakdown to skill_recovery_metrics.csv
+**Purpose**: Validates that grounded parameters preserve pedagogical semantics from BKT theoretical priors through neural processing layers.
 
-**Manual Execution**:
+**Command**:
 ```bash
 python examples/validation/validate_parameter_recovery.py \
-  --exp_dir experiments/<exp_name>/gtransformer/<dataset>/fold_0_<id> \
-  --output_dir experiments/<exp_name>/validation
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation
 ```
 
-**Parameters**:
-- `--exp_dir`: Path to fold directory containing trained model checkpoint and data
-- `--output_dir`: Directory to save validation results and plots
+**Output Files**:
+- `validation/h12_recovery_l0_grounded.png` - L₀ grounded parameter parity plot
+- `validation/h12_recovery_t_grounded.png` - T grounded parameter parity plot
+- `validation/h12_recovery_l0_probe.png` - L₀ probe parameter parity plot
+- `validation/h12_recovery_t_probe.png` - T probe parameter parity plot
+- `validation/h12_recovery_summary.json` - Quantitative metrics
+- `validation/h12_skill_recovery_metrics.csv` - Per-skill breakdown
 
-**Output**:
-- `h12_recovery_l0_grounded.png`: Parity plot for Initial Mastery ($P_{L_0}$) grounded parameters
-- `h12_recovery_t_grounded.png`: Parity plot for Learning Rate ($P_T$) grounded parameters
-- `h12_recovery_l0_probe.png`: Parity plot for Initial Mastery probe parameters (comparison)
-- `h12_recovery_t_probe.png`: Parity plot for Learning Rate probe parameters (comparison)
-- `h12_recovery_summary.json`: Summary statistics with Pearson r, R², MAE, RMSE for all parameters
-- `h12_skill_recovery_metrics.csv`: Per-skill breakdown of recovery metrics
+**Results (assist2009, Exp 893468)**:
 
-**Validation for H1.2**:
-- If Pearson $r \geq 0.6$ for grounded parameters → **Strong alignment** (H1.2 supported)
-- If $0.4 \leq r < 0.6$ → **Moderate alignment** (H1.2 partially supported, individualization present)
-- If $r < 0.4$ → **Weak alignment** (model may be repurposing priors)
-- Lower correlations for grounded vs probe parameters indicate genuine individualization while preserving pedagogy
+<div style="width: 60%;">
 
-**Example Results**:
+![L0 Grounded Recovery](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h12_recovery_l0_grounded.png)
 
-Experiment 893468 (ablation-none, 4 blocks, 8 attention heads, bug-fixed BKT) on assist2009, fold 0:
+</div>
 
-*Initial Mastery Preservation ($P_{L_0}$):*
+*L₀ Parameter Recovery*: Spearman ρ = 0.311 ± 0.039 (weak), MAE = 0.181 ± 0.013 (good). Weak correlation indicates genuine student-specific individualization while MAE confirms pedagogical bounds are maintained.
 
-![L0 Grounded Recovery](../experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/validation/h12_recovery_l0_grounded.png)
+<div style="width: 60%;">
 
-**Figure**: Parity plot showing correlation between grounded Initial Mastery parameters $p_{L_0}$ (after all transformer processing) and population-level BKT priors $\ell_{L0}$. Bubbles represent binned aggregates of test interactions, with size encoding sample density. The large bubbles (high-density regions) cluster near the theoretical ideal diagonal, demonstrating strong alignment where data is abundant.
+![T Grounded Recovery](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h12_recovery_t_grounded.png)
 
-**Metrics**: Spearman ρ = **0.399** (weak, < 0.4) indicates individualization dominates over strict prior preservation. MAE = **0.160** (good, in range 0.1-0.2) shows average absolute deviation is 16%, validating pedagogical semantics are maintained while allowing student-specific refinement. The weak correlation confirms genuine individualization is occurring—the model doesn't merely echo priors but adapts them contextually within pedagogical bounds.
+</div>
 
-*Learning Rate Preservation ($P_T$):*
+*T Parameter Recovery*: Spearman ρ = 0.528 ± 0.090 (moderate), MAE = 0.095 ± 0.009 (excellent). Moderate alignment with strong semantic preservation for learning rate.
 
-![T Grounded Recovery](../experiments/20260202_222258_benchpaper_893468/gtransformer/assist2009/validation/h12_recovery_t_grounded.png)
+**Probe Parameter Recovery** (for comparison with grounded parameters):
 
-**Figure**: Parity plot showing correlation between grounded Learning Rate parameters $p_T$ and BKT priors $\ell_T$. Bubbles represent binned aggregates with size encoding sample density. The large bubbles align closely with the theoretical ideal, with particularly strong preservation in the middle ranges (0.2-0.8) where most learning occurs.
+<div style="width: 60%;">
 
-**Metrics**: Spearman ρ = **0.544** (moderate, in range 0.4-0.6) demonstrates moderate rank-order preservation of pedagogical priors through all transformer layers. MAE = **0.102** (good, in range 0.1-0.2) shows average absolute deviation is 10.2%, indicating good semantic alignment. This stronger alignment for learning rates (vs initial mastery) reflects that the model has learned to reliably preserve theoretical understanding of how students improve with practice, while still providing individualized predictions.
+![L0 Probe Recovery](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h12_recovery_l0_probe.png)
 
-*Quantitative Summary*:
-- **L0 Grounded**: Spearman ρ = 0.399, Pearson r = 0.432, R² = -1.192, MAE = 0.160, RMSE = 0.194 (52,825 test interactions)
-- **T Grounded**: Spearman ρ = 0.544, Pearson r = 0.499, R² = -1.106, MAE = 0.102, RMSE = 0.156 (52,825 test interactions)
-- **L0 Probe** (comparison): Spearman ρ = 0.738, Pearson r = 0.717, R² = 0.460
-- **T Probe** (comparison): Spearman ρ = 0.728, Pearson r = 0.691, R² = 0.411
+</div>
 
-**Interpretation**:
-- **Weak L₀ alignment, moderate T alignment**: Spearman rank correlations (ρ = 0.399 for L0, 0.544 for T) show grounded parameters maintain varying levels of monotonic relationship with theoretical priors
-- Large bubbles (high-density regions) align well with theoretical priors; small outlier bubbles reduce Pearson correlation but don't affect rank-based Spearman
-- Lower correlations compared to probe parameters (ρ = 0.399 vs 0.738 for L0, 0.544 vs 0.728 for T) demonstrate genuine student-specific individualization while preserving pedagogical meaning
-- Negative R² values indicate grounded parameters prioritize individualization over simple linear prediction (expected behavior)
-- The model successfully balances theoretical grounding with contextual refinement—it doesn't merely echo priors nor abandon them
-- **H1.2 Validation Outcome**: Partially Supported. L₀ shows strong individualization (weak alignment), T maintains moderate semantic preservation. MAE bounds confirm pedagogical semantics are not abandoned. 
+*L₀ Probe Recovery*: Shows correlation between BKT theoretical L₀ and probe-predicted L₀ from latent states. Higher correlation than grounded L₀ indicates probes can recover theoretical structure, while lower grounded correlation reflects individualization.
 
+<div style="width: 60%;">
 
+![T Probe Recovery](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h12_recovery_t_probe.png)
 
-### H1.3 Functional Alignment - Prediction Confidence Heatmap
+</div>
 
-**Hypothesis H1.3 (Functional Alignment)**: The interpretable reference path predictions (p_ref) can serve as a functional replacement for supervised predictions (p_sup) when prediction equivalence I₂ ≥ 0.95.
-
-**Purpose**: Generate per-skill prediction confidence heatmaps to assess trustworthiness of interpretable predictions across different student-skill pairs. Two complementary metrics are used:
-
-#### Metric 1: Concordance (Skill Alignment Heatmap)
-**Script**: `examples/results/generate_skill_alignment_heatmap.py`
-
-**Definition**: 
-```
-Concordance = 1 - MAE(p_ref, p_sup)
-```
-where MAE is Mean Absolute Error averaged over all predictions for a given student-skill pair.
-
-**Rationale**: 
-- Concordance measures **average absolute agreement** between predictions
-- Range: [0, 1] where 1 = perfect alignment (p_ref = p_sup), 0 = maximum disagreement
-- Simple, interpretable metric: "How close are the predictions on average?"
-- Directly related to prediction error: high concordance → low average error
-
-**Justification**:
-- **Symmetric**: Treats over-prediction and under-prediction equally
-- **Intuitive**: Easy to explain to educators and practitioners
-- **Robust**: Not sensitive to extreme outliers
-- **Established**: MAE is standard metric in educational prediction literature
-
-**Limitations**:
-- Does NOT distinguish between different types of disagreement
-- Does NOT account for relative ranking (e.g., [0.2, 0.4, 0.6] vs [0.1, 0.3, 0.5] both have same concordance)
-- Does NOT consider binary decision thresholds (pass/fail)
-- Single aggregate metric may hide important patterns
-
-**Color Zones**:
-- 🟢 Green [0.90-1.0]: Excellent alignment (p_sup ≈ p_ref)
-- 🟡 Yellow [0.80-0.90]: Good alignment
-- 🟠 Orange [0.65-0.80]: Moderate alignment
-- 🔴 Red [<0.65]: Poor alignment (p_sup diverges from p_ref)
+*T Probe Recovery*: Shows correlation between BKT theoretical T and probe-predicted T from latent states. Comparison between probe and grounded recovery reveals how much the model refines theoretical priors during neural processing.
 
 ---
 
-#### Metric 2: H1.3 Composite Confidence (Enhanced Heatmap)
+### H1.3: Functional Alignment (Prediction Confidence)
+
 **Script**: `examples/validation/generate_skill_alignment_heatmap_h13.py`
 
-**Definition**:
-```
-Composite Confidence = 0.4 × C_calibrated + 0.3 × C_directional + 0.3 × C_percentile
-```
+**Purpose**: Generate per-skill prediction confidence heatmaps using composite metric (calibrated + directional + percentile).
 
-where:
-
-1. **C_calibrated (40%)**: Exponential confidence decay
-   ```
-   C_calibrated = exp(-2 × |p_ref - p_sup|)
-   ```
-   - Rapidly penalizes disagreement: 0.1 disagreement → 90% confidence, 0.5 → 14%
-   - Emphasizes small disagreements are acceptable, large ones are critical
-   - Non-linear: errors compound exponentially
-
-2. **C_directional (30%)**: Binary decision agreement
-   ```
-   C_directional = 1 if (p_ref ≥ 0.5) == (p_sup ≥ 0.5), else 0
-   ```
-   - Checks if both predictions make same pass/fail decision
-   - Critical for educational applications: wrong binary decision = wrong intervention
-   - All-or-nothing: no partial credit for being "close"
-
-3. **C_percentile (30%)**: Relative ranking
-   ```
-   C_percentile = (100 - percentile_rank(disagreement)) / 100
-   ```
-   - Compares this disagreement to all other disagreements in dataset
-   - Context-aware: "Is this disagreement typical or exceptional?"
-   - Normalizes across different skill difficulties
-
-**Rationale**:
-- **Multi-faceted trust**: Combines magnitude, direction, and context
-- **Practical focus**: Uses p_sup as "trust anchor" (known to be more accurate)
-- **Action-oriented**: Directly answers "Can I trust p_ref for this student-skill pair?"
-- **Weighted**: Prioritizes calibration (40%) over context (30%) over binary decisions (30%)
-
-**Justification**:
-
-1. **Why 3 components?**
-   - Concordance alone is insufficient (see limitations above)
-   - Need magnitude (calibrated), direction (binary), and context (percentile)
-   - Each captures different aspect of "trustworthiness"
-
-2. **Why these weights (40-30-30)?**
-   - **Calibration (40%)**: Most critical - how close are the raw predictions?
-   - **Directional (30%)**: Important for interventions - did we get the decision right?
-   - **Percentile (30%)**: Provides context - is this disagreement normal for this dataset?
-   - Empirically tested to balance all three concerns
-
-3. **Why exponential decay for calibration?**
-   - Linear disagreement → exponential confidence loss matches human trust dynamics
-   - Small errors tolerable, large errors catastrophic
-   - Factor of 2 chosen empirically: 0.25 disagreement → 60% confidence (threshold)
-
-4. **Why use p_sup as anchor?**
-   - p_sup has higher AUC (typically 0.78-0.85 vs 0.67-0.75 for p_ref)
-   - Ground truth unavailable at prediction time
-   - Framework: "When can we use interpretable p_ref instead of accurate p_sup?"
-
-**Comparison to Concordance**:
-| Aspect | Concordance | H1.3 Composite |
-|--------|-------------|----------------|
-| Metric | 1 - MAE | Weighted combination |
-| Components | 1 (absolute error) | 3 (magnitude + direction + context) |
-| Sensitivity | Linear | Non-linear (exponential) |
-| Binary decisions | Not considered | Explicit component |
-| Context-awareness | No | Yes (percentile) |
-| Interpretation | "How close?" | "How trustworthy?" |
-| Use case | Overall agreement | Trust assessment |
-
-**Confidence Categories**:
-- 🟢 High (≥0.8): p_ref trustworthy, can use interpretable predictions
-- 🟡 Medium (0.5-0.8): Use with caution, moderate agreement
-- 🔴 Low (<0.5): p_ref unreliable, consider using p_sup instead
-
-**Color Zones**:
-- 🟢 Green [0.80-1.0]: High confidence (p_ref trustworthy)
-- 🟡 Yellow [0.65-0.80]: Medium confidence (use with caution)
-- 🟠 Orange [0.50-0.65]: Low-medium confidence
-- 🔴 Red [<0.50]: Low confidence (p_ref unreliable)
-
----
-
-#### Usage
-
-**Automatic Execution**: Both scripts run automatically when calling:
+**Command**:
 ```bash
-python examples/run_benchmarks_paper.py --mode results --dataset <dataset>
-```
-
-**Manual Execution**:
-```bash
-# Concordance-based heatmap
-python examples/results/generate_skill_alignment_heatmap.py \
-  --exp_dir experiments/<exp_name>/gtransformer/<dataset>/fold_0_<id> \
-  --output_dir experiments/<exp_name>/validation \
-  --min_interactions 8 \
-  --top_skills 50 \
-  --top_students 30
-
-# H1.3 composite confidence heatmap
 python examples/validation/generate_skill_alignment_heatmap_h13.py \
-  --exp_dir experiments/<exp_name>/gtransformer/<dataset>/fold_0_<id> \
-  --output_dir experiments/<exp_name>/validation \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation \
   --min_interactions 5 \
   --top_skills 40 \
   --top_students 25
 ```
 
-**Parameters**:
-- `--exp_dir`: Path to fold directory containing qid_test_question_predictions_supervised.txt and _reference.txt
-- `--output_dir`: Directory to save output visualizations and statistics
-- `--min_interactions`: Minimum number of interactions per student-skill pair (5-8 recommended)
-- `--top_skills`: Number of most active skills to include in heatmap (40-50)
-- `--top_students`: Number of most active students to include (25-30)
+**Output Files**:
+- `validation/h13_skill_confidence_heatmap.png` - Student × skill confidence matrix
+- `validation/h13_skill_confidence_distribution.png` - 4-panel distribution analysis
+- `validation/h13_confidence_statistics.json` - Summary statistics
 
-**Output**:
+**Results (assist2009, Exp 893468)**:
 
-*Concordance heatmap:*
-- `h1_functional_alignment_heatmap.png`: Student × skill concordance visualization
-- `h1_functional_alignment_distribution.png`: Distribution analysis plots
-- `h1_functional_alignment_statistics.json`: Summary statistics
+<div style="width: 70%;">
 
-*H1.3 composite heatmap:*
-- `h13_skill_confidence_heatmap.png`: Student × skill confidence visualization
-- `h13_skill_confidence_distribution.png`: 4-panel distribution analysis
-  - Histogram of confidence scores
-  - Histogram of disagreement |p_ref - p_sup|
-  - Scatter plot p_sup vs p_ref colored by confidence
-  - Confidence vs disagreement relationship
-- `h13_confidence_statistics.json`: Summary statistics with confidence categories
+![H1.3 Confidence Heatmap](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h13_skill_confidence_heatmap.png)
 
-**Validation for H1.3**:
+</div>
 
-*Using Concordance:*
-- If mean concordance ≥ 0.90 → **Excellent alignment** (predictions nearly identical)
-- If mean concordance ≥ 0.80 → **Good alignment** (H1.3 supported)
-- If mean concordance < 0.80 → **Moderate alignment** (review needed)
+*Student × Skill Confidence Matrix*: Green = high confidence (p_ref trustworthy), Yellow = medium confidence (use with caution), Red = low confidence (use p_sup).
 
-*Using H1.3 Composite:*
-- If mean confidence ≥ 0.80 across student-skill pairs → **H1.3 supported** (p_ref can functionally replace p_sup)
-- If mean confidence < 0.80 → **H1.3 not fully supported** (interpretable predictions need confidence intervals)
-- Heatmap reveals which student-skill combinations are trustworthy vs need human review
+<div style="width: 70%;">
 
-**Recommended Analysis Workflow**:
-1. Start with **concordance** for overall agreement assessment
-2. Use **H1.3 composite** for trust-based decision making
-3. Compare both metrics: high concordance + high confidence = strong validation
-4. Investigate cases where metrics diverge (e.g., high concordance but low confidence due to directional mismatches)
+![H1.3 Distribution](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h13_skill_confidence_distribution.png)
 
-**Examples**
+</div>
 
-Experiment 893468 (ablation-none, 4 blocks, 8 attention heads, bug-fixed BKT) on assist2009, fold 0:
+*Confidence Distribution Analysis*: Mean confidence = 0.704, with 27.1% high confidence, 68.4% medium confidence, 4.4% low confidence pairs.
 
-*H1.3 Composite Confidence Heatmap:*
+---
 
-![H1.3 Confidence Heatmap](../experiments/20260202_222258_benchpaper_893468/validation/h13_skill_confidence_heatmap.png)
+### RQ3: Context-Aware Skill Mosaic (Skill Quadrant Comparison)
 
-**Figure**: Student × Skill confidence heatmap showing H1.3 composite confidence scores. Green cells indicate high confidence (p_ref trustworthy), yellow indicates medium confidence (use with caution), and red indicates low confidence (p_ref unreliable). The heatmap reveals heterogeneous confidence patterns across different student-skill combinations.
+**Script**: `examples/validation/generate_skill_quadrant_comparison.py`
 
-*H1.3 Confidence Distribution Analysis:*
+**Purpose**: Demonstrate context-aware personalization by showing gTransformer differentiates students with identical response sequences based on learning history (L₀/T quadrants).
 
-![H1.3 Distribution Plots](../experiments/20260202_222258_benchpaper_893468/validation/h13_skill_confidence_distribution.png)
-
-**Figure**: Four-panel analysis of H1.3 composite confidence. Top-left: histogram of confidence scores showing mean=0.704, median=0.712. Top-right: histogram of disagreement |p_ref - p_sup| showing distribution of prediction differences. Bottom-left: scatter plot of p_sup vs p_ref colored by confidence, revealing relationship between predictions and trust. Bottom-right: confidence vs disagreement scatter showing inverse relationship as expected.
-
-*Results Summary:*
-- **Mean Confidence**: 0.704 (< 0.80 threshold)
-- **Median Confidence**: 0.712
-- **Distribution**: 27.1% high confidence, 68.4% medium confidence, 4.4% low confidence
-- **Validation Outcome**: H1.3 not fully supported at mean confidence level, but 95.6% of student-skill pairs show medium-to-high confidence, indicating interpretable predictions are useful with appropriate confidence intervals
-- **Practical Implication**: For 27% of student-skill pairs, p_ref can be used directly; for another 68%, p_ref should be presented with caveats; only 4% require p_sup fallback
-
-
-### H2 Cost of Interpretability
-
-**Hypothesis H2 (Cost of Interpretability)**: The interpretable reference path predictions (p_ref) achieve comparable predictive performance to traditional BKT while providing the benefits of neural model capacity and student-specific individualization.
-
-**Purpose**: Quantify the performance trade-off between supervised predictions (p_sup), interpretable predictions (p_ref), and classical BKT baseline. This analysis reveals:
-1. **Cost of Interpretability**: Performance gap between p_sup and p_ref (how much accuracy is sacrificed for interpretability)
-2. **Gain from Personalization**: Performance improvement of p_ref over BKT (benefits of neural individualization vs population-level priors)
-
-**Script**: `examples/validation/run_bkt_benchmark.py`
-
-**What it does**:
-1. Trains a classical BKT model on skill-level data (learns population-level parameters: prior P(L₀), learning rate P(T), slip P(S), guess P(G) per skill)
-2. Evaluates the BKT model on held-out test data using question-level late fusion protocol
-3. Uses pre-trained BKT parameters WITHOUT updating belief states during test evaluation (prevents data leakage)
-4. For multi-skill questions, aggregates skill-level predictions using mean (average late fusion)
-5. Computes AUC, accuracy, and RMSE metrics matching neural model evaluation protocol
-6. Runs 5-fold cross-validation for robust statistical estimates
-
-**Prerequisites**:
-- **BKT Model Training**: Must first train BKT model to generate skill-level parameters
-  ```bash
-  python examples/train_bkt.py --dataset <dataset_name>
-  ```
-  Creates: `data/<dataset>/bkt_skill_params.pkl` (used by gtransformer for grounding)
-
-- **Data Files**: Requires train/validation/test sequence files in pykt format
-  - `data/<dataset>/train_valid_sequences.csv` (with fold column 0-4)
-  - `data/<dataset>/test_sequences.csv` or `test_question_sequences.csv` (fold=-1)
-
-**Manual Execution**:
+**Command**:
 ```bash
-# Question-level evaluation with late fusion (matches neural model protocol)
-python examples/validation/run_bkt_benchmark.py \
-  --dataset <dataset_name> \
-  --mode question \
-  --output_dir experiments/bkt_question_mode_<dataset>
-
-# Skill-level evaluation (for reference)
-python examples/validation/run_bkt_benchmark.py \
-  --dataset <dataset_name> \
-  --mode skill \
-  --output_dir experiments/bkt_skill_mode_<dataset>
+python examples/validation/generate_skill_quadrant_comparison.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation \
+  --top_n 12
 ```
-
-**Parameters**:
-- `--dataset`: Dataset name (assist2009, assist2015, algebra2005, bridge2algebra2006, nips_task34)
-- `--mode`: Evaluation protocol
-  - `question`: Question-level late fusion (mean) - **USE THIS** for fair comparison with neural models
-  - `skill`: Skill-level evaluation (BKT's native evaluation)
-- `--output_dir`: Directory to save results (default: `experiments/{timestamp}_bkt_{mode}_{dataset}`)
 
 **Output Files**:
-- `cv_results.json`: Aggregated 5-fold CV results with mean ± std for validation and test
-- `fold_0/eval_results.json` through `fold_4/eval_results.json`: Per-fold detailed results
+- `validation/h3_skill_quadrant_comparison_mosaic.png` - 4×3 grid of top 12 skills
+- `validation/individual_skills/h3_skill_<id>_quadrants.png` - Individual skill plots
+- `validation/h3_skill_quadrant_metadata.json` - Quantitative metrics
 
-**Evaluation Protocol** (mode=question):
-- **Training**: Skill-level BKT on 4 training folds
-- **Validation**: Skill-level evaluation on 1 validation fold
-- **Test**: Question-level evaluation with late fusion (mean), NO model updates
-- **Prediction Formula**: For each skill, `P(correct) = P(L₀) × (1 - P(S)) + (1 - P(L₀)) × P(G)`
-- **Late Fusion**: For multi-skill questions, `P(correct)_question = mean(P(correct)_skill1, ..., P(correct)_skillN)`
-- **Evaluation Type**: `question_level_late_fusion_mean_no_update`
+**Results (assist2009, Exp 893468)**:
 
-**Example Results**:
+<div style="width: 80%;">
 
-Experiment bkt_question_mode_fixed_04787 on assist2009:
+![Skill Quadrant Comparison](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/validation/h3_skill_quadrant_comparison_mosaic.png)
 
-```json
-{
-  "model": "BKT",
-  "dataset": "assist2009",
-  "evaluation_mode": "question",
-  "valid_mean_auc": 0.7100,
-  "valid_std_auc": 0.0069,
-  "test_mean_auc": 0.6097,
-  "test_std_auc": 0.0008,
-  "test_mean_acc": 0.6556,
-  "test_std_acc": 0.0050,
-  "evaluation_type": "question_level_late_fusion_mean_no_update"
-}
+</div>
+
+*Context-Aware Personalization*: Solid colored lines (gTransformer) diverge by student quadrant despite identical response sequences. Dotted gray lines (BKT) overlap due to Markovian property. Demonstrates non-Markovian personalization.
+
+---
+
+### Visualization Scripts
+
+#### Skill Alignment Heatmap (Concordance)
+
+**Script**: `examples/results/generate_skill_alignment_heatmap.py`
+
+**Command**:
+```bash
+python examples/results/generate_skill_alignment_heatmap.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots \
+  --min_interactions 8 \
+  --top_skills 50 \
+  --top_students 30
 ```
 
-**Validation for H2**:
+**Output**: 
+- `plots/skill_alignment_heatmap.png`
+- `plots/skill_alignment_distribution.png`
+- `plots/alignment_statistics.json`
 
-Compare three prediction sources across same test set:
+<div style="width: 70%;">
 
-| Prediction Source | AUC (AS2009) | Description | Purpose |
-|------------------|--------------|-------------|---------|
-| **p_sup** | 0.7783 ± 0.0009 | Supervised neural predictions | Maximum accuracy (black-box) |
-| **p_ref** | 0.6732 ± 0.0002 | Interpretable BKT-logic predictions | Theory-grounded interpretability |
-| **p_bkt** | 0.6097 ± 0.0008 | Classical BKT baseline | Population-level prior knowledge |
+![Skill Alignment Heatmap](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/skill_alignment_heatmap.png)
 
-**Key Metrics**:
-1. **Cost of Interpretability**: 
-   - Gap: p_sup - p_ref = 0.1051 (13.5%)
-   - Interpretation: ~10-14% AUC loss for interpretability with individualization
+</div>
 
-2. **Gain from Personalization**:
-   - Gain: p_ref - p_bkt = 0.0635 (10.4%)
-   - Interpretation: Neural individualization provides ~6-10% AUC improvement over population-level BKT
+*Concordance-based alignment*: Simple MAE-based metric showing prediction agreement between p_sup and p_ref.
 
-3. **Net Effect**:
-   - p_ref sits between p_bkt (classical baseline) and p_sup (neural ceiling)
-   - Achieves interpretability while outperforming traditional BKT through personalization
+---
 
-**Interpretation**:
-- **H2 Validation Outcome**: Supported. The interpretable predictions (p_ref) demonstrate:
-  - Meaningful improvement over classical BKT (+0.0635 AUC)
-  - Acceptable performance trade-off vs supervised predictions (-0.1051 AUC)
-  - Best of both worlds: interpretability from BKT logic + personalization from neural capacity
-  
-**Practical Implication**: 
-For applications requiring interpretability (e.g., formative assessment, student diagnostics), p_ref provides a viable alternative to black-box predictions with quantifiable confidence metrics. The 13.5% accuracy cost is offset by the ability to explain predictions through pedagogically meaningful BKT parameters.
+#### Prediction Envelope Gallery
 
+**Script**: `examples/results/generate_prediction_envelope_gallery.py`
+
+**Command**:
+```bash
+python examples/results/generate_prediction_envelope_gallery.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: 
+- `plots/prediction_envelope_gallery.png`
+- `plots/envelope_statistics.json`
+
+<div style="width: 80%;">
+
+![Prediction Envelope Gallery](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/prediction_envelope_gallery.png)
+
+</div>
+
+*Prediction Envelopes*: Visualization of prediction ranges showing upper bound (p_sup), lower bound (p_ref), and confidence intervals.
+
+---
+
+#### Envelope Distribution
+
+**Script**: `examples/results/generate_envelope_distribution.py`
+
+**Command**:
+```bash
+python examples/results/generate_envelope_distribution.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: `plots/envelope_distribution.png`
+
+<div style="width: 70%;">
+
+![Envelope Distribution](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/envelope_distribution.png)
+
+</div>
+
+*Distribution Analysis*: Statistical analysis of envelope widths and prediction ranges across all student-skill pairs.
+
+---
+
+#### Cognitive Quadrants Mosaic
+
+**Script**: `examples/results/generate_quadrant_analysis.py`
+
+**Command**:
+```bash
+python examples/results/generate_quadrant_analysis.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: `plots/cognitive_quadrants_mosaic.png`
+
+<div style="width: 80%;">
+
+![Cognitive Quadrants Mosaic](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/cognitive_quadrants_mosaic.png)
+
+</div>
+
+*Learning Profile Quadrants*: 4×3 mosaic showing student performance across different L₀/T learning profiles.
+
+---
+
+#### Personalization Mosaic
+
+**Script**: `examples/results/generate_personalization_mosaic.py`
+
+**Command**:
+```bash
+python examples/results/generate_personalization_mosaic.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: `plots/personalization_mosaic.png`
+
+<div style="width: 80%;">
+
+![Personalization Mosaic](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/personalization_mosaic.png)
+
+</div>
+
+*Student-Specific Personalization*: Demonstrates how individual students' predictions differ based on their unique learning profiles.
+
+---
+
+#### Initial Mastery Mosaic
+
+**Script**: `examples/results/generate_initial_mastery_mosaic.py`
+
+**Command**:
+```bash
+python examples/results/generate_initial_mastery_mosaic.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: `plots/initial_mastery_mosaic.png`
+
+<div style="width: 80%;">
+
+![Initial Mastery Mosaic](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/initial_mastery_mosaic.png)
+
+</div>
+
+*L₀ Parameter Distribution*: Visualization of initial mastery estimates across skills showing personalization and grounding.
+
+---
+
+#### Student Clustering Visualization
+
+**Script**: `examples/results/plot_student_clusters_gtransformer.py`
+
+**Command**:
+```bash
+python examples/results/plot_student_clusters_gtransformer.py \
+  --exp_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/fold_0_377291 \
+  --output_dir experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots
+```
+
+**Output**: `plots/cluster_placement_pacing_contextual.png`
+
+<div style="width: 80%;">
+
+![Student Clustering](../experiments/20260202_222258_benchpaper_assist2009_893468/gtransformer/assist2009/plots/cluster_placement_pacing_contextual.png)
+
+</div>
+
+*Student Clustering*: Contextual analysis showing student groupings based on latent representations and learning parameters.
+
+---
+
+### Running All Validation Scripts
+
+To run all validation and visualization scripts for a complete analysis:
+
+```bash
+# Full pipeline: training → evaluation → results
+python examples/run_benchmarks_paper.py \
+  --mode training \
+  --model gtransformer \
+  --dataset assist2009 \
+  --gpus 1,2,3,4,5
+
+python examples/run_benchmarks_paper.py \
+  --mode evaluation \
+  --model gtransformer \
+  --dataset assist2009
+
+python examples/run_benchmarks_paper.py \
+  --mode results \
+  --model gtransformer \
+  --dataset assist2009
+```
+
+The `--mode results` step automatically:
+1. Runs H1.2 parameter recovery validation on all folds
+2. Runs H1.1 structural encoding validation (campaign-level, 5-fold aggregation)
+3. Generates all visualization plots using representative fold
+4. Aggregates metrics and creates summary reports
+
+**Output Structure**:
+```
+experiments/<campaign>/gtransformer/<dataset>/
+├── validation/              # H1.1, H1.2, H1.3, RQ3 validation results
+│   ├── h12_recovery_*.png
+│   ├── h13_skill_confidence_*.png
+│   ├── h3_skill_quadrant_comparison_mosaic.png
+│   ├── structural_encoding_aggregated.json
+│   └── individual_skills/   # Per-skill detailed plots
+├── plots/                   # Visualization outputs
+│   ├── skill_alignment_heatmap.png
+│   ├── prediction_envelope_gallery.png
+│   ├── cognitive_quadrants_mosaic.png
+│   ├── personalization_mosaic.png
+│   ├── initial_mastery_mosaic.png
+│   └── cluster_placement_pacing_contextual.png
+└── cv_results.json          # 5-fold CV aggregated metrics
+```
+
+## Experiments
+
+### Exp 893468
+
+**Campaign**: `20260202_222258_benchpaper_assist2009_893468`  
+**Date**: February 2, 2026  
+**Purpose**: Bug-fixed BKT parameters, 8 attention heads architecture for assist2009
+
+**Architecture Configuration**:
+- d_model: 64
+- n_blocks: 4
+- num_attn_heads: 8
+- d_ff: 256
+- dropout: 0.1
+
+**Training Configuration**:
+- learning_rate: 0.0001
+- optimizer: adam
+- epochs: 200
+- ablation: none (full grounding)
+
+**Results (5-fold CV)**:
+
+| Dataset | AUC (p_sup) | AUC (p_ref) | Accuracy (p_sup) | Accuracy (p_ref) | Cost (%) | Status |
+|---------|-------------|-------------|------------------|------------------|----------|--------|
+| assist2009 | 0.7814 ± 0.0015 | 0.7436 ± 0.0008 | 0.7369 ± 0.0010 | 0.7225 ± 0.0009 | 4.8% | ✅ PASS |
+
+**Per-Fold Results**:
+
+| Fold | AUC (p_sup) | AUC (p_ref) | Accuracy (p_sup) | Accuracy (p_ref) |
+|------|-------------|-------------|------------------|------------------|
+| 0 | 0.7833 | 0.7448 | 0.7379 | 0.7233 |
+| 1 | 0.7806 | 0.7434 | 0.7357 | 0.7218 |
+| 2 | 0.7806 | 0.7429 | 0.7378 | 0.7221 |
+| 3 | 0.7795 | 0.7432 | 0.7358 | 0.7216 |
+| 4 | 0.7831 | 0.7437 | 0.7375 | 0.7237 |
+
+**Key Findings**:
+- **Cost of Interpretability**: 3.78 percentage points (4.8%)
+- **8 attention heads** architecture provides strong structural encoding
+- All 5 folds successfully completed
+- Consistent performance across folds (low standard deviation)
+- Used as reference experiment for Paper Table 4 (assist2009 row)
+
+---
+
+### Exp 698838
+
+**Campaign**: `20260202_222106_benchpaper_datasets_698838`  
+**Date**: February 2, 2026  
+**Purpose**: Bug-fixed BKT parameters, 4 attention heads architecture for multiple datasets
+
+**Architecture Configuration**:
+- d_model: 64
+- n_blocks: 4
+- num_attn_heads: 4
+- d_ff: 256
+- dropout: 0.1
+
+**Training Configuration**:
+- learning_rate: 0.0001
+- optimizer: adam
+- epochs: 200
+- ablation: none (full grounding)
+
+**Results (5-fold CV)**:
+
+| Dataset | AUC (p_sup) | AUC (p_ref) | Accuracy (p_sup) | Accuracy (p_ref) | Cost (%) | Status |
+|---------|-------------|-------------|------------------|------------------|----------|--------|
+| assist2015 | 0.7070 ± 0.0009 | 0.6940 ± 0.0008 | 0.6786 ± 0.0008 | 0.6772 ± 0.0003 | 1.8% | ✅ PASS |
+| algebra2005 | 0.8237 ± 0.0023 | 0.7800 ± 0.0042 | 0.8081 ± 0.0007 | 0.7954 ± 0.0001 | 5.3% | ✅ PASS |
+| bridge2algebra2006 | 0.8107 ± 0.0021 | 0.7810 ± 0.0012 | 0.8559 ± 0.0007 | 0.8487 ± 0.0002 | 3.7% | ✅ PASS |
+| nips_task34 | 0.7987 ± 0.0005 | 0.7666 ± 0.0029 | 0.7290 ± 0.0002 | 0.7125 ± 0.0026 | 4.0% | ✅ PASS |
+
+**Dataset-Specific Analysis**:
+
+**assist2015**:
+- **Lowest cost of interpretability** (1.8%)
+- Strong reference path alignment with supervised predictions
+- All 5 folds completed successfully
+- Note: Dataset lacks question IDs in test files (skill-level only)
+
+**algebra2005**:
+- **Highest supervised performance** (AUC = 0.8237)
+- Moderate cost of interpretability (5.3%)
+- Reference predictions maintain good performance (0.7800 AUC)
+- Multi-skill questions present structural challenges for probing
+
+**bridge2algebra2006**:
+- **Highest accuracy** (85.59% supervised)
+- Low cost of interpretability (3.7%)
+- Strong T parameter alignment (ρ = 0.681, see Paper Table 7)
+- Good balance between performance and interpretability
+
+**nips_task34**:
+- Moderate cost of interpretability (4.0%)
+- Consistent performance across folds (lowest std = 0.0005)
+- Strong L₀ structural encoding (Δ = 0.521, see Paper Table 6)
+- Weak T encoding due to bimodal distribution
+
+**Key Findings**:
+- **All 4 datasets**: Successfully trained with bug-fixed BKT parameters
+- **Cost of interpretability**: Ranges from 1.8% to 5.3% (all < 6%)
+- **4 attention heads** architecture adequate for all datasets
+- **Consistent performance**: All folds completed successfully (20/20 total)
+- **Bug-fix impact**: Dramatic improvements in p_ref compared to original BKT
+  - assist2015: +0.0395 AUC improvement
+  - algebra2005: +0.0439 AUC improvement  
+  - bridge2algebra2006: +0.0785 AUC improvement
+  - nips_task34: +0.0823 AUC improvement
+- Used as reference experiment for Paper Table 4 (4 datasets × 5 folds = 20 total experiments)

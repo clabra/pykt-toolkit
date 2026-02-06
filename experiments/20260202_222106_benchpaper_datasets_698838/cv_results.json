@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-02-03T08:11:24.730748",
-    "campaign": "20260202_222106_benchpaper_698838",
+    "generated_at": "2026-02-06T00:04:58.689493",
+    "campaign": "20260202_222106_benchpaper_datasets_698838",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",

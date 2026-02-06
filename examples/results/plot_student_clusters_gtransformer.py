@@ -189,18 +189,25 @@ def main():
     print(f"Alpha (Placement) - Mean: {alpha.mean():.4f}, Std: {alpha.std():.4f}, Range: [{alpha.min():.4f}, {alpha.max():.4f}]")
     print(f"Beta  (Pacing)    - Mean: {beta.mean():.4f}, Std: {beta.std():.4f}, Range: [{beta.min():.4f}, {beta.max():.4f}]")
     print(f"-----------------------------")
-    X = np.stack([alpha, beta], axis=1)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
     
-    kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
-    original_clusters = kmeans.fit_predict(X_scaled)
+    # Create L0/T quadrant assignments based on median splits
+    l0_median = np.median(alpha)
+    t_median = np.median(beta)
     
-    # Re-order based on overall proficiency
-    df_temp = pd.DataFrame({'a': X_scaled[:, 0], 'b': X_scaled[:, 1], 'orig_cluster': original_clusters})
-    cluster_order = df_temp.groupby('orig_cluster').apply(lambda g: g['a'].mean() + g['b'].mean()).sort_values().index.tolist()
-    remap = {orig: new for new, orig in enumerate(cluster_order)}
-    sorted_clusters = np.array([remap[c] for c in original_clusters])
+    # Assign each student to a quadrant based on L0 and T values
+    quadrant_assignment = np.zeros(len(alpha), dtype=int)
+    for i in range(len(alpha)):
+        if alpha[i] <= l0_median and beta[i] <= t_median:
+            quadrant_assignment[i] = 0  # Low L0, Low T -> Red
+        elif alpha[i] > l0_median and beta[i] <= t_median:
+            quadrant_assignment[i] = 1  # High L0, Low T -> Orange
+        elif alpha[i] <= l0_median and beta[i] > t_median:
+            quadrant_assignment[i] = 2  # Low L0, High T -> Blue
+        else:  # alpha[i] > l0_median and beta[i] > t_median
+            quadrant_assignment[i] = 3  # High L0, High T -> Green
+    
+    # Use quadrant assignment as clusters
+    sorted_clusters = quadrant_assignment
     
     df = pd.DataFrame({
         'Initial Knowledge (Mean Probe L0)': alpha,
@@ -208,23 +215,17 @@ def main():
         'Cluster': [f'Cluster {c}' for c in sorted_clusters]
     })
     
-    print("--- CLUSTER MEANS ---")
+    print("--- QUADRANT ASSIGNMENTS ---")
     print(df.groupby('Cluster').mean())
-    print("\n--- CLUSTER COUNTS ---")
+    print("\n--- QUADRANT COUNTS ---")
     print(df['Cluster'].value_counts())
     print("----------------------")
     
     # Plot
     sns.set_theme(style="whitegrid")
     
-    # High-contrast color palette
+    # Descriptive labels for personalized mode
     if has_personalization:
-        custom_palette = {
-            'Cluster 0': '#d62728',  # Bright red
-            'Cluster 1': '#ff7f0e',  # Bright orange
-            'Cluster 2': '#2ca02c',  # Bright green
-            'Cluster 3': '#1f77b4'   # Bright blue
-        }
         cluster_labels = {
             'Cluster 0': 'Foundational',
             'Cluster 1': 'Rapid Progression',
@@ -232,12 +233,6 @@ def main():
             'Cluster 3': 'High Performance'
         }
     else:
-        custom_palette = {
-            'Cluster 0': '#e74c3c',
-            'Cluster 1': '#f39c12',
-            'Cluster 2': '#3498db',
-            'Cluster 3': '#2ecc71'
-        }
         cluster_labels = None
     
     # Calculate cluster percentages
@@ -245,13 +240,23 @@ def main():
     total_students = len(df)
     cluster_pcts = {cluster: (count / total_students * 100) for cluster, count in cluster_counts.items()}
     
-    # Create labels with percentages and descriptions
-    # Map clusters to L0/T combinations based on sorted order
+    # Define quadrant labels and colors (fixed mapping)
+    # Cluster 0: Low L0, Low T -> Red
+    # Cluster 1: High L0, Low T -> Orange
+    # Cluster 2: Low L0, High T -> Blue
+    # Cluster 3: High L0, High T -> Green
     cluster_l0_t_labels = {
         'Cluster 0': 'Low L0-Low T',
-        'Cluster 1': 'Low L0-High T',
-        'Cluster 2': 'High L0-Low T',
+        'Cluster 1': 'High L0-Low T',
+        'Cluster 2': 'Low L0-High T',
         'Cluster 3': 'High L0-High T'
+    }
+    
+    cluster_colors = {
+        'Cluster 0': '#e74c3c',  # Red
+        'Cluster 1': '#f39c12',  # Orange
+        'Cluster 2': '#3498db',  # Blue
+        'Cluster 3': '#2ecc71'   # Green
     }
     
     if cluster_labels:
@@ -267,6 +272,14 @@ def main():
         }
         df['Cluster_Label'] = df['Cluster'].map(legend_labels)
     
+    # Create color palette based on assigned colors
+    custom_palette = {legend_labels[k]: v for k, v in cluster_colors.items()}
+    
+    print("\n--- COLOR ASSIGNMENTS ---")
+    for cluster in sorted(df['Cluster'].unique()):
+        print(f"{cluster}: {cluster_l0_t_labels[cluster]} → {cluster_colors[cluster]}")
+    print("-------------------------\n")
+    
     plt.figure(figsize=(12, 9))
     
     # Adjust point size and transparency based on personalization
@@ -279,12 +292,12 @@ def main():
     
     # 1. Plot Density Contours (KDE) to show the underlying mass
     sns.kdeplot(data=df, x='Initial Knowledge (Mean Probe L0)', y='Learning Rate (Mean Probe T)',
-                hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
+                hue='Cluster_Label', palette=custom_palette,
                 alpha=0.3, levels=5, thresh=0.1, fill=True, legend=False)
 
     # 2. Plot the individual student points
     sns.scatterplot(data=df.sort_values('Cluster'), x='Initial Knowledge (Mean Probe L0)', y='Learning Rate (Mean Probe T)', 
-                    hue='Cluster_Label', palette={legend_labels[k]: v for k, v in custom_palette.items()},
+                    hue='Cluster_Label', palette=custom_palette,
                     s=point_size, alpha=point_alpha, edgecolors='black', linewidth=0.5)
 
     # 3. Apply Power Transform (Sqrt) to y-axis to expand the dense [0.0 - 0.4] region

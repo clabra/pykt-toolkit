@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from torch.utils.data import DataLoader
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Ridge
 from scipy.stats import pearsonr, spearmanr
 import pickle
 
@@ -61,7 +63,48 @@ def compute_metrics(y_true, y_pred, weights=None):
         "count": int(len(y_t))
     }
 
-def plot_recovery(y_true, y_pred, title, output_path, color='royalblue', label_prefix="", show_metrics=False):
+def compute_control_and_selectivity(y_true, y_pred):
+    """
+    Compute control R² and selectivity metrics for probing analysis.
+    Matches the methodology from structural_encoding_validation.py
+    
+    Returns:
+        dict with fidelity_r2, control_r2, and selectivity
+    """
+    # Use predictions as features (similar to latent representations in structural validation)
+    X = y_pred.reshape(-1, 1)
+    y = y_true
+    
+    if len(y) < 10:
+        return {"fidelity_r2": 0, "control_r2": 0, "selectivity": 0}
+    
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # 1. Fidelity: R² between true and predicted values (on full dataset)
+    fidelity_r2 = float(r2_score(y_true, y_pred))
+    
+    # 2. Control: R² with observation-level shuffled labels (both train and test)
+    # Train probe on shuffled training labels
+    probe_control = Ridge(alpha=1.0)
+    y_train_shuffled = np.random.RandomState(42).permutation(y_train)
+    probe_control.fit(X_train, y_train_shuffled)
+    
+    # Evaluate on shuffled test labels (this creates the control baseline)
+    y_test_shuffled = np.random.RandomState(43).permutation(y_test)
+    control_r2 = float(r2_score(y_test_shuffled, probe_control.predict(X_test)))
+    
+    # 3. Selectivity: Fidelity - Control
+    selectivity = fidelity_r2 - control_r2
+    
+    return {
+        "fidelity_r2": fidelity_r2,
+        "control_r2": control_r2,
+        "selectivity": selectivity
+    }
+
+def plot_recovery(y_true, y_pred, title, output_path, color='royalblue', label_prefix="", show_metrics=False, 
+                  fidelity_r2=None, control_r2=None, selectivity=None, spearman_rho=None):
     """Generate parity plot using binned aggregates with bubble sizes for sample density."""
     
     # Create DataFrame and bin the true values
@@ -102,6 +145,24 @@ def plot_recovery(y_true, y_pred, title, output_path, color='royalblue', label_p
                    f"MAE = {metrics['mae']:.3f}")
         props = dict(boxstyle='round', facecolor='white', alpha=0.8)
         plt.text(0.05, 0.95, textstr, fontsize=12, verticalalignment='top', bbox=props)
+    
+    # Add Fidelity, Control, and Selectivity metrics if provided
+    if fidelity_r2 is not None and control_r2 is not None and selectivity is not None:
+        metrics_text = (
+            f"Fidelity ($R^2$): {fidelity_r2:.3f}\n"
+            f"Control ($R^2_{{control}}$): {control_r2:.3f}\n"
+            f"Selectivity ($\\Delta R^2$): {selectivity:.3f}"
+        )
+        props = dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='gray', linewidth=1.2)
+        plt.text(0.05, 0.95, metrics_text, fontsize=12, verticalalignment='top', 
+                bbox=props, transform=plt.gca().transAxes)
+    
+    # Add Spearman correlation if provided (for grounded parameter plots)
+    if spearman_rho is not None:
+        spearman_text = f"Spearman $\\rho$: {spearman_rho:.3f}"
+        props = dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='gray', linewidth=1.2)
+        plt.text(0.05, 0.95, spearman_text, fontsize=12, verticalalignment='top', 
+                bbox=props, transform=plt.gca().transAxes)
     
     plt.xlim(0, 1)
     plt.ylim(0, 1)
@@ -452,27 +513,86 @@ def main():
     
     pd.DataFrame(skill_metrics).to_csv(os.path.join(args.output_dir, "h12_skill_recovery_metrics.csv"), index=False)
     
-    # Generate Plots (without metrics legend for paper)
+    # Load probe metrics from structural encoding validation results
+    structural_file = os.path.join(args.output_dir, "structural_encoding_aggregated.json")
+    if os.path.exists(structural_file):
+        with open(structural_file, 'r') as f:
+            structural_results = json.load(f)
+        
+        # Compute means from fold arrays - use selectivity_std (standard) not selectivity_strict
+        l0_fidelity = np.mean(structural_results['results']['l0']['fidelity_r2'])
+        l0_selectivity_std = np.mean(structural_results['results']['l0']['selectivity_std'])
+        # Control R² = Fidelity R² - Selectivity
+        l0_control = l0_fidelity - l0_selectivity_std
+        
+        t_fidelity = np.mean(structural_results['results']['t']['fidelity_r2'])
+        t_selectivity_std = np.mean(structural_results['results']['t']['selectivity_std'])
+        t_control = t_fidelity - t_selectivity_std
+        
+        l0_probe_metrics = {
+            'fidelity_r2': l0_fidelity,
+            'control_r2': l0_control,
+            'selectivity': l0_selectivity_std
+        }
+        t_probe_metrics = {
+            'fidelity_r2': t_fidelity,
+            'control_r2': t_control,
+            'selectivity': t_selectivity_std
+        }
+        
+        print("\n" + "="*80)
+        print("Probe Metrics (from structural_encoding_aggregated.json)")
+        print("="*80)
+        print(f"L0 Probe - Fidelity R²: {l0_probe_metrics['fidelity_r2']:.3f}, "
+              f"Control R²: {l0_probe_metrics['control_r2']:.3f}, "
+              f"Selectivity: {l0_probe_metrics['selectivity']:.3f}")
+        print(f"T Probe  - Fidelity R²: {t_probe_metrics['fidelity_r2']:.3f}, "
+              f"Control R²: {t_probe_metrics['control_r2']:.3f}, "
+              f"Selectivity: {t_probe_metrics['selectivity']:.3f}")
+    else:
+        print(f"⚠️  Warning: {structural_file} not found. Computing probe metrics on-the-fly...")
+        l0_probe_metrics = compute_control_and_selectivity(combined_results["l0_true"], combined_results["l0_probe"])
+        t_probe_metrics = compute_control_and_selectivity(combined_results["t_true"], combined_results["t_probe"])
+        
+        print("\n" + "="*80)
+        print("Probe Metrics (computed on-the-fly)")
+        print("="*80)
+        print(f"L0 Probe - Fidelity R²: {l0_probe_metrics['fidelity_r2']:.3f}, "
+              f"Control R²: {l0_probe_metrics['control_r2']:.3f}, "
+              f"Selectivity: {l0_probe_metrics['selectivity']:.3f}")
+        print(f"T Probe  - Fidelity R²: {t_probe_metrics['fidelity_r2']:.3f}, "
+              f"Control R²: {t_probe_metrics['control_r2']:.3f}, "
+              f"Selectivity: {t_probe_metrics['selectivity']:.3f}")
+    
+    # Generate Plots with probe metrics displayed
     plot_recovery(combined_results["l0_true"], combined_results["l0_probe"], 
-                  f"Initial Mastery Recovery ($P(L_0)$ Probing) - {dataset_name}", 
+                  "Initial Mastery Structural Encoding P(L0)", 
                   os.path.join(args.output_dir, "h12_recovery_l0_probe.png"), 
-                  color='royalblue', label_prefix="Probe", show_metrics=False)
+                  color='royalblue', label_prefix="Probe", show_metrics=False,
+                  fidelity_r2=l0_probe_metrics['fidelity_r2'],
+                  control_r2=l0_probe_metrics['control_r2'],
+                  selectivity=l0_probe_metrics['selectivity'])
     
     plot_recovery(combined_results["t_true"], combined_results["t_probe"], 
-                  f"Learning Rate Recovery ($P(T)$ Probing) - {dataset_name}", 
+                  "Learning Rate Structural Encoding P(T)", 
                   os.path.join(args.output_dir, "h12_recovery_t_probe.png"), 
-                  color='royalblue', label_prefix="Probe", show_metrics=False)
+                  color='royalblue', label_prefix="Probe", show_metrics=False,
+                  fidelity_r2=t_probe_metrics['fidelity_r2'],
+                  control_r2=t_probe_metrics['control_r2'],
+                  selectivity=t_probe_metrics['selectivity'])
     
-    # Generate Grounded Parameter Plots (for H1.2 Semantic Alignment)
+    # Generate Grounded Parameter Plots (for H1.2 Semantic Alignment) with Spearman ρ
     plot_recovery(combined_results["l0_true"], combined_results["l0_grounded"], 
-                  f"Initial Mastery Preservation ($P(L_0)$ Grounded) - {dataset_name}", 
+                  "Initial Mastery Semantic Alignment P(L0)", 
                   os.path.join(args.output_dir, "h12_recovery_l0_grounded.png"), 
-                  color='royalblue', label_prefix="Grounded", show_metrics=False)
+                  color='royalblue', label_prefix="Grounded", show_metrics=False,
+                  spearman_rho=aggregated['l0_grounded']['spearman_r']['mean'])
     
     plot_recovery(combined_results["t_true"], combined_results["t_grounded"], 
-                  f"Learning Rate Preservation ($P(T)$ Grounded) - {dataset_name}", 
+                  "Learning Rate Semantic Alignment P(T)", 
                   os.path.join(args.output_dir, "h12_recovery_t_grounded.png"), 
-                  color='royalblue', label_prefix="Grounded", show_metrics=False)
+                  color='royalblue', label_prefix="Grounded", show_metrics=False,
+                  spearman_rho=aggregated['t_grounded']['spearman_r']['mean'])
 
     print(f"✅ Plots saved to: {args.output_dir}/h12_recovery_*.png")
     print("\n" + "="*80)

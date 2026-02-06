@@ -116,7 +116,9 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 
 - Code documentation should include usage examples
 - Use markdown format for documentation files
-- Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon. Use "we" instead of "you" following academic writing conventions.
+- Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon. 
+- Use "we" instead of "you" following academic writing conventions.
+- Avoid the use of em dash and other similar characters that I don't use in my writing.
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 - If you need to create new documentation files, create them in `./tmp`folder, unless I specifically ask for them.
 - Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits.

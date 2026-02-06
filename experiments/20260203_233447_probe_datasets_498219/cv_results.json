@@ -1,12 +1,12 @@
 {
-    "generated_at": "2026-02-04T08:21:27.146095",
-    "campaign": "20260203_233447_probe_datasets_498219",
+    "generated_at": "2026-02-05T20:34:41.131422",
+    "campaign": "all_experiments",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
         "akt": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,
@@ -19,7 +19,7 @@
             }
         },
         "atkt": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,
@@ -32,7 +32,7 @@
             }
         },
         "dkt": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,
@@ -45,7 +45,7 @@
             }
         },
         "dkvmn": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,
@@ -58,45 +58,45 @@
             }
         },
         "gtransformer": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PASS",
-                "auc_mean": 0.7061701069048405,
-                "auc_std": 0.0008246019686700014,
-                "acc_mean": 0.6786518706273892,
-                "acc_std": 0.000995705697833497,
+                "auc_mean": 0.7787627356706451,
+                "auc_std": 0.0017157804455028788,
+                "acc_mean": 0.7357714241971907,
+                "acc_std": 0.0012388791007524327,
                 "folds_ok": 5,
                 "folds_running": 0,
                 "folds_total": 5,
                 "fold_data": {
                     "0": {
-                        "auc": 0.7050926846091943,
-                        "acc": 0.6790619558385624
+                        "auc": 0.7798485355847313,
+                        "acc": 0.7377234278715505
                     },
                     "1": {
-                        "auc": 0.7069536718881948,
-                        "acc": 0.6775679268028809
+                        "auc": 0.7787959274710015,
+                        "acc": 0.734661461323535
                     },
                     "2": {
-                        "auc": 0.7053463585316895,
-                        "acc": 0.6786292026006409
+                        "auc": 0.777474360360713,
+                        "acc": 0.734450951123359
                     },
                     "3": {
-                        "auc": 0.707130124484979,
-                        "acc": 0.6802983936611954
+                        "auc": 0.7764117352468278,
+                        "acc": 0.73663260228882
                     },
                     "4": {
-                        "auc": 0.7063276950101455,
-                        "acc": 0.6777018742336661
+                        "auc": 0.7812831196899521,
+                        "acc": 0.7353886783786887
                     }
                 },
-                "auc_ref_mean": 0.6949050235860549,
-                "auc_ref_std": 0.0010097100499453285,
-                "acc_ref_mean": 0.6770280156203312,
-                "acc_ref_std": 0.0004384368923732935
+                "auc_ref_mean": 0.7502969939645142,
+                "auc_ref_std": 0.002671611764449096,
+                "acc_ref_mean": 0.7272323649864124,
+                "acc_ref_std": 0.0015569994518888823
             }
         },
         "saint": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,
@@ -109,7 +109,7 @@
             }
         },
         "sakt": {
-            "assist2015": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,

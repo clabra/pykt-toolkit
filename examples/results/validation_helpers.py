@@ -30,7 +30,8 @@ def load_model_from_dir(exp_dir, device):
     with open(config_path, 'r') as f:
         config = json.load(f)
         
-    mc = config.get('model_config', config.get('train_config', config.get('params', {})))
+    # Prioritize train_config as it contains the actual training parameters
+    mc = config.get('train_config', config.get('model_config', config.get('params', {})))
     
     # Infer dataset from experiment directory path: experiments/CAMPAIGN/model/dataset/fold_N
     dataset_name = None
@@ -44,18 +45,23 @@ def load_model_from_dir(exp_dir, device):
         dataset_name = config.get('dataset_name', config.get('params', {}).get('dataset_name', mc.get('dataset', 'assist2009')))
     
     # Extract critical architecture params from config (prioritize actual training values)
-    for k in ['d_model', 'n_blocks', 'dropout', 'd_ff', 'final_fc_dim', 'n_heads', 'ablation']:
+    # Note: num_attn_heads and n_heads are equivalent - check for both
+    for k in ['d_model', 'n_blocks', 'dropout', 'd_ff', 'final_fc_dim', 'n_heads', 'num_attn_heads', 'ablation']:
         if k not in mc:
             for src in ['params', 'train_config', 'input', 'defaults']:
                 if src in config and k in config[src]:
                     mc[k] = config[src][k]
                     break
     
+    # Handle num_attn_heads vs n_heads: normalize to n_heads (matches init_model.py logic)
+    if 'n_heads' not in mc and 'num_attn_heads' in mc:
+        mc['n_heads'] = mc['num_attn_heads']
+    
     # Apply defaults only for missing values
     defaults = {
         'kq_same': 1, 'separate_qa': 0, 'l2_rasch': 0.0, 
         'pretrain_dim': 768, 'ablation': 'none', 'n_uid': 0,
-        'final_fc_dim': 512, 'd_model': 64, 'n_blocks': 2, 'd_ff': 256, 'dropout': 0.1, 'n_heads': 8
+        'final_fc_dim': 512, 'd_model': 64, 'n_blocks': 2, 'd_ff': 256, 'dropout': 0.1, 'n_heads': 4
     }
     for k, v in defaults.items():
         if k not in mc: 

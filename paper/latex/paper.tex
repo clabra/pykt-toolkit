@@ -11,6 +11,7 @@
 \usepackage{amsmath, amsfonts}
 \usetikzlibrary{arrows.meta}
 \usepackage{svg}
+\usepackage{makecell}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -200,13 +201,13 @@ Our approach contributes to bridging the dichotomy between high-capacity deep le
 Our research is guided by three primary research questions:
 
 \begin{itemize}
-\item RQ1: \textbf{Theory-Based Interpretability Through Grounded Transformers}
+\item RQ1: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
 
-Can DKT models achieve state-of-the-art predictive performance while providing interpretability grounded in established principles and theories? Specifically, can we design a Transformer architecture that produces pedagogically meaningful mastery estimations that are explainable through a causal and interpretable logic, such as BKT?
+Are gTransformer models able to produce interpretable outputs while achieving state-of-the-art predictive performance? What is the trade-off between predictive performance  and interpretability?
 
-\item RQ2: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
+\item RQ2: \textbf{Grounded Interpretability}
 
-How do the metrics of the supervised, interpretable, and BKT predictions compare? What is the cost of interpretability in terms of AUC? How much predictive gain do the interpretable grounded predictions achieve compared to traditional BKT?
+How can we check that the parameters used to get interpretable outputs are really grounded in theory-based estimations?  
 
 \item RQ3: \textbf{Practical Value for Student-Centered Personalization}
 
@@ -214,10 +215,9 @@ How can the longitudinal context captured by a Transformer-based model enhance s
 
 \end{itemize} \label{sec_rq}
 
-The evaluation is designed to address each of these questions. First, to validate \textit{theory-based interpretability} (RQ1), we employ a triple validation protocol consisting of: (1) \textit{structural alignment} via diagnostic probing, confirming that Bayesian constructs ($P_{L_0}, P_T$) are the dominant organizing principles in the latent space (high selectivity $\Delta R^2 > 0.5$); (2) \textit{semantic alignment}, which measures the monotonic consistency between grounded parameters and original theoretical priors to verify pedagogical integrity ($\rho_T = 0.604$); and (3) \textit{functional alignment}, quantifying the confidence with which interpretable estimations can substitute for the supervised baseline. Second, we quantify the \textit{accuracy--interpretability trade-off} (RQ2) across five benchmark datasets, demonstrating that interpretable predictions consistently surpass classical BKT (averaging +17.0\% AUC improvement) with a low interpretability cost relative to black-box architectures. Finally, we demonstrate \textit{student-centered personalization} (RQ3) through context-aware diagnostics. Using case study visualizations of learning trajectories, we illustrate how gTransformer differentiates students based on longitudinal learning history rather than immediate response patterns. By leveraging attention mechanisms to encode longitudinal context that traditional models fundamentally overlook, gTransformer establishes a robust foundation for individualized instruction. This context-driven approach enables educators to move beyond simple outcome prediction toward a understanding of how a student is learning over time.
+The evaluation is designed to address each of these questions. First, to validate RQ1, we quantify the \textit{accuracy--interpretability trade-off} across various benchmark datasets, demonstrating that interpretable predictions consistently surpass classical BKT (averaging +17.0\% AUC improvement) with a low interpretability cost relative to black-box architectures. To validate RQ2, we employ a triple validation protocol consisting of: (1) \textit{structural alignment} via diagnostic probing, confirming that Bayesian concepts are the dominant organizing principles in the latent space (with high selectivity $\Delta R^2 > 0.5$); (2) \textit{semantic alignment}, which measures the monotonic consistency between grounded parameters and original theoretical priors to verify pedagogical integrity ($\rho_T = 0.604$); and (3) \textit{functional alignment}, quantifying the confidence with which interpretable estimations can substitute for the supervised baseline. Finally, we demonstrate \textit{student-centered personalization} (RQ3) through context-aware diagnostics. Using case study visualizations of learning trajectories, we illustrate how gTransformer differentiates students based on longitudinal learning history rather than immediate response patterns. By leveraging attention mechanisms to encode longitudinal context that traditional models fundamentally overlook, gTransformer establishes a robust foundation for individualized instruction. This context-driven approach enables educators to move beyond simple outcome prediction toward a understanding of how a student is learning over time.
 
-
-The remainder of this paper is structured as follows. \Cref{sec_related} reviews related work, while \cref{sec_arch} describes the gTransformer model, detailing the construction of embeddings, the grounding mechanism, and the prediction logic. \Cref{sec_experiment} presents the experimental setup, followed by a discussion of the empirical results in \cref{sec_results}. Finally, \cref{sec_conclusions} provides the conclusions. 
+The remainder of this paper is structured as follows. \Cref{sec_related} reviews related work, while \cref{sec_arch} describes the gTransformer model, detailing the construction of embeddings, the grounding mechanism, and the interpretable predictions. \Cref{sec_experiment} presents the experimental setup, followed by a discussion of the empirical results in \cref{sec_results}. Finally, \cref{sec_conclusions} provides the conclusions. 
 
 \section{Related Work} \label{sec_related}
 
@@ -450,9 +450,9 @@ For the comparative analysis, we selected six models that are among the most fre
 
 \section{Results and Discussion} \label{sec_results}
 
-\subsection{Predictive Performance} \label{sec_performance}
+\subsection{Tradeoff between Predictive Performance and Interpretability (RQ1)} \label{sec_tradeoff}
 
-To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across the five benchmark datasets described in \cref{sec_dataset}. The experimental results are summarized in Table~\ref{tab_performance}.
+To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across the benchmark datasets described in \cref{sec_dataset}. The experimental results are summarized in Table~\ref{tab_performance}.
 
 \begin{table}[htbp]
 \centering
@@ -475,53 +475,91 @@ gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
 \caption{AUC across the datasets evaluated on questions level with mean late fusion. \label{tab_performance}}
 \end{table}
 
-Comparing these results with baseline models, we observe that gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we utilize a version with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0$ and $\lambda_{\text{probe}} = 0$), functioning as a pure neural model to establish its maximum representational capacity. The hyperparameter configurations used for each dataset are shown in \cref{tab:implementation_params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other models. It ranks second on AL2005, BDG2006, and NIPS34, surpassed only by AKT, and third on AS2015, behind ATKT and AKT. These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance alongside theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
+Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we evaluate a configuration with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$) to establish its maximum predictive capacity in the absence of interpretability constraints. Hyperparameter settings for each dataset are detailed in \cref{tab:implementation_params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance while retaining its architectural support for theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
+
+
+The grounded (non-ablated) gTransformer model generates two distinct outputs: (1) supervised predictions from the standard output head ($p_{\text{sup}2}$), and (2) interpretable BKT logic predictions ($p_{\text{ref}}$) derived from the student-specific grounded parameters ($p_{L_0}$, $p_T$). To evaluate the performance trade-off, we compare these against (3) the ablated configuration ($p_{\text{sup}1}$), which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) the classical BKT baseline ($p_{\text{bkt}}$) using population-level parameters. This baseline is omitted for AS2015 because the test data lacks the question-level identifiers required for evaluation. Table \cref{tab:tradeoff} presents the test AUC results for these outputs, quantifying the Interpretability Cost ($p_{\text{sup}1} - p_{\text{ref}}$) and the Interpretability Gain ($p_{\text{ref}} - p_{\text{bkt}}$). The hyperparameter configuration for the grounded model is detailed in Table \cref{tab:params}.
+
 
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{lccccc}
+\begin{tabular}{lccccccc}
 \toprule
-\textbf{Parameter} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
+\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
 \midrule
-\multicolumn{6}{l}{\textit{Architecture Configuration}} \\
-Embedding dimension ($d_{model}$) & 64 & 64 & 64 & 64 & 64 \\
-Transformer blocks ($n_{blocks}$) & 4 & 4 & 4 & 4 & 4 \\
-Attention heads ($num\_attn\_heads$) & 4 & 4 & 4 & 4 & 4 \\
-Feed-forward dimension ($d_{ff}$) & 256 & 256 & 256 & 256 & 256 \\
+AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 & 0.0395 (5.0\%) & 0.1339 (22.0\%) \\
+AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0138 (1.9\%) & --- \\
+AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 & 0.0440 (5.3\%) & 0.0585 (8.1\%) \\
+Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 & 0.0338 (4.1\%) & 0.1054 (15.6\%) \\
+NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0340 (4.2\%) & 0.1937 (33.8\%) \\
 \midrule
-\multicolumn{6}{l}{\textit{Training Configuration}} \\
-Optimizer ($optimizer$) & Adam & Adam & Adam & Adam & Adam \\
-Learning rate ($learning\_rate$) & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $3 \times 10^{-4}$ \\
-Batch size ($batch\_size$) & 64 & 64 & 64 & 64 & 64 \\
-Dropout rate ($dropout$) & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
-Epochs ($epochs$) & 200 & 200 & 200 & 200 & 200 \\
-\midrule
-\multicolumn{6}{l}{\textit{Loss Weights}} \\
-Supervised ($\lambda_{sup}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
-Reference ($\lambda_{ref}$) & 0 & 0 & 0 & 0 & 0 \\
-Probing ($\lambda_{probe}$) & 0 & 0 & 0 & 0 & 0 \\
+\textbf{Mean} & 0.7861 & 0.7845 & 0.7530 & 0.6449 & 0.0018 & 0.0330 (4.1\%) & 0.1229 (19.9\%) \\
 \bottomrule
 \end{tabular}
-\caption{Parameter values used to train gTransformer across all datasets in ablated mode.}
-\label{tab:implementation_params}
+\caption{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} measures the representational cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} measures total interpretability cost ($p_{\text{sup}1} - p_{\text{ref}}$), while \textit{Int. Gain} measures ($p_{\text{ref}} - p_{\text{bkt}}$).}
+\label{tab:tradeoff}
 \end{table}
 
 
-\subsection{Theory-Based Interpretability Through Grounded Transformers (RQ1)} \label{sec_validation}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Hyperparameter} & \textbf{Performance} & \textbf{Trade-off} \\
+\midrule
+\multicolumn{3}{l}{\textit{Ablation Configuration}} \\
+ablation & \texttt{all} & \texttt{none} \\
+$\lambda_{\text{sup}}$ & 1.0 & 1.0 \\
+$\lambda_{\text{ref}}$ & \textbf{0} & 0.5 \\
+$\lambda_{\text{probe}}$ & \textbf{0} & 1.0 \\
+\midrule
+\multicolumn{3}{l}{\textit{Architecture Configuration}} \\
+$d_{\text{model}}$ & 64 & 64 \\
+$n_{\text{blocks}}$ & 4 & 4 \\
+$d_{\text{ff}}$ & 256 & 256 \\
+num. attn. heads & 4 & \makecell{AS2009: 8\\others: 4} \\
+\midrule
+\multicolumn{3}{l}{\textit{Training Configuration}} \\
+learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
+batch size & 64 & 64 \\
+optimizer & adam & adam \\
+epochs & 200 & 200 \\
+dropout & 0.1 & 0.1 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameter configurations for \cref{tab_performance} (Predictive Performance with ablation=all) and \cref{tab:tradeoff} (Accuracy-Interpretability Trade-off with ablation=none). \Cref{tab_performance} disables grounding and probing for maximum predictive performance, while \cref{tab:tradeoff} uses full interpretability with $\lambda_{\text{ref}}=0.5$ and $\lambda_{\text{probe}}=1.0$.}
+\label{tab:params}
+\end{table}
 
-We will use the following hypotheses to validate the RQ1 research question posed in section \ref{sec_intro}: 
+
+The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
-\item \textbf{H1.1: Structural Encoding}
+    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0330 AUC points (4.1\% relative reduction), ranging from a minimum of 1.9\% (AS2015) to a maximum of 5.3\% (AL2005), which is highly acceptable given the substantial gains in transparency.
+    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable gTransformer predictions consistently outperform classical BKT: AS2009 (+22.0\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
+\end{itemize}
+
+In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
+
+
+
+
+\subsection{Grounded Interpretability (RQ2)} \label{sec_grounded}
+
+We will use the following hypotheses to validate the RQ2 research question posed in section \ref{sec_intro}: 
+
+\begin{itemize}
+\item \textbf{H2.1: Structural Encoding}
 
 Latent representations in the gTransformer model are structurally organized around BKT constructs (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
 
-\item \textbf{H1.2: Semantic Alignment}
+\item \textbf{H2.2: Semantic Alignment}
 
 The extracted parameters are semantically aligned with meaningful BKT priors. 
 
-\item \textbf{H1.3: Functional Alignment}
+\item \textbf{H2.3: Functional Alignment}
 
 The interpretable predictions derived from extracted parameters can be used with quantified confidence, enabling educators to identify when theory-grounded explanations are trustworthy versus when additional validation is recommended.
 
@@ -529,7 +567,7 @@ The interpretable predictions derived from extracted parameters can be used with
 
 The objective of this triple validation is to demonstrate that grounding constraints actively shape the model's internal structure, not merely correlate with outputs, producing interpretable predictions. It addresses a fundamental challenge in educational AI: whether neural models can internalize pedagogical theory rather than learning arbitrary features that happen to predict well, and whether such interpretability can be achieved without sacrificing the representational power that makes deep learning effective.
 
-\subsubsection{Structural Alignment via Diagnostic Probing (H1.1)} \label{sec_structural_alignment}
+\subsubsection{Structural Encoding via Diagnostic Probing (H2.1)} \label{sec_structural_alignment}
 
 To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
 
@@ -551,7 +589,7 @@ To verify whether gTransformer's latent representations genuinely internalize pe
     \item \textbf{Learning Rate ($T$)}: Shows even stronger structural encoding with fidelity $R^2 = 0.566$ and Pearson $r = 0.753$. The selectivity reaches $\Delta R^2 = 0.607$, the highest among both constructs, with control $R^2 = -0.041$.
 \end{itemize}
 
-\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates H1.1 (Structural Encoding) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
+\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates H2.1 (Structural Encoding) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
 
 \begin{table}[htbp]
 \centering
@@ -579,9 +617,9 @@ Learning Rate ($T$) & 0.566 & 0.753 & $-0.041$ & \textbf{0.607} \\
 \caption{Structural Fidelity for Learning Rate $P_T$. Plot demonstrating robust linear recoverability ($r=0.753$, $R^2=0.566$) with superior fidelity compared to $P_{L_0}$. The tight clustering around the diagonal indicates the model encodes learning rate dynamics with high precision. \label{fig_structural_fidelity_t}}
 \end{figure}
 
-\subsubsection{Semantic Grounding and Alignment Preservation (H1.2)} \label{sec_semantic_grounding}
+\subsubsection{Semantic Alignment (H2.2)} \label{sec_semantic_alignment}
 
-Hypothesis H1.2 examines whether grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ retain their pedagogical semantics after neural processing. We want to check that models do not repurpose theoretical constructs for black-box optimization. Unlike H1.1, which assesses latent linear decodability, H1.2 validates monotonic relationship preservation in the final projected parameters. Because gTransformer refines population-level priors into student-specific estimates, we prioritize maintaining pedagogical ordering over exact numerical reproduction.
+Hypothesis H2.2 examines whether grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ retain their pedagogical semantics after neural processing. We want to check that models do not repurpose theoretical constructs for black-box optimization. Unlike H2.1, which assesses latent linear decodability, H2.2 validates monotonic relationship preservation in the final projected parameters. Because gTransformer refines population-level priors into student-specific estimates, we prioritize maintaining pedagogical ordering over exact numerical reproduction.
 
 We use Spearman's rank correlation ($\rho$) to measure this alignment, as it assesses monotonic consistency without assuming linearity with thresholds: $\rho \geq 0.6$ strong, $0.4 \leq \rho < 0.6$ moderate. 
 
@@ -593,7 +631,7 @@ We use Spearman's rank correlation ($\rho$) to measure this alignment, as it ass
     \item \textbf{Learning Rate ($P_T$)}: Shows stronger alignment, with Spearman $\rho=0.604$. The comparison with probe parameters ($\rho = 0.760$) again confirms meaningful contextual refinement.
 \end{itemize}
 
-\textbf{Interpretation}: The moderate-to-strong Spearman correlations validate H1.2 (Semantic Alignment) hypothesis: grounded parameters maintain pedagogical ordering after neural transformation while enabling individualization. The gap between grounded and probe correlations (0.309 for $L_0$, 0.156 for $T$) quantifies the degree of context-aware refinement: the model neither abandons theoretical priors nor mechanically reproduces them, achieving the desired balance.
+\textbf{Interpretation}: The moderate-to-strong Spearman correlations validate H2.2 (Semantic Alignment) hypothesis: grounded parameters maintain pedagogical ordering after neural transformation while enabling individualization. The gap between grounded and probe correlations (0.309 for $L_0$, 0.156 for $T$) quantifies the degree of context-aware refinement: the model neither abandons theoretical priors nor mechanically reproduces them, achieving the desired balance.
 
 \Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} visualize the alignment quality through plots comparing BKT theoretical priors (x-axis) against grounded parameters (y-axis). Each point represents a binned aggregate of test interactions, with size proportional to sample density. High-density regions (large bubbles) cluster near the diagonal, confirming rank-order preservation.
 
@@ -602,7 +640,7 @@ We use Spearman's rank correlation ($\rho$) to measure this alignment, as it ass
 \footnotesize
 \begin{tabular}{lcc}
 \toprule
-\textbf{Parameter} & \textbf{Spearman $\rho$ (H1.2)} & \textbf{Interpretation} \\
+\textbf{Parameter} & \textbf{Spearman $\rho$ (H2.2)} & \textbf{Interpretation} \\
 \midrule
 Initial Mastery ($P_{L_0}$) & 0.427 & Moderate \\
 Learning Rate ($P_T$) & 0.604 & Moderate-to-Strong \\
@@ -611,7 +649,7 @@ Learning Rate ($P_T$) & 0.604 & Moderate-to-Strong \\
 \caption{Semantic Alignment results for AS2009. Spearman $\rho$ measures monotonic relationship preservation between grounded parameters and BKT theoretical priors. Moderate-to-strong correlations confirm pedagogical semantics are preserved through neural transformation while enabling student-specific refinement. \label{tab_semantic_alignment}}
 \end{table}
 
-These findings support H1.2, confirming that grounded parameters maintain moderate-to-strong monotonic alignment with pedagogical theory while capturing individual behavioral heterogeneity.
+These findings support H2.2, confirming that grounded parameters maintain moderate-to-strong monotonic alignment with pedagogical theory while capturing individual behavioral heterogeneity.
 
 
 \begin{figure}[htbp]
@@ -623,9 +661,9 @@ These findings support H1.2, confirming that grounded parameters maintain modera
 \caption{Semantic Alignment for Learning Rate $P_{T}$. Plot demonstrating moderate-to-strong monotonic relationship preservation (Spearman $\rho = 0.604$) with superior alignment compared to $P_{L_0}$. The consistently tight clustering around the diagonal across the full $P_T$ range indicates the model reliably preserves pedagogical understanding of practice effects through all neural processing layers while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 
-\subsubsection{Functional Alignment and Prediction Confidence (H1.3)} \label{sec_functional_alignment}
+\subsubsection{Functional Alignment and Prediction Confidence (H2.3)} \label{sec_functional_alignment}
 
-For the third hypothesis H1.3 (Functional Alignment), we compare two prediction paths: interpretable predictions $\hat{y}_{ref}$ generated by feeding enriched parameters (projected from context vectors $z_t$) through BKT logic, and supervised predictions $\hat{y}_{sup}$ obtained directly from an MLP applied to $z_t$. While $\hat{y}_{sup}$ uses the full representational capacity of the neural network for maximum predictive accuracy, $\hat{y}_{ref}$ constrains predictions through pedagogically interpretable BKT parameters, enabling causal explanations at the cost of some predictive power. We assess the \textit{confidence} with which the interpretable reference path can functionally replace the supervised path across different student-skill contexts.
+For the third hypothesis H2.3 (Functional Alignment), we compare two prediction paths: interpretable predictions $\hat{y}_{ref}$ generated by feeding enriched parameters (projected from context vectors $z_t$) through BKT logic, and supervised predictions $\hat{y}_{sup}$ obtained directly from an MLP applied to $z_t$. While $\hat{y}_{sup}$ uses the full representational capacity of the neural network for maximum predictive accuracy, $\hat{y}_{ref}$ constrains predictions through pedagogically interpretable BKT parameters, enabling causal explanations at the cost of some predictive power. We assess the \textit{confidence} with which the interpretable reference path can functionally replace the supervised path across different student-skill contexts.
 
 To quantify prediction trustworthiness, we use a \textit{composite confidence metric} calculated as a weighted sum of three critical dimensions:
 
@@ -658,68 +696,6 @@ The three-component design addresses distinct trust requirements: simple numeric
 
 Across AS2009 test interactions, we observe heterogeneous confidence patterns (\Cref{fig_h13_confidence_heatmap}), with 89.2\% of student-skill pairs achieving medium or high confidence, while only 10.8\% exhibit low confidence. This shows that interpretable predictions provide actionable diagnostic value with quantified uncertainty bounds, enabling educators to leverage theory-grounded explanations while recognizing contexts requiring additional validation.
 
-\subsection{Accuracy--Interpretability Trade-Off (RQ2)} \label{sec_tradeoff}
-
-To quantify the performance trade-off between predictive accuracy and interpretability, we compare various prediction sources using a gTransformer architecture with the hyperparameter configuration shown in Table \ref{tab:interpretabilityparams}. The model produces different types of predictions: (1) predictions ($p_{\text{sup}}$) from the standard output layer, maximizing accuracy without interpretability constraints, (2) interpretable BKT-logic predictions ($p_{\text{ref}}$) derived from student-specific grounded parameters ($p_{L_0}$, $p_T$) extracted from the model's theoretical grounding layer, following classical BKT inference logic. For comparison, we include (3) the classical BKT baseline ($p_{\text{bkt}}$) from a separate traditional BKT model using population-level parameters. This baseline is omitted for AS2015 because the test data does not include the question column required for standardized question-level evaluation. \Cref{tab:tradeoff} presents the test AUC results, quantifying the Interpretability Cost ($p_{\text{sup}1} - p_{\text{ref}}$) incurred by the interpretable output and the Interpretability Gain ($p_{\text{ref}} - p_{\text{bkt}}$) achieved relative to the classical BKT baseline. 
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{lccccccc}
-\toprule
-\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
-\midrule
-AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 & 0.0395 (5.0\%) & 0.1339 (22.0\%) \\
-AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0138 (1.9\%) & --- \\
-AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 & 0.0440 (5.3\%) & 0.0585 (8.1\%) \\
-Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 & 0.0338 (4.1\%) & 0.1054 (15.6\%) \\
-NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0340 (4.2\%) & 0.1937 (33.8\%) \\
-\midrule
-\textbf{Mean} & 0.7861 & 0.7845 & 0.7530 & 0.6449 & 0.0018 & 0.0330 (4.1\%) & 0.1229 (19.9\%) \\
-\bottomrule
-\end{tabular}
-\caption{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} measures the representational cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} measures total interpretability cost ($p_{\text{sup}1} - p_{\text{ref}}$), while \textit{Int. Gain} measures ($p_{\text{ref}} - p_{\text{bkt}}$).}
-\label{tab:tradeoff}
-\end{table}
-
-The results reveal two insights regarding the accuracy--interpretability trade-off:
-
-\begin{itemize}
-    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0330 AUC points (4.1\% relative reduction), ranging from a minimum of 1.9\% (AS2015) to a maximum of 5.3\% (AL2005), which is highly acceptable given the substantial gains in transparency.
-    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable neural predictions consistently outperform classical BKT: AS2009 (+22.0\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
-\end{itemize}
-
-In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Parameter} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
-\midrule
-\multicolumn{6}{l}{\textit{Architecture Configuration}} \\
-Embedding dimension ($d_{model}$) & 64 & 64 & 64 & 64 & 64 \\
-Transformer blocks ($n_{blocks}$) & 4 & 4 & 4 & 4 & 4 \\
-Attention heads & 8 & 4 & 4 & 4 & 4 \\
-Feed-forward dimension ($d_{ff}$) & 256 & 256 & 256 & 256 & 256 \\
-\midrule
-\multicolumn{6}{l}{\textit{Training Configuration}} \\
-Optimizer & Adam & Adam & Adam & Adam & Adam \\
-Learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
-Batch size & 64 & 64 & 64 & 64 & 64 \\
-Dropout rate & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 \\
-Epochs & 200 & 200 & 200 & 200 & 200 \\
-\midrule
-\multicolumn{6}{l}{\textit{Loss Functions}} \\
-Ablation mode & none & none & none & none & none \\
-Supervised loss weight ($\lambda_{sup}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
-Reference loss weight ($\lambda_{ref}$) & 0.5 & 0.5 & 0.5 & 0.5 & 0.5 \\
-Probing loss weight ($\lambda_{probe}$) & 1.0 & 1.0 & 1.0 & 1.0 & 1.0 \\
-\bottomrule
-\end{tabular}
-\caption{Parameter values used to train gTransformer across all datasets.}
-\label{tab:interpretabilityparams}
-\end{table}
 
 
 \subsection{Context-Aware Diagnostics (RQ3)} \label{sec_gran_results}

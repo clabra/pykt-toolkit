@@ -1,12 +1,90 @@
 {
-    "generated_at": "2026-01-26T09:54:40.158873",
-    "campaign": "20260125_191032_ablation-none-datasets_algebra2005_220246",
+    "generated_at": "2026-02-05T20:13:03.761305",
+    "campaign": "20260202_222258_benchpaper_893468",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
+        "akt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "atkt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkt": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "dkvmn": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
         "gtransformer": {
-            "algebra2005": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "saint": {
+            "assist2009": {
+                "status": "PENDING",
+                "auc_mean": null,
+                "auc_std": null,
+                "acc_mean": null,
+                "acc_std": null,
+                "folds_ok": 0,
+                "folds_running": 0,
+                "folds_total": 5,
+                "fold_data": {}
+            }
+        },
+        "sakt": {
+            "assist2009": {
                 "status": "PENDING",
                 "auc_mean": null,
                 "auc_std": null,

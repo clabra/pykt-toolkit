@@ -1,54 +1,46 @@
 {
-    "generated_at": "2026-02-03T07:35:09.676148",
-    "campaign": "all_experiments",
+    "generated_at": "2026-02-06T01:02:54.185356",
+    "campaign": "20260202_222258_benchpaper_assist2009_893468",
     "protocol": "question-level late fusion (mean)",
     "metrics_note": "AUC/ACC values are question-level averages using late fusion protocol (mean aggregation across skills per question)",
     "p_ref_note": "p_ref metrics available only for grounded models (gtransformer) when dual_eval was used during evaluation",
     "results": {
         "gtransformer": {
-            "assist2015": {
-                "status": "QUEUED",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
+            "assist2009": {
+                "status": "PASS",
+                "auc_mean": 0.7814065078711654,
+                "auc_std": 0.0014797933056046317,
+                "acc_mean": 0.7369464538599916,
+                "acc_std": 0.0009788569973979144,
+                "folds_ok": 5,
                 "folds_running": 0,
                 "folds_total": 5,
-                "fold_data": {}
-            },
-            "algebra2005": {
-                "status": "QUEUED",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            },
-            "bridge2algebra2006": {
-                "status": "QUEUED",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
-            },
-            "nips_task34": {
-                "status": "QUEUED",
-                "auc_mean": null,
-                "auc_std": null,
-                "acc_mean": null,
-                "acc_std": null,
-                "folds_ok": 0,
-                "folds_running": 0,
-                "folds_total": 5,
-                "fold_data": {}
+                "fold_data": {
+                    "0": {
+                        "auc": 0.7832507793377871,
+                        "acc": 0.7379339380717266
+                    },
+                    "1": {
+                        "auc": 0.7806100023855683,
+                        "acc": 0.7357331496153404
+                    },
+                    "2": {
+                        "auc": 0.780584517351147,
+                        "acc": 0.7377999770352509
+                    },
+                    "3": {
+                        "auc": 0.7795312315326952,
+                        "acc": 0.7357905614881157
+                    },
+                    "4": {
+                        "auc": 0.7830560087486292,
+                        "acc": 0.7374746430895243
+                    }
+                },
+                "auc_ref_mean": 0.7436188728857124,
+                "auc_ref_std": 0.0008484464653644916,
+                "acc_ref_mean": 0.7225169365024686,
+                "acc_ref_std": 0.0009144021096640369
             }
         }
     }

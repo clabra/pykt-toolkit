@@ -1040,14 +1040,6 @@ def main():
                                         "required_files": ["qid_test_question_predictions_supervised.txt", "qid_test_question_predictions_reference.txt"]
                                     },
                                     {
-                                        "name": "Structural Encoding Validation (H1.1)",
-                                        "script": "examples/results/structural_encoding_validation.py",
-                                        "args": {
-                                            "--exp_dir": str(fold_dir)
-                                        },
-                                        "required_files": []  # Auto-discovers .ckpt files
-                                    },
-                                    {
                                         "name": "Prediction Envelope Gallery",
                                         "script": "examples/results/generate_prediction_envelope_gallery.py",
                                         "args": {
@@ -1186,11 +1178,12 @@ def main():
                                                 # Check for specific known issues
                                                 if "Model architecture mismatch" in result.stderr or "size mismatch" in result.stderr:
                                                     print(f"    [SKIP] Model architecture mismatch - incompatible checkpoint")
+                                                    plots_skipped += 1
                                                 else:
                                                     print(f"    [WARN] Script exited with code {result.returncode}")
                                                     if result.stderr:
                                                         print(f"    Error: {result.stderr[:200]}")
-                                                plots_failed += 1
+                                                    plots_failed += 1
                                             else:
                                                 print(f"    [OK] Completed successfully")
                                                 plots_generated += 1
@@ -1221,6 +1214,7 @@ def main():
                             # validation_dir already created at dataset level above
                             
                             # Check if this is a grounded model (gtransformer with active grounding)
+                            # First try eval_results.json, then fall back to config.json
                             eval_results_path = None
                             for root, dirs, files in os.walk(fold_dir):
                                 if "eval_results.json" in files:
@@ -1232,6 +1226,16 @@ def main():
                                 with open(eval_results_path, 'r') as f:
                                     eval_results = json.load(f)
                                     is_grounded = eval_results.get("grounded", False)
+                            
+                            # If not found in eval_results, check config.json
+                            if not is_grounded:
+                                config_path = Path(fold_dir) / "config.json"
+                                if config_path.exists():
+                                    with open(config_path, 'r') as f:
+                                        config = json.load(f)
+                                        params = config.get('params', {})
+                                        # Check if active_grounding is enabled (ablation=none means active_grounding=1)
+                                        is_grounded = params.get('active_grounding', 0) == 1 or params.get('ablation', 'all') == 'none'
                             
                             if not is_grounded:
                                 print(f"  [SKIP] Probing analysis (model not grounded)")
@@ -1257,10 +1261,11 @@ def main():
                                     
                                     validation_script = Path(PROJECT_ROOT) / "examples" / "validation" / "validate_parameter_recovery.py"
                                     if validation_script.exists():
+                                        # validate_parameter_recovery.py expects dataset dir (with all folds), not a single fold
                                         cmd = [
                                             sys.executable, 
                                             str(validation_script),
-                                            "--exp_dir", str(fold_dir),
+                                            "--exp_dir", str(dataset_dir),
                                             "--output_dir", str(validation_dir)
                                         ]
                                         
@@ -1288,6 +1293,57 @@ def main():
                                             print(f"    [WARN] Validation failed: {e}")
                                     else:
                                         print(f"  [SKIP] Validation script not found: {validation_script}")
+                            
+                            # 3. Run H1.1 structural encoding validation using campaign validation script
+                            print(f"\n  H1.1 Structural Encoding Validation:")
+                            
+                            # Use the proven campaign validation script which handles all the complexities
+                            campaign_validation_script = Path(PROJECT_ROOT) / "examples" / "validation" / "run_structural_validation_campaign.py"
+                            
+                            if not campaign_validation_script.exists():
+                                print(f"  [SKIP] Campaign validation script not found: {campaign_validation_script}")
+                            else:
+                                # The script expects the campaign directory structure
+                                # We need to pass the campaign directory (parent of gtransformer)
+                                cmd = [
+                                    sys.executable,
+                                    str(campaign_validation_script),
+                                    "--campaign_dir", str(campaign_dir),
+                                    "--datasets", dataset,
+                                    "--skip_existing"  # Don't rerun completed folds
+                                ]
+                                
+                                print(f"  [RUN] Running campaign validation for {dataset}...")
+                                try:
+                                    result = subprocess.run(cmd, check=False, cwd=PROJECT_ROOT,
+                                                          capture_output=True, text=True, timeout=900)
+                                    if result.returncode != 0:
+                                        print(f"    [WARN] Validation exited with code {result.returncode}")
+                                        if result.stderr:
+                                            print(f"    Error: {result.stderr[:500]}")
+                                    else:
+                                        print(f"    [OK] Validation completed successfully")
+                                        # Check if aggregated results were generated
+                                        aggregated_file = validation_dir / "structural_encoding_aggregated.json"
+                                        if aggregated_file.exists():
+                                            with open(aggregated_file, 'r') as f:
+                                                aggregated_results = json.load(f)
+                                            
+                                            # Extract H1.1 metrics
+                                            h11_data = aggregated_results.get('h1_structural_encoding', {})
+                                            l0_data = h11_data.get('l0', {})
+                                            t_data = h11_data.get('t', {})
+                                            
+                                            print(f"    Results:")
+                                            print(f"      L0 Fidelity:     {l0_data.get('fidelity_mean', 'N/A'):.3f} ± {l0_data.get('fidelity_std', 'N/A'):.3f}")
+                                            print(f"      L0 Selectivity:  {l0_data.get('selectivity_mean', 'N/A'):.3f} ± {l0_data.get('selectivity_std', 'N/A'):.3f}")
+                                            print(f"      T Fidelity:      {t_data.get('fidelity_mean', 'N/A'):.3f} ± {t_data.get('fidelity_std', 'N/A'):.3f}")
+                                            print(f"      T Selectivity:   {t_data.get('selectivity_mean', 'N/A'):.3f} ± {t_data.get('selectivity_std', 'N/A'):.3f}")
+                                            print(f"      Folds:           {aggregated_results.get('n_folds', 'N/A')}")
+                                except subprocess.TimeoutExpired:
+                                    print(f"    [WARN] Validation timeout (900s)")
+                                except Exception as e:
+                                    print(f"    [WARN] Validation failed: {e}")
         
         print(f"\n{'='*70}")
         print(f"VALIDATION COMPLETE")

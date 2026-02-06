@@ -8,9 +8,9 @@
                 "pearson_r": 0.6822000685894267
             },
             "selectivity": {
-                "standard_delta_r2": 0.5175819720231262,
+                "standard_delta_r2": 0.5372616698494371,
                 "strict_delta_r2": -0.5125502221176461,
-                "control_r2_obs": -0.06937100133149654,
+                "control_r2_obs": -0.0890506991578075,
                 "control_r2_skill": 0.9607611928092757
             }
         },
