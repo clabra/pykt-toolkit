@@ -552,25 +552,27 @@ We will use the following hypotheses to validate the RQ2 research question posed
 \begin{itemize}
 \item \textbf{H2.1: Structural Alignment}
 
-Latent representations in the gTransformer model are structurally organized around BKT constructs (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
+Latent representations in the gTransformer model are structurally organized around BKT concepts (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
 
 \item \textbf{H2.2: Semantic Alignment}
 
-The extracted parameters are semantically aligned with meaningful BKT priors. 
+The enriched extracted parameters are semantically aligned with the BKT concepts. 
 
 \item \textbf{H2.3: Functional Alignment}
 
-The interpretable predictions derived from extracted parameters can be used with quantified confidence, enabling educators to identify when theory-grounded explanations are trustworthy versus when additional validation is recommended.
+Interpretable predictions derived from the extracted parameters can be utilized instead of supervised predictions with quantified confidence.
 
 \end{itemize}
 
-The objective of this triple validation is to demonstrate that grounding constraints actively shape the model's internal structure, rather than merely correlating with outputs, to produce interpretable predictions. It addresses a fundamental challenge in educational AI: whether deep learning models can internalize pedagogical theory, rather than learning arbitrary features that happen to yield accurate predictions. We evaluate these hypotheses using the AS2009 dataset, one of the most widely-used benchmarks in knowledge tracing research, offering rich student interaction data and demonstrating strong predictive performance with gTransformer (AUC = 0.7814), making it an ideal testbed for examining the interplay between interpretability and model capacity.
+For the remainder of this study, we employ AS2009 as our reference dataset. Given its status as a widely used benchmark and its rich interaction data, it provides an ideal testbed for validating structural and semantic alignment, especially considering the high predictive AUC gTransformer achieves on this data.
 
 \subsubsection{Structural Alignment via Diagnostic Probing (H2.1)} \label{sec_structural_alignment}
 
-To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
+The H2.1 objective is to demonstrate that grounding constraints actively shape the model's internal structure, rather than merely correlating with outputs, to produce interpretable predictions. This addresses a fundamental challenge: whether deep learning models can internalize pedagogical theory, rather than learning arbitrary features that happen to yield accurate predictions. 
 
-\textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. If probes perform equally well on shuffled targets, the representations lack genuine structural encoding. Conversely, high selectivity ($\Delta R^2 > 0.5$) demonstrates that BKT constructs are the primary organizing axes rather than incidental patterns. 
+To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
+
+\textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. If probes perform equally well on shuffled targets, the representations lack genuine structural encoding. Conversely, high selectivity ($\Delta R^2 > 0.5$) demonstrates that BKT constructs are the primary organizing principles rather than incidental patterns. 
 
 \begin{itemize}
     \item \textbf{Fidelity}: The $R^2$ (coefficient of determination) is calculated on the test set, representing the proportion of the variance in the theoretical parameters that is predictable from the gTransformer's latent space:
@@ -580,41 +582,37 @@ To verify whether gTransformer's latent representations genuinely internalize pe
     \[ \Delta R^2 = R^2_{\text{true}} - R^2_{\text{control}} \]
 \end{itemize}
 
-\Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} present the diagnostic probing results on AS2009 via parity plots, comparing BKT theoretical priors (x-axis) with probe-extracted parameters (y-axis). Each point represents an aggregate of interactions, with its size proportional to the sample density. The tight adherence to the diagonal confirms a high degree of linear recoverability, with the obtained values indicating strong structural encoding:
+\Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} present the diagnostic probing results via parity plots, comparing BKT theoretical priors (x-axis) with probe-extracted parameters (y-axis). Each point represents an aggregate of interactions, with its size proportional to the sample density. The high adherence to the diagonal confirms a high degree of linear recoverability, with the obtained values indicating strong structural encoding:
 
 \begin{itemize}
-    \item \textbf{Initial Mastery ($L_0$)}: Achieves fidelity $R^2 = 0.549 \pm 0.064$ with Pearson $r = 0.743 \pm 0.041$, indicating strong linear recoverability. The selectivity $\Delta R^2 = 0.619 \pm 0.073$ exceeds the threshold of 0.5, demonstrating that $L_0$ is a dominant organizing principle in the latent space rather than an incidental pattern. The control task yields a negative $R^2 = -0.069$ (indicating performance worse than a mean-based baseline), confirming that probes cannot recover shuffled targets.
+    \item \textbf{Initial Mastery $P(L_0)$}: Achieves fidelity $R^2 = 0.549 \pm 0.064$ with Pearson $r = 0.743 \pm 0.041$, indicating strong linear recoverability. The selectivity $\Delta R^2 = 0.619 \pm 0.061$ exceeds the threshold of 0.5, demonstrating that this is a dominant organizing principle in the latent space rather than an incidental pattern. The control task yields a negative $R^2 = -0.069$ (indicating performance worse than a mean-based baseline), confirming that probes cannot recover shuffled targets.
     
-    \item \textbf{Learning Rate ($T$)}: Shows strong structural encoding with fidelity $R^2 = 0.515 \pm 0.080$ and Pearson $r = 0.721 \pm 0.050$. The selectivity reaches $\Delta R^2 = 0.570 \pm 0.070$, demonstrating robust encoding of learning rate dynamics, with control $R^2 = -0.055$.
+    \item \textbf{Learning Rate $P(T)$}: Shows strong structural encoding with fidelity $R^2 = 0.515 \pm 0.080$ and Pearson $r = 0.721 \pm 0.050$. The selectivity reaches $\Delta R^2 = 0.570 \pm 0.080$, demonstrating robust encoding of learning rate dynamics, with control $R^2 = -0.055$.
 \end{itemize}
 
-\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates the H2.1 (Structural Alignment) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
-
-
-
-
+\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates the H2.1 (Structural Alignment) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing concepts in final representations used for prediction. 
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_probe_893468.png}
-\caption{Structural Fidelity for Initial Mastery $P_{L_0}$. Plot showing strong linear recoverability ($R^2=0.549$, $r=0.743$, $\Delta=0.619$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The tight adherence to the diagonal and high selectivity ($\Delta > 0.5$) validate that $P_{L_0}$ is a dominant organizing principle in latent representations. \label{fig_structural_fidelity_l0}}
+\caption{Structural Fidelity for Initial Mastery $P(L_0)$. Plot showing demonstrating strong linear recoverability ($R^2=0.549$, $r=0.743$, $\Delta R^2 = 0.619$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The high adherence to the diagonal and high selectivity ($\Delta R^2 > 0.5$) validate that this is a dominant organizing principle in latent representations. \label{fig_structural_fidelity_l0}}
 \vspace{12pt}
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_probe_893468.png}
-\caption{Structural Fidelity for Learning Rate $P_T$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta=0.570$) between BKT theoretical priors and probe-extracted parameters. The tight clustering around the diagonal and high selectivity ($\Delta > 0.5$) confirm that learning rate dynamics are dominantly encoded in latent representations. \label{fig_structural_fidelity_t}}
+\caption{Structural Fidelity for Learning Rate $P(T)$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2 = 0.570$) between BKT theoretical priors and probe-extracted parameters. The high adherence to the diagonal and high selectivity ($\Delta R^2 > 0.5$) confirm that learning rate dynamics are dominantly encoded in latent representations. \label{fig_structural_fidelity_t}}
 \end{figure}
 
 \subsubsection{Semantic Alignment (H2.2)} \label{sec_semantic_alignment}
 
-Hypothesis H2.2 examines whether grounded parameters $\{p_{L_0,t}, p_{T,t}\}$ retain their pedagogical semantics after processing, ensuring models do not repurpose theoretical constructs for black-box optimization. Unlike H2.1, which probes latent representations, H2.2 validates monotonic relationship preservation in final projected parameters. We use Spearman's rank correlation ($\rho$) to measure alignment, as it captures monotonic consistency without assuming linearity ($\rho \geq 0.6$ strong, $0.4 \leq \rho < 0.6$ moderate).
+Hypothesis H2.2 examines whether grounded parameters retain their pedagogical semantics after processing, ensuring models do not repurpose theoretical constructs for black-box optimization. Unlike H2.1, which probes latent representations, H2.2 validates monotonic relationship preservation in final projected parameters. We use Spearman's rank correlation ($\rho$) to measure alignment, as it captures monotonic consistency without assuming linearity ($\rho \geq 0.6$ strong, $0.4 \leq \rho < 0.6$ moderate).
 
-\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} present parity plots comparing BKT theoretical priors (x-axis) with grounded parameters (y-axis), where each bubble represents an aggregate of test interactions with size encoding sample density. The patterns reveal differential preservation strategies:
+\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} present parity plots comparing BKT theoretical priors (x-axis) with grounded parameters (y-axis), where each bubble represents an aggregate of test interactions with size encoding sample density. The patterns reveal that:
 
 \begin{itemize}
-    \item \textbf{Initial Mastery ($P_{L_0}$)} shows weak alignment ($\rho = 0.360$, $r = 0.353$) with substantial scatter, indicating strong student-specific individualization. However, MAE = $0.168$ validates that refinements remain within pedagogical bounds, the model neither abandons nor mechanically reproduces theoretical priors.
-    \item \textbf{Learning Rate ($P_T$)} demonstrates moderate alignment ($\rho = 0.544$, $r = 0.470$) with clustering around the diagonal. The low MAE = $0.092$ confirms the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
+    \item \textbf{Initial Mastery ($P_{L_0}$)} shows weak alignment ($\rho = 0.360$) with substantial scatter, indicating strong student-specific individualization. However, MAE = $0.168$ validates that refinements remain within pedagogical bounds, indicating that the model neither abandons nor mechanically reproduces theoretical priors.
+    \item \textbf{Learning Rate ($P_T$)} demonstrates moderate alignment ($\rho = 0.544$). A low MAE = $0.092$ confirms the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
 \end{itemize}
 
-These findings support H2.2: grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The differential alignment ($P_T$ moderate, $P_{L_0}$ weak) reveals that learning rates preserve more theoretical structure while initial mastery estimates undergo stronger individualization.
+These findings support that grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The differential alignment reveals that learning rates preserve more theoretical structure while initial mastery estimates undergo stronger individualization.
 
 
 \begin{figure}[htbp]

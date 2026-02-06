@@ -588,8 +588,6 @@ INPUT /workspaces/pykt-toolkit/paper/latex/img/h12_recovery_l0_grounded_893468.p
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h12_recovery_t_grounded_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h12_recovery_t_grounded_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h12_recovery_t_grounded_893468.png
-INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr7t.vf
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8r.tfm
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h13_skill_confidence_heatmap_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h13_skill_confidence_heatmap_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h13_skill_confidence_heatmap_893468.png
@@ -605,6 +603,8 @@ INPUT /workspaces/pykt-toolkit/paper/latex/img/cluster_placement_pacing_contextu
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h3_skill_quadrant_comparison_mosaic_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h3_skill_quadrant_comparison_mosaic_893468.png
 INPUT /workspaces/pykt-toolkit/paper/latex/img/h3_skill_quadrant_comparison_mosaic_893468.png
+INPUT /usr/share/texlive/texmf-dist/fonts/vf/adobe/palatino/pplr7t.vf
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplr8r.tfm
 INPUT /workspaces/pykt-toolkit/paper/latex/paper.bbl
 INPUT /workspaces/pykt-toolkit/paper/latex/paper.bbl
 INPUT /workspaces/pykt-toolkit/paper/latex/paper.aux
