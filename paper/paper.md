@@ -1,6 +1,6 @@
 # Paper - Results Reproducibility
 
-## Paper Table 4 - Trade-off (paper.tex label: tab:tradeoff)
+## Paper Table 3 - Trade-off (paper.tex label: tab:tradeoff)
 
 | Dataset | Best Test AUC (p_sup) | AUC (p_ref) | AUC (p_bkt) | Cost (%) | Exp ID | Experiment Folder | **Architecture Configuration** |  |  |  | **Training Configuration** |  |  |  | **Loss Functions** |  |  |  | Notes |
 |---------|----------------------|-------------|-------------|----------|--------|-------------------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|-------|

@@ -405,28 +405,26 @@ This loss implements a grounding mechanism that constrains the context vector $z
 
 The default configuration uses weight coefficients $\lambda_{\text{sup}} = 1.0$, $\lambda_{\text{ref}} = 0.5$, and $\lambda_{\text{probe}} = 1.0$, balancing supervised performance with theoretical grounding while prioritizing global latent space alignment through active probing.
 
-
 \section{Experimental Setup} \label{sec_experiment}
 
-This section details the experimental framework employed to evaluate gTransformer, covering training configurations, five benchmark educational datasets, and the baseline models selected for comparison.
-
+This section details the experimental setup employed to train and evaluate gTransformer relative to various baseline models. It includes a description of the training configurations, datasets, and benchmark models selected for comparative evaluation. 
 
 \subsection{Training Setup}
 
-The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline models implementation. 
+The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline model implementation. 
 
-Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using the Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for baseline models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison. Parameters for gTransformer are detailed in \cref{tab:implementation_params} and \cref{tab:interpretabilityparams}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
+Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison. Hyperparameters used for gTransformer training are detailed in \cref{tab:params}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
 
 \subsection{Datasets}\label{sec_dataset}
 
-We evaluated gTransformer using five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}. 
+To validate if gTransformer is competitive in terms of predictive performance, we used five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}. 
 
 \begin{itemize}
     \item \textbf{ASSISTments 2009 (AS2009)}: Collected from the ASSISTments platform during the 2009-2010 school year, this dataset consists of math exercises and has served as the de facto standard benchmark for KT research for the past decade \citep{feng2009addressing}.
-    \item \textbf{ASSISTments 2015 (AS2015)}: A larger release from the same platform (2015), featuring the highest volume of students among the ASSISTments datasets while focusing on a specific set of 100 knowledge concepts \citep{feng2009addressing}.
-    \item \textbf{Algebra 2005 (AL2005)}: Released as part of the KDD Cup 2010 EDM Challenge, it contains detailed step-level responses from 13-14 year old students solving Algebra problems \citep{stamper2010algebra}.
-    \item \textbf{Bridge to Algebra 2006 (BDG2006)}: Also from the KDD Cup 2010 Challenge, this dataset focuses on the Bridge to Algebra tutoring system and features a significantly higher number of total interactions \citep{stamper2010algebra}.
-    \item \textbf{NeurIPS 2020 Education Challenge (NIPS34)}: A more recent diagnostic dataset from the Eedi platform containing student answers to multiple-choice math questions, characterized by high-quality subjects trees used for concept mapping \citep{wang2020instructions}.
+    \item \textbf{ASSISTments 2015 (AS2015)}: A larger release from the same platform, for the 2015 school year, containing the highest number of students among the ASSISTments datasets. It focuses on a specific set of 100 knowledge concepts \citep{feng2009addressing}.
+    \item \textbf{Algebra 2005 (AL2005)}: Released as part of the KDD Cup 2010 EDM Challenge, it contains responses from 13-14 year old students solving Algebra problems \citep{stamper2010algebra}.
+    \item \textbf{Bridge to Algebra 2006 (BDG2006)}: Also from the KDD Cup 2010 Challenge, this dataset focuses on the \textit{Bridge to Algebra} tutoring system and includes a high number of total interactions \citep{stamper2010algebra}.
+    \item \textbf{NeurIPS 2020 Education Challenge (NIPS34)}: A more recent dataset from the Eedi platform containing student answers to multiple-choice math questions, characterized by subjects trees used for concept mapping \citep{wang2020instructions}.
 \end{itemize}
 
 The characteristics of the datasets are summarized in Table~\ref{tab_datasets}: 
@@ -444,17 +442,17 @@ BDG2006 & 1,146 & 493 & 207,856 & 3,679,199 \\
 NIPS34 & 4,918 & 57 & 948 & 1,382,727 \\
 \bottomrule
 \end{tabularx}
-\caption{Statistics for the five benchmark datasets used in this study. $N_s$, $N_c$, $N_q$, and $N_i$ denote the total number of sequences (students), knowledge components (concepts or skills), unique questions, and student-item interactions, respectively. \label{tab_datasets}}
+\caption{Characteristics of the benchmark datasets used to evaluate AUC. $N_s$, $N_c$, $N_q$ and $N_i$ denote the total number of sequences (students), knowledge components, questions and student-item interactions, respectively. \label{tab_datasets}}
 \end{table}
 
 \subsection{Baseline Models}\label{sec_models}
 
-For the comparative analysis, we selected six models that are among the most frequently mentioned baselines \citep{liu2022pykt}: DKT \citep{piech2015deep}, DKVMN \citep{zhang2017dynamic}, SAKT \citep{pandey2019self}, SAINT \citep{choi2020towards}, AKT \citep{ghosh2020context}, and ATKT \citep{GuoHZTL21}. These models represent a comprehensive cross-section of the recurrent (DKT), memory-augmented (DKVMN), adversarial (ATKT), and attention-based (SAKT, SAINT, AKT) paradigms, providing a robust and diverse benchmark for evaluating gTransformer.
+For the comparative analysis, we selected six models that are among the most frequently mentioned baselines \citep{liu2022pykt}: DKT \citep{piech2015deep}, DKVMN \citep{zhang2017dynamic}, SAKT \citep{pandey2019self}, SAINT \citep{choi2020towards}, AKT \citep{ghosh2020context} and ATKT \citep{GuoHZTL21}. These models represent a representative selection of the recurrent (DKT), memory-augmented (DKVMN), adversarial (ATKT), and attention-based (SAKT, SAINT, AKT) paradigms, providing a robust and diverse benchmark for evaluating our model.
 
 
 \section{Results and Discussion} \label{sec_results}
 
-\subsection{Tradeoff between Predictive Performance and Interpretability (RQ1)} \label{sec_tradeoff}
+\subsection{Trade-Off between Predictive Performance and Interpretability (RQ1)} \label{sec_tradeoff}
 
 To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across the benchmark datasets described in \cref{sec_dataset}. The experimental results are summarized in Table~\ref{tab_performance}.
 
@@ -476,13 +474,12 @@ gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
 \end{tabularx}
 \vspace{2mm}
 \raggedright
-\caption{Comparison of predictive performance across various benchmark datasets. The table presents the test Area Under the Curve (AUC) for gTransformer and baseline models. Performances are evaluated at the question level using the mean late-fusion protocol to ensure fair comparison across diverse architectures. Values in bold indicate the best-performing model for each dataset. \label{tab_performance}}
+\caption{Comparison of predictive performance across various benchmark datasets. The table reports AUC values for gTransformer and baseline models evaluated at the question level, following a mean late-fusion protocol. Values in bold indicate the best-performing model for each dataset. \label{tab_performance}}
 \end{table}
 
-Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we evaluate a configuration with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$) to establish its maximum predictive capacity in the absence of interpretability constraints. Hyperparameter settings for each dataset are detailed in \cref{tab:params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance while retaining its architectural support for theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
+Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. To ensure a fair comparison with these non-interpretable baselines, we evaluated gTransformer in an ablated configuration ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$). This approach establishes the model's maximum predictive capacity in the absence of theoretical constraints, allowing for a direct assessment against other deep learning architectures. On AS2009, gTransformer achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering competitive predictive performance while retaining its architectural support for theory-based interpretability. 
 
-
-The grounded (non-ablated) gTransformer model generates two distinct outputs: (1) supervised predictions from the standard output head ($p_{\text{sup}2}$), and (2) interpretable BKT logic predictions ($p_{\text{ref}}$) derived from the student-specific grounded parameters ($p_{L_0}$, $p_T$). To evaluate the performance trade-off, we compare these against (3) the ablated configuration ($p_{\text{sup}1}$), which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) the classical BKT baseline ($p_{\text{bkt}}$) using population-level parameters. This baseline is omitted for AS2015 because the test data lacks the question-level identifiers required for evaluation. Table \cref{tab:tradeoff} presents the test AUC results for these outputs, quantifying the Interpretability Cost ($p_{\text{sup}1} - p_{\text{ref}}$) and the Interpretability Gain ($p_{\text{ref}} - p_{\text{bkt}}$). The hyperparameter configuration for the grounded model is detailed in Table \cref{tab:params}.
+The grounded (non-ablated) gTransformer variant generates two outputs: (1) supervised predictions from the standard output head ($p_{\text{sup}2}$) and (2) interpretable predictions ($p_{\text{ref}}$) derived from the grounded parameters. To evaluate the performance trade-off, we use also (3) supervised predictions from the ablated configuration ($p_{\text{sup}1}$), which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) predictions from the BKT model ($p_{\text{bkt}}$) using population-level parameters (this baseline is omitted for AS2015 because this dataset lacks the question-level identifiers required for evaluation). We quantify \textit{Interpretability Drop} as ($p_{\text{sup}1} - p_{\text{sup}2}$), the expected reduction in supervised predictive power caused by the structural constraints required to align the latent space with theoretical constructs. The \textit{Interpretability Cost} is measured as ($p_{\text{sup}2} - p_{\text{ref}}$), representing the sacrifice in accuracy required to achieve intrinsic pedagogical transparency. Conversely, the \textit{Interpretability Gain}, defined as ($p_{\text{ref}} - p_{\text{bkt}}$), represents the performance benefit of our grounded approach over the interpretable BKT baseline. \Cref{tab:tradeoff} presents the results for these metrics. 
 
 
 \begin{table}[htbp]
@@ -490,18 +487,18 @@ The grounded (non-ablated) gTransformer model generates two distinct outputs: (1
 \small
 \begin{tabular}{lccccccc}
 \toprule
-\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
+\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop (\%)} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
 \midrule
-AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 & 0.0378 (4.8\%) & 0.1339 (22.0\%) \\
-AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 & 0.0130 (1.8\%) & --- \\
-AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 & 0.0437 (5.3\%) & 0.0585 (8.1\%) \\
-Bridge2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 & 0.0297 (3.7\%) & 0.1054 (15.6\%) \\
-NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0321 (4.0\%) & 0.1937 (33.8\%) \\
+AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 (0.2\%) & 0.0378 (4.8\%) & 0.1339 (22.0\%) \\
+AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 (0.1\%) & 0.0130 (1.8\%) & --- \\
+AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 (0.0\%) & 0.0437 (5.3\%) & 0.0585 (8.1\%) \\
+BDG2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 (0.5\%) & 0.0297 (3.6\%) & 0.1054 (15.6\%) \\
+NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 (0.2\%) & 0.0321 (4.0\%) & 0.1937 (33.8\%) \\
 \midrule
-\textbf{Mean} & 0.7861 & 0.7845 & 0.7530 & 0.6449 & 0.0018 & 0.0313 (3.9\%) & 0.1229 (19.9\%) \\
+\textbf{Mean} & 0.7861 & 0.7843 & 0.7530 & 0.6449 & 0.0018 (0.2\%) & 0.0313 (3.9\%) & 0.1229 (19.9\%) \\
 \bottomrule
 \end{tabular}
-\caption{Accuracy--Interpretability trade-off across datasets with gTransformer. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$), and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} measures the representational cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} measures total interpretability cost ($p_{\text{sup}1} - p_{\text{ref}}$), while \textit{Int. Gain} measures ($p_{\text{ref}} - p_{\text{bkt}}$).}
+\caption{AUC--Interpretability trade-offs in gTransformer across datasets. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$) and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} column shows the cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} shows the interpretability cost ($p_{\text{sup}2} - p_{\text{ref}}$), while \textit{Int. Gain} shows the interpretability gain ($p_{\text{ref}} - p_{\text{bkt}}$).}
 \label{tab:tradeoff}
 \end{table}
 
@@ -514,40 +511,38 @@ NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 & 0.0321 (4.0\%) & 0.1937 (3
 \textbf{Hyperparameter} & \textbf{Performance} & \textbf{Trade-off} \\
 \midrule
 \multicolumn{3}{l}{\textit{Ablation Configuration}} \\
-ablation & \texttt{all} & \texttt{none} \\
+Ablation mode & \texttt{all} & \texttt{none} \\
 $\lambda_{\text{sup}}$ & 1.0 & 1.0 \\
-$\lambda_{\text{ref}}$ & \textbf{0} & 0.5 \\
-$\lambda_{\text{probe}}$ & \textbf{0} & 1.0 \\
+$\lambda_{\text{ref}}$ & 0 & 0.5 \\
+$\lambda_{\text{probe}}$ & 0 & 1.0 \\
 \midrule
 \multicolumn{3}{l}{\textit{Architecture Configuration}} \\
 $d_{\text{model}}$ & 64 & 64 \\
 $n_{\text{blocks}}$ & 4 & 4 \\
 $d_{\text{ff}}$ & 256 & 256 \\
-num. attn. heads & 4 & \makecell{AS2009: 8\\others: 4} \\
+Attention heads & 4 & \makecell{AS2009: 8\\others: 4} \\
 \midrule
 \multicolumn{3}{l}{\textit{Training Configuration}} \\
-learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
-batch size & 64 & 64 \\
-optimizer & adam & adam \\
-epochs & 200 & 200 \\
-dropout & 0.1 & 0.1 \\
+Learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
+Batch size & 64 & 64 \\
+Optimizer & \texttt{adam} & \texttt{adam} \\
+Epochs & 200 & 200 \\
+Dropout & 0.1 & 0.1 \\
 \bottomrule
 \end{tabular}
-\caption{Hyperparameter configurations for \cref{tab_performance} (Predictive Performance with ablation=all) and \cref{tab:tradeoff} (Accuracy-Interpretability Trade-off with ablation=none). \Cref{tab_performance} disables grounding and probing for maximum predictive performance, while \cref{tab:tradeoff} uses full interpretability with $\lambda_{\text{ref}}=0.5$ and $\lambda_{\text{probe}}=1.0$.}
+\caption{Hyperparameter configurations used to get the results reported in \cref{tab_performance} (Performance) and \cref{tab:tradeoff} (Trade-off). The first configuration disables grounding and probing (ablation=all) for maximum predictive performance, while the second uses full interpretability (ablation=none) with $\lambda_{\text{ref}}=0.5$ and $\lambda_{\text{probe}}=1.0$.}
 \label{tab:params}
 \end{table}
-
 
 The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
-    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics: 1) We define the \textit{Interpretability Drop} (\textit{Int. Drop}) as the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity ($p_{\text{sup}1} - p_{\text{sup}2}$); the results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (approx. 0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power; 2) We define the \textit{Interpretability Cost} (\textit{Int. Cost}) as the total performance impact of constraining final predictions to the causal logic of the reference model ($p_{\text{sup}1} - p_{\text{ref}}$); the results in Table~\ref{tab:tradeoff} show that the average cost across datasets is 0.0313 AUC points (3.9\% relative reduction), ranging from a minimum of 1.8\% (AS2015) to a maximum of 5.3\% (AL2005), which is highly acceptable given the substantial gains in transparency.
-    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable gTransformer predictions consistently outperform classical BKT: AS2009 (+22.0\%), Algebra 2005 (+8.1\%), Bridge to Algebra (+15.6\%), and NIPS (+33.8\%). This consistent improvement demonstrates that gTransformer provides a general diagnostic advantage over population-level priors. 
+    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics. The Interpretability Drop measures the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity. The results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power. The Interpretability Cost measures the performance impact of constraining final predictions to the causal logic of the reference model. The results show that the average cost across datasets is 0.0313 AUC points (3.9\% reduction), which is highly acceptable given the substantial gains in interpretability.
+    
+    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable gTransformer predictions consistently outperform classical BKT with an average improvement of 0.1229 AUC points (19.9\%), showing a general advantage over population-level priors. 
 \end{itemize}
 
-In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without the high performance loss typically associated with constrained models.
-
-
+In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without sacrificing performance.
 
 
 \subsection{Grounded Interpretability (RQ2)} \label{sec_grounded}
@@ -555,7 +550,7 @@ In summary, the cost of interpretability is consistently low and highly acceptab
 We will use the following hypotheses to validate the RQ2 research question posed in section \ref{sec_intro}: 
 
 \begin{itemize}
-\item \textbf{H2.1: Structural Encoding}
+\item \textbf{H2.1: Structural Alignment}
 
 Latent representations in the gTransformer model are structurally organized around BKT constructs (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
 
@@ -571,7 +566,7 @@ The interpretable predictions derived from extracted parameters can be used with
 
 The objective of this triple validation is to demonstrate that grounding constraints actively shape the model's internal structure, rather than merely correlating with outputs, to produce interpretable predictions. It addresses a fundamental challenge in educational AI: whether deep learning models can internalize pedagogical theory, rather than learning arbitrary features that happen to yield accurate predictions. We evaluate these hypotheses using the AS2009 dataset, one of the most widely-used benchmarks in knowledge tracing research, offering rich student interaction data and demonstrating strong predictive performance with gTransformer (AUC = 0.7814), making it an ideal testbed for examining the interplay between interpretability and model capacity.
 
-\subsubsection{Structural Encoding via Diagnostic Probing (H2.1)} \label{sec_structural_alignment}
+\subsubsection{Structural Alignment via Diagnostic Probing (H2.1)} \label{sec_structural_alignment}
 
 To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear Ridge regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
 
@@ -593,7 +588,7 @@ To verify whether gTransformer's latent representations genuinely internalize pe
     \item \textbf{Learning Rate ($T$)}: Shows strong structural encoding with fidelity $R^2 = 0.515 \pm 0.080$ and Pearson $r = 0.721 \pm 0.050$. The selectivity reaches $\Delta R^2 = 0.570 \pm 0.070$, demonstrating robust encoding of learning rate dynamics, with control $R^2 = -0.055$.
 \end{itemize}
 
-\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates H2.1 (Structural Encoding) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
+\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates the H2.1 (Structural Alignment) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing axes in final representations used for prediction. 
 
 
 
@@ -631,7 +626,7 @@ These findings support H2.2: grounded parameters maintain meaningful monotonic a
 \caption{Semantic Alignment for Learning Rate $P(T)$. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The clustering around the diagonal across the full $P_T$ range indicates the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 
-\subsubsection{Functional Alignment and Prediction Confidence (H2.3)} \label{sec_functional_alignment}
+\subsubsection{Functional Alignment (H2.3)} \label{sec_functional_alignment}
 
 For the third hypothesis H2.3 (Functional Alignment), we compare two prediction paths: interpretable predictions $\hat{y}_{ref}$ generated by feeding enriched parameters (projected from context vectors $z_t$) through BKT logic, and supervised predictions $\hat{y}_{sup}$ obtained directly from an MLP applied to $z_t$. While $\hat{y}_{sup}$ uses the full representational capacity of the neural network for maximum predictive accuracy, $\hat{y}_{ref}$ constrains predictions through pedagogically interpretable BKT parameters, enabling causal explanations at the cost of some predictive power. We assess the \textit{confidence} with which the interpretable reference path can functionally replace the supervised path across different student-skill contexts.
 
