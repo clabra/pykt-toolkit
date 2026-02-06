@@ -159,9 +159,9 @@ Section2: {
         <center><span style="font-size: 95px">Theory Bases</span></center>
         <center>(BKT Priors Embeddings)</center>
         
-        L₀<sub>base</sub>[q] ~ N(σ⁻¹(BKT_L₀[q]), 0.05)
+        L₀<sub>base</sub>[q] ~ N(σ⁻¹(L₀[q]), 0.05)
 
-        T<sub>base</sub>[q] ~ N(σ⁻¹(BKT_T[q]), 0.05)
+        T<sub>base</sub>[q] ~ N(σ⁻¹(T[q]), 0.05)
         
         <span style="color:#666">[n_question, 1]</span>
         
@@ -274,7 +274,7 @@ Section3: {
       
       <span style="color:#666">[B, S, z]</span>
 
-      <span style="color:#666">z = d + e</span>
+      <span style="color:#666">z = d + dim(q_embed)</span>
     |
     shape: rectangle
     style: {
@@ -576,6 +576,7 @@ Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" {
   style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }
 }
+
 Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" {
   style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
   target-arrowhead: { shape: arrow }

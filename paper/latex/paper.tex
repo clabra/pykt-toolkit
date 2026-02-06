@@ -286,7 +286,7 @@ Figure~\ref{fig_info_flow} illustrates the information flow through gTransformer
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.45\textwidth]{img/iml.png}
-    \caption{Dimensions of Informed Machine Learning in gTransformer.}
+    \caption{Dimensions of IML in gTransformer.}
     \label{fig_info_flow}
 \end{figure}
 
@@ -295,19 +295,21 @@ Within the context of our architecture, the operationalization of these dimensio
 \begin{itemize}
     \item \textbf{Prior Knowledge}: The source of theoretical information comprises simulation results from a reference model, typically expressed as parameter values that represent foundational pedagogical constructs.
     \item \textbf{Training Data}: Empirical student interaction histories are augmented with prior knowledge to train the model.
-    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture is employed to provide the inductive biases necessary to lead the model toward aligned states.
+    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture is employed to provide the inductive biases necessary to lead the model toward desired states.
     \item \textbf{Learning Algorithm}: The model is optimized via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical interpretability.
     \item \textbf{Final Hypothesis}: A set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted.
+    \item \textbf{Mastery Estimations}: The outputs generated through the grounded parameters serve as inputs to the reference model to produce interpretable mastery estimations.
 \end{itemize}
+
 
 \subsection{Architecture}
 
-The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, implements a theory-guided deep learning framework that integrates BKT concepts throughout the processing pipeline. The architecture is organized into six functional layers, which are detailed in the following subsections. Specifically, we: (i) begin with input data comprising student interaction sequences along with prior knowledge from the Bayesian reference model (\cref{sec_input}); (ii) proceed to difficulty-aware embeddings that encode skill-specific variations (\cref{sec_embeddings}); (iii) describe the attention-based encoder-decoder mechanism used to construct contextualized latent representations (\cref{sec_enc_dec}); (iv) explain how grounded parameters are obtained combining theoretical bases with contextual projections (\cref{sec_grounded_params}); (v) present the three parallel output heads intended to generate supervised predictions, interpretable predictions, and representation probes (\cref{sec_output_heads}); and (vi) conclude with the multi-objective loss function that orchestrates the training process to achieve both predictive performance and theory-based interpretability (\cref{sec_loss}).
+The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, implements a theory-guided deep learning framework that integrates BKT concepts throughout the processing pipeline. The architecture is organized into six functional layers, which are detailed in the following subsections. Specifically, we: (i) begin with input data comprising student interaction sequences along with prior knowledge from the Bayesian reference model (\cref{sec_input}); (ii) proceed to explain difficulty-aware embeddings that encode skill-specific variations (\cref{sec_embeddings}); (iii) describe the attention-based encoder-decoder mechanism used to construct contextualized latent representations (\cref{sec_enc_dec}); (iv) explain how grounded parameters are obtained combining theoretical bases with contextual projections (\cref{sec_grounded_params}); (v) present the output heads intended to generate supervised predictions and interpretable predictions (\cref{sec_output_heads}); and (vi) conclude with the multi-objective loss function that orchestrates the training process to achieve both predictive performance and theory-based interpretability (\cref{sec_loss}).
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=1.05\textwidth]{img/arch.png}
-    \caption{Functional layers of the gTransformer architecture. Gray components denote standard Transformer elements while blue components denote gTransformer-specific elements.}
+    \caption{Functional layers of the gTransformer architecture. Gray denotes standard Transformer elements, blue denotes gTransformer-specific elements.}
     \label{gtransformer_arch}
 \end{figure}
 
@@ -315,10 +317,10 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 
 The data flow begins with the ingestion of student interaction sequences enriched with population-level parameters from a pre-fit BKT reference model. Student interactions are represented as temporal sequences of tuples $(q_t, c_t, r_t)$, where $q_t$ denotes the question identifier, $c_t$ represents the associated knowledge component, concept or skill, and $r_t \in \{0, 1\}$ indicates the binary correctness of the student's response at timestep $t$.
 
-These empirical interaction traces are augmented with theoretical priors extracted from the BKT reference model. For each knowledge component $c$, we obtain population-level estimates of four fundamental BKT parameters: prior knowledge $P(L_0)$ (the probability that a randomly selected student has already mastered concept $c$ before any practice), learning rate $P(T)$ (the probability of transitioning from non-mastery to mastery after a single learning opportunity), guess probability $P(G)$ (the likelihood of answering correctly despite not having mastered the concept), and slip probability $P(S)$ (the likelihood of answering incorrectly despite having mastered the concept). For the sake of simplicity, only $P(L_0)$ and $P(T)$ undergo the grounding process. In contrast, we use directly the values estimated by BKT for the parameters $P(G)$ and $P(S)$ to calculate the interpretable predictions $\hat{y}_{\text{ref}}$.
+These empirical interaction traces are augmented with theoretical priors extracted from the BKT reference model. For each knowledge component $c$, we obtain population-level estimates of the four BKT parameters introduced in \ref{sec_bkt}: initial knowledge $P(L_0)$, learning rate $P(T)$, guess probability $P(G)$ and slip probability $P(S)$. For the sake of simplicity, only $P(L_0)$ and $P(T)$ undergo the grounding process while we use directly the values estimated by BKT for the parameters $P(G)$ and $P(S)$ to calculate the interpretable predictions $\hat{y}_{\text{ref}}$.
 
 
-\subsubsection{Prior-Enriched Embeddings} \label{sec_embeddings}
+\subsubsection{Embeddings} \label{sec_embeddings}
 
 For question embeddings, we define:
 \begin{equation} \label{eq:task_embedding}
@@ -334,9 +336,9 @@ where $e_{c,r} \in \mathbb{R}^{d}$ is the interaction base embedding (jointly en
 
 These embeddings serve as the primary inputs to the Transformer's attention mechanism, providing multi-dimensional representations that enable attention-driven discovery of relevant behavioral patterns across the student's learning history.
 
-\subsubsection{Attention-Based Encoder-Decoder} \label{sec_enc_dec}
+\subsubsection{Attention-Based Encoders-Decoders} \label{sec_enc_dec}
 
-The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks followed by $2n$ decoder blocks. The encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{y'_1, y'_2, \ldots, y'_{t-1}\}$ into a tensor of contextualized latent representations $Y_{\text{enc}} \in \mathbb{R}^{(t-1) \times d}$. Each encoder block applies multi-head self-attention with monotonic causal masking to prevent information leakage from future timesteps, followed by feed-forward networks and residual connections with layer normalization, following the standard Transformer architecture \citep{vaswani2017attention}.
+The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks and $2n$ decoder blocks. The encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{y'_1, y'_2, \ldots, y'_{t-1}\}$ into a tensor of contextualized latent representations $Y_{\text{enc}} \in \mathbb{R}^{(t-1) \times d}$. Each encoder block applies multi-head self-attention with masking to prevent information leakage from future timesteps, followed by feed-forward networks and residual connections with layer normalization, following the standard Transformer architecture \citep{vaswani2017attention}.
 
 The decoder architecture employs an alternating pattern of $2n$ sequential layers. Odd-numbered decoder layers (layers 1, 3, 5, \ldots, $2n-1$) perform self-attention over the current question embeddings $x'_t$, allowing the model to examine multiple aspects of the current task without incorporating response history. Even-numbered decoder layers (layers 2, 4, 6, \ldots, $2n$) perform cross-attention between the current question representation and the encoder's output $Y_{\text{enc}}$, retrieving relevant knowledge from the student's encoded learning trajectory. 
 
@@ -344,7 +346,7 @@ The final decoder layer produces an output tensor $d_{\text{out}} \in \mathbb{R}
 \begin{equation} \label{eq:context_vector}
     z_t = [d_{\text{out},t}; x'_t] \in \mathbb{R}^{z}
 \end{equation}
-where $z = d + e$ represents the combined dimensionality of the decoder output and question embedding spaces. This context vector serves as a comprehensive latent encoding of the student's current cognitive state, synthesizing information from both the observed interaction history and the current task characteristics.
+where the dimensionality of $z_t$ is the combined dimensionality of the decoder output and question embedding space. This context vector serves as a comprehensive encoding of the student's current cognitive state, synthesizing information from both the observed interaction history and the current task characteristics.
 
 \subsubsection{Grounded Parameters} \label{sec_grounded_params}
 
@@ -354,11 +356,11 @@ To ensure pedagogical interpretability, gTransformer estimates BKT parameters th
 \end{equation}
 These bases are implemented as scalar embeddings with Gaussian initialization centered at the theoretical values.
 
-Contextual adjustments are computed via dot products between the latent context vector $z_t$ and learnable semantic axes. For each concept $c$, we define a knowledge axis $K_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $V_{c} \in \mathbb{R}^{z}$. The contextual projections, representing the student-specific Knowledge Gap ($k_s$) and Learning Velocity ($v_s$), are calculated as:
+Contextual adjustments are computed via dot products between the latent context vector $z_t$ and learnable semantic axes. For each concept $c$, we define a knowledge axis $K_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $V_{c} \in \mathbb{R}^{z}$. The contextual projections, representing the student-specific Knowledge ($k_s$) and Learning Velocity ($v_s$), are calculated as:
 \begin{equation} \label{eq:contextual_projection}
     k_{s,t} = z_t \cdot K_c, \quad v_{s,t} = z_t \cdot V_c
 \end{equation}
-These dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed behavior deviates from the population average along the dimensions of prior mastery and learning rate.
+These dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed behavior deviates from the population average along the dimensions of initial mastery and learning velocity.
 
 The final grounded parameters are obtained through additive composition in logit space, followed by sigmoid activation to ensure valid probability bounds:
 \begin{equation} \label{eq:grounded_params}
@@ -368,12 +370,12 @@ This design ensures that the model's parameter estimates remain structurally anc
 
 \subsubsection{Output Heads} \label{sec_output_heads}
 
-The gTransformer model generates predictions through three parallel output heads, each serving a distinct functional role in the architecture's dual objectives of predictive accuracy and pedagogical interpretability.
+The gTransformer model generates predictions through various output heads, each serving a distinct functional role in the architecture's dual objectives of predictive accuracy and pedagogical interpretability.
 
-\textbf{Supervised Prediction Head}: A multi-layer perceptron (MLP) directly maps the context vector $z_t$ to a correctness prediction $\hat{y}_t = \text{MLP}(z_t)$. This head is optimized purely for predictive accuracy via binary cross-entropy loss, leveraging the full expressive capacity of the Transformer's learned representations without theoretical constraints.
+\textbf{Supervised Prediction Head ($p_{sup}$)}: A multi-layer perceptron (MLP) directly maps the context vector $z_t$ to a correctness prediction $\hat{y}_t = \text{MLP}(z_t)$. This head is optimized purely for predictive accuracy via binary cross-entropy loss, leveraging the full expressive capacity of the Transformer's learned representations without theoretical constraints.
 
-\textbf{Interpretable Output Head}: The grounded BKT parameters $(p_{L_0,t}, p_{T,t})$ are passed through an implementation of BKT logic, which performs a retrospective belief update walk over the student's interaction history. At each timestep, the BKT logic computes the probability of correctness $\hat{y}_{\text{ref},t}$ using the standard BKT update equations with the model's grounded parameters and the fixed population-level guess and slip values. These predictions are intrinsically interpretable because they can be directly tracked to established pedagogical constructs, providing a transparent causal explanation that justifies each estimation through the theoretical lens of BKT. This head ensures that the grounded parameters retain their intended semantic meaning by requiring them to produce valid predictions when subjected to the reference model's reasoning process.
 
+\textbf{Interpretable Output Head ($p_{ref}$)}: The grounded BKT parameters $(p_{L_0,t}, p_{T,t})$ are passed through an implementation of BKT logic, which performs a retrospective belief update walk over the student's interaction history. At each timestep, the BKT logic computes the probability of correctness $\hat{y}_{\text{ref},t}$ using the standard BKT update equations with the model's grounded parameters and the fixed population-level guess and slip values. These predictions are intrinsically interpretable because they can be directly tracked to established pedagogical constructs, providing a transparent causal explanation that justifies each estimation through the theoretical lens of BKT. This head ensures that the grounded parameters retain their intended semantic meaning by requiring them to produce valid predictions subjected to the reference model's reasoning process.
 
 \textbf{Linear Probe Heads}: Two dedicated linear layers extract BKT parameter estimates directly from the context vector: $\hat{p}_{L_0,t} = \sigma(W_{L_0} z_t)$ and $\hat{p}_{T,t} = \sigma(W_{T} z_t)$. Unlike the grounded parameter projections (which use concept-specific semantic axes), these probes are global linear extractors shared across all concepts. They serve to verify that the Transformer's internal representations explicitly encode the targeted pedagogical constructs in a linearly accessible manner.
 
@@ -389,7 +391,7 @@ The supervised loss $\mathcal{L}_{\text{sup}}$ measures the binary cross-entropy
     \mathcal{L}_{\text{sup}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t) \right]
 \end{equation}
 
-The reference output loss $\mathcal{L}_{\text{ref}}$ applies the same binary cross-entropy metric to the BKT logic head's predictions $\hat{y}_{\text{ref},t}$, ensuring that the grounded parameters $(p_{L_0,t}, p_{T,t})$ produce pedagogically meaningful predictions when constrained to operate through BKT's causal inference mechanism:
+The reference loss $\mathcal{L}_{\text{ref}}$ applies the same binary cross-entropy metric to the BKT logic head's predictions $\hat{y}_{\text{ref},t}$, ensuring that the grounded parameters $(p_{L_0,t}, p_{T,t})$ produce pedagogically meaningful predictions when constrained to operate through BKT's causal inference mechanism:
 \begin{equation}
     \mathcal{L}_{\text{ref}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_{\text{ref},t}) + (1-r_t) \log(1-\hat{y}_{\text{ref},t}) \right]
 \end{equation}
@@ -398,7 +400,8 @@ The probing loss $\mathcal{L}_{\text{probe}}$ enforces global alignment between 
 \begin{equation}
     \mathcal{L}_{\text{probe}} = \sum_{k \in \{L_0, T\}} \text{MSE}\left( \hat{p}_{k,t}, P(k)_c \right)
 \end{equation}
-This loss implements an "active grounding" mechanism, forcing the context vector $z_t$ to organize its internal structure such that pedagogical parameters can be extracted via simple linear transformations. By constraining the latent space globally rather than merely regularizing output parameters locally, the probing loss ensures that interpretability is structurally embedded throughout the model's representations.
+
+This loss implements a grounding mechanism that constrains the context vector $z_t$ to align its internal structure such that pedagogical parameters can be extracted via simple linear transformations. By constraining the latent space globally, rather than merely regularizing output parameters locally, the probing loss enables that interpretability is structurally embedded throughout the model's representations.
 
 The default configuration uses weight coefficients $\lambda_{\text{sup}} = 1.0$, $\lambda_{\text{ref}} = 0.5$, and $\lambda_{\text{probe}} = 1.0$, balancing supervised performance with theoretical grounding while prioritizing global latent space alignment through active probing.
 
@@ -476,7 +479,7 @@ gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
 \caption{Comparison of predictive performance across various benchmark datasets. The table presents the test Area Under the Curve (AUC) for gTransformer and baseline models. Performances are evaluated at the question level using the mean late-fusion protocol to ensure fair comparison across diverse architectures. Values in bold indicate the best-performing model for each dataset. \label{tab_performance}}
 \end{table}
 
-Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we evaluate a configuration with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$) to establish its maximum predictive capacity in the absence of interpretability constraints. Hyperparameter settings for each dataset are detailed in \cref{tab:implementation_params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance while retaining its architectural support for theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
+Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. For this comparison, we evaluate a configuration with interpretability mechanisms ablated ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$) to establish its maximum predictive capacity in the absence of interpretability constraints. Hyperparameter settings for each dataset are detailed in \cref{tab:params}. On AS2009, this configuration achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering top-tier predictive performance while retaining its architectural support for theory-based interpretability, offering a robust and transparent alternative for high-stakes educational environments where pedagogical grounding is paramount.
 
 
 The grounded (non-ablated) gTransformer model generates two distinct outputs: (1) supervised predictions from the standard output head ($p_{\text{sup}2}$), and (2) interpretable BKT logic predictions ($p_{\text{ref}}$) derived from the student-specific grounded parameters ($p_{L_0}$, $p_T$). To evaluate the performance trade-off, we compare these against (3) the ablated configuration ($p_{\text{sup}1}$), which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) the classical BKT baseline ($p_{\text{bkt}}$) using population-level parameters. This baseline is omitted for AS2015 because the test data lacks the question-level identifiers required for evaluation. Table \cref{tab:tradeoff} presents the test AUC results for these outputs, quantifying the Interpretability Cost ($p_{\text{sup}1} - p_{\text{ref}}$) and the Interpretability Gain ($p_{\text{ref}} - p_{\text{bkt}}$). The hyperparameter configuration for the grounded model is detailed in Table \cref{tab:params}.
@@ -668,7 +671,8 @@ Across AS2009 test interactions, we observe heterogeneous confidence patterns (\
 
 To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centered personalization beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, uses its high capacity to capture temporal learning signatures (the individualized parameters $p_{L_0}$ and $p_T$ extracted from interaction history) to differentiate students even when their observable responses are identical.
 
-The students were classified into four learning situations based on their historical learning parameters. Figure~\ref{fig:student_clusters_as2009} shows students classified in the four quadrants for AS2009 dataset:
+The students were classified into four learning situations based on their historical learning parameters. \Cref{fig:student_clusters_as2009} illustrates the distribution of students across the four quadrants for the AS2009 dataset:
+
 \begin{itemize}
     \item \textbf{Low Prior Knowledge / Low Learning Rate}: Observations for students in this quadrant suggest limited foundational mastery with slow skill acquisition. 
     \item \textbf{Low Prior Knowledge / High Learning Rate}: Despite initial knowledge gaps, rapid progress indicates responsiveness to instruction. 
@@ -676,13 +680,13 @@ The students were classified into four learning situations based on their histor
     \item \textbf{High Prior Knowledge / High Learning Rate}: Consistent mastery and rapid skill development suggest readiness for advanced material.
 \end{itemize}
 
-
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/cluster_placement_pacing_contextual_893468.png}
+    \caption{Clustering of students into four learning situations based on their historical parameters (computed as averages across all previous interactions).}
     \label{fig:student_clusters_as2009}
-    \caption{The figure shows the students clustered into four learning situations based on their historical learning parameters (computed as averages across all previous interactions).}
 \end{figure}
+
 
 In order to demonstrate the gTransformer's ability to capture longitudinal context and overcome the Markovian limitations characteristic of traditional approaches, we show a comparative analysis of mastery trajectories for students with identical response sequences. We selected representative skills with meaningful sequence lengths (5--30 interactions) and identified students from at least two different learning quadrants who provided the same responses to the same questions in the same order. These trajectories are illustrated in the 4$\times$3 mosaic shown in \cref{fig:skill_quadrant_mosaic}, where each subplot displays mastery predictions for students from different quadrants despite their identical performance within each skill. The dotted gray BKT lines overlap perfectly, reflecting the Markovian assumption: BKT produces identical probability estimates for all students who provide the same sequence of responses, regardless of their broader learning history. In contrast, the solid colored gTransformer lines diverge based on learning situation, demonstrating that the model attends to longitudinal context—the full trajectory of previous interactions across all skills—to differentiate students even when their current skill-specific responses are identical. This visual evidence confirms that gTransformer captures non-Markovian personalization patterns that classical models fundamentally cannot represent.
 
