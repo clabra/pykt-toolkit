@@ -12,6 +12,8 @@
 \usetikzlibrary{arrows.meta}
 \usepackage{svg}
 \usepackage{makecell}
+\usepackage[markup=underlined, authormarkup=none]{changes}
+\definechangesauthor[name=Author, color=blue]{rev}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -180,7 +182,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 
 \section{Introduction} \label{sec_intro}
 
-Knowledge Tracing (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Learning Analytics \citep{Romero2020}. Formally, it is conceptualized as a supervised sequence-modeling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question $q_i$ and the student's binary response $r_i \in \{0, 1\}$, with $r_i = 1$ indicating a correct answer and $r_i = 0$ an incorrect one. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalized instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and personalized, the ability to accurately track and interpret student mastery is a critical requirement for effective, scalable and learner-centred education.
+KNOWLEDGE TRACING (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Learning Analytics \citep{Romero2020}. Formally, it is conceptualized as a supervised sequence-modeling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question $q_i$ and the student's binary response $r_i \in \{0, 1\}$, with $r_i = 1$ indicating a correct answer and $r_i = 0$ an incorrect one. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalized instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and personalized, the ability to accurately track and interpret student mastery is a critical requirement for effective, scalable and learner-centred education.
 
 Historically, the development of KT has been characterized by a dichotomy between two distinct paradigms \citep{abdelrahman2023knowledge}. The first, which predominated in the field for years, is characterized by probabilistic models such as Bayesian Knowledge Tracing (BKT) \citep{corbett1994knowledge} and Factor Analysis Models based on logistic regression, including Additive Factor Models \citep{cen2008comparing}, Performance Factor Analysis \citep{pavlik2009performance}, and Knowledge Tracing Machines \citep{vie2019knowledge}. Factor Analysis Models are theoretically supported by the Item Response Theory (IRT) \citep{embretson2013item}, which has played a large role in educational assessment and measurement. These traditional approaches are intrinsically interpretable: they model learning as a process governed by explicit parameters related to pedagogical, cognitive or psychometric principles. Because the model structure mirrors a theoretical understanding of human learning, educators can inspect these values to validate the model's reasoning and trust its outputs. However, this transparency comes at the cost of representational rigidity; the simplifying assumptions required by these models often limit their predictive power, causing them to struggle with the complex, non-linear and long-range dependencies inherent in real-world student behavior \citep{twenty_five_years_of_bkt}.
 
@@ -416,7 +418,8 @@ Training and evaluation followed a standard five-fold cross-validation protocol 
 
 \subsection{Datasets}\label{sec_dataset}
 
-To validate if gTransformer is competitive in terms of predictive performance, we used five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}. 
+\replaced[id=rev]{For our analysis, we utilised those datasets for which the \textit{pyKT} library \citep{liu2022pykt} provides standardised preprocessing mechanisms, thereby ensuring a rigorous and consistent treatment of student interactions. From this collection, we excluded those datasets that lack explicit mapping to Knowledge Components (\textit{Statics2011} and \textit{POJ}), as this information is essential for pedagogical interpretability, allowing mastery estimations to be anchored to defined educational concepts. The five datasets selected for this study are described below:}{To validate if gTransformer is competitive in terms of predictive performance, we used five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}.}
+ 
 
 \begin{itemize}
     \item \textbf{ASSISTments 2009 (AS2009)}: Collected from the ASSISTments platform during the 2009-2010 school year, this dataset consists of math exercises and has served as the de facto standard benchmark for KT research for the past decade \citep{feng2009addressing}.
@@ -695,6 +698,11 @@ This differentiation may inform adaptive instructional decisions. For example, c
 
 Ultimately, the prediction divergence observed across various skill-sequence combinations underscores the practical value of gTransformer for student-centered personalization beyond traditional BKT. These findings validate our hypothesis for RQ3, demonstrating that the synthesis of \textit{deep learning capacity + theoretical grounding = enhanced personalization}.
 
+\section{Limitations} \label{sec_limitations}
+
+\section{Future Work} \label{sec_future_work}
+
+\added{Future research will aim to extend the empirical validation of \textit{gTransformer} beyond the benchmark datasets utilised in this study. Although the underlying methodology is fundamentally domain-independent, extending this evaluation to a wider range of datasets across varied domains and subjects represents a valuable research direction to further demonstrate the model's versatility.}
 
 \section{Conclusions} \label{sec_conclusions}
 
