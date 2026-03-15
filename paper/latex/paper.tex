@@ -14,6 +14,7 @@
 \usepackage{makecell}
 \usepackage[markup=underlined, authormarkup=none]{changes}
 \definechangesauthor[name=Author, color=blue]{rev}
+\setlength{\headheight}{20pt}
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
 % For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
 
@@ -309,7 +310,7 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=1.05\textwidth]{img/arch.png}
+    \includegraphics[width=1.0\textwidth]{img/arch.png}
     \caption{Functional layers of the gTransformer architecture. Gray denotes standard Transformer elements, blue denotes gTransformer-specific elements.}
     \label{gtransformer_arch}
 \end{figure}
@@ -619,10 +620,10 @@ These findings support that grounded parameters maintain meaningful monotonic al
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_grounded_893468.png}
+\includegraphics[width=0.68\textwidth]{img/h12_recovery_l0_grounded_893468.png}
 \caption{Semantic Alignment for Initial Mastery $P(L_0)$. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with size encoding sample density. The substantial scatter indicates strong student-specific individualization, with the model prioritizing context-aware adaptation over strict adherence to population priors. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
-\includegraphics[width=0.70\textwidth]{img/h12_recovery_t_grounded_893468.png}
+\includegraphics[width=0.68\textwidth]{img/h12_recovery_t_grounded_893468.png}
 \caption{Semantic Alignment for Learning Rate $P(T)$. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The clustering around the diagonal across the full $P_T$ range indicates the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 
