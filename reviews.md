@@ -13,24 +13,39 @@ Empezar agradeciendo tiempo, lectura cuidadosa, lo mucho que aportan, lo que hay
 
 Comments and Suggestions for Authors: 
 
+### Comment 1
+
 To train the model, datasets were used that were mainly mathematically oriented - 4 out of the 5 datasets were task results. The fifth dataset was not specified. This means that the evaluation was carried out mainly on one type of educational data. Therefore, either the title should be narrowed down and specified that it is about training in the field of mathematics. Or the study should be expanded to include other different datasets.
 
-### R: justificar porque se escogen estos datasets (e.g. son los que se eferencian en el benchmark pykt...); en "Limitaciones" indicar: que los datasets ... matematicas ... seria necesario explorar otro tipo datasets; el analisis es independiente del dominio; al revisor explicar esto y que se ha incluido en las "limitaciones".  
+### Response 1
+
+Justificar porque se escogen estos datasets (e.g. son los que se eferencian en el benchmark pykt...); en "Limitaciones" indicar: que los datasets ... matematicas ... seria necesario explorar otro tipo datasets; el analisis es independiente del dominio; al revisor explicar esto y que se ha incluido en las "limitaciones".  
+
+
+### Comment 2
 
 Since gTransformer is based on the concepts of BKT, it also takes on some of its shortcomings - how does gTransformer capture the complex, nonlinear dependencies in student behaviour?
 
-### R: Posibilidades: 1) explicarlo a nivel técnico (cómo lo hace); 2) cómo sabemos que funciona: Figuras 7 y plots; 3) "gracias ... se ha aprovechado para clarificar" ... ver si hay que explicarlo mejor en el paper
+### Response 2
+Posibilidades: 1) explicarlo a nivel técnico (cómo lo hace); 2) cómo sabemos que funciona: Figuras 7 y plots; 3) "gracias ... se ha aprovechado para clarificar" ... ver si hay que explicarlo mejor en el paper
 
+### Comment 3
 For the purposes of the research, only two of the four parameters of Bayesian Knowledge Tracing (BKT) – initial knowledge (P(L_0)) and learning rate (P(T)) – undergo the grounding process. The parameters Guess and Slip are used as fixed values ​​from the population, which limits full individualisation.
 Please extend the study by analysing how the model will respond if non-zero values ​​are set for Guess and Slip.
 
-### R: buscar referencias donde se hable de los guess and slip y porque esta justificado tomarlos a nivel de poblacion; "lo que dices es cierto ... pero consideramos que tiene sentido hacerlo así porque ... simplificar la arquitectura por ... tiene sentido a nivel de poblacion. Ponerlo en "Limitaciones" (o en la "Discusion"): es una primera aproximacion ... seria interesante incluirlos ... pero esta fura del alcance inicial en el que nos hemos centrado cuyo objetivo es una primera validacion inicial ... en trabajos futuros tiene sentido extender el analisis a los 4 parametros por ... aunque esto supone crear una nueva version de la arquitectura, lanzar un training costoso en terminos computacionales". Ver si se puede poner tambien en la "Discusion". 
+### Response 3
 
+Buscar referencias donde se hable de los guess and slip y porqué estaría justificado tomarlos a nivel de poblacion; "lo que dices es cierto ... pero consideramos que tiene sentido utilizar sólo esos dos parámteros porque ... simplificación de la arquitectura ... tiene sentido tomar los otros dos parámetros a nivel de poblacion. Mencionar este punto en "Limitaciones y Future Research": ... es una primera aproximacion ... seria interesante incluirlos ... pero esta fura del alcance inicial en el que nos hemos centrado cuyo objetivo es una primera validacion inicial  ... aunque esto supone crear una nueva version de la arquitectura, lanzar un training costoso en terminos ... en trabajos futuros seria interesante extender el analisis a los 4 parametros por computacionales". 
+
+### Comment 4
 Comments on the Quality of English Language: 
 
 Please, check spelling. Please, use UK English, not US. 
 
-### R: revisar palabras típicas que difieren entre inglés británico y americano: modeling, stadandardisation, etc. 
+### Response 4
+
+Revisar palabras típicas que difieren entre inglés británico y americano: modeling, stadandardisation, etc. 
+
 
 ## Reviewer 1
 
@@ -66,9 +81,12 @@ This paper presents gTransformer, a deep learning model for interpretable knowle
 
 Overall, the paper is well-structured. The authors gave a clear description of the proposed model and the experimental settings. No critical technical issues were spotted. The research fits the scope of the Applied Sciences journal. The references are appropriate and up to date. The topic should be interesting to certain readers.
 
+### Comment 1 
 I did not spot critical technical issues. However, while introducing the model in Sections 3.1 and 3.2, the authors should provide a detailed description of the layer number, the neuron size of each layer, the function (e.g., drop out, pooling) of each layer, and the key parameters used (e.g., learning rate, optimizer, etc.). 
 
-### R: dar los detalles. Dice que la estructura esta bien, hay que justificar entonces el hecho de que se hagan cambios en la misma ("teniendo en cuenta los comentarios de otros revisores hemos hecho estos cambios ...")
+### Response 1
+
+Dar los detalles. Dice que la estructura esta bien, hay que justificar entonces el hecho de que se hagan cambios en la misma ("teniendo en cuenta los comentarios de otros revisores hemos hecho estos cambios ...")
 
 Minor issues exist in the paper (e.g., "i.e." should be "i.e.," and "e.g." should be "e.g.,"). Proofreading should be done before re-submission. 
 
@@ -77,9 +95,15 @@ Minor issues exist in the paper (e.g., "i.e." should be "i.e.," and "e.g." shoul
 ## Reviewer 3
 
 Comments and Suggestions for Authors
-This paper demonstrates a clearly strong scientific component, methodologically well-designed to confirm or refute social concepts and learning contexts involving personalized segments with the highest possible degree of statistical reliability. Such elements are rarely measured with comparable rigor in empirically based studies of a similar orientation. The methodology is highly commendable but however a minor suggestion for a slight improvement applies to the discussion section toward the end of the paper and the conclusion. It would be beneficial to elaborate more extensively on the practical implications of the findings, placing greater emphasis on the social dimension and on the broader context of application derived from the results.
+This paper demonstrates a clearly strong scientific component, methodologically well-designed to confirm or refute social concepts and learning contexts involving personalized segments with the highest possible degree of statistical reliability. Such elements are rarely measured with comparable rigor in empirically based studies of a similar orientation. 
 
-### R: en la "Discussion" ... meter titulo de "Practical Applications" ... si no encaja porque ya se está explicando en otras secciones, entonces explicar dónde se estan explicando las aplicaciones prácticas (remarcarlo con subtitulo si se puede) ... "gracias ..."
+### Comment 1
+
+The methodology is highly commendable but however a minor suggestion for a slight improvement applies to the discussion section toward the end of the paper and the conclusion. It would be beneficial to elaborate more extensively on the practical implications of the findings, placing greater emphasis on the social dimension and on the broader context of application derived from the results.
+
+### Response 1
+
+En la "Discussion" ... meter titulo de "Practical Applications" ... si no encaja porque ya se está explicando en otras secciones, entonces explicar dónde se estan explicando las aplicaciones prácticas (remarcarlo con subtitulo si se puede) ... "gracias ..."
 
 
 

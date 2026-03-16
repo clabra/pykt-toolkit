@@ -1,0 +1,103 @@
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{non-interpretable}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{conceptualised}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{modelling}{1}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterise}{2}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilises}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{synthesising}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Student-Centred Personalisation}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{visualisations}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorise}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Individualised}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{modelling}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterise}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritised}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorised}{5}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilising}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilises}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularisation}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{penalises}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorises}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalised}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalisation}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organised}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Grey}{9}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behavioural}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{synthesising}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialised}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{centred}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{minimising}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularising}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{standardised}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{For our analysis, we utilised those datasets for which the \textit {pyKT} library \citep {liu2022pykt} provides standardised preprocessing mechanisms, thereby ensuring a rigorous and consistent treatment of student interactions. From this collection, we excluded those datasets that lack explicit mapping to Knowledge Components (\textit {Statics2011} and \textit {POJ}), as this information is essential for pedagogical interpretability, allowing mastery estimations to be anchored to defined educational concepts. The five datasets selected for this study are described below:}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised by subject trees}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{analysed}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Optimiser}{15}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalise}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalise}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{18}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{19}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{19}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{20}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{20}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{recognising}{21}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Student-Centred Personalisation}{21}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centred personalisation beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, leverages its attention mechanism to capture complex, non-linear dependencies across the entire interaction history. By synthesising this history into a latent context vector and projecting it onto student-specific parameters ($p_{L_0}$ and $p_T$), the model identifies unique learning signatures that Markovian transitions fundamentally cannot represent. This allows gTransformer to differentiate students even when their immediate observable responses are identical.}{21}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorised}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{grey}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{coloured}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{grey}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{coloured}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{24}
+\ChangesListline {added}{Added}{The representational grounding methodology explored in this work is fundamentally domain-independent, which suggests that the resulting pedagogical insights and the accuracy--interpretability trade-offs could be generalised to diverse educational contexts. Nonetheless, extending the empirical validation of \textit {gTransformer} beyond the benchmark datasets utilised in this study to a wider range of domains and subjects represents a valuable research direction to further illustrate its versatility.}{24}
+\ChangesListline {added}{Added}{In this initial validation of gTransformer, the grounding process was restricted to the two primary knowledge parameters: initial mastery $P(L_0)$ and learning rate $P(T)$. The Guess and Slip parameters were set to fixed, population-level values estimated by the reference BKT model. This was a deliberate architectural choice to prioritise the interpretability of 'knowledge' acquisition over the modelling of 'performance' errors. In established BKT literature, $P(L_0)$ and $P(T)$ are considered the primary parameters reflecting a student's latent state, whereas Guess and Slip are often viewed as performance parameters tied to the assessment item properties \citep {yudelson2013individualized}. By fixing the latter, the model remains focused on the core pedagogical constructs whilst avoiding model degeneracy challenges \citep {baker2008more} that arise when all four parameters vary simultaneously. Future research could address the impact of incorporating student-specific Guess and Slip values to further refine the granularity of context-aware individualisation.}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{25}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{generalisable}{25}
