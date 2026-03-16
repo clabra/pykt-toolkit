@@ -699,11 +699,12 @@ This differentiation may inform adaptive instructional decisions. For example, c
 
 Ultimately, the prediction divergence observed across various skill-sequence combinations underscores the practical value of gTransformer for student-centered personalization beyond traditional BKT. These findings validate our hypothesis for RQ3, demonstrating that the synthesis of \textit{deep learning capacity + theoretical grounding = enhanced personalization}.
 
-\section{Limitations} \label{sec_limitations}
+\section{Limitations and Future Research} \label{sec_limitations_future}
 
-\section{Future Work} \label{sec_future_work}
+\added{The representational grounding methodology explored in this work is fundamentally domain-independent, which suggests that the resulting pedagogical insights and the accuracy--interpretability trade-offs could be generalised to diverse educational contexts. Nonetheless, extending the empirical validation of \textit{gTransformer} beyond the benchmark datasets utilised in this study to a wider range of domains and subjects represents a valuable research direction to further illustrate its versatility.}
 
-\added{Future research will aim to extend the empirical validation of \textit{gTransformer} beyond the benchmark datasets utilised in this study. Although the underlying methodology is fundamentally domain-independent, extending this evaluation to a wider range of datasets across varied domains and subjects represents a valuable research direction to further demonstrate the model's versatility.}
+\added{In this initial validation of gTransformer, the grounding process was restricted to the two primary knowledge parameters: initial mastery $P(L_0)$ and learning rate $P(T)$. The Guess and Slip parameters were set to fixed, population-level values estimated by the reference BKT model. This was a deliberate architectural choice to prioritise the interpretability of 'knowledge' acquisition over the modelling of 'performance' errors. In established BKT literature, $P(L_0)$ and $P(T)$ are considered the primary parameters reflecting a student's latent state, whereas Guess and Slip are often viewed as performance parameters tied to the assessment item properties \citep{yudelson2013individualized}. By fixing the latter, the model remains focused on the core pedagogical constructs whilst avoiding model degeneracy challenges \citep{baker2008more} that arise when all four parameters vary simultaneously. Future research could address the impact of incorporating student-specific Guess and Slip values to further refine the granularity of context-aware individualisation.}
+
 
 \section{Conclusions} \label{sec_conclusions}
 
