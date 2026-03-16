@@ -108,7 +108,7 @@
 % Affiliations / Addresses (Add [1] after \address if there is only one affiliation.)
 \address{%
 $^{1}$ \quad Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain; clabra@dia.uned.es\\
-$^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain; ocsantos@dia.uned.es}
+$^{2}$ \quad \replaced[id=rev]{PhyUM Research Centre}{PhyUM Research Center}, Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain; ocsantos@dia.uned.es}
 
 % Contact information of the corresponding author
 \corres{Author to whom correspondence should be addressed.}
@@ -183,7 +183,7 @@ $^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Compu
 
 \section{Introduction} \label{sec_intro}
 
-KNOWLEDGE TRACING (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Learning Analytics \citep{Romero2020}. Formally, it is conceptualized as a supervised sequence-modelling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question $q_i$ and the student's binary response $r_i \in \{0, 1\}$, with $r_i = 1$ indicating a correct answer and $r_i = 0$ an incorrect one. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalised instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and personalised, the ability to accurately track and interpret student mastery is a critical requirement for effective, scalable and learner-centred education.
+KNOWLEDGE TRACING (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Learning Analytics \citep{Romero2020}. Formally, it is \replaced[id=rev]{conceptualised}{conceptualized} as a supervised sequence-modelling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question $q_i$ and the student's binary response $r_i \in \{0, 1\}$, with $r_i = 1$ indicating a correct answer and $r_i = 0$ an incorrect one. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalised instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and personalised, the ability to accurately track and interpret student mastery is a critical requirement for effective, scalable and learner-centred education.
 
 Historically, the development of KT has been characterised by a dichotomy between two distinct paradigms \citep{abdelrahman2023knowledge}. The first, which predominated in the field for years, is characterised by probabilistic models such as Bayesian Knowledge Tracing (BKT) \citep{corbett1994knowledge} and Factor Analysis Models based on logistic regression, including Additive Factor Models \citep{cen2008comparing}, Performance Factor Analysis \citep{pavlik2009performance}, and Knowledge Tracing Machines \citep{vie2019knowledge}. Factor Analysis Models are theoretically supported by the Item Response Theory (IRT) \citep{embretson2013item}, which has played a large role in educational assessment and measurement. These traditional approaches are intrinsically interpretable: they model learning as a process governed by explicit parameters related to pedagogical, cognitive or psychometric principles. Because the model structure mirrors a theoretical understanding of human learning, educators can inspect these values to validate the model's reasoning and trust its outputs. However, this transparency comes at the cost of representational rigidity; the simplifying assumptions required by these models often limit their predictive power, causing them to struggle with the complex, non-linear and long-range dependencies inherent in real-world student behaviour \citep{twenty_five_years_of_bkt}.
 
@@ -211,7 +211,7 @@ Are gTransformer models able to produce interpretable outputs while remaining co
 
 How can we check that the parameters used to get interpretable outputs are really grounded in theory-based estimations?  
 
-\item RQ3: \textbf{Student-Centered Personalization}
+\item RQ3: \textbf{\replaced[id=rev]{Student-Centred Personalisation}{Student-Centered Personalization}}
 
 How can the longitudinal context captured by a Transformer-based model enhance student-centred personalisation, and how does this compare with capabilities of population-based models like BKT?
 
@@ -223,7 +223,7 @@ The remainder of this paper is structured as follows. \Cref{sec_related} reviews
 
 \section{Related Work} \label{sec_related}
 
-This section provides a review of research related to gTransformer. We first examine the theoretical foundations and limitations of BKT, which serves as our reference model for pedagogical grounding. We then trace the evolution of DKT from Recurrent Neural Networks to recent attention-based architectures. Following this, we categorize existing efforts to bridge the interpretability gap in DKT, contrasting post-hoc and ante-hoc methodologies. Finally, our model is mapped to taxonomic dimensions of Informed Machine Learning, establishing the connection with this paradigm. 
+This section provides a review of research related to gTransformer. We first examine the theoretical foundations and limitations of BKT, which serves as our reference model for pedagogical grounding. We then trace the evolution of DKT from Recurrent Neural Networks to recent attention-based architectures. Following this, we \replaced[id=rev]{categorise}{categorize} existing efforts to bridge the interpretability gap in DKT, contrasting post-hoc and ante-hoc methodologies. Finally, our model is mapped to taxonomic dimensions of Informed Machine Learning, establishing the connection with this paradigm. 
 
 
 \subsection{Bayesian Knowledge Tracing} \label{sec_bkt}
@@ -239,7 +239,7 @@ For this study, we selected BKT \citep{corbett1994knowledge} as our reference th
 
 These four parameters enable a recursive estimation of student mastery: the \textit{Initial Mastery} provides the starting probabilistic state, which is updated at each interaction using Bayes' theorem to incorporate the observed outcome (moderated by \textit{Guess} and \textit{Slip} probabilities) and shifted by the \textit{Learn Rate} to account for knowledge acquisition. This recursive cycle allows BKT to generate a transparent causal explanation of the student's learning progress that is directly interpretable by educators.
 
-But standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{Individualized BKT} approaches exist, they are often computationally expensive and struggle with data sparsity \citep{yudelson2013individualised}. The gTransformer approach offers a new way to address individualisation by leveraging the capabilities of Transformers to compress student interaction history into a context vector. This allows the model to infer parameter values at the student-level, transforming population-level BKT insights into high-granularity student diagnostics.
+But standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{\replaced[id=rev]{Individualised}{Individualized} BKT} approaches exist, they are often computationally expensive and struggle with data sparsity \citep{yudelson2013individualised}. The gTransformer approach offers a new way to address individualisation by leveraging the capabilities of Transformers to compress student interaction history into a context vector. This allows the model to infer parameter values at the student-level, transforming population-level BKT insights into high-granularity student diagnostics.
 
 \subsection{Deep Knowledge Tracing}
 
@@ -271,7 +271,7 @@ A widely adopted technique to enforce this consistency involves incorporating do
 \end{equation}
 where $\mathcal{L}_{TRN}$ measures the supervised error between true labels $Y_{true}$ and predicted labels $Y_{pred}$, while $\mathcal{L}_{THEORY}$ penalizes violations of theoretical constraints, weighted by the hyperparameter $\gamma$. 
 
-\citet{vonrueden2021informed} formalized these efforts into an IML taxonomy, which categorizes knowledge integration by its source, representation and the stage of the machine learning pipeline where it is incorporated. Knowledge can be represented as algebraic equations, logical rules or probabilistic priors, and integrated at various stages: within the training data, through the design of tailored architectures, or by influencing the model's final output. 
+\citet{vonrueden2021informed} formalized these efforts into an IML taxonomy, which \replaced[id=rev]{categorises}{categorizes} knowledge integration by its source, representation and the stage of the machine learning pipeline where it is incorporated. Knowledge can be represented as algebraic equations, logical rules or probabilistic priors, and integrated at various stages: within the training data, through the design of tailored architectures, or by influencing the model's final output. 
 
 We operationalized these taxonomic dimensions in gTransformer by integrating theoretical priors from an interpretable BKT model into the inputs and employing a multi-objective loss function to anchor the model's predictions to BKT parameters. However, while most IML approaches focus on using prior knowledge to maximize predictive accuracy \citep{vonrueden2021informed}, gTransformer aims to achieve theory-based interpretability while offering competitive predictive performance, as detailed in \cref{sec_iml_gtransformer}. 
 
@@ -298,7 +298,7 @@ Within the context of our architecture, the operationalization of these dimensio
     \item \textbf{Prior Knowledge}: The source of theoretical information comprises simulation results from a reference model, typically expressed as parameter values that represent foundational pedagogical constructs.
     \item \textbf{Training Data}: Empirical student interaction histories are augmented with prior knowledge to train the model.
     \item \textbf{Hypothesis Set}: An attention-based Transformer architecture is employed to provide the inductive biases necessary to lead the model toward desired states.
-    \item \textbf{Learning Algorithm}: The model is optimized via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical interpretability.
+    \item \textbf{Learning Algorithm}: The model is \replaced[id=rev]{optimised}{optimized} via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical interpretability.
     \item \textbf{Final Hypothesis}: A set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted.
     \item \textbf{Mastery Estimations}: The outputs generated through the grounded parameters serve as inputs to the reference model to produce interpretable mastery estimations.
 \end{itemize}
@@ -311,7 +311,7 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=1.0\textwidth]{img/arch.png}
-    \caption{Functional layers of the gTransformer architecture. Gray denotes standard Transformer elements, blue denotes gTransformer-specific elements.}
+    \caption{Functional layers of the gTransformer architecture. \replaced[id=rev]{Grey}{Gray} denotes standard Transformer elements, blue denotes gTransformer-specific elements.}
     \label{gtransformer_arch}
 \end{figure}
 
@@ -374,8 +374,7 @@ This design ensures that the model's parameter estimates remain structurally anc
 
 The gTransformer model generates predictions through various output heads, each serving a distinct functional role in the architecture's dual objectives of predictive accuracy and pedagogical interpretability.
 
-\textbf{Supervised Prediction Head ($p_{sup}$)}: A multi-layer perceptron (MLP) directly maps the context vector $z_t$ to a correctness prediction $\hat{y}_t = \text{MLP}(z_t)$. This head is optimized purely for predictive accuracy via binary cross-entropy loss, leveraging the full expressive capacity of the Transformer's learned representations without theoretical constraints.
-
+\textbf{Supervised Prediction Head ($p_{sup}$)}: A multi-layer perceptron (MLP) directly maps the context vector $z_t$ to a correctness prediction $\hat{y}_t = \text{MLP}(z_t)$. This head is \replaced[id=rev]{optimised}{optimized} purely for predictive accuracy via binary cross-entropy loss, leveraging the full expressive capacity of the Transformer's learned representations without theoretical constraints.
 
 \textbf{Interpretable Output Head ($p_{ref}$)}: The grounded BKT parameters $(p_{L_0,t}, p_{T,t})$ are passed through an implementation of BKT logic, which performs a retrospective belief update walk over the student's interaction history. At each timestep, the BKT logic computes the probability of correctness $\hat{y}_{\text{ref},t}$ using the standard BKT update equations with the model's grounded parameters and the fixed population-level guess and slip values. These predictions are intrinsically interpretable because they can be directly tracked to established pedagogical constructs, providing a transparent causal explanation that justifies each estimation through the theoretical lens of BKT. This head ensures that the grounded parameters retain their intended semantic meaning by requiring them to produce valid predictions subjected to the reference model's reasoning process.
 
@@ -415,7 +414,7 @@ This section details the experimental setup employed to train and evaluate gTran
 
 The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardised data preprocessing, dataset splitting, and baseline model implementation. 
 
-Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison. Hyperparameters used for gTransformer training are detailed in \cref{tab:params}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
+Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the \replaced[id=rev]{optimised}{optimized} values reported in the official \texttt{pyKT} repository to ensure fair comparison. Hyperparameters used for gTransformer training are detailed in \cref{tab:params}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
 
 \subsection{Datasets}\label{sec_dataset}
 
@@ -663,7 +662,7 @@ The three-component design addresses distinct trust requirements: simple numeric
 Across AS2009 test interactions, we observe heterogeneous confidence patterns (\Cref{fig_h13_confidence_heatmap}), with 89.2\% of student-skill pairs achieving medium or high confidence, while only 10.8\% exhibit low confidence. This shows that interpretable predictions provide actionable diagnostic value with quantified uncertainty, enabling educators to leverage theory-grounded explanations while recognising situations requiring additional validation.
 
 
-\subsection{Student-Centered Personalization (RQ3)} \label{sec_gran_results}
+\subsection{\replaced[id=rev]{Student-Centred Personalisation}{Student-Centered Personalization} (RQ3)} \label{sec_gran_results}
 
 \replaced[id=rev]{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centred personalisation beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, leverages its attention mechanism to capture complex, non-linear dependencies across the entire interaction history. By synthesising this history into a latent context vector and projecting it onto student-specific parameters ($p_{L_0}$ and $p_T$), the model identifies unique learning signatures that Markovian transitions fundamentally cannot represent. This allows gTransformer to differentiate students even when their immediate observable responses are identical.}{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centred personalisation beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, uses its high capacity to capture temporal learning dynamics (the individualised parameters $p_{L_0}$ and $p_T$ extracted from interaction history) to differentiate students even when their observable responses are identical.}
 
