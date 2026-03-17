@@ -218,7 +218,7 @@ Consequently, there is a critical need for new approaches that move beyond techn
 Our research is guided by three primary research questions:
 
 \begin{itemize}
-\item RQ1: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
+\item RQ1: \textbf{Performance--Interpretability Trade-Off}
 
 Are gTransformer models able to produce interpretable outputs while remaining competitive in terms of predictive performance? What is the trade-off between predictive performance and interpretability?
 
@@ -226,7 +226,7 @@ Are gTransformer models able to produce interpretable outputs while remaining co
 
 How can we check that the parameters used to get interpretable outputs are really grounded in theory-based estimations?  
 
-\item RQ3: \replaced[id=rev]{\textbf{Student-Centred Personalisation}}{\textbf{Student-Centered Personalization}}
+\item RQ3: \replaced[id=rev]{\textbf{Context-Aware Personalisation}}{\textbf{Student-Centered Personalization}}
 
 How can the longitudinal context captured by a Transformer-based model enhance \replaced[id=rev]{student-centred personalisation}{student-centered personalization}, and how does this compare with capabilities of population-based models like BKT?
 
@@ -465,7 +465,7 @@ This section details the experimental setup employed to train and evaluate gTran
     \item \added[id=rev]{\textbf{H2.3: Functional Alignment}: Quantifies the confidence with which interpretable, theory-constrained estimations {($p_{\text{ref}}$)} can substitute for the black-box supervised baseline {($p_{\text{sup}2}$)} without significant performance loss.}
 \end{itemize}
 
-\subsubsection{\added[id=rev]{Personalised Diagnostic Granularity (RQ3)}}
+\subsubsection{\added[id=rev]{Context-Aware Personalisation (RQ3)}}
 
 \added[id=rev]{To evaluate the model's ability to provide learner-centred diagnostics, we leverage the context-aware parameters derived by the attention mechanism.}
 \added[id=rev]{We implement a diagnostic protocol that clusters interaction sequences into distinct learning situations (e.g., rapid mastery, learning plateaus) based on grounded prior knowledge and learning rates.} 
@@ -548,7 +548,7 @@ For the comparative analysis, we selected six models that are among the most fre
 
 \section{Results and Discussion} \label{sec_results}
 
-\subsection{Trade-Off between Predictive Performance and Interpretability (RQ1)} \label{sec_tradeoff}
+\subsection{Performance--Interpretability Trade-off (RQ1)} \label{sec_tradeoff}
 
 To evaluate the predictive performance of gTransformer, we \replaced[id=rev]{utilised}{utilized} the Area Under the Curve (AUC) across the benchmark datasets described in \cref{sec_dataset}. The experimental results are \replaced[id=rev]{summarised}{summarized} in Table~\ref{tab_performance}.
 
@@ -698,7 +698,7 @@ The three-component design addresses distinct trust requirements: simple numeric
 Across AS2009 test interactions, we observe heterogeneous confidence patterns (\Cref{fig_h13_confidence_heatmap}), with 89.2\% of student-skill pairs achieving medium or high confidence, while only 10.8\% exhibit low confidence. This shows that interpretable predictions provide actionable diagnostic value with quantified uncertainty, enabling educators to leverage theory-grounded explanations while \replaced[id=rev]{recognising}{recognizing} situations requiring additional validation.
 
 
-\subsection{Student-Centred Personalisation (RQ3)} \label{sec_gran_results}
+\subsection{Context-Aware Personalisation (RQ3)} \label{sec_gran_results}
 
 \replaced[id=rev]{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e., their sequence of interactions) rather than just response patterns.}{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e., their sequence of interactions) rather than just response patterns.} \replaced[id=rev]{This capability enables student-centred personalisation beyond what population-based models such as BKT can provide.}{This capability enables student-centered personalization beyond what population-based models such as BKT can provide.} \replaced[id=rev]{Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history.}{Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history.} \replaced[id=rev]{The gTransformer model, by contrast, leverages its attention mechanism to capture complex, non-linear dependencies across the entire interaction history.}{The gTransformer model, by contrast, uses its high capacity to capture temporal learning dynamics (the individualized parameters extracted from interaction history) to differentiate students even when their observable responses are identical.} By synthesising this history into a latent context vector and projecting it onto student-specific parameters ($p_{L_0}$ and $p_T$), the model identifies unique learning signatures that Markovian transitions fundamentally cannot represent. This allows gTransformer to differentiate students even when their immediate observable responses are identical.
 
