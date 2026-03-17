@@ -464,12 +464,13 @@ This section details the experimental setup employed to train and evaluate gTran
 \begin{itemize}
     \item \added[id=rev]{\textbf{H2.1: Structural Alignment}: Latent representations in the gTransformer model are structurally organized around Bayesian concepts (initial mastery {$P(L_0)$} and learning rate {$P(T)$}) as the dominant organising principle. This is verified using {\textit{diagnostic probing}} {\citep{hewitt2019designing, belinkov2022probing}}. We measure {\textit{fidelity}} as the quality of the parameter recovery from the latent representations via {$R^2$} and Pearson correlation {$r$}. To distinguish genuine structural encoding from spurious correlations, {\textit{selectivity}} ({$\Delta R^2$}) is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. We aim for {$\Delta R^2 > 0.5$}.}
     \item \added[id=rev]{\textbf{H2.2: Semantic Alignment}: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation {$\rho$}) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.}
-    \item \added[id=rev]{\textbf{H2.3: Functional Alignment}: Quantifies the confidence with which interpretable, theory-constrained estimations {($p_{\text{ref}}$)} can substitute for the black-box supervised baseline {($p_{\text{sup}2}$)} without significant performance loss. To quantify this trustworthiness, we define a \textit{composite confidence metric} calculated as a weighted sum of three relevant dimensions:
+    \item \added[id=rev]{\textbf{H2.3: Functional Alignment}: Quantifies the confidence with which interpretable, theory-constrained estimations ($p_{\text{ref}}$) can substitute for the black-box supervised baseline ($p_{\text{sup}2}$) without significant performance loss. To quantify this trustworthiness, we define a \textit{composite confidence metric} calculated as a weighted sum of three relevant dimensions:}
     \begin{equation} \label{eq:confidence}
     \text{Confidence} = w_1 \cdot C_{\text{calibrated}} + w_2 \cdot C_{\text{directional}} + w_3 \cdot C_{\text{percentile}}
     \end{equation}
-    where $w_1, w_2, w_3$ are relative weights. These dimensions include numerical proximity ($C_{\text{calibrated}}$), binary decision agreement ($C_{\text{directional}}$), and a dataset-wide rank of prediction disagreement ($C_{\text{percentile}}$). This three-component design identifies student-skill pairs where interpretable predictions are reliable versus those requiring additional validation.}
+    \added[id=rev]{where $w_1, w_2, w_3$ are relative weights. These dimensions include numerical proximity ($C_{\text{calibrated}}$), binary decision agreement ($C_{\text{directional}}$), and a dataset-wide rank of prediction disagreement ($C_{\text{percentile}}$). This three-component design identifies student-skill pairs where interpretable predictions are reliable versus those requiring additional validation.}
 \end{itemize}
+
 
 \subsubsection{\added[id=rev]{Context-Aware Personalisation (RQ3)}}
 
