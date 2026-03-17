@@ -443,16 +443,34 @@ This section details the experimental setup employed to train and evaluate gTran
 
 \subsection{Methodology} \label{sec_methodology}
 
-\added[id=rev]{To validate gTransformer's capabilities, we employ a multi-faceted evaluation strategy. The grounded (non-ablated) gTransformer variant generates two outputs: (1) supervised predictions from the standard output head {($p_{\text{sup}2}$)} and (2) interpretable predictions {($p_{\text{ref}}$)} derived from the grounded parameters. To evaluate the performance trade-off, we use also (3) supervised predictions from the ablated configuration {($p_{\text{sup}1}$)}, which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) predictions from the BKT model {($p_{\text{bkt}}$)} using population-level parameters. We quantify {\textit{Interpretability Drop}} as {($p_{\text{sup}1} - p_{\text{sup}2}$)}, the expected reduction in supervised predictive power caused by the structural constraints required to align the latent space with theoretical constructs. The {\textit{Interpretability Cost}} is measured as {($p_{\text{sup}2} - p_{\text{ref}}$)}, representing the sacrifice in accuracy required to achieve intrinsic pedagogical transparency. Conversely, the {\textit{Interpretability Gain}}, defined as {($p_{\text{ref}} - p_{\text{bkt}}$)}, represents the performance benefit of our grounded approach over the interpretable BKT baseline.}
+\subsubsection{\added[id=rev]{Performance--Interpretability Trade-off (RQ1)}}
 
-\added[id=rev]{For {\textit{grounded interpretability}} (RQ2), we establish a triple validation protocol consisting of the following hypotheses:}
+\added[id=rev]{To quantify the balance between predictive power and transparency, we assess gTransformer using four distinct prediction variants:}
+\added[id=rev]{(1) ablated supervised predictions {($p_{\text{sup}1}$)}, representing the model's maximum capacity without grounding;}
+\added[id=rev]{(2) grounded supervised predictions {($p_{\text{sup}2}$)}, from the standard output head of the unified model;}
+\added[id=rev]{(3) interpretable predictions {($p_{\text{ref}}$)}, derived exclusively from the causative BKT logic using grounded parameters; and}
+\added[id=rev]{(4) population-level BKT predictions {($p_{\text{bkt}}$)} as a classical baseline.}
+
+\added[id=rev]{We establish three key metrics to evaluate this trade-off:} 
+\added[id=rev]{firstly, {\textit{Interpretability Drop}}, defined as {($p_{\text{sup}1} - p_{\text{sup}2}$)}, which measures the impact of theoretical constraints on neural capacity;}
+\added[id=rev]{secondly, {\textit{Interpretability Cost}}, calculated as {($p_{\text{sup}2} - p_{\text{ref}}$)}, quantifying the accuracy reduction when switching to fully interpretable logic;}
+\added[id=rev]{and thirdly, {\textit{Interpretability Gain}}, defined as {($p_{\text{ref}} - p_{\text{bkt}}$)}, which represents the performance advantage of grounded Individualization over traditional theory-based models.}
+
+\subsubsection{\added[id=rev]{Grounded Interpretability Validation (RQ2)}}
+
+\added[id=rev]{To verify that gTransformer's internal states are pedagogically valid rather than merely technical artifacts, we implement a triple validation framework based on the following hypotheses:}
 \begin{itemize}
     \item \added[id=rev]{\textbf{H2.1: Structural Alignment}: Latent representations in the gTransformer model are structurally organized around Bayesian concepts (initial mastery {$P(L_0)$} and learning rate {$P(T)$}) as the dominant organising principle. This is verified using {\textit{diagnostic probing}} {\citep{hewitt2019designing, belinkov2022probing}}. We measure {\textit{fidelity}} as the quality of the parameter recovery from the latent representations via {$R^2$} and Pearson correlation {$r$}. To distinguish genuine structural encoding from spurious correlations, {\textit{selectivity}} ({$\Delta R^2$}) is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. We aim for {$\Delta R^2 > 0.5$}.}
     \item \added[id=rev]{\textbf{H2.2: Semantic Alignment}: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation {$\rho$}) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.}
     \item \added[id=rev]{\textbf{H2.3: Functional Alignment}: Quantifies the confidence with which interpretable, theory-constrained estimations {($p_{\text{ref}}$)} can substitute for the black-box supervised baseline {($p_{\text{sup}2}$)} without significant performance loss.}
 \end{itemize}
 
-\added[id=rev]{Furthermore, to evaluate {\textit{student-centred personalisation}} (RQ3), we implement {\textit{context-aware diagnostics}} by clustering interaction sequences into four distinct learning situations based on grounded prior knowledge and learning rates. This allows us to demonstrate how the model captures high-granularity context - such as learning plateaus or rapid mastery - that traditional Markovian models fundamentally overlook. These diagnostics are further validated through visualisations of longitudinal learning trajectories.}
+\subsubsection{\added[id=rev]{Personalised Diagnostic Granularity (RQ3)}}
+
+\added[id=rev]{To evaluate the model's ability to provide learner-centred diagnostics, we leverage the context-aware parameters derived by the attention mechanism.}
+\added[id=rev]{We implement a diagnostic protocol that clusters interaction sequences into distinct learning situations (e.g., rapid mastery, learning plateaus) based on grounded prior knowledge and learning rates.} 
+\added[id=rev]{This approach allows us to demonstrate how gTransformer overcomes the Markovian limitations of traditional models by capturing longitudinal context.}
+\added[id=rev]{These diagnostic profiles are validated through visualisations of student-specific learning trajectories and a comparison of the granularity level achieved relative to population-level and student-independent baselines.}
 
 \subsection{Training Setup}
 
