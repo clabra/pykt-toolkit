@@ -1,6 +1,6 @@
 ;blue;;0;0;0;0;0
-rev;blue;Author;39;0;46;0;0
-rev2com1;brown;Reviewer 2;1;0;2;0;0
+rev;blue;Author;37;0;64;0;0
+rev2com1;brown;Reviewer 2;18;0;4;0;0
 rev3bcom1;violet;Reviewer 3;2;0;1;0;0
-revother;gray;Other;2;0;30;0;0
-rev4;red;Reviewer 4;5;0;1;0;0
+revother;gray;Other;2;0;1;0;0
+rev4;red;Reviewer 4;5;0;3;0;0
