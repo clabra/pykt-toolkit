@@ -298,6 +298,13 @@ Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
   engineering and environmental systems.
 \newblock {\em ACM Computing Surveys} {\bf 2022}, {\em 55},~1--37.
 
+\bibitem[Baker et~al.(2008)Baker, Corbett, and Aleven]{baker2008more}
+Baker, R.S.d.; Corbett, A.T.; Aleven, V.
+\newblock More accurate student modeling through contextual estimation of slip
+  and guess probabilities in bayesian knowledge tracing.
+\newblock In Proceedings of the International conference on intelligent
+  tutoring systems. Springer,  2008, pp. 406--415.
+
 \bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
 Hewitt, J.; Liang, P.
 \newblock Designing and Interpreting Probes with Control Tasks.
@@ -359,12 +366,5 @@ Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  et~al.
 \newblock Enhancing Knowledge Tracing via Adversarial Training.
 \newblock In Proceedings of the Proceedings of the 27th ACM SIGKDD Conference
   on Knowledge Discovery \& Data Mining,  2021.
-
-\bibitem[Baker et~al.(2008)Baker, Corbett, and Aleven]{baker2008more}
-Baker, R.S.d.; Corbett, A.T.; Aleven, V.
-\newblock More accurate student modeling through contextual estimation of slip
-  and guess probabilities in bayesian knowledge tracing.
-\newblock In Proceedings of the International conference on intelligent
-  tutoring systems. Springer,  2008, pp. 406--415.
 
 \end{thebibliography}
