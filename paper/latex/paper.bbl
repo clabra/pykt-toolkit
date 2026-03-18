@@ -20,6 +20,53 @@ Abdelrahman, G.; Wang, Q.; Nunes, B.
 \newblock Knowledge tracing: A survey.
 \newblock {\em ACM Computing Surveys} {\bf 2023}, {\em 55},~1--37.
 
+\bibitem[Ines et~al.(2024)Ines, Ani, and Angelina]{twenty_five_years_of_bkt}
+Ines, {\v{S}ari\'c-Grgi\'c}.; Ani, G.; Angelina, G.
+\newblock Twenty-Five Years of Bayesian knowledge tracing: a systematic review.
+\newblock {\em User Modeling and User-Adapted Interaction} {\bf 2024}, {\em
+  34},~1127 – 1173.
+\newblock Cited by: 16, {\url{https://doi.org/10.1007/s11257-023-09389-4}}.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
+  Kaiser, and Polosukhin]{vaswani2017attention}
+Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
+  Kaiser, {\L}.; Polosukhin, I.
+\newblock Attention is all you need.
+\newblock {\em Advances in neural information processing systems} {\bf 2017},
+  {\em 30}.
+
+\bibitem[Bai et~al.(2024)Bai, Zhao, Wei, Cai, and He]{bai2024survey}
+Bai, Y.; Zhao, J.; Wei, T.; Cai, Q.; He, L.
+\newblock A survey of explainable knowledge tracing.
+\newblock {\em Applied Intelligence} {\bf 2024}, {\em 54},~6483--6514.
+
+\bibitem[Rudin(2019)]{rudin2019stop}
+Rudin, C.
+\newblock Stop explaining black box machine learning models for high stakes
+  decisions and use interpretable models instead.
+\newblock {\em Nature machine intelligence} {\bf 2019}, {\em 1},~206--215.
+
+\bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
+  Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
+  Bauckhage, and Schuecker]{vonrueden2021informed}
+Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
+  Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
+\newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
+  Knowledge into Learning Systems.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
+  p. 1–1.
+
+\bibitem[Holmes et~al.(2022)Holmes, Porayska-Pomsta, Holstein, Sutherland,
+  Baker, Shum, Santos, Rodrigo, Cukurova, Bittencourt, and
+  Koedinger]{Holmes2022504}
+Holmes, W.; Porayska-Pomsta, K.; Holstein, K.; Sutherland, E.; Baker, T.; Shum,
+  S.B.; Santos, O.C.; Rodrigo, M.T.; Cukurova, M.; Bittencourt, I.I.;  et~al.
+\newblock Ethics of AI in Education: Towards a Community-Wide Framework.
+\newblock {\em International Journal of Artificial Intelligence in Education}
+  {\bf 2022}, {\em 32},~504 – 526.
+\newblock Cited by: 636; All Open Access, Hybrid Gold Open Access,
+  {\url{https://doi.org/10.1007/s40593-021-00239-1}}.
+
 \bibitem[Cen et~al.(2008)Cen, Koedinger, and Junker]{cen2008comparing}
 Cen, H.; Koedinger, K.; Junker, B.
 \newblock Comparing two IRT models for conjunctive skills.
@@ -46,13 +93,6 @@ Embretson, S.E.; Reise, S.P.
 \newblock {\em Item response theory for psychologists}; Psychology Press,
   2013.
 
-\bibitem[Ines et~al.(2024)Ines, Ani, and Angelina]{twenty_five_years_of_bkt}
-Ines, {\v{S}ari\'c-Grgi\'c}.; Ani, G.; Angelina, G.
-\newblock Twenty-Five Years of Bayesian knowledge tracing: a systematic review.
-\newblock {\em User Modeling and User-Adapted Interaction} {\bf 2024}, {\em
-  34},~1127 – 1173.
-\newblock Cited by: 16, {\url{https://doi.org/10.1007/s11257-023-09389-4}}.
-
 \bibitem[Piech et~al.(2015)Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and
   Sohl-Dickstein]{piech2015deep}
 Piech, C.; Bassen, J.; Huang, J.; Ganguli, S.; Sahami, M.; Guibas, L.J.;
@@ -60,30 +100,6 @@ Piech, C.; Bassen, J.; Huang, J.; Ganguli, S.; Sahami, M.; Guibas, L.J.;
 \newblock Deep knowledge tracing.
 \newblock {\em Advances in neural information processing systems} {\bf 2015},
   {\em 28}.
-
-\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
-  Kaiser, and Polosukhin]{vaswani2017attention}
-Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
-  Kaiser, {\L}.; Polosukhin, I.
-\newblock Attention is all you need.
-\newblock {\em Advances in neural information processing systems} {\bf 2017},
-  {\em 30}.
-
-\bibitem[Holmes et~al.(2022)Holmes, Porayska-Pomsta, Holstein, Sutherland,
-  Baker, Shum, Santos, Rodrigo, Cukurova, Bittencourt, and
-  Koedinger]{Holmes2022504}
-Holmes, W.; Porayska-Pomsta, K.; Holstein, K.; Sutherland, E.; Baker, T.; Shum,
-  S.B.; Santos, O.C.; Rodrigo, M.T.; Cukurova, M.; Bittencourt, I.I.;  et~al.
-\newblock Ethics of AI in Education: Towards a Community-Wide Framework.
-\newblock {\em International Journal of Artificial Intelligence in Education}
-  {\bf 2022}, {\em 32},~504 – 526.
-\newblock Cited by: 636; All Open Access, Hybrid Gold Open Access,
-  {\url{https://doi.org/10.1007/s40593-021-00239-1}}.
-
-\bibitem[Bai et~al.(2024)Bai, Zhao, Wei, Cai, and He]{bai2024survey}
-Bai, Y.; Zhao, J.; Wei, T.; Cai, Q.; He, L.
-\newblock A survey of explainable knowledge tracing.
-\newblock {\em Applied Intelligence} {\bf 2024}, {\em 54},~6483--6514.
 
 \bibitem[Pandey and Karypis(2019)]{Pandey2019384}
 Pandey, S.; Karypis, G.
@@ -120,22 +136,6 @@ Chen, J.; Liu, Z.; Huang, S.; Liu, Q.; Luo, W.
   models with question-centric cognitive representations.
 \newblock In Proceedings of the Proceedings of the AAAI Conference on
   Artificial Intelligence,  2023, Vol.~37, pp. 14196--14204.
-
-\bibitem[Rudin(2019)]{rudin2019stop}
-Rudin, C.
-\newblock Stop explaining black box machine learning models for high stakes
-  decisions and use interpretable models instead.
-\newblock {\em Nature machine intelligence} {\bf 2019}, {\em 1},~206--215.
-
-\bibitem[Von~Rueden et~al.(2021)Von~Rueden, Mayer, Beckh, Georgiev,
-  Giesselbach, Heese, Kirsch, Pfrommer, Pick, Ramamurthy, Walczak, Garcke,
-  Bauckhage, and Schuecker]{vonrueden2021informed}
-Von~Rueden, L.; Mayer, S.; Beckh, K.; Georgiev, B.; Giesselbach, S.; Heese, R.;
-  Kirsch, B.; Pfrommer, J.; Pick, A.; Ramamurthy, R.;  et~al.
-\newblock Informed Machine Learning – A Taxonomy and Survey of Integrating
-  Knowledge into Learning Systems.
-\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2021},
-  p. 1–1.
 
 \bibitem[Arnau-González et~al.(2025)Arnau-González, Wu, Solera-Monforte,
   Arnau, and Arevalillo-Herráez]{Arnau-Gonzalez2025195}
@@ -243,6 +243,21 @@ Zhang, M.; Zhu, X.; Zhang, C.; Qian, W.; Pan, F.; Zhao, H.
 \newblock In Proceedings of the Proceedings of the 32nd ACM international
   conference on information and knowledge management,  2023, pp. 3236--3246.
 
+\bibitem[Labra and Santos(2023)]{labra2023exploring}
+Labra, C.; Santos, O.C.
+\newblock Exploring cognitive models to augment explainability in Deep
+  Knowledge Tracing.
+\newblock In Proceedings of the Adjunct Proceedings of the 31st ACM Conference
+  on User Modeling, Adaptation and Personalization (UMAP '23 Adjunct),  2023,
+  pp. 220--223.
+\newblock {\url{https://doi.org/10.1145/3563359.3597384}}.
+
+\bibitem[Badrinath and Pardos(2025)]{badrinath2025optimizing}
+Badrinath, A.; Pardos, Z.
+\newblock Optimizing Bayesian Knowledge Tracing with Neural Network Parameter
+  Generation.
+\newblock {\em arXiv preprint arXiv:2501.00000} {\bf 2025}.
+
 \bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
   Ganguly, Shekhar, Samatova, and Kumar]{karpatne2017theory}
 Karpatne, A.; Atluri, G.; Faghmous, J.; Steinbach, M.; Banerjee, A.; Ganguly,
@@ -282,6 +297,19 @@ Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
 \newblock Integrating scientific knowledge with machine learning for
   engineering and environmental systems.
 \newblock {\em ACM Computing Surveys} {\bf 2022}, {\em 55},~1--37.
+
+\bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
+Hewitt, J.; Liang, P.
+\newblock Designing and Interpreting Probes with Control Tasks.
+\newblock In Proceedings of the Proceedings of the 2019 Conference on Empirical
+  Methods in Natural Language Processing and the 9th International Joint
+  Conference on Natural Language Processing (EMNLP-IJCNLP); Inui, K.; Jiang,
+  J.; Ng, V.; Wan, X., Eds., Hong Kong, China,  2019; pp. 2733--2743.
+
+\bibitem[Belinkov(2022)]{belinkov2022probing}
+Belinkov, Y.
+\newblock Probing classifiers: Promises, shortcomings, and advances.
+\newblock {\em Computational Linguistics} {\bf 2022}, {\em 48},~207--219.
 
 \bibitem[Liu et~al.(2022)Liu, Liu, Chen, Huang, Tang, and Luo]{liu2022pykt}
 Liu, Z.; Liu, Q.; Chen, J.; Huang, S.; Tang, J.; Luo, W.
@@ -331,19 +359,6 @@ Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  et~al.
 \newblock Enhancing Knowledge Tracing via Adversarial Training.
 \newblock In Proceedings of the Proceedings of the 27th ACM SIGKDD Conference
   on Knowledge Discovery \& Data Mining,  2021.
-
-\bibitem[Hewitt and Liang(2019)]{hewitt2019designing}
-Hewitt, J.; Liang, P.
-\newblock Designing and Interpreting Probes with Control Tasks.
-\newblock In Proceedings of the Proceedings of the 2019 Conference on Empirical
-  Methods in Natural Language Processing and the 9th International Joint
-  Conference on Natural Language Processing (EMNLP-IJCNLP); Inui, K.; Jiang,
-  J.; Ng, V.; Wan, X., Eds., Hong Kong, China,  2019; pp. 2733--2743.
-
-\bibitem[Belinkov(2022)]{belinkov2022probing}
-Belinkov, Y.
-\newblock Probing classifiers: Promises, shortcomings, and advances.
-\newblock {\em Computational Linguistics} {\bf 2022}, {\em 48},~207--219.
 
 \bibitem[Baker et~al.(2008)Baker, Corbett, and Aleven]{baker2008more}
 Baker, R.S.d.; Corbett, A.T.; Aleven, V.

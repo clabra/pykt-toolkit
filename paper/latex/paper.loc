@@ -1,103 +1,148 @@
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{non-interpretable}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{conceptualised}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{modelling}{1}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalised}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterise}{2}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{3}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilises}{3}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{synthesising}{3}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{3}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred}{3}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Student-Centred Personalisation}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Knowledge Tracing (KT) \citep {corbett1994knowledge} is a foundational problem in Intelligent Tutoring Systems and Learning Analytics \citep {Romero2020} aimed at estimating the evolution of student knowledge as they interact with a sequence of educational work items. Accurate mastery tracking enables data-driven personalisation, yet current approaches are caught in a dichotomy between interpretable but rigid probabilistic models and high-accuracy but opaque Deep Knowledge Tracing architectures \citep {abdelrahman2023knowledge, twenty_five_years_of_bkt, vaswani2017attention}. While recent efforts have sought to bridge this gap, they frequently prioritise technical performance over pedagogical alignment \citep {bai2024survey, rudin2019stop, vonrueden2021informed}. Consequently, a critical research gap remains regarding architectures that can maintain the representational capacity of deep learning while remaining grounded in educational theory. Specifically, there is a need for models that track student mastery through conceptual constructs, such as prior knowledge and learning rates, rather than opaque latent features, addressing the transparency and accountability concerns essential for trust in educational AI \citep {Holmes2022504}}{3}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{To address the challenge of achieving both high predictive accuracy and pedagogical transparency, this work provides the following key contributions:}{3}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{We introduce gTransformer, a variant of attention-based Transformers that implements a novel \textit {Representational Grounding} methodology. This approach explicitly anchors the model's latent representations to the concepts of an intrinsically interpretable reference model, bridging the gap between deep learning expressiveness and theoretical alignment.}{3}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{We demonstrate that grounded models achieve state-of-the-art predictive performance, providing a significant AUC gain over traditional theory-based models (+19.9\%) while incurring a minimal cost (3.9\%) relative to non-interpretable configurations.}{3}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{By leveraging attention mechanisms to encode longitudinal interaction histories into context-aware parameters, gTransformer overcomes the structural rigidity and Markovian limitations of traditional approaches, enabling the differentiation of students based on their unique learning trajectories.}{3}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{We establish a triple validation methodology consisting of structural, semantic, and functional alignment to quantify the pedagogical integrity and reliability of the model's internal diagnostic representations.}{3}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{\textbf {Context-Aware Personalisation}}{4}
 \ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{visualisations}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorise}{4}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Individualised}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{modelling}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterise}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritised}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorised}{5}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilising}{6}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilises}{6}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularisation}{6}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{penalises}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorises}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalised}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalisation}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{7}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organised}{8}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{8}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Grey}{9}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behavioural}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{To address these questions, we implement a validation approach that quantifies the trade-off between predictive performance and interpretability (RQ1), assesses the pedagogical grounding of internal representations through a triple validation methodology (RQ2), and demonstrates practical applications for achieving context-aware personalisation (RQ3).}{4}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{This section situates gTransformer within the broader landscape of KT research. We begin by tracing the historical evolution of KT models and the emergence of the interpretability--performance dichotomy. We then examine the theoretical foundations of Bayesian Knowledge Tracing (BKT) as our reference framework, followed by a review of the transition from recurrent to attention-based Deep Knowledge Tracing (DKT) architectures. Subsequently, we categorise existing efforts to bridge the interpretability gap through post-hoc and ante-hoc methodologies. Finally, we map our approach to the paradigm of Informed Machine Learning, establishing the theoretical grounding of our model.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Historically, the development of KT has been characterized by a dichotomy between two distinct paradigms {\citep {abdelrahman2023knowledge}}. The first, which predominated in the field for years, is characterized by probabilistic models such as Bayesian Knowledge Tracing (BKT) {\citep {corbett1994knowledge}} and Factor Analysis Models based on logistic regression, including Additive Factor Models {\citep {cen2008comparing}}, Performance Factor Analysis {\citep {pavlik2009performance}}, and Knowledge Tracing Machines {\citep {vie2019knowledge}}. Factor Analysis Models are theoretically supported by the Item Response Theory (IRT) {\citep {embretson2013item}}, which has played a large role in educational assessment and measurement. These traditional approaches are intrinsically interpretable: they model learning as a process governed by explicit parameters related to pedagogical, cognitive or psychometric principles. Because the model structure mirrors a theoretical understanding of human learning, educators can inspect these values to validate the model's reasoning and trust its outputs. However, this transparency comes at the cost of representational rigidity; the simplifying assumptions required by these models often limit their predictive power, causing them to struggle with the complex, non-linear and long-range dependencies inherent in real-world student behavior {\citep {twenty_five_years_of_bkt}}.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{The second paradigm emerged with the advent of Deep Knowledge Tracing (DKT) {\citep {piech2015deep}}, which leverages deep learning techniques ranging from initial Recurrent Neural Networks to more recent Transformer architectures {\citep {vaswani2017attention}}. The latter, based on encoder-decoder components and attention mechanisms, are especially relevant as they provide the foundation for current Large Language Models (LLMs). By treating student interaction histories as temporal sequences, Transformer models apply techniques similar to those that characterize LLMs. DKT models have achieved state-of-the-art predictive performance, significantly outperforming classical baselines due to a structural high capacity that allow them to extract latent features from vast amounts of data {\citep {abdelrahman2023knowledge}}. However, this substantial gain in predictive performance has come at the cost of model transparency, creating a significant interpretability gap. Deep learning models are notoriously opaque ``black boxes'', where the internal high-dimensional representations bear no direct correspondence to constructs that are interpretable in terms of human-understandable concepts or established domain knowledge. In a high-stakes domain such as education, where algorithmic decisions influence learning trajectories, grades and opportunities, this lack of transparency raises critical concerns regarding accountability and trust {\citep {Holmes2022504}}.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Extensive research has sought to bridge this gap, with {\citet {bai2024survey}} classifying modalities into {\textit {post-hoc}} and {\textit {ante-hoc}} categories.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{While {\textit {post-hoc}} methods aim to extract explanations from black-box models after training, {\textit {ante-hoc}} approaches seek to achieve intrinsic interpretability by design, ensuring the model's internal logic is transparent from the outset.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Within this latter category, recent models have attempted to achieve intrinsic transparency by integrating attention mechanisms {\citep {Pandey2019384, ghosh2020context}} or by incorporating side information such as IRT parameters {\citep {yeung2019deep, su2021time, chen2023improving}}.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{These efforts aim to make the decision-making process visible, moving away from pure black-box architectures toward systems whose internal states can be inspected.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{However, from the perspective of domain experts such as teachers and pedagogical designers, these solutions frequently fall short.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Post-hoc explanations often rely on technical relevance scores or local approximations that remain disconnected from domain knowledge {\citep {rudin2019stop}} while most current ante-hoc methods do not produce outputs that map directly to human-understandable concepts.}{5}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{As noted in various surveys {\citep {bai2024survey, vonrueden2021informed}}, when deep learning models incorporate domain knowledge, the primary objective is typically the optimization of predictive performance, while interpretability is often overlooked or left as an unaddressed concern.}{6}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Consequently, there is a critical need for new approaches that move beyond technical transparency toward true pedagogical interpretability.}{6}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{For a KT system to be confidently adopted in high-stakes educational environments, its estimations must be grounded in trusted and empirically validated principles derived from relevant fields such as pedagogy, cognitive science, and psychometrics.}{6}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Educators require models that align with their domain knowledge, tracking mastery not through opaque latent features but through concepts explicitly defined by established frameworks, including the prior knowledge, learning rates and knowledge components postulated by traditional approaches such as BKT and Factor Analysis Models.}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Individualised}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{modelling}{6}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterise}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritised}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilising}{7}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilises}{7}
+\ChangesListline {added}{Added\nobreakspace {}(revother)}{Furthermore, recent research has explored the use of surrogate explainable models and mixup-based loss functions to regularize deep learning predictors, providing a path toward balancing predictive performance with pedagogical transparency \citep {labra2023exploring}.}{8}
+\ChangesListline {added}{Added\nobreakspace {}(revother)}{The viability of this paradigm is further supported by recent developments in neural parameter generation, such as the BKTransformer architecture \citep {badrinath2025optimizing}, which enhances the predictive performance of a BKT model utilising attention-based sequence modeling to estimate individualised, temporally-evolving BKT parameters.}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularisation}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{penalises}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorises}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalised}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{8}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{9}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{9}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{operationalisation}{9}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{9}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organised}{10}
 \ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{10}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{synthesising}{10}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialised}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{centred}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{11}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{12}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{minimising}{12}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularising}{12}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{12}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{standardised}{12}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{For our analysis, we utilised those datasets for which the \textit {pyKT} library \citep {liu2022pykt} provides standardised preprocessing mechanisms, thereby ensuring a rigorous and consistent treatment of student interactions. From this collection, we excluded those datasets that lack explicit mapping to Knowledge Components (\textit {Statics2011} and \textit {POJ}), as this information is essential for pedagogical interpretability, allowing mastery estimations to be anchored to defined educational concepts. The five datasets selected for this study are described below:}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{characterised by subject trees}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{13}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{14}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{14}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{analysed}{14}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Optimiser}{15}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{16}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{16}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{16}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalise}{16}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalise}{16}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{17}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{17}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{17}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{17}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{18}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilised}{19}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{19}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{The problem of KT can be formally conceptualised as a supervised sequence-modelling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence of student interaction sequences enriched with population-level parameters from a pre-fit BKT reference model. Student interactions are represented as temporal sequences of tuples $(q_t, c_t, r_t)$, where $q_t$ denotes the question identifier, $c_t$ represents the associated knowledge component, concept or skill, and $r_t \in \{0, 1\}$ indicates the binary correctness of the student's response at timestep $t$.}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{These empirical interaction traces are augmented with theoretical priors extracted from the BKT reference model. For each knowledge component $c$, we obtain population-level estimates of the four BKT parameters introduced in \ref {sec_bkt}: initial knowledge $P(L_0)$, learning rate $P(T)$, guess probability $P(G)$ and slip probability $P(S)$. For the sake of simplicity, only $P(L_0)$ and $P(T)$ undergo the grounding process while we use directly the values estimated by BKT for the parameters $P(G)$ and $P(S)$ to calculate the interpretable predictions $\hat {y}_{\text {ref}}$.}{10}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Grey}{11}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behavioural}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{contextualised}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev2com1)}{The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks and $2n$ decoder blocks. In our default configuration ($n=4$), this results in 4 encoder layers and 8 decoder layers, providing a total of 12 sequential attention-driven processing stages. Notably, the architecture does not utilise explicit pooling layers (such as \texttt {MaxPool} or \texttt {AvgPool}); instead, it relies on the attention mechanism to perform dynamic, context-aware aggregation of information across the temporal sequence. The encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{y'_1, y'_2, \ldots , y'_{t-1}\}$ into a tensor of \replaced [id=rev]{contextualised}{contextualized} latent representations $Y_{\text {enc}} \in \mathbb {R}^{(t-1) \times d}$. Each encoder block applies multi-head self-attention ($h=4$ or $h=8$ depending on the dataset) with masking to prevent information leakage from future timesteps, followed by a position-wise feed-forward network (FFN) with a hidden dimension of $d_{\text {ff}} = 256$. Within each block, we apply residual connections followed by Layer Normalization (\textit {LayerNorm}) and Dropout ($p=0.1$) to ensure numerical stability and prevent over-fitting, following the established Transformer standards \citep {vaswani2017attention}.}{12}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev2com1)}{The decoder architecture employs an alternating pattern of $2n$ sequential layers. Odd-numbered decoder layers (layers 1, 3, 5, \dots , $2n-1$) perform self-attention over the current question embeddings $x'_t$ using 4 or 8 heads, allowing the model to examine multiple aspects of the current task without incorporating response history. Even-numbered decoder layers (layers 2, 4, 6, \dots , $2n$) perform cross-attention between the current question representation and the encoder's output $Y_{\text {enc}}$, effectively acting as a knowledge retriever that selectively weights relevant evidence from the student's encoded learning trajectory.}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{synthesising}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialised}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{centred}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{initialisation}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualised}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{behaviour}{13}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev2com1)}{A multi-layer perceptron (MLP) directly maps the high-dimensional context vector $z_t$ to a correctness prediction. The context vector ($z \in \mathbb {R}^{128}$) is passed through a sequence of three linear layers with neuron sizes of 512, 256, and 1, respectively. Each hidden layer is followed by a \texttt {ReLU} activation function and a dropout layer ($p=0.1$).}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{maximise}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{minimising}{14}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{regularising}{15}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Performance--Interpretability Trade-off (RQ1)}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{To quantify the balance between predictive power and transparency, we assess gTransformer using four distinct prediction variants:}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{(1) ablated supervised predictions ($p_{\text {sup}1}$), representing the model's maximum capacity without grounding;}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{(2) grounded supervised predictions ($p_{\text {sup}2}$), from the standard output head of the unified model;}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{(3) interpretable predictions ($p_{\text {ref}}$), derived exclusively from the causative BKT logic using grounded parameters; and}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{(4) population-level BKT predictions ($p_{\text {bkt}}$) as a classical baseline.}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{We establish three key metrics to evaluate this trade-off:}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{firstly, \textit {Interpretability Drop}, defined as ($p_{\text {sup}1} - p_{\text {sup}2}$), which measures the impact of theoretical constraints on neural capacity;}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{secondly, \textit {Interpretability Cost}, calculated as ($p_{\text {sup}2} - p_{\text {ref}}$), quantifying the accuracy reduction when switching to fully interpretable logic;}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{and thirdly, \textit {Interpretability Gain}, defined as ($p_{\text {ref}} - p_{\text {bkt}}$), which represents the performance advantage of grounded Individualization over traditional theory-based models.}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Grounded Interpretability Validation (RQ2)}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{To verify that gTransformer's internal states are pedagogically valid rather than merely technical artifacts, we implement a triple validation methodology based on the following hypotheses:}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{\textbf {H2.1: Structural Alignment}: Latent representations in the gTransformer model are structurally organised around Bayesian concepts (initial mastery $P(L_0)$ and learning rate $P(T)$) as the dominant organising principle. This is verified using \textit {diagnostic probing} \citep {hewitt2019designing, belinkov2022probing}. We measure \textit {fidelity} as the quality of the parameter recovery from the latent representations via $R^2$ and Pearson correlation $r$. To distinguish genuine structural encoding from spurious correlations, \textit {selectivity} ($\Delta R^2$) is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. We aim for $\Delta R^2 > 0.5$.}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{\textbf {H2.2: Semantic Alignment}: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation $\rho $) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.}{15}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{\textbf {H2.3: Functional Alignment}: Quantifies the confidence with which interpretable, theory-constrained estimations ($p_{\text {ref}}$) can substitute for the black-box supervised baseline ($p_{\text {sup}2}$) without significant performance loss. To quantify this trustworthiness, we define a \textit {composite confidence metric} calculated as a weighted sum of three relevant dimensions:}{16}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{where $w_1, w_2, w_3$ are relative weights. These dimensions include numerical proximity ($C_{\text {calibrated}}$), binary decision agreement ($C_{\text {directional}}$), and a dataset-wide rank of prediction disagreement ($C_{\text {percentile}}$). This three-component design identifies student-skill pairs where interpretable predictions are reliable versus those requiring additional validation.}{16}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{Context-Aware Personalisation (RQ3)}{16}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{To evaluate the model's ability to provide context-aware predictions, we implement an approach that clusters students along two dimensions corresponding to the predicted parameter values: prior knowledge ($p_{L_0}$) and learning rate ($p_T$). We select students with identical responses to the same sequence of questions but belonging to different clusters (i.e., demonstrating different longitudinal learning patterns). We then illustrate how gTransformer customises predictions based on these diverse learning contexts, whereas traditional BKT models, being fundamentally Markovian, produce identical predictions for the same response sequence regardless of the historical learning context. This approach highlights the non-Markovian patterns and context-aware personalisation that population-level baselines fundamentally cannot represent.}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{standardised}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimised}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev4)}{For our analysis, we utilised those datasets for which the \textit {pyKT} library \citep {liu2022pykt} provides standardised preprocessing mechanisms, thereby ensuring a rigorous and consistent treatment of student interactions. From this collection, we excluded those datasets that lack explicit mapping to Knowledge Components (\textit {Statics2011} and \textit {POJ}), as this information is essential for pedagogical interpretability, allowing mastery estimations to be anchored to defined educational concepts. The five datasets selected for this study are described below:}{16}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev2com1)}{$n_{\text {blocks}}$ (Encoder / Decoder)}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Total attention layers}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{12}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{12}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Output MLP dimensions}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{[128, 512, 256, 1]}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{[128, 512, 256, 1]}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Activation function}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{\texttt {ReLU}}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{\texttt {ReLU}}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Normalization}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{\textit {LayerNorm}}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{\textit {LayerNorm}}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Optimiser}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev2com1)}{Dropout ($p$)}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Weight initialization}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Xavier /}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Orthogonal}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Xavier /}{17}
+\ChangesListline {added}{Added\nobreakspace {}(rev2com1)}{Orthogonal}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev4)}{characterised by subject trees}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{17}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{utilise}{18}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{summarised}{18}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{analysed}{18}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{18}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalise}{19}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{19}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{optimisation}{20}
 \ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{20}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{20}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{recognising}{21}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Student-Centred Personalisation}{21}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centred personalisation beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, leverages its attention mechanism to capture complex, non-linear dependencies across the entire interaction history. By synthesising this history into a latent context vector and projecting it onto student-specific parameters ($p_{L_0}$ and $p_T$), the model identifies unique learning signatures that Markovian transitions fundamentally cannot represent. This allows gTransformer to differentiate students even when their immediate observable responses are identical.}{21}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorised}{22}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{grey}{22}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{coloured}{22}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{22}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{23}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{grey}{23}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{coloured}{23}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{For the generation of this diagnosis, we utilise balanced weights ($w_1 = 0.4, w_2 = 0.3, w_3 = 0.3$) to provide equal importance to all criteria while slightly prioritising numerical calibration.}{20}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{recognising}{20}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e., their sequence of interactions) rather than just response patterns.}{20}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{21}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{individualisation}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{prioritising}{22}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{This capability enables student-centred personalisation beyond what population-based models such as BKT can provide.}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history.}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev4)}{The gTransformer model, by contrast, leverages its attention mechanism to capture complex, non-linear dependencies across the entire interaction history.}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{categorised}{23}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{grey}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{coloured}{24}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{24}
 \ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{24}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{24}
-\ChangesListline {added}{Added}{The representational grounding methodology explored in this work is fundamentally domain-independent, which suggests that the resulting pedagogical insights and the accuracy--interpretability trade-offs could be generalised to diverse educational contexts. Nonetheless, extending the empirical validation of \textit {gTransformer} beyond the benchmark datasets utilised in this study to a wider range of domains and subjects represents a valuable research direction to further illustrate its versatility.}{24}
-\ChangesListline {added}{Added}{In this initial validation of gTransformer, the grounding process was restricted to the two primary knowledge parameters: initial mastery $P(L_0)$ and learning rate $P(T)$. The Guess and Slip parameters were set to fixed, population-level values estimated by the reference BKT model. This was a deliberate architectural choice to prioritise the interpretability of 'knowledge' acquisition over the modelling of 'performance' errors. In established BKT literature, $P(L_0)$ and $P(T)$ are considered the primary parameters reflecting a student's latent state, whereas Guess and Slip are often viewed as performance parameters tied to the assessment item properties \citep {yudelson2013individualized}. By fixing the latter, the model remains focused on the core pedagogical constructs whilst avoiding model degeneracy challenges \citep {baker2008more} that arise when all four parameters vary simultaneously. Future research could address the impact of incorporating student-specific Guess and Slip values to further refine the granularity of context-aware individualisation.}{24}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{24}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{24}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{24}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{25}
-\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{generalisable}{25}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{enhanced personalisation}{24}
+\ChangesListline {added}{Added\nobreakspace {}(rev3bcom1)}{The results of this study have profound practical and social implications for the future of artificial intelligence in education. Beyond its high predictive accuracy, gTransformer contributes to the social dimension of educational AI by placing evidence-based diagnostics at the core of the learning experience. By grounding its latent context vectors in theoretical parameters—such as learning rates and prior knowledge—the model formally acknowledges that students are dynamic learners with unique interaction contexts, rather than static categorisations based on fixed capacity traits. This shift is crucial for promoting trust and transparency in AI systems, as educators can clearly understand the pedagogical rationale behind the model's differing estimations for students with identical performance records.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev3bcom1)}{From a practical perspective, our findings demonstrate how grounded deep learning models can be integrated into Intelligent Tutoring Systems (ITS) to facilitate proactive, non-Markovian support strategies. The differentiated diagnostics provided by gTransformer allow for more nuanced instructional interventions: while a high-momentum learner might be recommended accelerated pacing to maintain engagement, a student whose profile indicates a need for foundational remediation can be identified earlier, even before significant errors occur. Consequently, gTransformer serves as a tool for proactive pedagogical support, ensuring that educational technology acts as an enabler of inclusive and tailored instruction in increasingly diverse digital classrooms.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{The representational grounding methodology explored in this work is fundamentally domain-independent, which suggests that the resulting pedagogical insights and the accuracy--interpretability trade-offs could be generalised to diverse educational contexts.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{Nonetheless, extending the empirical validation of \textit {gTransformer} beyond the benchmark datasets utilised in this study to a wider range of domains and subjects represents a valuable research direction to further illustrate its versatility.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{In this initial validation of gTransformer, the grounding process was restricted to the two primary knowledge parameters: initial mastery $P(L_0)$ and learning rate $P(T)$.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{The Guess and Slip parameters were set to fixed, population-level values estimated by the reference BKT model to prioritise the interpretability of `knowledge' acquisition over the modelling of `performance' errors.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{In established BKT literature, $P(L_0)$ and $P(T)$ are considered the primary parameters reflecting a student's latent state, whereas Guess and Slip are often viewed as performance parameters tied to the assessment item properties}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{By fixing the latter, the model remains focused on the core pedagogical constructs whilst avoiding model degeneracy challenges}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{that arise when all four parameters vary simultaneously.}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev4)}{Future research could address the impact of incorporating student-specific Guess and Slip values to further refine the granularity of context-aware individualisation.}{26}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{generalisable}{26}
+\ChangesListline {added}{Added\nobreakspace {}(rev)}{While gTransformer was validated using BKT as the primary reference model, the underlying Representational Grounding approach is inherently extensible. Within the educational domain, future research could investigate the integration of alternative theoretical frameworks, such as Additive Factor Models or Performance Factor Analysis, allowing for the use of diverse pedagogical parameters while leveraging the historical learning context-awareness of the Transformer architecture. Furthermore, the applicability of the gTransformer approach extends beyond Knowledge Tracing. The Representational Grounding framework can be adapted to any scientific field where established theoretical models coexist with high-volume empirical data. By anchoring latent representations to domain-specific concepts, this methodology offers a \replaced [id=rev]{generalisable}{generalizable} path toward bridging deep learning expressiveness with rigorous scientific grounding. Evaluating how different theoretical assumptions influence both the accuracy--interpretability trade-off and the context-awareness of domain-specific predictions across diverse disciplines remains an open and promising avenue for future research.}{27}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{internalises}{27}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{organising}{27}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{personalisation}{27}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev)}{student-centred personalisation}{27}
+\ChangesListline {replaced}{Replaced\nobreakspace {}(rev3bcom1)}{By grounding high-capacity models in established domain theory, this approach offers a path toward highly accurate, pedagogically justifiable, and inclusive personalisation. Our research demonstrates that bridging the performance--interpretability gap is not merely a technical challenge, but a social necessity for building ethical AI tools that support every student's unique learning journey.}{27}

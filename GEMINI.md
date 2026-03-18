@@ -177,16 +177,18 @@ When you are running experiments (Experiment Agent):
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
 - For gtransformer model, the metric we use is test auc question-level average late-fusion
 
-## Reviews 
+## Reviews
 
 The reviews.md file gathers the comments sent by the four reviewers of the paper. We have to generate the answers for them and apply changes suggested by them wherever it applies. Use UK english and not US english. 
 
 Guidelines to generate the responses: 
 
+- We'll go step by step. I'll provide instructions for each response. Don't apply changes to the manuscript by yourself, we'll do it after you have generated the responses.
 - The comment X by the reviewer Y will be provided (with references to the reviews.md file to get the comment text). 
 - Generate answer to comment X by the reviewer Y
 - Generate the response using a variant of this format: "Thank you for pointing this out. We agree with this comment. Therefore, we have…" [Explain what change you have made. Mention exactly where in the revised manuscript this change can be found – page number, paragraph, and line.] [updated text in the manuscript if necessary] 
 - Use UK english and not US english.
+- To facilitate the review process, all changes should be marked in the manuscript using tracked revisions via the LaTeX package 'change'  that displays revisions in blue. 
 
 ## Copyright and License
 
