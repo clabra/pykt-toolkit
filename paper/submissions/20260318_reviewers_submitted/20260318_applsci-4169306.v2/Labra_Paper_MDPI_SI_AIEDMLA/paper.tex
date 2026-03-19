@@ -1,0 +1,856 @@
+% !TeX root = paper.tex
+%  LaTeX support: latex@mdpi.com 
+%  For support, please attach all files needed for compiling as well as the log file, and specify your operating system, LaTeX version, and LaTeX editor.
+
+%=================================================================
+\documentclass[applsci,article,submit,moreauthors,pdftex]{Definitions/mdpi} 
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, fit, backgrounds}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amsfonts}
+\usetikzlibrary{arrows.meta}
+\usepackage{svg}
+\usepackage{makecell}
+%\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
+% For posting an early version of this manuscript as a preprint, you may use "preprints" as the journal. Changing "submit" to "accept" before posting will remove line numbers.
+
+% Below journals will use APA reference format:
+% admsci, aieduc, behavsci, businesses, econometrics, economies, education, ejihpe, famsci, games, humans, ijcs, ijfs, jintelligence, journalmedia, jrfm, jsam, languages, peacestud, psycholint, publications, tourismhosp, youth
+
+% Below journals will use Chicago reference format:
+% arts, genealogy, histories, humanities, laws, literature, religions, risks, socsci
+
+%--------------------
+% Class Options:
+%--------------------
+%----------
+% journal
+%----------
+% Choose between the following MDPI journals:
+% accountaudit, acoustics, actuators, addictions, adhesives, admsci, adolescents, aerobiology, aerospace, agriculture, agriengineering, agrochemicals, agronomy, ai, aichem, aieduc, aieng, aimater, aimed, aipa, air, aisens, algorithms, allergies, alloys, amh, analog, analytica, analytics, anatomia, anesthres, animals, antibiotics, antibodies, antioxidants, applbiosci, appliedchem, appliedmath, appliedphys, applmech, applmicrobiol, applnano, applsci, aquacj, architecture, arm, arthropoda, arts, asc, asi, astronautics, astronomy, atmosphere, atoms, audiolres, automation, axioms, bacteria, batteries, bdcc, behavsci, beverages, biochem, bioengineering, biologics, biology, biomass, biomechanics, biomed, biomedicines, biomedinformatics, biomimetics, biomolecules, biophysica, bioresourbioprod, biosensors, biosphere, biotech, birds, blockchains, bloods, blsf, brainsci, breath, buildings, businesses, cancers, carbon, cardio, cardiogenetics, cardiovascmed, catalysts, cells, ceramics, challenges, chemengineering, chemistry, chemosensors, chemproc, children, chips, cimb, civileng, cleantechnol, climate, clinbioenerg, clinpract, clockssleep, cmd, cmtr, coasts, coatings, colloids, colorants, commodities, complexities, complications, compounds, computation, computers, condensedmatter, conservation, constrmater, cosmetics, covid, crops, cryo, cryptography, crystals, csmf, ctn, culture, curroncol, cyber, dairy, data, ddc, dentistry, dermato, dermatopathology, designs, devices, dhi, diabetology, diagnostics, dietetics, digital, disabilities, diseases, diversity, dna, drones, dynamics, earth, ebj, ecm, ecologies, econometrics, economies, edm, education, eesp, ejihpe, electricity, electrochem, electronicmat, electronics, encyclopedia, endocrines, energies, eng, engproc, entomology, entropy, environments, environremediat, epidemiologia, epigenomes, esa, est, famsci, fermentation, fibers, fintech, fire, fishes, fluids, foods, forecasting, forensicsci, forests, fossstud, foundations, fractalfract, fuels, future, futureinternet, futurepharmacol, futurephys, futuretransp, galaxies, games, gases, gastroent, gastrointestdisord, gastronomy, gels, genealogy, genes, geographies, geohazards, geomatics, geometry, geosciences, geotechnics, geriatrics, germs, glacies, grasses, green, greenhealth, gucdd, hardware, hazardousmatters, healthcare, hearts, hemato, hematolrep, hep, heritage, higheredu, highthroughput, histories, horticulturae, hospitals, humanities, humans, hydrobiology, hydrogen, hydrology, hydropower, hygiene, idr, iic, ijcs, ijem, ijerph, ijfs, ijgi, ijmd, ijms, ijns, ijom, ijpb, ijt, ijtm, ijtpp, ime, immuno, informatics, information, infrastructures, inorganics, insects, instruments, inventions, iot, j, jaestheticmed, jal, jcdd, jcm, jcp, jcrm, jcs, jcto, jdad, jdb, jdream, jemr, jeta, jfb, jfmk, jgbg, jgg, jimaging, jintelligence, jlpea, jmahp, jmmp, jmms, jmp, jmse, jne, jnt, jof, joi, joitmc, joma, jop, joptm, jor, journalmedia, jox, jpbi, jphytomed, jpm, jrfm, jsam, jsan, jtaer, jvd, jzbg, kidneydial, kinasesphosphatases, knowledge, labmed, laboratories, lae, land, languages, laws, life, lights, limnolrev, lipidology, liquids, literature, livers, logics, logistics, lubricants, lymphatics, machines, macromol, magnetism, magnetochemistry, make, marinedrugs, materials, materproc, mathematics, mca, measurements, medicina, medicines, medsci, membranes, merits, metabolites, metals, meteorology, methane, metrics, metrology, micro, microarrays, microbiolres, microelectronics, micromachines, microorganisms, microplastics, microwave, minerals, mining, mmphys, modelling, molbank, molecules, mps, msf, mti, multimedia, muscles, nanoenergyadv, nanomanufacturing, nanomaterials, ncrna, ndt, network, neuroglia, neuroimaging, neurolint, neurosci, nitrogen, notspecified, nursrep, nutraceuticals, nutrients, obesities, occuphealth, oceans, ohbm, onco, optics, oral, organics, organoids, osteology, oxygen, pandemics, parasites, parasitologia, particles, pathogens, pathophysiology, peacestud, pediatrrep, pets, pharmaceuticals, pharmaceutics, pharmacoepidemiology, pharmacy, philosophies, photochem, photonics, phycology, physchem, physics, physiologia, plants, plasma, platforms, pollutants, polymers, polysaccharides, populations, poultry, powders, precipitation, precisoncol, preprints, proceedings, processes, prosthesis, proteomes, psf, psychiatryint, psychoactives, psycholint, publications, purification, quantumrep, quaternary, qubs, radiation, rdt, reactions, realestate, receptors, recycling, regeneration, religions, remotesensing, reports, reprodmed, resources, rheumato, risks, rjpm, robotics, rsee, ruminants, safety, sci, scipharm, sclerosis, seeds, sensors, separations, sexes, shi, signals, sinusitis, siuj, skins, smartcities, sna, societies, socsci, software, soilsystems, solar, solids, spectroscj, sports, standards, stats, std, stratsediment, stresses, surfaces, surgeries, suschem, sustainability, symmetry, synbio, systems, tae, targets, taxonomy, technologies, telecom, test, textiles, thalassrep, therapeutics, thermo, timespace, tomography, tourismhosp, toxics, toxins, tph, transplantology, transportation, traumacare, traumas, tri, tropicalmed, universe, urbansci, uro, vaccines, vehicles, venereology, vetsci, vibration, virtualworlds, viruses, vision, waste, water, welding, wem, wevj, wild, wind, women, world, youth, zoonoticdis
+
+%---------
+% article
+%---------
+% The default type of manuscript is "article", but can be replaced by: 
+% abstract, addendum, article, benchmark, book, bookreview, briefcommunication, briefreport, casereport, changes, clinicopathologicalchallenge, comment, commentary, communication, conceptpaper, conferenceproceedings, correction, conferencereport, creative, datadescriptor, discussion, entry, expressionofconcern, extendedabstract, editorial, essay, erratum, fieldguide, hypothesis, interestingimages, letter, meetingreport, monograph, newbookreceived, obituary, opinion, proceedingpaper, projectreport, reply, retraction, review, perspective, protocol, shortnote, studyprotocol, supfile, systematicreview, technicalnote, viewpoint, guidelines, registeredreport, tutorial,  giantsinurology, urologyaroundtheworld
+% supfile = supplementary materials
+
+%----------
+% submit
+%----------
+% The class option "submit" will be changed to "accept" by the Editorial Office when the paper is accepted. This will only make changes to the frontpage (e.g., the logo of the journal will get visible), the headings, and the copyright information. Also, line numbering will be removed. Journal info and pagination for accepted papers will also be assigned by the Editorial Office.
+
+%------------------
+% moreauthors
+%------------------
+% If there is only one author the class option oneauthor should be used. Otherwise use the class option moreauthors.
+
+%---------
+% pdftex
+%---------
+% The option pdftex is for use with pdfLaTeX. Remove "pdftex" for (1) compiling with LaTeX & dvi2pdf (if eps figures are used) or for (2) compiling with XeLaTeX.
+
+%=================================================================
+% MDPI internal commands - do not modify
+\firstpage{1} 
+\makeatletter 
+\setcounter{page}{\@firstpage} 
+\makeatother
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\pubyear{2026}
+\copyrightyear{2025}
+%\externaleditor{Firstname Lastname} % More than 1 editor, please add `` and '' before the last editor name
+\datereceived{ } 
+\daterevised{ } % Comment out if no revised date
+\dateaccepted{ } 
+\datepublished{ } 
+%\datecorrected{} % For corrected papers: "Corrected: XXX" date in the original paper.
+%\dateretracted{} % For retracted papers: "Retracted: XXX" date in the original paper.
+%\doinum{} % Used for some special journals, like molbank
+%\pdfoutput=1 % Uncommented for upload to arXiv.org
+%\CorrStatement{yes}  % For updates
+%\longauthorlist{yes} % For many authors that exceed the left citation part
+%\IsAssociation{yes} % For association journals
+
+%=================================================================
+% Add packages and commands here. The following packages are loaded in our class file: fontenc, inputenc, calc, indentfirst, fancyhdr, graphicx, epstopdf, lastpage, ifthen, float, amsmath, amssymb, lineno, setspace, enumitem, mathpazo, booktabs, titlesec, etoolbox, tabto, xcolor, colortbl, soul, multirow, microtype, tikz, totcount, changepage, attrib, upgreek, array, tabularx, pbox, ragged2e, tocloft, marginnote, marginfix, enotez, amsthm, natbib, hyperref, cleveref, scrextend, url, geometry, newfloat, caption, draftwatermark, seqsplit
+% cleveref: load \crefname definitions after \begin{document}
+
+%=================================================================
+% Please use the following mathematics environments: Theorem, Lemma, Corollary, Proposition, Characterization, Property, Problem, Example, ExamplesandDefinitions, Hypothesis, Remark, Definition, Notation, Assumption
+%% For proofs, please use the proof environment (the amsthm package is loaded by the MDPI class).
+
+%=================================================================
+% Full title of the paper (Capitalized)
+\Title{Theory-Based Interpretability in Deep Knowledge Tracing via Grounded Transformers}
+
+% Author Orchid ID: enter ID or remove command
+\newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
+\newcommand{\orcidauthorB}{0000-0002-9281-4209} % Add \orcidB{} behind the author's name
+
+% Authors, for the paper (add full first names)
+\Author{Concepcion Labra $^{1}$\orcidA{}, Olga C. Santos $^{2,*}$\orcidB{}}
+
+%\longauthorlist{yes}
+
+% MDPI internal command: Authors, for metadata in PDF
+\AuthorNames{Concepcion Labra, Olga C. Santos}
+
+%\longauthorlist{yes}
+
+% Affiliations / Addresses (Add [1] after \address if there is only one affiliation.)
+\address{%
+$^{1}$ \quad Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain; clabra@dia.uned.es\\
+$^{2}$ \quad PhyUM Research Center, Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain; ocsantos@dia.uned.es}
+
+% Contact information of the corresponding author
+\corres{Author to whom correspondence should be addressed.}
+
+% Current address and/or shared authorship
+%\firstnote{Current address: Affiliation.}  
+% Current address should not be the same as any items in the Affiliation section.
+
+%\secondnote{These authors contributed equally to this work.}
+% The commands \thirdnote{} till \eighthnote{} are available for further notes.
+
+%\simplesumm{} % Simple summary
+
+%\conference{} % An extended version of a conference paper
+
+% Abstract (Do not insert blank lines, i.e. \\) 
+\abstract{Knowledge Tracing, which estimates how students' knowledge evolves during interactions with educational content, is a cornerstone of Intelligent Tutoring Systems. While deep learning models achieve superior predictive performance in this task, they lack interpretability, a limitation that is particularly critical in educational contexts. We introduce \textit{gTransformer}, a new type of grounded Transformer models bridging deep learning performance with intrinsic interpretability through \textit{Representational Grounding}. It adds theory-based parameters to input interaction sequences and uses attention mechanisms to transform them into latent representations. These are projected into enriched parameters that incorporate longitudinal context while preserving semantics. Validation demonstrates: (1) structural encoding around theoretical concepts (probing selectivity $\Delta R^2 > 0.5$); (2) semantic alignment; and (3) functional alignment with quantified confidence. Results show that gTransformer achieves predictive performance competitive with state-of-the-art architectures while offering intrinsically interpretable predictions. The trade-off is characterized by a significant AUC gain over traditional theory-based models (+19.9\%), with a minimal cost (3.9\%) relative to non interpretable configurations. Critically, gTransformer enables context-aware personalization by differentiating students based on longitudinal learning trajectories rather than immediate responses, capturing patterns that traditional Markovian models cannot represent. This offers a practical path toward AI-driven adaptive instruction that is both accurate and interpretable.} 
+
+% Keywords
+\keyword{deep knowledge tracing; theory-based interpretability; grounded transformers; bayesian knowledge tracing; educational data analysis; personalized learning} 
+
+% The fields PACS, MSC, and JEL may be left empty or commented out if not applicable
+%\PACS{J0101}
+%\MSC{}
+%\JEL{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Only for the journal Diversity
+%\LSID{\url{http://}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Only for the journal Applied Sciences
+%\featuredapplication{Authors are encouraged to provide a concise description of the specific application or a potential application of the work. This section is not mandatory.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Only for the journal Data
+%\dataset{DOI number or link to the deposited data set if the data set is published separately. If the data set shall be published as a supplement to this paper, this field will be filled by the journal editors. In this case, please submit the data set as a supplement.}
+%\datasetlicense{License under which the data set is made available (CC0, CC-BY, CC-BY-SA, CC-BY-NC, etc.)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Only for the journal BioTech, Fishes, Neuroimaging and Toxins
+%\keycontribution{The breakthroughs or highlights of the manuscript. Authors can write one or two sentences to describe the most important part of the paper.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Only for the journal Encyclopedia
+%\encyclopediadef{For entry manuscripts only: please provide a brief overview of the entry title instead of an abstract.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Different journals have different requirements. Please check the specific journal guidelines in the "Instructions for Authors" on the journal's official website.
+%\addhighlights{yes}
+%\renewcommand{\addhighlights}{%
+%
+%\noindent The goal is to increase the discoverability and readability of the article via search engines and other scholars. Highlights should not be a copy of the abstract, but a simple text allowing the reader to quickly and simplified find out what the article is about and what can be cited from it. Each of these parts should be devoted up to 2~bullet points.\vspace{3pt}\\
+%\textbf{What are the main findings?}
+% \begin{itemize}[labelsep=2.5mm,topsep=-3pt]
+% \item First bullet.
+% \item Second bullet.
+% \end{itemize}\vspace{3pt}
+%\textbf{What are the implications of the main findings?}
+% \begin{itemize}[labelsep=2.5mm,topsep=-3pt]
+% \item First bullet.
+% \item Second bullet.
+% \end{itemize}
+%}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Introduction} \label{sec_intro}
+
+Knowledge Tracing (KT) \citep{corbett1994knowledge} is a foundational problem in  Intelligent Tutoring Systems and Learning Analytics \citep{Romero2020}. Formally, it is conceptualized as a supervised sequence-modeling task aimed at estimating the longitudinal evolution of student knowledge based on their historical interaction traces. The input to the system consists of a temporal sequence $\mathcal{S} = \{(q_1, r_1), (q_2, r_2), \dots, (q_{t-1}, r_{t-1})\}$, where each tuple represents a question $q_i$ and the student's binary response $r_i \in \{0, 1\}$, with $r_i = 1$ indicating a correct answer and $r_i = 0$ an incorrect one. The task objective is to predict the output $\hat{y}_t = P(r_t=1 | q_t, \mathcal{S})$, signifying the probability of a correct response to the current question $q_t$ given the observed history. By monitoring these longitudinal estimations, we can track the dynamic evolution of student knowledge, providing a data-driven foundation for personalized instruction and targeted pedagogical interventions. In an era where educational environments are becoming increasingly digital and personalized, the ability to accurately track and interpret student mastery is a critical requirement for effective, scalable and learner-centred education.
+
+Historically, the development of KT has been characterized by a dichotomy between two distinct paradigms \citep{abdelrahman2023knowledge}. The first, which predominated in the field for years, is characterized by probabilistic models such as Bayesian Knowledge Tracing (BKT) \citep{corbett1994knowledge} and Factor Analysis Models based on logistic regression, including Additive Factor Models \citep{cen2008comparing}, Performance Factor Analysis \citep{pavlik2009performance}, and Knowledge Tracing Machines \citep{vie2019knowledge}. Factor Analysis Models are theoretically supported by the Item Response Theory (IRT) \citep{embretson2013item}, which has played a large role in educational assessment and measurement. These traditional approaches are intrinsically interpretable: they model learning as a process governed by explicit parameters related to pedagogical, cognitive or psychometric principles. Because the model structure mirrors a theoretical understanding of human learning, educators can inspect these values to validate the model's reasoning and trust its outputs. However, this transparency comes at the cost of representational rigidity; the simplifying assumptions required by these models often limit their predictive power, causing them to struggle with the complex, non-linear and long-range dependencies inherent in real-world student behavior \citep{twenty_five_years_of_bkt}.
+
+The second paradigm emerged with the advent of Deep Knowledge Tracing (DKT) \citep{piech2015deep}, which leverages deep learning techniques ranging from initial Recurrent Neural Networks to more recent Transformer architectures \citep{vaswani2017attention}. The latter, based on encoder-decoder components and attention mechanisms, are especially relevant as they provide the foundation for current Large Language Models (LLMs). By treating student interaction histories as temporal sequences, Transformer models apply techniques similar to those that characterize LLMs. DKT models have achieved state-of-the-art predictive performance, significantly outperforming classical baselines due to a structural high capacity that allow them to extract latent features from vast amounts of data \citep{abdelrahman2023knowledge}. However, this substantial gain in predictive performance has come at the cost of model transparency, creating a significant interpretability gap. Deep learning models are notoriously opaque ``black boxes'', where the internal high-dimensional representations bear no direct correspondence to constructs that are interpretable in terms of human-understandable concepts or established domain knowledge. In a high-stakes domain such as education, where algorithmic decisions influence learning trajectories, grades and opportunities, this lack of transparency raises critical concerns regarding accountability and trust \citep{Holmes2022504}.
+
+Extensive research has sought to bridge this gap, with \citet{bai2024survey} classifying modalities into \textit{post-hoc} and \textit{ante-hoc} categories. While \textit{post-hoc} methods aim to extract explanations from black-box models after training, \textit{ante-hoc} approaches seek to achieve intrinsic interpretability by design, ensuring the model's internal logic is transparent from the outset. Within this latter category, recent models have attempted to achieve intrinsic transparency by integrating attention mechanisms \citep{Pandey2019384, ghosh2020context} or by incorporating side information such as IRT parameters \citep{yeung2019deep, su2021time, chen2023improving}. These efforts aim to make the decision-making process visible, moving away from pure black-box architectures toward systems whose internal states can be inspected.
+
+However, from the perspective of domain experts such as teachers and pedagogical designers, these solutions frequently fall short. Post-hoc explanations often rely on technical relevance scores or local approximations that remain disconnected from domain knowledge \citep{rudin2019stop} while most current ante-hoc methods do not produce outputs that map directly to human-understandable concepts. As noted in various surveys \citep{bai2024survey, vonrueden2021informed}, when deep learning models incorporate domain knowledge, the primary objective is typically the optimization of predictive performance, while interpretability is often overlooked or left as an unaddressed concern.
+
+Consequently, there is a critical need for new approaches that move beyond technical transparency toward true pedagogical interpretability. For a KT system to be confidently adopted in high-stakes educational environments, its estimations must be grounded in trusted and empirically validated principles derived from relevant fields such as pedagogy, cognitive science, and psychometrics. Educators require models that align with their domain knowledge, tracking mastery not through opaque latent features but through concepts explicitly defined by established frameworks, including the prior knowledge, learning rates and knowledge components postulated by traditional approaches such as BKT and Factor Analysis Models.
+
+To address this challenge, we introduce the \textit{grounded Transformer (gTransformer)}, a variant of attention-based Transformers that implements a novel \textit{Representational Grounding} methodology to bridge the gap between deep learning expressiveness and theoretical alignment. This approach explicitly anchors the Transformer’s latent representations to the concepts of an intrinsically interpretable reference model. The gTransformer architecture utilizes an encoder-decoder design with attention mechanisms to create context vectors that encode complex student interaction patterns. These vectors are projected into context-aware parameters, which then drive predictions using the reference model's interpretable logic. By doing so, the model's estimations can be explained and traced back to the foundational pedagogical principles and theoretical frameworks that govern the predictive logic. This architecture achieves transparency by providing \textit{grounded interpretability}, as estimations are conveyed through the same well-validated concepts employed in traditional interpretable systems. 
+
+Our approach contributes to bridging the dichotomy between high-capacity deep learning and domain-specific theoretical transparency, providing two practical advantages. First, compared to non-interpretable DKT models, gTransformer offers intrinsic pedagogical transparency by generating actionable parameters, such as prior knowledge and learning rates, that are directly meaningful to educators. Second, compared to traditional approaches, gTransformer is context-aware, i.e it is able to encode individual patterns taking into account the history of student interactions, overcoming the limitations of rigid population-level parameters and Markovian assumptions characteristic of traditional approaches such as BKT. For instance, it can distinguish between a learner requiring foundational remediation and one exhibiting high acquisition momentum even when their immediate local performance appears identical. By synthesizing these capabilities, gTransformer provides a robust foundation for individualized, student-centered instruction, enabling educators to move beyond purely predictive outcomes toward a causal understanding of student learning progress that identifies the underlying pedagogical factors explaining the student performance.
+
+
+Our research is guided by three primary research questions:
+
+\begin{itemize}
+\item RQ1: \textbf{Trade-Offs Between Predictive Performance and Interpretability}
+
+Are gTransformer models able to produce interpretable outputs while remaining competitive in terms of predictive performance? What is the trade-off between predictive performance  and interpretability?
+
+\item RQ2: \textbf{Grounded Interpretability}
+
+How can we check that the parameters used to get interpretable outputs are really grounded in theory-based estimations?  
+
+\item RQ3: \textbf{Student-Centered Personalization}
+
+How can the longitudinal context captured by a Transformer-based model enhance student-centered personalization, and how does this compare with capabilities of population-based models like BKT?
+
+\end{itemize} \label{sec_rq}
+
+The evaluation is designed to address each of these questions. First, to validate RQ1, we quantify the \textit{accuracy--interpretability trade-off} across various benchmark datasets, demonstrating that interpretable predictions consistently surpass classical BKT (averaging +19.9\% AUC improvement) with a low interpretability cost relative to black-box architectures (averaging 3.9\% AUC). To validate \textit{grounded interpretability} (RQ2), we employ a triple validation protocol consisting of: (1) \textit{structural alignment} via diagnostic probing, confirming that Bayesian concepts are the dominant organizing principles in the latent space (with high selectivity $\Delta R^2 > 0.5$); (2) \textit{semantic alignment}, which measures the monotonic consistency between grounded parameters and original theoretical priors to verify pedagogical integrity (Spearman $\rho_{L0}=0.360$, $\rho_T=0.544$); and (3) \textit{functional alignment}, quantifying the confidence with which interpretable estimations can substitute for the supervised baseline. Finally, we demonstrate \textit{student-centered personalization} (RQ3) through \textit{context-aware diagnostics}. By clustering students into four distinct learning situations based on their longitudinal prior knowledge and learning rates, we illustrate how gTransformer captures high-granularity context that traditional models fundamentally overlook. Using case study visualizations of learning trajectories, we demonstrate that the model differentiates students even when their immediate response patterns are identical, establishing a robust foundation for individualized instruction that enables educators to move beyond simple outcome prediction toward a deeper understanding of how each student is learning over time.
+
+The remainder of this paper is structured as follows. \Cref{sec_related} reviews related work, while \cref{sec_arch} describes the gTransformer model, detailing the construction of embeddings, the grounding mechanism, and the interpretable predictions. \Cref{sec_experiment} presents the experimental setup, followed by a discussion of the empirical results in \cref{sec_results}. Finally, \cref{sec_conclusions} provides the conclusions. 
+
+\section{Related Work} \label{sec_related}
+
+This section provides a review of research related to gTransformer. We first examine the theoretical foundations and limitations of BKT, which serves as our reference model for pedagogical grounding. We then trace the evolution of DKT from Recurrent Neural Networks to recent attention-based architectures. Following this, we categorize existing efforts to bridge the interpretability gap in DKT, contrasting post-hoc and ante-hoc methodologies. Finally, our model is mapped to taxonomic dimensions of Informed Machine Learning, establishing the connection with this paradigm. 
+
+
+\subsection{Bayesian Knowledge Tracing} \label{sec_bkt}
+
+For this study, we selected BKT \citep{corbett1994knowledge} as our reference theoretical framework. Student action sequences in Intelligent Tutoring Systems can be modeled as Hidden Markov Models, where the probability of a transition depends only on the previous state \citep{Arnau-Gonzalez2025195}. BKT models the learning process as a Hidden Markov process governed by four parameters that provide a causal narrative of student learning progress, which is intuitive to educators and aligned with cognitive science principles:
+
+\begin{itemize}
+    \item \textbf{Initial Mastery}: The probability a student knows a concept prior to practice 
+    \item \textbf{Learn Rate}: The probability of transitioning from unlearned to learned states after a practice opportunity
+    \item \textbf{Guess}: The probability of a correct response despite a lack of mastery
+    \item \textbf{Slip}: The probability of an incorrect response despite mastery 
+\end{itemize}
+
+These four parameters enable a recursive estimation of student mastery: the \textit{Initial Mastery} provides the starting probabilistic state, which is updated at each interaction using Bayes' theorem to incorporate the observed outcome (moderated by \textit{Guess} and \textit{Slip} probabilities) and shifted by the \textit{Learn Rate} to account for knowledge acquisition. This recursive cycle allows BKT to generate a transparent causal explanation of the student's learning progress that is directly interpretable by educators.
+
+But standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{Individualized BKT} approaches exist, they are often computationally expensive and struggle with data sparsity \citep{yudelson2013individualized}. The gTransformer approach offers a new way to address individualization by leveraging the capabilities of Transformers to compress student interaction history into a context vector. This allows the model to infer parameter values at the student-level, transforming population-level BKT insights into high-granularity student diagnostics.
+
+\subsection{Deep Knowledge Tracing}
+
+The application of deep learning to KT was initiated by the DKT model \citep{piech2015deep}, which framed student performance as a sequence modeling task. While pioneering, DKT was constrained by the inherent limitations of Recurrent Neural Networks (RNNs). These architectures are difficult to train \citep{Pascanu20132347} and their sequential nature precludes parallelization, a bottleneck that becomes critical at longer sequence lengths where memory constraints limit efficiency. 
+
+The introduction of attention-based architectures \citep{vaswani2017attention}, such as Self-Attentive Knowledge Tracing (SAKT) \citep{Pandey2019384} and Separated Self-AttentIve Neural Knowledge Tracing (SAINT) \citep{choi2020towards}, addressed these limitations by enabling parallel processing of interaction histories. This marked a significant shift toward the attention-based Transformer architectures that characterize modern Large Language Models (LLMs). By replacing recurrent units with multi-head attention, these models capture long-range dependencies more effectively, allowing for a longitudinal context-aware representation of a student's entire history. More recently, Attentive Knowledge Tracing (AKT) \citep{ghosh2020context} further refined this approach by incorporating skill difficulty and attention mechanisms that weigh past interactions based on their temporal distance. 
+
+Beyond the prominent recurrent and attention-based paradigms, the research community has explored several other architectural directions to capture the multifaceted nature of student learning. Notable categories include Memory-Augmented models that utilize external storage to explicitly track concept mastery, Graph-Based approaches that model the topological relationships between skills, and specialized variations such as Text-Aware or Forgetting-Aware models that incorporate exercise semantics and temporal decay into the tracing process \citep{abdelrahman2023knowledge}. While these variants exploit diverse dimensions of domain knowledge to augment predictive performance, achieving intrinsic interpretability has generally not been prioritized as a primary objective.
+
+\subsection{Interpretability in Deep Knowledge Tracing} \label{sec_interpretability}
+
+Interpretability in DKT remains an open challenge despite a variety of attempts, which can be categorized into two primary modalities: \textit{post-hoc} and \textit{ante-hoc}. Post-hoc methods attempt to explain trained black-box models by utilizing either model-specific techniques, such as Layer-Wise Relevance Propagation (LRP) \citep{bach2015pixel}, or model-agnostic approaches like Local Interpretable Model-agnostic Explanations (LIME) \citep{ribeiro2016should}. However, it has been argued that relying on post-hoc explanations for high-stakes decision-making is fundamentally flawed \citep{rudin2019stop}. For teachers and domain experts, these methods offer limited utility as they produce explanations based on deep learning structures rather than pedagogically sound principles, necessitating significant technical expertise for meaningful interpretation.
+
+The second category, \textit{ante-hoc} methods, pursues intrinsic interpretability through two primary approaches. The first consists of traditional models that rely on transparent structures, such as BKT or Factor Analysis Models. The second encompasses DKT variants that achieve interpretability by incorporating additional modules or utilizing side information \citep{bai2024survey}. Among these, attention mechanisms have emerged as the most prominent architectural extensions. They have been integrated into a wide range of models, from the pioneering SAKT \citep{Pandey2019384} to more recent architectures like AKT \citep{ghosh2020context}. However, relying solely on attention weights presents similar practical obstacles to those of post-hoc methods for educational practitioners, as these mechanisms do not provide an explicit interpretation grounded in pedagogically sound principles. 
+
+In the integration of side information for ante-hoc interpretability, IRT \citep{embretson2013item} has served as the most prominent foundation. It estimates the probability of a correct response based on a student’s latent ability and the item's difficulty. This theory has been coupled with DKT models such as Deep-IRT \citep{yeung2019deep}, which utilizes dynamic key-value memory networks to capture learners' trajectories and uses inferred abilities and difficulties to predict performance. Similarly, TC-MIRT \citep{su2021time} embeds multidimensional IRT parameters to predict student states. Other relevant models include KIKT \citep{gan2020knowledge}, which harnesses IRT to simulate student performance; LANA \citep{zhou2021lana}, which adopts an IRT variant for ability clustering; and QIKT \citep{chen2023improving}, which features question-centric representations integrated with an interpretable IRT layer. Beyond IRT, researchers have leveraged diverse principles, such as constructive learning \citep{liu2022ability, sun2024progressive}, learning and forgetting curves \citep{zhang2021learning}, finite state automata (FSAs) \citep{zhu2020learning}, classical test theory (CTT) \citep{lee2024monacobert}, and monotonicity constraints \citep{zhang2023counterfactual}. 
+
+In contrast to these models, whose diagnostic utility is often restricted by the specificity and scope of the single underlying theory serving as side information \citep{bai2024survey}, gTransformer offers a more flexible framework. It can be grounded in any established theoretical reference, effectively decoupling the expressiveness of deep learning from the constraints of specific pedagogical models.
+
+\subsection{Informed Machine Learning} \label{sec_iml}
+
+The integration of domain knowledge into deep learning has been broadly explored through conceptual frameworks such as Theory-Guided Data Science (TGDS) \citep{karpatne2017theory}, Physics-Informed Machine Learning (PIML) \citep{karniadakis2021physics}, and Informed Machine Learning (IML) \citep{vonrueden2021informed}. 
+
+TGDS emerged as a paradigm to address the limitations of purely data-driven ``black-box'' models, which may produce results inconsistent with established domain knowledge \citep{karpatne2017theory}. By explicitly requiring scientific consistency, TGDS integrates theoretical insights into the learning process to ensure that models remain scientifically plausible. This integration is typically achieved via theory-guided learning where domain-specific invariants serve as regularization terms, or through the design of neural architectures that respect the structural constraints of the problem \citep{karpatne2017theory, jia2021physics}. A prominent implementation of this paradigm is Physics-Informed Neural Networks (PINNs) \citep{raissi2019physics, karniadakis2021physics}, which embed differential equations directly into the loss function, forcing the model to satisfy theoretical constraints while learning from empirical data. 
+
+A widely adopted technique to enforce this consistency involves incorporating domain-specific constraints into the loss function as follows \citep{karpatne2017theory, willard2022integrating}: 
+\begin{equation} \label{eq_theory_loss}
+\mathcal{L} = \mathcal{L}_{TRN}(Y_{true}, Y_{pred}) + \gamma \mathcal{L}_{THEORY}(Y_{pred}),
+\end{equation}
+where $\mathcal{L}_{TRN}$ measures the supervised error between true labels $Y_{true}$ and predicted labels $Y_{pred}$, while $\mathcal{L}_{THEORY}$ penalizes violations of theoretical constraints, weighted by the hyperparameter $\gamma$. 
+
+\citet{vonrueden2021informed} formalized these efforts into an IML taxonomy, which categorizes knowledge integration by its source, representation and the stage of the machine learning pipeline where it is incorporated. Knowledge can be represented as algebraic equations, logical rules or probabilistic priors, and integrated at various stages: within the training data, through the design of tailored architectures, or by influencing the model's final output. 
+
+We operationalized these taxonomic dimensions in gTransformer by integrating theoretical priors from an interpretable BKT model into the inputs and employing a multi-objective loss function to anchor the model's predictions to BKT parameters. However, while most IML approaches focus on using prior knowledge to maximize predictive accuracy \citep{vonrueden2021informed}, gTransformer aims to achieve theory-based interpretability while offering competitive predictive performance, as detailed in \cref{sec_iml_gtransformer}. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{The gTransformer Model} \label{sec_arch}
+
+This section details the design and implementation of gTransformer, a hybrid architecture that bridges the gap between deep learning expressiveness and theoretical alignment by grounding the Transformer's latent representations in concepts established by a reference model. We begin by mapping its components to the taxonomic dimensions of IML, clarifying how theoretical priors and empirical data are processed using specialized inductive biases and multi-objective optimization. We then provide a comprehensive description of the model's architecture, detailing its functional layers: from embeddings enriched with prior knowledge to the core attention-based encoder-decoder engine. We explain the projection mechanism enabling the estimation of individualized, pedagogically meaningful parameters, which are fed into an output head implementing BKT logic to produce interpretable predictions. Finally, we detail the loss functions that anchor the model's predictions to BKT parameters.
+
+\subsection{Dimensions of Informed Machine Learning in gTransformer} \label{sec_iml_gtransformer}
+
+Figure~\ref{fig_info_flow} illustrates the information flow through gTransformer, mapped to the taxonomic dimensions of IML as defined by \citet{vonrueden2021informed}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{img/iml.png}
+    \caption{Dimensions of IML in gTransformer.}
+    \label{fig_info_flow}
+\end{figure}
+
+Within the context of our architecture, the operationalization of these dimensions can be explained as follows: 
+
+\begin{itemize}
+    \item \textbf{Prior Knowledge}: The source of theoretical information comprises simulation results from a reference model, typically expressed as parameter values that represent foundational pedagogical constructs.
+    \item \textbf{Training Data}: Empirical student interaction histories are augmented with prior knowledge to train the model.
+    \item \textbf{Hypothesis Set}: An attention-based Transformer architecture is employed to provide the inductive biases necessary to lead the model toward desired states.
+    \item \textbf{Learning Algorithm}: The model is optimized via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical interpretability.
+    \item \textbf{Final Hypothesis}: A set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted.
+    \item \textbf{Mastery Estimations}: The outputs generated through the grounded parameters serve as inputs to the reference model to produce interpretable mastery estimations.
+\end{itemize}
+
+
+\subsection{Architecture}
+
+The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, implements a theory-guided deep learning framework that integrates BKT concepts throughout the processing pipeline. The architecture is organized into six functional layers, which are detailed in the following subsections. Specifically, we: (i) begin with input data comprising student interaction sequences along with prior knowledge from the Bayesian reference model (\cref{sec_input}); (ii) proceed to explain difficulty-aware embeddings that encode skill-specific variations (\cref{sec_embeddings}); (iii) describe the attention-based encoder-decoder mechanism used to construct contextualized latent representations (\cref{sec_enc_dec}); (iv) explain how grounded parameters are obtained combining theoretical bases with contextual projections (\cref{sec_grounded_params}); (v) present the output heads intended to generate supervised predictions and interpretable predictions (\cref{sec_output_heads}); and (vi) conclude with the multi-objective loss function that orchestrates the training process to achieve both predictive performance and theory-based interpretability (\cref{sec_loss}).
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=1.05\textwidth]{img/arch.png}
+    \caption{Functional layers of the gTransformer architecture. Gray denotes standard Transformer elements, blue denotes gTransformer-specific elements.}
+    \label{gtransformer_arch}
+\end{figure}
+
+\subsubsection{Input Components} \label{sec_input}
+
+The data flow begins with the ingestion of student interaction sequences enriched with population-level parameters from a pre-fit BKT reference model. Student interactions are represented as temporal sequences of tuples $(q_t, c_t, r_t)$, where $q_t$ denotes the question identifier, $c_t$ represents the associated knowledge component, concept or skill, and $r_t \in \{0, 1\}$ indicates the binary correctness of the student's response at timestep $t$.
+
+These empirical interaction traces are augmented with theoretical priors extracted from the BKT reference model. For each knowledge component $c$, we obtain population-level estimates of the four BKT parameters introduced in \ref{sec_bkt}: initial knowledge $P(L_0)$, learning rate $P(T)$, guess probability $P(G)$ and slip probability $P(S)$. For the sake of simplicity, only $P(L_0)$ and $P(T)$ undergo the grounding process while we use directly the values estimated by BKT for the parameters $P(G)$ and $P(S)$ to calculate the interpretable predictions $\hat{y}_{\text{ref}}$.
+
+
+\subsubsection{Embeddings} \label{sec_embeddings}
+
+For question embeddings, we define:
+\begin{equation} \label{eq:task_embedding}
+    x'_t = c_q + u_q \cdot d_c
+\end{equation}
+where $c_q \in \mathbb{R}^{d}$ represents the invariant concept base embedding (encoding the semantic identity of the knowledge component), $u_q \in \mathbb{R}$ is a scalar difficulty parameter specific to question $q$, and $d_c \in \mathbb{R}^{d}$ is the concept-specific difficulty variation axis. This formulation allows multiple questions targeting the same concept to share a common semantic core ($c_q$) while differing in their position along a learned difficulty direction ($d_c$), with the magnitude of displacement controlled by the per-question difficulty scalar ($u_q$).
+
+Similarly, for interaction history embeddings (encoding both the question and the student's response), we employ:
+\begin{equation} \label{eq:interaction_embedding}
+    y'_t = e_{c,r} + u_q \cdot f_{c,r}
+\end{equation}
+where $e_{c,r} \in \mathbb{R}^{d}$ is the interaction base embedding (jointly encoding the concept $c$ and response outcome $r$), and $f_{c,r} \in \mathbb{R}^{d}$ is the interaction-specific difficulty variation axis. 
+
+These embeddings serve as the primary inputs to the Transformer's attention mechanism, providing multi-dimensional representations that enable attention-driven discovery of relevant behavioral patterns across the student's learning history.
+
+\subsubsection{Attention-Based Encoders-Decoders} \label{sec_enc_dec}
+
+The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks and $2n$ decoder blocks. The encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{y'_1, y'_2, \ldots, y'_{t-1}\}$ into a tensor of contextualized latent representations $Y_{\text{enc}} \in \mathbb{R}^{(t-1) \times d}$. Each encoder block applies multi-head self-attention with masking to prevent information leakage from future timesteps, followed by feed-forward networks and residual connections with layer normalization, following the standard Transformer architecture \citep{vaswani2017attention}.
+
+The decoder architecture employs an alternating pattern of $2n$ sequential layers. Odd-numbered decoder layers (layers 1, 3, 5, \ldots, $2n-1$) perform self-attention over the current question embeddings $x'_t$, allowing the model to examine multiple aspects of the current task without incorporating response history. Even-numbered decoder layers (layers 2, 4, 6, \ldots, $2n$) perform cross-attention between the current question representation and the encoder's output $Y_{\text{enc}}$, retrieving relevant knowledge from the student's encoded learning trajectory. 
+
+The final decoder layer produces an output tensor $d_{\text{out}} \in \mathbb{R}^{t \times d}$, which is concatenated with the question embedding to form the high-dimensional context vector:
+\begin{equation} \label{eq:context_vector}
+    z_t = [d_{\text{out},t}; x'_t] \in \mathbb{R}^{z}
+\end{equation}
+where the dimensionality of $z_t$ is the combined dimensionality of the decoder output and question embedding space. This context vector serves as a comprehensive encoding of the student's current cognitive state, synthesizing information from both the observed interaction history and the current task characteristics.
+
+\subsubsection{Grounded Parameters} \label{sec_grounded_params}
+
+To ensure pedagogical interpretability, gTransformer estimates BKT parameters through an additive composition mechanism operating in logit space. For each knowledge component $c$, we define theoretical base parameters $\ell_{L_0,c}$ and $\ell_{T,c}$, initialized as the logit-transformed population-level BKT priors:
+\begin{equation} \label{eq:theory_base}
+    \ell_{L_0,c} = \text{logit}(P(L_0)_c), \quad \ell_{T,c} = \text{logit}(P(T)_c)
+\end{equation}
+These bases are implemented as scalar embeddings with Gaussian initialization centered at the theoretical values.
+
+Contextual adjustments are computed via dot products between the latent context vector $z_t$ and learnable semantic axes. For each concept $c$, we define a knowledge axis $K_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $V_{c} \in \mathbb{R}^{z}$. The contextual projections, representing the student-specific Knowledge ($k_s$) and Learning Velocity ($v_s$), are calculated as:
+\begin{equation} \label{eq:contextual_projection}
+    k_{s,t} = z_t \cdot K_c, \quad v_{s,t} = z_t \cdot V_c
+\end{equation}
+These dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed behavior deviates from the population average along the dimensions of initial mastery and learning velocity.
+
+The final grounded parameters are obtained through additive composition in logit space, followed by sigmoid activation to ensure valid probability bounds:
+\begin{equation} \label{eq:grounded_params}
+    p_{L_0,t} = \sigma(\ell_{L_0,c} + k_{s,t}), \quad p_{T,t} = \sigma(\ell_{T,c} + v_{s,t})
+\end{equation}
+This design ensures that the model's parameter estimates remain structurally anchored to BKT theory, with the base terms providing pedagogically sound initialization, while contextual projections enable individualized adjustments driven by observed student behavior.
+
+\subsubsection{Output Heads} \label{sec_output_heads}
+
+The gTransformer model generates predictions through various output heads, each serving a distinct functional role in the architecture's dual objectives of predictive accuracy and pedagogical interpretability.
+
+\textbf{Supervised Prediction Head ($p_{sup}$)}: A multi-layer perceptron (MLP) directly maps the context vector $z_t$ to a correctness prediction $\hat{y}_t = \text{MLP}(z_t)$. This head is optimized purely for predictive accuracy via binary cross-entropy loss, leveraging the full expressive capacity of the Transformer's learned representations without theoretical constraints.
+
+
+\textbf{Interpretable Output Head ($p_{ref}$)}: The grounded BKT parameters $(p_{L_0,t}, p_{T,t})$ are passed through an implementation of BKT logic, which performs a retrospective belief update walk over the student's interaction history. At each timestep, the BKT logic computes the probability of correctness $\hat{y}_{\text{ref},t}$ using the standard BKT update equations with the model's grounded parameters and the fixed population-level guess and slip values. These predictions are intrinsically interpretable because they can be directly tracked to established pedagogical constructs, providing a transparent causal explanation that justifies each estimation through the theoretical lens of BKT. This head ensures that the grounded parameters retain their intended semantic meaning by requiring them to produce valid predictions subjected to the reference model's reasoning process.
+
+\textbf{Linear Probe Heads}: Two dedicated linear layers extract BKT parameter estimates directly from the context vector: $\hat{p}_{L_0,t} = \sigma(W_{L_0} z_t)$ and $\hat{p}_{T,t} = \sigma(W_{T} z_t)$. Unlike the grounded parameter projections (which use concept-specific semantic axes), these probes are global linear extractors shared across all concepts. They serve to verify that the Transformer's internal representations explicitly encode the targeted pedagogical constructs in a linearly accessible manner.
+
+\subsubsection{Multi-Objective Loss} \label{sec_loss}
+
+The training objective balances predictive performance with pedagogical grounding through a weighted combination of three loss terms:
+\begin{equation} \label{eq:total_loss}
+    \mathcal{L}_{\text{total}} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}
+\end{equation}
+
+The supervised loss $\mathcal{L}_{\text{sup}}$ measures the binary cross-entropy between the MLP's direct predictions $\hat{y}_t$ and the ground truth responses $r_t$, driving the model to maximize predictive accuracy:
+\begin{equation}
+    \mathcal{L}_{\text{sup}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t) \right]
+\end{equation}
+
+The reference loss $\mathcal{L}_{\text{ref}}$ applies the same binary cross-entropy metric to the BKT logic head's predictions $\hat{y}_{\text{ref},t}$, ensuring that the grounded parameters $(p_{L_0,t}, p_{T,t})$ produce pedagogically meaningful predictions when constrained to operate through BKT's causal inference mechanism:
+\begin{equation}
+    \mathcal{L}_{\text{ref}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_{\text{ref},t}) + (1-r_t) \log(1-\hat{y}_{\text{ref},t}) \right]
+\end{equation}
+
+The probing loss $\mathcal{L}_{\text{probe}}$ enforces global alignment between the Transformer's latent representations and BKT constructs by minimizing the mean squared error between linear probe predictions and population-level BKT targets:
+\begin{equation}
+    \mathcal{L}_{\text{probe}} = \sum_{k \in \{L_0, T\}} \text{MSE}\left( \hat{p}_{k,t}, P(k)_c \right)
+\end{equation}
+
+This loss implements a grounding mechanism that constrains the context vector $z_t$ to align its internal structure such that pedagogical parameters can be extracted via simple linear transformations. By constraining the latent space globally, rather than merely regularizing output parameters locally, the probing loss enables that interpretability is structurally embedded throughout the model's representations.
+
+The default configuration uses weight coefficients $\lambda_{\text{sup}} = 1.0$, $\lambda_{\text{ref}} = 0.5$, and $\lambda_{\text{probe}} = 1.0$, balancing supervised performance with theoretical grounding while prioritizing global latent space alignment through active probing.
+
+\section{Experimental Setup} \label{sec_experiment}
+
+This section details the experimental setup employed to train and evaluate gTransformer relative to various baseline models. It includes a description of the training configurations, datasets, and benchmark models selected for comparative evaluation. 
+
+\subsection{Training Setup}
+
+The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library \citep{liu2022pykt} for standardized data preprocessing, dataset splitting, and baseline model implementation. 
+
+Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level, mean late-fusion protocol as recommended in \cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the optimized values reported in the official \texttt{pyKT} repository to ensure fair comparison. Hyperparameters used for gTransformer training are detailed in \cref{tab:params}. All experiments were conducted on a machine equipped with 40 CPU cores and 8 NVIDIA Tesla V100-SXM2 GPUs with 32 GB HBM2 each.
+
+\subsection{Datasets}\label{sec_dataset}
+
+To validate if gTransformer is competitive in terms of predictive performance, we used five benchmark datasets that are among the most frequently cited and utilized for knowledge tracing benchmarks \citep{liu2022pykt}. 
+
+\begin{itemize}
+    \item \textbf{ASSISTments 2009 (AS2009)}: Collected from the ASSISTments platform during the 2009-2010 school year, this dataset consists of math exercises and has served as the de facto standard benchmark for KT research for the past decade \citep{feng2009addressing}.
+    \item \textbf{ASSISTments 2015 (AS2015)}: A larger release from the same platform, for the 2015 school year, containing the highest number of students among the ASSISTments datasets. It focuses on a specific set of 100 knowledge concepts \citep{feng2009addressing}.
+    \item \textbf{Algebra 2005 (AL2005)}: Released as part of the KDD Cup 2010 EDM Challenge, it contains responses from 13-14 year old students solving Algebra problems \citep{stamper2010algebra}.
+    \item \textbf{Bridge to Algebra 2006 (BDG2006)}: Also from the KDD Cup 2010 Challenge, this dataset focuses on the \textit{Bridge to Algebra} tutoring system and includes a high number of total interactions \citep{stamper2010algebra}.
+    \item \textbf{NeurIPS 2020 Education Challenge (NIPS34)}: A more recent dataset from the Eedi platform containing student answers to multiple-choice math questions, characterized by subjects trees used for concept mapping \citep{wang2020instructions}.
+\end{itemize}
+
+The characteristics of the datasets are summarized in Table~\ref{tab_datasets}: 
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{lcccc}
+\toprule
+\textbf{Dataset} & \textbf{Sequences ($N_s$)} & \textbf{Concepts ($N_c$)} & \textbf{Questions ($N_q$)} & \textbf{Interactions ($N_i$)} \\
+\midrule
+AS2009 & 4,217 & 123 & 26,688 & 346,860 \\
+AS2015 & 19,917 & 100 & --- & 708,631 \\
+AL2005 & 574 & 112 & 210,710 & 809,694 \\
+BDG2006 & 1,146 & 493 & 207,856 & 3,679,199 \\
+NIPS34 & 4,918 & 57 & 948 & 1,382,727 \\
+\bottomrule
+\end{tabularx}
+\caption{Characteristics of the benchmark datasets used to evaluate AUC. $N_s$, $N_c$, $N_q$ and $N_i$ denote the total number of sequences (students), knowledge components, questions and student-item interactions, respectively. \label{tab_datasets}}
+\end{table}
+
+\subsection{Baseline Models}\label{sec_models}
+
+For the comparative analysis, we selected six models that are among the most frequently mentioned baselines \citep{liu2022pykt}: DKT \citep{piech2015deep}, DKVMN \citep{zhang2017dynamic}, SAKT \citep{pandey2019self}, SAINT \citep{choi2020towards}, AKT \citep{ghosh2020context} and ATKT \citep{GuoHZTL21}. These models represent a representative selection of the recurrent (DKT), memory-augmented (DKVMN), adversarial (ATKT), and attention-based (SAKT, SAINT, AKT) paradigms, providing a robust and diverse benchmark for evaluating our model.
+
+
+\section{Results and Discussion} \label{sec_results}
+
+\subsection{Trade-Off between Predictive Performance and Interpretability (RQ1)} \label{sec_tradeoff}
+
+To evaluate the predictive performance of gTransformer, we utilized the Area Under the Curve (AUC) across the benchmark datasets described in \cref{sec_dataset}. The experimental results are summarized in Table~\ref{tab_performance}.
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{lccccc}
+\toprule
+\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
+\midrule
+AKT & 0.7825 & 0.7081 & \textbf{0.8306} & \textbf{0.8208} & \textbf{0.8033} \\
+ATKT & 0.7715 & \textbf{0.7810} & 0.7995 & 0.7889 & 0.7665 \\
+DKT & 0.7528 & 0.7031 & 0.8149 & 0.8015 & 0.7689 \\
+DKVMN & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
+SAKT & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
+SAINT & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
+\midrule
+gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
+\bottomrule
+\end{tabularx}
+\vspace{2mm}
+\raggedright
+\caption{Comparison of predictive performance across various benchmark datasets. The table reports AUC values for gTransformer and baseline models evaluated at the question level, following a mean late-fusion protocol. Values in bold indicate the best-performing model for each dataset. \label{tab_performance}}
+\end{table}
+
+Compared to baseline models, gTransformer achieves highly competitive performance across all benchmarks. To ensure a fair comparison with these non-interpretable baselines, we evaluated gTransformer in an ablated configuration ($\lambda_{\text{ref}} = 0, \lambda_{\text{probe}} = 0$). This approach establishes the model's maximum predictive capacity in the absence of theoretical constraints, allowing for a direct assessment against other deep learning architectures. On AS2009, gTransformer achieves an AUC of 0.7831, outperforming all other evaluated models. It ranks second on AL2005, BDG2006 and NIPS34 (surpassed only by AKT), and third on AS2015 (behind ATKT and AKT). These results demonstrate gTransformer's flexibility in delivering competitive predictive performance while retaining its architectural support for theory-based interpretability. 
+
+The grounded (non-ablated) gTransformer variant generates two outputs: (1) supervised predictions from the standard output head ($p_{\text{sup}2}$) and (2) interpretable predictions ($p_{\text{ref}}$) derived from the grounded parameters. To evaluate the performance trade-off, we use also (3) supervised predictions from the ablated configuration ($p_{\text{sup}1}$), which establishes the maximum predictive capacity in the absence of interpretability constraints, and (4) predictions from the BKT model ($p_{\text{bkt}}$) using population-level parameters (this baseline is omitted for AS2015 because this dataset lacks the question-level identifiers required for evaluation). We quantify \textit{Interpretability Drop} as ($p_{\text{sup}1} - p_{\text{sup}2}$), the expected reduction in supervised predictive power caused by the structural constraints required to align the latent space with theoretical constructs. The \textit{Interpretability Cost} is measured as ($p_{\text{sup}2} - p_{\text{ref}}$), representing the sacrifice in accuracy required to achieve intrinsic pedagogical transparency. Conversely, the \textit{Interpretability Gain}, defined as ($p_{\text{ref}} - p_{\text{bkt}}$), represents the performance benefit of our grounded approach over the interpretable BKT baseline. \Cref{tab:tradeoff} presents the results for these metrics. 
+
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & \textbf{Int. Drop (\%)} & \textbf{Int. Cost (\%)} & \textbf{Int. Gain (\%)} \\
+\midrule
+AS2009 & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.0017 (0.2\%) & 0.0378 (4.8\%) & 0.1339 (22.0\%) \\
+AS2015 & 0.7078 & 0.7070 & 0.6940 & --- & 0.0008 (0.1\%) & 0.0130 (1.8\%) & --- \\
+AL2005 & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0003 (0.0\%) & 0.0437 (5.3\%) & 0.0585 (8.1\%) \\
+BDG2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.0041 (0.5\%) & 0.0297 (3.6\%) & 0.1054 (15.6\%) \\
+NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 (0.2\%) & 0.0321 (4.0\%) & 0.1937 (33.8\%) \\
+\midrule
+\textbf{Mean} & 0.7861 & 0.7843 & 0.7530 & 0.6449 & 0.0018 (0.2\%) & 0.0313 (3.9\%) & 0.1229 (19.9\%) \\
+\bottomrule
+\end{tabular}
+\caption{AUC--Interpretability trade-offs in gTransformer across datasets. The table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$) and classical BKT predictions ($p_{\text{bkt}}$). \textit{Int. Drop} column shows the cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$), \textit{Int. Cost} shows the interpretability cost ($p_{\text{sup}2} - p_{\text{ref}}$), while \textit{Int. Gain} shows the interpretability gain ($p_{\text{ref}} - p_{\text{bkt}}$).}
+\label{tab:tradeoff}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Hyperparameter} & \textbf{Performance} & \textbf{Trade-off} \\
+\midrule
+\multicolumn{3}{l}{\textit{Ablation Configuration}} \\
+Ablation mode & \texttt{all} & \texttt{none} \\
+$\lambda_{\text{sup}}$ & 1.0 & 1.0 \\
+$\lambda_{\text{ref}}$ & 0 & 0.5 \\
+$\lambda_{\text{probe}}$ & 0 & 1.0 \\
+\midrule
+\multicolumn{3}{l}{\textit{Architecture Configuration}} \\
+$d_{\text{model}}$ & 64 & 64 \\
+$n_{\text{blocks}}$ & 4 & 4 \\
+$d_{\text{ff}}$ & 256 & 256 \\
+Attention heads & 4 & \makecell{AS2009: 8\\others: 4} \\
+\midrule
+\multicolumn{3}{l}{\textit{Training Configuration}} \\
+Learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
+Batch size & 64 & 64 \\
+Optimizer & \texttt{adam} & \texttt{adam} \\
+Epochs & 200 & 200 \\
+Dropout & 0.1 & 0.1 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameter configurations used to get the results reported in \cref{tab_performance} (Performance) and \cref{tab:tradeoff} (Trade-off). The first configuration disables grounding and probing (ablation=all) for maximum predictive performance, while the second uses full interpretability (ablation=none) with $\lambda_{\text{ref}}=0.5$ and $\lambda_{\text{probe}}=1.0$.}
+\label{tab:params}
+\end{table}
+
+The results reveal two insights regarding the accuracy--interpretability trade-off:
+
+\begin{itemize}
+    \item \textbf{Low Cost of Interpretability.} This cost can be analyzed through two distinct metrics. The Interpretability Drop measures the impact of grounding constraints ($\mathcal{L}_{\text{ref}}$ and $\mathcal{L}_{\text{probe}}$) on the Transformer's original representational capacity. The results in Table~\ref{tab:tradeoff} show that this drop is negligible, with an average of only 0.0018 AUC points (0.2\%), demonstrating that the model internalizes pedagogical theory without sacrificing its expressive power. The Interpretability Cost measures the performance impact of constraining final predictions to the causal logic of the reference model. The results show that the average cost across datasets is 0.0313 AUC points (3.9\% reduction), which is highly acceptable given the substantial gains in interpretability.
+    
+    \item \textbf{General Interpretability Gain.} Comparing $p_{\text{ref}}$ against $p_{\text{bkt}}$ provides a measure of the \textit{Interpretability Gain}. In all comparable datasets, interpretable gTransformer predictions consistently outperform classical BKT with an average improvement of 0.1229 AUC points (19.9\%), showing a general advantage over population-level priors. 
+\end{itemize}
+
+In summary, the cost of interpretability is consistently low and highly acceptable for practical educational applications. By accurately recovering student-specific learning parameters, gTransformer bridges the gap between black-box performance and theoretical rigor, offering a superior diagnostic alternative to traditional symbolic approaches without sacrificing performance.
+
+
+\subsection{Grounded Interpretability (RQ2)} \label{sec_grounded}
+
+We will use the following hypotheses to validate the RQ2 research question posed in section \ref{sec_intro}: 
+
+\begin{itemize}
+\item \textbf{H2.1: Structural Alignment}
+
+Latent representations in the gTransformer model are structurally organized around BKT concepts (initial mastery $P_{L0}$ and learning rate $P_T$) as the dominant organizing principle.
+
+\item \textbf{H2.2: Semantic Alignment}
+
+The enriched extracted parameters are semantically aligned with the BKT concepts. 
+
+\item \textbf{H2.3: Functional Alignment}
+
+Interpretable predictions derived from the extracted parameters can be utilized instead of supervised predictions with quantified confidence.
+
+\end{itemize}
+
+For the remainder of this study, we employ AS2009 as our reference dataset. Given its status as a widely used benchmark and its rich interaction data, it provides an ideal testbed for validating structural and semantic alignment, especially considering the high predictive AUC gTransformer achieves on this data.
+
+\subsubsection{Structural Alignment via Diagnostic Probing (H2.1)} \label{sec_structural_alignment}
+
+The H2.1 objective is to demonstrate that grounding constraints actively shape the model's internal structure, rather than merely correlating with outputs, to produce interpretable predictions. This addresses a fundamental challenge: whether deep learning models can internalize pedagogical theory, rather than learning arbitrary features that happen to yield accurate predictions. 
+
+To verify whether gTransformer's latent representations genuinely internalize pedagogical concepts, we employ \textit{diagnostic probing with control tasks} \citep{hewitt2019designing, belinkov2022probing}. This approach trains linear regression models to act as diagnostic probes, checking if the original BKT theoretical parameters ($p_{L_0}$ and $p_{T}$) can be extracted from the final hidden states $z_t$ produced by gTransformer. 
+
+\textbf{Methodology}: We measure \textit{fidelity} as the quality of the parameter recovery from the latent representations, measured via $R^2$ and Pearson correlation $r$. To distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is calculated to compare probe performance on true BKT targets against a control task with randomly shuffled target values. If probes perform equally well on shuffled targets, the representations lack genuine structural encoding. Conversely, high selectivity ($\Delta R^2 > 0.5$) demonstrates that BKT constructs are the primary organizing principles rather than incidental patterns. 
+
+\begin{itemize}
+    \item \textbf{Fidelity}: The $R^2$ (coefficient of determination) is calculated on the test set, representing the proportion of the variance in the theoretical parameters that is predictable from the gTransformer's latent space:
+    \[ R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} \]
+    where $y_i$ is the actual BKT theoretical value, $\hat{y}_i$ is the value predicted by the linear probe from the hidden state $z_t$, and $\bar{y}$ is the mean of the theoretical values.
+    \item \textbf{Selectivity}: Compares true performance against a shuffled control:
+    \[ \Delta R^2 = R^2_{\text{true}} - R^2_{\text{control}} \]
+\end{itemize}
+
+\Cref{fig_structural_fidelity_l0,fig_structural_fidelity_t} present the diagnostic probing results via parity plots, comparing BKT theoretical priors (x-axis) with probe-extracted parameters (y-axis). Each point represents an aggregate of interactions, with its size proportional to the sample density. The high adherence to the diagonal confirms a high degree of linear recoverability, with the obtained values indicating strong structural encoding:
+
+\begin{itemize}
+    \item \textbf{Initial Mastery $P(L_0)$}: Achieves fidelity $R^2 = 0.549 \pm 0.064$ with Pearson $r = 0.743 \pm 0.041$, indicating strong linear recoverability. The selectivity $\Delta R^2 = 0.619 \pm 0.061$ exceeds the threshold of 0.5, demonstrating that this is a dominant organizing principle in the latent space rather than an incidental pattern. The control task yields a negative $R^2 = -0.069$ (indicating performance worse than a mean-based baseline), confirming that probes cannot recover shuffled targets.
+    
+    \item \textbf{Learning Rate $P(T)$}: Shows strong structural encoding with fidelity $R^2 = 0.515 \pm 0.080$ and Pearson $r = 0.721 \pm 0.050$. The selectivity reaches $\Delta R^2 = 0.570 \pm 0.080$, demonstrating robust encoding of learning rate dynamics, with control $R^2 = -0.055$.
+\end{itemize}
+
+\textbf{Interpretation}: The high selectivity ($>0.5$) for both parameters validates the H2.1 (Structural Alignment) hypothesis: BKT constructs are preserved through all Transformer layers and remain as primary organizing concepts in final representations used for prediction. 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_probe_893468.png}
+\caption{Structural Fidelity for Initial Mastery $P(L_0)$. Plot showing demonstrating strong linear recoverability ($R^2=0.549$, $r=0.743$, $\Delta R^2 = 0.619$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with size encoding sample density. The high adherence to the diagonal and high selectivity ($\Delta R^2 > 0.5$) validate that this is a dominant organizing principle in latent representations. \label{fig_structural_fidelity_l0}}
+\vspace{12pt}
+\includegraphics[width=0.70\textwidth]{img/h12_recovery_t_probe_893468.png}
+\caption{Structural Fidelity for Learning Rate $P(T)$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2 = 0.570$) between BKT theoretical priors and probe-extracted parameters. The high adherence to the diagonal and high selectivity ($\Delta R^2 > 0.5$) confirm that learning rate dynamics are dominantly encoded in latent representations. \label{fig_structural_fidelity_t}}
+\end{figure}
+
+\subsubsection{Semantic Alignment (H2.2)} \label{sec_semantic_alignment}
+
+Hypothesis H2.2 examines whether grounded parameters retain their pedagogical semantics after processing, ensuring models do not repurpose theoretical constructs for black-box optimization. Unlike H2.1, which probes latent representations, H2.2 validates monotonic relationship preservation in final projected parameters. We use Spearman's rank correlation ($\rho$) to measure alignment, as it captures monotonic consistency without assuming linearity ($\rho \geq 0.6$ strong, $0.4 \leq \rho < 0.6$ moderate).
+
+\Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} present parity plots comparing BKT theoretical priors (x-axis) with grounded parameters (y-axis), where each bubble represents an aggregate of test interactions with size encoding sample density. The patterns reveal that:
+
+\begin{itemize}
+    \item \textbf{Initial Mastery ($P_{L_0}$)} shows weak alignment ($\rho = 0.360$) with substantial scatter, indicating strong student-specific individualization. However, MAE = $0.168$ validates that refinements remain within pedagogical bounds, indicating that the model neither abandons nor mechanically reproduces theoretical priors.
+    \item \textbf{Learning Rate ($P_T$)} demonstrates moderate alignment ($\rho = 0.544$). A low MAE = $0.092$ confirms the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
+\end{itemize}
+
+These findings support that grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The differential alignment reveals that learning rates preserve more theoretical structure while initial mastery estimates undergo stronger individualization.
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_grounded_893468.png}
+\caption{Semantic Alignment for Initial Mastery $P(L_0)$. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with size encoding sample density. The substantial scatter indicates strong student-specific individualization, with the model prioritizing context-aware adaptation over strict adherence to population priors. \label{fig_semantic_alignment_l0}}
+\vspace{12pt}
+\includegraphics[width=0.70\textwidth]{img/h12_recovery_t_grounded_893468.png}
+\caption{Semantic Alignment for Learning Rate $P(T)$. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The clustering around the diagonal across the full $P_T$ range indicates the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware refinement. \label{fig_semantic_alignment_t}}
+\end{figure}
+
+\subsubsection{Functional Alignment (H2.3)} \label{sec_functional_alignment}
+
+For the third hypothesis we compare two prediction paths: interpretable predictions $\hat{y}_{ref}$ generated by feeding enriched parameters (projected from context vectors $z_t$) through BKT logic, and supervised predictions $\hat{y}_{sup}$ obtained directly from an MLP applied to $z_t$. While $\hat{y}_{sup}$ uses the full representational capacity of the neural network for maximum predictive accuracy, $\hat{y}_{ref}$ constrains predictions through pedagogically interpretable BKT parameters, enabling causal explanations at the cost of some predictive power. We assess the \textit{confidence} with which the interpretable reference path can functionally replace the supervised path.
+
+To quantify prediction trustworthiness, we use a \textit{composite confidence metric} calculated as a weighted sum of three relevant dimensions:
+
+\begin{equation}
+\text{Confidence} = w_1 \cdot C_{\text{calibrated}} + w_2 \cdot C_{\text{directional}} + w_3 \cdot C_{\text{percentile}}
+\end{equation}
+
+where $w_1, w_2, w_3$ are the relative weights assigned to each metric. For the generation of the confidence heatmap in \cref{fig_h13_confidence_heatmap}, we utilized balanced weights ($w_1 = 0.4, w_2 = 0.3, w_3 = 0.3$) to provide approximately equal importance to all criteria while slightly prioritizing numerical calibration. These dimensions are defined as follows:
+
+\begin{itemize}
+    \item $C_{\text{calibrated}} = \exp(-2|\hat{y}_{ref} - \hat{y}_{sup}|)$ measures numerical closeness with exponential decay (e.g. a 0.1 disagreement yields 0.90 confidence while a 0.5 disagreement yields only 0.14).
+    
+    \item $C_{\text{directional}} = \begin{cases} 
+    1 & \text{if } (\hat{y}_{ref} \geq 0.5 \text{ and } \hat{y}_{sup} \geq 0.5) \text{ or } (\hat{y}_{ref} < 0.5 \text{ and } \hat{y}_{sup} < 0.5) \\
+    0 & \text{otherwise}
+    \end{cases}$ ensures binary decision agreement, i.e. whether both predictions agree on pass/fail.
+    
+    \item $C_{\text{percentile}} = \frac{100 - \text{percentile\_rank}(|\hat{y}_{ref} - \hat{y}_{sup}|)}{100}$ ranks the current disagreement against all others in the dataset. By subtracting the percentile rank from 100, we ensure that larger-than-average disagreements result in lower confidence scores. For instance, a disagreement in the 70th percentile (larger than 70\% of all cases) yields a confidence of 0.30, indicating that the interpretable logic is diverging from the baseline more than usual.
+\end{itemize}
+
+
+The three-component design addresses distinct trust requirements: simple numerical proximity can be misleading when predictions fall on opposite sides of the 0.5 decision threshold (e.g., $\hat{y}_{ref}=0.49$ vs $\hat{y}_{sup}=0.51$ differ by only 0.02 but yield opposite interventions), while context-free metrics cannot account for skill-specific prediction difficulty. Certain skills consistently exhibit higher disagreement between $\hat{y}_{ref}$ and $\hat{y}_{sup}$ across all students, making a given disagreement magnitude acceptable in such cases but problematic for skills where both predictors typically align closely. Using the more accurate supervised predictions $\hat{y}_{sup}$ as a trust anchor, this metric identifies student-skill pairs where interpretable predictions are reliable versus those requiring human review.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{img/h13_skill_confidence_heatmap_893468.png}
+\caption{Student × Skill confidence heatmap. Green cells indicate high confidence ($\geq 0.8$) in the interpretable predictions. Yellow shows medium confidence and red indicates low confidence. \label{fig_h13_confidence_heatmap}}
+\end{figure}
+
+
+Across AS2009 test interactions, we observe heterogeneous confidence patterns (\Cref{fig_h13_confidence_heatmap}), with 89.2\% of student-skill pairs achieving medium or high confidence, while only 10.8\% exhibit low confidence. This shows that interpretable predictions provide actionable diagnostic value with quantified uncertainty, enabling educators to leverage theory-grounded explanations while recognizing situations requiring additional validation.
+
+
+\subsection{Student-Centered Personalization (RQ3)} \label{sec_gran_results}
+
+To validate RQ3, we show how gTransformer differentiates students based on their longitudinal learning context (i.e. their sequence of interactions) rather than just response patterns. This capability enables student-centered personalization beyond what population-based models such as BKT can provide. Classical BKT is fundamentally Markovian: given the same response sequence, it produces identical predictions regardless of the student's learning history. The gTransformer model, by contrast, uses its high capacity to capture temporal learning dynamics (the individualized parameters $p_{L_0}$ and $p_T$ extracted from interaction history) to differentiate students even when their observable responses are identical.
+
+In order to demonstrate this capability, we perform a cluster analysis on the AS2009 dataset based on the historical parameters $p_{L_0}$ and $p_T$ and then select representative students from each cluster to show how gTransformer can provide customized recommendations.  
+
+Students are categorized into four learning situations based on their historical learning parameters and potential intervention requirements. \Cref{fig:student_clusters_as2009} illustrates the distribution of students across the four quadrants:
+
+\begin{itemize}
+    \item \textbf{Low Prior Knowledge / Low Learning Rate}: Observations for students in this quadrant suggest limited foundational mastery with slow skill acquisition. 
+    \item \textbf{Low Prior Knowledge / High Learning Rate}: Despite initial knowledge gaps, rapid progress indicates responsiveness to instruction. 
+    \item \textbf{High Prior Knowledge / Low Learning Rate}: Strong foundational mastery but minimal progress may signal disengagement or instructional mismatch. 
+    \item \textbf{High Prior Knowledge / High Learning Rate}: Consistent mastery and rapid skill development suggest readiness for advanced material.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/cluster_placement_pacing_contextual_893468.png}
+    \caption{Clustering of students into four learning situations based on their historical parameters (computed as averages across all previous interactions).}
+    \label{fig:student_clusters_as2009}
+\end{figure}
+
+
+In order to demonstrate the gTransformer's ability to capture longitudinal context and overcome the Markovian limitations characteristic of traditional approaches, we show a comparative analysis of mastery trajectories for students with identical response sequences. We selected representative skills with meaningful sequence lengths (5--30 interactions) and identified students from at least two different learning quadrants who provided the same responses to the same questions in the same order. These trajectories are illustrated in the 4$\times$3 mosaic shown in \cref{fig:skill_quadrant_mosaic}, where each subplot displays different predictions for students from different quadrants despite their identical performance within each skill. The dotted gray BKT lines overlap perfectly, reflecting the Markovian assumption: BKT produces identical probability estimates for all students who provide the same sequence of responses, regardless of their broader learning history. In contrast, the solid colored gTransformer lines diverge based on the whole learning trajectory, demonstrating that the model attends to longitudinal context, i.e. to the full trajectory of previous interactions across all skills, to differentiate students even when their current skill-specific responses are identical. This confirms that gTransformer captures non-Markovian personalization patterns that classical models fundamentally cannot represent.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.0\textwidth]{img/h3_skill_quadrant_comparison_mosaic_893468.png}
+\caption{Context-aware prediction mosaic showing non-Markovian personalization. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles. BKT predictions (dotted gray) overlap due to Markovian constraints, while gTransformer predictions (solid colored) diverge based on historical parameters ($P_{L_0}, P_T$). Circles represent predictions of correctness, while crosses indicate predicted failures. This demonstrates that gTransformer differentiates students not by what they answered, but by how they learned along their whole learning trajectory.}
+\label{fig:skill_quadrant_mosaic}
+\end{figure}
+
+This differentiation may inform adaptive instructional decisions. For example, consider two students with identical response sequences for a given skill: one demonstrates rapid progress across previous skills (High $P_{L_0}$/High $P_T$), while the other shows gradual improvement (Low $P_{L_0}$/Low $P_T$). Classical BKT produces identical predictions for both students, whereas gTransformer generates distinct estimations reflecting their unique learning trajectories. Consequently, educators could recommend accelerated pacing for students with high acquisition momentum while providing additional scaffolding for those demonstrating gradual development, even when their current skill performance appears equivalent.
+
+Ultimately, the prediction divergence observed across various skill-sequence combinations underscores the practical value of gTransformer for student-centered personalization beyond traditional BKT. These findings validate our hypothesis for RQ3, demonstrating that the synthesis of \textit{deep learning capacity + theoretical grounding = enhanced personalization}.
+
+
+\section{Conclusions} \label{sec_conclusions}
+
+This work introduces gTransformer, a Transformer-based model that bridges the gap between deep learning performance and intrinsic interpretability through Representational Grounding. By anchoring latent representations to semantically meaningful constructs, we demonstrate that competitive predictive accuracy can coexist with theoretical alignment.
+
+Our results validate the approach across three dimensions. First, quantifying the accuracy--interpretability trade-off, we showed that interpretable gTransformer predictions consistently surpass classical BKT with a low interpretability cost relative to black-box architectures ($RQ1$). Second, we confirmed that gTransformer internalizes BKT constructs as its primary organizing principle, achieving high structural selectivity and semantic alignment with theoretical priors ($RQ2$). Finally, we demonstrated that gTransformer enables context-aware personalization by capturing longitudinal learning patterns that Markovian models inherently overlook, allowing for differentiated diagnostics for students with identical scores but different interaction histories ($RQ3$).
+
+Ultimately, gTransformer provides a practical approach for transforming opaque deep learning predictors into actionable interpretable tools. By grounding high-capacity models in established domain theory, this approach offers a path toward student-centered personalization that is both highly accurate and pedagogically interpretable.
+
+While gTransformer was validated using BKT as the primary reference model, the underlying Representational Grounding approach is inherently extensible. Within the educational domain, future research could investigate the integration of alternative theoretical frameworks, such as Additive Factor Models or Performance Factor Analysis, allowing for the use of diverse pedagogical parameters while leveraging the longitudinal context-awareness of the Transformer architecture. Furthermore, the applicability of the gTransformer approach extends beyond Knowledge Tracing. The Representational Grounding framework can be adapted to any scientific field where established theoretical models coexist with high-volume empirical data. By anchoring latent representations to domain-specific concepts, this methodology offers a generalizable path toward bridging deep learning expressiveness with rigorous scientific grounding. Evaluating how different theoretical assumptions influence both the accuracy--interpretability trade-off and the context-awareness of domain-specific predictions across diverse disciplines remains an open and promising avenue for future research.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\vspace{6pt} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% optional
+%\supplementary{The following supporting information can be downloaded at:  \linksupplementary{s1}, Figure S1: title; Table S1: title; Video S1: title.}
+
+% Only for journal Methods and Protocols:
+% If you wish to submit a video article, please do so with any other supplementary material.
+% \supplementary{The following supporting information can be downloaded at: \linksupplementary{s1}, Figure S1: title; Table S1: title; Video S1: title. A supporting video article is available at doi: link.}
+
+% Only used for preprtints:
+% \supplementary{The following supporting information can be downloaded at the website of this paper posted on \href{https://www.preprints.org/}{Preprints.org}.}
+
+% Only for journal Hardware:
+% If you wish to submit a video article, please do so with any other supplementary material.
+% \supplementary{The following supporting information can be downloaded at: \linksupplementary{s1}, Figure S1: title; Table S1: title; Video S1: title.\vspace{6pt}\\
+%\begin{tabularx}{\textwidth}{lll}
+%\toprule
+%\textbf{Name} & \textbf{Type} & \textbf{Description} \\
+%\midrule
+%S1 & Python script (.py) & Script of python source code used in XX \\
+%S2 & Text (.txt) & Script of modelling code used to make Figure X \\
+%S3 & Text (.txt) & Raw data from experiment X \\
+%S4 & Video (.mp4) & Video demonstrating the hardware in use \\
+%... & ... & ... \\
+%\bottomrule
+%\end{tabularx}
+%}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\authorcontributions{Conceptualization, C. L.; methodology, C. L. and O. C. S.; software, C. L.; validation, C. L. and O. C. S.; formal analysis, C. L.; investigation, C. L.; resources, C. L. and O. C. S.; data curation, C. L.; writing---original draft preparation, C. L.; writing---review and editing, C. L. and O. C. S.; visualization, C. L.; supervision, O. C. S. All authors have read and agreed to the published version of the manuscript.}
+
+\funding{This research received no external funding.}
+
+\dataavailability{The datasets used in this paper can be downloaded through the links provided in https://pykt-toolkit.readthedocs.io/en/latest/datasets.html.}
+
+\conflictsofinterest{The authors declare no conflicts of interest.} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{adjustwidth}{-\extralength}{0cm}
+%\printendnotes[custom] % Un-comment to print a list of endnotes
+
+\reftitle{References}
+
+% Please provide either the correct journal abbreviation (e.g. according to the “List of Title Word Abbreviations” http://www.issn.org/services/online-services/access-to-the-ltwa/) or the full name of the journal.
+% Citations and References in Supplementary files are permitted provided that they also appear in the reference list here. 
+
+%=====================================
+% References, variant A: external bibliography
+%=====================================
+\bibliography{biblio}
+
+%=====================================
+% References, variant B: internal bibliography (commented out)
+%=====================================
+
+% ACS format
+% \isAPAandChicago{}{%
+% \begin{thebibliography}{999}
+% % Reference 1
+% \bibitem[Author1(year)]{ref-journal}
+% Author~1, T. The title of the cited article. {\em Journal Abbreviation} {\bf 2008}, {\em 10}, 142--149.
+% ... (truncated for chunk)
+
+% % Chicago format (Used for journal: arts, genealogy, histories, humanities, jintelligence, laws, literature, religions, risks, socsci)
+% \isChicagoStyle{%
+% \begin{thebibliography}{999}
+% % Reference 1
+% \bibitem[Aranceta-Bartrina(1999a)]{ref-journal}
+% Aranceta-Bartrina, Javier. 1999a. Title of the cited article. \textit{Journal Title} 6: 100--10.
+% % Reference 2
+% \bibitem[Aranceta-Bartrina(1999b)]{ref-book1}
+% Aranceta-Bartrina, Javier. 1999b. Title of the chapter. In \textit{Book Title}, 2nd ed. Edited by Editor 1 and Editor 2. Publication place: Publisher, vol. 3, pp. 54–96.
+% % Reference 3
+% \bibitem[Baranwal and Munteanu {[1921]}(1955)]{ref-book2}
+% Baranwal, Ajay K., and Costea Munteanu. 1955. \textit{Book Title}. Publication place: Publisher, pp. 154--96. First published 1921 (op-tional).
+% % Reference 4
+% \bibitem[Berry and Smith(1999)]{ref-thesis}
+% Berry, Evan, and Amy M. Smith. 1999. Title of Thesis. Level of Thesis, Degree-Granting University, City, Country. Identifi-cation information (if available).
+% % Reference 5
+% \bibitem[Cojocaru et al.(1999)]{ref-unpublish}
+% Cojocaru, Ludmila, Dragos Constatin Sanda, and Eun Kyeong Yun. 1999. Title of Unpublished Work. \textit{Journal Title}, phrase indicating stage of publication.
+% % Reference 6
+% \bibitem[Driver et al.(2000)]{ref-proceeding}
+% Driver, John P., Steffen Rohrs, and Sean Meighoo. 2000. Title of Presentation. In \textit{Title of the Collected Work} (if available). Paper presented at Name of the Conference, Location of Conference, Date of Conference.
+% % Reference 7
+% \bibitem[Harwood(2008)]{ref-url}
+% Harwood, John. 2008. Title of the cited article. Available online: URL (accessed on Day Month Year).
+% \end{thebibliography}
+% }{}
+% 
+% % APA format (Used for journal: admsci, behavsci, businesses, econometrics, economies, education, ejihpe, games, humans, ijfs, journalmedia, jrfm, languages, psycholint, publications, tourismhosp, youth)
+% \isAPAStyle{%
+% \begin{thebibliography}{999}
+% % Reference 1
+% \bibitem[\protect\citeauthoryear{Azikiwe \BBA\ Bello}{{2020a}}]{ref-journal}
+% Azikiwe, H., \& Bello, A. (2020a). Title of the cited article. \textit{Journal Title}, \textit{Volume}(Issue), 
+% Firstpage--Lastpage/Article Number.
+% % Reference 2
+% \bibitem[\protect\citeauthoryear{Azikiwe \BBA\ Bello}{{2020b}}]{ref-book1}
+% Azikiwe, H., \& Bello, A. (2020b). \textit{Book title}. Publisher Name.
+% % Reference 3
+% \bibitem[Davison(1623/2019)]{ref-book2}
+% Davison, T. E. (2019). Title of the book chapter. In A. A. Editor (Ed.), \textit{Title of the book: Subtitle} 
+% (pp. Firstpage--Lastpage). Publisher Name. (Original work published 1623) (Optional).
+% % Reference 4
+% \bibitem[Fistek et al.(2017)]{ref-proceeding}
+% Fistek, A., Jester, E., \& Sonnenberg, K. (2017, Month Day). Title of contribution [Type of contribution]. Conference Name, Conference City, Conference Country.
+% % Reference 5
+% \bibitem[Hutcheson(2012)]{ref-thesis}
+% Hutcheson, V. H. (2012). \textit{Title of the thesis} [XX Thesis, Name of Institution Awarding the Degree].
+% % Reference 6
+% \bibitem[Lippincott \& Poindexter(2019)]{ref-unpublish}
+% Lippincott, T., \& Poindexter, E. K. (2019). \textit{Title of the unpublished manuscript} [Unpublished manuscript/Manuscript in prepara-tion/Manuscript submitted for publication]. Department Name, Institution Name.
+% % Reference 7
+% \bibitem[Harwood(2008)]{ref-url}
+% Harwood, J. (2008). \textit{Title of the cited article}. Available online: URL (accessed on Day Month Year).
+% \end{thebibliography}
+% }{}
+
+% If authors have biography, please use the format below
+%\section*{Short Biography of Authors}
+%\bio
+%{\raisebox{-0.35cm}{\includegraphics[width=3.5cm,height=5.3cm,clip,keepaspectratio]{Definitions/author1.pdf}}}
+%{\textbf{Firstname Lastname} Biography of first author}
+%
+%\bio
+%{\raisebox{-0.35cm}{\includegraphics[width=3.5cm,height=5.3cm,clip,keepaspectratio]{Definitions/author2.jpg}}}
+%{\textbf{Firstname Lastname} Biography of second author}
+
+% For the MDPI journals use author-date citation, please follow the formatting guidelines on http://www.mdpi.com/authors/references
+% To cite two works by the same author: \citeauthor{ref-journal-1a} (\citeyear{ref-journal-1a}, \citeyear{ref-journal-1b}). This produces: Whittaker (1967, 1975)
+% To cite two works by the same author with specific pages: \citeauthor{ref-journal-3a} (\citeyear{ref-journal-3a}, p. 328; \citeyear{ref-journal-3b}, p.475). This produces: Wong (1999, p. 328; 2000, p. 475)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% for journal Sci
+%\reviewreports{\\
+%Reviewer 1 comments and authors’ response\\
+%Reviewer 2 comments and authors’ response\\
+%Reviewer 3 comments and authors’ response
+%}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\PublishersNote{}
+\end{adjustwidth}
+\end{document}
+
