@@ -1,0 +1,46 @@
+
+# problem: Problem
+data: Data
+prior: Prior Knowledge
+ml: ML Pipeline
+solution: Solution
+rf: Reference Model
+
+# problem -> data
+# problem -> prior
+data -> ml
+ml -> solution
+prior -> ml
+rf -> prior: simulation
+
+prior: |md
+  ### Prior Knowledge
+  - Parameter Values
+|
+prior.shape: rectangle
+
+ml: {
+  td: Training Data
+  hs: Hypothesis Set
+  la: Learning Algorithm
+  fh: Final Hypothesis
+  direction: down
+  td -> hs -> la -> fh
+
+  la: |latex
+    \textit{Learning Algorithm}
+
+    \begin{equation}
+      \mathcal{L}_{total} = L_{sup} + \lambda_{ref} L_{ref} + \lambda_{init} L_{init} + \lambda_{rate} L_{rate} + L_{reg}
+    \end{equation}
+  |
+  la.shape: rectangle
+
+  hs: |md
+    ### Hypothesis Set
+    - Embeddings
+    - Attention Heads
+    - Parameter Projections
+  |
+  hs.shape: rectangle
+}

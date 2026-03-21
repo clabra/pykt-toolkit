@@ -1,0 +1,266 @@
+direction: up
+
+** {
+  style: {
+    font-size: 80
+  }
+}
+
+MainContainer: {
+  label: ""
+  direction: down
+  style: {
+    stroke: "#3d3d3d"
+    stroke-width: 4
+    fill: "#f9f9f9"
+    border-radius: 12
+  }
+
+  # ============================================================================
+  # PRIOR KNOWLEDGE (Theory Source)
+  # ============================================================================
+  
+  PriorKnowledge: {
+    label: |md
+      <center><span style="font-size: 90px; color: #000000">Prior Knowledge</span></center>
+      
+      Interpretable Reference Model
+      
+      Simulation Results
+    |
+    shape: cylinder
+    style: {
+      fill: "#EBF5FB"
+      stroke: "#333333"
+      stroke-width: 4
+      font-size: 80
+      font-color: "#000000"
+    }
+  }
+
+  # ============================================================================
+  # DATA (Empirical Source)
+  # ============================================================================
+  
+  Data: {
+    label: |md
+      <center><span style="font-size: 90px; color: #000000">Data</span></center>
+      
+      Student Interaction Sequences
+      
+      {(q, c, r)}
+    |
+    shape: cylinder
+    style: {
+      fill: "#EBF5FB"
+      stroke: "#333333"
+      stroke-width: 4
+      font-size: 80
+      font-color: "#000000"
+    }
+  }
+
+  # ============================================================================
+  # LEARNING PIPELINE CONTAINER
+  # ============================================================================
+
+  LearningPipeline: {
+    label: "Machine Learning Pipeline"
+    direction: down
+    style: {
+      stroke: "#333333"
+      stroke-width: 4
+      fill: "#ffffff"
+      border-radius: 8
+      font-size: 80
+      stroke-dash: 5
+    }
+
+    # ==========================================================================
+    # TRAINING DATA (Informed)
+    # ==========================================================================
+
+    TrainingData: {
+      label: |md
+        <center><span style="font-size: 90px; color: #000000">Training Data</span></center>
+        
+        Student Interaction Sequences
+        
+        Informed with Prior Knowledge
+        
+        {(q, c, r)} ⊕ Parameters
+      |
+      shape: cylinder
+      style: {
+        fill: "#EBF5FB"
+        stroke: "#333333"
+        stroke-width: 4
+        font-size: 80
+        font-color: "#000000"
+      }
+    }
+
+    # ==========================================================================
+    # HYPOTHESIS SET (Architecture)
+    # ==========================================================================
+
+    HypothesisSet: {
+      label: |md
+        <center><span style="font-size: 90px; color: #000000">Hypothesis Set</span></center>
+
+        Attention-based Encoder-Decoder + 
+        
+        Grounding Induction
+      |
+      shape: rectangle
+      style: {
+        fill: "#EBF5FB"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+        font-size: 80
+        font-color: "#000000"
+      }
+    }
+
+    # ==========================================================================
+    # LEARNING ALGORITHM (Multi-Objective)
+    # ==========================================================================
+
+    LearningAlgorithm: {
+      label: |md
+        <center><span style="font-size: 90px; color: #000000">Learning Algorithm</span></center>
+        
+        Multi-Objective Loss: 
+        
+        ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>ref</sub>·ℒ<sub>ref</sub>
+        
+        Balances Accuracy and Grounding
+      |
+      shape: rectangle
+      style: {
+        fill: "#EBF5FB"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+        font-size: 80
+        font-color: "#000000"
+      }
+    }
+
+    # ==========================================================================
+    # FINAL HYPOTHESIS (Learned Weights)
+    # ==========================================================================
+
+    FinalHypothesis: {
+      label: |md
+        <center><span style="font-size: 90px; color: #000000">Final Hypothesis</span></center>
+        
+        Learned Weights
+
+        Context-aware Grounded Parameters 
+      |
+      shape: rectangle
+      style: {
+        fill: "#EBF5FB"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+        font-size: 80
+        font-color: "#000000"
+      }
+    }
+
+    # ==========================================================================
+    # INTERNAL PIPELINE CONNECTIONS
+    # ==========================================================================
+
+    TrainingData -> HypothesisSet: {
+      label: "Trains"
+      style: {
+        stroke: "#2874A6"
+        stroke-width: 6
+        font-size: 80
+      }
+    }
+
+    HypothesisSet -> LearningAlgorithm: {
+      label: "Optimized via"
+      style: {
+        stroke: "#2874A6"
+        stroke-width: 6
+        font-size: 80
+      }
+    }
+
+    LearningAlgorithm -> FinalHypothesis: {
+      label: "Produces"
+      style: {
+        stroke: "#2874A6"
+        stroke-width: 6
+        font-size: 80
+      }
+    }
+  }
+
+  # ============================================================================
+  # INFORMATION FLOW CONNECTIONS (External to Pipeline)
+  # ============================================================================
+
+  # ============================================================================
+  # MASTERY ESTIMATIONS (Output)
+  # ============================================================================
+  
+  MasteryEstimations: {
+
+    label: |md
+      <center><span style="font-size: 90px; color: #000000">Mastery Estimations</span></center>
+      
+      Interpretable Predictions {ŷ<sub>ref</sub>}
+
+      Derived from Grounded Parameters 
+      
+      and Reference Model Logic
+    
+    |
+
+    shape: rectangle
+    style: {
+      fill: "#EBF5FB"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+      font-size: 80
+      font-color: "#000000"
+    }
+  }
+
+  Data -> LearningPipeline.TrainingData: {
+    label: "Feeds into"
+    style: {
+      stroke: "#2874A6"
+      stroke-width: 6
+      font-size: 80
+    }
+  }
+
+  PriorKnowledge -> LearningPipeline.TrainingData: {
+    label: "Informs"
+    style: {
+      stroke: "#229954"
+      stroke-width: 6
+      font-size: 80
+    }
+  }
+
+
+  LearningPipeline.FinalHypothesis -> MasteryEstimations: {
+    label: "Generates"
+    style: {
+      stroke: "#2874A6"
+      stroke-width: 6
+      font-size: 80
+    }
+  }
+
+}

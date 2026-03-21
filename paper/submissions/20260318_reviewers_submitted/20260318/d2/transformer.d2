@@ -1,0 +1,358 @@
+direction: up
+
+** {
+  style: {
+    font-size: 85
+  }
+}
+
+MainContainer: {
+  label: "Encoder-Decoder Architecture"
+  style: {
+    stroke: "#666666"
+    stroke-width: 4
+    fill: "#f9f9f9"
+    border-radius: 12
+    font-size: 100
+  }
+
+# ====================================================================================
+# INPUTS
+# ====================================================================================
+
+Inputs: {
+  label: "Inputs"
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  qa_embed: {
+    label: |md
+      y' (qa_embed)
+      
+      Interaction History
+      
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  q_embed: {
+    label: |md
+      x' (q_embed)
+      
+      Current Questions
+      
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+}
+
+# ====================================================================================
+# ENCODER
+# ====================================================================================
+
+Encoder: {
+  label: "Encoder (n_blocks layers)"
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  Block1: {
+    label: |md
+      Encoder Block 1
+      
+      Self-Attention(y', y', y')
+      
+      + FFN + Residual + LayerNorm
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+      3d: true
+    }
+  }
+  
+  BlockN: {
+    label: |md
+      ...
+      
+      Encoder Block n
+      
+      Self-Attention(y, y, y)
+      
+      + FFN + Residual + LayerNorm
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+      3d: true
+    }
+  }
+  
+  Output: {
+    label: |md
+      y<sub>encoded</sub>
+      
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  Block1 -> BlockN: "" {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
+  BlockN -> Output: "" {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ====================================================================================
+# DECODER
+# ====================================================================================
+
+Decoder: {
+  label: "Decoder (n_blocks × 2 layers)"
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  DecoderBlock1: {
+    label: "Decoder Block 1"
+    style: {
+      stroke: "#2874A6"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#EBF5FB"
+      font-size: 90
+    }
+    
+    Layer1: {
+      label: |md
+        Layer 1: Self-Attention
+        
+        Self-Attention(x', x', x')
+        
+        Peek current question
+        
+        <span style="color:#666">No FFN</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#D6EAF8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    Layer2: {
+      label: |md
+        Layer 2: Cross-Attention
+        
+        Cross-Attention(x, y<sub>enc</sub>, y<sub>enc</sub>)
+        
+        Knowledge retrieval
+        
+        <span style="color:#666">+ FFN + Residual + LayerNorm</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#D6EAF8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    Layer1 -> Layer2: "" {
+      style: { stroke: "#2874A6"; stroke-width: 6 }
+      target-arrowhead: { shape: arrow }
+    }
+  }
+  
+  DecoderBlockN: {
+    label: "Decoder Block n"
+    style: {
+      stroke: "#2874A6"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#EBF5FB"
+      font-size: 90
+    }
+    
+    Layer2N_1: {
+      label: |md
+        Layer 2n-1: Self-Attention
+        
+        Self-Attention(x, x, x)
+        
+        <span style="color:#666">No FFN</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#D6EAF8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    Layer2N: {
+      label: |md
+        Layer 2n: Cross-Attention
+        
+        Cross-Attention(x, y<sub>enc</sub>, y<sub>enc</sub>)
+        
+        <span style="color:#666">+ FFN + Residual + LayerNorm</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#D6EAF8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    Layer2N_1 -> Layer2N: "" {
+      style: { stroke: "#2874A6"; stroke-width: 6 }
+      target-arrowhead: { shape: arrow }
+    }
+  }
+  
+  Output: {
+    label: |md
+      d<sub>output</sub>
+      
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  DecoderBlock1.Layer2 -> DecoderBlockN.Layer2N_1: "..." {
+    style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  DecoderBlockN.Layer2N -> Output: "" {
+    style: { stroke: "#2874A6"; stroke-width: 6 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ====================================================================================
+# OUTPUT
+# ====================================================================================
+
+Output: {
+  label: "Output"
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  ContextVector: {
+    label: |md
+      Context Vector
+      
+      z<sub>t</sub> = d<sub>output</sub> ⊕ q<sub>embed</sub>
+      
+      <span style="color:#666">[B, S, z] where z = d + e</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#D6EAF8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+}
+
+# ====================================================================================
+# CONNECTIONS
+# ====================================================================================
+
+Inputs.qa_embed -> Encoder.Block1: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Inputs.q_embed -> Decoder.DecoderBlock1.Layer1: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Encoder.Output -> Decoder.DecoderBlock1.Layer2: "K, V" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Encoder.Output -> Decoder.DecoderBlockN.Layer2N: "K, V" {
+  style: { stroke: "#229954"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Decoder.Output -> Output.ContextVector: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Inputs.q_embed -> Output.ContextVector: "" {
+  style: { stroke: "#2874A6"; stroke-width: 6; font-size: 80; stroke-dash: 5 }
+  target-arrowhead: { shape: arrow }
+}
+
+}

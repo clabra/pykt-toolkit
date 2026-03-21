@@ -1,0 +1,650 @@
+direction: up
+
+** {
+  style: {
+    font-size: 85
+  }
+}
+
+MainContainer: {
+  label: ""
+  style: {
+    stroke: "#2d2d2d"
+    stroke-width: 4
+    fill: "#f9f9f9"
+    border-radius: 12
+    font-size: 100
+  }
+
+# ============================================================================
+# 1: INPUT COMPONENTS
+# ============================================================================
+
+Section1: {
+  label: "1: Input Data"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  InputData: {
+    label: |md
+      <center><span style="font-size: 95px">Interaction Data</span></center>
+
+      {(q, c, r)}
+    |
+    shape: cylinder
+    style: {
+      fill: "#E8E8E8"
+      stroke: "#333333"
+      stroke-width: 4
+    }
+  }
+
+  BKT: {
+    label: |md
+
+      <center><span style="font-size: 95px">Reference Model</span></center>
+
+      <center>BKT</center>
+
+      p<sub>L₀</sub>, p<sub>T</sub>
+    |
+    shape: cylinder
+    style: {
+      fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+    }
+  }
+
+}
+
+# ============================================================================
+# 2: EMBEDDINGS LAYER
+# ============================================================================
+
+Section2: {
+  label: "2: Embeddings"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  StandardEmbeddings: {
+    label: "Standard Track"
+    style: {
+      stroke: "#666666"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#E8E8E8"
+      font-size: 90
+    }
+    
+    TaskHistoryEmb: {
+      label: |md
+        <center><span style="font-size: 95px">History Embeddings</span></center>
+        <center>(Response + Difficulty)</center>
+        
+        y'<sub>t</sub> = e + u·f
+        
+        e: Interaction = qa_emb(r) + q_emb(q)
+
+        f: Interaction Variation = qa_diff(r) + q_diff(q)
+
+        u: Problem Difficulty (scalar)
+        
+        <span style="color:#666">e, f: [d]    u: scalar    y': [d]</span>
+
+        <span style="color:#666">[B, S, d]</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#E8E8E8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    TaskHistoryEmb2: {
+      label: |md
+        <center><span style="font-size: 95px">Task Embeddings</span></center>
+        <center>(Question + Difficulty)</center>
+        
+        x'<sub>t</sub> = c + u·d
+        
+        c: Question/Skill Embedding = q_emb(q)
+
+        d: Question Variation = q_diff(q)
+
+        u: Problem Difficulty (scalar)
+        
+        <span style="color:#666">c, d: [d]    u: scalar    x': [d]</span>
+
+        <span style="color:#666">[B, S, d]</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#E8E8E8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+  }
+  
+  InterpretableEmbeddings: {
+    label: "Interpretable Track"
+    style: {
+      stroke: "#2874A6"
+      stroke-width: 3
+      stroke-dash: 5
+      fill: "#E3F2FD"
+      font-size: 90
+    }
+    
+    TheoryBases: {
+      label: |md
+        <center><span style="font-size: 95px">Theory Bases</span></center>
+        <center>(BKT Priors Embeddings)</center>
+        
+        L₀<sub>base</sub>[q] ~ N(σ⁻¹(L₀[q]), 0.05)
+
+        T<sub>base</sub>[q] ~ N(σ⁻¹(T[q]), 0.05)
+        
+        <span style="color:#666">[n_question, 1]</span>
+        
+        <span style="color:#666">Textured logits from BKT</span>
+
+      |
+      shape: rectangle
+      style: {
+        fill: "#E3F2FD"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    SemanticAxes: {
+      label: |md
+        <center><span style="font-size: 95px">Semantic Axes</span></center>
+        
+        K<sub>axis</sub>[q]: Knowledge Direction
+
+        V<sub>axis</sub>[q]: Velocity Direction
+        
+        <span style="color:#666">[n_question, z]</span>
+
+        <span style="color:#666">z = d + dim(q_embed)</span>
+      |
+      shape: rectangle
+      style: {
+        fill: "#E3F2FD"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+  }
+  
+}
+
+# ============================================================================
+# 3: TRANSFORMER ARCHITECTURE
+# ============================================================================
+
+Section3: {
+  label: "3: Attention-based Encoder-Decoder"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  Encoder: {
+    label: |md
+      <center><span style="font-size: 95px">Encoder</span></center>
+
+      (Self-Attention)
+
+      y'<sub>1:t-1</sub>
+      
+      <span style="color:#666">n_blocks</span>
+
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E8E8E8"
+      stroke: "#333333"
+      stroke-width: 4
+      multiple: true
+      shadow: true
+      3d: true
+    }
+  }
+  
+  Decoder: {
+    label: |md
+      <center><span style="font-size: 95px">Decoder</span></center>
+
+      (Cross-Attention)
+
+      x'<sub>t</sub>
+      
+      <span style="color:#666">n_blocks x 2</span>
+
+      <span style="color:#666">[B, S, d]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E8E8E8"
+      stroke: "#333333"
+      stroke-width: 4
+      multiple: true
+      shadow: true
+      3d: true
+    }
+  }
+  
+  ContextVector: {
+    label: |md
+      <center><span style="font-size: 95px">Context Vector</span></center>
+
+      z<sub>t</sub> = d<sub>out</sub> ⊕ q<sub>emb</sub>
+
+      (High-dim Latent)
+      
+      <span style="color:#666">[B, S, z]</span>
+
+      <span style="color:#666">z = d + dim(q_embed)</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E8E8E8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  Encoder -> Decoder: "History Context" {
+    style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  Decoder -> ContextVector {
+    style: { stroke: "#666666"; stroke-width: 8 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ============================================================================
+# 4: GROUNDED PARAMETERS (THREE-COMPONENT COMPOSITION)
+# ============================================================================
+
+Section4: {
+  label: "4: Grounded Parameters (Base + Projection)"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+  TheoryBase: {
+    label: |md
+      <center><span style="font-size: 95px">Theory Base</span></center>
+
+      (BKT Prior Embeddings Lookup)
+      
+      ℓ<sub>L₀</sub>[q] = L₀<sub>base</sub>[q]
+
+      ℓ<sub>T</sub>[q] = T<sub>base</sub>[q]
+      
+      <span style="color:#666">[n_question, 1] → [B, S]</span>
+    |
+    shape: rectangle
+    style: {
+        fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  SemanticProjection: {
+    label: |md
+      <center><span style="font-size: 95px">Context Projection</span></center>
+      
+      Δ<sub>L₀</sub> = z<sub>t</sub> · K<sub>axis</sub>[q]
+
+      Δ<sub>T</sub> = z<sub>t</sub> · V<sub>axis</sub>[q]
+      
+      <span style="color:#666">Dot product</span>
+
+      <span style="color:#666">[B, S]</span>
+    |
+    shape: rectangle
+    style: {
+        fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  FinalParams: {
+    label: |md
+      <center><span style="font-size: 95px">Final Parameters</span></center>
+
+      (Base + Context Projection)
+      
+      p<sub>L₀</sub> = σ(ℓ<sub>L₀</sub> + Δ<sub>L₀</sub>)
+
+      p<sub>T</sub> = σ(ℓ<sub>T</sub> + Δ<sub>T</sub>)
+      
+      <span style="color:#666">[B, S]</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  TheoryBase -> FinalParams: "" {
+    style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  SemanticProjection -> FinalParams: "" {
+    style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ============================================================================
+# 5: OUTPUTS
+# ============================================================================
+
+
+Section5: {
+  label: "5: Output Heads"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+  
+
+
+      SupervisedOut: {
+      label: |md
+        <center><span style="font-size: 95px">Supervised Prediction</span></center>
+        
+        ŷ<sub>t</sub> = MLP(z<sub>t</sub>)
+        
+        <span style="color:#666">[B, S]</span>
+      |
+      shape: rectangle
+      style: {
+          fill: "#E8E8E8"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    ReferenceOut: {
+      label: |md
+        <center><span style="font-size: 95px">Reference Output</span></center>
+        
+        ŷ<sub>ref</sub> = BKT(p<sub>L₀</sub>, p<sub>T</sub>)
+        
+        <span style="color:#666">[B, S]</span>
+      |
+      shape: rectangle
+      style: {
+          fill: "#E3F2FD"
+        stroke: "#000000"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+    
+    DiagnosticProbes: {
+      label: |md
+        <center><span style="font-size: 95px">Probes</span></center>
+        
+        p̂<sub>L₀</sub> = Linear(z<sub>t</sub>)
+
+        p̂<sub>T</sub>  = Linear(z<sub>t</sub>)
+        
+        <span style="color:#666">[B, S]</span>
+      |
+      shape: rectangle
+      style: {
+          fill: "#E3F2FD"
+        stroke: "#333333"
+        stroke-width: 4
+        shadow: true
+      }
+    }
+
+
+}
+
+# ============================================================================
+# 6: MULTI-OBJECTIVE LOSS
+# ============================================================================
+
+Section6: {
+  label: "6: Multi-Objective Loss"
+  direction: right
+  style: {
+    stroke: "#333333"
+    stroke-width: 4
+    fill: "#ffffff"
+    border-radius: 8
+    font-size: 100
+    stroke-dash: 5
+  }
+
+LossSup: {
+    label: |md
+      <center><span style="font-size: 95px">ℒ<sub>sup</sub></span></center>
+      
+      <span style="color:#666">Scalar</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E8E8E8"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  LossRef: {
+    label: |md
+      <center><span style="font-size: 95px">ℒ<sub>ref</sub></span></center>
+      
+      <span style="color:#666">Scalar</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  LossProbe: {
+    label: |md
+      <center><span style="font-size: 95px">ℒ<sub>probe</sub></span></center>
+      
+      MSE(p̂<sub>L₀</sub>, μ<sub>L₀</sub>) + MSE(p̂<sub>T</sub>, μ<sub>T</sub>)
+      
+      <span style="color:#666">Scalar</span>
+    |
+    shape: rectangle  
+    style: {
+      fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  TotalLoss: {
+    label: |md
+      <center><span style="font-size: 95px">Total Loss</span></center>
+      
+      ℒ = λ<sub>sup</sub>·ℒ<sub>sup</sub> + λ<sub>ref</sub>·ℒ<sub>ref</sub> + λ<sub>probe</sub>·ℒ<sub>probe</sub>
+      
+      <span style="color:#666">Scalar</span>
+    |
+    shape: rectangle
+    style: {
+      fill: "#E3F2FD"
+      stroke: "#333333"
+      stroke-width: 4
+      shadow: true
+    }
+  }
+  
+  LossSup -> TotalLoss: "" {
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  LossRef -> TotalLoss: "" {
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+  LossProbe -> TotalLoss: "" {
+    style: { stroke: "#333333"; stroke-width: 8; font-size: 80 }
+    target-arrowhead: { shape: arrow }
+  }
+    
+}
+
+Section5.SupervisedOut -> Section6.LossSup {
+    style: { stroke: "#666666"; stroke-width: 8 }
+    target-arrowhead: { shape: arrow }
+  }
+  Section5.ReferenceOut -> Section6.LossRef {
+    style: { stroke: "#2874A6"; stroke-width: 8 }
+    target-arrowhead: { shape: arrow }
+  }
+  Section5.DiagnosticProbes -> Section6.LossProbe {
+    style: { stroke: "#666666"; stroke-width: 8 }
+    target-arrowhead: { shape: arrow }
+  }
+
+# ============================================================================
+# DATA FLOW CONNECTIONS BETWEEN SECTIONS
+#============================================================================
+
+# 1 -> 2
+Section1.InputData -> Section2.StandardEmbeddings.TaskHistoryEmb: "" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+Section1.BKT -> Section2.InterpretableEmbeddings.TheoryBases: "" {
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+# 2 -> 3
+Section2.StandardEmbeddings.TaskHistoryEmb -> Section3.Encoder: "" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section2.StandardEmbeddings.TaskHistoryEmb2 -> Section3.Decoder: "Current Question" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+# 3 -> 4 (Grounded Parameters)
+Section2.InterpretableEmbeddings.TheoryBases -> Section4.TheoryBase: "" {
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section2.InterpretableEmbeddings.SemanticAxes -> Section4.SemanticProjection: "" {
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section4.SemanticProjection: "z" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+# 4 -> 5 (Outputs)
+Section4.FinalParams -> Section5.ReferenceOut: "" {
+  style: { stroke: "#2874A6"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section5.SupervisedOut: "" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+Section3.ContextVector -> Section5.DiagnosticProbes: "" {
+  style: { stroke: "#666666"; stroke-width: 8; font-size: 80 }
+  target-arrowhead: { shape: arrow }
+}
+
+# Ground Truth -> Loss
+Section1.InputData -> Section6.LossSup: "y" {
+  style: {
+    font-size: 80
+    stroke: "#666666"
+    stroke-width: 8
+  }
+  target-arrowhead: { shape: arrow }
+}
+Section1.BKT -> Section6.LossProbe: "BKT parameters" {
+  style: {
+    font-size: 80
+    stroke: "#2874A6"
+    stroke-width: 8
+  }
+  target-arrowhead: { shape: arrow }
+}
+Section1.BKT -> Section5.ReferenceOut: "BKT Logic" {
+  style: {
+    stroke: "#2874A6"
+    stroke-width: 8
+    font-size: 80
+  }
+  target-arrowhead: { shape: arrow }
+}
+
+}
+
