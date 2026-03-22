@@ -177,18 +177,40 @@ When you are running experiments (Experiment Agent):
 - Strictly following the reproducibility protocol in `examples/reproducibility.md`.
 - For gtransformer model, the metric we use is test auc question-level average late-fusion
 
-## Reviews
+## Proofreading
 
-The reviews.md file gathers the comments sent by the four reviewers of the paper. We have to generate the answers for them and apply changes suggested by them wherever it applies. Use UK english and not US english. 
+MDPI editors have included these instructions in the latest version of the manuscript, which is currently undergoing proofreading: 
 
-Guidelines to generate the responses: 
+```latex
+%MDPI: Notes for Authors
+%1. The paper was edited by our English editor, please check the whole text and confirm if your meaning is retained.
+%2. Do not delete any comment we left for you and reply to each comment so that we can understand your meaning clearly.
+%3. Please directly correct on this version. If you need to revise somewhere in your paper, please highlight the revisions and track changes to make us known.
+%4. Please finish the proofreading based on this version.
+%5. Please make sure that all the symbols in the paper are of the same format.
+%6. Please confirm and revise all the comments with “Revised”, “It should be italic”; “I confirm xx is correct”; “I have checked and revised all.” , etc.“
+%(Thank you for your cooperation in advance.)
+%We have done layout for your paper, so please do not change the format of references.
+```
 
-- We'll go step by step. I'll provide instructions for each response. Don't apply changes to the manuscript by yourself, we'll do it after you have generated the responses.
-- The comment X by the reviewer Y will be provided (with references to the reviews.md file to get the comment text). 
-- Generate answer to comment X by the reviewer Y
-- Generate the response using a variant of this format: "Thank you for pointing this out. We agree with this comment. Therefore, we have…" [Explain what change you have made. Mention exactly where in the revised manuscript this change can be found – page number, paragraph, and line.] [updated text in the manuscript if necessary] 
-- Use UK english and not US english.
-- To facilitate the review process, all changes should be marked in the manuscript using tracked revisions via the LaTeX package 'change'  that displays revisions in blue. 
+To answer them, I'l use this: 
+
+```latex
+%AuthorsAnswers: OK. I'll mark my comments with %AuthorsAnswer
+```
+
+### Rules
+
+Some specially important rules are:
+
+- For proper names, such as gTransformer, use capitalization; don't use italics. 
+- For concepts we define, such as representational grounding, use italics on first introduction only, and lowecase.
+
+### MDPI Style Guide 
+
+The Style Guidefor authors can be found here: 
+https://www.mdpi.com/authors/layout#_bookmark12
+
 
 ## Copyright and License
 
