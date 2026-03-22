@@ -32,7 +32,7 @@
 \definechangesauthor[name=Reviewer 3, color=violet]{rev3bcom1}
 \definechangesauthor[name=Other, color=gray]{revother}
 \definechangesauthor[name=Reviewer 4, color=red]{rev4}
-\definechangesauthor[name=Proofreading, color=green]{revproof}
+\definechangesauthor[name=Proofreading, color=red]{revproof}
 \setlength{\headheight}{20pt}
 
 %\documentclass[preprints,article,submit,pdftex,moreauthors]{Definitions/mdpi} 
@@ -904,11 +904,8 @@ Ines, {\v{S}ari\'c-Grgi\'c}.; Ani, G.; Angelina, G.
 
 \bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
   Kaiser, and Polosukhin]{vaswani2017attention}
-Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.;
-  Kaiser, {\L}.; Polosukhin, I.
-\newblock Attention is all you need.
-\newblock {\em arXiv} {\bf 2017},
- arXiv:1706.03762.
+\added[id=revproof]{Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.; Kaiser, L.; Polosukhin, I. Attention is all you need. Advances in Neural Information Processing Systems, bf 30, 2017.}
+%AuthorsAnswer: Updated this citation to the published conference version instead of the arXiv preprint. See biblio.bib file for reference details.
 
 \bibitem[Bai et~al.(2024)Bai, Zhao, Wei, Cai, and He]{bai2024survey}
 Bai, Y.; Zhao, J.; Wei, T.; Cai, Q.; He, L.
@@ -970,13 +967,14 @@ Embretson, S.E.; Reise, S.P.
 \newblock {\em Item Response Theory for Psychologists}; Psychology Press: \hl{Hove, UK},
   2013.
 
-\bibitem[Piech et~al.(2015)Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and
-  Sohl-Dickstein]{piech2015deep}
-Piech, C.; Bassen, J.; Huang, J.; Ganguli, S.; Sahami, M.; Guibas, L.J.;
-  Sohl-Dickstein, J.
+
+\bibitem[Piech et~al.(2015)Piech, Bassen, Huang, Ganguli, Sahami, Guibas, and Sohl-Dickstein]{piech2015deep}
+\added[id=revproof]{%
+Piech, C.; Bassen, J.; Huang, J.; Ganguli, S.; Sahami, M.; Guibas, L.J.; Sohl-Dickstein, J.
 \newblock Deep knowledge tracing.
-\newblock {\em arXiv} {\bf 2015},
-  arXiv:1506.05908.
+\newblock \em Advances in Neural Information Processing Systems, \bf 28, 2015.%
+}
+%AuthorsAnswer: Updated this citation from the arXiv preprint to the formally published journal article. See biblio.bib file for reference details.
 
 \bibitem[Pandey and Karypis(2019)]{Pandey2019384}
 Pandey, S.; Karypis, G.
@@ -1130,11 +1128,14 @@ Labra, C.; Santos, O.C.
   pp. 220--223.
 \newblock {\url{https://doi.org/10.1145/3563359.3597384}}.
 
+
 \bibitem[Badrinath and Pardos(2025)]{badrinath2025optimizing}
+\added[id=revproof]{%
 Badrinath, A.; Pardos, Z.
-\newblock Optimizing Bayesian Knowledge Tracing with Neural Network Parameter
-  Generation.
-\newblock {\em arXiv} {\bf 2025}, arXiv:2501.00000.
+\newblock Optimizing Bayesian Knowledge Tracing with Neural Network Parameter Generation.
+\newblock Journal of Educational Data Mining, \bf 17 (1), 41--65, 2025.%
+}
+%AuthorsAnswer: Updated this citation from the arXiv preprint to the formally published journal article. See biblio.bib file for reference details.
 
 \bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
   Ganguly, Shekhar, Samatova, and Kumar]{karpatne2017theory}
@@ -1237,10 +1238,14 @@ Zhang, J.; Shi, X.; King, I.; Yeung, D.Y.
 \newblock In \textit{Proceedings of the 26th international
   conference on World Wide Web}; \hl{International World Wide Web Conferences Steering Committee: Geneva, Switzerland},  2017; pp. 765--774.
 
+
 \bibitem[Pandey and Karypis(2019)]{pandey2019self}
+\added[id=revproof]{%
 Pandey, S.; Karypis, G.
 \newblock A self-attentive model for knowledge tracing.
-\newblock {\em arXiv} {\bf 2019}, arXiv:1907.06837.
+\newblock \em International Educational Data Mining Society, \bf 2019. %
+}
+%AuthorsAnswer: Updated this citation from the arXiv preprint to the formally published journal article. See biblio.bib file for reference details.
 
 \bibitem[Guo et~al.(2021)Guo, Huang, Zhou, Lang, et~al.]{GuoHZTL21}
 Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  \hl{et~al.} %MDPI: Please write out the first ten authors' names before using “et al.” in the references.
@@ -1249,8 +1254,8 @@ Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  \hl{et~al.} %MDPI: Please write out the
   on Knowledge Discovery \& Data Mining, \hl{Virtual, 14--18 August} 2021.
 
 \bibitem[Badrinath et~al.(2021)Badrinath, Wang, and Pardos]{badrinath2021pybkt}
-\hl{Badrinath, A.; Wang, F.; Pardos, Z. pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In \protect\textit{Proceedings of the 14th International Conference on Educational Data Mining (EDM 2021)}; International Educational Data Mining Society, 2021; pp. 468--474.}
-%AuthorsAnswer: We have added this new reference to ensure bibliographical accuracy.
+\added[id=revproof]{Badrinath, A.; Wang, F.; Pardos, Z. pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In \protect\textit{Proceedings of the 14th International Conference on Educational Data Mining (EDM 2021)}; International Educational Data Mining Society, 2021; pp. 468--474.}
+%AuthorsAnswer: We have added this new reference that was missing. See biblio.bib file for reference details. 
 
 
 \end{thebibliography}
