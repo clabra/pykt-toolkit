@@ -532,7 +532,8 @@ where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include num
 
 \subsection{Training~Setup}
 
-The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library~\citep{liu2022pykt} for {standardised} data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official \texttt{pyKT} repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.}
+The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyKT} library~\citep{liu2022pykt} for {standardised} data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official \texttt{pyKT} repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.} For~the Bayesian Knowledge Tracing baseline, we utilised \hl{\textit{pyBKT}}~\citep{badrinath2021pybkt}, a Python implementation of the algorithm that estimates student cognitive mastery from problem-solving sequences.
+%AuthorsAnswer: Added reference to the pyBKT library as requested, which was used for the BKT baseline implementation.
 
 
 \begin{table}[H]
@@ -1246,6 +1247,11 @@ Guo, X.; Huang, Z.; Zhou, T.; Lang, L.;  \hl{et~al.} %MDPI: Please write out the
 \newblock Enhancing Knowledge Tracing via Adversarial Training.
 \newblock In Proceedings of the 27th ACM SIGKDD Conference
   on Knowledge Discovery \& Data Mining, \hl{Virtual, 14--18 August} 2021.
+
+\bibitem[Badrinath et~al.(2021)Badrinath, Wang, and Pardos]{badrinath2021pybkt}
+\hl{Badrinath, A.; Wang, F.; Pardos, Z. pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In \protect\textit{Proceedings of the 14th International Conference on Educational Data Mining (EDM 2021)}; International Educational Data Mining Society, 2021; pp. 468--474.}
+%AuthorsAnswer: We have added this new reference to ensure bibliographical accuracy.
+
 
 \end{thebibliography}
 
