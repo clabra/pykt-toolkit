@@ -216,6 +216,9 @@ Some specially important rules are:
 The Style Guidefor authors can be found here: 
 https://www.mdpi.com/authors/layout#_bookmark12
 
+### MDPI Mathematical Content Guidelines
+
+See math_guidelines.md for more information.
 
 ## Copyright and License
 
