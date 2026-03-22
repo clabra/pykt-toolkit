@@ -119,7 +119,7 @@
 %6. Please confirm and revise all the comments with “Revised”, “It should be italic”; “I confirm xx is correct”; “I have checked and revised all.” , etc.“
 %(Thank you for your cooperation in advance.)
 %We have done layout for your paper, so please do not change the format of references.
-%AuthorsAnswer: OK. I'll mark my comments with %AuthorsAnswer
+%AuthorsAnswer: We have carefully reviewed the entire manuscript in accordance with the provided instructions. All responses to editor comments are preceded by the %AuthorsAnswer tag.
 
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
@@ -127,7 +127,7 @@
 
 % Authors, for the paper (add full first names)
 \Author{\hl{Concepcion Labra} %MDPI: Please carefully check the accuracy of names and affiliations. Please note that at this stage (the manuscript has been accepted in the current form), we will not accept authorship or content changes to the main text (including adding new authors/corresponding authors/affiliations or deleting present authors/corresponding authors/affiliations or exchanging author orders). 
-%AuthorsAnswer: Names checked
+%AuthorsAnswer: We have verified the accuracy of the author names and affiliations as requested.
  $^{1}$\orcidA{} and Olga C. Santos $^{1,2,}$*\orcidB{}}
 
 %\longauthorlist{yes}
@@ -160,8 +160,10 @@ $^{2}$ \quad PhyUM Research Center, \hl{UNED}}
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e.,~\\) 
-\abstract{Knowledge Tracing, which estimates how students' knowledge evolves during interactions with educational content, is a cornerstone of Intelligent Tutoring Systems. While deep learning models achieve superior predictive performance in this task, they lack interpretability, a limitation that is particularly critical in educational contexts. We introduce \textit{\highlighting{gTransformer,}}%MDPI: Please check throughout the manuscript to ensure the formats (italic, bold, sub/superscript, etc.) of the variables are consistent and revise if necessary.
-a new type of grounded Transformer model bridging deep learning performance with intrinsic interpretability through \textit{\highlighting{Representational Grounding.}}%MDPI: Please confirm if the italics are necessary; if not, please remove them. please check all italics in the whole text.
+\abstract{Knowledge Tracing, which estimates how students' knowledge evolves during interactions with educational content, is a cornerstone of Intelligent Tutoring Systems. While deep learning models achieve superior predictive performance in this task, they lack interpretability, a limitation that is particularly critical in educational contexts. We introduce \highlighting{gTransformer},%MDPI: Please check throughout the manuscript to ensure the formats (italic, bold, sub/superscript, etc.) of the variables are consistent and revise if necessary.
+%AuthorsAnswer: We appreciate this observation regarding formatting consistency. In this manuscript, 'gTransformer' serves as the proper name for the proposed model architecture (a named entity); as such, we use capitalization without italics. 
+a new type of grounded Transformer model bridging deep learning performance with intrinsic interpretability through \textit{\highlighting{representational grounding}}.%MDPI: Please confirm if the italics are necessary; if not, please remove them. please check all italics in the whole text.
+%AuthorsAnswer: 'representational grounding' is a concept defined within this work. Following academic conventions for newly introduced constructs, we propose the use of lowercase, with italics applied only on its first occurrence to denote its definition. We have verified the entire text to ensure this formatting is applied consistently.
  It adds theory-based parameters to input interaction sequences and uses attention mechanisms to transform them into latent representations. These are projected into enriched parameters that incorporate historical learning context while preserving semantics. Validation demonstrates: (1) structural encoding around theoretical concepts (probing selectivity $\Delta R^2 > 0.5$); (2) semantic alignment; and (3) functional alignment with quantified confidence. Results show that gTransformer achieves predictive performance competitive with state-of-the-art architectures while offering intrinsically interpretable predictions. The trade-off is characterised by a significant AUC gain over traditional theory-based models (+19.9\%), with a minimal cost (3.9\%) relative to non-interpretable configurations. Critically, gTransformer enables context-aware personalisation by differentiating students based on longitudinal learning trajectories rather than immediate responses, capturing patterns that traditional Markovian models cannot represent. This offers a practical path toward AI-driven adaptive instruction that is both accurate and interpretable.} 
 
 % Keywords
