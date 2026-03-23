@@ -122,6 +122,7 @@
 %We have done layout for your paper, so please do not change the format of references.
 %AuthorsAnswer: We thank the editorial team for their comprehensive proofreading and helpful guidance. We have carefully reviewed the entire manuscript in accordance with the provided instructions, and all our responses are preceded by the %AuthorsAnswer tag for clarity. 
 
+
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-3499-6106} % Add \orcidA{} behind the author's name
 \newcommand{\orcidauthorB}{0000-0002-9281-4209} % Add \orcidB{} behind the author's name
@@ -289,18 +290,18 @@ How can the historical learning context captured by a Transformer-based model en
 
 {Consequently, there is a critical need for new approaches that move beyond technical transparency toward true pedagogical interpretability.}
 {For a KT system to be confidently adopted in high-stakes educational environments, its estimations must be grounded in trusted and empirically validated principles derived from relevant fields such as pedagogy, cognitive science, and~psychometrics.}
-{Educators require models that align with their domain knowledge, tracking mastery not through opaque latent features but through concepts explicitly defined by established frameworks, including the \textit{initial mastery}, \textit{learn rates} and knowledge components postulated by traditional approaches such as BKT and Factor Analysis Models.}
+{Educators require models that align with their domain knowledge, tracking mastery not through opaque latent features but through concepts explicitly defined by established frameworks, including the initial mastery, learn rates and knowledge components postulated by traditional approaches such as BKT and Factor Analysis Models.}
 
 \subsection{Bayesian Knowledge~Tracing} \label{sec_bkt}
 
 For this study, we selected BKT~\citep{corbett1994knowledge} as our reference theoretical framework. Student action sequences in Intelligent Tutoring Systems can be modelled as Hidden Markov Models, where the probability of a transition depends only on the previous state~\citep{Arnau-Gonzalez2025195}. BKT models the learning process as a Hidden Markov process governed by four parameters that provide a causal narrative of student learning progress, which is intuitive to educators and aligned with cognitive science principles:
 
 \begin{itemize}
-    \item \hl{\textit{Initial Mastery}} ($P(\text{L}_0)$): The probability that a student knows a concept prior to practice; %AuthorsAnswer: Following editorial guidelines, we have standardised the BKT technical nomenclature (\textit{Initial Mastery}, \textit{Learn Rate}, \textit{Guess}, and \textit{Slip}) across the entire manuscript. We have ensured consistent casing (lowercase in sentences, Title Case in headers) and have explicitly defined their respective mathematical symbols ($P(\text{L}_0)$, $P(\text{T})$, $P(\text{G})$, $P(\text{S})$) using upright subscripts for categorical labels. We standardised "initial mastery" (instead of "prior knowledge") when referring specifically to the $P(\text{L}_0)$ parameter to distinguish it from the broader IML taxonomic source.
-    \item \hl{\textit{Learn Rate}} ($P(\text{T})$): %MDPI EE: please check that the intended meaning has been retained. %AuthorsAnswer: we maintained "Learn Rate" (instead of "Learning Rate") to align with BKT literature (e.g., pyBKT) and avoid confusion with the optimiser's learning rate. 
+    \item Initial Mastery ($P(\text{L}_0)$): The probability that a student knows a concept prior to practice; %AuthorsAnswer: Following editorial guidelines, we have standardised the BKT technical nomenclature (\textit{Initial Mastery}, \textit{Learn Rate}, \textit{Guess}, and \textit{Slip}) across the entire manuscript. We have ensured consistent casing (lowercase in sentences, Title Case in headers) and have explicitly defined their respective mathematical symbols ($P(\text{L}_0)$, $P(\text{T})$, $P(\text{G})$, $P(\text{S})$) using upright subscripts for categorical labels. We standardised "initial mastery" (instead of "prior knowledge") when referring specifically to the $P(\text{L}_0)$ parameter to distinguish it from the broader IML taxonomic source.
+    \item Learn Rate ($P(\text{T})$): %MDPI EE: please check that the intended meaning has been retained. %AuthorsAnswer: we maintained "Learn Rate" (instead of "Learning Rate") to align with BKT literature (e.g., pyBKT) and avoid confusion with the optimiser's learning rate. 
     The probability of transitioning from unlearned to learned states after a practice opportunity;
-    \item \hl{\textit{Guess}} ($P(\text{G})$): The probability of a correct response despite a lack of mastery;
-    \item \hl{\textit{Slip}} ($P(\text{S})$): The probability of an incorrect response despite mastery. 
+    \item Guess ($P(\text{G})$): The probability of a correct response despite a lack of mastery;
+    \item Slip ($P(\text{S})$): The probability of an incorrect response despite mastery. 
 \end{itemize}
 
 These four parameters enable a recursive estimation of student mastery: the initial mastery provides the starting probabilistic state, which is updated at each interaction using Bayes' theorem to incorporate the observed outcome (moderated by guess and slip probabilities) and shifted by the learn rate to account for knowledge acquisition. This recursive cycle allows BKT to generate a transparent causal explanation of the student's learning progress that is directly interpretable by~educators.
@@ -394,6 +395,7 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 %MDPI: We moved the figure here to avoid large blank, please confirm.
 %AuthorsAnswer: We agree with this change.
 %MDPI: We revised the hyphen (-) to a minus sign (“−” U+2212). Please confirm.
+%AuthorsAnswer: We have verified the typesetting of mathematical variables and operators. Specifically, we have ensured that all subtraction operations and negative values across Equations (1)–(16) are rendered within LaTeX math mode, to produce the U+2212 minus sign character. Furthermore, we have audited all numerical ranges throughout the text and captions, to ensure the use of -- instead of standard hyphens.
     \caption{\protect\hl{Functional} layers of the gTransformer architecture. {Grey} denotes standard Transformer elements; blue denotes gTransformer-specific~elements.}
     \label{gtransformer_arch}
 \end{figure} %MDPI EE: please revise "Encoder-Decoder" to "Encoder--Decoder" in Figure 2.
@@ -545,7 +547,6 @@ where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include num
 The gTransformer model was implemented in \texttt{PyTorch} using the pyKT library~\citep{liu2022pykt} for standardised data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official pyKT repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.} For~the Bayesian Knowledge Tracing baseline, we utilised pyBKT~\citep{badrinath2021pybkt}, a Python implementation of the algorithm that estimates student cognitive mastery from problem-solving sequences.
 %AuthorsAnswer: Added reference to the pyBKT library as requested, which was used for the BKT baseline implementation.
 
-
 \begin{table}[H]
 \centering
 \small
@@ -556,8 +557,8 @@ The gTransformer model was implemented in \texttt{PyTorch} using the pyKT librar
 \toprule
 \textbf{Hyperparameter} & \textbf{Performance} & \textbf{Trade-Off} \\
 \midrule
-\multicolumn{3}{l}{\textit{\hl{Ablation Configuration}%MDPI: Please add an explanation for the use of italics in the table footer. If the italics is unnecessary, please remove it. 
-}} \\
+\multicolumn{3}{l}{Ablation Configuration} %MDPI: Please add an explanation for the use of italics in the table footer. If the italics is unnecessary, please remove it. %AuthorsAnswer: This italics was unnecessary so we have removed it.
+ \\
 Ablation mode & \hl{\texttt{all}} %MDPI: Please confirm if the font formatting is necessary; if not, please remove it. The following are the same.
  & \texttt{none} \\
 $\lambda_{\text{sup}}$ & 1.0 & 1.0 \\
@@ -572,7 +573,7 @@ $d_{\text{ff}}$ & 256 & 256 \\
 Attention heads & 4 & \makecell{AS2009: 8\\others: 4} \\
 {Output MLP dimensions} & {[128, 512, 256, 1]} & {[128, 512, 256, 1]} \\
 {Activation function} & {\texttt{ReLU}} & {\texttt{ReLU}} \\
-{Normalization} & {\textit{LayerNorm}} & {\textit{LayerNorm}} \\
+{Normalization} & LayerNorm & LayerNorm \\
 \midrule
 \multicolumn{3}{l}{Training Configuration} \\
 Learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
@@ -678,7 +679,6 @@ NIPS34 & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.0019 (0.2\%) & 0.0321 (4.0\%) & 0
 \end{tabularx}
 \end{table}
 
-
 The results reveal two insights regarding the accuracy--interpretability trade-off:
 
 \begin{itemize}
@@ -717,7 +717,7 @@ The H2.1 objective is to demonstrate that grounding constraints actively shape t
 \begin{figure}[H]
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_probe_893468.png}
 %MDPI: Please confirm whether the bubble needs an explanation. 
-\caption{\protect\hl{Structural} fidelity for learn rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
+\caption{\protect\hl{Structural} fidelity for Learn Rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
 \end{figure}
 \unskip
 
