@@ -360,10 +360,11 @@ Figure~\ref{fig_info_flow} illustrates the information flow through gTransformer
     \includegraphics[width=0.45\textwidth]{img/iml.png}
     \caption{\protect\hl{Dimensions} %MDPI: 1. Please DO NOT change any data in figures/tables or replace into new figures/tables during proofreading stage since paper has been accepted
 %2. Please recheck all figures and make sure there are no duplicated figures in the whole manuscript. 
+%AuthorsAnswer: We confirm that no data in the figures or tables has been changed and no figures or tables have been replaced. We have verified that there are no duplicated figures in the manuscript; all nine figures are unique and correctly labelled.
  of IML in~gTransformer.}
     \label{fig_info_flow}
 \end{figure} %MDPI EE: please revise "Encoder-Decoder" to "Encoder--Decoder" in Figure 1. 
-%AuthorsAnswer: We have revised "Encoder-Decoder" to "Encoder--Decoder" in Figure 1.
+%AuthorsAnswer: We have changed "Encoder-Decoder" to "Encoder--Decoder" in Figure 1.
 
 Within the context of our architecture, the~{operationalisation} of these dimensions can be explained as follows: 
 
@@ -372,7 +373,7 @@ Within the context of our architecture, the~{operationalisation} of these dimens
     \item Training Data: Empirical student interaction histories are augmented with prior knowledge to train the model.
     \item Hypothesis Set: An attention-based Transformer architecture is employed to provide the inductive biases necessary to lead the model toward desired states.
     \item Learning Algorithm: The model is {optimised} via a multi-objective loss function formulated to balance the trade-off between predictive performance and pedagogical~interpretability.
-    \item Final Hypothesis: This comprises a set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted. %MDPI EE: please check that the intended meaning has been retained.
+    \item Final Hypothesis: This comprises a set of learned weights that drive latent representations from which parameter values aligned with the reference model can be extracted. %MDPI EE: please check that the intended meaning has been retained. %AuthorsAnswer: We confirm that the intended meaning has been retained.
     \item Mastery Estimations: The outputs generated through the grounded parameters serve as inputs to the reference model to produce interpretable mastery estimations.
 \end{itemize}
 
