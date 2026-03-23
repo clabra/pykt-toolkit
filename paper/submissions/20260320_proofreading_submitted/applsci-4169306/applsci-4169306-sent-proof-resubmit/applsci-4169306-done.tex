@@ -504,7 +504,7 @@ This section details the experimental setup employed to train and evaluate gTran
 \subsection{Methodology} \label{sec_methodology}
 \unskip
 
-\subsubsection{{\protect\highlighting{Performance--Interpretability Trade-Off (RQ1)}}}%MDPI: The heading is repeat with sec5.1, please check.
+\subsubsection{{\protect\highlighting{Quantifying the Performance--Interpretability Trade-Off (RQ1)}}}%MDPI: The heading is repeat with sec5.1, please check. %AuthorsAnswer: We have renamed this subsection to 'Quantifying the Performance--Interpretability Trade-Off (RQ1)' to distinguish it from the results presented in Section 5.1.
  \label{sec:rq1_method}
 
 {To quantify the balance between predictive power and transparency, we assess gTransformer using four distinct prediction variants:}
@@ -522,7 +522,7 @@ This section details the experimental setup employed to train and evaluate gTran
 \end{align}
 where $\mathcal{I}_{\text{drop}}$ (interpretability drop) measures the impact of theoretical constraints on neural capacity, $\mathcal{I}_{\text{cost}}$ (interpretability cost) quantifies the accuracy reduction when switching to interpretable logic, and~$\mathcal{I}_{\text{gain}}$ (interpretability gain) represents the advantage over traditional population-level models.
 
-\subsubsection{{Grounded Interpretability Validation (RQ2)}}
+\subsubsection{{Validation Methodology for Grounded Interpretability (RQ2)}}
 
 {To verify that gTransformer's internal states are pedagogically valid, we implement a triple-validation methodology based on the following hypotheses:}
 
@@ -542,7 +542,7 @@ where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include num
 \end{itemize}
 
 
-\subsubsection{\texorpdfstring{{\protect\highlighting{Context-Aware Personalisation (RQ3)}}}{Context-Aware Personalisation (RQ3)}} %MDPI: The heading is repeat with sec5.3, please check.
+\subsubsection{\texorpdfstring{{\protect\highlighting{Evaluation Protocols for Context-Aware Personalisation (RQ3)}}}{Evaluation Protocols for Context-Aware Personalisation (RQ3)}} %MDPI: The heading is repeat with sec5.3, please check. %AuthorsAnswer: We have renamed this subsection to 'Evaluation Protocols for Context-Aware Personalisation (RQ3)' to distinguish the methodology from the results discussed in Section 5.3.
  \label{sec:rq3_method}
 
 {To evaluate the model's ability to provide context-aware predictions, we implement an approach that clusters students along two dimensions corresponding to the predicted parameter values: initial mastery ($p_{\text{L}_0}$) and learn rate ($p_{\text{T}}$). We select students with identical responses to the same sequence of questions but belonging to different clusters (i.e., demonstrating different longitudinal learning patterns). We then illustrate how gTransformer customises predictions based on these diverse learning contexts, whereas traditional BKT models, being fundamentally Markovian, produce identical predictions for the same response sequence regardless of the historical learning context. This approach highlights the non-Markovian patterns and context-aware personalisation that population-level baselines fundamentally cannot represent.}
