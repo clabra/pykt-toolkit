@@ -339,7 +339,7 @@ A widely adopted technique to enforce this consistency involves incorporating do
 %AuthorsAnswer: We have thoroughly reviewed all mathematical expressions and confirmed that there are no duplicated equations in the manuscript. The document contains 16 numbered equations (Equations (1)--(16)), each appearing exactly once and labelled in sequential order.
 ~\citep{karpatne2017theory, willard2022integrating}:
 \begin{equation} \label{eq_theory_loss}
-\mathcal{L} = \mathcal{L}_{\text{TRN}}(Y_{\text{true}}, Y_{\text{pred}}) + \gamma \mathcal{L}_{\text{THEORY}}(Y_{\text{pred}}),
+\mathcal{L} = \mathcal{L}_{\text{TRN}}(Y_{\text{true}}, Y_{\text{pred}}) + \gamma \mathcal{L}_{\text{THEORY}}(Y_{\text{pred}})
 \end{equation}
 where $\mathcal{L}_{\text{TRN}}$ measures the supervised error between true labels $Y_{\text{true}}$ and predicted labels $Y_{\text{pred}}$, while $\mathcal{L}_{\text{THEORY}}$ {penalises} violations of theoretical constraints, weighted by the hyperparameter $\gamma$. 
 
@@ -408,13 +408,13 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 
 For question embeddings, we define
 \begin{equation} \label{eq:task_embedding}
-    \mathbf{x}'_t = \mathbf{c}_q + u_q \cdot \mathbf{d}_c,
+    \mathbf{x}'_t = \mathbf{c}_q + u_q \cdot \mathbf{d}_c
 \end{equation}
 where $\mathbf{c}_q \in \mathbb{R}^{d}$ represents the invariant concept base embedding (encoding the semantic identity of the knowledge component), $u_q \in \mathbb{R}$ is a scalar difficulty parameter specific to question $q$, and~$\mathbf{d}_c \in \mathbb{R}^{d}$ is the concept-specific difficulty variation axis. This formulation allows multiple questions targeting the same concept to share a common semantic core ($\mathbf{c}_q$) while differing in their position along a learned difficulty direction ($\mathbf{d}_c$), with~the magnitude of displacement controlled by the per-question difficulty scalar ($u_q$).
 
 Similarly, for~interaction history embeddings (encoding both the question and the student's response), we employ
 \begin{equation} \label{eq:interaction_embedding}
-    \mathbf{y}'_t = \mathbf{e}_{c,r} + u_q \cdot \mathbf{f}_{c,r},
+    \mathbf{y}'_t = \mathbf{e}_{c,r} + u_q \cdot \mathbf{f}_{c,r}
 \end{equation}
 where $\mathbf{e}_{c,r} \in \mathbb{R}^{d}$ is the interaction base embedding (jointly encoding the concept $c$ and response outcome $r$), and~$\mathbf{f}_{c,r} \in \mathbb{R}^{d}$ is the interaction-specific difficulty variation~axis. 
 
@@ -430,7 +430,7 @@ The~encoder processes the student's longitudinal interaction history through $n$
 
 The final decoder layer produces an output tensor $\mathbf{d}_{\text{out}} \in \mathbb{R}^{t \times d}$, which is concatenated with the question embedding to form the high-dimensional context vector
 \begin{equation} \label{eq:context_vector}
-    \mathbf{z}_t = [\mathbf{d}_{\text{out},t}; \mathbf{x}'_t] \in \mathbb{R}^{z},
+    \mathbf{z}_t = [\mathbf{d}_{\text{out},t}; \mathbf{x}'_t] \in \mathbb{R}^{z}
 \end{equation}
 where the dimensionality of $\mathbf{z}_t$ is the combined dimensionality of the decoder output and question embedding space. 
 This context vector serves as a comprehensive encoding of the student's current cognitive state, {synthesising} information from both the observed interaction history and the current task~characteristics.
@@ -440,7 +440,7 @@ This context vector serves as a comprehensive encoding of the student's current 
 
 To ensure pedagogical interpretability, gTransformer estimates BKT parameters through an additive composition mechanism operating in logit space. For~each knowledge component $c$, we define theoretical base parameters $\ell_{\text{L}_0,c}$ and $\ell_{\text{T},c}$, {initialised} as the logit-transformed population-level BKT priors:
 \begin{equation} \label{eq:theory_base}
-    \ell_{\text{L}_0,c} = \operatorname{logit}(P(\text{L}_0)_c), \quad \ell_{\text{T},c} = \operatorname{logit}(P(\text{T})_c).
+    \ell_{\text{L}_0,c} = \operatorname{logit}(P(\text{L}_0)_c), \quad \ell_{\text{T},c} = \operatorname{logit}(P(\text{T})_c)
 \end{equation}
 
 \hl{These} %MDPI: Please confirm that the unindented formatting is preserved here. Please check all after equations. %AuthorsAnswer: We have reviewed the formatting following equations (1)–(16). We have chosen to start new indented paragraphs for sentences that introduce distinct functional layers or design principles (e.g., following Eq. 5, 6, 7) to improve the structural clarity of the methodology.
@@ -448,14 +448,14 @@ To ensure pedagogical interpretability, gTransformer estimates BKT parameters th
 
 Contextual adjustments are computed via dot products between the latent context vector $\mathbf{z}_t$ and learnable semantic axes. For~each concept $c$, we define a knowledge axis $\mathbf{k}_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $\mathbf{v}_{c} \in \mathbb{R}^{z}$. The~contextual projections, representing the student-specific knowledge \hl{($k_{s,t}$)} and learning velocity \hl{($v_{s,t}$)}, are calculated as
 \begin{equation} \label{eq:contextual_projection}
-    k_{s,t} = \mathbf{z}_t \cdot \mathbf{k}_c, \quad v_{s,t} = \mathbf{z}_t \cdot \mathbf{v}_c.
+    k_{s,t} = \mathbf{z}_t \cdot \mathbf{k}_c, \quad v_{s,t} = \mathbf{z}_t \cdot \mathbf{v}_c
 \end{equation}
 
 \hl{These} dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed {behaviour} deviates from the population average along the dimensions of initial mastery and learning~velocity.
 
 The final grounded parameters are obtained through additive composition in logit space, followed by sigmoid activation to ensure valid probability bounds:
 \begin{equation} \label{eq:grounded_params}
-    p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0,c} + k_{s,t}), \quad p_{\text{T},t} = \sigma(\ell_{\text{T},c} + v_{s,t}).
+    p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0,c} + k_{s,t}), \quad p_{\text{T},t} = \sigma(\ell_{\text{T},c} + v_{s,t})
 \end{equation}
 
 \hl{This} design ensures that the model's parameter estimates remain structurally anchored to BKT theory, with~the base terms providing pedagogically sound {initialisation}, while contextual projections enable {individualised} adjustments driven by observed student~{behaviour}.
@@ -473,22 +473,22 @@ The gTransformer model generates predictions through various output heads, each 
 
 The training objective balances predictive performance with pedagogical grounding through a weighted combination of three loss terms:
 \begin{equation} \label{eq:total_loss}
-    \mathcal{L}_{\text{total}} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}.
+    \mathcal{L}_{\text{total}} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}
 \end{equation}
 
 The supervised loss $\mathcal{L}_{\text{sup}}$ measures the binary cross-entropy between the MLP's direct predictions $\hat{y}_t$ and the ground truth responses $r_t$, driving the model to {maximise} predictive~accuracy:
 \begin{equation}
-    \mathcal{L}_{\text{sup}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t) \right].
+    \mathcal{L}_{\text{sup}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_t) + (1-r_t) \log(1-\hat{y}_t) \right]
 \end{equation}
 
 The reference loss $\mathcal{L}_{\text{ref}}$ applies the same binary cross-entropy metric to the BKT logic head's predictions $\hat{y}_{\text{ref},t}$, ensuring that the grounded parameters $(p_{\text{L}_0,t}, p_{\text{T},t})$ produce pedagogically meaningful predictions when constrained to operate through BKT's causal inference mechanism:
 \begin{equation}
-    \mathcal{L}_{\text{ref}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_{\text{ref},t}) + (1-r_t) \log(1-\hat{y}_{\text{ref},t}) \right].
+    \mathcal{L}_{\text{ref}} = -\frac{1}{N} \sum_{t=1}^N \left[ r_t \log(\hat{y}_{\text{ref},t}) + (1-r_t) \log(1-\hat{y}_{\text{ref},t}) \right]
 \end{equation}
 
 The probing loss $\mathcal{L}_{\text{probe}}$ enforces global alignment between the Transformer's latent representations and BKT constructs by {minimising} the mean squared error between linear probe predictions and population-level BKT targets:
 \begin{equation}
-    \mathcal{L}_{\text{probe}} = \sum_{k \in \{\text{L}_0, \text{T}\}} \operatorname{MSE}\left( \hat{p}_{k,t}, P(k)_c \right).
+    \mathcal{L}_{\text{probe}} = \sum_{k \in \{\text{L}_0, \text{T}\}} \operatorname{MSE}\left( \hat{p}_{k,t}, P(k)_c \right)
 \end{equation}
 
 This loss implements a grounding mechanism that constrains the context vector $\mathbf{z}_t$ to align its internal structure such that pedagogical parameters can be extracted via simple linear transformations. By~constraining the latent space globally, rather than merely {regularising} output parameters locally, the~probing loss ensures that interpretability is structurally embedded throughout the model's~representations.
@@ -518,7 +518,7 @@ This section details the experimental setup employed to train and evaluate gTran
 \begin{align}
 \mathcal{I}_{\text{drop}} &= p_{\text{sup}1} - p_{\text{sup}2} \label{eq:int_drop} \\
 \mathcal{I}_{\text{cost}} &= p_{\text{sup}2} - p_{\text{ref}}   \label{eq:int_cost} \\
-\mathcal{I}_{\text{gain}} &= p_{\text{ref}} - p_{\text{bkt}},   \label{eq:int_gain}
+\mathcal{I}_{\text{gain}} &= p_{\text{ref}} - p_{\text{bkt}}   \label{eq:int_gain}
 \end{align}
 where $\mathcal{I}_{\text{drop}}$ (interpretability drop) measures the impact of theoretical constraints on neural capacity, $\mathcal{I}_{\text{cost}}$ (interpretability cost) quantifies the accuracy reduction when switching to interpretable logic, and~$\mathcal{I}_{\text{gain}}$ (interpretability gain) represents the advantage over traditional population-level models.
 
@@ -530,13 +530,13 @@ where $\mathcal{I}_{\text{drop}}$ (interpretability drop) measures the impact of
 \item {\textbf{\hl{H2.1: Structural Alignment}%MDPI: Please confirm that the hypotheses format is preserved.
 }: Latent representations in the gTransformer model are structurally organised around Bayesian concepts (initial mastery $P(\text{L}_0)$ and learn rate $P(\text{T})$) as the dominant organising principle. This is verified using \textit{diagnostic probing}~\citep{hewitt2019designing, belinkov2022probing}. We measure \textit{fidelity} as the quality of the parameter recovery via the coefficient of determination $R^2$ and Pearson correlation $r$. To~distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is defined as}
 \begin{equation} \label{eq:selectivity}
-    \Delta R^2 = R^2_{\text{target}} - R^2_{\text{control}},
+    \Delta R^2 = R^2_{\text{target}} - R^2_{\text{control}}
     \end{equation}
 where $R^2_{\text{target}}$ represents the probe performance on true BKT targets and $R^2_{\text{control}}$ is the performance on a control task with randomly shuffled targets.
     \item H2.2: Semantic Alignment: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation $\rho$) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.
     \item H2.3: Functional Alignment: \textls[-15]{Quantifies the confidence with which interpretable, theory-constrained estimations ($p_{\text{ref}}$) can substitute for the black-box supervised baseline ($p_{\text{sup}2}$) without significant performance loss. To~quantify this trustworthiness, we define a \textit{composite confidence metric} calculated as a weighted sum of three relevant~dimensions:}
 \begin{equation} \label{eq:confidence}
-    \operatorname{Confidence} = w_1 \cdot C_{\text{calibrated}} + w_2 \cdot C_{\text{directional}} + w_3 \cdot C_{\text{percentile}},
+    \operatorname{Confidence} = w_1 \cdot C_{\text{calibrated}} + w_2 \cdot C_{\text{directional}} + w_3 \cdot C_{\text{percentile}}
     \end{equation}
 where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include numerical proximity ($C_{\text{calibrated}}$), binary decision agreement ($C_{\text{directional}}$), and~a dataset-wide rank of prediction disagreement ($C_{\text{percentile}}$).
 \end{itemize}
