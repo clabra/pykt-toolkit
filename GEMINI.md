@@ -218,7 +218,7 @@ https://www.mdpi.com/authors/layout#_bookmark12
 
 ### MDPI Mathematical Content Guidelines
 
-See math_guidelines.md for more information.
+See math_guidelines.md and mdpi_math_content_checklist.md for more information. The second essentially expands the rules in math_guidelines.md with the specific technical rigor required for an MDPI submission in this field.
 
 ## Copyright and License
 
