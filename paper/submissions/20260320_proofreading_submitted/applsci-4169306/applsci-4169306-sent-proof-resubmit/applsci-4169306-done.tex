@@ -357,10 +357,10 @@ Figure~\ref{fig_info_flow} illustrates the information flow through gTransformer
 \begin{figure}[H]
    % \centering
     \includegraphics[width=0.45\textwidth]{img/iml.png}
-    \caption{\protect\hl{Dimensions} %MDPI: 1. Please DO NOT change any data in figures/tables or replace into new figures/tables during proofreading stage since paper has been accepted
+%MDPI: 1. Please DO NOT change any data in figures/tables or replace into new figures/tables during proofreading stage since paper has been accepted
 %2. Please recheck all figures and make sure there are no duplicated figures in the whole manuscript. 
 %AuthorsAnswer: We confirm that no data in the figures or tables has been changed and no figures or tables have been replaced. We have verified that there are no duplicated figures in the manuscript; all nine figures are unique and correctly labelled.
- of IML in~gTransformer.}
+    \caption{\protect\hl{Dimensions} of IML in~gTransformer.}
     \label{fig_info_flow}
 \end{figure} %MDPI EE: please revise "Encoder-Decoder" to "Encoder--Decoder" in Figure 1. 
 %AuthorsAnswer: We have changed "Encoder-Decoder" to "Encoder--Decoder" in Figure 1.
@@ -391,9 +391,9 @@ The gTransformer architecture, illustrated in Figure~\ref{gtransformer_arch}, im
 \begin{figure}[H]
    % \centering
     \includegraphics[width=1.0\textwidth]{img/arch.png}
-    \caption{\protect\hl{Functional} %MDPI: We moved the figure here to avoid large blank, please confirm.
+%MDPI: We moved the figure here to avoid large blank, please confirm.
 %MDPI: We revised the hyphen (-) to a minus sign (“−” U+2212). Please confirm.
- layers of the gTransformer architecture. {Grey} denotes standard Transformer elements; blue denotes gTransformer-specific~elements.}
+    \caption{\protect\hl{Functional} layers of the gTransformer architecture. {Grey} denotes standard Transformer elements; blue denotes gTransformer-specific~elements.}
     \label{gtransformer_arch}
 \end{figure} %MDPI EE: please revise "Encoder-Decoder" to "Encoder--Decoder" in Figure 2.
 \unskip
@@ -439,10 +439,11 @@ To ensure pedagogical interpretability, gTransformer estimates BKT parameters th
 \hl{These} %MDPI: Please confirm that the unindented formatting is preserved here. Please check all after equations.
  bases are implemented as scalar embeddings with Gaussian {initialisation} {centred} at the theoretical~values.
 
-Contextual adjustments are computed via dot products between the latent context vector $\mathbf{z}_t$ and learnable semantic axes. For~each concept $c$, we define a knowledge axis $\mathbf{k}_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $\mathbf{v}_{c} \in \mathbb{R}^{z}$. The~contextual projections, representing the student-specific knowledge ($k_s$) and learning velocity ($v_s$), are calculated as
+Contextual adjustments are computed via dot products between the latent context vector $\mathbf{z}_t$ and learnable semantic axes. For~each concept $c$, we define a knowledge axis $\mathbf{k}_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $\mathbf{v}_{c} \in \mathbb{R}^{z}$. The~contextual projections, representing the student-specific knowledge \hl{($k_{s,t}$)} and learning velocity \hl{($v_{s,t}$)}, are calculated as
 \begin{equation} \label{eq:contextual_projection}
     k_{s,t} = \mathbf{z}_t \cdot \mathbf{k}_c, \quad v_{s,t} = \mathbf{z}_t \cdot \mathbf{v}_c.
 \end{equation}
+%AuthorsAnswer: We have standardised the mathematical notation to clearly distinguish between theoretical constructs (uppercase P) and student-specific grounded outputs (lowercase p). Contextual projections and grounded parameters now consistently include the timestep index 't' to reflect the temporal dynamics of the model, as defined in Equations (5)--(7).
 \hl{These} dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed {behaviour} deviates from the population average along the dimensions of initial mastery and learning~velocity.
 
 The final grounded parameters are obtained through additive composition in logit space, followed by sigmoid activation to ensure valid probability bounds:
@@ -547,8 +548,8 @@ The gTransformer model was implemented in \texttt{PyTorch} using the \texttt{pyK
 \begin{table}[H]
 \centering
 \small
-\caption{Hyperparameter configurations for performance benchmark (\protect\hl{Table} %MDPI: The first citation of each table should appear in numerical order. Citations of Table 3 and 4 are before Table 2, please revise and ensure that the first citation of each table appears in numerical order. This is very important to revise, otherwise, it may affect publication process.
- \ref{tab_performance}) and trade-off evaluation (\protect\hl{Table} \ref{tab:tradeoff}).}
+%MDPI: The first citation of each table should appear in numerical order. Citations of Table 3 and 4 are before Table 2, please revise and ensure that the first citation of each table appears in numerical order. This is very important to revise, otherwise, it may affect publication process.
+\caption{Hyperparameter configurations for performance benchmark (\protect\hl{Table} \ref{tab_performance}) and trade-off evaluation (\protect\hl{Table} \ref{tab:tradeoff}).}
 \label{tab:params}
 \begin{tabularx}{\textwidth}{LCC}
 \toprule
@@ -715,10 +716,11 @@ The H2.1 objective is to demonstrate that grounding constraints actively shape t
 \end{figure}
 \begin{figure}[H]
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_probe_893468.png}
-\caption{\protect\hl{Structural}  %MDPI: Please confirm whether the bubble needs an explanation. 
- fidelity for learn rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
+%MDPI: Please confirm whether the bubble needs an explanation. 
+\caption{\protect\hl{Structural} fidelity for learn rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
 \end{figure}
 \unskip
+
 
 \subsubsection{Semantic Alignment (H2.2)} \label{sec_semantic_alignment}
 
@@ -727,8 +729,8 @@ Hypothesis H2.2 examines whether grounded parameters retain their pedagogical se
 \Cref{fig_semantic_alignment_l0,fig_semantic_alignment_t} present parity plots comparing BKT theoretical priors (x-axis) with grounded parameters (y-axis), where each bubble represents an aggregate of test interactions with size encoding sample density. The~patterns reveal that:
 
 \begin{itemize}
-    \item Initial Mastery ($P_{\text{L}_0}$) shows weak alignment ($\rho = 0.360$) with substantial scatter, indicating strong student-specific {individualisation}. However, MAE = $0.168$ validates that refinements remain within pedagogical bounds, indicating that the model neither abandons nor mechanically reproduces theoretical priors.
-    \item Learn Rate ($P_{\text{T}}$) demonstrates moderate alignment ($\rho = 0.544$). A~low MAE = $0.092$ confirms that the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
+    \item \textit{Initial Mastery} \hl{($p_{\text{L}_0}$)} shows weak alignment ($\rho = 0.360$) with substantial scatter, indicating strong student-specific {individualisation}. However, MAE = $0.168$ validates that refinements remain within pedagogical bounds, indicating that the model neither abandons nor mechanically reproduces theoretical priors.
+    \item \textit{Learn Rate} \hl{($p_{\text{T}}$)} demonstrates moderate alignment ($\rho = 0.544$). A~low MAE = $0.092$ confirms that the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
 \end{itemize}
 
 These findings support that grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The~differential alignment reveals that learn rates preserve more theoretical structure while initial mastery estimates undergo stronger~individualisation.
@@ -737,11 +739,11 @@ These findings support that grounded parameters maintain meaningful monotonic al
 \begin{figure}[H]
 %\centering
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_l0_grounded_893468.png}
-\caption{\protect\hl{Semantic} alignment for Initial Mastery $P(\text{L}_0)$. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~substantial scatter indicates strong student-specific {individualisation}, with~the model {prioritising} context-aware adaptation over strict adherence to population~priors. \label{fig_semantic_alignment_l0}}
+\caption{\protect\hl{Semantic} alignment for \textit{Initial Mastery} \hl{$p_{\text{L}_0}$}. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~substantial scatter indicates strong student-specific {individualisation}, with~the model {prioritising} context-aware adaptation over strict adherence to population~priors. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_t_grounded_893468.png}
-\caption{\protect\hl{Semantic} %MDPI: Please confirm whether the bubble needs an explanation. 
- alignment for learn rate $P(\text{T})$. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The~clustering around the diagonal across the full $P_{\text{T}}$ range indicates that the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware~refinement. \label{fig_semantic_alignment_t}}
+%MDPI: Please confirm whether the bubble needs an explanation. 
+ \caption{\protect\hl{Semantic} alignment for \textit{Learn Rate} \hl{$p_{\text{T}}$}. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The~clustering around the diagonal across the full $P_{\text{T}}$ range indicates that the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware~refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 \unskip
 
@@ -754,8 +756,8 @@ In \Cref{fig_h13_confidence_heatmap}, we observe heterogeneous confidence patter
 \begin{figure}[H]
 %\centering
 \includegraphics[width=0.85\textwidth]{img/h13_skill_confidence_heatmap_893468.png}
-\caption{\protect\hl{Student} %MDPI: Please change the hyphen (-) between numbers into an en dash (−, “U+2013”), e.g., “2019-2022” should be “2019–2022” and “0-9” should be “0–9”.
-  skill confidence heatmap. Green cells indicate high confidence ($\geq$0.8) in the interpretable predictions. Yellow shows medium confidence and red indicates low~confidence. \label{fig_h13_confidence_heatmap}}
+%MDPI: Please change the hyphen (-) between numbers into an en dash (−, “U+2013”), e.g., “2019-2022” should be “2019–2022” and “0-9” should be “0–9”.
+\caption{\protect\hl{Student} skill confidence heatmap. Green cells indicate high confidence ($\geq$0.8) in the interpretable predictions. Yellow shows medium confidence and red indicates low~confidence. \label{fig_h13_confidence_heatmap}}
 \end{figure}
 \unskip
 
@@ -791,9 +793,9 @@ We select representative skills with meaningful sequence lengths (5--30 interact
 \begin{figure}[H]
 %\centering
 \includegraphics[width=1.0\textwidth]{img/h3_skill_quadrant_comparison_mosaic_893468.png}
-\caption{\protect\hl{Context-aware} %MDPI: Please confirm whether the overlapping content in this figure affects scientific understanding and if it does, please revise it.
+%MDPI: Please confirm whether the overlapping content in this figure affects scientific understanding and if it does, please revise it.
 %MDPI: Please confirm whether the red and green vertical lines need explanation.
-  prediction mosaic showing non-Markovian personalisation. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles. BKT predictions (dotted grey) overlap due to Markovian constraints, while gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}, p_{\text{T}}$). Circles represent predictions of correctness, while crosses indicate predicted failures. This demonstrates that gTransformer differentiates students not by what they answered, but~by how they learned along their whole learning~trajectory.}
+\caption{\protect\hl{Context-aware} prediction mosaic showing non-Markovian personalisation. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles. BKT predictions (dotted grey) overlap due to Markovian constraints, while gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}, p_{\text{T}}$). Circles represent predictions of correctness, while crosses indicate predicted failures. This demonstrates that gTransformer differentiates students not by what they answered, but~by how they learned along their whole learning~trajectory.}
 \label{fig:skill_quadrant_mosaic}
 \end{figure}
 
