@@ -306,7 +306,9 @@ For this study, we selected BKT~\citep{corbett1994knowledge} as our reference th
 
 These four parameters enable a recursive estimation of student mastery: the initial mastery provides the starting probabilistic state, which is updated at each interaction using Bayes' theorem to incorporate the observed outcome (moderated by guess and slip probabilities) and shifted by the learn rate to account for knowledge acquisition. This recursive cycle allows BKT to generate a transparent causal explanation of the student's learning progress that is directly interpretable by~educators.
 
-But standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \textit{{Individualised} BKT} approaches exist, they are often computationally expensive and struggle with data sparsity~\citep{yudelson2013individualized}. The~gTransformer approach offers a new way to address {individualisation} by leveraging the capabilities of Transformers to compress student interaction history into a context vector. This allows the model to infer parameter values at the student level, transforming population-level BKT insights into high-granularity student~diagnostics.
+But standard BKT suffers from a significant limitation: it typically operates at a population level, estimating a single set of parameters for all students interacting with a given skill. While \hl{individualised BKT} approaches exist, they are often computationally expensive and struggle with data sparsity~\citep{yudelson2013individualized}. %AuthorsAnswer: We have converted 'Individualised BKT' to lowercase and removed the italics to maintain architectural terminology consistency with the rest of the manuscript.
+The~gTransformer approach offers a new way to address {individualisation} by leveraging the capabilities of Transformers to compress student interaction history into a context vector. This allows the model to infer parameter values at the student level, transforming population-level BKT insights into high-granularity student~diagnostics.
+
 
 \subsection{Deep Knowledge~Tracing}
 
@@ -546,6 +548,7 @@ where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include num
 
 The gTransformer model was implemented in \texttt{PyTorch} using the pyKT library~\citep{liu2022pykt} for standardised data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official pyKT repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.} For~the Bayesian Knowledge Tracing baseline, we utilised pyBKT~\citep{badrinath2021pybkt}, a Python implementation of the algorithm that estimates student cognitive mastery from problem-solving sequences.
 %AuthorsAnswer: Added reference to the pyBKT library as requested, which was used for the BKT baseline implementation.
+
 
 \begin{table}[H]
 \centering
