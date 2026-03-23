@@ -527,20 +527,19 @@ where $\mathcal{I}_{\text{drop}}$ (interpretability drop) measures the impact of
 {To verify that gTransformer's internal states are pedagogically valid, we implement a triple-validation methodology based on the following hypotheses:}
 
 \begin{itemize}
-\item {\textbf{\hl{H2.1: Structural Alignment}%MDPI: Please confirm that the hypotheses format is preserved.
-}: Latent representations in the gTransformer model are structurally organised around Bayesian concepts (initial mastery $P(\text{L}_0)$ and learn rate $P(\text{T})$) as the dominant organising principle. This is verified using \textit{diagnostic probing}~\citep{hewitt2019designing, belinkov2022probing}. We measure \textit{fidelity} as the quality of the parameter recovery via the coefficient of determination $R^2$ and Pearson correlation $r$. To~distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is defined as}
+\item \textit{H2.1: Structural Alignment}: %MDPI: Please confirm that the hypotheses format is preserved. %AuthorsAnswer: Confirmed. In accordance with MDPI typographic standards which recommend avoiding bold font in the main body text, we have standardised the labels for all hypotheses (H2.1, H2.2, and H2.3) in italics for emphasis.
+Latent representations in the gTransformer model are structurally organised around Bayesian concepts (initial mastery $P(\text{L}_0)$ and learn rate $P(\text{T})$) as the dominant organising principle. This is verified using \textit{diagnostic probing}~\citep{hewitt2019designing, belinkov2022probing}. We measure \textit{fidelity} as the quality of the parameter recovery via the coefficient of determination $R^2$ and Pearson correlation $r$. To~distinguish genuine structural encoding from spurious correlations, \textit{selectivity} is defined as
 \begin{equation} \label{eq:selectivity}
     \Delta R^2 = R^2_{\text{target}} - R^2_{\text{control}}
     \end{equation}
 where $R^2_{\text{target}}$ represents the probe performance on true BKT targets and $R^2_{\text{control}}$ is the performance on a control task with randomly shuffled targets.
-    \item H2.2: Semantic Alignment: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation $\rho$) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.
-    \item H2.3: Functional Alignment: \textls[-15]{Quantifies the confidence with which interpretable, theory-constrained estimations ($p_{\text{ref}}$) can substitute for the black-box supervised baseline ($p_{\text{sup}2}$) without significant performance loss. To~quantify this trustworthiness, we define a \textit{composite confidence metric} calculated as a weighted sum of three relevant~dimensions:}
+    \item \textit{H2.2: Semantic Alignment}: Grounded parameters must retain their pedagogical semantics. We evaluate the monotonic consistency (Spearman correlation $\rho$) between the model's grounded parameters and the original theoretical priors to verify pedagogical integrity across datasets.
+    \item \textit{H2.3: Functional Alignment}: \textls[-15]{Quantifies the confidence with which interpretable, theory-constrained estimations ($p_{\text{ref}}$) can substitute for the black-box supervised baseline ($p_{\text{sup}2}$) without significant performance loss. To~quantify this trustworthiness, we define a \textit{composite confidence metric} calculated as a weighted sum of three relevant~dimensions:}
 \begin{equation} \label{eq:confidence}
     \operatorname{Confidence} = w_1 \cdot C_{\text{calibrated}} + w_2 \cdot C_{\text{directional}} + w_3 \cdot C_{\text{percentile}}
     \end{equation}
 where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include numerical proximity ($C_{\text{calibrated}}$), binary decision agreement ($C_{\text{directional}}$), and~a dataset-wide rank of prediction disagreement ($C_{\text{percentile}}$).
 \end{itemize}
-
 
 \subsubsection{\texorpdfstring{{\protect\highlighting{Evaluation Protocols for Context-Aware Personalisation (RQ3)}}}{Evaluation Protocols for Context-Aware Personalisation (RQ3)}} %MDPI: The heading is repeat with sec5.3, please check. %AuthorsAnswer: We have renamed this subsection to 'Evaluation Protocols for Context-Aware Personalisation (RQ3)' to distinguish the methodology from the results discussed in Section 5.3.
  \label{sec:rq3_method}
@@ -555,8 +554,8 @@ The gTransformer model was implemented in PyTorch (v2.4.1) using the pyKT librar
 \begin{table}[H]
 \centering
 \small
-%MDPI: The first citation of each table should appear in numerical order. Citations of Table 3 and 4 are before Table 2, please revise and ensure that the first citation of each table appears in numerical order. This is very important to revise, otherwise, it may affect publication process.
-\caption{Hyperparameter configurations for performance benchmark (\protect\hl{Table} \ref{tab_performance}) and trade-off evaluation (\protect\hl{Table} \ref{tab:tradeoff}).}
+%MDPI: The first citation of each table should appear in numerical order. Citations of Table 3 and 4 are before Table 2, please revise and ensure that the first citation of each table appears in numerical order. This is very important to revise, otherwise, it may affect publication process. %AuthorsAnswer: We have revised the caption for Table 2 and removed the forward-references to Tables 3 and 4. The tables are now first cited in the main text in strict numerical order: Table 1 (Section 4), Table 2 (Section 4.2), Table 3 (Section 5.1), and Table 4 (Section 5.2).
+\caption{Hyperparameter configurations for experimental benchmark and trade-off evaluation.}
 \label{tab:params}
 \begin{tabularx}{\textwidth}{LCC}
 \toprule
@@ -717,12 +716,13 @@ The H2.1 objective is to demonstrate that grounding constraints actively shape t
 \begin{figure}[H]
 %\centering
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_l0_probe_893468.png}
+%AuthorsAnswer: Confirmed. The bubble visual representation is explained in the caption below.
 \caption{\protect\hl{Structural} fidelity for Initial Mastery $P(\text{L}_0)$. Plot demonstrating strong linear recoverability ($R^2=0.549$, $r=0.743$, $\Delta R^2=0.619$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with~size encoding sample density. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) validate that this is a dominant organising principle in latent~representations. \label{fig_structural_fidelity_l0}}
 \end{figure}
 \begin{figure}[H]
 \includegraphics[width=0.70\textwidth]{img/h12_recovery_t_probe_893468.png}
-%MDPI: Please confirm whether the bubble needs an explanation. 
-\caption{\protect\hl{Structural} fidelity for Learn Rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
+%MDPI: Please confirm whether the bubble needs an explanation. %AuthorsAnswer: We have added the requested explanation for the bubble visual representation to this caption for consistency with Figure 3.
+\caption{\protect\hl{Structural} fidelity for Learn Rate $P(\text{T})$. Plot demonstrating robust linear recoverability ($R^2=0.515$, $r=0.721$, $\Delta R^2=0.570$) between BKT theoretical priors and probe-extracted parameters. Each bubble represents a binned aggregate of test interactions, with~size encoding sample density. The~high adherence to the diagonal and high selectivity ($\Delta R^2>0.5$) confirm that learn rate dynamics are dominantly encoded in latent~representations. \label{fig_structural_fidelity_t}}
 \end{figure}
 \unskip
 
@@ -740,15 +740,15 @@ Hypothesis H2.2 examines whether grounded parameters retain their pedagogical se
 
 These findings support that grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The~differential alignment reveals that learn rates preserve more theoretical structure while initial mastery estimates undergo stronger~individualisation.
 
-
 \begin{figure}[H]
 %\centering
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_l0_grounded_893468.png}
+%AuthorsAnswer: Confirmed. The bubble visual representation is explained in the caption below.
 \caption{\protect\hl{Semantic} alignment for Initial Mastery \hl{$p_{\text{L}_0}$}. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~substantial scatter indicates strong student-specific individualisation, with~the model prioritising context-aware adaptation over strict adherence to population~priors. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_t_grounded_893468.png}
-%MDPI: Please confirm whether the bubble needs an explanation. 
- \caption{\protect\hl{Semantic} alignment for Learn Rate \hl{$p_{\text{T}}$}. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. The~clustering around the diagonal across the full $P_{\text{T}}$ range indicates that the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware~refinement. \label{fig_semantic_alignment_t}}
+%MDPI: Please confirm whether the bubble needs an explanation. %AuthorsAnswer: We have added the requested explanation for the bubble representation to this caption for consistency with Figure 5.
+ \caption{\protect\hl{Semantic} alignment for Learn Rate \hl{$p_{\text{T}}$}. Plot demonstrating moderate monotonic relationship preservation (Spearman $\rho = 0.544$, MAE = $0.092$) between BKT theoretical priors and grounded parameters. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~clustering around the diagonal across the full $P_{\text{T}}$ range indicates that the model preserves pedagogical understanding of practice effects through neural processing while enabling context-aware~refinement. \label{fig_semantic_alignment_t}}
 \end{figure}
 \unskip
 
@@ -799,10 +799,13 @@ We select representative skills with meaningful sequence lengths (5--30 interact
 %\centering
 \includegraphics[width=1.0\textwidth]{img/h3_skill_quadrant_comparison_mosaic_893468.png}
 %MDPI: Please confirm whether the overlapping content in this figure affects scientific understanding and if it does, please revise it.
+%AuthorsAnswer: The overlapping of the dotted grey BKT lines is intentional and semantically significant. It demonstrably highlights the Markovian limitation of the baseline model, which produces identical predictions for students with the same recent response sequence. This visual stacking directly contrasts with the diverging gTransformer lines, making the scientific point that our model effectively captures broader historical context where BKT cannot. We confirm that this overlap does not negatively affect scientific understanding.
 %MDPI: Please confirm whether the red and green vertical lines need explanation.
-\caption{\protect\hl{Context-aware} prediction mosaic showing non-Markovian personalisation. Each panel displays students with identical response sequences (same ground truth bars) but different learning profiles. BKT predictions (dotted grey) overlap due to Markovian constraints, while gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}, p_{\text{T}}$). Circles represent predictions of correctness, while crosses indicate predicted failures. This demonstrates that gTransformer differentiates students not by what they answered, but~by how they learned along their whole learning~trajectory.}
+%AuthorsAnswer: We have updated the caption to explicitly state that the green and red vertical bars represent the ground truth for correct and incorrect responses, respectively.
+\caption{\protect\hl{Context-aware} prediction mosaic showing non-Markovian personalisation. Each panel displays students with identical response sequences (same green and red ground truth bars for correct and incorrect responses, respectively) but different learning profiles. BKT predictions (dotted grey) overlap due to Markovian constraints, while gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}, p_{\text{T}}$). Circles represent predictions of correctness, while crosses indicate predicted failures. This demonstrates that gTransformer differentiates students not by what they answered, but~by how they learned along their whole learning~trajectory.}
 \label{fig:skill_quadrant_mosaic}
 \end{figure}
+
 
 \textls[-15]{These findings validate our hypothesis for RQ3, showing how the historical learning context captured by a Transformer-based model can enhance student-centred~personalisation.}
 
@@ -864,15 +867,15 @@ Ultimately, gTransformer provides a practical approach for transforming opaque d
 
 \funding{This research received no external~funding.}
 
-
-\institutionalreview{\hl{please add}}
+\institutionalreview{Not applicable}
 %MDPI: In this section, you should add the Institutional Review Board Statement and approval number, if relevant to your study. You might choose to exclude this statement if the study did not require ethical approval. Please note that the Editorial Office might ask you for further information. Please add “The study was conducted in accordance with the Declaration of Helsinki, and approved by the Institutional Review Board (or Ethics Committee) of NAME OF INSTITUTE (protocol code XXX and date of approval).” for studies involving humans. OR “The animal study protocol was approved by the Institutional Review Board (or Ethics Committee) of NAME OF INSTITUTE (protocol code XXX and date of approval).” for studies involving animals. OR “Ethical review and approval were waived for this study due to REASON (please provide a detailed justification).” OR “Not applicable” for studies not involving humans or animals.
+%AuthorsAnswer: Not applicable. This study exclusively utilizes publicly available benchmark datasets. No new primary data was collected from human participants for this research. This statement could be excluded. 
 
-\informedconsent{\hl{please add}}
+\informedconsent{Not applicable}
 %MDPI: Any research article describing a study involving humans should contain this statement. Please add ``Informed consent was obtained from all subjects involved in the study.'' OR ``Patient consent was waived due to REASON (please provide a detailed justification).'' OR ``Not applicable'' for studies not involving humans. You might also choose to exclude this statement if the study did not involve humans.
-
+%AuthorsAnswer: Not applicable. Since the research involves the retrospective analysis of anonymised, open-access datasets, primary informed consent was not required for this study.
 %Written informed consent for publication must be obtained from participating patients who can be identified (including by the patients themselves). Please state ``Written informed consent has been obtained from the patient(s) to publish this paper'' if applicable.
-
+%AuthorsAnswer: Not applicable. This study exclusively utilizes publicly available benchmark datasets. No new primary data was collected from human participants for this research. This statement could be excluded. 
 
 \dataavailability{The datasets used in this paper can be downloaded through the links provided \hl{in} %MDPI: Please provide the date you accessed the URL in the following format: “URL (accessed on Day Month Year)”.
  \url{https://pykt-toolkit.readthedocs.io/en/latest/datasets.html}.}
