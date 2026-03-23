@@ -4,7 +4,7 @@ This document lists the identified non-compliance points and formatting errors i
 
 ## Priority Checklist
 
-### 1. Bayesian Parameter Subscripts (Upright Labels Rule)
+### 1. Bayesian Parameter Subscripts (Upright Labels Rule) [Done]
 - **Problem**: Subscripts $L_0, T, G, S$ are consistently in italics in the text and captions, which violates the "labels are upright" rule (MDPI standard and author's own claim on line 168).
 - **Locations**:
     - Lines 389, 391 (Text)
