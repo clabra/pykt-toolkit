@@ -423,8 +423,8 @@ These embeddings serve as the primary inputs to the Transformer's attention mech
 
 \subsubsection{Attention-Based~Encoders--Decoders} \label{sec_enc_dec}
 
-{The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks and $2n$ decoder blocks. In~our default configuration ($n=4$), this results in 4 encoder layers and 8 decoder layers, providing a total of 12 sequential attention-driven processing stages. The~architecture does not utilise explicit pooling layers (such \hl{as} %MDPI: Please confirm the special font format if keep. Please check all.
- \texttt{MaxPool} or \texttt{AvgPool}) but rather relies on the attention mechanism to perform dynamic, context-aware aggregation of information across the temporal sequence. The~encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{\mathbf{y}'_1, \mathbf{y}'_2, \ldots, \mathbf{y}'_{t-1}\}$ into a tensor of contextualised latent representations. Each encoder block applies multi-head self-attention ($h=4$ or $h=8$ depending on the dataset) with masking to prevent information leakage from future timesteps, followed by a position-wise feed-forward network (FFN) with a hidden dimension of $d_{\text{ff}} = 256$. Within~each block, we apply residual connections followed by Layer Normalization and dropout ($p=0.1$) to ensure numerical stability and prevent over-fitting, following the established Transformer standards~\citep{vaswani2017attention}.}
+The core processing engine of gTransformer is a stacked Transformer architecture composed of $n$ encoder blocks and $2n$ decoder blocks. In~our default configuration ($n=4$), this results in 4 encoder layers and 8 decoder layers, providing a total of 12 sequential attention-driven processing stages. The~architecture does not utilise explicit pooling layers (such as max pooling or average pooling) but rather relies on the attention mechanism to perform dynamic, context-aware aggregation of information across the temporal sequence.%MDPI: Please confirm the special font format if keep. Please check all. %AuthorsAnswer: To maintain consistent academic typography, we have converted general architectural terms (like max pooling, average pooling, and ReLU) to plain text. Monospaced font is now reserved exclusively for software-specific literal parameter strings (e.g., \texttt{all}) to distinguish them from general technical discussion.
+The~encoder processes the student's longitudinal interaction history through $n$ sequential self-attention layers, transforming the sequence of interaction embeddings $\{\mathbf{y}'_1, \mathbf{y}'_2, \ldots, \mathbf{y}'_{t-1}\}$ into a tensor of contextualised latent representations. Each encoder block applies multi-head self-attention ($h=4$ or $h=8$ depending on the dataset) with masking to prevent information leakage from future timesteps, followed by a position-wise feed-forward network (FFN) with a hidden dimension of $d_{\text{ff}} = 256$. Within~each block, we apply residual connections followed by Layer Normalization and dropout ($p=0.1$) to ensure numerical stability and prevent over-fitting, following the established Transformer standards~\citep{vaswani2017attention}.
 
 {The decoder architecture employs an alternating pattern of $2n$ sequential layers. Odd-numbered decoder layers (layers 1, 3, 5, \dots, $2n-1$) perform self-attention over the current question embeddings $\mathbf{x}'_t$ using four or eight heads, allowing the model to examine multiple aspects of the current task without incorporating response history. Even-numbered decoder layers (layers 2, 4, 6, \dots, $2n$) perform cross-attention between the current question representation and the encoder's output, effectively acting as a knowledge retriever that selectively weights relevant evidence from the student's encoded learning trajectory.}
 
@@ -435,26 +435,29 @@ The final decoder layer produces an output tensor $\mathbf{d}_{\text{out}} \in \
 where the dimensionality of $\mathbf{z}_t$ is the combined dimensionality of the decoder output and question embedding space. 
 This context vector serves as a comprehensive encoding of the student's current cognitive state, {synthesising} information from both the observed interaction history and the current task~characteristics.
 
+
 \subsubsection{Grounded~Parameters} \label{sec_grounded_params}
 
 To ensure pedagogical interpretability, gTransformer estimates BKT parameters through an additive composition mechanism operating in logit space. For~each knowledge component $c$, we define theoretical base parameters $\ell_{\text{L}_0,c}$ and $\ell_{\text{T},c}$, {initialised} as the logit-transformed population-level BKT priors:
 \begin{equation} \label{eq:theory_base}
     \ell_{\text{L}_0,c} = \operatorname{logit}(P(\text{L}_0)_c), \quad \ell_{\text{T},c} = \operatorname{logit}(P(\text{T})_c).
 \end{equation}
-\hl{These} %MDPI: Please confirm that the unindented formatting is preserved here. Please check all after equations.
+
+\hl{These} %MDPI: Please confirm that the unindented formatting is preserved here. Please check all after equations. %AuthorsAnswer: We have reviewed the formatting following equations (1)–(16). We have chosen to start new indented paragraphs for sentences that introduce distinct functional layers or design principles (e.g., following Eq. 5, 6, 7) to improve the structural clarity of the methodology.
  bases are implemented as scalar embeddings with Gaussian {initialisation} {centred} at the theoretical~values.
 
 Contextual adjustments are computed via dot products between the latent context vector $\mathbf{z}_t$ and learnable semantic axes. For~each concept $c$, we define a knowledge axis $\mathbf{k}_{c} \in \mathbb{R}^{z}$ and a learning velocity axis $\mathbf{v}_{c} \in \mathbb{R}^{z}$. The~contextual projections, representing the student-specific knowledge \hl{($k_{s,t}$)} and learning velocity \hl{($v_{s,t}$)}, are calculated as
 \begin{equation} \label{eq:contextual_projection}
     k_{s,t} = \mathbf{z}_t \cdot \mathbf{k}_c, \quad v_{s,t} = \mathbf{z}_t \cdot \mathbf{v}_c.
 \end{equation}
-%AuthorsAnswer: We have standardised the mathematical notation to clearly distinguish between theoretical constructs (uppercase P) and student-specific grounded outputs (lowercase p). Contextual projections and grounded parameters now consistently include the timestep index 't' to reflect the temporal dynamics of the model, as defined in Equations (5)--(7).
+
 \hl{These} dot products project the high-dimensional latent state onto interpretable semantic dimensions, quantifying how much the student's observed {behaviour} deviates from the population average along the dimensions of initial mastery and learning~velocity.
 
 The final grounded parameters are obtained through additive composition in logit space, followed by sigmoid activation to ensure valid probability bounds:
 \begin{equation} \label{eq:grounded_params}
     p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0,c} + k_{s,t}), \quad p_{\text{T},t} = \sigma(\ell_{\text{T},c} + v_{s,t}).
 \end{equation}
+
 \hl{This} design ensures that the model's parameter estimates remain structurally anchored to BKT theory, with~the base terms providing pedagogically sound {initialisation}, while contextual projections enable {individualised} adjustments driven by observed student~{behaviour}.
 
 \subsubsection{Output~Heads} \label{sec_output_heads}
@@ -546,9 +549,8 @@ where $w_1$, $w_2$, and $w_3$ are relative weights. These dimensions include num
 
 \subsection{Training~Setup}
 
-The gTransformer model was implemented in \texttt{PyTorch} using the pyKT library~\citep{liu2022pykt} for standardised data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official pyKT repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.} For~the Bayesian Knowledge Tracing baseline, we utilised pyBKT~\citep{badrinath2021pybkt}, a Python implementation of the algorithm that estimates student cognitive mastery from problem-solving sequences.
-%AuthorsAnswer: Added reference to the pyBKT library as requested, which was used for the BKT baseline implementation.
-
+The gTransformer model was implemented in PyTorch using the pyKT library~\citep{liu2022pykt} for standardised data preprocessing, dataset splitting, and~baseline model implementation. Training and evaluation followed a standard five-fold cross-validation protocol using an 80/20 train/test split. Predictive performance was measured using Area Under the Curve (AUC), applying the question-level mean late-fusion protocol as recommended in~\cite{liu2022pykt}. Hyperparameter configurations for benchmark models were aligned with the {optimised} values reported in the official pyKT repository. The~specific configurations used for gTransformer are detailed in \cref{tab:params}. {All experiments were conducted utilising 24 CPU cores and 5 NVIDIA Tesla GPUs.} For~the Bayesian Knowledge Tracing baseline, we utilised pyBKT~\citep{badrinath2021pybkt}, a Python implementation of the algorithm that estimates student cognitive mastery from problem-solving sequences.
+%AuthorsAnswer: Added reference to the pyBKT library, which was used for the BKT baseline implementation.
 
 \begin{table}[H]
 \centering
@@ -562,7 +564,7 @@ The gTransformer model was implemented in \texttt{PyTorch} using the pyKT librar
 \midrule
 \multicolumn{3}{l}{Ablation Configuration} %MDPI: Please add an explanation for the use of italics in the table footer. If the italics is unnecessary, please remove it. %AuthorsAnswer: This italics was unnecessary so we have removed it.
  \\
-Ablation mode & \hl{\texttt{all}} %MDPI: Please confirm if the font formatting is necessary; if not, please remove it. The following are the same.
+Ablation mode & \texttt{all} %MDPI: Please confirm if the font formatting is necessary; if not, please remove it. The following are the same. %AuthorsAnswer: Confirmed. Monospaced font is used here for literal software-specific parameter strings ('all', 'none') to distinguish them from general technical discussion.
  & \texttt{none} \\
 $\lambda_{\text{sup}}$ & 1.0 & 1.0 \\
 $\lambda_{\text{ref}}$ & 0 & 0.5 \\
@@ -575,13 +577,13 @@ $d_{\text{model}}$ & 64 & 64 \\
 $d_{\text{ff}}$ & 256 & 256 \\
 Attention heads & 4 & \makecell{AS2009: 8\\others: 4} \\
 {Output MLP dimensions} & {[128, 512, 256, 1]} & {[128, 512, 256, 1]} \\
-{Activation function} & {\texttt{ReLU}} & {\texttt{ReLU}} \\
+{Activation function} & {ReLU} & {ReLU} \\
 {Normalization} & LayerNorm & LayerNorm \\
 \midrule
 \multicolumn{3}{l}{Training Configuration} \\
 Learning rate & \makecell{NIPS34: $3 \times 10^{-4}$\\others: $10^{-4}$} & $10^{-4}$ \\
 Batch size & 64 & 64 \\
-{Optimiser} & \texttt{adam} & \texttt{adam} \\
+{Optimiser} & Adam & Adam \\
 Epochs & 200 & 200 \\
 {Dropout ($p$)} & 0.1 & 0.1 \\
 {Weight initialization} & \makecell{{Xavier/} \\ {Orthogonal}} & \makecell{{Xavier/} \\ {Orthogonal}} \\
