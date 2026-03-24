@@ -227,6 +227,8 @@ a new type of grounded Transformer model bridging deep learning performance with
 \section{Introduction} \label{sec_intro}
 \unskip
 
+\added[id=revproof]{This section frames the motivation and scope of the work. We first identify the core research problem and the limitations of existing approaches that motivate it. We then summarise the main contributions of the proposed solution, and conclude with the research questions that structure the experimental evaluation.}
+
 \subsection{Problem Statement and~Motivation}
 
 {Knowledge Tracing (KT)~\citep{corbett1994knowledge} is a foundational problem in Intelligent Tutoring Systems and Learning Analytics~\citep{Romero2020} aimed at estimating the evolution of student knowledge as they interact with a sequence of educational work items. Accurate mastery tracking enables data-driven personalisation, yet current approaches are caught in a dichotomy between interpretable but rigid probabilistic models and high-accuracy but opaque Deep Knowledge Tracing (DKT) architectures~\citep{abdelrahman2023knowledge, twenty_five_years_of_bkt, vaswani2017attention}. While recent efforts have sought to bridge this gap, they generally do not aim for interpretability based on alignment with pedagogical principles~\citep{bai2024survey, rudin2019stop, vonrueden2021informed}. Consequently, a~critical research gap remains regarding architectures that can maintain the capacity of deep learning while remaining grounded in educational theory. Specifically, there is a need for models that track student mastery through conceptual constructs, such as \textit{initial mastery} and \textit{learn rates}, rather than opaque latent features, addressing the transparency and accountability concerns essential for trust in educational \replaced[id=rev]{artificial intelligence}{AI}~\citep{Holmes2022504}}.
@@ -503,6 +505,8 @@ This section details the experimental setup employed to train and evaluate gTran
 \subsection{Methodology} \label{sec_methodology}
 \unskip
 
+\added[id=revproof]{This section details the evaluation methodology developed to address each research question. We describe the metrics and protocols for quantifying the performance--interpretability trade-off (Section~\ref{sec:rq1_method}), the triple-validation approach for verifying the pedagogical grounding of internal representations, and the comparative analysis strategy for evaluating context-aware personalisation capabilities (Section~\ref{sec:rq3_method}).}
+
 \subsubsection{{\protect\highlighting{Quantifying the Performance--Interpretability Trade-Off (RQ1)}}}%MDPI: The heading is repeat with sec5.1, please check. %AuthorsAnswer: We have renamed this subsection to 'Quantifying the Performance--Interpretability Trade-Off (RQ1)' to distinguish it from the results presented in Section 5.1.
  \label{sec:rq1_method}
 
@@ -630,6 +634,8 @@ For the comparative analysis, we selected six models that are among the most fre
 
 \section{Results and~Discussion} \label{sec_results}
 \unskip
+
+\added[id=revproof]{This section presents and discusses the experimental results in correspondence with the three research questions. Section~\ref{sec_tradeoff} quantifies the accuracy--interpretability trade-off across benchmark datasets. Section~\ref{sec_grounded} assesses the pedagogical grounding of the model's internal representations through the triple-validation protocol. Section~\ref{sec_gran_results} evaluates the model's capacity to deliver context-aware personalised predictions.}
 
 \subsection{\texorpdfstring{\protect\highlighting{Performance--Interpretability Trade-Off (RQ1)}}{Performance--Interpretability Trade-Off (RQ1)}} \label{sec_tradeoff}
 
