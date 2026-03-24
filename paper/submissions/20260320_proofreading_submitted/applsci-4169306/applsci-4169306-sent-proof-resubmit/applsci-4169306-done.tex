@@ -610,7 +610,7 @@ The characteristics of the datasets are summarised in Table~\ref{tab_datasets}.
 
 \begin{table}[H]
 \centering
-\caption{Characteristics of the benchmark datasets used to evaluate AUC. $N_{\text{s}}$, $N_{\text{c}}$, $N_{\text{q}}$ and $N_{\text{i}}$ denote the total number of sequences (students), knowledge components, questions and student--item interactions, respectively. \label{tab_datasets}}
+\caption{Characteristics of the benchmark datasets used to evaluate Area Under the Curve (AUC). $N_{\text{s}}$, $N_{\text{c}}$, $N_{\text{q}}$ and $N_{\text{i}}$ denote the total number of sequences (students), knowledge components, questions and student--item interactions, respectively. \label{tab_datasets}}
 \begin{tabularx}{\textwidth}{Lcccc}
 \toprule
 \textbf{Dataset} & \textbf{Sequences (\boldmath{$N_{\text{s}}$})} & \textbf{Concepts (\boldmath{$N_{\text{c}}$})} & \textbf{Questions (\boldmath{$N_{\text{q}}$})} & \textbf{Interactions (\boldmath{$N_{\text{i}}$})} \\
@@ -668,7 +668,7 @@ To evaluate the performance trade-off, we compare the results of the ablated con
 \begin{table}[H]
 \centering
 \small
-\caption{AUC--interpretability trade-offs in gTransformer across datasets. The~table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$) and classical BKT predictions ($p_{\text{bkt}}$). The~$\mathcal{I}_{\text{drop}}$ column shows the cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$) and $\mathcal{I}_{\text{cost}}$ shows the interpretability cost ($p_{\text{sup}2} - p_{\text{ref}}$), while $\mathcal{I}_{\text{gain}}$ shows the interpretability gain ($p_{\text{ref}} - p_{\text{bkt}}$).}
+\caption{AUC--interpretability trade-offs in gTransformer across datasets. The~table shows AUC scores for the predictions of the ablated configuration ($p_{\text{sup}1}$), predictions of the grounded configuration ($p_{\text{sup}2}$), interpretable predictions ($p_{\text{ref}}$) and classical Bayesian Knowledge Tracing (BKT) predictions ($p_{\text{bkt}}$). The~$\mathcal{I}_{\text{drop}}$ column shows the cost of grounding ($p_{\text{sup}1} - p_{\text{sup}2}$) and $\mathcal{I}_{\text{cost}}$ shows the interpretability cost ($p_{\text{sup}2} - p_{\text{ref}}$), while $\mathcal{I}_{\text{gain}}$ shows the interpretability gain ($p_{\text{ref}} - p_{\text{bkt}}$).}
 \label{tab:tradeoff}
 \begin{tabularx}{\textwidth}{LcCccccc}
 \toprule
@@ -742,13 +742,14 @@ Hypothesis H2.2 examines whether grounded parameters retain their pedagogical se
     \item Learn Rate ($p_{\text{T}}$) demonstrates moderate alignment ($\rho = 0.544$). A~low MAE = $0.092$ confirms that the model preserves pedagogical understanding of practice effects while enabling context-aware refinement.
 \end{itemize}
 
+
 These findings support that grounded parameters maintain meaningful monotonic alignment with theory while capturing individual heterogeneity. The~differential alignment reveals that learn rates preserve more theoretical structure while initial mastery estimates undergo stronger~individualisation.
 
 \begin{figure}[H]
 %\centering
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_l0_grounded_893468.png}
 %AuthorsAnswer: Confirmed. The bubble visual representation is explained in the caption below.
-\caption{\protect\hl{Semantic} alignment for Initial Mastery \hl{$p_{\text{L}_0}$}. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, MAE = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~substantial scatter indicates strong student-specific individualisation, with~the model prioritising context-aware adaptation over strict adherence to population~priors. \label{fig_semantic_alignment_l0}}
+\caption{\protect\hl{Semantic} alignment for Initial Mastery \hl{$p_{\text{L}_0}$}. Plot showing weak monotonic relationship preservation (Spearman $\rho = 0.360$, Mean Absolute Error (MAE) = $0.168$) between BKT theoretical priors and grounded parameters after neural transformation. Each bubble represents an aggregate of test interactions, with~size encoding sample density. The~substantial scatter indicates strong student-specific individualisation, with~the model prioritising context-aware adaptation over strict adherence to population~priors. \label{fig_semantic_alignment_l0}}
 \vspace{12pt}
 \includegraphics[width=0.68\textwidth]{img/h12_recovery_t_grounded_893468.png}
 %MDPI: Please confirm whether the bubble needs an explanation. %AuthorsAnswer: We have added the requested explanation for the bubble representation to this caption for consistency with Figure 5.
