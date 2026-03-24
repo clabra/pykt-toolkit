@@ -275,7 +275,7 @@ def plot_confidence_heatmap(pivot, stats, output_path):
         cmap=cmap_conf,
         norm=norm,
         ax=ax,
-        cbar_kws={'label': 'H1.3 Composite Confidence', 'pad': 0.08}
+        cbar_kws={'label': 'Composite Confidence', 'pad': 0.08}
     )
     
     ax.set_xlabel(f'Skills (Top {stats["n_skills"]} by Density)', fontsize=12)
@@ -287,9 +287,9 @@ def plot_confidence_heatmap(pivot, stats, output_path):
     
     # Add discrete legend
     legend_patches = [
-        mpatches.Patch(color='#27ae60', label='[0.80 - 1.0]: High Confidence'),
-        mpatches.Patch(color='#f39c12', label='[0.65 - 0.80]: Medium Confidence'),
-        mpatches.Patch(color='#e67e22', label='[0.50 - 0.65]: Low-Medium Confidence'),
+        mpatches.Patch(color='#27ae60', label='[0.80–1.0]: High Confidence'),
+        mpatches.Patch(color='#f39c12', label='[0.65–0.80]: Medium Confidence'),
+        mpatches.Patch(color='#e67e22', label='[0.50–0.65]: Low-Medium Confidence'),
         mpatches.Patch(color='#c0392b', label='[< 0.50]: Low Confidence')
     ]
     
