@@ -1,177 +1,224 @@
-% This is samplepaper.tex, a sample chapter demonstrating the
-% LLNCS macro package for Springer Computer Science proceedings;
-% Version 2.21 of 2022/01/12
+% ECTEL 2026 - Full Research Paper
 %
 \documentclass[runningheads]{llncs}
-\usepackage[markup=underlined, authormarkup=none]{changes}
-\definechangesauthor[name=Author, color=red]{del}
 %
 \usepackage[T1]{fontenc}
-% T1 fonts will be used to generate the final print and online PDFs,
-% so please use T1 fonts in your manuscript whenever possible.
-% Other font encondings may result in incorrect characters.
-%
 \usepackage{graphicx}
-% Used for displaying a sample figure. If possible, figure files should
-% be included in EPS format.
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{hyperref}
 %
-% If you use the hyperref package, please uncomment the following two lines
-% to display URLs in blue roman font according to Springer's eBook style:
-%\usepackage{color}
-%\renewcommand\UrlFont{\color{blue}\rmfamily}
-%\urlstyle{rm}
+\graphicspath{{../mdpi_template/img/}}
 %
 \begin{document}
 %
 \title{Theory-Based User Modeling for Intelligent Tutoring Systems via Grounded Transformers}
 %
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
+\titlerunning{Theory-Based User Modeling via Grounded Transformers}
 %
-
-
+\author{Concepcion Labra\inst{1}\orcidID{0009-0004-3499-6106} \and
+Olga C. Santos\inst{1,2}\orcidID{0000-0002-9281-4209}}
 %
-\authorrunning{F. Author et al.}
-% First names are abbreviated in the running head.
-% If there are more than two authors, 'et al.' is used.
+\authorrunning{C. Labra and O.C. Santos}
 %
-
+\institute{Department of Artificial Intelligence, Computer Science School, UNED, 28040 Madrid, Spain\\
+\email{\{clabra,ocsantos\}@dia.uned.es} \and
+PhyUM Research Center, UNED, 28040 Madrid, Spain}
 %
-\maketitle              % typeset the header of the contribution
+\maketitle
 %
 \begin{abstract}
-\deleted[id=del]{The abstract should briefly summarize the contents of the paper in
-150--250 words.}The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL. 
+The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL.
 
-\keywords{deep knowledge tracing  \and theory-based interpretability \and learning theories \and intelligent tutoring systems \and user modeling  \and grounded transformers.}
+\keywords{deep knowledge tracing \and theory-based interpretability \and learning theories \and intelligent tutoring systems \and user modeling \and grounded transformers}
 \end{abstract}
-%
 %
 %
 \section{Introduction}
 
-\subsection{Problem Statement}
-The student model serves as a cornerstone of Intelligent Tutoring Systems. 
-In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. 
-However, these traditional approaches have one significant limitations: they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. 
+Knowledge Tracing (KT)~\cite{corbett1994knowledge} is a foundational problem in Intelligent Tutoring Systems (ITS) and Learning Analytics~\cite{Romero2020} aimed at estimating the evolution of student knowledge as they interact with a sequence of educational items. Accurate mastery tracking enables data-driven personalisation, yet current approaches are caught in a dichotomy between interpretable but rigid probabilistic models and high-accuracy but opaque Deep Knowledge Tracing (DKT) architectures~\cite{abdelrahman2023knowledge,vaswani2017attention}. While recent efforts have sought to bridge this gap, they generally do not aim for interpretability grounded in pedagogical principles~\cite{bai2024survey,vonrueden2021informed}. In a high-stakes domain such as education, where the Artificial Intelligence Act (EU) 2024/1689 explicitly classifies AI systems that assess or monitor learners as high-risk, this lack of transparency raises critical concerns about accountability and trust~\cite{Holmes2022504}.
 
-To overcome this limitation, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories, thus providing a theoretically sound foundation for TEL. 
+To address these limitations, we introduce gTransformer, a Transformer-based model that bridges the gap between deep learning performance and pedagogical interpretability through \textit{representational grounding}: a methodology that explicitly anchors the model's latent representations to the theoretically meaningful concepts of an intrinsically interpretable reference model. By grounding KT in Bayesian Knowledge Tracing (BKT)~\cite{corbett1994knowledge} parameters, gTransformer provides instructional decisions that are both theoretically justifiable and sensitive to each student's longitudinal learning context. This work makes three primary contributions:
+\begin{itemize}
+    \item \textit{Grounded Architecture}: We introduce gTransformer, which implements \textit{representational grounding} to bridge deep learning expressiveness and theoretical alignment.
+    \item \textit{Performance--Interpretability Trade-Off}: We demonstrate that grounded models achieve state-of-the-art predictive performance (+19.9\% AUC over traditional BKT) while incurring a minimal interpretability cost (3.9\%) relative to non-interpretable configurations.
+    \item \textit{Context-Aware Personalisation}: By encoding longitudinal interaction histories into context-aware BKT parameters, gTransformer enables differentiated diagnostics based on individual learning trajectories.
+\end{itemize}
 
+These contributions are structured around three research questions: (RQ1)~What is the trade-off between predictive performance and interpretability? (RQ2)~How can we verify that the model's internal representations are genuinely grounded in pedagogical theory? (RQ3)~How does the longitudinal learning context enhance student-centred personalisation?
 
+%
+\section{Background}
 
-\subsection{Template Guidelines}
-Please note that the first paragraph of a section or subsection is
-not indented. The first paragraph that follows a table, figure,
-equation etc. does not need an indent, either.
+\subsection{Interpretability--Performance Dichotomy}
 
-Subsequent paragraphs, however, are indented.
+The development of KT has historically been characterised by a dichotomy between two paradigms~\cite{abdelrahman2023knowledge}. Traditional probabilistic models, such as BKT~\cite{corbett1994knowledge} and Factor Analysis Models, are intrinsically interpretable: they model learning through explicit parameters aligned with pedagogical and psychometric principles. However, their simplifying assumptions limit predictive power, causing them to struggle with the complex, non-linear dependencies in real-world student behaviour~\cite{twenty_five_years_of_bkt}.
 
-\subsubsection{Sample Heading (Third Level)} Only two levels of
-headings should be numbered. Lower level headings remain unnumbered;
-they are formatted as run-in headings.
+DKT models~\cite{piech2015deep}, which leverage deep learning architectures from Recurrent Neural Networks to Transformers, achieve state-of-the-art predictive performance. However, this gain has come at the cost of model transparency. Extensive research has sought to bridge this gap through post hoc and ante hoc interpretability methods~\cite{bai2024survey}. While ante hoc approaches integrating IRT parameters~\cite{yeung2019deep,chen2023improving} represent meaningful advances, they frequently produce outputs that remain disconnected from practitioners' domain knowledge. Educators require models that track mastery through concepts explicitly grounded in established frameworks, such as the initial mastery and learn rates postulated by BKT.
 
-\paragraph{Sample Heading (Fourth Level)}
-The contribution should contain no more than four levels of
-headings. Table~\ref{tab1} gives a summary of all heading levels.
+\subsection{Bayesian Knowledge Tracing as Theoretical Framework}
 
-\begin{table}
-\caption{Table captions should be placed above the
-tables.}\label{tab1}
-\begin{tabular}{|l|l|l|}
-\hline
-Heading level &  Example & Font size and style\\
-\hline
-Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
-1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
-2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
-3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
-4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
-\hline
+We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework. BKT models the learning process as a Hidden Markov process governed by four interpretable parameters: Initial Mastery ($P(\text{L}_0)$), the probability that a student knows a concept prior to practice; Learn Rate ($P(\text{T})$), the probability of transitioning from the unlearned to the learned state; Guess ($P(\text{G})$), the probability of a correct response despite lack of mastery; and Slip ($P(\text{S})$), the probability of an incorrect response despite mastery. These parameters enable a recursive, causally transparent estimation of student mastery that is directly interpretable by educators.
+
+Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. gTransformer addresses this by leveraging Transformer attention mechanisms to infer student-specific parameters from individual interaction histories.
+
+\subsection{Informed Machine Learning}
+
+We situate gTransformer within the Informed Machine Learning (IML) framework~\cite{vonrueden2021informed}, which categorises the integration of domain knowledge by its source, representation, and the stage of the machine learning pipeline where it is incorporated. The general IML loss formulation is:
+\begin{equation} \label{eq_theory_loss}
+\mathcal{L} = \mathcal{L}_{\text{TRN}}(Y_{\text{true}}, Y_{\text{pred}}) + \gamma \mathcal{L}_{\text{THEORY}}(Y_{\text{pred}})
+\end{equation}
+where $\mathcal{L}_{\text{TRN}}$ measures supervised error and $\mathcal{L}_{\text{THEORY}}$ penalises violations of theoretical constraints, weighted by $\gamma$. While most IML approaches use prior knowledge to maximise predictive accuracy, gTransformer aims to achieve theory-based interpretability while maintaining competitive performance.
+
+%
+\section{The gTransformer Model}
+
+\subsection{Architecture}
+
+Figure~\ref{fig_arch} illustrates the information flow through gTransformer, mapped to the IML taxonomic dimensions. Student interaction histories are augmented with BKT theoretical priors ($P(\text{L}_0)$, $P(\text{T})$ per skill), encoding prior knowledge directly into the model's input representations. These enriched sequences are processed through an attention-based encoder--decoder Transformer backbone that captures long-range temporal dependencies. The key architectural contribution is a projection module that maps the final context vectors $\mathbf{z}_t$ to student-specific BKT parameter estimates ($p_{\text{L}_0}$, $p_{\text{T}}$), which are then passed through BKT forward logic to generate interpretable mastery predictions.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\textwidth]{iml.png}
+\caption{\textbf{Dimensions of Informed Machine Learning in gTransformer.} The model integrates BKT theoretical priors at the input stage and applies a multi-objective loss to anchor internal representations and outputs to pedagogically meaningful constructs.}
+\label{fig_arch}
+\end{figure}
+
+\subsection{Multi-Objective Loss Function}
+
+The model is trained with a multi-objective loss function that balances predictive accuracy with pedagogical grounding:
+\begin{equation} \label{eq_loss}
+\mathcal{L} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}
+\end{equation}
+where $\mathcal{L}_{\text{sup}}$ is the binary cross-entropy on supervised predictions, $\mathcal{L}_{\text{ref}}$ is the cross-entropy on interpretable BKT-based predictions to anchor outputs to the reference model, and $\mathcal{L}_{\text{probe}}$ is an auxiliary loss that encourages latent representations to encode BKT parameters in a linearly recoverable manner. The hyperparameters $\lambda_{\text{sup}}$, $\lambda_{\text{ref}}$, $\lambda_{\text{probe}}$ govern the trade-off between performance and interpretability.
+
+%
+\section{Experimental Evaluation}
+
+\subsection{Datasets, Baselines, and Methodology}
+
+We evaluate gTransformer on five benchmark datasets with explicit knowledge component mappings: ASSISTments 2009 (AS2009, 4,217 students, 123 skills), ASSISTments 2015 (AS2015, 19,917 students, 100 skills), Algebra 2005 (AL2005, 574 students, 112 skills), Bridge to Algebra 2006 (BDG2006, 1,146 students, 493 skills), and NeurIPS 2020 Education Challenge (NIPS34, 4,918 students, 57 skills). We follow a standard five-fold cross-validation with an 80/20 train/test split, measuring performance via AUC using the question-level mean late-fusion protocol~\cite{liu2022pykt}. Baselines include DKT~\cite{piech2015deep}, DKVMN~\cite{zhang2017dynamic}, SAKT~\cite{Pandey2019384}, SAINT~\cite{choi2020towards}, AKT~\cite{ghosh2020context}, and ATKT~\cite{GuoHZTL21}.
+
+To quantify the performance--interpretability trade-off (RQ1), we define three metrics. Let $p_{\text{sup}1}$ be ablated (non-grounded) supervised predictions, $p_{\text{sup}2}$ grounded supervised predictions, $p_{\text{ref}}$ interpretable BKT-based predictions, and $p_{\text{bkt}}$ classical BKT predictions:
+\begin{align}
+\mathcal{I}_{\text{drop}} &= p_{\text{sup}1} - p_{\text{sup}2} \quad\text{(cost of grounding on neural capacity)} \\
+\mathcal{I}_{\text{cost}} &= p_{\text{sup}2} - p_{\text{ref}}   \quad\text{(cost of switching to interpretable logic)} \\
+\mathcal{I}_{\text{gain}} &= p_{\text{ref}} - p_{\text{bkt}}   \quad\text{(advantage over population-level BKT)}
+\end{align}
+
+To verify grounded interpretability (RQ2), we implement a triple-validation methodology: (H2.1)~Structural Alignment, assessed via diagnostic probing~\cite{hewitt2019designing,belinkov2022probing} measuring the linear recoverability of BKT constructs from hidden states; (H2.2)~Semantic Alignment, assessed via Spearman's rank correlation ($\rho$) between grounded parameters and theoretical priors; and (H2.3)~Functional Alignment, assessed via a composite confidence metric quantifying the reliability of interpretable predictions as substitutes for supervised ones.
+
+\subsection{RQ1: Performance--Interpretability Trade-Off}
+
+Table~\ref{tab_performance} shows the comparative performance of gTransformer against baselines in the ablated (non-grounded) configuration. gTransformer achieves the best AUC on AS2009, ranks second on AL2005, BDG2006, and NIPS34, and third on AS2015, demonstrating that the architecture is competitive with the state of the art.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Predictive performance (AUC) comparison.} Bold indicates best performance per dataset.}
+\label{tab_performance}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{AS2009} & \textbf{AS2015} & \textbf{AL2005} & \textbf{BDG2006} & \textbf{NIPS34} \\
+\midrule
+AKT          & 0.7825 & 0.7081 & \textbf{0.8306} & \textbf{0.8208} & \textbf{0.8033} \\
+ATKT         & 0.7715 & \textbf{0.7810} & 0.7995 & 0.7889 & 0.7665 \\
+DKT          & 0.7528 & 0.7031 & 0.8149 & 0.8015 & 0.7689 \\
+DKVMN        & 0.7440 & 0.7013 & 0.8054 & 0.7983 & 0.7673 \\
+SAKT         & 0.7263 & 0.6947 & 0.7880 & 0.7740 & 0.7517 \\
+SAINT        & 0.6921 & 0.6836 & 0.7775 & 0.7781 & 0.7873 \\
+\midrule
+gTransformer & \textbf{0.7831} & 0.7078 & 0.8240 & 0.8148 & 0.8006 \\
+\bottomrule
 \end{tabular}
 \end{table}
-y
-\noindent Displayed equations are centered and set on a separate
-line.
-\begin{equation}
-x + y = z
-\end{equation}
-Please try to avoid rasterized images for line-art diagrams and
-schemas. Whenever possible, use vector graphics instead.
 
-%\begin{figure}
-%\includegraphics[width=\textwidth]{fig1.eps}
-%\caption{A figure caption is always placed below the illustration.
-%Please note that short captions are centered, while long ones are
-%justified by the macro package automatically.} \label{fig1}
-%\end{figure}
+Table~\ref{tab_tradeoff} quantifies the trade-off. The interpretability drop ($\mathcal{I}_{\text{drop}}$) is negligible on average (0.2\%), demonstrating that grounding constraints do not compromise the model's expressive capacity. The interpretability cost ($\mathcal{I}_{\text{cost}}$), i.e., the performance reduction when constraining predictions to BKT logic, averages 3.9\% across datasets. Against population-level BKT, interpretable gTransformer predictions show a consistent advantage of 19.9\% on average. These results establish that pedagogical interpretability can be achieved at a minimal performance cost.
 
-\begin{theorem}
-This is a sample theorem. The run-in heading is set in bold, while
-the following text appears in italics. Definitions, lemmas,
-propositions, and corollaries are styled the same way.
-\end{theorem}
+\begin{table}[t]
+\centering
+\caption{\textbf{AUC--interpretability trade-offs.} $\mathcal{I}_{\text{drop}}$ = cost of grounding; $\mathcal{I}_{\text{cost}}$ = interpretability cost; $\mathcal{I}_{\text{gain}}$ = gain over BKT.}
+\label{tab_tradeoff}
+\small
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Dataset} & $p_{\text{sup}1}$ & $p_{\text{sup}2}$ & $p_{\text{ref}}$ & $p_{\text{bkt}}$ & $\mathcal{I}_{\text{drop}}$ & $\mathcal{I}_{\text{cost}}$ & $\mathcal{I}_{\text{gain}}$ \\
+\midrule
+AS2009  & 0.7831 & 0.7814 & 0.7436 & 0.6097 & 0.2\% & 4.8\% & 22.0\% \\
+AS2015  & 0.7078 & 0.7070 & 0.6940 & ---    & 0.1\% & 1.8\% & ---    \\
+AL2005  & 0.8240 & 0.8237 & 0.7800 & 0.7215 & 0.0\% & 5.3\% & 8.1\%  \\
+BDG2006 & 0.8148 & 0.8107 & 0.7810 & 0.6756 & 0.5\% & 3.6\% & 15.6\% \\
+NIPS34  & 0.8006 & 0.7987 & 0.7666 & 0.5729 & 0.2\% & 4.0\% & 33.8\% \\
+\midrule
+Mean    & 0.7861 & 0.7843 & 0.7530 & 0.6449 & 0.2\% & 3.9\% & 19.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ2: Grounded Interpretability}
+
+We validate grounded interpretability using AS2009 as the reference dataset.
+
+\paragraph{Structural Alignment (H2.1).}
+Using diagnostic probing, we assess whether BKT constructs are linearly recoverable from final hidden states. Initial Mastery achieves fidelity $R^2 = 0.549$ ($r = 0.743$) with selectivity $\Delta R^2 = 0.619$, exceeding the 0.5 threshold that distinguishes genuine structural encoding from spurious correlations. Learn Rate achieves $R^2 = 0.515$ ($\Delta R^2 = 0.570$). These results confirm that BKT constructs are preserved as primary organising principles in the latent space.
+
+\paragraph{Semantic Alignment (H2.2).}
+Initial Mastery shows weaker monotonic alignment with theoretical priors ($\rho = 0.360$, MAE = $0.168$), reflecting strong student-specific individualisation. Learn Rate demonstrates moderate alignment ($\rho = 0.544$, MAE = $0.092$), preserving the pedagogical understanding of practice effects. Both parameters remain within pedagogical bounds, confirming that the model neither abandons nor mechanically reproduces theoretical priors.
+
+\paragraph{Functional Alignment (H2.3).}
+A composite confidence metric shows that 89.2\% of student--skill pairs achieve medium or high confidence in interpretable predictions, indicating that theory-grounded outputs provide actionable diagnostic value.
+
+\subsection{RQ3: Context-Aware Personalisation}
+
+To demonstrate gTransformer's capacity for context-aware personalisation, we cluster students in AS2009 along two dimensions---initial mastery ($p_{\text{L}_0}$) and learn rate ($p_{\text{T}}$)---identifying four learning situations: (1)~low initial mastery/low learn rate, (2)~low initial mastery/high learn rate, (3)~high initial mastery/low learn rate, and (4)~high initial mastery/high learn rate.
+
+Figure~\ref{fig_mosaic} shows mastery trajectories for students who provide identical response sequences to the same questions but belong to different learning situations. Classical BKT predictions (dotted grey lines) overlap perfectly, reflecting its Markovian constraint: given the same response sequence, BKT produces identical probability estimates regardless of learning history. gTransformer predictions (solid coloured lines) diverge based on the full interaction history, demonstrating the model's capacity to differentiate students not by what they answered, but by how they have learned across their entire trajectory.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{h3_skill_quadrant_comparison_mosaic_893468.png}
+\caption{\textbf{Context-aware prediction mosaic.} Each panel shows students with identical response sequences (green/red bars for correct/incorrect responses) but different learning situations. BKT predictions (dotted grey) overlap due to Markovian constraints; gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}$, $p_{\text{T}}$). Circles indicate predicted correct responses; crosses indicate predicted failures.}
+\label{fig_mosaic}
+\end{figure}
+
 %
-% the environments 'definition', 'lemma', 'proposition', 'corollary',
-% 'remark', and 'example' are defined in the LLNCS documentclass as well.
-%
-\begin{proof}
-Proofs, examples, and remarks have the initial word in italics,
-while the following text appears in normal font.
-\end{proof}
-For citations of references, we prefer the use of square brackets
-and consecutive numbers. Citations using labels or the author/year
-convention are also acceptable. The following bibliography provides
-a sample reference list with entries for journal
-articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
-book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
-and a homepage~\cite{ref_url1}. Multiple citations are grouped
-\cite{ref_article1,ref_lncs1,ref_book1},
-\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
+\section{Discussion: Towards Mindful TEL}
 
+\subsection{Theory-Grounded Instructional Decisions}
+
+The results demonstrate that gTransformer addresses the accuracy--interpretability trade-off in KT by providing pedagogically grounded parameters at a minimal performance cost. This is directly relevant to the ECTEL 2026 theme of Mindful TEL: the model embodies the principle that learning technologies should be shaped with intention, ensuring that the cognitive engine of an ITS is anchored in established educational theory rather than opaque data-driven heuristics.
+
+By operationalising BKT parameters ($P_{\text{L}_0}$, $P_{\text{T}}$) derived from deep learning context, gTransformer provides educators with the diagnostic handles through which an ITS can perform mindful instruction. Rather than acting as a black box that issues recommendations without justification, the system grounds its decisions in constructs that practitioners recognise and can validate. This aligns with broader EU imperatives for explainable, accountable AI in education~\cite{Holmes2022504}, and responds directly to the concerns raised by the Artificial Intelligence Act's designation of educational AI as high-risk.
+
+\subsection{Beyond Static Labelling: Context-Aware Adaptation}
+
+A central contribution of this work is the shift from population-level labelling to situation-based diagnosis. Our results (RQ3) demonstrate that gTransformer's context-aware predictions provide a higher-resolution understanding of the learning journey than population-level models. By encoding each student's longitudinal history into personalisable parameters, the model acknowledges that students are dynamic learners whose instructional needs evolve continuously.
+
+This enables educators to identify, for instance, students with high prior knowledge but low learn rate---suggesting disengagement or instructional mismatch---and adapt the pacing accordingly before significant learning gaps emerge. Conversely, students with high prior knowledge and high learn rate can be identified for accelerated progression to prevent unnecessary remediation. This intentional design addresses essential concerns about accountability and pedagogical integrity in automated instruction.
+
+\subsection{Pedagogical Integrity and Human Agency}
+
+The triple-validation methodology (RQ2) establishes that the model's internal representations genuinely internalise pedagogical theory rather than merely correlating with it. Structural alignment confirms BKT constructs as primary organising principles; semantic alignment confirms that grounded parameters retain their pedagogical semantics; and functional alignment quantifies the confidence with which educators can trust interpretable predictions. Together, these results support the claim that gTransformer is not merely a high-performance prediction system, but a theory-grounded diagnostic tool that can serve as the cognitive foundation of responsible, human-centred ITS.
+
+%
+\section{Conclusions}
+
+This work introduces gTransformer, a Transformer-based model that bridges deep learning performance and pedagogical interpretability through \textit{representational grounding}. Our results validate the approach across three dimensions. Interpretable gTransformer predictions consistently surpass classical BKT with an average gain of 19.9\% AUC, at a low interpretability cost of 3.9\% relative to black-box architectures (RQ1). The model internalises BKT constructs as its primary organising principle in latent representations, confirmed by structural, semantic, and functional alignment (RQ2). gTransformer enables context-aware personalisation by capturing longitudinal learning patterns that Markovian models cannot represent (RQ3).
+
+As a foundation for TEL, gTransformer demonstrates that pedagogically justifiable student modeling is achievable without sacrificing the predictive power needed for effective adaptive instruction. The \textit{representational grounding} methodology is domain-independent and may be extended to other theoretical frameworks beyond BKT or to other scientific fields where established theoretical models coexist with high-volume empirical data. Future research will investigate the integration of guess and slip parameters for finer-grained personalisation and the generalisation of gTransformer to alternative educational theories.
+
+%
 \begin{credits}
-\subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is
-used for general acknowledgments, for example: This study was funded
-by X (grant number Y).
+\subsubsection{\ackname}
+This research received no external funding.
 
 \subsubsection{\discintname}
-It is now necessary to declare any competing interests or to specifically
-state that the authors have no competing interests. Please place the
-statement with a bold run-in heading in small font size beneath the
-(optional) acknowledgments\footnote{If EquinOCS, our proceedings submission
-system, is used, then the disclaimer can be provided directly in the system.},
-for example: The authors have no competing interests to declare that are
-relevant to the content of this article. Or: Author A has received research
-grants from Company W. Author B has received a speaker honorarium from
-Company X and owns stock in Company Y. Author C is a member of committee Z.
+The authors have no competing interests to declare that are relevant to the content of this article.
 \end{credits}
-%
-% ---- Bibliography ----
-%
-% BibTeX users should specify bibliography style 'splncs04'.
-% References will then be sorted and formatted in the correct style.
-%
-% \bibliographystyle{splncs04}
-% \bibliography{mybibliography}
-%
-\begin{thebibliography}{8}
-\bibitem{ref_article1}
-Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
 
-\bibitem{ref_lncs1}
-Author, F., Author, S.: Title of a proceedings paper. In: Editor,
-F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol. 9999, pp. 1--13.
-Springer, Heidelberg (2016). \doi{10.10007/1234567890}
+%
+\bibliographystyle{splncs04}
+\bibliography{biblio}
 
-\bibitem{ref_book1}
-Author, F., Author, S., Author, T.: Book title. 2nd edn. Publisher,
-Location (1999)
-
-\bibitem{ref_proc1}
-Author, A.-B.: Contribution title. In: 9th International Proceedings
-on Proceedings, pp. 1--2. Publisher, Location (2010)
-
-\bibitem{ref_url1}
-LNCS Homepage, \url{http://www.springer.com/lncs}, last accessed 2023/10/25
-\end{thebibliography}
 \end{document}
