@@ -3,6 +3,8 @@
 % Version 2.21 of 2022/01/12
 %
 \documentclass[runningheads]{llncs}
+\usepackage[markup=underlined, authormarkup=none]{changes}
+\definechangesauthor[name=Author, color=red]{del}
 %
 \usepackage[T1]{fontenc}
 % T1 fonts will be used to generate the final print and online PDFs,
@@ -39,10 +41,8 @@
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-The abstract should briefly summarize the contents of the paper in
-150--250 words.
-
-The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL. 
+\deleted[id=del]{The abstract should briefly summarize the contents of the paper in
+150--250 words.}The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL. 
 
 \keywords{deep knowledge tracing  \and theory-based interpretability \and learning theories \and intelligent tutoring systems \and user modeling  \and grounded transformers.}
 \end{abstract}
@@ -50,12 +50,22 @@ The student model serves as a cornerstone of Intelligent Tutoring Systems. In ma
 %
 %
 \section{Introduction}
+
 \subsection{Problem Statement}
-Please note that the first paragraph of a section or subsection is
+The student model serves as a cornerstone of Intelligent Tutoring Systems. 
+In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. 
+However, these traditional approaches have one significant limitations: they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. 
+
+To overcome this limitation, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories, thus providing a theoretically sound foundation for TEL. 
+
+
+
+\subsection{Template Notes}
+\deleted[id=del]{Please note that the first paragraph of a section or subsection is
 not indented. The first paragraph that follows a table, figure,
 equation etc. does not need an indent, either.
 
-Subsequent paragraphs, however, are indented.
+Subsequent paragraphs, however, are indented.}
 
 \subsubsection{Sample Heading (Third Level)} Only two levels of
 headings should be numbered. Lower level headings remain unnumbered;

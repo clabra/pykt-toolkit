@@ -8,52 +8,58 @@ The key contributions of the paper will be a new Transformer attention-based mod
 
 ## Paper Publication
 
-The paper is intended to be published in this [MDPI special issue](https://www.mdpi.com/journal/applsci/special_issues/KODK4051XS) that, ultimately, aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Its target is researchers and practitioners interested in original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts. So, the abstract should highlight the practical outcomes of the approach more than architecture approaches or technical novelties. We should try to answer the question: what can be done with our proposal than can't be done without it?.
+The paper is intended to be submitted to ECTEL 2026, the Twenty-first European Conference on Technology Enhanced Learning that this year is dedicated to this topic: "Mindful TEL: Learning Technologies Shaped with Intention". See [conference website](https://ea-tel.eu/ectel2026/cfp). 
 
-## MDPI Special Issue Information
+The European Conference on Technology-Enhanced Learning (ECTEL) engages researchers, practitioners, educational developers, entrepreneurs, industry leaders, and policy makers to address current challenges and advances in the field. ECTEL 2026 will take place on 14-18 September 2026 in Valencia, Spain. ECTEL 2026 will be a face-to-face conference.
 
-Artificial intelligence (AI) and educational data mining (EDM) are profoundly transforming the educational landscape, reshaping the paradigms of teaching and learning. AI applications in education enable the analysis of large datasets, revealing intricate patterns in student behaviour and facilitating the personalisation of learning experiences. The GED, meanwhile, provides detailed information that enables evidence-based decision-making in education. Likewise, the integration of human–computer interaction (HCI) improves the accessibility and personalisation of educational interfaces, making learning tools more intuitive and responsive, and more advanced methods, including predictive modelling and machine learning algorithms, allow educational systems to dynamically adapt to individual needs, fostering a more inclusive and learner-centred approach to education. This Special Issue calls on the academic community to examine how these technologies are driving the development of adaptive learning environments, enabling early identification of student needs and promoting accessibility and equity in education.
+## 2026 Theme 
 
-Ultimately, this Special Issue aims to compile rigorous research that explores the impact of AI, EDM and advanced technological tools on evolving educational models. Researchers and practitioners are invited to contribute original ideas that improve the effectiveness and quality of education in increasingly diverse learning contexts.
+As technology and increasingly artificial intelligence shapes how we learn, teach, and research, the challenge for the TEL community is to ensure that innovation remains purposeful and grounded in learning theories and robust evidence. The theme of ECTEL 2026 invites research work that pairs scientific rigor with reflective awareness: studies that advance the design and understanding of learning technologies while keeping human values, agency and educational purpose at the center.
 
-The scope of the Special Issue includes, but is not limited to, the following topics:
+This orientation echoes wider European work on digital citizenship in education, where technologies are framed as tools to empower learners, defend human rights and strengthen democracy (Council of Europe, 2023). At the same time, the Artificial Intelligence Act (EU) 2024/1689 explicitly classifies AI systems in education as “high-risk”, particularly those that assign, assess or monitor learners. This tension reminds us that learning technologies, including AI, are not neutral or inevitable, but must remain deliberate choices shaping the educational futures we want.
 
-- Artificial intelligence in education;
-- Educational data mining (EDM);
-- Interactive machine learning (IML);
-- Human-in-the-loop machine learning and machine teaching;
-- Educational data mining and learning analytics;
-- Predictive modelling in education;
-- Machine learning for learning analytics;
-- Neural networks in educational AI;
-- Natural language processing (NLP) in education;
-- Intelligent tutoring systems (ITS);
-- AI ethics in education;
-- Inclusion and accessibility in AI tools.
+Against this backdrop, Mindful TEL: Learning Technologies Shaped with Intention calls for research that is not just effective, but meaningful; devised and studied with intention, to enrich learning and shape education’s digital future. With decades of experience and deep, interdisciplinary expertise, the ECTEL community is eminently equipped to lead the way.
+
+## Conference Topics 
+
+We invite submissions that advance and reflect on our understanding of Technology-Enhanced Learning through the lens of purposeful design, rigorous inquiry and human-centred innovation. The topics are structured under the following four broad thematic lenses, each open to multiple research methodologies, learning contexts, and technological forms. Submissions may address but are not limited to the following:
+
+1. Theoretical, methodological and empirical foundations of TEL
+Studies examining how learning technologies intersect with pedagogy, theory and design.
+Research exploring learners’ and educators’ epistemic and metacognitive agency in TEL systems.
+Methodological contributions and empirical investigations that contribute robust evidence of “what works” and “why” in TEL.
+2. Technologies, tools and interfaces in TEL
+Design, implementation and evaluation of digital systems (including AI-mediated, immersive, mobile, adaptive) for learning, with a focus on purpose and impact.
+Investigations of human-technology collaboration, agency, transparency and trust in TEL environments.
+Issues of interoperability, scalability, sustainability, data-driven insight and real-world integration.
+3. Contexts, practices and learning ecologies
+Studies across educational levels (K-12, higher education, lifelong learning, informal and non-formal) and diverse global, institutional, cultural settings.
+Research on teacher/practitioner professional agency, institutional designs and ecosystem roles in enabling meaningful TEL.
+Explorations of how TEL practices, environments and stakeholders are shaped and reshaped in current and future learning ecologies.
+4. Societal, ethical, policy and equity dimensions
+Issues of fairness, inclusion, accessibility, digital/AI literacy, and power relations in TEL.
+Research examining governance, policy and institutional agency that enable responsible, human-centred TEL.
+Critical reflection on the impact of TEL innovations on human values, trust, sustainability and the broader educational mission.
+We encourage authors to frame their work in relation to how it contributes to shaping technology for meaningful learning, how it designs with intention, and how it brings rich new insights, not merely novelty. Studies that combine technological innovations with pedagogical depth, reflection, and real-world relevance are particularly welcome.
+
+## Submission Formats
+
+Full research papers (8-15 pages, including references). 
+
+Research papers are expected to be mature research contributions to the field of technology-enhanced learning. Full research papers should clearly define research objectives and questions that fit within the scope of the conference and its topics. In addition, research papers should discuss the state-of-the-art in the area in which the work is framed, how the new proposal advances state of the art, present an appropriate research methodology, as well as present and discuss the results of the research conducted. Preliminary results or work in progress will likely not meet the bar for a full research paper contribution, but fit well in the poster paper category. Research papers should highlight their novelty and contribution to the field, as well as their fit within the scope of this year’s conference. It is important for ECTEL 2026 research papers to address and integrate aspects of technology and learning rather than focusing on one or the other.
+
+Accepted full research papers will be published in LNCS Springer Conference Proceedings.
 
 ## Paper Abstract
 
-"Knowledge Tracing, which enables the estimation of how students' knowledge evolves as they interact with educational content, is a cornerstone of intelligent tutoring systems. Traditional approaches coexist with deep knowledge tracing models that deliver better predictions but suffer from a critical drawback: lack of interpretability, which is particularly problematic in educational contexts. To overcome this limitation, we propose gTransformer, a novel model that unifies the high predictive performance of deep learning with the intrinsic interpretability of traditional approaches like Bayesian Knowledge Tracing. Our design employs an encoder-decoder Transformer that enriches input sequences with parameter estimates from the interpretable model. Attention mechanisms integrate these embeddings into a latent context vector, which is projected into updated parameter values constrained to remain semantically grounded to educational constructs while incorporating rich temporal dependencies learned by the network. These enriched parameters then drive predictions through interpretable Bayesian logic. Experiments demonstrating state-of-the-art accuracy show that our model achieves superior diagnostic granularity by identifying student-specific parameters—such as initial knowledge and learning rates—that capture individual longitudinal contexts. By anchoring deep representations to defined concepts, gTransformer offers a pedagogically interpretable alternative for data-driven personalization."
-
-## Reviewers
-
-The focus of the paper is Education and practical applications more the Deep Learning specialists. Use rigurous, well-established practices and methodologies in deep knowledge tracing, avoiding methodological approaches that sound unfamiliar, unclear or risky. The contributions to this special issue have to be practical more than about methodology innovations 
+"The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL."
 
 
 ## Reference Documents
 
-- `papers-pykt` folder contains papers for most of the models included in `pykt/models`
-- `assistant/taxonomy.md` - a taxonomy to classify attention-based models, most of them are included in the `pykt` framework, so the code can be found in the `pykt/models` folder
-- `assistant/quickstart.pdf` - explains how to train and evaluate models, follow these guidelines when it comes to generating scripts for training and testing
-- `assistant/contribute.pdf` - explains how to proceed to add new models and datasets, follow these guidelines when it comes to code generation, scripts, and documentation
-- `assistant/datasets.pdf` - explains datasets used in the pykt-toolkit framework and how to get them
-- `assistant/models.pdf` - prvides a list with a description and a paper for each model in `pykt/models`. Many of the cited papers can be found in `papers-pykt` folder
+- `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it.  
+- `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. 
 
-## Datasets
-
-- `/data`: Processed datasets ready for training
-- `/data_original`: Raw datasets (do not modify)
-- `assistant/datasets.md`: details about some datasets that we'll use to test models, and an explanation of `data/[DATASET]/keyid2idx.json`, a bidirectional mapping dictionary that converts between original dataset IDs and zero-based sequential indices used internally by the pykt framework.
 
 ## Environment Setup
 
@@ -74,22 +80,6 @@ To launch commands properly, follow these steps:
     docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/run_repro_experiment.py ..."
     ```
 
-### GPU Resources
-The machine has 8 GPUs.
-- **Standard Allocation**: Use 5 GPUs for training runs (e.g., `CUDA_VISIBLE_DEVICES=0,1,2,3,4`).
-- **Monitoring**: Always verify GPU availability before launching multi-GPU experiments.
-
-## Reproducibility
-
-We treat every training or evaluation run as a formal experiment requiring full reproductibility as detailed in `examples/reproducibility.md`. All default values for parameters should be specified in a single source of truth: `configs/parameter_default.json`. CLI flags override individual defaults; absence of a CLI flag implies the default recorded in the experiment's `config.json` (no hidden or implicit defaults allowed). The following standards must be met for an experiment to be considered reproducible.
-
-We want to avoid the risks of having parameter defaults hardcoded. Changes in hardcoded values would not be reflected unless parameter_default.json is manually update first; moreover, evaluation could keep using another values, producing divergent checkpoints and invalid reproducibility claims. Hard-coding also prevents per-experiment architectural variation via overrides.
-
-when you change any parameter default value (the reference values are in paper/parameters.cvs) follow guidelines in "Parameter Evolution Protocol" section.
-
-## Ablation Studies
-
-See `assistant/ablation.md` for guidelines on how to augment or modify the model code in order to be able to properly perform ablation studies.
 
 ## Important Constraints
 
@@ -98,64 +88,35 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - Do NOT modify existent files in `/data` directory (only modify files created for the new model/s)
 - DO NOT modify existent models in `pykt/models` (only the new created model/s). The code and scripts for existent models in the pykt framework mustn't be changed. We only want to contribute a new model, without modifing existent ones.
 - DO NOT modify scripts in examples such as wandb_train.py, wandb_predict.py or wandb_[model_name]_train.py that are use by pykt framework to train and evaluate models. 
+
 ## Guidelines
 
-### pykt Standards
+### Objective
 
-- We are creating a new model to contribute to the pykt framework. Follow guidelines in `assistant/contribute.pdf` and `assistant/quickstart.pdf` when it comes to create model code, training and evaluation scripts, model parameters, etc, following pykt standards.
-- Most scripts are in `examples` folder
-- New files and scripts that don't adhere to the standard guidelines described in `assistant/contribute.pdf` and `assistant/quickstart.pdf` should be created in the `pykt-toolkit/tmp` dir. Create them only when it's neccessary; if they are temporal or merely informative, perhaps is enough with providing the apporpiate feedback without the need of create too many new files. The objective is maintain the original structure as similar as possible to that in the `main` branch while isolating auxiliary files in `pykt-toolkit/tmp` folder. This way it will be easier to do contributions to the upstream repo from which we forked.
-
-### Operational standards
-
-- Training and evaluation should be launched using the commands described in `examples/reproducibility.md`
-- Avoid launching commands that terminate scripts tha are running in the terminal
-- Launch scripts in such a way that we leverage available GPUs (around 75% if not set otherwise) and CPUs (around 75% of CPU power)
+Create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 1 will be a full research paper with 8-15 pages, including references. 
 
 ### Code and Style Guidelines
 
-- Code documentation should include usage examples
 - Use markdown format for documentation files
 - Use an academic professional tone, avoiding the use of emojis, icons, exclamations, informal language or marketing jargon. 
 - Use "we" instead of "you" following academic writing conventions.
 - Avoid the use of em dash and other similar characters that I don't use in my writing.
 - Ensure that all documentation is clear, concise, and accessible to a PhD-level audience.
 - If you need to create new documentation files, create them in `./tmp`folder, unless I specifically ask for them.
-- Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits.
-- After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in `examples/reproducibility.md` to propagate the changes in order to have proper reproducibility guarantees.
-- When creating or updating plans don't include time estimations
 - Only do commits when I ask for. In general, I prefer to commit after testing with experiments. Don't add nothing to the commit unless it is explicitly asked for.
-- In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions, in case something doesn't match what is expected.
-- Don't update early models such as idkt for instance. They are deprecated in favour of current model. 
 - You are allowed to access tmp folder and log files. Don't ask for permission each time. 
 - The language should consistently focus on observable learning patterns (learning rate, prior knowledge, progress) rather than potentially fixed traits (capacity, ability), making it clear that the model is a tool for adaptive instruction rather than student categorization. This approach ensures the research maintains its educational mission: supporting better learning outcomes through adaptive instruction, not creating new ways to categorize or limit students. Specific Terminology:
     - Use "learning rate" instead of "capacity"
     - Use "learning situations" instead of "student archetypes" or "cognitive profiles"
     - Use "prior knowledge" instead of "cognitive profile"
     - Focus on what educators can do (provide support, accelerate pacing, prevent unnecessary remediation) rather than what students are
-- If code or scripts need something and don't have or find it, then throw an exception and fail ASAP. Avoid fallbacks that hide error or produce unrealiable results. 
 
-
-## Models architecture and implementation
-
-- `assistant/newmodel.md`: points to the doc containing the description of current version of the model being developed and tested
-- `paper/bkt.md`: Bayesian Knowledge Tracing (BKT) theory and principles
 
 ## Instructions
 
-Your are an expert in deep learning models applied to knowledge tracing. You are also an expert in the field of knowledge tracing, educational assessment, statistics and machine learning, with a strong background in experimental design and reproducibility. You know the pykt-toolkit framework aimed to implement and compare many deep kwnowledge tracing models.
+Your are an expert in deep learning models applied to knowledge tracing. You are also an expert in the field of  Intelligent Tutoring Systems, student modeling, learning theories, statistics and machine learning, with a strong background in experimental design and reproducibility. You know the pykt-toolkit framework aimed to implement and compare many deep kwnowledge tracing models.
 
 ### Role-Specific Guidelines
-
-#### 👨‍💻 For Coding & Implementation
-
-When you are writing or fixing code (Coder Agent):
-
-- The code of the models are in `pykt/models`. The scripts to train and evaluate them in `examples`. The papers about these models can be found in `bibliography/papers-pykt`.
-- Prioritize modifications in `pykt/models` for model architecture but only for new models we are implementing, not for existent models.
-- Follow the stricter `assistant/contribute.pdf` guidelines for code style.
-- **Do not** modify the `data_original` directory.
-- Always run a small test script (e.g., in `tmp/`) before committing major changes.
 
 #### 📝 For Documentation & Writing
 
@@ -163,41 +124,10 @@ When you are updating the paper or documentation (Writer Agent):
 
 - Use the academic "we" instead of "you".
 - Maintain a tone suitable for a PhD-level audience.
-- The paper master is the `paper/latex/paper.tex` file, in Latex format.
-- The folder `paper/` contains also other auxiliar files for the paper, such as the bibliography file `paper/latex/biblio.bib` and `paper/gtransformer.md` containing a detailed description of our approach, including the gtransformer model implemented in `pykt/models/gtransformer.py`, scripts to run experiments in `pykt/examples` and results of the experiments in `experiments` folder. **Most of the information in the latex paper is based on teh info in this file**.
-- Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper/latex/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.
+- The paper master is the `paper_ectel/ectel_template/paper.tex` file, in Latex format.
+- The folder `paper_ectel/ectel_template` contains also other auxiliar files for the paper, such as the bibliography file `paper_ectel/ectel_template/biblio.bib`. 
+- Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper_ectel/ectel_template/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.
 
-#### 📊 For Experiments & Reproducibility
-
-When you are running experiments (Experiment Agent):
-
-- Follow `assistant/quickstart.pdf` guidelines.
-- Ensure all default parameters are in `configs/parameter_default.json`.
-- Use `configs/data_config.json` for datasets path and configuration.
-- Strictly following the reproducibility protocol in `examples/reproducibility.md`.
-- For gtransformer model, the metric we use is test auc question-level average late-fusion
-
-## Proofreading
-
-MDPI editors have included these instructions in the latest version of the manuscript, which is currently undergoing proofreading: 
-
-```latex
-%MDPI: Notes for Authors
-%1. The paper was edited by our English editor, please check the whole text and confirm if your meaning is retained.
-%2. Do not delete any comment we left for you and reply to each comment so that we can understand your meaning clearly.
-%3. Please directly correct on this version. If you need to revise somewhere in your paper, please highlight the revisions and track changes to make us known.
-%4. Please finish the proofreading based on this version.
-%5. Please make sure that all the symbols in the paper are of the same format.
-%6. Please confirm and revise all the comments with “Revised”, “It should be italic”; “I confirm xx is correct”; “I have checked and revised all.” , etc.“
-%(Thank you for your cooperation in advance.)
-%We have done layout for your paper, so please do not change the format of references.
-```
-
-To answer them, I'l use this: 
-
-```latex
-%AuthorsAnswers: OK. I'll mark my comments with %AuthorsAnswer
-```
 
 ### Rules
 
@@ -211,14 +141,44 @@ Some specially important rules are:
 - Mathematical symbols that appear between two numbers should have a space on either side, such as in “a = 2b”. Do not leave a space around mathematical operators in subscripts and superscripts, e.g., an+1, and also do not leave a space around other expressions in subscripts and superscripts, unless doing so would lead to confusion or misreading, e.g., E365nm. Do not leave a space where there is only one number, e.g., “the number of samples in each case was >50”. Do not include a space when writing ratios, e.g., 1:100. Decimals need to be completed; e.g., a = .01 should be written as a = 0.01. Use scientific notation, i.e., a × 10b rather than aEb or aeb. Leave a space before or after trigonometric function, e.g., cos Θ, cot Θ, sin Θ, tan Θ, sec Θ, csc Θ, etc.
 - Equations. You may include appropriate equations in your manuscript. They may be included inline or as a separate paragraph. Non-inline equations may be numbered starting from 1 (do not include a section number), e.g., Equation (1). In the appendixes, all equations should be prefixed with A and in the supplementary information with S, e.g., Equation (A1), Equation (S1). Subequations are not recommended; if necessary, they should be cited, for example, as Equation (1a). Minor or trivial equations do not necessarily need to be numbered, at the discretion of the author. In derivations involving multiple steps, obvious intermediate results may be omitted. Punctuate equations as part of a regular sentence. For example, if the equation comes at the end of a sentence, a period should be placed immediately after the equation. It is not necessary to always use a colon to end the paragraph before an equation. If the equation is followed by “where . . . ” to define the symbols used, “where” should be all lower case and flushed to the margin (without first line indentation) to indicate that it does not begin a new paragraph. All terms used in an equation should be defined in the text. It is highly recommended to check specifically for this during proofreading before submission, as undefined terms could lead reviewers and editors to misinterpret your meaning. Additionally, be aware of multiply defined symbols, and we recommend using standard notation in the field where it exists (e.g., P for a probability function). The format (italics/non-italics) of each character in an Equation should be consistent with the main text. Symbols used in equations should use italic font, although exceptions will be permitted where there is a convention not to use italics. Words and numbers in equations should not use italic font. 
 
-### MDPI Style Guide 
 
-The Style Guidefor authors can be found here: 
-https://www.mdpi.com/authors/layout#_bookmark12
+### ECTEL Guidelines 
 
-### MDPI Mathematical Content Guidelines
+In case of conflict, the guidelines in this section have priority over the ones in "### Rules" section. 
 
-See math_guidelines.md and mdpi_math_content_checklist.md for more information. The second essentially expands the rules in math_guidelines.md with the specific technical rigor required for an MDPI submission in this field.
+#### Sample Heading (Third Level)
+Only two levels of headings should be numbered. Lower level headings remain unnumbered; they are formatted as run-in headings.
+
+##### Sample Heading (Fourth Level)
+The contribution should contain no more than four levels of headings. Table 1 gives a summary of all heading levels.
+
+**Table 1.** Table captions should be placed above the tables.
+
+| Heading level | Example | Font size and style |
+|---|---|---|
+| Title (centered) | **Lecture Notes** | 14 point, bold |
+| 1st-level heading | **1 Introduction** | 12 point, bold |
+| 2nd-level heading | **2.1 Printing Area** | 10 point, bold |
+| 3rd-level heading | **Run-in Heading in Bold.** Text follows | 10 point, bold |
+| 4th-level heading | *Lowest Level Heading.* Text follows | 10 point, italic |
+
+Displayed equations are centered and set on a separate line.
+
+$$x + y = z$$
+
+Please try to avoid rasterized images for line-art diagrams and schemas. Whenever possible, use vector graphics instead.
+
+> **Theorem.** *This is a sample theorem. The run-in heading is set in bold, while the following text appears in italics. Definitions, lemmas, propositions, and corollaries are styled the same way.*
+
+> *Proof.* Proofs, examples, and remarks have the initial word in italics, while the following text appears in normal font.
+
+For citations of references, we prefer the use of square brackets and consecutive numbers. Citations using labels or the author/year convention are also acceptable. The following bibliography provides a sample reference list with entries for journal articles [1], an LNCS chapter [2], a book [3], proceedings without editors [4], and a homepage [5]. Multiple citations are grouped [1–3], [1, 3–5].
+
+#### Acknowledgements
+A bold run-in heading in small font size at the end of the paper is used for general acknowledgments, for example: This study was funded by X (grant number Y).
+
+#### Disclosure of Interests
+It is now necessary to declare any competing interests or to specifically state that the authors have no competing interests. Please place the statement with a bold run-in heading in small font size beneath the (optional) acknowledgments (if EquinOCS is used, the disclaimer can be provided directly in the system), for example: The authors have no competing interests to declare that are relevant to the content of this article. Or: Author A has received research grants from Company W. Author B has received a speaker honorarium from Company X and owns stock in Company Y. Author C is a member of committee Z.
 
 ## Copyright and License
 
