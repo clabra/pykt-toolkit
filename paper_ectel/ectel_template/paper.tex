@@ -80,12 +80,9 @@ We situate gTransformer within the Informed Machine Learning (IML) framework~\ci
 \end{equation}
 where $\mathcal{L}_{\text{TRN}}$ measures supervised error and $\mathcal{L}_{\text{THEORY}}$ penalises violations of theoretical constraints, weighted by $\gamma$. While most IML approaches use prior knowledge to maximise predictive accuracy, gTransformer aims to achieve theory-based interpretability while maintaining competitive performance.
 
-%
-\section{The gTransformer Model}
+\subsection{Grounded Transformers}
 
-\subsection{Architecture}
-
-Figure~\ref{fig_arch} illustrates the information flow through gTransformer, mapped to the IML taxonomic dimensions. Student interaction histories are augmented with BKT theoretical priors ($P(\text{L}_0)$, $P(\text{T})$ per skill), encoding prior knowledge directly into the model's input representations. These enriched sequences are processed through an attention-based encoder--decoder Transformer backbone that captures long-range temporal dependencies. The key architectural contribution is a projection module that maps the final context vectors $\mathbf{z}_t$ to student-specific BKT parameter estimates ($p_{\text{L}_0}$, $p_{\text{T}}$), which are then passed through BKT forward logic to generate interpretable mastery predictions.
+Grounded Transformers~\cite{labra2026theory} are Knowledge Tracing models designed to bridge deep learning performance and pedagogical interpretability through \textit{representational grounding}: their internal representations are explicitly anchored to the interpretable parameters of a reference theoretical model. Figure~\ref{fig_arch} illustrates the information flow through gTransformer, a Grounded Transformer architecture, mapped to the IML taxonomic dimensions. Student interaction histories are augmented with BKT theoretical priors ($P(\text{L}_0)$, $P(\text{T})$ per skill), encoding prior knowledge directly into the model's input representations. These enriched sequences are processed through an attention-based encoder--decoder Transformer backbone that captures long-range temporal dependencies. A projection module maps the final context vectors $\mathbf{z}_t$ to student-specific BKT parameter estimates ($p_{\text{L}_0}$, $p_{\text{T}}$), which are then passed through BKT forward logic to generate interpretable mastery predictions.
 
 \begin{figure}[t]
 \centering
@@ -94,8 +91,7 @@ Figure~\ref{fig_arch} illustrates the information flow through gTransformer, map
 \label{fig_arch}
 \end{figure}
 
-\subsection{Multi-Objective Loss Function}
-
+\paragraph{Multi-Objective Loss Function.}
 The model is trained with a multi-objective loss function that balances predictive accuracy with pedagogical grounding:
 \begin{equation} \label{eq_loss}
 \mathcal{L} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}
@@ -103,22 +99,22 @@ The model is trained with a multi-objective loss function that balances predicti
 where $\mathcal{L}_{\text{sup}}$ is the binary cross-entropy on supervised predictions, $\mathcal{L}_{\text{ref}}$ is the cross-entropy on interpretable BKT-based predictions to anchor outputs to the reference model, and $\mathcal{L}_{\text{probe}}$ is an auxiliary loss that encourages latent representations to encode BKT parameters in a linearly recoverable manner. The hyperparameters $\lambda_{\text{sup}}$, $\lambda_{\text{ref}}$, $\lambda_{\text{probe}}$ govern the trade-off between performance and interpretability.
 
 %
-\section{Experimental Evaluation}
+\section{User Models based on Grounded Transformers}
 
-\subsection{Datasets, Baselines, and Methodology}
+Intelligent Tutoring Systems are typically structured around three interacting components: the \textit{domain model}, which encodes the knowledge to be taught; the \textit{user model}, which tracks the learner's evolving state; and the \textit{tutorial model}, which mediates instructional decisions. This section examines how gTransformer~\cite{labra2026theory} instantiates each of these three components, evaluating its capacity to serve as the cognitive foundation of a theory-grounded ITS.
+
+\subsection{Experimental Setup}
 
 We evaluate gTransformer on five benchmark datasets with explicit knowledge component mappings: ASSISTments 2009 (AS2009, 4,217 students, 123 skills), ASSISTments 2015 (AS2015, 19,917 students, 100 skills), Algebra 2005 (AL2005, 574 students, 112 skills), Bridge to Algebra 2006 (BDG2006, 1,146 students, 493 skills), and NeurIPS 2020 Education Challenge (NIPS34, 4,918 students, 57 skills). We follow a standard five-fold cross-validation with an 80/20 train/test split, measuring performance via AUC using the question-level mean late-fusion protocol~\cite{liu2022pykt}. Baselines include DKT~\cite{piech2015deep}, DKVMN~\cite{zhang2017dynamic}, SAKT~\cite{Pandey2019384}, SAINT~\cite{choi2020towards}, AKT~\cite{ghosh2020context}, and ATKT~\cite{GuoHZTL21}.
 
-To quantify the performance--interpretability trade-off (RQ1), we define three metrics. Let $p_{\text{sup}1}$ be ablated (non-grounded) supervised predictions, $p_{\text{sup}2}$ grounded supervised predictions, $p_{\text{ref}}$ interpretable BKT-based predictions, and $p_{\text{bkt}}$ classical BKT predictions:
+\subsection{User Model: Theory-Grounded Knowledge Tracing}
+
+To quantify gTransformer's performance as a user model and the cost of pedagogical grounding, we define three metrics. Let $p_{\text{sup}1}$ be ablated (non-grounded) supervised predictions, $p_{\text{sup}2}$ grounded supervised predictions, $p_{\text{ref}}$ interpretable BKT-based predictions, and $p_{\text{bkt}}$ classical BKT predictions:
 \begin{align}
 \mathcal{I}_{\text{drop}} &= p_{\text{sup}1} - p_{\text{sup}2} \quad\text{(cost of grounding on neural capacity)} \\
 \mathcal{I}_{\text{cost}} &= p_{\text{sup}2} - p_{\text{ref}}   \quad\text{(cost of switching to interpretable logic)} \\
 \mathcal{I}_{\text{gain}} &= p_{\text{ref}} - p_{\text{bkt}}   \quad\text{(advantage over population-level BKT)}
 \end{align}
-
-To verify grounded interpretability (RQ2), we implement a triple-validation methodology: (H2.1)~Structural Alignment, assessed via diagnostic probing~\cite{hewitt2019designing,belinkov2022probing} measuring the linear recoverability of BKT constructs from hidden states; (H2.2)~Semantic Alignment, assessed via Spearman's rank correlation ($\rho$) between grounded parameters and theoretical priors; and (H2.3)~Functional Alignment, assessed via a composite confidence metric quantifying the reliability of interpretable predictions as substitutes for supervised ones.
-
-\subsection{RQ1: Performance--Interpretability Trade-Off}
 
 Table~\ref{tab_performance} shows the comparative performance of gTransformer against baselines in the ablated (non-grounded) configuration. gTransformer achieves the best AUC on AS2009, ranks second on AL2005, BDG2006, and NIPS34, and third on AS2015, demonstrating that the architecture is competitive with the state of the art.
 
@@ -165,9 +161,9 @@ Mean    & 0.7861 & 0.7843 & 0.7530 & 0.6449 & 0.2\% & 3.9\% & 19.9\% \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ2: Grounded Interpretability}
+\subsection{Domain Model: Validating Theoretical Grounding}
 
-We validate grounded interpretability using AS2009 as the reference dataset.
+To verify that gTransformer's internal representations are genuinely grounded in the domain model (BKT), we implement a triple-validation methodology: (H2.1)~Structural Alignment, assessed via diagnostic probing~\cite{hewitt2019designing,belinkov2022probing} measuring the linear recoverability of BKT constructs from hidden states; (H2.2)~Semantic Alignment, assessed via Spearman's rank correlation ($\rho$) between grounded parameters and theoretical priors; and (H2.3)~Functional Alignment, assessed via a composite confidence metric quantifying the reliability of interpretable predictions as substitutes for supervised ones. We validate using AS2009 as the reference dataset.
 
 \paragraph{Structural Alignment (H2.1).}
 Using diagnostic probing, we assess whether BKT constructs are linearly recoverable from final hidden states. Initial Mastery achieves fidelity $R^2 = 0.549$ ($r = 0.743$) with selectivity $\Delta R^2 = 0.619$, exceeding the 0.5 threshold that distinguishes genuine structural encoding from spurious correlations. Learn Rate achieves $R^2 = 0.515$ ($\Delta R^2 = 0.570$). These results confirm that BKT constructs are preserved as primary organising principles in the latent space.
@@ -178,9 +174,15 @@ Initial Mastery shows weaker monotonic alignment with theoretical priors ($\rho 
 \paragraph{Functional Alignment (H2.3).}
 A composite confidence metric shows that 89.2\% of student--skill pairs achieve medium or high confidence in interpretable predictions, indicating that theory-grounded outputs provide actionable diagnostic value.
 
-\subsection{RQ3: Context-Aware Personalisation}
+\subsection{Tutorial Model: Situation-Based Instruction}
 
-To demonstrate gTransformer's capacity for context-aware personalisation, we cluster students in AS2009 along two dimensions---initial mastery ($p_{\text{L}_0}$) and learn rate ($p_{\text{T}}$)---identifying four learning situations: (1)~low initial mastery/low learn rate, (2)~low initial mastery/high learn rate, (3)~high initial mastery/low learn rate, and (4)~high initial mastery/high learn rate.
+The theory-grounded parameters produced by gTransformer---student-specific estimates of initial mastery ($p_{\text{L}_0}$) and learn rate ($p_{\text{T}}$)---provide the diagnostic handles through which an ITS tutorial model can implement \textit{situation-based instruction}. Rather than applying a uniform instructional strategy, the tutorial model can route each student to a differentiated instructional pathway based on their learning situation as identified by gTransformer. The following section describes how this routing is operationalised through context-aware personalisation.
+
+%
+\section{Context-Aware Personalisation}
+\label{sec_personalisation}
+
+A key contribution of this work is demonstrating how gTransformer enables the ITS tutorial model to move from population-level strategies towards situation-based, context-aware instruction. We cluster students in AS2009 along two dimensions---initial mastery ($p_{\text{L}_0}$) and learn rate ($p_{\text{T}}$)---identifying four learning situations: (1)~low initial mastery/low learn rate, (2)~low initial mastery/high learn rate, (3)~high initial mastery/low learn rate, and (4)~high initial mastery/high learn rate. Each situation calls for a distinct tutorial strategy: students in situation (1) require targeted scaffolding; those in situation (4) are ready for accelerated pacing; intermediate situations benefit from adjusted challenge levels or motivational support.
 
 Figure~\ref{fig_mosaic} shows mastery trajectories for students who provide identical response sequences to the same questions but belong to different learning situations. Classical BKT predictions (dotted grey lines) overlap perfectly, reflecting its Markovian constraint: given the same response sequence, BKT produces identical probability estimates regardless of learning history. gTransformer predictions (solid coloured lines) diverge based on the full interaction history, demonstrating the model's capacity to differentiate students not by what they answered, but by how they have learned across their entire trajectory.
 
@@ -190,6 +192,8 @@ Figure~\ref{fig_mosaic} shows mastery trajectories for students who provide iden
 \caption{\textbf{Context-aware prediction mosaic.} Each panel shows students with identical response sequences (green/red bars for correct/incorrect responses) but different learning situations. BKT predictions (dotted grey) overlap due to Markovian constraints; gTransformer predictions (solid coloured) diverge based on historical parameters ($p_{\text{L}_0}$, $p_{\text{T}}$). Circles indicate predicted correct responses; crosses indicate predicted failures.}
 \label{fig_mosaic}
 \end{figure}
+
+This divergence has direct implications for the tutorial model. Each student interaction event can be routed to a different instructional pathway based on the learning situation assigned by gTransformer. A student whose trajectory places them in situation (1) triggers a scaffolding strategy; a student in situation (4) is routed towards accelerated content progression. Crucially, this routing is not static: as new interactions arrive, gTransformer updates its parameter estimates from the full longitudinal context, allowing the tutorial model to dynamically reassign students across situations as their learning trajectory evolves. This event-driven, context-aware routing is precisely what population-level models such as standard BKT cannot support---two students with an identical recent response pattern may receive different instructional interventions if their prior histories place them in different learning situations.
 
 %
 \section{Discussion}
@@ -202,7 +206,7 @@ By operationalising BKT parameters ($P_{\text{L}_0}$, $P_{\text{T}}$) derived fr
 
 \subsection{Beyond Static Labelling: Context-Aware Adaptation}
 
-A central contribution of this work is the shift from population-level labelling to situation-based diagnosis. Our results (RQ3) demonstrate that gTransformer's context-aware predictions provide a higher-resolution understanding of the learning journey than population-level models. By encoding each student's longitudinal history into personalisable parameters, the model acknowledges that students are dynamic learners whose instructional needs evolve continuously.
+A central contribution of this work is the shift from population-level labelling to situation-based diagnosis. The results presented in Section~\ref{sec_personalisation} demonstrate that gTransformer's context-aware predictions provide a higher-resolution understanding of the learning journey than population-level models. By encoding each student's longitudinal history into personalisable parameters, the model acknowledges that students are dynamic learners whose instructional needs evolve continuously.
 
 This enables educators to identify, for instance, students with high prior knowledge but low learn rate---suggesting disengagement or instructional mismatch---and adapt the pacing accordingly before significant learning gaps emerge. Conversely, students with high prior knowledge and high learn rate can be identified for accelerated progression to prevent unnecessary remediation. This intentional design addresses essential concerns about accountability and pedagogical integrity in automated instruction.
 
@@ -213,7 +217,7 @@ The triple-validation methodology (RQ2) establishes that the model's internal re
 %
 \section{Conclusions}
 
-This work introduces gTransformer, a Transformer-based model that bridges deep learning performance and pedagogical interpretability through \textit{representational grounding}. Our results validate the approach across three dimensions. Interpretable gTransformer predictions consistently surpass classical BKT with an average gain of 19.9\% AUC, at a low interpretability cost of 3.9\% relative to black-box architectures (RQ1). The model internalises BKT constructs as its primary organising principle in latent representations, confirmed by structural, semantic, and functional alignment (RQ2). gTransformer enables context-aware personalisation by capturing longitudinal learning patterns that Markovian models cannot represent (RQ3).
+This work demonstrates how gTransformer~\cite{labra2026theory}, a Grounded Transformer that bridges deep learning performance and pedagogical interpretability through \textit{representational grounding}, can serve as the cognitive foundation of a theory-grounded ITS. We evaluated its capacity to instantiate the three core ITS components. As a user model, interpretable gTransformer predictions consistently surpass classical BKT with an average gain of 19.9\% AUC, at a low interpretability cost of 3.9\% relative to black-box architectures. As a domain model, gTransformer internalises BKT constructs as its primary organising principle in latent representations, confirmed by structural, semantic, and functional alignment. As a tutorial model foundation, gTransformer enables context-aware, situation-based instruction by capturing longitudinal learning patterns that Markovian models cannot represent.
 
 As a foundation for TEL, gTransformer demonstrates that pedagogically justifiable student modeling is achievable without sacrificing the predictive power needed for effective adaptive instruction. The \textit{representational grounding} methodology is domain-independent and may be extended to other theoretical frameworks beyond BKT or to other scientific fields where established theoretical models coexist with high-volume empirical data. Future research will investigate the integration of guess and slip parameters for finer-grained personalisation and the generalisation of gTransformer to alternative educational theories.
 
