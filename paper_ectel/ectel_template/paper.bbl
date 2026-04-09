@@ -65,6 +65,11 @@ Ines, {\v{S}ari\'c-Grgi\'c}., Ani, G., Angelina, G.: Twenty-five years of
   User-Adapted Interaction  \textbf{34}(4),  1127 – 1173 (2024).
   \doi{10.1007/s11257-023-09389-4}, cited by: 16
 
+\bibitem{labra2026theory}
+Labra, C., Santos, O.C.: Theory-based interpretability in deep knowledge
+  tracing via grounded transformers. Applied Sciences  \textbf{16}(7), ~3138
+  (2026)
+
 \bibitem{liu2022pykt}
 Liu, Z., Liu, Q., Chen, J., Huang, S., Tang, J., Luo, W.: pykt: a python
   library to benchmark deep learning based knowledge tracing models. Advances
@@ -80,18 +85,6 @@ Pandey, S., Karypis, G.: A self-attentive model for knowledge tracing. In:
 Piech, C., Bassen, J., Huang, J., Ganguli, S., Sahami, M., Guibas, L.J.,
   Sohl-Dickstein, J.: Deep knowledge tracing. Advances in neural information
   processing systems  \textbf{28} (2015)
-
-\bibitem{Romero2020}
-Romero, C., Ventura, S.: Educational data mining and learning analytics: An
-  updated survey. Wiley Interdisciplinary Reviews: Data Mining and Knowledge
-  Discovery  \textbf{10}(3) (2020). \doi{10.1002/widm.1355},
-  \url{https://www.scopus.com/inward/record.uri?eid=2-s2.0-85078249045&doi=10.1002%2fwidm.1355&partnerID=40&md5=49fd0ecad9aa4817ca616bd1bcd24532},
-  cited by: 759; All Open Access, Green Open Access
-
-\bibitem{vaswani2017attention}
-Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N.,
-  Kaiser, {\L}., Polosukhin, I.: Attention is all you need. Advances in neural
-  information processing systems  \textbf{30} (2017)
 
 \bibitem{vonrueden2021informed}
 Von~Rueden, L., Mayer, S., Beckh, K., Georgiev, B., Giesselbach, S., Heese, R.,

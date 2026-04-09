@@ -93,7 +93,19 @@ To launch commands properly, follow these steps:
 
 ### Objective
 
-Create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 1 will be a full research paper with 8-15 pages, including references. 
+Create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
+
+In paper 2 we are not going to present gTransformer as a contribution since this was made in paper 1 (MDPI). We will talk about grounded transformers and reference paper 1. We will explain what are grounded transformers but they are not a contribution of this paper 2. The contributions of paper 2 are about how to leverage grounded transformers for better user modeling. Take into account also "### Double-blind Review" so talk about grounded transformers about the work of others. 
+
+### Double-blind Review
+
+All papers submitted to ECTEL, except Doctoral Consortium submissions, will be reviewed through a double-blind review process, meaning that author names are not disclosed to the reviewers and reviewer names are not disclosed to the authors.
+
+For this purpose, authors must submit their manuscript:
+
+- without any reference to themselves and their institutions;
+- without any URLs to projects, products or self-developed systems;
+- with relevant self-references blinded or written in the third person.
 
 ### Code and Style Guidelines
 

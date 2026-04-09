@@ -32,16 +32,30 @@ The student model serves as a cornerstone of Intelligent Tutoring Systems. In ma
 %
 \section{Introduction}
 
-Knowledge Tracing (KT)~\cite{corbett1994knowledge} is a foundational problem in Intelligent Tutoring Systems (ITS) and Learning Analytics~\cite{Romero2020} aimed at estimating the evolution of student knowledge as they interact with a sequence of educational items. Accurate mastery tracking enables data-driven personalisation, yet current approaches are caught in a dichotomy between interpretable but rigid probabilistic models and high-accuracy but opaque Deep Knowledge Tracing (DKT) architectures~\cite{abdelrahman2023knowledge,vaswani2017attention}. While recent efforts have sought to bridge this gap, they generally do not aim for interpretability grounded in pedagogical principles~\cite{bai2024survey,vonrueden2021informed}. In a high-stakes domain such as education, where the Artificial Intelligence Act (EU) 2024/1689 explicitly classifies AI systems that assess or monitor learners as high-risk, this lack of transparency raises critical concerns about accountability and trust~\cite{Holmes2022504}.
+\subsection{Problem Statement}
+The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing (KT)~\cite{corbett1994knowledge} approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there.
 
-To address these limitations, we introduce gTransformer, a Transformer-based model that bridges the gap between deep learning performance and pedagogical interpretability through \textit{representational grounding}: a methodology that explicitly anchors the model's latent representations to the theoretically meaningful concepts of an intrinsically interpretable reference model. By grounding KT in Bayesian Knowledge Tracing (BKT)~\cite{corbett1994knowledge} parameters, gTransformer provides instructional decisions that are both theoretically justifiable and sensitive to each student's longitudinal learning context. This work makes three primary contributions:
+To overcome these limitations, Grounded Transformers~\cite{labra2026theory} have been recently proposed as a class of models that support instructional decisions grounded in learning theories and individual learning histories. In this paper, we investigate how this approach can be leveraged to advance theory-based user modeling in Intelligent Tutoring Systems.
+
+\subsection{Research Contributions}
+
+This work makes three primary contributions:
 \begin{itemize}
-    \item \textit{Grounded Architecture}: We introduce gTransformer, which implements \textit{representational grounding} to bridge deep learning expressiveness and theoretical alignment.
-    \item \textit{Performance--Interpretability Trade-Off}: We demonstrate that grounded models achieve state-of-the-art predictive performance (+19.9\% AUC over traditional BKT) while incurring a minimal interpretability cost (3.9\%) relative to non-interpretable configurations.
-    \item \textit{Context-Aware Personalisation}: By encoding longitudinal interaction histories into context-aware BKT parameters, gTransformer enables differentiated diagnostics based on individual learning trajectories.
+    \item \textit{Theory-Based User Modeling}: We demonstrate how gTransformer~\cite{labra2026theory}, a Transformer-based model that implements \textit{representational grounding} to anchor its latent representations to the pedagogically meaningful concepts of Bayesian Knowledge Tracing (BKT), provides a theoretically sound foundation for instructional decisions in TEL.
+
+    \item \textit{Personalisation}: By clustering students according to their theory-grounded parameters---initial mastery and learn rate---gTransformer identifies distinct learning situations that call for differentiated tutoring strategies. Students with low prior knowledge and low learn rate require targeted scaffolding; those with high prior knowledge and high learn rate are ready for accelerated pacing; intermediate profiles benefit from adjusted challenge levels or motivational support. This placing and pacing framework enables the ITS to adapt instruction to the actual needs of each student, grounded in the same theoretical constructs that underpin the model's predictions.
+    
+    \item \textit{Context-Awareness}: By encoding each student's longitudinal interaction history into context-aware BKT parameters, gTransformer captures the historical trajectory that led to the current knowledge state, enabling differentiated diagnostics that population-level models fundamentally cannot provide.
 \end{itemize}
 
-These contributions are structured around three research questions: (RQ1)~What is the trade-off between predictive performance and interpretability? (RQ2)~How can we verify that the model's internal representations are genuinely grounded in pedagogical theory? (RQ3)~How does the longitudinal learning context enhance student-centred personalisation?
+\subsection{Research Questions}
+
+This work is guided by following research questions that together examine how Grounded Transformers~\cite{labra2026theory} can be leveraged to advance theory-based user modeling, support personalised instruction grounded in learning theories, and exploit the full longitudinal context of each student's learning trajectory:
+
+\begin{itemize}
+    \item RQ1: How Grounded Transformers can enable personalized instruction in Intelligent Tutoring Systems?
+    \item RQ2: How can the longitudinal learning context encoded by Grounded Transformers be exploited to provide situation-aware instruction?
+\end{itemize}
 
 %
 \section{Background}
@@ -178,7 +192,7 @@ Figure~\ref{fig_mosaic} shows mastery trajectories for students who provide iden
 \end{figure}
 
 %
-\section{Discussion: Towards Mindful TEL}
+\section{Discussion}
 
 \subsection{Theory-Grounded Instructional Decisions}
 
