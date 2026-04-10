@@ -237,18 +237,35 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
     outlines.
     """
     print(f"\n── Option 5: State transition graph ({grid_n}×{grid_n} grid) ──")
-    edges_g = np.linspace(0, 1, grid_n + 1)
-    centres = 0.5 * (edges_g[:-1] + edges_g[1:])
-
-    def cell_id(x, y):
-        ci = min(int(x * grid_n), grid_n - 1)
-        ri = min(int(y * grid_n), grid_n - 1)
-        return ri, ci   # (row, col)
 
     for i, uid in enumerate(representatives):
         quad     = i
         quad_ids = sm[sm['quadrant'] == quad].index
         quad_df  = df[df['student_id'].isin(quad_ids)]
+
+        # ── Data-driven axis bounds with 5% padding ────────────────────────
+        pad = 0.05
+        x_all = quad_df[rate_col].values
+        y_all = quad_df[init_col].values
+        xlo = max(0.0, x_all.min() - pad * (x_all.max() - x_all.min()))
+        xhi = min(1.0, x_all.max() + pad * (x_all.max() - x_all.min()))
+        ylo = max(0.0, y_all.min() - pad * (y_all.max() - y_all.min()))
+        yhi = min(1.0, y_all.max() + pad * (y_all.max() - y_all.min()))
+        if xhi - xlo < 1e-6: xlo, xhi = 0.0, 1.0
+        if yhi - ylo < 1e-6: ylo, yhi = 0.0, 1.0
+
+        # Per-quadrant grid edges in data range
+        q_edges_x = np.linspace(xlo, xhi, grid_n + 1)
+        q_edges_y = np.linspace(ylo, yhi, grid_n + 1)
+        q_cx = 0.5 * (q_edges_x[:-1] + q_edges_x[1:])
+        q_cy = 0.5 * (q_edges_y[:-1] + q_edges_y[1:])
+
+        def cell_id(x, y):
+            ci = np.searchsorted(q_edges_x, x, side='right') - 1
+            ri = np.searchsorted(q_edges_y, y, side='right') - 1
+            ci = int(max(0, min(grid_n - 1, ci)))
+            ri = int(max(0, min(grid_n - 1, ri)))
+            return ri, ci
 
         # Count transitions
         from collections import defaultdict
@@ -275,18 +292,50 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
         max_freq  = top_trans[0][1] if top_trans else 1
 
         fig, ax = plt.subplots(figsize=(9, 8))
-        draw_bg(ax, t_med, l0_med, colors, short_names)
+
+        # ── Quadrant background regions clipped to data range ──────────────
+        def clipped_rect(ax_, x0, y0, w, h, color, alpha):
+            rx0 = max(x0, xlo); ry0 = max(y0, ylo)
+            rx1 = min(x0+w, xhi); ry1 = min(y0+h, yhi)
+            if rx1 > rx0 and ry1 > ry0:
+                ax_.add_patch(Rectangle((rx0, ry0), rx1-rx0, ry1-ry0,
+                                        color=color, alpha=alpha, zorder=0))
+
+        clipped_rect(ax, 0,     0,     t_med,     l0_med,     colors[0], 0.10)
+        clipped_rect(ax, 0,     l0_med, t_med,    1-l0_med,   colors[1], 0.10)
+        clipped_rect(ax, t_med, 0,     1-t_med,   l0_med,     colors[2], 0.10)
+        clipped_rect(ax, t_med, l0_med, 1-t_med,  1-l0_med,   colors[3], 0.10)
+
+        if xlo <= t_med <= xhi:
+            ax.axvline(t_med,  color='grey', lw=1.0, ls='--', alpha=0.5, zorder=1)
+        if ylo <= l0_med <= yhi:
+            ax.axhline(l0_med, color='grey', lw=1.0, ls='--', alpha=0.5, zorder=1)
+
+        # Quadrant name labels (only if median is within view)
+        for q_l, (px, py) in enumerate([
+            (t_med/2,        l0_med/2),
+            (t_med/2,        (l0_med+1)/2),
+            ((t_med+1)/2,    l0_med/2),
+            ((t_med+1)/2,    (l0_med+1)/2),
+        ]):
+            if xlo <= px <= xhi and ylo <= py <= yhi:
+                ax.text(px, py, short_names[q_l], ha='center', va='center',
+                        fontsize=8, color=colors[q_l], alpha=0.65, zorder=1)
 
         # ── Draw grid ──────────────────────────────────────────────────────
-        for v in edges_g:
+        for v in q_edges_x:
             ax.axvline(v, color='lightgrey', lw=0.4, zorder=1)
+        for v in q_edges_y:
             ax.axhline(v, color='lightgrey', lw=0.4, zorder=1)
 
         # ── Node circles sized by visit count ─────────────────────────────
         max_visits = max(visit_count.values()) if visit_count else 1
+        cell_w = (xhi - xlo) / grid_n
+        cell_h = (yhi - ylo) / grid_n
+        base_r = 0.3 * min(cell_w, cell_h)
         for (r, c), cnt in visit_count.items():
-            cx_n = centres[c]; cy_n = centres[r]
-            radius = 0.012 + 0.025 * cnt / max_visits
+            cx_n = q_cx[c]; cy_n = q_cy[r]
+            radius = 0.2 * base_r + 0.8 * base_r * cnt / max_visits
             sl_lw  = 2.0 + 4.0 * self_loops.get((r,c), 0) / max_freq
             circle = plt.Circle((cx_n, cy_n), radius,
                                  color=colors[quad], alpha=0.35,
@@ -297,8 +346,8 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
         # ── Arrows for top transitions ─────────────────────────────────────
         for (src, dst), freq in top_trans:
             sr, sc_ = src; dr, dc = dst
-            x0 = centres[sc_]; y0 = centres[sr]
-            x1 = centres[dc];  y1 = centres[dr]
+            x0 = q_cx[sc_]; y0 = q_cy[sr]
+            x1 = q_cx[dc];  y1 = q_cy[dr]
             lw   = 0.8 + 3.5 * freq / max_freq
             alpha = 0.4 + 0.5 * freq / max_freq
             ax.annotate('', xy=(x1, y1), xytext=(x0, y0),
@@ -310,6 +359,11 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
             ax.text(mx, my, str(freq), fontsize=6, color='dimgrey',
                     ha='center', va='center', zorder=5,
                     bbox=dict(boxstyle='round,pad=0.1', fc='white', ec='none', alpha=0.7))
+
+        ax.set_xlim(xlo, xhi)
+        ax.set_ylim(ylo, yhi)
+        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=11)
+        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=11)
 
         n_quad = len(quad_ids)
         quad_mean_l0 = sm.loc[quad_ids, init_col].mean()
@@ -323,7 +377,6 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
             f'  |  Rep. student {uid}: $p_{{L_0}}$={rep_mean_l0:.3f}, $p_T$={rep_mean_t:.3f}',
             fontsize=10, pad=10
         )
-        ax.set_aspect('equal')
 
         plt.tight_layout()
         out = os.path.join(output_dir, f"attractor_transgraph_{names[i]}_{suffix}.png")
