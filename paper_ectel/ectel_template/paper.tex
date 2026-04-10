@@ -9,9 +9,10 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage[markup=underlined, authormarkup=none]{changes}
+\usepackage{subcaption}
 \definechangesauthor[name=Development, color=blue]{dev}
 %
-\graphicspath{{../mdpi_template/img/}}
+\graphicspath{{img/}}
 %
 \begin{document}
 %
@@ -109,6 +110,57 @@ The 3D roster plots address RQ2, revealing how student profiles evolve over time
 \includegraphics[width=\textwidth]{roster_3d_situations_893468.png}
 \caption{\textbf{3D Cognitive Roster.} Longitudinal trajectories of four representative students across the $(p_{\text{L}_0}, p_{\text{T}}, t)$ space. Points represent interactions over time; colours correspond to the four learning situations. Vertical lines indicate interaction time-steps.}
 \label{fig_roster}
+\end{figure}
+
+The parameter orbits of representative students across the four learning situations are characterised in Figures~\ref{fig_ellipse} and~\ref{fig_returnmap}. Figure~\ref{fig_ellipse} shows covariance ellipses (1$\sigma$ and 2$\sigma$) in $(p_{\text{L}_0}, p_{\text{T}})$ space, summarising the shape and extent of each student's parameter orbit. The ellipses reveal that Diligent Beginners and Fast Masters occupy larger, spatially extended orbits---reflecting rich contextual variation across skills---while Slow Starters and Plateaued learners exhibit more compact, constrained orbits concentrated in low- and high-mastery regions respectively. The orientation and eccentricity of each ellipse indicate whether variability is predominantly along the mastery axis, the learning rate axis, or both, providing a concise geometrical signature of each learning situation.
+
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_ellipse_slow_starters_893468.png}
+  \caption{Slow Starters}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_ellipse_plateaued_893468.png}
+  \caption{Plateaued}
+\end{subfigure}
+\vspace{0.5em}
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_ellipse_diligent_beginners_893468.png}
+  \caption{Diligent Beginners}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_ellipse_fast_masters_893468.png}
+  \caption{Fast Masters}
+\end{subfigure}
+\caption{\textbf{Parameter orbit ellipses.} Covariance ellipses (1$\sigma$ and 2$\sigma$) for the representative student of each learning situation in $(p_{\text{L}_0}, p_{\text{T}})$ space. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability across all interactions.}
+\label{fig_ellipse}
+\end{figure}
+
+Figure~\ref{fig_returnmap} shows return maps (lag plots) for the same four representatives. Each panel plots the value of a parameter at interaction $t+1$ against its value at interaction $t$, separately for $p_{\text{L}_0}$ (left sub-panel) and $p_{\text{T}}$ (right sub-panel), with points coloured from dark (early interactions) to bright (late interactions) using a sequential palette. The diagonal represents a fixed point: points on the diagonal indicate no change between consecutive interactions. For Slow Starters (student 600), the $p_{\text{L}_0}$ return map shows a broad scatter around the diagonal with a slight downward shift from early (mean 0.61) to late interactions (mean 0.48), indicating persistent difficulty without recovery; $p_{\text{T}}$ remains clustered near zero throughout, consistent with a low-rate attractor. Plateaued learners (student 2116) show the opposite $p_{\text{L}_0}$ trajectory: early points scatter in mid-range values and late points consolidate near the diagonal at high mastery (0.80), while $p_{\text{T}}$ declines from 0.077 to 0.050---the system reached a stable high-mastery state and ceased active learning. Diligent Beginners (student 917) exhibit the richest dynamics: both $p_{\text{L}_0}$ (0.52 $\to$ 0.67) and $p_{\text{T}}$ (0.12 $\to$ 0.20) increase over time, with points distributed above the diagonal in both panels---an orbit that has not yet converged, indicating ongoing learning. Fast Masters (student 13) show early stabilisation: $p_{\text{L}_0}$ is already high from the first interactions (mean 0.74) and changes negligibly thereafter, while $p_{\text{T}}$ declines moderately (0.15 $\to$ 0.11), suggesting the model assigns reducing marginal gains to a student already near mastery.
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_returnmap_slow_starters_893468.png}
+  \caption{Slow Starters}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_returnmap_plateaued_893468.png}
+  \caption{Plateaued}
+\end{subfigure}
+\vspace{0.5em}
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_returnmap_diligent_beginners_893468.png}
+  \caption{Diligent Beginners}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{attractor_returnmap_fast_masters_893468.png}
+  \caption{Fast Masters}
+\end{subfigure}
+\caption{\textbf{Return maps.} Lag plots for the representative student of each learning situation. Each panel shows $p_{\text{L}_0}(t+1)$ vs $p_{\text{L}_0}(t)$ (left) and $p_{\text{T}}(t+1)$ vs $p_{\text{T}}(t)$ (right). Points are coloured from dark (early) to bright (late) interactions. The diagonal (dashed line) marks the fixed point; deviations above indicate increasing parameters and deviations below indicate decreasing ones.}
+\label{fig_returnmap}
 \end{figure}
 
 These results underscore the utility of theory-grounded user modeling for ECTEL 2026's theme of Mindful TEL. By shaping learning technologies with intention, we ensure that deep learning's predictive power does not come at the cost of pedagogical transparency. The augmented user model provides the "diagnostic handles" required for educators to exercise agency within AI-mediated environments, transforming the "black box" into a collaborative cognitive engine that supports, rather than replaces, human expertise.

@@ -106,7 +106,7 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 
 ### Objective
 
-You are a assistant that helps to create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
+You are a assistant that helps to create a paper for ECTEL (paper 2, located at `paper_ectel/ectel_template/paper.tex`) based on the paper submitted to MDPI (paper 1, located at `paper_ectel/mdpi_template/applsci-4169306-done.tex`) . We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
 
 In paper 2 we are not going to present gTransformer as a contribution since this was made in paper 1 (MDPI). We will talk about grounded transformers and reference paper 1. We will explain what are grounded transformers but they are not a contribution of this paper 2. The contributions of paper 2 are about how to leverage grounded transformers for better user modeling. Take into account also "### Double-blind Review" so talk about grounded transformers about the work of others. 
 
