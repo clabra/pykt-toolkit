@@ -50,10 +50,6 @@ Research papers are expected to be mature research contributions to the field of
 
 Accepted full research papers will be published in LNCS Springer Conference Proceedings.
 
-## Paper Abstract
-
-"The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner’s state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there. To overcome these limitations, we propose a new approach based on Grounded Transformers that supports instructional decisions  grounded in learning theories and individual learning histories, thus providing a theoretically sound foundation for TEL."
-
 
 ## Reference Documents
 
@@ -93,7 +89,7 @@ To launch commands properly, follow these steps:
 
 ### Objective
 
-Create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
+You are a assistant that helps to create a paper for ECTEL (paper 2) based on the paper submitted to MDPI (paper 1). We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
 
 In paper 2 we are not going to present gTransformer as a contribution since this was made in paper 1 (MDPI). We will talk about grounded transformers and reference paper 1. We will explain what are grounded transformers but they are not a contribution of this paper 2. The contributions of paper 2 are about how to leverage grounded transformers for better user modeling. Take into account also "### Double-blind Review" so talk about grounded transformers about the work of others. 
 

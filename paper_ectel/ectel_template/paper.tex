@@ -8,6 +8,8 @@
 \usepackage{tabularx}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage[markup=underlined, authormarkup=none]{changes}
+\definechangesauthor[name=Development, color=blue]{dev}
 %
 \graphicspath{{../mdpi_template/img/}}
 %
@@ -25,7 +27,7 @@
 %
 \begin{abstract}
 
-The user model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these approaches are not anchored to theoretical frameworks derived from learning theories, which limits their utility when it comes to interpreting user profiles and the evolution of learning trajectories. To overcome these limitations, we propose a new approach to user modeling based on Grounded Transformers, a class of deep learning models whose internal representations are anchored to interpretable models based on cognitive or pedagogical principles. The resulting user models support instructional decisions rooted in learning theories, and we demonstrate how this grounding enables personalised, context-aware instruction in Intelligent Tutoring Systems.
+The user model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these approaches are not anchored to theoretical frameworks derived from learning theories, which limits their utility when it comes to interpreting user profiles or explaining the evolution of learning trajectories. To overcome these limitations, we propose a new approach to user modeling based on Grounded Transformers, a class of deep learning models whose internal representations are anchored to interpretable models based on cognitive or pedagogical principles. The resulting user models support instructional decisions rooted in learning theories, and we demonstrate how this grounding enables personalised, context-aware instruction in Intelligent Tutoring Systems.
 
 \keywords{deep learning \and theory-based interpretability \and grounded transformers \and user modeling \and learning theories \and intelligent tutoring systems }
 \end{abstract}
@@ -44,11 +46,11 @@ In this work, we show how grounded transformers can be leveraged to create augme
 
 This work makes three primary contributions:
 \begin{itemize}
-    \item \textit{Augmented Theory-Based Models}: [describe gBKT proposal and evaluation methodology and results] 
+    \item \textit{Augmented Theory-Based Models}: \added[id=dev]{describe gBKT proposal and evaluation methodology and results} 
 
-    \item \textit{Augmented Student Model}: [how use the output of gBKT to augment the user model, profile clusters]
+    \item \textit{Augmented Student Model}: \added[id=dev]{how use the output of gBKT to augment the user model, profile clusters}
     
-    \item \textit{Adapted Instructional Strategies}: [advantages of the augmented user model: strategies adapted to different clusters]
+    \item \textit{Adapted Instructional Strategies}: \added[id=dev]{advantages of the augmented user model: strategies adapted to different clusters}
 \end{itemize}
 
 \subsection{Research Questions}
@@ -63,50 +65,44 @@ This work is guided by following research questions that together examine how Gr
 %
 \section{Background}
 
-\subsection{Interpretability--Performance Dichotomy}
+\subsection{Intelligent Tutoring Systems and User Models}
 
-The development of KT has historically been characterised by a dichotomy between two paradigms~\cite{abdelrahman2023knowledge}. Traditional probabilistic models, such as BKT~\cite{corbett1994knowledge} and Factor Analysis Models, are intrinsically interpretable: they model learning through explicit parameters aligned with pedagogical and psychometric principles. However, their simplifying assumptions limit predictive power, causing them to struggle with the complex, non-linear dependencies in real-world student behaviour~\cite{twenty_five_years_of_bkt}.
+Intelligent Tutoring Systems are typically structured around three interacting components: 
 
-DKT models~\cite{piech2015deep}, which leverage deep learning architectures from Recurrent Neural Networks to Transformers, achieve state-of-the-art predictive performance. However, this gain has come at the cost of model transparency. Extensive research has sought to bridge this gap through post hoc and ante hoc interpretability methods~\cite{bai2024survey}. While ante hoc approaches integrating IRT parameters~\cite{yeung2019deep,chen2023improving} represent meaningful advances, they frequently produce outputs that remain disconnected from practitioners' domain knowledge. Educators require models that track mastery through concepts explicitly grounded in established frameworks, such as the initial mastery and learn rates postulated by BKT.
+\begin{itemize}
+    \item \textit{domain model}: \added[id=dev]{explain how it encodes the knowledge to be taught}
+    \item \textit{user model}: \added[id=dev]{explain how it tracks the learner's evolving state}
+    \item \textit{tutorial model}: \added[id=dev]{explain how it mediates instructional decisions.} 
+\end{itemize}
 
-\subsection{Bayesian Knowledge Tracing as Theoretical Framework}
+\subsection{Learning Theories and Bayesian Knowledge Tracing}
 
 We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework. BKT models the learning process as a Hidden Markov process governed by four interpretable parameters: Initial Mastery ($P(\text{L}_0)$), the probability that a student knows a concept prior to practice; Learn Rate ($P(\text{T})$), the probability of transitioning from the unlearned to the learned state; Guess ($P(\text{G})$), the probability of a correct response despite lack of mastery; and Slip ($P(\text{S})$), the probability of an incorrect response despite mastery. These parameters enable a recursive, causally transparent estimation of student mastery that is directly interpretable by educators.
 
 Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. gTransformer addresses this by leveraging Transformer attention mechanisms to infer student-specific parameters from individual interaction histories.
 
-\subsection{Informed Machine Learning}
-
-We situate gTransformer within the Informed Machine Learning (IML) framework~\cite{vonrueden2021informed}, which categorises the integration of domain knowledge by its source, representation, and the stage of the machine learning pipeline where it is incorporated. The general IML loss formulation is:
-\begin{equation} \label{eq_theory_loss}
-\mathcal{L} = \mathcal{L}_{\text{TRN}}(Y_{\text{true}}, Y_{\text{pred}}) + \gamma \mathcal{L}_{\text{THEORY}}(Y_{\text{pred}})
-\end{equation}
-where $\mathcal{L}_{\text{TRN}}$ measures supervised error and $\mathcal{L}_{\text{THEORY}}$ penalises violations of theoretical constraints, weighted by $\gamma$. While most IML approaches use prior knowledge to maximise predictive accuracy, gTransformer aims to achieve theory-based interpretability while maintaining competitive performance.
-
 \subsection{Grounded Transformers}
 
-Grounded Transformers~\cite{labra2026theory} are Knowledge Tracing models designed to bridge deep learning performance and pedagogical interpretability through \textit{representational grounding}: their internal representations are explicitly anchored to the interpretable parameters of a reference theoretical model. Figure~\ref{fig_arch} illustrates the information flow through gTransformer, a Grounded Transformer architecture, mapped to the IML taxonomic dimensions. Student interaction histories are augmented with BKT theoretical priors ($P(\text{L}_0)$, $P(\text{T})$ per skill), encoding prior knowledge directly into the model's input representations. These enriched sequences are processed through an attention-based encoder--decoder Transformer backbone that captures long-range temporal dependencies. A projection module maps the final context vectors $\mathbf{z}_t$ to student-specific BKT parameter estimates ($p_{\text{L}_0}$, $p_{\text{T}}$), which are then passed through BKT forward logic to generate interpretable mastery predictions.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.82\textwidth]{iml.png}
-\caption{\textbf{Dimensions of Informed Machine Learning in gTransformer.} The model integrates BKT theoretical priors at the input stage and applies a multi-objective loss to anchor internal representations and outputs to pedagogically meaningful constructs.}
-\label{fig_arch}
-\end{figure}
-
-\paragraph{Multi-Objective Loss Function.}
-The model is trained with a multi-objective loss function that balances predictive accuracy with pedagogical grounding:
-\begin{equation} \label{eq_loss}
-\mathcal{L} = \lambda_{\text{sup}} \mathcal{L}_{\text{sup}} + \lambda_{\text{ref}} \mathcal{L}_{\text{ref}} + \lambda_{\text{probe}} \mathcal{L}_{\text{probe}}
-\end{equation}
-where $\mathcal{L}_{\text{sup}}$ is the binary cross-entropy on supervised predictions, $\mathcal{L}_{\text{ref}}$ is the cross-entropy on interpretable BKT-based predictions to anchor outputs to the reference model, and $\mathcal{L}_{\text{probe}}$ is an auxiliary loss that encourages latent representations to encode BKT parameters in a linearly recoverable manner. The hyperparameters $\lambda_{\text{sup}}$, $\lambda_{\text{ref}}$, $\lambda_{\text{probe}}$ govern the trade-off between performance and interpretability.
 
 %
-\section{User Models based on Grounded Transformers}
+\section{Theory-Based Augmented User Models}
 
-Intelligent Tutoring Systems are typically structured around three interacting components: the \textit{domain model}, which encodes the knowledge to be taught; the \textit{user model}, which tracks the learner's evolving state; and the \textit{tutorial model}, which mediates instructional decisions. This section examines how gTransformer~\cite{labra2026theory} instantiates each of these three components, evaluating its capacity to serve as the cognitive foundation of a theory-grounded ITS.
+\added[id=dev]{Describe an ITS architecture based on the 3 typical components described in the Background section, namely: domain model, user mode, tutor model. The base user model is given by the state of acquisition of the knowledge components defined in the domain model. In addition it is augmented with the output of a gBKT model. The gBKT model on its side is fed with a tuple (L0, T) that is the output of a gTransformer model. The output of the user model goes into the tutor model that makes the instruction decisions.}
 
-\subsection{Experimental Setup}
+
+%
+\section{Methodology}
+
+\added[id=dev]{Describe the methodology for the experiments. We will describe gBKT as a traditional BKT model augmented with a gTransformer model that ouputs L0 and T parameters. These parameters are the projections of a z context vector and they encapsulate the longitudinal context of the student learning trajectory. Explain that we validate gBKT comparing it with a traditional BKT model and demonstrating that it outperforms the traditional BKT model in terms of accuracy. Briefly describe the architecture of gTransformer (summarizing the architecture explained in the MDPI paper) and explain that it has been trained with the ASSISTments 2009 dataset. Explain that the same L0, T parameters are used also to augment the student model.}
+
+%
+\section{Results and Discussion}
+
+\added[id=dev]{Describe the results of the experiments and discuss the implications of the results and applications.}
+
+%
+
+\section{Experimental Setup}
 
 We evaluate gTransformer on five benchmark datasets with explicit knowledge component mappings: ASSISTments 2009 (AS2009, 4,217 students, 123 skills), ASSISTments 2015 (AS2015, 19,917 students, 100 skills), Algebra 2005 (AL2005, 574 students, 112 skills), Bridge to Algebra 2006 (BDG2006, 1,146 students, 493 skills), and NeurIPS 2020 Education Challenge (NIPS34, 4,918 students, 57 skills). We follow a standard five-fold cross-validation with an 80/20 train/test split, measuring performance via AUC using the question-level mean late-fusion protocol~\cite{liu2022pykt}. Baselines include DKT~\cite{piech2015deep}, DKVMN~\cite{zhang2017dynamic}, SAKT~\cite{Pandey2019384}, SAINT~\cite{choi2020towards}, AKT~\cite{ghosh2020context}, and ATKT~\cite{GuoHZTL21}.
 

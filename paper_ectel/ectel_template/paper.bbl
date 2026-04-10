@@ -3,23 +3,9 @@
 \providecommand{\urlprefix}{URL }
 \providecommand{\doi}[1]{https://doi.org/#1}
 
-\bibitem{abdelrahman2023knowledge}
-Abdelrahman, G., Wang, Q., Nunes, B.: Knowledge tracing: A survey. ACM
-  Computing Surveys  \textbf{55}(11),  1--37 (2023)
-
-\bibitem{bai2024survey}
-Bai, Y., Zhao, J., Wei, T., Cai, Q., He, L.: A survey of explainable knowledge
-  tracing. Applied Intelligence  \textbf{54}(8),  6483--6514 (2024)
-
 \bibitem{belinkov2022probing}
 Belinkov, Y.: Probing classifiers: Promises, shortcomings, and advances.
   Computational Linguistics  \textbf{48}(1),  207--219 (2022)
-
-\bibitem{chen2023improving}
-Chen, J., Liu, Z., Huang, S., Liu, Q., Luo, W.: Improving interpretability of
-  deep sequential knowledge tracing models with question-centric cognitive
-  representations. In: Proceedings of the AAAI Conference on Artificial
-  Intelligence. vol.~37, pp. 14196--14204 (2023)
 
 \bibitem{choi2020towards}
 Choi, Y., Lee, Y., Cho, J., Baek, J., Kim, B., Cha, Y., Shin, D., Bae, C., Heo,
@@ -59,12 +45,6 @@ Holmes, W., Porayska-Pomsta, K., Holstein, K., Sutherland, E., Baker, T., Shum,
   \url{https://www.scopus.com/inward/record.uri?eid=2-s2.0-85104089310&doi=10.1007%2fs40593-021-00239-1&partnerID=40&md5=d38abffc49a2a1a3b620b04c101f2fae},
   cited by: 636; All Open Access, Hybrid Gold Open Access
 
-\bibitem{twenty_five_years_of_bkt}
-Ines, {\v{S}ari\'c-Grgi\'c}., Ani, G., Angelina, G.: Twenty-five years of
-  bayesian knowledge tracing: a systematic review. User Modeling and
-  User-Adapted Interaction  \textbf{34}(4),  1127 – 1173 (2024).
-  \doi{10.1007/s11257-023-09389-4}, cited by: 16
-
 \bibitem{labra2026theory}
 Labra, C., Santos, O.C.: Theory-based interpretability in deep knowledge
   tracing via grounded transformers. Applied Sciences  \textbf{16}(7), ~3138
@@ -85,19 +65,6 @@ Pandey, S., Karypis, G.: A self-attentive model for knowledge tracing. In:
 Piech, C., Bassen, J., Huang, J., Ganguli, S., Sahami, M., Guibas, L.J.,
   Sohl-Dickstein, J.: Deep knowledge tracing. Advances in neural information
   processing systems  \textbf{28} (2015)
-
-\bibitem{vonrueden2021informed}
-Von~Rueden, L., Mayer, S., Beckh, K., Georgiev, B., Giesselbach, S., Heese, R.,
-  Kirsch, B., Pfrommer, J., Pick, A., Ramamurthy, R., Walczak, M., Garcke, J.,
-  Bauckhage, C., Schuecker, J.: Informed machine learning – a taxonomy and
-  survey of integrating knowledge into learning systems. IEEE Transactions on
-  Knowledge and Data Engineering p. 1–1 (2021)
-
-\bibitem{yeung2019deep}
-Yeung, C.K.: Deep-irt: Make deep learning based knowledge tracing explainable
-  using item response theory. In: Proceedings of the 12th International
-  Conference on Educational Data Mining (EDM 2019). pp. 683--686. International
-  Educational Data Mining Society (2019), cited by: 86
 
 \bibitem{yudelson2013individualized}
 Yudelson, M.V., Koedinger, K.R., Gordon, G.J.: Individualized bayesian
