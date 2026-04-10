@@ -154,30 +154,28 @@ def main():
 
     colors = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
     quad_labels = [
-        'Slow Starters (Low $p_{L_0}$, Low $p_T$)',
-        'Plateaued (High $p_{L_0}$, Low $p_T$)',
-        'Diligent Beginners (Low $p_{L_0}$, High $p_T$)',
-        'Fast Masters (High $p_{L_0}$, High $p_T$)',
+        'Foundational (Low $p_{L_0}$, Low $p_T$)',
+        'Consolidating (High $p_{L_0}$, Low $p_T$)',
+        'Emerging (Low $p_{L_0}$, High $p_T$)',
+        'Advancing (High $p_{L_0}$, High $p_T$)',
     ]
-    quad_names = ['slow_starters', 'plateaued', 'diligent_beginners', 'fast_masters']
+    quad_names = ['foundational', 'consolidating', 'emerging', 'advancing']
 
     def sample_stride_then_filter(data, rate_c, init_c, stride, min_d):
-        """Take every `stride`-th interaction, then drop any that haven't moved
-        >= min_d from the previously kept point. First and last are always kept."""
+        """Take every `stride`-th candidate; include a point (and the one
+        immediately before it) only when the step distance >= min_d.
+        First and last candidates are always kept."""
         candidates = list(range(0, len(data), stride))
         if candidates[-1] != len(data) - 1:
             candidates.append(len(data) - 1)
-        sel = [candidates[0]]
-        last_x = data[rate_c].iloc[candidates[0]]
-        last_y = data[init_c].iloc[candidates[0]]
-        for j in candidates[1:]:
-            dx = data[rate_c].iloc[j] - last_x
-            dy = data[init_c].iloc[j] - last_y
-            if (dx*dx + dy*dy) ** 0.5 >= min_d or j == candidates[-1]:
-                sel.append(j)
-                last_x = data[rate_c].iloc[j]
-                last_y = data[init_c].iloc[j]
-        return sel
+        keep = {candidates[0], candidates[-1]}
+        for k in range(1, len(candidates)):
+            prev, curr = candidates[k - 1], candidates[k]
+            dx = data[rate_c].iloc[curr] - data[rate_c].iloc[prev]
+            dy = data[init_c].iloc[curr] - data[init_c].iloc[prev]
+            if (dx * dx + dy * dy) ** 0.5 >= min_d:
+                keep.add(curr)
+        return sorted(keep)
 
     # Auto-compute the global min_move threshold via binary search so that the
     # representative with the most movement has at most --max_points plotted points.
@@ -265,10 +263,10 @@ def main():
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
         # Quadrant labels inside the regions
-        ax.text(t_med / 2,       l0_med / 2,       'Slow\nStarters',      ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
-        ax.text(t_med / 2,       (l0_med + 1) / 2,  'Plateaued',           ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
-        ax.text((t_med + 1) / 2, l0_med / 2,        'Diligent\nBeginners', ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
-        ax.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Fast\nMasters',       ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
+        ax.text(t_med / 2,       l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
+        ax.text(t_med / 2,       (l0_med + 1) / 2,  'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
+        ax.text((t_med + 1) / 2, l0_med / 2,        'Emerging',      ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
+        ax.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Advancing',     ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
 
         # --- Legend ---
         legend_handles = [
@@ -282,14 +280,14 @@ def main():
         mean_l0 = full_subset[init_col].mean()
         mean_t  = full_subset[rate_col].mean()
         ax.set_title(
-            f'Trajectory: {quad_labels[i]}\n'
+            f'{quad_labels[i]}\n'
             f'student {uid}  |  {len(full_subset)} interactions  |  {len(subset)} sampled (every {args.timestep}, min_move={min_move:.3f})\n'
             f'mean $p_{{L_0}}$ = {mean_l0:.3f}  |  mean $p_T$ = {mean_t:.3f}',
             fontsize=10, pad=10
         )
 
         plt.tight_layout()
-        out_path = os.path.join(output_dir, f"roster_3d_{quad_names[i]}_893468.png")
+        out_path = os.path.join(output_dir, f"roster_2d_{quad_names[i]}_893468.png")
         plt.savefig(out_path, dpi=150, bbox_inches='tight')
         plt.close()
         print(f"Saved {quad_names[i]}: {len(subset)} points (every {args.timestep}, min_move={min_move:.3f}) → {out_path}")
@@ -309,10 +307,10 @@ def main():
                 ax_.add_patch(Rectangle((t_med, l0_med), 1.0 - t_med, 1.0 - l0_med, color=quad_colors[3], alpha=0.15, zorder=0))
                 ax_.axvline(t_med,  color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
                 ax_.axhline(l0_med, color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
-                ax_.text(t_med / 2,       l0_med / 2,       'Slow\nStarters',      ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
-                ax_.text(t_med / 2,       (l0_med + 1) / 2,  'Plateaued',           ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
-                ax_.text((t_med + 1) / 2, l0_med / 2,        'Diligent\nBeginners', ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
-                ax_.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Fast\nMasters',       ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
+                ax_.text(t_med / 2,       l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
+                ax_.text(t_med / 2,       (l0_med + 1) / 2,  'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
+                ax_.text((t_med + 1) / 2, l0_med / 2,        'Emerging',      ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
+                ax_.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Advancing',     ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
                 ax_.set_xlim(0.0, 1.0)
                 ax_.set_ylim(0.0, 1.0)
                 ax_.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
@@ -361,7 +359,7 @@ def main():
                               xytext=(6, 6), textcoords='offset points',
                               fontsize=11, color='black', fontweight='bold', zorder=7)
                 ax_g.set_title(
-                    f'Trajectory: {quad_labels[i]}\n'
+                    f'{quad_labels[i]}\n'
                     f'student {uid}  |  step {r_indices[f]} / {indices[-1]}',
                     fontsize=10, pad=10
                 )
@@ -387,6 +385,38 @@ def main():
                    color=colors[i], s=50, label=quad_labels[i], alpha=0.8, edgecolors='k')
         ax.plot(t, subset[rate_col], subset[init_col],
                 color=colors[i], alpha=0.5, linewidth=2)
+
+    # --- Quadrant dividing planes ---
+    # Axes: X=t (reversed), Y=p_T (0→1), Z=p_L0
+    # Quadrants: Q0=Foundational(low L0,low T), Q1=Consolidating(high L0,low T),
+    #            Q2=Emerging(low L0,high T),    Q3=Advancing(high L0,high T)
+    plane_alpha = 0.13
+    t_range = np.array([0, global_max_interactions])
+    t_grid  = np.array([[0, 0], [global_max_interactions, global_max_interactions]])
+
+    # Plane 1a: Y=t_med, Z in [0, l0_med]  → Foundational (Q0) color
+    xx1a = t_grid.copy()
+    yy1a = np.full_like(xx1a, t_med, dtype=float)
+    zz1a = np.array([[0, l0_med], [0, l0_med]], dtype=float)
+    ax.plot_surface(xx1a, yy1a, zz1a, color=quad_colors[0], alpha=plane_alpha, linewidth=0, antialiased=False)
+
+    # Plane 1b: Y=t_med, Z in [l0_med, 1]  → Consolidating (Q1) color
+    xx1b = t_grid.copy()
+    yy1b = np.full_like(xx1b, t_med, dtype=float)
+    zz1b = np.array([[l0_med, 1.0], [l0_med, 1.0]], dtype=float)
+    ax.plot_surface(xx1b, yy1b, zz1b, color=quad_colors[1], alpha=plane_alpha, linewidth=0, antialiased=False)
+
+    # Plane 2a: Z=l0_med, Y in [0, t_med]  → Foundational (Q0) color
+    xx2a = t_grid.copy()
+    yy2a = np.array([[0, t_med], [0, t_med]], dtype=float)
+    zz2a = np.full_like(xx2a, l0_med, dtype=float)
+    ax.plot_surface(xx2a, yy2a, zz2a, color=quad_colors[0], alpha=plane_alpha, linewidth=0, antialiased=False)
+
+    # Plane 2b: Z=l0_med, Y in [t_med, 1]  → Emerging (Q2) color
+    xx2b = t_grid.copy()
+    yy2b = np.array([[t_med, 1.0], [t_med, 1.0]], dtype=float)
+    zz2b = np.full_like(xx2b, l0_med, dtype=float)
+    ax.plot_surface(xx2b, yy2b, zz2b, color=quad_colors[2], alpha=plane_alpha, linewidth=0, antialiased=False)
 
     ax.set_xlabel('Interaction Time-step ($t$)', fontsize=12, labelpad=10)
     ax.set_ylabel('Learning Rate ($p_{T}$)', fontsize=12, labelpad=10)

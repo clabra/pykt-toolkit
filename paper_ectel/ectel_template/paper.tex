@@ -103,13 +103,50 @@ To address RQ2, we define four \textit{learning situations} based on the estimat
 
 Comparison of predictive performance (Table~\ref{tab_performance}) addresses RQ1, showing that gBKT significantly outperforms standard BKT, with an average AUC gain of 19.9\% ($\mathcal{I}_{\text{gain}}$). This validates that context-aware parameters derived from grounded Transformers accurately capture the nuances of individual learning journeys while remaining within the interpretable framework of BKT.
 
-The 3D roster plots address RQ2, revealing how student profiles evolve over time. By observing the movement of students through the $(p_{\text{L}_0}, p_{\text{T}})$ space over the course of their interactions, educators gain theory-grounded insights into whether a student is disengaging (decreasing $T$) or gaining confidence (increasing $L_0$). This ability to ground deep learning state into pedagogically recognisable constructs enables more mindful instructional support and satisfies the accountability requirements for high-risk educational AI.
+Figure~\ref{fig_roster} addresses RQ2, showing trajectory plots for a representative student from each of the four learning situations. Each panel maps consecutive sampled interactions in $(p_T, p_{L_0})$ space, with numbered points and directional arrows tracing the temporal evolution of the student's parameter profile across the full interaction sequence. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift in the student's learning situation over time. By reading these trajectories, educators gain theory-grounded insights into whether a student is disengaging (decreasing $p_{\text{T}}$) or gaining confidence (increasing $p_{\text{L}_0}$). This dynamic view grounds deep learning state into pedagogically recognisable constructs, enabling more mindful instructional support and satisfying the accountability requirements for high-risk educational AI.
 
 
-\begin{figure}[t]
+\begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{roster_3d_situations_893468.png}
-\caption{\textbf{3D Cognitive Roster.} Longitudinal trajectories of four representative students across the $(p_{\text{L}_0}, p_{\text{T}}, t)$ space. Points represent interactions over time; colours correspond to the four learning situations. Vertical lines indicate interaction time-steps.}
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth]{roster_2d_foundational_893468.png}
+  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$). The trajectory remains confined to the lower-left
+  quadrant throughout the interaction sequence. The small number of sampled points and their limited spread
+  indicate that the student's parameters change very little: neither mastery nor learning rate improves
+  substantially, signalling a structural mismatch between task demands and current preparation that calls
+  for immediate scaffolding.}
+\end{subfigure}
+\vspace{0.3em}
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth]{roster_2d_consolidating_893468.png}
+  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$). The trajectory is compact and anchored in the
+  upper-left quadrant. High prior mastery is stable across interactions, but the learning rate remains near
+  zero and shows no upward trend. This stagnation suggests the student has exhausted the learning potential
+  of current tasks; the tutorial model should introduce novel challenge or advance difficulty to reactivate
+  learning.}
+\end{subfigure}
+\vspace{0.3em}
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth]{roster_2d_emerging_893468.png}
+  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$). The trajectory is the most spatially extended:
+  points span a wide area of the parameter space and the path crosses quadrant boundaries, reflecting
+  a student whose mastery and learning rate vary substantially across skills and interactions. The high
+  learning rate signals strong growth potential; differentiated instruction by skill component is most
+  effective here.}
+\end{subfigure}
+\vspace{0.3em}
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth]{roster_2d_advancing_893468.png}
+  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$). The trajectory occupies the upper-right quadrant
+  and shows moderate spread, indicating robust mastery combined with a sustained learning rate across
+  interaction contexts. The student can safely be routed to accelerated content; the trajectory confirms
+  that the high-performance profile is consistent rather than task-specific.}
+\end{subfigure}
+\caption{\textbf{Learning situation trajectories.} Sampled $(p_T, p_{L_0})$ trajectories for a representative
+student from each of the four learning situations (stride 10, $\delta_{\min}=0.3$). Numbered points mark
+interactions where the Euclidean displacement in parameter space exceeded $\delta_{\min}$; arrows indicate
+temporal direction. Coloured background regions correspond to the four learning situations; the trajectory
+colour reflects the learning situation of the representative student.}
 \label{fig_roster}
 \end{figure}
 

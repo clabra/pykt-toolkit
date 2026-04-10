@@ -19,6 +19,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle, Ellipse
 
+def lighten_color(hex_color, factor=0.55):
+    """Blend hex_color toward white by the given factor (0=original, 1=white)."""
+    import matplotlib.colors as mc
+    r, g, b = mc.to_rgb(hex_color)
+    return (r + (1 - r) * factor, g + (1 - g) * factor, b + (1 - b) * factor)
+
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 def load_data(run_dir):
@@ -165,25 +171,28 @@ def main():
 
         # ── Covariance ellipses ────────────────────────────────────────────
         if len(xs) >= 3:
-            for n_std, lw, alpha_, ls in [(1.0, 2.0, 0.80, '-'),
-                                          (2.0, 1.5, 0.50, '--')]:
-                covariance_ellipse(ax, xs, ys, n_std=n_std,
-                                   edgecolor=quad_colors[i],
-                                   facecolor=quad_colors[i],
-                                   linewidth=lw, linestyle=ls,
-                                   alpha=alpha_, fill=True,
-                                   zorder=4, label=f'{n_std:.0f}σ ellipse')
+            # 1σ: richer fill; 2σ: very light fill with desaturated edge
+            covariance_ellipse(ax, xs, ys, n_std=1.0,
+                               edgecolor=quad_colors[i], facecolor=quad_colors[i],
+                               linewidth=2.0, linestyle='-',
+                               alpha=0.35, fill=True, zorder=4)
+            covariance_ellipse(ax, xs, ys, n_std=2.0,
+                               edgecolor=lighten_color(quad_colors[i], 0.45),
+                               facecolor=lighten_color(quad_colors[i], 0.60),
+                               linewidth=1.5, linestyle='--',
+                               alpha=0.30, fill=True, zorder=3)
 
         # Overplot facecolor=white to make it look like contour lines
         # (separate clean patches on top)
         if len(xs) >= 3:
-            for n_std, lw, ls in [(1.0, 2.0, '-'), (2.0, 1.5, '--')]:
-                covariance_ellipse(ax, xs, ys, n_std=n_std,
-                                   edgecolor=quad_colors[i],
-                                   facecolor='none',
-                                   linewidth=lw, linestyle=ls,
-                                   alpha=0.9, fill=False,
-                                   zorder=5)
+            covariance_ellipse(ax, xs, ys, n_std=1.0,
+                               edgecolor=quad_colors[i], facecolor='none',
+                               linewidth=2.0, linestyle='-',
+                               alpha=0.95, fill=False, zorder=5)
+            covariance_ellipse(ax, xs, ys, n_std=2.0,
+                               edgecolor=lighten_color(quad_colors[i], 0.35),
+                               linewidth=1.5, linestyle='--',
+                               alpha=0.75, fill=False, zorder=5)
 
         # ── Mean marker ───────────────────────────────────────────────────
         ax.scatter(mean_x, mean_y, s=200, marker='+',
@@ -207,12 +216,18 @@ def main():
         ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
-        # Legend: deduplicate (add ellipses manually)
+        # Legend: situation name + ellipses + mean
+        import matplotlib.lines as mlines
+        situation_handle = mpatches.Patch(facecolor=quad_colors[i], edgecolor='k',
+                                          linewidth=0.8, alpha=0.6,
+                                          label=quad_names_short[i])
         sigma_handles = [
-            mpatches.Patch(edgecolor=quad_colors[i], facecolor='none',
-                           linewidth=2.0, linestyle='-',  label='1σ ellipse'),
-            mpatches.Patch(edgecolor=quad_colors[i], facecolor='none',
-                           linewidth=1.5, linestyle='--', label='2σ ellipse'),
+            situation_handle,
+            mpatches.Patch(edgecolor=quad_colors[i], facecolor=quad_colors[i],
+                           linewidth=2.0, linestyle='-',  alpha=0.5, label='1\u03c3 region'),
+            mpatches.Patch(edgecolor=lighten_color(quad_colors[i], 0.35),
+                           facecolor=lighten_color(quad_colors[i], 0.60),
+                           linewidth=1.5, linestyle='--', alpha=0.5, label='2\u03c3 region'),
         ]
         ax.legend(handles=sigma_handles + [
             plt.scatter([], [], s=200, marker='+', color=quad_colors[i],
@@ -220,9 +235,9 @@ def main():
         ], fontsize=8, loc='lower right', framealpha=0.8)
 
         ax.set_title(
-            f'Attractor Orbit: {quad_labels[i]}\n'
+            f'{quad_labels[i]}\n'
             f'student {uid}  |  {len(xs)} interactions  '
-            f'|  orbit σ₁=({np.sqrt(np.cov(xs, ys)[0,0]):.3f}, '
+            f'|  σ₁=({np.sqrt(np.cov(xs, ys)[0,0]):.3f}, '
             f'{np.sqrt(np.cov(xs, ys)[1,1]):.3f})',
             fontsize=10, pad=10
         )
