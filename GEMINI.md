@@ -76,6 +76,23 @@ To launch commands properly, follow these steps:
     docker exec -w /workspaces/pykt-toolkit pinn-dev /bin/bash -c "source /home/vscode/.pykt-env/bin/activate && python examples/run_repro_experiment.py ..."
     ```
 
+### GPU Resources
+The machine has 8 GPUs.
+- **Standard Allocation**: Use 5 GPUs for training runs (e.g., `CUDA_VISIBLE_DEVICES=0,1,2,3,4`).
+- **Monitoring**: Always verify GPU availability before launching multi-GPU experiments.
+
+## Reproducibility
+
+We treat every training or evaluation run as a formal experiment requiring full reproductibility as detailed in `examples/reproducibility.md`. All default values for parameters should be specified in a single source of truth: `configs/parameter_default.json`. CLI flags override individual defaults; absence of a CLI flag implies the default recorded in the experiment's `config.json` (no hidden or implicit defaults allowed). The following standards must be met for an experiment to be considered reproducible.
+
+We want to avoid the risks of having parameter defaults hardcoded. Changes in hardcoded values would not be reflected unless parameter_default.json is manually update first; moreover, evaluation could keep using another values, producing divergent checkpoints and invalid reproducibility claims. Hard-coding also prevents per-experiment architectural variation via overrides.
+
+When you change any parameter default value (the reference values are in paper/parameters.cvs) follow guidelines in "Parameter Evolution Protocol" section.
+
+## Ablation Studies
+
+See `assistant/ablation.md` for guidelines on how to augment or modify the model code in order to be able to properly perform ablation studies.
+
 
 ## Important Constraints
 
@@ -103,6 +120,12 @@ For this purpose, authors must submit their manuscript:
 - without any URLs to projects, products or self-developed systems;
 - with relevant self-references blinded or written in the third person.
 
+### Operational standards
+
+- Training and evaluation should be launched using the commands described in `examples/reproducibility.md`
+- Avoid launching commands that terminate scripts tha are running in the terminal
+- Launch scripts in such a way that we leverage available GPUs (around 75% if not set otherwise) and CPUs (around 75% of CPU power)
+
 ### Code and Style Guidelines
 
 - Use markdown format for documentation files
@@ -118,6 +141,12 @@ For this purpose, authors must submit their manuscript:
     - Use "learning situations" instead of "student archetypes" or "cognitive profiles"
     - Use "prior knowledge" instead of "cognitive profile"
     - Focus on what educators can do (provide support, accelerate pacing, prevent unnecessary remediation) rather than what students are
+
+- Follow guidelines in `reproducibility.md` to avoid hardcoded default values for parameters. Don't avoid audits.
+- After changes in codebase, always check if parameters in `configs/parameter_default.json` were added or modified. If so, apply guidelines described in `examples/reproducibility.md` to propagate the changes in order to have proper reproducibility guarantees.
+- In general, try to avoid fallbacks. I prefer fail as early as possible, throwing exceptions, in case something doesn't match what is expected.
+- Don't update early models such as idkt for instance. They are deprecated in favour of current model. 
+- If code or scripts need something and don't have or find it, then throw an exception and fail ASAP. Avoid fallbacks that hide error or produce unrealiable results. 
 
 
 ## Instructions
@@ -135,6 +164,26 @@ When you are updating the paper or documentation (Writer Agent):
 - The paper master is the `paper_ectel/ectel_template/paper.tex` file, in Latex format.
 - The folder `paper_ectel/ectel_template` contains also other auxiliar files for the paper, such as the bibliography file `paper_ectel/ectel_template/biblio.bib`. 
 - Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper_ectel/ectel_template/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.
+
+#### 👨‍💻 For Coding & Implementation
+
+When you are writing or fixing code (Coder Agent):
+
+- The code of the models are in `pykt/models`. The scripts to train and evaluate them in `examples`. The papers about these models can be found in `bibliography/papers-pykt`.
+- Prioritize modifications in `pykt/models` for model architecture but only for new models we are implementing, not for existent models.
+- Follow the stricter `assistant/contribute.pdf` guidelines for code style.
+- **Do not** modify the `data_original` directory.
+- Always run a small test script (e.g., in `tmp/`) before committing major changes.
+
+#### 📊 For Experiments & Reproducibility
+
+When you are running experiments (Experiment Agent):
+
+- Follow `assistant/quickstart.pdf` guidelines.
+- Ensure all default parameters are in `configs/parameter_default.json`.
+- Use `configs/data_config.json` for datasets path and configuration.
+- Strictly following the reproducibility protocol in `examples/reproducibility.md`.
+- For gtransformer model, the metric we use is test auc question-level average late-fusion
 
 
 ### Rules
