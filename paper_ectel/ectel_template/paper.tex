@@ -25,7 +25,7 @@
 %
 \begin{abstract}
 
-The user model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these approaches are not anchored to theoretical frameworks derived from learning theories, which limits their utility when it comes to interpreting user profiles and the evolution of learning trajectories. To overcome these limitations, we propose a new approach to user modeling based on Grounded Transformers that supports instructional decisions anchored in theoretical principles, thus providing a sound foundation for TEL.
+The user model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these approaches are not anchored to theoretical frameworks derived from learning theories, which limits their utility when it comes to interpreting user profiles and the evolution of learning trajectories. To overcome these limitations, we propose a new approach to user modeling based on Grounded Transformers, a class of deep learning models whose internal representations are anchored to interpretable models based on cognitive or pedagogical principles. The resulting user models support instructional decisions rooted in learning theories, and we demonstrate how this grounding enables personalised, context-aware instruction in Intelligent Tutoring Systems.
 
 \keywords{deep learning \and theory-based interpretability \and grounded transformers \and user modeling \and learning theories \and intelligent tutoring systems }
 \end{abstract}
@@ -34,28 +34,30 @@ The user model serves as a cornerstone of Intelligent Tutoring Systems. In many 
 \section{Introduction}
 
 \subsection{Problem Statement}
-The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing (KT)~\cite{corbett1994knowledge} approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations. First, they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. Furthermore, they frequently lack longitudinal context, as instructional decisions are typically based on isolated knowledge states without accounting for the historical trajectory that led there.
+The student model serves as a cornerstone of Intelligent Tutoring Systems. In many instances, this modeling relies on Knowledge Tracing (KT)~\cite{corbett1994knowledge} approaches, which represent the learner's state of mastery across specific skills or knowledge components. However, these traditional approaches are subject to significant limitations since they lack pedagogical interpretability, as they are not anchored to theoretical frameworks derived from cognitive or educational principles. 
 
-To overcome these limitations, Grounded Transformers~\cite{labra2026theory} have been recently proposed as a class of models that support instructional decisions grounded in learning theories and individual learning histories. In this paper, we investigate how this approach can be leveraged to advance theory-based user modeling in Intelligent Tutoring Systems.
+To overcome these limitations, Grounded Transformer have been recently proposed as a class of deep learning models able to provide information about the evolution of the user according to parameters derived from theoretical principles. In \cite{labra2026theory} they introduce gTransformer, and show how through \textit{representational grounding} it is able to anchor its latent representations to pedagogically meaningful concepts based on Bayesian Knowledge Tracing (BKT). 
+
+In this work, we show how grounded transformers can be leveraged to create augmented student models to improve instructional decisions in Inteligent Tutoring Systems. To this end we propose gBKT, a traditional BKT model augmented with output from a gTransformer model, to enrich the student model. We evaluate gBKT, show its advantages compared with a traditional BKT model and how it can be used to create student models able to support better instrucional decisions.  
 
 \subsection{Research Contributions}
 
 This work makes three primary contributions:
 \begin{itemize}
-    \item \textit{Theory-Based User Modeling}: We demonstrate how gTransformer~\cite{labra2026theory}, a Transformer-based model that implements \textit{representational grounding} to anchor its latent representations to the pedagogically meaningful concepts of Bayesian Knowledge Tracing (BKT), provides a theoretically sound foundation for instructional decisions in TEL.
+    \item \textit{Augmented Theory-Based Models}: [describe gBKT proposal and evaluation methodology and results] 
 
-    \item \textit{Personalisation}: By clustering students according to their theory-grounded parameters---initial mastery and learn rate---gTransformer identifies distinct learning situations that call for differentiated tutoring strategies. Students with low prior knowledge and low learn rate require targeted scaffolding; those with high prior knowledge and high learn rate are ready for accelerated pacing; intermediate profiles benefit from adjusted challenge levels or motivational support. This placing and pacing framework enables the ITS to adapt instruction to the actual needs of each student, grounded in the same theoretical constructs that underpin the model's predictions.
+    \item \textit{Augmented Student Model}: [how use the output of gBKT to augment the user model, profile clusters]
     
-    \item \textit{Context-Awareness}: By encoding each student's longitudinal interaction history into context-aware BKT parameters, gTransformer captures the historical trajectory that led to the current knowledge state, enabling differentiated diagnostics that population-level models fundamentally cannot provide.
+    \item \textit{Adapted Instructional Strategies}: [advantages of the augmented user model: strategies adapted to different clusters]
 \end{itemize}
 
 \subsection{Research Questions}
 
-This work is guided by following research questions that together examine how Grounded Transformers~\cite{labra2026theory} can be leveraged to advance theory-based user modeling, support personalised instruction grounded in learning theories, and exploit the full longitudinal context of each student's learning trajectory:
+This work is guided by following research questions that together examine how Grounded Transformers~\cite{labra2026theory} can be leveraged to improve theory-based augmented user modeling:
 
 \begin{itemize}
-    \item RQ1: How Grounded Transformers can enable personalized instruction in Intelligent Tutoring Systems?
-    \item RQ2: How can the longitudinal learning context encoded by Grounded Transformers be exploited to provide situation-aware instruction?
+    \item RQ1: How can we obtain augmented student models with information derived from existent learning theories?
+    \item RQ2: How these augmented student models can be used to improve Intelligent Tutoring Systems?
 \end{itemize}
 
 %
