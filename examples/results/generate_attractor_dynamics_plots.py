@@ -305,7 +305,7 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
                         arrowprops=dict(arrowstyle='->', color=colors[quad],
                                         lw=lw, alpha=alpha, mutation_scale=14),
                         zorder=4)
-            # Frequency label at midpoint
+            # Frequency label at arrow midpoint
             mx, my = (x0+x1)/2, (y0+y1)/2
             ax.text(mx, my, str(freq), fontsize=6, color='dimgrey',
                     ha='center', va='center', zorder=5,
