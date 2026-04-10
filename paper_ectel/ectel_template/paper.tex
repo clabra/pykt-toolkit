@@ -46,11 +46,9 @@ In this work, we show how grounded transformers can be leveraged to create augme
 
 This work makes three primary contributions:
 \begin{itemize}
-    \item \textit{Augmented Theory-Based Models}: \added[id=dev]{describe gBKT proposal and evaluation methodology and results} 
-
-    \item \textit{Augmented Student Model}: \added[id=dev]{how use the output of gBKT to augment the user model, profile clusters}
-    
-    \item \textit{Adapted Instructional Strategies}: \added[id=dev]{advantages of the augmented user model: strategies adapted to different clusters}
+    \item \textit{Augmented Theory-Based Models}: We introduce a methodology for anchoring deep learning models to Bayesian Knowledge Tracing (BKT) logic, enabling the generation of pedagogically grounded parameters ($p_{\text{L}_0}$, $p_{\text{T}}$) that capture individualised student characteristics while maintaining high predictive accuracy.
+    \item \textit{Augmented Student Model}: We propose an augmented user model that integrates these grounded parameters to categorised learners into four distinct \textit{learning situations} based on their prior knowledge and learning rate, providing a higher-resolution diagnostic profile than population-level models.
+    \item \textit{Adapted Instructional Strategies}: We demonstrate how this augmented user model enables situation-based instruction, where the ITS tutorial model can dynamically route students to differentiated instructional pathways tailored to their specific learning situation.
 \end{itemize}
 
 \subsection{Research Questions}
@@ -70,9 +68,9 @@ This work is guided by following research questions that together examine how Gr
 Intelligent Tutoring Systems are typically structured around three interacting components: 
 
 \begin{itemize}
-    \item \textit{domain model}: \added[id=dev]{explain how it encodes the knowledge to be taught}
-    \item \textit{user model}: \added[id=dev]{explain how it tracks the learner's evolving state}
-    \item \textit{tutorial model}: \added[id=dev]{explain how it mediates instructional decisions.} 
+    \item \textit{domain model}: This component encodes the knowledge to be taught, typically structured as a set of Knowledge Components (KCs) or skills. It provides the semantic framework through which student performance is assessed and instructional content is organised.
+    \item \textit{user model}: The user model tracks the learner's evolving state by maintaining a representation of their mastery across the domain model. In gTransformer, this is augmented with longitudinal parameters that capture the student's unique learning patterns beyond simple correctness.
+    \item \textit{tutorial model}: This component mediates instructional decisions by selecting the next activity, intervention, or level of support based on the current state of the user model. The goal is to provide a personalised learning experience that optimises the student's trajectory.
 \end{itemize}
 
 \subsection{Learning Theories and Bayesian Knowledge Tracing}
@@ -87,18 +85,33 @@ Standard BKT suffers from a significant limitation: it operates at the populatio
 %
 \section{Theory-Based Augmented User Models}
 
-\added[id=dev]{Describe an ITS architecture based on the 3 typical components described in the Background section, namely: domain model, user mode, tutor model. The base user model is given by the state of acquisition of the knowledge components defined in the domain model. In addition it is augmented with the output of a gBKT model. The gBKT model on its side is fed with a tuple (L0, T) that is the output of a gTransformer model. The output of the user model goes into the tutor model that makes the instruction decisions.}
+We formalise the proposed ITS architecture by integrating traditional components with our grounded modelling engine. The \textit{domain model} defines the structured knowledge components to be mastered. The \textit{user model} tracks student mastery across these components, and is augmented with student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$ provided by \textit{gTransformer}. 
+
+The \textit{gBKT} component performs Bayesian updating of student mastery $L_t$, where the initial belief $L_0$ and the learning transition $T$ are dynamically set by gTransformer's grounded outputs. These parameters encapsulate the student's longitudinal learning context, allowing the user model to differentiate between learners who might show similar correctness patterns but possess different underlying learning rates or prior knowledge. The output of this augmented user model is used by: 1)~the tutorial model to select instructional strategies, and 2)~a diagnostic roster module that visualises student evolution in a 3D $(p_{\text{L}_0}, p_{\text{T}}, t)$ space.
 
 
 %
 \section{Methodology}
 
-\added[id=dev]{Describe the methodology for the experiments. We will describe gBKT as a traditional BKT model augmented with a gTransformer model that ouputs L0 and T parameters. These parameters are the projections of a z context vector and they encapsulate the longitudinal context of the student learning trajectory. Explain that we validate gBKT comparing it with a traditional BKT model and demonstrating that it outperforms the traditional BKT model in terms of accuracy. Briefly describe the architecture of gTransformer (summarizing the architecture explained in the MDPI paper) and explain that it has been trained with the ASSISTments 2009 dataset. Explain that the same L0, T parameters are used also to augment the student model.}
+To address RQ1, we evaluate \textit{gBKT} by comparing its predictive performance against traditional population-level BKT. Unlike standard BKT which uses constant parameters for all students on a given skill, gBKT leverages gTransformer to infer context-aware parameters from historical interaction sequences. gTransformer uses a Transformer-based encoder-decoder architecture where latent representations $z_t$ are projected onto BKT semantic axes through representational grounding. The model is trained on benchmark datasets such as AS2009, with the grounded parameters serving both to constrain predictions to pedagogical logic and to augment the student profile.
+
+To address RQ2, we define four \textit{learning situations} based on the estimated $(p_{\text{L}_0}, p_{\text{T}})$: (1)~\textit{slow starters} (low $L_0$, low $T$), (2)~\textit{diligent beginners} (low $L_0$, high $T$), (3)~\textit{plateaued learners} (high $L_0$, low $T$), and (4)~\textit{fast masters} (high $L_0$, high $T$). These situations allow the tutorial model to adapt strategies: situation (1) might receive targeted scaffolding, while (4) receives accelerated content. Since parameters are dynamic, students can transition between situations as more evidence is gathered. To illustrate this, we generate 3D roster plots showing the longitudinal trajectory of representative students across these quadrants.
 
 %
 \section{Results and Discussion}
 
-\added[id=dev]{Describe the results of the experiments and discuss the implications of the results and applications.}
+Comparison of predictive performance (Table~\ref{tab_performance}) addresses RQ1, showing that gBKT significantly outperforms standard BKT, with an average AUC gain of 19.9\% ($\mathcal{I}_{\text{gain}}$). This validates that context-aware parameters derived from grounded Transformers accurately capture the nuances of individual learning journeys while remaining within the interpretable framework of BKT.
+
+The 3D roster plots address RQ2, revealing how student profiles evolve over time. By observing the movement of students through the $(p_{\text{L}_0}, p_{\text{T}})$ space over the course of their interactions, educators gain theory-grounded insights into whether a student is disengaging (decreasing $T$) or gaining confidence (increasing $L_0$). This ability to ground deep learning state into pedagogically recognisable constructs enables more mindful instructional support and satisfies the accountability requirements for high-risk educational AI.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{roster_3d_situations_893468.png}
+\caption{\textbf{3D Cognitive Roster.} Longitudinal trajectories of four representative students across the $(p_{\text{L}_0}, p_{\text{T}}, t)$ space. Points represent interactions over time; colours correspond to the four learning situations. Vertical lines indicate interaction time-steps.}
+\label{fig_roster}
+\end{figure}
+
+These results underscore the utility of theory-grounded user modeling for ECTEL 2026's theme of Mindful TEL. By shaping learning technologies with intention, we ensure that deep learning's predictive power does not come at the cost of pedagogical transparency. The augmented user model provides the "diagnostic handles" required for educators to exercise agency within AI-mediated environments, transforming the "black box" into a collaborative cognitive engine that supports, rather than replaces, human expertise.
 
 %
 
