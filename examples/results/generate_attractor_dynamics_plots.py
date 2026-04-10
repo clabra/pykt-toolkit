@@ -312,10 +312,15 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
                     bbox=dict(boxstyle='round,pad=0.1', fc='white', ec='none', alpha=0.7))
 
         n_quad = len(quad_ids)
+        quad_mean_l0 = sm.loc[quad_ids, init_col].mean()
+        quad_mean_t  = sm.loc[quad_ids, rate_col].mean()
+        rep_mean_l0  = sm.loc[uid, init_col]
+        rep_mean_t   = sm.loc[uid, rate_col]
         ax.set_title(
             f'Transition Graph: {labels[i]}\n'
             f'{n_quad} students  |  {grid_n}×{grid_n} grid  |  top {top_k} transitions shown\n'
-            f'Node size ∝ visit frequency  |  arrow width ∝ transition count',
+            f'Quadrant mean: $p_{{L_0}}$={quad_mean_l0:.3f}, $p_T$={quad_mean_t:.3f}'
+            f'  |  Rep. student {uid}: $p_{{L_0}}$={rep_mean_l0:.3f}, $p_T$={rep_mean_t:.3f}',
             fontsize=10, pad=10
         )
         ax.set_aspect('equal')
