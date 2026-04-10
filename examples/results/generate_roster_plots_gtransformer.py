@@ -9,6 +9,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 
@@ -152,34 +153,65 @@ def main():
         full_subset = df[df['student_id'] == uid].reset_index(drop=True)
         # Cap to global_max_interactions
         full_subset = full_subset.iloc[:global_max_interactions]
-        # Subsample every args.timestep interactions; always include the last point
-        indices = list(range(0, len(full_subset), args.timestep))
-        if (len(full_subset) - 1) not in indices:
-            indices.append(len(full_subset) - 1)
-        subset = full_subset.iloc[indices].reset_index(drop=True)
-        # t values are the actual positions in the student's original sequence
-        t = np.array(indices)
 
-        fig = plt.figure(figsize=(10, 7))
+        # Select transition points: first interaction, then only when quadrant changes
+        def row_quadrant(row):
+            return get_quadrant({init_col: row[init_col], rate_col: row[rate_col]})
+
+        full_subset = full_subset.copy()
+        full_subset['pt_quad'] = full_subset.apply(row_quadrant, axis=1)
+
+        transition_indices = [0]
+        last_quad = full_subset['pt_quad'].iloc[0]
+        for idx in range(1, len(full_subset)):
+            q = full_subset['pt_quad'].iloc[idx]
+            if q != last_quad:
+                transition_indices.append(idx)
+                last_quad = q
+
+        subset = full_subset.iloc[transition_indices].reset_index(drop=True)
+        t = np.array(transition_indices)
+
+        fig = plt.figure(figsize=(11, 8))
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.scatter(t, subset[rate_col], subset[init_col],
-                   color=colors[i], s=60, alpha=0.85, edgecolors='k', zorder=5)
-        ax.plot(t, subset[rate_col], subset[init_col],
-                color=colors[i], alpha=0.6, linewidth=2)
+        # --- Colored quadrant regions on the back wall (x = global_max_interactions) ---
+        quad_colors = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
+        quad_yz = [
+            ([0.0, t_med],   [0.0, l0_med]),   # Q0 Slow Starters
+            ([0.0, t_med],   [l0_med, 1.0]),    # Q1 Plateaued
+            ([t_med, 1.0],   [0.0, l0_med]),    # Q2 Diligent Beginners
+            ([t_med, 1.0],   [l0_med, 1.0]),    # Q3 Fast Masters
+        ]
+        xback = global_max_interactions
+        for qc, (yr, zr) in zip(quad_colors, quad_yz):
+            yy, zz = np.meshgrid(yr, zr)
+            xx = np.full_like(yy, xback, dtype=float)
+            ax.plot_surface(xx, yy, zz, color=qc, alpha=0.18, zorder=1)
 
-        # Mark quadrant boundary planes (translucent) — use fixed [0,1] ranges
+        # --- Two boundary planes spanning full time range ---
         t_plot_range = [0, global_max_interactions]
         tt, ll = np.meshgrid(t_plot_range, [0.0, 1.0])
-        ax.plot_surface(tt, np.full_like(tt, t_med), ll, alpha=0.07, color='grey')
+        ax.plot_surface(tt, np.full_like(tt, t_med),  ll,          alpha=0.10, color='grey', zorder=2)
         rr, tt2 = np.meshgrid([0.0, 1.0], t_plot_range)
-        ax.plot_surface(tt2, rr, np.full_like(rr, l0_med), alpha=0.07, color='grey')
+        ax.plot_surface(tt2, rr, np.full_like(rr, l0_med),          alpha=0.10, color='grey', zorder=2)
+
+        # --- Connecting line ---
+        ax.plot(t, subset[rate_col], subset[init_col],
+                color='dimgrey', alpha=0.5, linewidth=1.5, zorder=3)
+
+        # --- Transition points numbered and colored by quadrant ---
+        for seq, (idx, row) in enumerate(zip(t, subset.itertuples())):
+            pt_color = quad_colors[int(row.pt_quad)]
+            ax.scatter([idx], [getattr(row, rate_col)], [getattr(row, init_col)],
+                       color=pt_color, s=90, edgecolors='k', zorder=5, alpha=0.95)
+            ax.text(idx, getattr(row, rate_col), getattr(row, init_col),
+                    f' {seq}', fontsize=8, color='black', zorder=6)
 
         ax.set_xlabel('Interaction time-step ($t$)', fontsize=11, labelpad=10)
         ax.set_ylabel('Learning Rate ($p_T$)', fontsize=11, labelpad=10)
         ax.set_zlabel('Initial Mastery ($p_{L_0}$)', fontsize=11, labelpad=10)
 
-        # Integer ticks on x-axis, range fixed to global max (inverted)
         ax.set_xlim(global_max_interactions, 0)
         max_ticks = 10
         tick_step = max(1, global_max_interactions // max_ticks)
@@ -187,19 +219,27 @@ def main():
         ax.set_xticks(xticks)
         ax.set_xticklabels([str(v) for v in xticks], fontsize=8)
 
-        # Fix p_T and p_L0 axes to [0,1]
         ax.set_ylim(0.0, 1.0)
         ax.set_zlim(0.0, 1.0)
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
         ax.set_zticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
+        # --- Legend ---
+        legend_handles = [
+            mpatches.Patch(color=quad_colors[q], alpha=0.7, label=quad_labels[q])
+            for q in range(4)
+        ]
+        ax.legend(handles=legend_handles, loc='upper left',
+                  bbox_to_anchor=(0.0, 1.0), fontsize=8, framealpha=0.7)
+
         mean_l0 = full_subset[init_col].mean()
         mean_t  = full_subset[rate_col].mean()
+        n_transitions = len(transition_indices) - 1
         ax.set_title(
             f'Trajectory: {quad_labels[i]}\n'
-            f'student {uid}  |  {len(full_subset)} interactions  |  sampled every {args.timestep}\n'
+            f'student {uid}  |  {len(full_subset)} interactions  |  {n_transitions} transition(s)\n'
             f'mean $p_{{L_0}}$ = {mean_l0:.3f}  |  mean $p_T$ = {mean_t:.3f}',
-            fontsize=11, pad=15
+            fontsize=10, pad=15
         )
         ax.view_init(elev=20, azim=45)
 
@@ -207,7 +247,7 @@ def main():
         out_path = os.path.join(output_dir, f"roster_3d_{quad_names[i]}_893468.png")
         plt.savefig(out_path, dpi=150, bbox_inches='tight')
         plt.close()
-        print(f"Saved individual trajectory plot: {out_path}")
+        print(f"Saved {quad_names[i]}: {len(transition_indices)} points ({n_transitions} transitions) → {out_path}")
 
     # --- Combined plot (kept for backward compatibility) ---
     fig = plt.figure(figsize=(14, 10))
