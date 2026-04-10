@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.patches import Rectangle
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 
@@ -148,106 +149,98 @@ def main():
     ]
     quad_names = ['slow_starters', 'plateaued', 'diligent_beginners', 'fast_masters']
 
-    # --- Individual 3D trajectory plot per representative student ---
+    # --- Individual 2D trajectory plot per representative student ---
     for i, uid in enumerate(representatives):
         full_subset = df[df['student_id'] == uid].reset_index(drop=True)
-        # Cap to global_max_interactions
         full_subset = full_subset.iloc[:global_max_interactions]
 
-        # Select transition points: first interaction, then only when quadrant changes
         def row_quadrant(row):
             return get_quadrant({init_col: row[init_col], rate_col: row[rate_col]})
 
         full_subset = full_subset.copy()
         full_subset['pt_quad'] = full_subset.apply(row_quadrant, axis=1)
 
-        transition_indices = [0]
-        last_quad = full_subset['pt_quad'].iloc[0]
-        for idx in range(1, len(full_subset)):
-            q = full_subset['pt_quad'].iloc[idx]
-            if q != last_quad:
-                transition_indices.append(idx)
-                last_quad = q
+        # Sample every args.timestep interactions; always include the last point
+        indices = list(range(0, len(full_subset), args.timestep))
+        if (len(full_subset) - 1) not in indices:
+            indices.append(len(full_subset) - 1)
+        subset = full_subset.iloc[indices].reset_index(drop=True)
 
-        subset = full_subset.iloc[transition_indices].reset_index(drop=True)
-        t = np.array(transition_indices)
-
-        fig = plt.figure(figsize=(11, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # --- Colored quadrant regions on the back wall (x = global_max_interactions) ---
         quad_colors = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
-        quad_yz = [
-            ([0.0, t_med],   [0.0, l0_med]),   # Q0 Slow Starters
-            ([0.0, t_med],   [l0_med, 1.0]),    # Q1 Plateaued
-            ([t_med, 1.0],   [0.0, l0_med]),    # Q2 Diligent Beginners
-            ([t_med, 1.0],   [l0_med, 1.0]),    # Q3 Fast Masters
-        ]
-        xback = global_max_interactions
-        for qc, (yr, zr) in zip(quad_colors, quad_yz):
-            yy, zz = np.meshgrid(yr, zr)
-            xx = np.full_like(yy, xback, dtype=float)
-            ax.plot_surface(xx, yy, zz, color=qc, alpha=0.18, zorder=1)
 
-        # --- Two boundary planes spanning full time range ---
-        t_plot_range = [0, global_max_interactions]
-        tt, ll = np.meshgrid(t_plot_range, [0.0, 1.0])
-        ax.plot_surface(tt, np.full_like(tt, t_med),  ll,          alpha=0.10, color='grey', zorder=2)
-        rr, tt2 = np.meshgrid([0.0, 1.0], t_plot_range)
-        ax.plot_surface(tt2, rr, np.full_like(rr, l0_med),          alpha=0.10, color='grey', zorder=2)
+        fig, ax = plt.subplots(figsize=(8, 7))
 
-        # --- Connecting line ---
-        ax.plot(t, subset[rate_col], subset[init_col],
-                color='dimgrey', alpha=0.5, linewidth=1.5, zorder=3)
+        # --- Colored quadrant background regions ---
+        ax.add_patch(Rectangle((0.0, 0.0),    t_med,        l0_med,        color=quad_colors[0], alpha=0.15, zorder=0))
+        ax.add_patch(Rectangle((0.0, l0_med), t_med,        1.0 - l0_med,  color=quad_colors[1], alpha=0.15, zorder=0))
+        ax.add_patch(Rectangle((t_med, 0.0),  1.0 - t_med,  l0_med,        color=quad_colors[2], alpha=0.15, zorder=0))
+        ax.add_patch(Rectangle((t_med, l0_med), 1.0 - t_med, 1.0 - l0_med, color=quad_colors[3], alpha=0.15, zorder=0))
 
-        # --- Transition points numbered and colored by quadrant ---
-        for seq, (idx, row) in enumerate(zip(t, subset.itertuples())):
+        # --- Boundary lines ---
+        ax.axvline(t_med,  color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
+        ax.axhline(l0_med, color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
+
+        # --- Connecting line with directional arrows between sampled points ---
+        for k in range(len(subset) - 1):
+            x0, y0 = subset[rate_col].iloc[k],   subset[init_col].iloc[k]
+            x1, y1 = subset[rate_col].iloc[k+1], subset[init_col].iloc[k+1]
+            ax.annotate('', xy=(x1, y1), xytext=(x0, y0),
+                        arrowprops=dict(arrowstyle='->', color='dimgrey',
+                                        lw=2.0, alpha=0.35,
+                                        mutation_scale=20),
+                        zorder=2)
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            ax.text(mx, my, str(k + 1), fontsize=8, color='dimgrey',
+                    ha='center', va='center', zorder=3,
+                    bbox=dict(boxstyle='round,pad=0.15', fc='white', ec='none', alpha=0.6))
+
+        # --- Transition points numbered by actual interaction index ---
+        for actual_idx, row in zip(indices, subset.itertuples()):
             pt_color = quad_colors[int(row.pt_quad)]
-            ax.scatter([idx], [getattr(row, rate_col)], [getattr(row, init_col)],
-                       color=pt_color, s=90, edgecolors='k', zorder=5, alpha=0.95)
-            ax.text(idx, getattr(row, rate_col), getattr(row, init_col),
-                    f' {seq}', fontsize=8, color='black', zorder=6)
+            ax.scatter(getattr(row, rate_col), getattr(row, init_col),
+                       color=pt_color, s=160, edgecolors='k', linewidths=0.9,
+                       zorder=4, alpha=0.95)
+            ax.annotate(str(actual_idx),
+                        xy=(getattr(row, rate_col), getattr(row, init_col)),
+                        xytext=(5, 5), textcoords='offset points',
+                        fontsize=10, color='black', zorder=5)
 
-        ax.set_xlabel('Interaction time-step ($t$)', fontsize=11, labelpad=10)
-        ax.set_ylabel('Learning Rate ($p_T$)', fontsize=11, labelpad=10)
-        ax.set_zlabel('Initial Mastery ($p_{L_0}$)', fontsize=11, labelpad=10)
-
-        ax.set_xlim(global_max_interactions, 0)
-        max_ticks = 10
-        tick_step = max(1, global_max_interactions // max_ticks)
-        xticks = list(range(0, global_max_interactions + 1, tick_step))
-        ax.set_xticks(xticks)
-        ax.set_xticklabels([str(v) for v in xticks], fontsize=8)
-
+        ax.set_xlim(0.0, 1.0)
         ax.set_ylim(0.0, 1.0)
-        ax.set_zlim(0.0, 1.0)
+        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
+        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=12)
+        ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
-        ax.set_zticks([0.0, 0.25, 0.5, 0.75, 1.0])
+
+        # Quadrant labels inside the regions
+        ax.text(t_med / 2,       l0_med / 2,       'Slow\nStarters',      ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
+        ax.text(t_med / 2,       (l0_med + 1) / 2,  'Plateaued',           ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
+        ax.text((t_med + 1) / 2, l0_med / 2,        'Diligent\nBeginners', ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
+        ax.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Fast\nMasters',       ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
 
         # --- Legend ---
         legend_handles = [
             mpatches.Patch(color=quad_colors[q], alpha=0.7, label=quad_labels[q])
             for q in range(4)
         ]
-        ax.legend(handles=legend_handles, loc='upper left',
-                  bbox_to_anchor=(0.0, 1.0), fontsize=8, framealpha=0.7)
+        ax.legend(handles=legend_handles, fontsize=8, framealpha=0.8,
+                  loc='upper center', bbox_to_anchor=(0.5, -0.12),
+                  ncol=2, borderaxespad=0)
 
         mean_l0 = full_subset[init_col].mean()
         mean_t  = full_subset[rate_col].mean()
-        n_transitions = len(transition_indices) - 1
         ax.set_title(
             f'Trajectory: {quad_labels[i]}\n'
-            f'student {uid}  |  {len(full_subset)} interactions  |  {n_transitions} transition(s)\n'
+            f'student {uid}  |  {len(full_subset)} interactions  |  sampled every {args.timestep}\n'
             f'mean $p_{{L_0}}$ = {mean_l0:.3f}  |  mean $p_T$ = {mean_t:.3f}',
-            fontsize=10, pad=15
+            fontsize=10, pad=10
         )
-        ax.view_init(elev=20, azim=45)
 
         plt.tight_layout()
         out_path = os.path.join(output_dir, f"roster_3d_{quad_names[i]}_893468.png")
         plt.savefig(out_path, dpi=150, bbox_inches='tight')
         plt.close()
-        print(f"Saved {quad_names[i]}: {len(transition_indices)} points ({n_transitions} transitions) → {out_path}")
+        print(f"Saved {quad_names[i]}: {len(subset)} points (every {args.timestep}) → {out_path}")
 
     # --- Combined plot (kept for backward compatibility) ---
     fig = plt.figure(figsize=(14, 10))
