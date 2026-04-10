@@ -109,45 +109,45 @@ Figure~\ref{fig_roster} addresses RQ2, showing trajectory plots for a representa
 \begin{figure}[p]
 \centering
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth]{roster_2d_foundational_893468.png}
-  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$). The trajectory remains confined to the lower-left
-  quadrant throughout the interaction sequence. The small number of sampled points and their limited spread
-  indicate that the student's parameters change very little: neither mastery nor learning rate improves
-  substantially, signalling a structural mismatch between task demands and current preparation that calls
-  for immediate scaffolding.}
+  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
+  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): trajectory confined to the lower-left quadrant;
+  limited spread signals a structural mismatch calling for immediate scaffolding.}
 \end{subfigure}
-\vspace{0.3em}
+\vspace{1em}
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth]{roster_2d_consolidating_893468.png}
-  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$). The trajectory is compact and anchored in the
-  upper-left quadrant. High prior mastery is stable across interactions, but the learning rate remains near
-  zero and shows no upward trend. This stagnation suggests the student has exhausted the learning potential
-  of current tasks; the tutorial model should introduce novel challenge or advance difficulty to reactivate
-  learning.}
+  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
+  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact trajectory anchored at high mastery
+  and near-zero learning rate; stagnation cues the introduction of novel challenge.}
 \end{subfigure}
-\vspace{0.3em}
-\begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth]{roster_2d_emerging_893468.png}
-  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$). The trajectory is the most spatially extended:
-  points span a wide area of the parameter space and the path crosses quadrant boundaries, reflecting
-  a student whose mastery and learning rate vary substantially across skills and interactions. The high
-  learning rate signals strong growth potential; differentiated instruction by skill component is most
-  effective here.}
-\end{subfigure}
-\vspace{0.3em}
-\begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth]{roster_2d_advancing_893468.png}
-  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$). The trajectory occupies the upper-right quadrant
-  and shows moderate spread, indicating robust mastery combined with a sustained learning rate across
-  interaction contexts. The student can safely be routed to accelerated content; the trajectory confirms
-  that the high-performance profile is consistent rather than task-specific.}
-\end{subfigure}
-\caption{\textbf{Learning situation trajectories.} Sampled $(p_T, p_{L_0})$ trajectories for a representative
-student from each of the four learning situations (stride 10, $\delta_{\min}=0.3$). Numbered points mark
-interactions where the Euclidean displacement in parameter space exceeded $\delta_{\min}$; arrows indicate
-temporal direction. Coloured background regions correspond to the four learning situations; the trajectory
-colour reflects the learning situation of the representative student.}
+\caption{\textbf{Learning situation trajectories (1/2): Foundational and Consolidating.}
+Each trajectory traces the evolution of a representative student's parameter pair $(p_T, p_{L_0})$
+over successive interactions. Points are selected using a two-stage procedure: a candidate is
+considered every 10 interactions; it is plotted only if its Euclidean distance from the previously
+plotted point in $(p_T, p_{L_0})$ space exceeds $\delta_{\min}=0.3$, so that only genuinely
+significant parameter shifts are shown. Consecutive plotted points are connected by directional
+arrows and labelled with the interaction index. Coloured background regions delimit the four
+learning situations defined by the population medians of $p_{L_0}$ and $p_T$.}
 \label{fig_roster}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
+  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): spatially extended trajectory crossing quadrant
+  boundaries; high learning rate signals strong growth potential warranting skill-level differentiation.}
+\end{subfigure}
+\vspace{1em}
+\begin{subfigure}[b]{\textwidth}
+  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
+  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): upper-right trajectory with moderate spread;
+  robust mastery across contexts supports routing to accelerated content.}
+\end{subfigure}
+\caption{\textbf{Learning situation trajectories (2/2): Emerging and Advancing.}
+Same two-stage sampling as Figure~\ref{fig_roster}: one candidate every 10 interactions,
+retained only when the Euclidean displacement from the previous plotted point exceeds
+$\delta_{\min}=0.3$. Coloured background regions delimit the four learning situations.}
+\label{fig_roster_cont}
 \end{figure}
 
 The parameter orbits of representative students across the four learning situations are characterised in Figures~\ref{fig_ellipse} and~\ref{fig_returnmap}. A key property of gTransformer's augmented user model is that the learning situation label assigned to each student is not a static category frozen at enrolment: it is a summary of the student's longitudinal tendency, continuously updated as new interactions arrive. The covariance ellipses in Figure~\ref{fig_ellipse} make this explicit---each ellipse visualises the full spread of $(p_{\text{L}_0}, p_{\text{T}})$ values that a student's profile traverses across all their interactions, rather than a single point estimate.
