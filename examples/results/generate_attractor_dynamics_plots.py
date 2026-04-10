@@ -372,9 +372,8 @@ def plot_transition_graph(df, sm, rate_col, init_col, representatives,
         rep_mean_t   = sm.loc[uid, rate_col]
         ax.set_title(
             f'Transition Graph: {labels[i]}\n'
-            f'{n_quad} students  |  {grid_n}×{grid_n} grid  |  top {top_k} transitions shown\n'
-            f'Quadrant mean: $p_{{L_0}}$={quad_mean_l0:.3f}, $p_T$={quad_mean_t:.3f}'
-            f'  |  Rep. student {uid}: $p_{{L_0}}$={rep_mean_l0:.3f}, $p_T$={rep_mean_t:.3f}',
+            f'All {n_quad} students in quadrant  |  {grid_n}×{grid_n} grid  |  top {top_k} transitions shown\n'
+            f'Quadrant mean: $p_{{L_0}}$={quad_mean_l0:.3f}, $p_T$={quad_mean_t:.3f}',
             fontsize=10, pad=10
         )
 
