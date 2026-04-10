@@ -198,13 +198,13 @@ python3 examples/validation/run_ablation_comparison.py
   - `latent_tsne_map.png`: t-SNE colored by BKT $L_0$ (difficulty)
   - `latent_tsne_map_by_skill.png`: t-SNE colored by top skills
   - `latent_pca_map.png`: PCA projection colored by difficulty
-  - Script: `tmp/plot_latent_pca.py` (generates PCA visualizations)
+  - Script: `examples/validation/old/plot_latent_pca.py` (generates PCA visualizations)
 
 ✅ **Data extraction**: `pykt/models/evaluate_gtransformer.py` extracts latent vectors during evaluation
 
 #### What We Need to Enhance:
 
-**Script**: Extend `tmp/plot_latent_pca.py` → `examples/analyze_latent_space.py`
+**Script**: Extend `examples/validation/old/plot_latent_pca.py` → `examples/analyze_latent_space.py`
 
 **Additional Functionality**:
 1. **Scree plot**: Show cumulative variance explained by PCs
