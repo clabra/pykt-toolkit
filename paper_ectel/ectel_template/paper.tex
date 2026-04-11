@@ -176,8 +176,7 @@ For \textit{advancing learners}, the ellipse is moderately extended and centred 
 \label{fig_ellipse}
 \end{figure}
 
-
-Figure~\ref{fig_returnmap} shows return maps (lag plots) for the same four representatives. Each panel plots the value of a parameter at interaction $t+1$ against its value at interaction $t$, separately for $p_{\text{L}_0}$ (left sub-panel) and $p_{\text{T}}$ (right sub-panel), with points coloured from dark (early interactions) to bright (late interactions) using a sequential palette. The diagonal represents a fixed point: points on the diagonal indicate no change between consecutive interactions. Deviations above the diagonal signal an increasing parameter; deviations below signal a decrease. Unlike population-level BKT, which produces a single pair of constant parameter values for all students on a given skill, each return map encodes the unique temporal trajectory of an individual student, a view that is both dynamic and context-aware, and one that evolves measurably as the student progresses.
+Figure~\ref{fig_returnmap} shows plots for the same four representatives. Each panel plots the value of a parameter at interaction $t+1$ against its value at interaction $t$, separately for $p_{\text{L}_0}$ (left sub-panel) and $p_{\text{T}}$ (right sub-panel), with points coloured from dark (early interactions) to bright (late interactions) using a sequential palette. The diagonal represents a fixed point: points on the diagonal indicate no change between consecutive interactions. Deviations above the diagonal signal an increasing parameter; deviations below signal a decrease. Unlike population-level BKT, which produces a single pair of constant parameter values for all students on a given skill, each return map encodes the unique temporal trajectory of an individual student, a view that is both dynamic and context-aware, and one that evolves measurably as the student progresses.
 
 For \textit{foundational learners}, the $p_{\text{L}_0}$ return map reveals a broad scatter around the diagonal with a systematic downward drift from early interactions (mean 0.61) to late interactions (mean 0.48): the model progressively revises its mastery estimate downward as evidence of insufficient learning accumulates. The $p_{\text{T}}$ panel is tightly concentrated near zero throughout, exposing a stable low-rate attractor that a snapshot profile would reduce to a single low number. The trajectory, however, shows that the attractor consolidates over time; the orbit is converging, not oscillating randomly. This temporal structure informs instructional timing: an intervention delivered before the orbit locks into the low attractor is far more likely to dislodge the student from this trajectory than one applied after convergence. The tutorial model, monitoring this return map in real time, can act early and revise the learning-situation assignment as soon as $p_{\text{T}}$ or $p_{\text{L}_0}$ shows a sustained upward deviation.
 
@@ -191,12 +190,12 @@ For \textit{advancing learners}, the $p_{\text{L}_0}$ return map shows early sta
 \centering
 \begin{subfigure}[b]{\textwidth}
   \centering
-  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_foundational_893468.png}
+  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_foundational_893468.png}
   \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): broad scatter with downward mastery drift and a stable low learning-rate attractor converging over time.}
 \end{subfigure}
 \begin{subfigure}[b]{\textwidth}
   \centering
-  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_consolidating_893468.png}
+  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_consolidating_893468.png}
   \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): mastery orbit migrates to a high-mastery fixed point while learning rate declines, revealing an active-to-plateau transition.}
 \end{subfigure}
 \end{figure}
@@ -205,15 +204,15 @@ For \textit{advancing learners}, the $p_{\text{L}_0}$ return map shows early sta
 \centering
 \begin{subfigure}[b]{\textwidth}
   \centering
-  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_emerging_893468.png}
+  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_emerging_893468.png}
   \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): both mastery and learning rate increase over time, with points distributed above the diagonal in both panels.}
 \end{subfigure}
 \begin{subfigure}[b]{\textwidth}
   \centering
-  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_advancing_893468.png}
+  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_advancing_893468.png}
   \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): mastery clusters at high values from the first interactions; learning rate declines moderately as marginal gains diminish.}
 \end{subfigure}
-\caption{\textbf{Return maps.} Lag plots for the representative student of each learning situation. Each panel shows $p_{\text{L}_0}(t+1)$ vs $p_{\text{L}_0}(t)$ (left) and $p_{\text{T}}(t+1)$ vs $p_{\text{T}}(t)$ (right). Points are coloured from dark (early) to bright (late) interactions. The diagonal (dashed line) marks the fixed point; deviations above indicate increasing parameters and deviations below indicate decreasing ones.}
+\caption{\textbf{Return maps.} Plots for the representative student of each learning situation. Each panel shows $p_{\text{L}_0}(t+1)$ vs $p_{\text{L}_0}(t)$ (left) and $p_{\text{T}}(t+1)$ vs $p_{\text{T}}(t)$ (right). Points are coloured from dark (early) to bright (late) interactions. The diagonal (dashed line) marks the fixed point; deviations above indicate increasing parameters and deviations below indicate decreasing ones.}
 \label{fig_returnmap}
 \end{figure}
 
