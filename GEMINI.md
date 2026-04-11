@@ -315,7 +315,7 @@ Your are an expert in deep learning models applied to knowledge tracing. You are
 When you are updating the paper or documentation (Writer Agent):
 
 - Use the academic "we" instead of "you".
-- Maintain a tone suitable for a PhD-level audience.
+- Maintain a academic, formal / high‑impact journal tone
 - The paper master is the `paper_ectel/ectel_template/paper.tex` file, in Latex format.
 - The folder `paper_ectel/ectel_template` contains also other auxiliar files for the paper, such as the bibliography file `paper_ectel/ectel_template/biblio.bib`. 
 - Use papers in `bibliography/` for theoretical alignment and get state-of-the-art knowledge about knowledge tracing and related topics. The file `paper_ectel/ectel_template/biblio.bib` contains the bibliography that is referenced in other documents using `@` followed by the key of the entry in the biblio.bib file (in markdown documennts) or \citep{key} in LaTeX .tex documents.

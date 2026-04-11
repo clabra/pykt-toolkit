@@ -49,7 +49,13 @@ The present paper addresses this gap. Following the conceptual framework introdu
 
 The research question that guides this work is: how can augmenting an ITS user model with grounded Transformer parameters support the design of context-aware, situation-based instructional strategies that are both grounded in established learning theories and responsive to the evolving needs of individual learners?
 
-The remainder of the paper is organised as follows. Section~2 formalises the proposed augmented user model and the gTransformer architecture that powers it, and makes explicit the design principles that govern its construction. Section~3 describes the methodology for augmenting the user model and deriving learning situations from grounded parameters. Section~4 presents the results for each learning situation and their instructional implications. Section~5 demonstrates situation-based instructional routing. Section~6 discusses the broader implications and Section~7 concludes.
+The remainder of the paper is organised as follows. Section~2 provides background on ITS student models and the learning theories underpinning reference models such as BKT. Section~3 formalises the proposed augmented user model and the gTransformer architecture that powers it, and makes explicit the design principles that govern its construction. Section~4 describes the methodology for augmenting the user model and deriving learning situations from grounded parameters. Section~5 presents the results for each learning situation and their instructional implications. Section~6 demonstrates situation-based instructional routing. Section~7 discusses the broader implications and Section~8 concludes.
+
+%
+
+\section{Background}
+
+This section introduces the principal components of ITS and the role of student models in driving adaptive instruction. It then presents the learning-theoretic foundations of Bayesian Knowledge Tracing, the reference model whose constructs underpin the grounded Transformer architecture used in this work.
 
 \subsection{Intelligent Tutoring Systems and User Models}
 
@@ -63,9 +69,18 @@ Intelligent Tutoring Systems are typically structured around three interacting c
 
 \subsection{Learning Theories and Bayesian Knowledge Tracing}
 
-We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework. BKT models the learning process as a Hidden Markov process governed by four interpretable parameters: Initial Mastery ($P(\text{L}_0)$), the probability that a student knows a concept prior to practice; Learn Rate ($P(\text{T})$), the probability of transitioning from the unlearned to the learned state; Guess ($P(\text{G})$), the probability of a correct response despite lack of mastery; and Slip ($P(\text{S})$), the probability of an incorrect response despite mastery. These parameters enable a recursive, causally transparent estimation of student mastery that is directly interpretable by educators.
+We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework. BKT models the learning process as a Hidden Markov process governed by four interpretable parameters:
 
-Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. As a result, two students with identical recent response patterns receive the same mastery estimate and the same instructional routing, regardless of differences in their prior knowledge or in the rate at which they have been consolidating knowledge across earlier interactions. The augmented student model proposed here overcomes this limitation by replacing population-level parameter estimates with student-specific, longitudinally sensitive ones derived by gTransformer.
+\begin{itemize}
+    \item \textit{Initial Mastery} ($P(\text{L}_0)$): the probability that a student knows a concept prior to practice.
+    \item \textit{Learn Rate} ($P(\text{T})$): the probability of transitioning from the unlearned to the learned state.
+    \item \textit{Guess} ($P(\text{G})$): the probability of a correct response despite lack of mastery.
+    \item \textit{Slip} ($P(\text{S})$): the probability of an incorrect response despite mastery.
+\end{itemize}
+
+These parameters enable a recursive, causally transparent estimation of student mastery that is directly interpretable by educators.
+
+Despite these properties, standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. As a result, two students with identical recent response patterns receive the same mastery estimate and the same instructional routing, regardless of differences in their prior knowledge or in the rate at which they have been consolidating knowledge across earlier interactions. The augmented student model proposed here overcomes this limitation by replacing population-level parameter estimates with student-specific, longitudinally sensitive ones derived by gTransformer.
 
 %
 \section{Grounded Transformers and Augmented User Models}
