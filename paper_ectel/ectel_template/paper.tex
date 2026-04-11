@@ -77,9 +77,10 @@ We propose an \textit{augmented user model} that integrates the three standard I
 
 The augmented user model is powered by gTransformer~\cite{labra2026theory}, a hybrid architecture that implements \textit{representational grounding}: a methodology that anchors Transformer latent representations to the semantic constructs of BKT, bridging deep learning expressiveness with pedagogical interpretability. Figure~\ref{fig_arch} summarises the architecture.
 
+
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{arch.pdf}
+\includegraphics[width=\textwidth]{gtransformer.png}
 \caption{\textbf{gTransformer architecture.} Two processing tracks share a common encoder--decoder backbone. The standard track (white boxes) produces supervised predictions via an MLP head. The grounded track (grey boxes) combines BKT theory base logits with context-vector projections onto learnable semantic axes to produce student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$, which are passed through BKT update logic to yield theory-transparent predictions. Both heads are jointly optimised via a multi-objective loss. Outputs of the grounded track populate the augmented user model (blue box).}
 \label{fig_arch}
 \end{figure}
