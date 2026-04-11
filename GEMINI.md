@@ -6,14 +6,19 @@ This project uses pykt-toolkit as a starting point, forked from pykt-toolkit git
 
 The key contributions of the paper will be a new Transformer attention-based model with a good balance between performance (i.e. is competive in terms of AUC with state of the art attention-based models) and interpretability. Our approach higlights interpretability and explanability as key contributions
 
+## Reference Documents
+
+- `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it.  
+- `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. 
+
 ## Paper Publication
 
-The paper is intended to be submitted to ECTEL 2026, the Twenty-first European Conference on Technology Enhanced Learning that this year is dedicated to this topic: "Mindful TEL: Learning Technologies Shaped with Intention". See [conference website](https://ea-tel.eu/ectel2026/cfp). 
+The paper is intended to be submitted to ECTEL 2026, the Twenty-first European Conference on Technology Enhanced Learning that this year is dedicated to this theme: "Mindful TEL: Learning Technologies Shaped with Intention". See [conference website](https://ea-tel.eu/ectel2026/cfp). 
 
 The European Conference on Technology-Enhanced Learning (ECTEL) engages researchers, practitioners, educational developers, entrepreneurs, industry leaders, and policy makers to address current challenges and advances in the field. ECTEL 2026 will take place on 14-18 September 2026 in Valencia, Spain. ECTEL 2026 will be a face-to-face conference.
 
-## 2026 Theme 
 
+## ECTEL 2026 Conference Theme
 As technology and increasingly artificial intelligence shapes how we learn, teach, and research, the challenge for the TEL community is to ensure that innovation remains purposeful and grounded in learning theories and robust evidence. The theme of ECTEL 2026 invites research work that pairs scientific rigor with reflective awareness: studies that advance the design and understanding of learning technologies while keeping human values, agency and educational purpose at the center.
 
 This orientation echoes wider European work on digital citizenship in education, where technologies are framed as tools to empower learners, defend human rights and strengthen democracy (Council of Europe, 2023). At the same time, the Artificial Intelligence Act (EU) 2024/1689 explicitly classifies AI systems in education as “high-risk”, particularly those that assign, assess or monitor learners. This tension reminds us that learning technologies, including AI, are not neutral or inevitable, but must remain deliberate choices shaping the educational futures we want.
@@ -50,12 +55,228 @@ Research papers are expected to be mature research contributions to the field of
 
 Accepted full research papers will be published in LNCS Springer Conference Proceedings.
 
+## Paper narrative 
 
-## Reference Documents
+### Theme
 
-- `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it.  
-- `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. 
+How to address in our paper the ECTEL 2026 Theme: "Mindful TEL: Learning Technologies Shaped with Intention".
 
+### Conference theme alignment 
+
+Highlight the following points in the paper and integrate them into the narrative where applicable.
+
+- **Purposeful design in Intelligent Tutoring Systems.** Frame the paper within the evolution of ITS designed with explicit pedagogical intent. Emphasize that student models in ITS are most often based on Knowledge Tracing (KT), and that the field has historically been driven almost exclusively by predictive accuracy, without regard for whether the model's outputs are interpretable or actionable by end users, in particular educators and instructional designers.
+
+- **Support for instructionally relevant, human-aware strategies.** Stress that the value of a student model is not only its predictive performance, but its capacity to inform adaptive instruction in ways that are sensitive to human, cognitive, and ethical considerations. Grounded transformers make this possible through the extraction of interpretable learning signals (prior knowledge, learning rate, progress) that educators can act upon.
+
+- **Ethically and humanistically informed TEL.** Integrate attention to responsible AI, interpretability, and explainability as first-class concerns. Highlight how grounded transformers combine strong predictive performance with end-user interpretability -- meaning interpretability directed at educators and learners, not only AI specialists. Reference the prior work [MDPI paper] for the technical details of this design choice.
+
+- **Transparency, explainability, and human control in TEL.** Address model explainability, educator and learner agency, and the avoidance of black-box systems in high-stakes educational contexts. Align this with the EU AI Act (2024/1689), which classifies AI systems used to assess or monitor learners as high-risk, and with the broader European framework for digital citizenship in education.
+
+- **Educational context and ethical sensitivity.** Acknowledge the real-world educational context in which these models operate, including risks, limitations, trade-offs, data privacy, and potential for algorithmic bias. Make clear that the model is a tool to support adaptive instruction, not a mechanism for categorizing or labeling students.
+
+### Paper approach
+
+Nuestro paper para ECTEL es un "Design paper" que se apoya mucho en una contribucion nuestra  anterior, el paper enviado a MDPI, que era un " Conceptual paper". Tener en cuenta que este paper ECTEL va con doble ciego por lo que las menciones al paper MDPI deben hacerse como aludiendo a terceros. 
+
+```
+Background information: 
+
+1. Design paper
+📌 Qué es
+Un design paper presenta el diseño y la justificación de una solución (artefacto, sistema, modelo, framework, metodología) para un problema educativo concreto. En este caso presentamos como mejorar el Nodelo de Usuario, un componente clave de los Sistemas Tutoriales Inteligentes. 
+
+No solo explica qué queremos construir, sino por qué lo diseñamos así.
+
+📌 Características clave
+
+Se centra en el proceso de diseño
+Explicita decisiones intencionales (ideal para Mindful TEL)
+Normalmente incluye:
+
+- problema de diseño
+- principios de diseño
+- trade-offs
+- a veces una evaluación inicial (piloto, validación cualitativa). En esta caso presentamos como utilizarlo para generar informacion (e.g. plots) que ayude a mejorar las estrategias instruccionales adaptandolas mejor a cada alumno y a su evolucion durante el proceso de aprendizaje. 
+
+📌 Estructura típica
+
+- Problema / contexto
+- Marco teórico o de diseño
+- Principios de diseño
+- Descripción del artefacto o enfoque
+- Evaluación preliminar o reflexión
+
+✅ Cuándo encaja mejor
+
+- Has diseñado una solución TEL, especialmente con IA. En esta caso un Modelo de Usuario Aumentado mediante informacion procedente de un gTransforme entrenado a partir de datos de un modelo BKT
+- Se pueden justificar decisiones pedagógicas y éticas
+- La contribución es cómo diseñar de forma mindful, no solo resultados
+
+🔑 Muy alineado con “Mindful TEL: Learning Technologies Shaped with Intention”
+
+2. Conceptual paper
+
+📌 Qué es
+Un conceptual paper no es empírico. Su contribución es teórica o conceptual:
+
+- propone modelos. En este caso el paper MDPI proponia un modelo gTransformer
+- redefine conceptos
+- articula marcos de análisis. En el paper mdpi como crear modelos DKT que tengan interpetabilidad para el usuario final no técnico
+- conecta literatura existente de forma novedosa
+
+No construyes ni evalúas un sistema: construyes ideas.
+
+📌 Características clave
+
+- No presenta datos nuevos. En el paper MDPI presentamos datos que apoyaban la validez del modelo demostrando entre otras cosas su competitividad en terminos de accuracy.  
+- Fuerte argumentación conceptual
+- Uso crítico de literatura existente
+- Nueva perspectiva, tipología o framework. En el paper mdpi la contribucion era un nuevo tipo de modelos Deep Learning interpretables 
+
+📌 Estructura típica
+
+- Problematización
+- Revisión conceptual crítica
+- Propuesta de modelo / marco
+- Implicaciones para investigación y práctica. En el paper mdpi mostramos algunas aplicaciones practicas para demostrar su valor pedagogico
+
+✅ Cuándo encaja mejor
+
+- Quieres redefinir qué es Mindful TEL
+- Propones un marco ético, pedagógico o de diseño
+- Tu aportación es conceptual, no técnica
+
+🔑 Ideal si tu paper dice:
+
+“Así deberíamos pensar la IA/TEL consciente, incluso si aún no está implementado.”
+
+```
+
+La narrativa debe ser muy clara y explícita:
+
+- El conceptual paper (MDPI) establece el “por qué” y el “qué”;
+- El design paper (ECTEL) demuestra el “cómo”.
+
+Dicho de otro modo:
+
+Conceptual paper → define el marco, principios, valores y conceptos (Grounded Transformers para una interpetabilidad basada en modelo teoricos intrinsicamente interpretables y relevantes para  el usuario final)
+Design paper → operationaliza esos principios en decisiones concretas de diseño TEL alineadas con el tema de la Conferencia
+
+⚠️ Lo que los revisores NO quieren:
+
+Que el design paper parezca una “repetición” del conceptual
+Que el lector tenga que leer el paper anterior para entender este
+
+✅ Lo que SÍ quieren:
+
+Ver continuidad intelectual
+Ver avance claro (concept → diseño)
+
+
+## Paper Structure
+
+### Introducción (early positioning)
+
+Tener en cuenta lo siguiente, adaptando al requisito de doble-ciego del paper ECTEL actual y a un inglés académico: 
+
+"This design paper builds upon our previous conceptual work, which articulated a framework for Mindful Technology-Enhanced Learning. While the earlier paper focused on defining the conceptual foundations and design principles, the present contribution advances this work by translating those principles into concrete design decisions and an implementable TEL approach."
+
+Dejar claro que este paper ECTEL: 
+- no duplica
+- supone un avance
+- es necesario
+
+### Background / related work / theoretical grounding
+
+
+- resumir solo lo esencial del conceptual paper (paper mdpi)
+- tratarlo como marco de referencia, no como resultado principal
+
+Ejemplo:
+
+"Following the conceptual framework introduced in [X], this work adopts the notions of intentionality, transparency, and learner agency as guiding design principles."
+
+💡 Importante: no explicar todo el conceptual paper otra vez.
+Asume que el lector confía en él como base teórica.
+
+### Cómo hacer que el Design paper sea claramente “Mindful TEL”
+
+Aquí está el punto fuerte de nuestro  caso.
+
+Un design paper mindful debe mostrar explícitamente:
+✅ a) Principios → decisiones
+
+Hacer visible la trazabilidad:
+
+Principio conceptual Decisión de diseño
+
+- Intencionalidad: La IA solo interviene en X momentos
+- Transparencia: Feedback explicable para docentes
+- Control humano: Override manual / configuración explícita
+
+➡️ Esto aumenta la posibilidad de que acepten el paer para ECTEL
+
+
+✅ b) Decisiones conscientes (incluyendo lo que NO hacemos)
+
+Esto es muy poderoso y claramente “mindful”:
+
+- qué decidiste no automatizar
+- qué capacidades de la tecnología deliberadamente limitaste
+- trade-offs éticos/pedagógicos
+
+Ejemplo:
+
+    "Rather than maximizing automation, design choices were intentionally constrained to preserve pedagogical agency."
+
+###
+
+### Cómo evitar el principal riesgo: “dependencia excesiva” del paper previo
+
+🔴 Riesgo típico
+El revisor piensa:
+
+“Este paper depende demasiado del anterior.”
+
+✅ Cómo evitarlo (regla práctica)
+Tu design paper debe cumplir esto:
+👉 Se entiende y se evalúa correctamente aunque el lector NO haya leído el conceptual paper.
+Eso implica:
+
+- Breve recap conceptual (1–2 párrafos)
+- Referencia clara, pero no imprescindible
+- Contribución autónoma
+
+
+### Cómo formular la contribución (muy clave en conferencias)
+
+Una posible formulación limpia y potente:
+
+"This paper contributes by demonstrating how a mindful TEL framework can be operationalized through concrete design choices, thereby bridging conceptual foundations and practical system design."
+
+O, si se quiere enfatizar IA:
+
+"The contribution lies in translating a conceptual definition of mindful TEL into an AI-supported learning design that foregrounds intentionality, transparency, and human decision-making."
+
+
+6. Evalúarlo con este checklist: 
+
+Marcar ✅ si es cierto:
+
+☐ El lector entiende qué era el conceptual paper en 2 minutos
+☐ El foco ahora está claramente en diseño, no teoría
+☐ Se ven decisiones intencionales, no solo arquitectura
+☐ El paper sin el anterior sigue siendo publicable
+☐ El término "mindful" no es solo retórico: está en el diseño
+
+Si se cumplen 4–5 ✅ → está muy bien alineada.
+
+7. Considerar este planteamiento: 
+
+- Conceptual paper → legitima el enfoque
+- Design paper → lo hace tangible
+- Tema de la conferencia → encaje natural
 
 ## Environment Setup
 
