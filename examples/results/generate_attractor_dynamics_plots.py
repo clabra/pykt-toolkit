@@ -416,14 +416,14 @@ def main():
                                 non_outlier_ids)
 
     colors      = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
-    short_names = ['Slow\nStarters', 'Plateaued', 'Diligent\nBeginners', 'Fast\nMasters']
+    short_names = ['Foundational', 'Consolidating', 'Emerging', 'Advancing']
     labels      = [
-        'Slow Starters (Low $p_{L_0}$, Low $p_T$)',
-        'Plateaued (High $p_{L_0}$, Low $p_T$)',
-        'Diligent Beginners (Low $p_{L_0}$, High $p_T$)',
-        'Fast Masters (High $p_{L_0}$, High $p_T$)',
+        'Foundational (Low $p_{L_0}$, Low $p_T$)',
+        'Consolidating (High $p_{L_0}$, Low $p_T$)',
+        'Emerging (Low $p_{L_0}$, High $p_T$)',
+        'Advancing (High $p_{L_0}$, High $p_T$)',
     ]
-    names = ['slow_starters', 'plateaued', 'diligent_beginners', 'fast_masters']
+    names = ['foundational', 'consolidating', 'emerging', 'advancing']
 
     plot_kde_overlay(df, sm, rate_col, init_col, reps, t_med, l0_med,
                      colors, short_names, labels, names, output_dir, args.uid_suffix)

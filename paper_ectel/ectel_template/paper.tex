@@ -36,9 +36,13 @@ The user model serves as a cornerstone of Intelligent Tutoring Systems. In many 
 %
 \section{Introduction}
 
-The student model is one of the core components in Intelligent Tutoring Systems (ITS). In many of these systems it is defined as a set of mastery states with respect to the skills or knowledge components that characterise the domain under study. This characterisation is adequate when the aim is simply to estimate the student's knowledge and make predictions about their degree of learning when interacting with study materials. In this work we address how to augment this student model with additional information that can serve as the basis for designing more sophisticated instructional strategies.
+Intelligent Tutoring Systems (ITS) rely on a student model to represent the learner's evolving knowledge state and to drive adaptive instructional decisions. In most deployed systems, this model is operationalised as a set of mastery estimates over a predefined collection of skills or knowledge components, updated incrementally as the student interacts with learning materials. Knowledge Tracing (KT) approaches, ranging from Bayesian Knowledge Tracing (BKT)~\cite{corbett1994knowledge} to deep learning architectures such as DKT~\cite{piech2015deep} and attention-based models~\cite{ghosh2020context}, have substantially advanced the accuracy of these estimates. However, predictive accuracy alone is insufficient for purposeful adaptive instruction: a student model that cannot articulate why a learner is struggling, or that cannot provide theory-grounded predictions of future performance, offers limited diagnostic value to educators and tutoring systems alike.
 
-To this end, we propose the use of a gTransformer model~\cite{labra2026theory} to derive a set of parameters that enrich the user model with information that, as we demonstrate throughout this work, is highly useful when adapting the instructional strategy of an ITS. Our primary contribution is an \textit{augmented student model}: we show how a user model that integrates parameters from a Grounded Transformer is able to support instructional strategies more closely adapted to the needs of the student along the learning trajectory. This work is guided by the following research question: how can augmenting a user model with information from a Grounded Transformer improve the design of instructional strategies?
+Two fundamental limitations characterise current KT models. First, high-performance neural approaches are largely opaque: their internal representations do not correspond to pedagogically recognisable constructs, making it difficult for practitioners to justify or act on model outputs. Second, interpretable models such as standard BKT operate at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}, and therefore cannot capture the individual learning patterns that determine which instructional strategy will be most effective for a given learner at a given moment.
+
+Recent work on Grounded Transformers~\cite{labra2026theory} addresses both limitations by constraining Transformer latent representations to align with the semantic axes of BKT through \textit{representational grounding}. This yields student-specific, longitudinally updated estimates of initial mastery ($p_{\text{L}_0}$) and learning rate ($p_{\text{T}}$), derived from each student's full interaction history rather than from population averages. In the present work we investigate how these grounded parameters can augment the ITS student model in ways that support richer and more intentional instructional strategies.
+
+Our primary contribution is an \textit{augmented student model} that integrates Grounded Transformer parameters into all three core ITS components -the user model, the domain model, and the tutorial model- and demonstrates that doing so enables context-aware, \textit{situation-based instruction}. In \cite{labra2026theory}, they evaluate gTransformer on five benchmark datasets and show that interpretable predictions derived from grounded parameters consistently outperform classical BKT by an average AUC gain of 19.9\%, at a grounding cost of only 3.9\% relative to black-box deep learning architectures. They further confirm, through structural, semantic, and functional alignment analyses, that the model's representations genuinely encode BKT constructs as primary organising principles rather than as surface correlates. These properties make the augmented student model that we propose a viable foundation for a more adaptive, human-centred ITS. This work is guided by the following research question: how can augmenting a user model with Grounded Transformer parameters improve the design of context-aware, situation-based instructional strategies?
 
 
 %
@@ -49,19 +53,20 @@ To this end, we propose the use of a gTransformer model~\cite{labra2026theory} t
 Intelligent Tutoring Systems are typically structured around three interacting components: 
 
 \begin{itemize}
-    \item \textit{domain model}: This component encodes the knowledge to be taught, typically structured as a set of Knowledge Components (KCs) or skills. It provides the semantic framework through which student performance is assessed and instructional content is organised.
-    \item \textit{user model}: The user model tracks the learner's evolving state by maintaining a representation of their mastery across the domain model. In gTransformer, this is augmented with longitudinal parameters that capture the student's unique learning patterns beyond simple correctness.
-    \item \textit{tutorial model}: This component mediates instructional decisions by selecting the next activity, intervention, or level of support based on the current state of the user model. The goal is to provide a personalised learning experience that optimises the student's trajectory.
+    \item \textit{Domain model}: This component encodes the knowledge to be taught, typically structured as a set of Knowledge Components (KCs) or skills. It provides the base through which student performance is assessed and instructional content is organised.
+    \item \textit{User model}: The user model tracks the learner's evolving state by maintaining a representation of their mastery across the domain model. 
+    \item \textit{Tutorial model}: This component mediates instructional decisions by selecting the next activity, intervention, or level of support based on the current state of the user model. The goal is to provide a personalised learning experience that optimises the student's trajectory.
 \end{itemize}
 
 \subsection{Learning Theories and Bayesian Knowledge Tracing}
 
 We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework. BKT models the learning process as a Hidden Markov process governed by four interpretable parameters: Initial Mastery ($P(\text{L}_0)$), the probability that a student knows a concept prior to practice; Learn Rate ($P(\text{T})$), the probability of transitioning from the unlearned to the learned state; Guess ($P(\text{G})$), the probability of a correct response despite lack of mastery; and Slip ($P(\text{S})$), the probability of an incorrect response despite mastery. These parameters enable a recursive, causally transparent estimation of student mastery that is directly interpretable by educators.
 
-Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. gTransformer addresses this by leveraging Transformer attention mechanisms to infer student-specific parameters from individual interaction histories.
+Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. 
 
 \subsection{Grounded Transformers}
 
+The gTransformer model proposed in~\cite{labra2026theory} addresses the limitations of traditional BKT by leveraging Transformer attention mechanisms to infer student-specific parameters from individual interaction histories.
 
 %
 \section{Theory-Based Augmented User Models}
@@ -85,49 +90,34 @@ Comparison of predictive performance (Table~\ref{tab_performance}) addresses RQ1
 
 Figure~\ref{fig_roster} addresses RQ2, showing trajectory plots for a representative student from each of the four learning situations. Each panel maps consecutive sampled interactions in $(p_T, p_{L_0})$ space, with numbered points and directional arrows tracing the temporal evolution of the student's parameter profile across the full interaction sequence. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift in the student's learning situation over time. By reading these trajectories, educators gain theory-grounded insights into whether a student is disengaging (decreasing $p_{\text{T}}$) or gaining confidence (increasing $p_{\text{L}_0}$). This dynamic view grounds deep learning state into pedagogically recognisable constructs, enabling more mindful instructional support and satisfying the accountability requirements for high-risk educational AI.
 
-
 \begin{figure}[p]
 \centering
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
-  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): trajectory confined to the lower-left quadrant;
-  limited spread signals a structural mismatch calling for immediate scaffolding.}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.36\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
+  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): trajectory confined to the lower-left quadrant; limited spread signals a structural mismatch calling for immediate scaffolding.}
 \end{subfigure}
-\vspace{1em}
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
-  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact trajectory anchored at high mastery
-  and near-zero learning rate; stagnation cues the introduction of novel challenge.}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.36\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
+  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact trajectory anchored at high mastery and near-zero learning rate; stagnation cues the introduction of novel challenge.}
 \end{subfigure}
-\caption{\textbf{Learning situation trajectories (1/2): Foundational and Consolidating.}
-Each trajectory traces the evolution of a representative student's parameter pair $(p_T, p_{L_0})$
-over successive interactions. Points are selected using a two-stage procedure: a candidate is
-considered every 10 interactions; it is plotted only if its Euclidean distance from the previously
-plotted point in $(p_T, p_{L_0})$ space exceeds $\delta_{\min}=0.3$, so that only genuinely
-significant parameter shifts are shown. Consecutive plotted points are connected by directional
-arrows and labelled with the interaction index. Coloured background regions delimit the four
-learning situations defined by the population medians of $p_{L_0}$ and $p_T$.}
-\label{fig_roster}
 \end{figure}
-
 \begin{figure}[p]
+\ContinuedFloat
 \centering
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
-  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): spatially extended trajectory crossing quadrant
-  boundaries; high learning rate signals strong growth potential.}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.36\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
+  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): spatially extended trajectory crossing quadrant boundaries; high learning rate signals strong growth potential.}
 \end{subfigure}
-\vspace{1em}
 \begin{subfigure}[b]{\textwidth}
-  \includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
-  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): upper-right trajectory with moderate spread;
-  robust mastery across contexts supports routing to accelerated content.}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.36\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
+  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): upper-right trajectory with moderate spread; robust mastery across contexts supports routing to accelerated content.}
 \end{subfigure}
-\caption{\textbf{Learning situation trajectories (2/2): Emerging and Advancing.}
-Same two-stage sampling as Figure~\ref{fig_roster}: one candidate every 10 interactions,
-retained only when the Euclidean displacement from the previous plotted point exceeds
-$\delta_{\min}=0.3$. Coloured background regions delimit the four learning situations.}
-\label{fig_roster_cont}
+\caption{\textbf{Learning situation trajectories.} Each trajectory traces the evolution of a representative student's parameter pair $(p_T, p_{L_0})$ over successive interactions. A candidate is considered every 10 interactions and plotted only if its Euclidean distance from the previously plotted point exceeds $\delta_{\min}=0.3$. Consecutive points are connected by directional arrows and labelled with the interaction index. Coloured background regions delimit the four learning situations defined by the population medians of $p_{L_0}$ and $p_T$.}
+\label{fig_roster}
 \end{figure}
 
 The parameter orbits of representative students across the four learning situations are characterised in Figures~\ref{fig_ellipse} and~\ref{fig_returnmap}. A key property of gTransformer's augmented user model is that the learning situation label assigned to each student is not a static category frozen at enrolment: it is a summary of the student's longitudinal tendency, continuously updated as new interactions arrive. The covariance ellipses in Figure~\ref{fig_ellipse} make this explicit---each ellipse visualises the full spread of $(p_{\text{L}_0}, p_{\text{T}})$ values that a student's profile traverses across all their interactions, rather than a single point estimate.
@@ -141,24 +131,31 @@ For \textit{emerging learners}, the ellipse is the most spatially extended of al
 For \textit{advancing learners}, the ellipse is moderately extended and centred at high mastery with a moderate learning rate. The spread reflects a student who engages responsively across varied skill demands while maintaining consistently high prior knowledge. The tutorial model can safely route this student to accelerated content and reduced practice redundancy; the ellipse shape confirms that the high-mastery profile is robust across contexts and not an artefact of easy items.
 
 
-\begin{figure}[t]
+\begin{figure}[p]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_ellipse_slow_starters_893468.png}
-  \caption{Foundational}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_ellipse_plateaued_893468.png}
-  \caption{Consolidating}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_foundational_893468.png}
+  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): compact ellipse at low mastery and low learning rate; persistent difficulty calls for immediate scaffolding.}
 \end{subfigure}
-\vspace{0.5em}
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_ellipse_diligent_beginners_893468.png}
-  \caption{Emerging}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_ellipse_fast_masters_893468.png}
-  \caption{Advancing}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_consolidating_893468.png}
+  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact ellipse at high mastery and near-zero learning rate; stagnation calls for novel challenge.}
+\end{subfigure}
+\end{figure}
+\begin{figure}[p]
+\ContinuedFloat
+\centering
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_emerging_893468.png}
+  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): most spatially extended ellipse; heterogeneous profile across skills benefits from skill-level differentiation.}
+\end{subfigure}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_advancing_893468.png}
+  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): moderately extended ellipse at high mastery and robust learning rate; supports routing to accelerated content.}
 \end{subfigure}
 \caption{\textbf{Parameter orbit ellipses.} Covariance ellipses (1$\sigma$ and 2$\sigma$) for the representative student of each learning situation in $(p_{\text{L}_0}, p_{\text{T}})$ space. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability across all interactions.}
 \label{fig_ellipse}
@@ -175,24 +172,31 @@ For \textit{emerging learners}, both $p_{\text{L}_0}$ (0.52 $\to$ 0.67) and $p_{
 
 For \textit{advancing learners}, the $p_{\text{L}_0}$ return map shows early stabilisation: mastery is high from the first interactions (mean 0.74) and the orbit clusters around the diagonal with negligible net movement. The $p_{\text{T}}$ panel declines moderately (0.15 $\to$ 0.11), indicating that the model assigns progressively smaller marginal learning rate estimates as opportunities for further gain diminish. The instructional implication is not derived from a presumed initial ability but from observed evidence: continued practice at the current difficulty level produces diminishing returns, and the tutorial model can route this student to more demanding content immediately, grounded in the trajectory rather than in a prior assignment.
 
-\begin{figure}[t]
+\begin{figure}[p]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_returnmap_slow_starters_893468.png}
-  \caption{Foundational}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_returnmap_plateaued_893468.png}
-  \caption{Consolidating}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_foundational_893468.png}
+  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): broad scatter with downward mastery drift and a stable low learning-rate attractor converging over time.}
 \end{subfigure}
-\vspace{0.5em}
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_returnmap_diligent_beginners_893468.png}
-  \caption{Emerging}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{attractor_returnmap_fast_masters_893468.png}
-  \caption{Advancing}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_consolidating_893468.png}
+  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): mastery orbit migrates to a high-mastery fixed point while learning rate declines, revealing an active-to-plateau transition.}
+\end{subfigure}
+\end{figure}
+\begin{figure}[p]
+\ContinuedFloat
+\centering
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_emerging_893468.png}
+  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): both mastery and learning rate increase over time, with points distributed above the diagonal in both panels.}
+\end{subfigure}
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.38\textheight,keepaspectratio]{attractor_returnmap_advancing_893468.png}
+  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): mastery clusters at high values from the first interactions; learning rate declines moderately as marginal gains diminish.}
 \end{subfigure}
 \caption{\textbf{Return maps.} Lag plots for the representative student of each learning situation. Each panel shows $p_{\text{L}_0}(t+1)$ vs $p_{\text{L}_0}(t)$ (left) and $p_{\text{T}}(t+1)$ vs $p_{\text{T}}(t)$ (right). Points are coloured from dark (early) to bright (late) interactions. The diagonal (dashed line) marks the fixed point; deviations above indicate increasing parameters and deviations below indicate decreasing ones.}
 \label{fig_returnmap}

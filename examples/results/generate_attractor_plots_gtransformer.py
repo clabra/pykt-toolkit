@@ -118,13 +118,13 @@ def main():
 
     # ── find representatives ─────────────────────────────────────────────────
     quad_colors     = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
-    quad_names      = ['slow_starters', 'plateaued', 'diligent_beginners', 'fast_masters']
-    quad_names_short = ['Slow\nStarters', 'Plateaued', 'Diligent\nBeginners', 'Fast\nMasters']
+    quad_names      = ['foundational', 'consolidating', 'emerging', 'advancing']
+    quad_names_short = ['Foundational', 'Consolidating', 'Emerging', 'Advancing']
     quad_labels     = [
-        'Slow Starters (Low $p_{L_0}$, Low $p_T$)',
-        'Plateaued (High $p_{L_0}$, Low $p_T$)',
-        'Diligent Beginners (Low $p_{L_0}$, High $p_T$)',
-        'Fast Masters (High $p_{L_0}$, High $p_T$)',
+        'Foundational (Low $p_{L_0}$, Low $p_T$)',
+        'Consolidating (High $p_{L_0}$, Low $p_T$)',
+        'Emerging (Low $p_{L_0}$, High $p_T$)',
+        'Advancing (High $p_{L_0}$, High $p_T$)',
     ]
 
     representatives = []
