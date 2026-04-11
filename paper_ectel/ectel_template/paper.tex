@@ -64,20 +64,30 @@ We select BKT~\cite{corbett1994knowledge} as our reference theoretical framework
 
 Standard BKT suffers from a significant limitation: it operates at the population level, estimating a single parameter set for all students on a given skill~\cite{yudelson2013individualized}. 
 
-\subsection{Grounded Transformers}
 
-The gTransformer model proposed in~\cite{labra2026theory} is a hybrid architecture that bridges deep learning expressiveness and theoretical alignment through \textit{representational grounding}: a methodology that anchors the Transformer's latent representations to the semantic constructs of an intrinsically interpretable reference model (BKT in this case).
-
-The architecture is organised into six functional layers. The input to the system consists of temporal sequences of student interactions $(q_t, c_t, r_t)$ (question, knowledge component, correctness) augmented with population-level BKT priors for each knowledge component. These are encoded via difficulty-aware embeddings that decompose each question into a concept base representation and a learned difficulty variation axis, enabling multiple questions targeting the same concept to share a common semantic core while differing in difficulty. An attention-based encoder--decoder then transforms the interaction history into contextualised latent representations. The encoder processes the longitudinal sequence through stacked self-attention layers; the decoder alternates between self-attention over the current question and cross-attention over the encoded history, selectively retrieving evidence relevant to the present learning state.
-
-Student-specific BKT parameters are obtained through an additive composition in logit space: for each knowledge component, theoretical base values (logit-transformed population-level BKT priors) are combined with contextual adjustments derived from dot products of the latent context vector with learnable concept-specific semantic axes for initial mastery and learning rate. This ensures that estimated parameters remain structurally anchored to BKT theory while allowing individualised deviations driven by observed student behaviour. The model operates through two output heads: a multi-layer perceptron that produces unconstrained supervised predictions optimising for accuracy, and an interpretable head that passes the grounded parameters $(p_{\text{L}_0,t}, p_{\text{T},t})$ through BKT update logic to produce theory-transparent predictions. Training is governed by a multi-objective loss that jointly optimises supervised accuracy, interpretable prediction quality, and global latent-space alignment via diagnostic probing, balancing predictive performance against pedagogical grounding. Full architectural details are provided in~\cite{labra2026theory}.
 
 %
-\section{Theory-Based Augmented User Models}
+\section{Grounded Transformers and Augmented User Models}
 
-We formalise the proposed ITS architecture by integrating traditional components with a Grounded Transformer. The \textit{domain model} defines the structured knowledge components to be mastered. The \textit{user model} tracks student mastery across these components, and is augmented with student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$ provided by a \textit{gTransformer} model. 
+\subsection{Proposed Architecture}
 
-These parameters encapsulate the student's longitudinal learning context, allowing the user model to differentiate between learners who might show similar correctness patterns but possess different underlying learning rates or prior knowledge. The output of this augmented user model is used by: 1)~the tutorial model to select instructional strategies, and 2)~a diagnostic roster module that visualises student evolution in a $(p_{\text{L}_0}, p_{\text{T}})$ space.
+We propose an \textit{augmented user model} that integrates the three standard ITS components with a Grounded Transformer engine. The \textit{domain model} defines the structured knowledge components to be mastered. The \textit{user model} tracks student mastery across these components and is augmented with student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$ inferred by gTransformer~\cite{labra2026theory} from the student's full interaction history. These parameters encapsulate the student's longitudinal learning context, allowing the user model to differentiate learners who show similar correctness patterns but differ in prior knowledge or learning rate. The outputs of this augmented user model feed: 1)~the \textit{tutorial model}, which selects situation-based instructional strategies; and 2)~a \textit{diagnostic roster module}, which visualises student trajectories in $(p_{\text{L}_0}, p_{\text{T}})$ space to support educator oversight.
+
+\subsection{gTransformer}
+
+The augmented user model is powered by gTransformer~\cite{labra2026theory}, a hybrid architecture that implements \textit{representational grounding}: a methodology that anchors Transformer latent representations to the semantic constructs of BKT, bridging deep learning expressiveness with pedagogical interpretability. Figure~\ref{fig_arch} summarises the architecture.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{arch.pdf}
+\caption{\textbf{gTransformer architecture.} Two processing tracks share a common encoder--decoder backbone. The standard track (white boxes) produces supervised predictions via an MLP head. The grounded track (grey boxes) combines BKT theory base logits with context-vector projections onto learnable semantic axes to produce student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$, which are passed through BKT update logic to yield theory-transparent predictions. Both heads are jointly optimised via a multi-objective loss. Outputs of the grounded track populate the augmented user model (blue box).}
+\label{fig_arch}
+\end{figure}
+
+As illustrated in Figure~\ref{fig_arch}, the architecture operates through two parallel tracks. The \textit{standard track} encodes student interactions $(q_t, c_t, r_t)$ via difficulty-aware embeddings and processes them through a stacked attention-based encoder--decoder, producing a context vector $z_t$ that summarises the student's current learning state. A multi-layer perceptron maps $z_t$ directly to a correctness prediction $\hat{y}_t$, optimising for predictive accuracy without theoretical constraints.
+
+The \textit{grounded track} implements representational grounding by composing student-specific BKT parameters in logit space. For each knowledge component, logit-transformed population-level BKT priors serve as theory base values; contextual adjustments are obtained by projecting $z_t$ onto learnable concept-specific semantic axes for initial mastery and learning rate. The resulting grounded parameters $p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0} + z_t \cdot k_c)$ and $p_{\text{T},t} = \sigma(\ell_{\text{T}} + z_t \cdot v_c)$ are then passed through BKT update logic to produce interpretable predictions $\hat{y}_{\text{ref},t}$. Training is governed by a multi-objective loss balancing supervised accuracy, interpretable prediction quality, and global latent-space alignment through diagnostic probing. Full architectural details are provided in~\cite{labra2026theory}.
+
 
 
 %
