@@ -80,6 +80,26 @@ ECTEL_SCRIPTS = [
         "script": "examples/results/generate_attractor_dynamics_plots.py",
         "gif_flag": False,
     },
+    {
+        "name": "Learning situation distribution over time",
+        "script": "examples/results/generate_situation_distribution_plots.py",
+        "gif_flag": False,
+    },
+    {
+        "name": "Learning situation dynamics (counts + churn)",
+        "script": "examples/results/generate_situation_dynamics_plot.py",
+        "gif_flag": False,
+    },
+    {
+        "name": "Learning situation transitions (distribution + transition matrix)",
+        "script": "examples/results/generate_situation_transitions_plot.py",
+        "gif_flag": False,
+    },
+    {
+        "name": "Learning situation entry vs. exit",
+        "script": "examples/results/generate_situation_entry_exit_plot.py",
+        "gif_flag": False,
+    },
 ]
 
 

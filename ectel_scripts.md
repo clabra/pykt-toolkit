@@ -12,7 +12,7 @@ Every script reads `traj_rate.csv` and `traj_initmastery.csv` from the represent
 
 ## Centralized launcher
 
-`examples/run_ectel_paper.py` runs all three individual scripts in sequence for one or more datasets. It is independent of `run_benchmarks_paper.py`.
+`examples/run_ectel_paper.py` runs all seven individual scripts in sequence for one or more datasets. It is independent of `run_benchmarks_paper.py`.
 
 ```bash
 # All datasets in the most recent benchpaper campaign
@@ -160,3 +160,144 @@ python examples/results/generate_attractor_dynamics_plots.py \
     --output_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/plots_ectel
 ```
 
+
+---
+
+## Script 4 — Learning situation distribution over time
+
+**Script**: `examples/results/generate_situation_distribution_plots.py`
+
+At each interaction snapshot (every `--stride` interactions), assigns each student to a learning situation based on the mean of their parameters accumulated up to that snapshot, and plots how the distribution evolves across the full session. Population medians for $P(L_0)$ and $P(T)$ are computed once on the full dataset and used as fixed quadrant boundaries at every snapshot.
+
+### Output files
+
+| File | Description |
+|---|---|
+| `situation_dist_stacked_<uid_suffix>.png` | Stacked area chart: fraction of students in each learning situation vs. interaction index. |
+| `situation_dist_counts_<uid_suffix>.png` | Stacked bar chart: absolute student count per learning situation vs. interaction index. |
+| `situation_dist_heatmap_<uid_suffix>.png` | Student × snapshot heatmap coloured by assigned learning situation; students sorted by dominant quadrant. |
+
+### Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--run_dir` | required | Fold directory containing `traj_rate.csv` and `traj_initmastery.csv`. |
+| `--output_dir` | `--run_dir` | Directory where plots are saved. |
+| `--stride` | `10` | Snapshot interval in number of interactions. |
+| `--min_interactions` | `5` | Students with fewer total interactions are excluded. |
+| `--max_interactions` | p90 | Cap trajectories at this length. Defaults to the 90th percentile of student interaction counts. |
+| `--uid_suffix` | `893468` | Suffix appended to all output filenames. |
+
+### Individual invocation
+
+```bash
+python examples/results/generate_situation_distribution_plots.py \
+    --run_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/fold_0_377291 \
+    --output_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/plots_ectel \
+    --stride 10
+```
+
+---
+
+## Script 5 — Learning situation dynamics (counts + churn)
+
+**Script**: `examples/results/generate_situation_dynamics_plot.py`
+
+Two-panel figure: the top panel shows the stacked bar distribution of students across learning situations at each interaction snapshot, with per-situation trend lines overlaid. The bottom panel shows *transition churn* — the fraction of students whose assigned learning situation changed relative to the previous snapshot — providing direct evidence that situation assignments are not static.
+
+### Output files
+
+| File | Description |
+|---|---|
+| `situation_dynamics_<uid_suffix>.png` | Two-panel figure: stacked bar counts with trend lines (top) and churn percentage curve (bottom). |
+
+### Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--run_dir` | required | Fold directory containing `traj_rate.csv` and `traj_initmastery.csv`. |
+| `--output_dir` | `--run_dir` | Directory where plots are saved. |
+| `--stride` | `10` | Snapshot interval in number of interactions. |
+| `--min_interactions` | `5` | Students with fewer total interactions are excluded. |
+| `--max_interactions` | p90 | Cap trajectory length. Defaults to the 90th percentile of student interaction counts. |
+| `--smooth_window` | `5` | Uniform smoothing window applied to trend lines and churn curve. Set to `1` to disable. |
+| `--uid_suffix` | `893468` | Suffix appended to all output filenames. |
+
+### Individual invocation
+
+```bash
+python examples/results/generate_situation_dynamics_plot.py \
+    --run_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/fold_0_377291 \
+    --output_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/plots_ectel
+```
+
+---
+
+## Script 6 — Learning situation transitions (distribution + transition matrix)
+
+**Script**: `examples/results/generate_situation_transitions_plot.py`
+
+Two-panel figure combining the stacked bar distribution (left) with a 4×4 gross transition matrix (right). The matrix counts every individual A→B reassignment across all consecutive snapshot pairs — unlike churn, opposing flows do not cancel. A text box in the left panel reports the total fraction of student-snapshot pairs that involved a situation change.
+
+### Output files
+
+| File | Description |
+|---|---|
+| `situation_transitions_<uid_suffix>.png` | Stacked bar counts with trend lines (left) and gross transition probability matrix (right). |
+
+### Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--run_dir` | required | Fold directory containing `traj_rate.csv` and `traj_initmastery.csv`. |
+| `--output_dir` | `--run_dir` | Directory where plots are saved. |
+| `--stride` | `10` | Snapshot interval in number of interactions. |
+| `--min_interactions` | `5` | Students with fewer total interactions are excluded. |
+| `--max_interactions` | p90 | Cap trajectory length. Defaults to the 90th percentile of student interaction counts. |
+| `--smooth_window` | `3` | Smoothing window for bar trend lines. |
+| `--uid_suffix` | `893468` | Suffix appended to all output filenames. |
+
+### Individual invocation
+
+```bash
+python examples/results/generate_situation_transitions_plot.py \
+    --run_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/fold_0_377291 \
+    --output_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/plots_ectel
+```
+
+---
+
+## Script 7 — Learning situation entry vs. exit
+
+**Script**: `examples/results/generate_situation_entry_exit_plot.py`
+
+Compares each student's learning situation at the start of their session (entry: mean over the first `--window` interactions) against their situation at the end (exit: mean over the last `--window` interactions). Only students with at least `2 × window` interactions are included so the two windows do not overlap.
+
+Produces two separate output files:
+
+- An **alluvial (Sankey) diagram** where ribbons connect entry to exit columns; ribbon width encodes the number of students, making cross-situation flows directly visible even when opposing flows cancel in aggregate.
+- A **transition probability heatmap** showing the fraction of students from each entry situation who ended in each exit situation (each row sums to 100%).
+
+### Output files
+
+| File | Description |
+|---|---|
+| `situation_alluvial_<uid_suffix>.png` | Alluvial diagram: ribbon width proportional to student count; ribbons coloured by entry situation. |
+| `situation_transition_matrix_<uid_suffix>.png` | 4×4 heatmap of entry→exit transition percentages; raw counts in parentheses; each row sums to 100%. |
+
+### Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--run_dir` | required | Fold directory containing `traj_rate.csv` and `traj_initmastery.csv`. |
+| `--output_dir` | `--run_dir` | Directory where plots are saved. |
+| `--window` | `30` | Number of interactions used for the entry and exit windows. Students with fewer than `2 × window` interactions are excluded. |
+| `--uid_suffix` | `893468` | Suffix appended to all output filenames. |
+
+### Individual invocation
+
+```bash
+python examples/results/generate_situation_entry_exit_plot.py \
+    --run_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/fold_0_377291 \
+    --output_dir experiments/20260202_222258_benchpaper_assist2009_mdpipaper_893468/gtransformer/assist2009/plots_ectel
+```
