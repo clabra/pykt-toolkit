@@ -8,8 +8,9 @@ The key contributions of the paper will be a new Transformer attention-based mod
 
 ## Reference Documents
 
-- `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it.  
-- `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. 
+- mdpi paper latex file: `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it. **This is the authoritative source for all technical facts about gTransformer**: architecture, parameter formulas, training loss, validation methodology, and quantitative results. Read this file first whenever a writing task requires precise technical content.
+- ectel paper latex file: `paper_ectel/ectel_template/paper.tex` - the current draft of the ECTEL 2026 paper. **This is the master file for all editing and drafting tasks**: section structure, existing text, figures, and bibliography references. Always read this file to determine the current paper state before making any edits or additions.
+- `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. The bibliography file for the ECTEL paper is `paper_ectel/ectel_template/biblio.bib`.
 
 ## Paper Publication
 
@@ -57,9 +58,33 @@ Accepted full research papers will be published in LNCS Springer Conference Proc
 
 ## Paper narrative 
 
-### Theme
+### Key technical facts
 
-How to address in our paper the ECTEL 2026 Theme: "Mindful TEL: Learning Technologies Shaped with Intention".
+The following facts are essential context for any writing or editing task on this paper. Authoritative sources: MDPI paper (`paper_ectel/mdpi_template/applsci-4169306-done.tex`) and ECTEL paper (`paper_ectel/ectel_template/paper.tex`).
+
+**BKT reference model.** Bayesian Knowledge Tracing (BKT) models learning as a Hidden Markov process with four interpretable parameters: Initial Mastery $P(\text{L}_0)$ (probability of knowing a concept before practice), Learn Rate $P(\text{T})$ (probability of transitioning from unlearned to learned), Guess $P(\text{G})$ (probability of a correct response despite lack of mastery), and Slip $P(\text{S})$ (probability of an incorrect response despite mastery). Standard BKT operates at the population level, estimating one parameter set per skill for all students.
+
+**gTransformer architecture.** A hybrid architecture that implements *representational grounding*: it anchors Transformer latent representations to the semantic constructs of BKT, bridging deep learning expressiveness with pedagogical interpretability. Two parallel processing tracks share a common attention-based encoder--decoder backbone:
+
+- *Standard track*: encodes student interactions $(q_t, c_t, r_t)$ (question identifier, knowledge component, binary correctness) via difficulty-aware embeddings and produces context vector $z_t$. An MLP maps $z_t$ to a correctness prediction $\hat{y}_t$ optimised for predictive accuracy.
+- *Grounded track*: computes student-specific BKT parameters in logit space. Population-level BKT priors serve as theory base values; contextual adjustments are obtained by projecting $z_t$ onto learnable concept-specific semantic axes. The resulting parameters are $p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0} + z_t \cdot k_c)$ and $p_{\text{T},t} = \sigma(\ell_{\text{T}} + z_t \cdot v_c)$. These are passed through BKT update logic to produce interpretable predictions $\hat{y}_{\text{ref},t}$.
+
+Only $P(\text{L}_0)$ and $P(\text{T})$ are grounded. $P(\text{G})$ and $P(\text{S})$ are fixed at population-level values (performance parameters tied to item properties, not knowledge acquisition).
+
+**Training.** A multi-objective loss balances supervised accuracy ($\hat{y}_t$), interpretable prediction quality ($\hat{y}_{\text{ref},t}$), and global latent-space alignment via diagnostic probing.
+
+**Validation methodology (triple-validation, MDPI paper).** Structural alignment: BKT constructs are primary organising principles of the latent space. Semantic alignment: grounded parameters retain pedagogical semantics. Functional alignment: quantifies confidence in interpretable predictions.
+
+**Performance (from MDPI paper).** gTransformer achieves an average AUC gain of +19.9% over classical BKT (interpretable baseline) at a grounding cost of only 3.9% relative to black-box deep learning architectures. Datasets used: ASSISTments 2009 (AS2009), ASSISTments 2015, Algebra 2005. No new experiments are run for the ECTEL paper; all results are drawn from the MDPI paper.
+
+**The augmented student model (ECTEL contribution).** The ECTEL paper does not present gTransformer as a new contribution; it treats gTransformer as prior work (cited in third person for double-blind review) and builds upon it. The contribution is a design for an augmented ITS user model that uses gTransformer's grounded parameters to support situation-based instruction. For each student and knowledge component, gTransformer infers a continuously updated pair $(p_{\text{L}_0,t}, p_{\text{T},t})$ from the student's full interaction history. These are used to assign each student to one of four *learning situations*, defined by partitioning the $(p_{\text{L}_0}, p_{\text{T}})$ plane at the population medians of both parameters:
+
+- *Foundational* (low $p_{\text{L}_0}$, low $p_{\text{T}}$): limited prior knowledge, slow consolidation; requires scaffolding, worked examples, reduced complexity.
+- *Emerging* (low $p_{\text{L}_0}$, high $p_{\text{T}}$): limited prior knowledge but high learning rate; targeted practice with progressively increasing challenge.
+- *Consolidating* (high $p_{\text{L}_0}$, low $p_{\text{T}}$): high prior knowledge, near-zero learning rate indicating stagnation; novel or cross-domain challenge needed.
+- *Advancing* (high $p_{\text{L}_0}$, high $p_{\text{T}}$): high prior knowledge and active learning rate; route to accelerated content.
+
+Learning situation assignments are dynamic: gTransformer updates $(p_{\text{L}_0,t}, p_{\text{T},t})$ at every interaction, so a student can transition across quadrants as their trajectory evolves. 67% of students in AS2009 were assigned a different learning situation at session exit versus session entry.
 
 ### Conference theme alignment 
 
@@ -77,206 +102,75 @@ Highlight the following points in the paper and integrate them into the narrativ
 
 ### Paper approach
 
-Nuestro paper para ECTEL es un "Design paper" que se apoya mucho en una contribucion nuestra  anterior, el paper enviado a MDPI, que era un " Conceptual paper". Tener en cuenta que este paper ECTEL va con doble ciego por lo que las menciones al paper MDPI deben hacerse como aludiendo a terceros. 
+The ECTEL paper is a design paper. It builds upon a prior conceptual paper (published at MDPI), which established the theoretical framework for grounded transformers as a class of interpretable deep knowledge tracing models. Because the ECTEL submission follows a double-blind review process, all references to the prior work must be written in the third person, as if referring to the work of others.
 
-```
-Background information: 
+The two papers occupy complementary and clearly distinct roles:
 
-1. Design paper
-📌 Qué es
-Un design paper presenta el diseño y la justificación de una solución (artefacto, sistema, modelo, framework, metodología) para un problema educativo concreto. En este caso presentamos como mejorar el Nodelo de Usuario, un componente clave de los Sistemas Tutoriales Inteligentes. 
+- The conceptual paper (MDPI) establishes the *why* and the *what*: it defines the framework of *representational grounding*, proposes grounded transformers as a new class of interpretable deep learning models for KT, and supports validity through competitive predictive accuracy. Its contribution is conceptual and theoretical.
+- The design paper (ECTEL) demonstrates the *how*: it operationalizes those principles into concrete design decisions for an enhanced student model in ITS. Specifically, it shows how to leverage grounded transformers to extract interpretable learning signals (prior knowledge, learning rate, progress) and translate these into instructional information that educators can act upon. Its contribution is the design of an augmented user model grounded in theoretically interpretable components derived from BKT.
 
-No solo explica qué queremos construir, sino por qué lo diseñamos así.
-
-📌 Características clave
-
-Se centra en el proceso de diseño
-Explicita decisiones intencionales (ideal para Mindful TEL)
-Normalmente incluye:
-
-- problema de diseño
-- principios de diseño
-- trade-offs
-- a veces una evaluación inicial (piloto, validación cualitativa). En esta caso presentamos como utilizarlo para generar informacion (e.g. plots) que ayude a mejorar las estrategias instruccionales adaptandolas mejor a cada alumno y a su evolucion durante el proceso de aprendizaje. 
-
-📌 Estructura típica
-
-- Problema / contexto
-- Marco teórico o de diseño
-- Principios de diseño
-- Descripción del artefacto o enfoque
-- Evaluación preliminar o reflexión
-
-✅ Cuándo encaja mejor
-
-- Has diseñado una solución TEL, especialmente con IA. En esta caso un Modelo de Usuario Aumentado mediante informacion procedente de un gTransforme entrenado a partir de datos de un modelo BKT
-- Se pueden justificar decisiones pedagógicas y éticas
-- La contribución es cómo diseñar de forma mindful, no solo resultados
-
-🔑 Muy alineado con “Mindful TEL: Learning Technologies Shaped with Intention”
-
-2. Conceptual paper
-
-📌 Qué es
-Un conceptual paper no es empírico. Su contribución es teórica o conceptual:
-
-- propone modelos. En este caso el paper MDPI proponia un modelo gTransformer
-- redefine conceptos
-- articula marcos de análisis. En el paper mdpi como crear modelos DKT que tengan interpetabilidad para el usuario final no técnico
-- conecta literatura existente de forma novedosa
-
-No construyes ni evalúas un sistema: construyes ideas.
-
-📌 Características clave
-
-- No presenta datos nuevos. En el paper MDPI presentamos datos que apoyaban la validez del modelo demostrando entre otras cosas su competitividad en terminos de accuracy.  
-- Fuerte argumentación conceptual
-- Uso crítico de literatura existente
-- Nueva perspectiva, tipología o framework. En el paper mdpi la contribucion era un nuevo tipo de modelos Deep Learning interpretables 
-
-📌 Estructura típica
-
-- Problematización
-- Revisión conceptual crítica
-- Propuesta de modelo / marco
-- Implicaciones para investigación y práctica. En el paper mdpi mostramos algunas aplicaciones practicas para demostrar su valor pedagogico
-
-✅ Cuándo encaja mejor
-
-- Quieres redefinir qué es Mindful TEL
-- Propones un marco ético, pedagógico o de diseño
-- Tu aportación es conceptual, no técnica
-
-🔑 Ideal si tu paper dice:
-
-“Así deberíamos pensar la IA/TEL consciente, incluso si aún no está implementado.”
-
-```
-
-La narrativa debe ser muy clara y explícita:
-
-- El conceptual paper (MDPI) establece el “por qué” y el “qué”;
-- El design paper (ECTEL) demuestra el “cómo”.
-
-Dicho de otro modo:
-
-Conceptual paper → define el marco, principios, valores y conceptos (Grounded Transformers para una interpetabilidad basada en modelo teoricos intrinsicamente interpretables y relevantes para  el usuario final)
-Design paper → operationaliza esos principios en decisiones concretas de diseño TEL alineadas con el tema de la Conferencia
-
-⚠️ Lo que los revisores NO quieren:
-
-Que el design paper parezca una “repetición” del conceptual
-Que el lector tenga que leer el paper anterior para entender este
-
-✅ Lo que SÍ quieren:
-
-Ver continuidad intelectual
-Ver avance claro (concept → diseño)
-
+The narrative must make this progression explicit and self-contained. Reviewers will expect to see clear intellectual continuity (concept to design) as well as a standalone contribution that does not require reading the prior paper to be understood and evaluated.
 
 ## Paper Structure
 
-### Introducción (early positioning)
+### Planned paper sections
 
-Tener en cuenta lo siguiente, adaptando al requisito de doble-ciego del paper ECTEL actual y a un inglés académico: 
+The section structure is defined exclusively in `paper_ectel/ectel_template/paper.tex`. Before drafting or editing any section, read that file to extract the current `\section` and `\subsection` commands. Do not rely on any cached list; the structure may have changed since this file was last updated. Do not invent or add sections not present in the LaTeX file.
 
-"This design paper builds upon our previous conceptual work, which articulated a framework for Mindful Technology-Enhanced Learning. While the earlier paper focused on defining the conceptual foundations and design principles, the present contribution advances this work by translating those principles into concrete design decisions and an implementable TEL approach."
+### Introduction (early positioning)
 
-Dejar claro que este paper ECTEL: 
-- no duplica
-- supone un avance
-- es necesario
+The introduction must establish three things clearly and concisely: (i) the educational problem (student models in ITS optimized for accuracy but not interpretability or actionability), (ii) the prior conceptual contribution that motivates this work (grounded transformers as a framework for end-user interpretability), and (iii) the specific design contribution of this paper (an augmented student model that translates grounded transformer outputs into instructionally relevant information for educators).
 
-### Background / related work / theoretical grounding
+The opening should make explicit that this paper does not duplicate the prior work, but advances it from concept to design. A representative framing:
 
+> "A recent line of work has proposed *representational grounding* as a design principle for interpretable deep knowledge tracing models, demonstrating that transformer-based architectures can be grounded in theoretically motivated parameters derived from reference models such as Bayesian Knowledge Tracing [X]. While that work established the conceptual framework and validated its predictive performance, it did not address how the resulting interpretable representations should be leveraged within an ITS to support adaptive instruction. The present paper addresses this gap."
 
-- resumir solo lo esencial del conceptual paper (paper mdpi)
-- tratarlo como marco de referencia, no como resultado principal
+### Background and related work
 
-Ejemplo:
+This section should summarize only what is necessary to situate the design contribution: the limitations of accuracy-driven KT models, the concept of grounded transformers as introduced in [X], and the role of student models in ITS. The prior conceptual paper should be treated as a theoretical reference, not re-explained in full. One or two paragraphs suffice.
 
-"Following the conceptual framework introduced in [X], this work adopts the notions of intentionality, transparency, and learner agency as guiding design principles."
+A representative framing:
 
-💡 Importante: no explicar todo el conceptual paper otra vez.
-Asume que el lector confía en él como base teórica.
+> "Following the conceptual framework introduced in [X], this work adopts the notions of intentionality, transparency, and educator agency as guiding design principles for the augmented student model presented here."
 
-### Cómo hacer que el Design paper sea claramente “Mindful TEL”
+### Making the design explicitly mindful
 
-Aquí está el punto fuerte de nuestro  caso.
+A design paper aligned with the ECTEL theme must make intentional design choices visible and traceable. This means showing not only what was designed, but why, and what was deliberately excluded.
 
-Un design paper mindful debe mostrar explícitamente:
-✅ a) Principios → decisiones
+Two strategies are particularly effective:
 
-Hacer visible la trazabilidad:
+- *Principle-to-decision traceability.* Map each design principle to a concrete decision. For example: interpretability as a first-class requirement leads to the choice of grounded transformer outputs over raw attention weights; human agency as a principle leads to presenting learning signals as decision support rather than automated recommendations.
+- *Intentional constraints.* State explicitly what the design does not do and why. For example, the model does not automate instructional decisions; it provides educators with structured evidence to inform their own judgments. This is a deliberate trade-off in favour of pedagogical agency.
 
-Principio conceptual Decisión de diseño
+A useful formulation: "Rather than maximizing automation, design choices were intentionally constrained to preserve pedagogical agency."
 
-- Intencionalidad: La IA solo interviene en X momentos
-- Transparencia: Feedback explicable para docentes
-- Control humano: Override manual / configuración explícita
+### Avoiding over-dependence on the prior paper
 
-➡️ Esto aumenta la posibilidad de que acepten el paer para ECTEL
+The main risk for a design paper that follows a conceptual one is that reviewers perceive it as a repetition or an extension that should have been included in the original submission. To mitigate this:
 
+- Include a brief, self-contained recap of the conceptual framework (one to two paragraphs), sufficient for the paper to be read and evaluated independently.
+- Make the design contribution the clear foreground. The conceptual paper provides the foundation; this paper builds on it.
+- Ensure the contribution statement refers to the design artefact and its educational implications, not to the theoretical framework alone.
 
-✅ b) Decisiones conscientes (incluyendo lo que NO hacemos)
+### Contribution statement
 
-Esto es muy poderoso y claramente “mindful”:
+A concise and accurate formulation of the contribution:
 
-- qué decidiste no automatizar
-- qué capacidades de la tecnología deliberadamente limitaste
-- trade-offs éticos/pedagógicos
+> "This paper contributes a design for an augmented student model in ITS that operationalizes the principles of grounded transformers into instructionally actionable representations, enabling educators to identify distinct learning situations and adapt instruction accordingly."
 
-Ejemplo:
+Alternatively, foregrounding the ECTEL theme:
 
-    "Rather than maximizing automation, design choices were intentionally constrained to preserve pedagogical agency."
+> "The contribution lies in translating a conceptual framework for interpretable deep knowledge tracing into a mindful TEL design that foregrounds intentionality, transparency, and human pedagogical agency."
 
-###
+### Self-assessment checklist
 
-### Cómo evitar el principal riesgo: “dependencia excesiva” del paper previo
+Before finalizing the paper, verify that the following criteria are met:
 
-🔴 Riesgo típico
-El revisor piensa:
-
-“Este paper depende demasiado del anterior.”
-
-✅ Cómo evitarlo (regla práctica)
-Tu design paper debe cumplir esto:
-👉 Se entiende y se evalúa correctamente aunque el lector NO haya leído el conceptual paper.
-Eso implica:
-
-- Breve recap conceptual (1–2 párrafos)
-- Referencia clara, pero no imprescindible
-- Contribución autónoma
-
-
-### Cómo formular la contribución (muy clave en conferencias)
-
-Una posible formulación limpia y potente:
-
-"This paper contributes by demonstrating how a mindful TEL framework can be operationalized through concrete design choices, thereby bridging conceptual foundations and practical system design."
-
-O, si se quiere enfatizar IA:
-
-"The contribution lies in translating a conceptual definition of mindful TEL into an AI-supported learning design that foregrounds intentionality, transparency, and human decision-making."
-
-
-6. Evalúarlo con este checklist: 
-
-Marcar ✅ si es cierto:
-
-☐ El lector entiende qué era el conceptual paper en 2 minutos
-☐ El foco ahora está claramente en diseño, no teoría
-☐ Se ven decisiones intencionales, no solo arquitectura
-☐ El paper sin el anterior sigue siendo publicable
-☐ El término "mindful" no es solo retórico: está en el diseño
-
-Si se cumplen 4–5 ✅ → está muy bien alineada.
-
-7. Considerar este planteamiento: 
-
-- Conceptual paper → legitima el enfoque
-- Design paper → lo hace tangible
-- Tema de la conferencia → encaje natural
+- [ ] The reader can understand the conceptual background in two paragraphs without reading the prior paper.
+- [ ] The focus is clearly on design decisions, not on theoretical exposition.
+- [ ] Intentional design choices (including what was not automated) are made explicit.
+- [ ] The paper is self-contained and publishable independently of the prior work.
+- [ ] The term "mindful" is not merely rhetorical: it is instantiated in specific design decisions.
 
 ## Environment Setup
 
