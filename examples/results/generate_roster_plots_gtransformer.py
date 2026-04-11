@@ -45,6 +45,12 @@ def main():
                              "If not set, it is derived so that the most-active representative has at most --max_points points.")
     parser.add_argument('--max_points', type=int, default=20,
                         help="Target maximum number of sampled points per plot; used to auto-compute min_move threshold (default: 20)")
+    parser.add_argument('--rate_max', type=float, default=0.5,
+                        help="Upper bound on the learning-rate axis; points above this value are treated as outliers "
+                             "and excluded from the 2D trajectory plots (default: 0.5)")
+    parser.add_argument('--rate_outlier_warn_pct', type=float, default=5.0,
+                        help="Percentage threshold: emit a warning when more than this fraction of interactions "
+                             "exceed --rate_max, suggesting they may not be outliers (default: 5.0)")
     parser.add_argument('--gif', action='store_true',
                         help="Also save an animated GIF showing trajectory progression")
     parser.add_argument('--gif_fps', type=int, default=2,
@@ -72,8 +78,24 @@ def main():
     # Calculate global medians for quadrant assignment
     l0_med = df[init_col].median()
     t_med = df[rate_col].median()
-    
+
     print(f"Medians: L0={l0_med:.4f}, T={t_med:.4f}")
+
+    # --- Rate-axis outlier report ---
+    rate_max = args.rate_max
+    n_total = len(df)
+    n_above = int((df[rate_col] > rate_max).sum())
+    pct_above = 100.0 * n_above / n_total if n_total > 0 else 0.0
+    print(f"Rate-axis range check: {n_above}/{n_total} interactions ({pct_above:.2f}%) "
+          f"have {rate_col} > {rate_max} (--rate_max).")
+    if pct_above > args.rate_outlier_warn_pct:
+        import warnings
+        warnings.warn(
+            f"WARNING: {pct_above:.1f}% of interactions exceed rate_max={rate_max}, "
+            f"which is above the --rate_outlier_warn_pct={args.rate_outlier_warn_pct}% threshold. "
+            f"These points may not be outliers; consider raising --rate_max.",
+            UserWarning, stacklevel=2
+        )
     
     def get_quadrant(row):
         l0, t = row[init_col], row[rate_col]
@@ -162,20 +184,49 @@ def main():
     quad_names = ['foundational', 'consolidating', 'emerging', 'advancing']
 
     def sample_stride_then_filter(data, rate_c, init_c, stride, min_d):
-        """Take every `stride`-th candidate; include a point (and the one
-        immediately before it) only when the step distance >= min_d.
-        First and last candidates are always kept."""
+        """Take every `stride`-th candidate. A candidate is plotted when its
+        Euclidean distance from the *last plotted point* exceeds min_d.
+        Skipped candidates increment a counter on the last plotted point.
+        First and last candidates are always kept.
+        Returns (kept_indices, skip_counts) where skip_counts[idx] is the
+        number of candidates absorbed by that plotted point before it."""
         candidates = list(range(0, len(data), stride))
+        if not candidates:
+            return [], {}
         if candidates[-1] != len(data) - 1:
             candidates.append(len(data) - 1)
-        keep = {candidates[0], candidates[-1]}
+        kept = [candidates[0]]
+        skip_counts = {candidates[0]: 0}
+        pending = 0  # skipped candidates since last plotted point
+        last_x = float(data[rate_c].iloc[candidates[0]])
+        last_y = float(data[init_c].iloc[candidates[0]])
         for k in range(1, len(candidates)):
-            prev, curr = candidates[k - 1], candidates[k]
-            dx = data[rate_c].iloc[curr] - data[rate_c].iloc[prev]
-            dy = data[init_c].iloc[curr] - data[init_c].iloc[prev]
-            if (dx * dx + dy * dy) ** 0.5 >= min_d:
-                keep.add(curr)
-        return sorted(keep)
+            curr = candidates[k]
+            cx = float(data[rate_c].iloc[curr])
+            cy = float(data[init_c].iloc[curr])
+            dist = ((cx - last_x) ** 2 + (cy - last_y) ** 2) ** 0.5
+            is_forced = (k == len(candidates) - 1)  # always keep last
+            if dist >= min_d or is_forced:
+                kept.append(curr)
+                skip_counts[curr] = pending
+                pending = 0
+                last_x, last_y = cx, cy
+            else:
+                pending += 1
+        # If the forced-last point is too close to its predecessor, discard it
+        # and use the predecessor as the final point instead.
+        if len(kept) >= 2:
+            prev_idx = kept[-2]
+            last_idx = kept[-1]
+            px = float(data[rate_c].iloc[prev_idx])
+            py = float(data[init_c].iloc[prev_idx])
+            lx = float(data[rate_c].iloc[last_idx])
+            ly = float(data[init_c].iloc[last_idx])
+            if ((lx - px) ** 2 + (ly - py) ** 2) ** 0.5 < min_d:
+                absorbed = skip_counts.pop(last_idx, 0)
+                kept.pop()
+                skip_counts[prev_idx] = skip_counts.get(prev_idx, 0) + absorbed + 1
+        return kept, skip_counts
 
     # Auto-compute the global min_move threshold via binary search so that the
     # representative with the most movement has at most --max_points plotted points.
@@ -187,7 +238,8 @@ def main():
             mx = 0
             for uid in representatives:
                 fs = df[df['student_id'] == uid].reset_index(drop=True).iloc[:global_max_interactions]
-                mx = max(mx, len(sample_stride_then_filter(fs, rate_col, init_col, args.timestep, min_d)))
+                idxs, _ = sample_stride_then_filter(fs, rate_col, init_col, args.timestep, min_d)
+                mx = max(mx, len(idxs))
             return mx
         if _max_count(0.0) <= args.max_points:
             min_move = 0.0
@@ -207,66 +259,114 @@ def main():
         full_subset = df[df['student_id'] == uid].reset_index(drop=True)
         full_subset = full_subset.iloc[:global_max_interactions]
 
+        # Drop per-student points outside the rate axis range
+        n_before = len(full_subset)
+        full_subset = full_subset[full_subset[rate_col] <= rate_max].reset_index(drop=True)
+        n_dropped = n_before - len(full_subset)
+        if n_dropped > 0:
+            pct_dropped = 100.0 * n_dropped / n_before
+            print(f"  Student {uid}: dropped {n_dropped}/{n_before} ({pct_dropped:.1f}%) "
+                  f"interactions with {rate_col} > {rate_max}.")
+            if pct_dropped > args.rate_outlier_warn_pct:
+                import warnings
+                warnings.warn(
+                    f"WARNING: student {uid} has {pct_dropped:.1f}% of interactions above "
+                    f"rate_max={rate_max}; trajectory may be distorted.",
+                    UserWarning, stacklevel=2
+                )
+
         def row_quadrant(row):
             return get_quadrant({init_col: row[init_col], rate_col: row[rate_col]})
 
         full_subset = full_subset.copy()
         full_subset['pt_quad'] = full_subset.apply(row_quadrant, axis=1)
 
-        indices = sample_stride_then_filter(full_subset, rate_col, init_col, args.timestep, min_move)
+        indices, skip_counts = sample_stride_then_filter(full_subset, rate_col, init_col, args.timestep, min_move)
         subset = full_subset.iloc[indices].reset_index(drop=True)
 
         quad_colors = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
 
         fig, ax = plt.subplots(figsize=(8, 7))
 
-        # --- Colored quadrant background regions ---
-        ax.add_patch(Rectangle((0.0, 0.0),    t_med,        l0_med,        color=quad_colors[0], alpha=0.15, zorder=0))
-        ax.add_patch(Rectangle((0.0, l0_med), t_med,        1.0 - l0_med,  color=quad_colors[1], alpha=0.15, zorder=0))
-        ax.add_patch(Rectangle((t_med, 0.0),  1.0 - t_med,  l0_med,        color=quad_colors[2], alpha=0.15, zorder=0))
-        ax.add_patch(Rectangle((t_med, l0_med), 1.0 - t_med, 1.0 - l0_med, color=quad_colors[3], alpha=0.15, zorder=0))
+        # --- Colored quadrant background regions (clipped to rate_max) ---
+        t_right = min(t_med, rate_max)  # left half never exceeds rate_max
+        e_right = rate_max - t_med if t_med < rate_max else 0.0  # emerging/advancing width
+        ax.add_patch(Rectangle((0.0,   0.0),    t_right,  l0_med,       color=quad_colors[0], alpha=0.15, zorder=0))
+        ax.add_patch(Rectangle((0.0,   l0_med), t_right,  1.0 - l0_med, color=quad_colors[1], alpha=0.15, zorder=0))
+        if e_right > 0:
+            ax.add_patch(Rectangle((t_med, 0.0),    e_right, l0_med,       color=quad_colors[2], alpha=0.15, zorder=0))
+            ax.add_patch(Rectangle((t_med, l0_med), e_right, 1.0 - l0_med, color=quad_colors[3], alpha=0.15, zorder=0))
 
         # --- Boundary lines ---
-        ax.axvline(t_med,  color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
+        if t_med < rate_max:
+            ax.axvline(t_med,  color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
         ax.axhline(l0_med, color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
 
         # --- Connecting line with directional arrows between sampled points ---
-        for k in range(len(subset) - 1):
+        _MIN_SEG_LEN = 0.008  # segments shorter than this are skipped (invisible arrow)
+        n_segments = len(subset) - 1
+
+        # Pre-compute segment lengths; find the effective first/last visible segments
+        seg_lens = []
+        for k in range(n_segments):
+            x0_ = subset[rate_col].iloc[k];  y0_ = subset[init_col].iloc[k]
+            x1_ = subset[rate_col].iloc[k+1]; y1_ = subset[init_col].iloc[k+1]
+            seg_lens.append(((x1_ - x0_) ** 2 + (y1_ - y0_) ** 2) ** 0.5)
+        visible_ks = [k for k, sl in enumerate(seg_lens) if sl >= _MIN_SEG_LEN]
+        eff_first = visible_ks[0]  if visible_ks else None
+        eff_last  = visible_ks[-1] if visible_ks else None
+
+        for k in range(n_segments):
+            if seg_lens[k] < _MIN_SEG_LEN:
+                continue
             x0, y0 = subset[rate_col].iloc[k],   subset[init_col].iloc[k]
             x1, y1 = subset[rate_col].iloc[k+1], subset[init_col].iloc[k+1]
+            is_endpoint_seg = (k == eff_first or k == eff_last)
             ax.annotate('', xy=(x1, y1), xytext=(x0, y0),
-                        arrowprops=dict(arrowstyle='->', color='dimgrey',
-                                        lw=2.0, alpha=0.35,
+                        arrowprops=dict(arrowstyle='->', color='#444444' if is_endpoint_seg else '#aaaaaa',
+                                        lw=2.0 if is_endpoint_seg else 1.5,
+                                        alpha=0.80 if is_endpoint_seg else 0.35,
                                         mutation_scale=20),
-                        zorder=2)
+                        zorder=6 if is_endpoint_seg else 2)
             mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-            ax.text(mx, my, str(k + 1), fontsize=12, color='dimgrey',
+            ax.text(mx, my, str(k + 1), fontsize=12,
+                    color='#444444' if is_endpoint_seg else '#aaaaaa',
                     ha='center', va='center', zorder=3,
                     bbox=dict(boxstyle='round,pad=0.15', fc='white', ec='none', alpha=0.6))
 
-        # --- Transition points numbered by actual interaction index ---
+        # --- Transition points: size encodes number of absorbed skipped candidates ---
+        _BASE_S = 100
+        _S_PER_SKIP = 22
+        first_idx, last_idx = indices[0], indices[-1]
         for actual_idx, row in zip(indices, subset.itertuples()):
             pt_color = quad_colors[int(row.pt_quad)]
+            n_skips = skip_counts.get(actual_idx, 0)
+            marker_s = _BASE_S + n_skips * _S_PER_SKIP
+            is_endpoint = (actual_idx == first_idx or actual_idx == last_idx)
             ax.scatter(getattr(row, rate_col), getattr(row, init_col),
-                       color=pt_color, s=160, edgecolors='k', linewidths=0.9,
+                       color=pt_color, s=marker_s, edgecolors='k',
+                       linewidths=1.8 if is_endpoint else 0.9,
                        zorder=4, alpha=0.95)
             ax.annotate(str(actual_idx),
                         xy=(getattr(row, rate_col), getattr(row, init_col)),
                         xytext=(5, 5), textcoords='offset points',
-                        fontsize=10, color='black', zorder=5)
+                        fontsize=11 if is_endpoint else 10,
+                        color='#1a1a1a' if is_endpoint else '#888888', zorder=5)
 
-        ax.set_xlim(0.0, 1.0)
+        ax.set_xlim(0.0, rate_max)
         ax.set_ylim(0.0, 1.0)
         ax.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
         ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=12)
-        ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
+        x_ticks = [v for v in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0] if v <= rate_max + 1e-9]
+        ax.set_xticks(x_ticks)
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
-        # Quadrant labels inside the regions
-        ax.text(t_med / 2,       l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
-        ax.text(t_med / 2,       (l0_med + 1) / 2,  'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
-        ax.text((t_med + 1) / 2, l0_med / 2,        'Emerging',      ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
-        ax.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Advancing',     ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
+        # Quadrant labels inside the regions (only where visible)
+        ax.text(t_med / 2,                    l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
+        ax.text(t_med / 2,                    (l0_med + 1) / 2, 'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
+        if t_med < rate_max:
+            ax.text((t_med + rate_max) / 2, l0_med / 2,       'Emerging',  ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
+            ax.text((t_med + rate_max) / 2, (l0_med + 1) / 2, 'Advancing', ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
 
         # --- Legend ---
         legend_handles = [
@@ -377,7 +477,7 @@ def main():
     for i, uid in enumerate(representatives):
         full_subset = df[df['student_id'] == uid].reset_index(drop=True)
         full_subset = full_subset.iloc[:global_max_interactions]
-        indices = sample_stride_then_filter(full_subset, rate_col, init_col, args.timestep, min_move)
+        indices, _ = sample_stride_then_filter(full_subset, rate_col, init_col, args.timestep, min_move)
         subset = full_subset.iloc[indices].reset_index(drop=True)
         t = np.array(indices)
 
