@@ -10,6 +10,7 @@
 \usepackage{hyperref}
 \usepackage[markup=underlined, authormarkup=none]{changes}
 \usepackage{subcaption}
+\usepackage{float}
 \definechangesauthor[name=Development, color=blue]{dev}
 %
 \graphicspath{{img/}}
@@ -78,12 +79,13 @@ We propose an \textit{augmented user model} that integrates the three standard I
 
 The augmented user model is powered by gTransformer~\cite{labra2026theory}, a hybrid architecture that implements \textit{representational grounding}: a methodology that anchors Transformer latent representations to the semantic constructs of BKT, bridging deep learning expressiveness with pedagogical interpretability. Figure~\ref{fig_arch} summarises the architecture.
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.65\textwidth,height=0.75\textheight,keepaspectratio]{gtransformer.png}
 \caption{\textbf{gTransformer architecture.} Two processing tracks share a common encoder--decoder backbone. The standard track (white boxes) produces supervised predictions via an MLP head. The grounded track (grey boxes) combines BKT theory base logits with context-vector projections onto learnable semantic axes to produce student-specific parameters $(p_{\text{L}_0}, p_{\text{T}})$, which are passed through BKT update logic to yield theory-transparent predictions. Both heads are jointly optimised via a multi-objective loss. Outputs of the grounded track populate the augmented user model (blue box).}
 \label{fig_arch}
 \end{figure}
+
 
 As illustrated in Figure~\ref{fig_arch}, the architecture operates through two parallel tracks. The \textit{standard track} encodes student interactions $(q_t, c_t, r_t)$ via difficulty-aware embeddings and processes them through a stacked attention-based encoder--decoder, producing a context vector $z_t$ that summarises the student's current learning state. A multi-layer perceptron maps $z_t$ directly to a correctness prediction $\hat{y}_t$, optimising for predictive accuracy without theoretical constraints.
 
@@ -122,7 +124,7 @@ Comparison of predictive performance (Table~\ref{tab_performance}) addresses RQ1
 
 Figure~\ref{fig_roster} addresses RQ2, showing trajectory plots for a representative student from each of the four learning situations. Each panel maps consecutive sampled interactions in $(p_T, p_{L_0})$ space, with numbered points and directional arrows tracing the temporal evolution of the student's parameter profile across the full interaction sequence. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift in the student's learning situation over time. By reading these trajectories, educators gain theory-grounded insights into whether a student is disengaging (decreasing $p_{\text{T}}$) or gaining confidence (increasing $p_{\text{L}_0}$). This dynamic view grounds deep learning state into pedagogically recognisable constructs, enabling more mindful instructional support and satisfying the accountability requirements for high-risk educational AI.
 
-\begin{figure}[p]
+\begin{figure}[H]
 \centering
 \begin{subfigure}[b]{\textwidth}
   \centering
@@ -135,7 +137,7 @@ Figure~\ref{fig_roster} addresses RQ2, showing trajectory plots for a representa
   \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact trajectory anchored at high mastery and near-zero learning rate; stagnation cues the introduction of novel challenge.}
 \end{subfigure}
 \end{figure}
-\begin{figure}[p]
+\begin{figure}[H]
 \ContinuedFloat
 \centering
 \begin{subfigure}[b]{\textwidth}
@@ -163,7 +165,7 @@ For \textit{emerging learners}, the ellipse is the most spatially extended of al
 For \textit{advancing learners}, the ellipse is moderately extended and centred at high mastery with a moderate learning rate. The spread reflects a student who engages responsively across varied skill demands while maintaining consistently high prior knowledge. The tutorial model can safely route this student to accelerated content and reduced practice redundancy; the ellipse shape confirms that the high-mastery profile is robust across contexts and not an artefact of easy items.
 
 
-\begin{figure}[p]
+\begin{figure}[H]
 \centering
 \begin{subfigure}[b]{\textwidth}
   \centering
@@ -176,7 +178,7 @@ For \textit{advancing learners}, the ellipse is moderately extended and centred 
   \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): compact ellipse at high mastery and near-zero learning rate; stagnation calls for novel challenge.}
 \end{subfigure}
 \end{figure}
-\begin{figure}[p]
+\begin{figure}[H]
 \ContinuedFloat
 \centering
 \begin{subfigure}[b]{\textwidth}
@@ -203,7 +205,7 @@ For \textit{emerging learners}, both $p_{\text{L}_0}$ (0.52 $\to$ 0.67) and $p_{
 
 For \textit{advancing learners}, the $p_{\text{L}_0}$ return map shows early stabilisation: mastery is high from the first interactions (mean 0.74) and the orbit clusters around the diagonal with negligible net movement. The $p_{\text{T}}$ panel declines moderately (0.15 $\to$ 0.11), indicating that the model assigns progressively smaller marginal learning rate estimates as opportunities for further gain diminish. The instructional implication is not derived from a presumed initial ability but from observed evidence: continued practice at the current difficulty level produces diminishing returns, and the tutorial model can route this student to more demanding content immediately, grounded in the trajectory rather than in a prior assignment.
 
-\begin{figure}[p]
+\begin{figure}[H]
 \centering
 \begin{subfigure}[b]{\textwidth}
   \centering
@@ -216,7 +218,7 @@ For \textit{advancing learners}, the $p_{\text{L}_0}$ return map shows early sta
   \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): mastery orbit migrates to a high-mastery fixed point while learning rate declines, revealing an active-to-plateau transition.}
 \end{subfigure}
 \end{figure}
-\begin{figure}[p]
+\begin{figure}[H]
 \ContinuedFloat
 \centering
 \begin{subfigure}[b]{\textwidth}
@@ -238,6 +240,7 @@ These results underscore the utility of theory-grounded user modeling for ECTEL 
 %
 \section{Context-Aware Personalisation}
 \label{sec_personalisation}
+
 
 A key contribution of this work is demonstrating how gTransformer enables the ITS tutorial model to move from population-level strategies towards situation-based, context-aware instruction. Rather than assigning students to fixed ability groups, we identify four \textit{learning situations} by partitioning the $(p_{\text{L}_0}, p_{\text{T}})$ parameter space along two dimensions (initial mastery and learning rate) on the AS2009 dataset: (1)~\textit{foundational learners} (low initial mastery, low learning rate), (2)~\textit{emerging learners} (low initial mastery, high learning rate), (3)~\textit{consolidating learners} (high initial mastery, low learning rate), and (4)~\textit{advancing learners} (high initial mastery, high learning rate). These learning situations are not static categories: because gTransformer continuously updates its parameter estimates as new interactions arrive, a student's assigned situation evolves with their trajectory. Each situation calls for a distinct tutorial strategy: foundational learners require targeted scaffolding; advancing learners are ready for accelerated pacing; intermediate situations benefit from adjusted challenge levels or motivational support.
 
@@ -284,4 +287,3 @@ The authors have no competing interests to declare that are relevant to the cont
 \bibliography{biblio}
 
 \end{document}
-
