@@ -173,6 +173,12 @@ The GTransformer visualization pipeline generates various plots categorized into
 - **Script**: `examples/results/plot_student_clusters_gtransformer.py` (Student learning archetypes).
 - **Script**: `examples/results/generate_roster_plots_gtransformer.py` (Cognitive Roster & Mastery Heatmaps).
 
+### 5. Situational Instruction (ECTEL paper)
+- **Script**: `examples/results/generate_roster_plots_gtransformer.py` (Cognitive Roster: 2-D quadrant scatter, 3-D trajectory scatter, heatmap, and animated GIFs).
+- **Script**: `examples/results/generate_attractor_plots_gtransformer.py` (Attractor covariance ellipses, one per learning-situation quadrant).
+- **Script**: `examples/results/generate_attractor_dynamics_plots.py` (KDE density contours, return/lag maps, and state-transition graphs).
+- **Output directory**: `plots_ectel/` at the dataset level (e.g. `experiments/<campaign>/gtransformer/<dataset>/plots_ectel/`).
+- All three scripts are invoked automatically by `python examples/run_benchmarks_paper.py --mode results` and require `traj_rate.csv` and `traj_initmastery.csv` in the representative fold directory.
 
 
 ## Instructions

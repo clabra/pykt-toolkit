@@ -1119,15 +1119,6 @@ def main():
                                             "--output_dir": str(plot_dir)
                                         },
                                         "required_files": []  # Auto-discovers checkpoint and config
-                                    },
-                                    {
-                                        "name": "Latent Space Analysis",
-                                        "script": "examples/validation/old/plot_latent_pca.py",
-                                        "args": {
-                                            "--exp_dir": str(fold_dir),
-                                            "--output_dir": str(plot_dir)
-                                        },
-                                        "required_files": []  # Auto-discovers checkpoint and config
                                     }
                                 ]
                                 
@@ -1217,7 +1208,7 @@ def main():
                                     print(f"          2. Evaluation with dual_eval=true in configs/parameter_default.json")
                             else:
                                 print(f"\n  [INFO] Plot generation skipped (--plots=false)")
-                            
+
                             # 2. Generate diagnostic probing results for validation
                             print(f"\n  Diagnostic Probing Analysis:")
                             # validation_dir already created at dataset level above
