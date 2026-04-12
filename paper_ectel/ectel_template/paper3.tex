@@ -72,19 +72,19 @@ However, traditional BKT is limited by its population-level assumptions: it typi
 
 Historically, KT has been characterized by a dichotomy between two paradigms: traditional models like BKT~\cite{corbett1994knowledge}, which are \textit{intrinsically interpretable} due to their human-understandable parameters, and deep learning architectures introduced in DKT~\cite{piech2015deep} that have demonstrated superior predictive accuracy but operate as opaque ``black boxes'' whose internal states lack direct correspondence to pedagogical principles~\cite{abdelrahman2023knowledge}. This lack of transparency raises significant concerns regarding accountability in high-stakes educational environments~\cite{rudin2019stop}. Grounded Transformers such as gTransformer~\cite{labra2026theory} emerge as an alternative to this dichotomy, proposing an architecture that maintains the predictive power of deep learning while ensuring its internal representations are grounded in established learning theories~\cite{labra2026theory}.
 
-The gTransformer architecture, shown in Figure~\ref{fig_arch}, is designed to transform learner activity history into actionable pedagogical information through three distinct stages:
+The gTransformer architecture, shown in Fig.~\ref{fig_arch2}, is designed to transform learner activity history into actionable pedagogical information through three distinct stages:
 
 \begin{itemize}
   \item Input: The model integrates raw interaction histories with theoretical priors derived from population-level BKT estimates. This anchoring ensures that the architecture remains grounded in pedagogically sound principles.
-  \item Processing: Within the core engine, two parallel tracks process the student's context. The \textit{standard track} optimizes for estimations accuracy, while the \textit{grounded track} projects latent context onto theory-defined axes to derive student-specific, longitudinally updated parameters for initial mastery ($p_{\text{L}_0}$) and learning rate ($p_{\text{T}}$). Both tracks are jointly optimized via a multi-objective loss that enforces both inference accuracy and grounding.
-  \item Output: The resulting grounded parameters quantify each learner's unique dynamics. They form the data-driven basis of the augmented user model, enabling the identification of learning situations that guide differentiated instruction.
+  \item Processing: Within the core engine, two parallel tracks process the student's context. The \textit{standard track} optimizes for estimations accuracy, while the \textit{grounded track} projects latent context onto theory-defined axes to derive student-specific parameters ($p_{\text{L}_0}, p_t$). Both tracks are jointly optimized via a multi-objective loss that enforces both inference accuracy and grounding.
+  \item Output: The resulting grounded parameters quantify each learner's unique dynamics. They form the data-driven basis of the augmented user model.
 \end{itemize}
 
 \begin{figure}[!htb]
 \centering
-\includegraphics[width=1.0\textwidth]{arch3.png}
-\caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional mastery estimates. The augmented profile enables situation-based instructional strategies through the tutor model.}
-\label{fig_arch}
+\includegraphics[width=1.0\textwidth]{arch2.png}
+\caption{The gTransformer architecture. The model integrates theoretical priors and interaction history to produce student-specific grounded parameters through parallel standard and grounded tracks.}
+\label{fig_arch2}
 \end{figure}
 
 
@@ -99,12 +99,19 @@ ITS are typically structured around three interacting components \cite{nkambou20
 \end{itemize}
 The effectiveness of this traditional architecture is historically constrained by the limitations of the user model that primarily contain mastery states inferred through KT systems. While this information provides a useful snapshot of what a student knows, it is often insufficient for mindful instruction because it fails to capture the underlying learning dynamics that explain why those states were reached. For instructional decisions to be transparent, accountable, and pedagogically grounded, user models must move beyond simple data correlates and instead provide representations that reflect actionable pedagogical constructs.
 
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=1.0\textwidth]{arch3.png}
+\caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional knowledge tracing (KT) mastery estimates. The augmented user model enables situation-based instructional strategies through the tutor model.}
+\label{fig_arch3}
+\end{figure}
+
 
 \section{Grounded Transformers and Augmented User Models}
 
 \subsection{Proposed Architecture}
 
-We propose an \textit{augmented user model} (AUM) that operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. While the \textit{domain model} defines the structured knowledge components, the \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who might show similar response sequences but differ in longitudinal context. As shown in Figure~\ref{fig_arch}, the grounded parameters directly inform: 1)~the \textit{tutor model}, which implements situation-based instructional strategies; and 2)~a \textit{diagnostic roster module}, which provides educators with the transparent oversight required for accountable and purposeful TEL environments.
+We propose an \textit{augmented user model} (AUM) that operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. While the \textit{domain model} defines the structured knowledge components, the \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who might show similar response sequences but differ in longitudinal context. As shown in Fig.~\ref{fig_arch3}, the grounded parameters directly inform: 1)~the \textit{tutor model}, which implements situation-based instructional strategies; and 2)~a \textit{diagnostic roster module}, which provides educators with the transparent oversight required for accountable and purposeful TEL environments.
 
 \subsection{Design Principles}
 
