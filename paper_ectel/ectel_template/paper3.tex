@@ -104,7 +104,7 @@ The effectiveness of this traditional architecture is historically constrained b
 \vspace{-6pt}
 \subsection{Proposed Architecture}
 
-We propose an \textit{augmented user model} (AUM) that, in order to overcome the limitations of purely mastery-based representations identified in Section~\ref{sub_its}, operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. The \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who show similar recent response sequences but differ in their individual learning histories. The grounded parameters define a two-dimensional space that is partitioned into four \textit{learning situations} (Section~4.2), each of which maps to a distinct instructional strategy. As shown in Fig.~\ref{fig_arch3}, these learning situations directly inform the \textit{tutor model}, which implements situation-based instructional routing. 
+We propose an \textit{augmented user model} (AUM) that, in order to overcome the limitations of purely mastery-based representations identified in Section~\ref{sub_its}, operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. The \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who show similar recent response sequences but differ in their individual learning histories. The grounded parameters define a two-dimensional space that is partitioned into four \textit{learning situations} (Section~\ref{sec_situations}), each of which maps to a distinct instructional strategy. As shown in Fig.~\ref{fig_arch3}, these learning situations directly inform the \textit{tutor model}, which implements situation-based instructional routing. 
 
 \begin{figure}[H]
 \centering
@@ -115,13 +115,16 @@ We propose an \textit{augmented user model} (AUM) that, in order to overcome the
 
 \subsection{Design Principles}
 
-The augmented student model presented here is shaped by three explicit design principles, each of which traces directly to a concrete implementation decision. Making this traceability visible is central to the ECTEL theme of Mindful TEL: a technology shaped with intention must be able to account for why it was designed the way it was, including what it deliberately does not do.
+Our proposal is informed by three explicit design principles: 
 
-\textbf{Interpretability as a first-class requirement.} Rather than relying on post hoc explanation techniques such as attention weight visualisation, the system produces outputs that are intrinsically grounded in BKT parameters. This choice limits the model to the parameter space defined by a well-established learning theory but ensures that every prediction can be traced to constructs that educators recognise and can validate. Raw model internals are not surfaced to practitioners.
+\begin{itemize}
+\item \textit{Theory-grounded representations.} This principle is operationalised by embedding pedagogical considerations directly into the architecture design. Rather than pursuing predictive accuracy in a vacuum, we design the system to reflect established learning theories. This ensures that the outputs are not merely data correlates, but legitimate pedagogical constructs that speak the language of the educator, thereby bridging the gap between machine intelligence and human instructional judgment.
 
-\textbf{Transparency toward educators.} The grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ and their derived learning situations are designed to be readable by non-specialist practitioners. The four learning situation labels (foundational, emerging, consolidating, advancing) map to observable learning patterns and imply concrete instructional actions, rather than encoding latent scores that require technical expertise to interpret.
+\item \textit{Actionable pedagogical strategies.} Longitudinally updated parameter estimates are transformed into an augmented user model featuring \textit{learning situations} (Section~\ref{sec_situations}). These representations translate model outputs into actionable insights that support targeted pedagogical interventions.
 
-\textbf{Educator agency over automation.} The model does not issue automated instructional recommendations or select content without human involvement. It provides educators and the tutorial model with structured, theory-grounded evidence about each student's current learning situation. Instructional decisions remain with the practitioner. This is a deliberate constraint: rather than maximising automation, the design preserves the capacity for human judgment and oversight, which is required for responsible deployment of AI in high-stakes educational contexts~\cite{Holmes2022504}.
+\item \textit{Human-centred focus.} For students, the design ensures an individualised experience adapted to their evolving learning situations. For educators, it provides the interpretable evidence necessary to make informed pedagogical decisions. By maintaining this human-centred focus, the design guarantees that transparency, accountability and agency remain at the centre of the TEL environment~\cite{Holmes2022504}.
+
+\end{itemize}
 
 %
 \section{Methodology}
@@ -135,6 +138,7 @@ For each student $s$ and knowledge component $c$, gTransformer infers a pair of 
 To augment the user model, we record the most recent $(p_{\text{L}_0}, p_{\text{T}})$ pair for each student alongside the standard mastery estimate. This extended user profile allows the ITS to distinguish students who show similar response patterns but differ in their underlying learning dynamics, a distinction that population-level BKT cannot make. We validate the quality of this augmented user model by comparing $\hat{y}_{\text{ref}}$ against classical BKT predictions using AUC on the ASSISTments 2009 (AS2009) dataset.
 
 \subsection{Clustering into Learning Situations}
+\label{sec_situations}
 
 To translate the continuous parameter space into actionable instructional decisions, we partition the $(p_{\text{L}_0}, p_{\text{T}})$ plane into four \textit{learning situations} using the population medians of both parameters as thresholds. This yields a $2 \times 2$ partition that is interpretable, non-parametric, and data-driven. This choice of a coarse partition is an \textit{intentional design constraint}: while deep learning enables high-dimensional clustering, we deliberately maintain a simple, transparent segmentation to ensure that the resulting labels directly correspond to well-known instructional strategies and remain accountable to human interpretation. The four situations are:
 
