@@ -9,7 +9,7 @@ The key contributions of the paper will be a new Transformer attention-based mod
 ## Reference Documents
 
 - mdpi paper latex file: `paper_ectel/mdpi_template/applsci-4169306-done.tex` - the latex version of our paper published by MDPI. The paper for ECTEL 2026 will be based on it. **This is the authoritative source for all technical facts about gTransformer**: architecture, parameter formulas, training loss, validation methodology, and quantitative results. Read this file first whenever a writing task requires precise technical content.
-- ectel paper latex file: `paper_ectel/ectel_template/paper3.tex` - the current draft of the ECTEL 2026 paper. **This is the master file for all editing and drafting tasks**: section structure, existing text, figures, and bibliography references. Always read this file to determine the current paper state before making any edits or additions.
+- ectel paper latex file: `paper_ectel/ectel_template/paper.tex` - the current draft of the ECTEL 2026 paper. **This is the master file for all editing and drafting tasks**: section structure, existing text, figures, and bibliography references. Always read this file to determine the current paper state before making any edits or additions.
 - `bibliography` folder contains reference papers, some of them were used as bibliography for the MDPI paper. The bibliography file for the ECTEL paper is `paper_ectel/ectel_template/biblio.bib`.
 
 ## Paper Publication
@@ -48,9 +48,7 @@ Research examining governance, policy and institutional agency that enable respo
 Critical reflection on the impact of TEL innovations on human values, trust, sustainability and the broader educational mission.
 We encourage authors to frame their work in relation to how it contributes to shaping technology for meaningful learning, how it designs with intention, and how it brings rich new insights, not merely novelty. Studies that combine technological innovations with pedagogical depth, reflection, and real-world relevance are particularly welcome.
 
-## Conferences guidelines
-
-### Submission Formats
+## Submission Formats
 
 Full research papers (8-15 pages, including references). 
 
@@ -58,17 +56,37 @@ Research papers are expected to be mature research contributions to the field of
 
 Accepted full research papers will be published in LNCS Springer Conference Proceedings.
 
-### Double-blind Review
+## Paper narrative 
 
-All papers submitted to ECTEL, except Doctoral Consortium submissions, will be reviewed through a double-blind review process, meaning that author names are not disclosed to the reviewers and reviewer names are not disclosed to the authors.
+### Key technical facts
 
-For this purpose, authors must submit their manuscript:
+The following facts are essential context for any writing or editing task on this paper. Authoritative sources: MDPI paper (`paper_ectel/mdpi_template/applsci-4169306-done.tex`) and ECTEL paper (`paper_ectel/ectel_template/paper.tex`).
 
-- without any reference to themselves and their institutions;
-- without any URLs to projects, products or self-developed systems;
-- with relevant self-references blinded or written in the third person.
+**BKT reference model.** Bayesian Knowledge Tracing (BKT) models learning as a Hidden Markov process with four interpretable parameters: Initial Mastery $P(\text{L}_0)$ (probability of knowing a concept before practice), Learn Rate $P(\text{T})$ (probability of transitioning from unlearned to learned), Guess $P(\text{G})$ (probability of a correct response despite lack of mastery), and Slip $P(\text{S})$ (probability of an incorrect response despite mastery). Standard BKT operates at the population level, estimating one parameter set per skill for all students.
 
-## Conference theme alignment 
+**gTransformer architecture.** A hybrid architecture that implements *representational grounding*: it anchors Transformer latent representations to the semantic constructs of BKT, bridging deep learning expressiveness with pedagogical interpretability. Two parallel processing tracks share a common attention-based encoder--decoder backbone:
+
+- *Standard track*: encodes student interactions $(q_t, c_t, r_t)$ (question identifier, knowledge component, binary correctness) via difficulty-aware embeddings and produces context vector $z_t$. An MLP maps $z_t$ to a correctness prediction $\hat{y}_t$ optimised for predictive accuracy.
+- *Grounded track*: computes student-specific BKT parameters in logit space. Population-level BKT priors serve as theory base values; contextual adjustments are obtained by projecting $z_t$ onto learnable concept-specific semantic axes. The resulting parameters are $p_{\text{L}_0,t} = \sigma(\ell_{\text{L}_0} + z_t \cdot k_c)$ and $p_{\text{T},t} = \sigma(\ell_{\text{T}} + z_t \cdot v_c)$. These are passed through BKT update logic to produce interpretable predictions $\hat{y}_{\text{ref},t}$.
+
+Only $P(\text{L}_0)$ and $P(\text{T})$ are grounded. $P(\text{G})$ and $P(\text{S})$ are fixed at population-level values (performance parameters tied to item properties, not knowledge acquisition).
+
+**Training.** A multi-objective loss balances supervised accuracy ($\hat{y}_t$), interpretable prediction quality ($\hat{y}_{\text{ref},t}$), and global latent-space alignment via diagnostic probing.
+
+**Validation methodology (triple-validation, MDPI paper).** Structural alignment: BKT constructs are primary organising principles of the latent space. Semantic alignment: grounded parameters retain pedagogical semantics. Functional alignment: quantifies confidence in interpretable predictions.
+
+**Performance (from MDPI paper).** gTransformer achieves an average AUC gain of +19.9% over classical BKT (interpretable baseline) at a grounding cost of only 3.9% relative to black-box deep learning architectures. Datasets used: ASSISTments 2009 (AS2009), ASSISTments 2015, Algebra 2005. No new experiments are run for the ECTEL paper; all results are drawn from the MDPI paper.
+
+**The augmented student model (ECTEL contribution).** The ECTEL paper does not present gTransformer as a new contribution; it treats gTransformer as prior work (cited in third person for double-blind review) and builds upon it. The contribution is a design for an augmented ITS user model that uses gTransformer's grounded parameters to support situation-based instruction. For each student and knowledge component, gTransformer infers a continuously updated pair $(p_{\text{L}_0,t}, p_{\text{T},t})$ from the student's full interaction history. These are used to assign each student to one of four *learning situations*, defined by partitioning the $(p_{\text{L}_0}, p_{\text{T}})$ plane at the population medians of both parameters:
+
+- *Foundational* (low $p_{\text{L}_0}$, low $p_{\text{T}}$): limited prior knowledge, slow consolidation; requires scaffolding, worked examples, reduced complexity.
+- *Emerging* (low $p_{\text{L}_0}$, high $p_{\text{T}}$): limited prior knowledge but high learning rate; targeted practice with progressively increasing challenge.
+- *Consolidating* (high $p_{\text{L}_0}$, low $p_{\text{T}}$): high prior knowledge, near-zero learning rate indicating stagnation; novel or cross-domain challenge needed.
+- *Advancing* (high $p_{\text{L}_0}$, high $p_{\text{T}}$): high prior knowledge and active learning rate; route to accelerated content.
+
+Learning situation assignments are dynamic: gTransformer updates $(p_{\text{L}_0,t}, p_{\text{T},t})$ at every interaction, so a student can transition across quadrants as their trajectory evolves. 67% of students in AS2009 were assigned a different learning situation at session exit versus session entry.
+
+### Conference theme alignment 
 
 Highlight the following points in the paper and integrate them into the narrative where applicable.
 
@@ -93,9 +111,74 @@ The two papers occupy complementary and clearly distinct roles:
 
 The narrative must make this progression explicit and self-contained. Reviewers will expect to see clear intellectual continuity (concept to design) as well as a standalone contribution that does not require reading the prior paper to be understood and evaluated.
 
-## Paper Instructions
+## Paper Structure
 
-Help the author to create the paper following the instructions detailed in ectel_instructions.md file.
+## Abstract 
+
+- name the design artefact (augmented student model)
+- explain what it translates (grounded outputs → actionable representations)
+- explain how it is used (learning situations → strategies)
+- The conceptual mdpi paper is referenced at the right level.
+- The contribution reads as necessary, autonomous, and design‑driven.
+
+### Planned paper sections
+
+The section structure is defined exclusively in `paper_ectel/ectel_template/paper.tex`. Before drafting or editing any section, read that file to extract the current `\section` and `\subsection` commands. Do not rely on any cached list; the structure may have changed since this file was last updated. Do not invent or add sections not present in the LaTeX file.
+
+### Introduction (early positioning)
+
+The introduction must establish three things clearly and concisely: (i) the educational problem (student models in ITS optimized for accuracy but not interpretability or actionability), (ii) the prior conceptual contribution that motivates this work (grounded transformers as a framework for end-user interpretability), and (iii) the specific design contribution of this paper (an augmented student model that translates grounded transformer outputs into instructionally relevant information for educators).
+
+The opening should make explicit that this paper does not duplicate the prior work, but advances it from concept to design. A representative framing:
+
+> "A recent line of work has proposed *representational grounding* as a design principle for interpretable deep knowledge tracing models, demonstrating that transformer-based architectures can be grounded in theoretically motivated parameters derived from reference models such as Bayesian Knowledge Tracing [X]. While that work established the conceptual framework and validated its predictive performance, it did not address how the resulting interpretable representations should be leveraged within an ITS to support adaptive instruction. The present paper addresses this gap."
+
+### Background and related work
+
+This section should summarize only what is necessary to situate the design contribution: the limitations of accuracy-driven KT models, the concept of grounded transformers as introduced in [X], and the role of student models in ITS. The prior conceptual paper should be treated as a theoretical reference, not re-explained in full. One or two paragraphs suffice.
+
+A representative framing:
+
+> "Following the conceptual framework introduced in [X], this work adopts the notions of intentionality, transparency, and educator agency as guiding design principles for the augmented student model presented here."
+
+### Making the design explicitly mindful
+
+A design paper aligned with the ECTEL theme must make intentional design choices visible and traceable. This means showing not only what was designed, but why, and what was deliberately excluded.
+
+Two strategies are particularly effective:
+
+- *Principle-to-decision traceability.* Map each design principle to a concrete decision. For example: interpretability as a first-class requirement leads to the choice of grounded transformer outputs over raw attention weights; human agency as a principle leads to presenting learning signals as decision support rather than automated recommendations.
+- *Intentional constraints.* State explicitly what the design does not do and why. For example, the model does not automate instructional decisions; it provides educators with structured evidence to inform their own judgments. This is a deliberate trade-off in favour of pedagogical agency.
+
+A useful formulation: "Rather than maximizing automation, design choices were intentionally constrained to preserve pedagogical agency."
+
+### Avoiding over-dependence on the prior paper
+
+The main risk for a design paper that follows a conceptual one is that reviewers perceive it as a repetition or an extension that should have been included in the original submission. To mitigate this:
+
+- Include a brief, self-contained recap of the conceptual framework (one to two paragraphs), sufficient for the paper to be read and evaluated independently.
+- Make the design contribution the clear foreground. The conceptual paper provides the foundation; this paper builds on it.
+- Ensure the contribution statement refers to the design artefact and its educational implications, not to the theoretical framework alone.
+
+### Contribution statement
+
+A concise and accurate formulation of the contribution:
+
+> "This paper contributes a design for an augmented student model in ITS that operationalizes the principles of grounded transformers into instructionally actionable representations, enabling educators to identify distinct learning situations and adapt instruction accordingly."
+
+Alternatively, foregrounding the ECTEL theme:
+
+> "The contribution lies in translating a conceptual framework for interpretable deep knowledge tracing into a mindful TEL design that foregrounds intentionality, transparency, and human pedagogical agency."
+
+### Self-assessment checklist
+
+Before finalizing the paper, verify that the following criteria are met:
+
+- [ ] The reader can understand the conceptual background in two paragraphs without reading the prior paper.
+- [ ] The focus is clearly on design decisions, not on theoretical exposition.
+- [ ] Intentional design choices (including what was not automated) are made explicit.
+- [ ] The paper is self-contained and publishable independently of the prior work.
+- [ ] The term "mindful" is not merely rhetorical: it is instantiated in specific design decisions.
 
 ## Environment Setup
 
@@ -143,6 +226,22 @@ See `assistant/ablation.md` for guidelines on how to augment or modify the model
 - DO NOT modify scripts in examples such as wandb_train.py, wandb_predict.py or wandb_[model_name]_train.py that are use by pykt framework to train and evaluate models. 
 
 ## Guidelines
+
+### Objective
+
+You are a assistant that helps to create a paper for ECTEL (paper 2, located at `paper_ectel/ectel_template/paper.tex`) based on the paper submitted to MDPI (paper 1, located at `paper_ectel/mdpi_template/applsci-4169306-done.tex`) . We'll use the results obtained for the MDPI paper, no new experiments will be launched. Paper 2 will be a full research paper with 8-15 pages, including references. 
+
+In paper 2 we are not going to present gTransformer as a contribution since this was made in paper 1 (MDPI). We will talk about grounded transformers and reference paper 1. We will explain what are grounded transformers but they are not a contribution of this paper 2. The contributions of paper 2 are about how to leverage grounded transformers for better user modeling. Take into account also "### Double-blind Review" so talk about grounded transformers about the work of others. 
+
+### Double-blind Review
+
+All papers submitted to ECTEL, except Doctoral Consortium submissions, will be reviewed through a double-blind review process, meaning that author names are not disclosed to the reviewers and reviewer names are not disclosed to the authors.
+
+For this purpose, authors must submit their manuscript:
+
+- without any reference to themselves and their institutions;
+- without any URLs to projects, products or self-developed systems;
+- with relevant self-references blinded or written in the third person.
 
 ### Operational standards
 
