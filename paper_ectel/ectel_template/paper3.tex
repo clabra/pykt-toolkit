@@ -45,7 +45,7 @@ The research question that guides this work is:
 
 \textit{RQ: How can ITS user modeling be augmented with theory-grounded information to support more mindful instructional strategies that comply with the requirements for transparency and pedagogical purpose?}
 
-The remainder of the paper is organised as follows. Section~2 provides background on the learning theories underpinning the BKT reference model, the gTransformer architecture, and the role of user models in ITS. Section~3 formalises the proposed augmented user model and makes explicit the design principles that govern its construction. Section~4 describes the methodology for augmenting the user model and deriving learning situations from grounded parameters. Section~5 presents the results for each learning situation and their instructional implications. Section~6 demonstrates situation-based instructional routing. Section~7 discusses the broader implications and Section~8 concludes.
+The remainder of the paper is organised as follows. Section~2 provides background on the learning theories underpinning the reference model, the gTransformer architecture, and the role of user models in ITS. Section~3 establishes the design principles of the augmented student model and details its architectural implementation. Section~4 describes the methodology for operationalising this model, including the transformation of parameter trajectories into learning situations. Section~5 presents the empirical results that validate the model’s diagnostic capacity. Section~6 demonstrates the instructional utility of the design through situation-based routing. Section~7 discusses the broader implications for Mindful TEL and Section~8 concludes.
 
 %
 
@@ -100,22 +100,14 @@ ITS are typically structured around three interacting components \cite{nkambou20
 \end{itemize}
 The effectiveness of this traditional architecture is historically constrained by the limitations of the user model that primarily contain mastery states inferred through KT systems. While this information provides a useful snapshot of what a student knows, it is often insufficient for mindful instruction because it fails to capture the underlying learning dynamics that explain why those states were reached. For instructional decisions to be transparent, accountable, and pedagogically grounded, user models must move beyond simple data correlates and instead provide representations that reflect actionable pedagogical constructs, as we propose in Section~\ref{sec_grounded}.
 
-\section{Grounded Transformers and Augmented User Models}\label{sec_grounded}
-\vspace{-6pt}
-\subsection{Proposed Architecture}
+\section{Design of the Augmented Student Model}
+\label{sec_grounded}
 
-We propose an \textit{augmented user model} (AUM) that, in order to overcome the limitations of purely mastery-based representations identified in Section~\ref{sub_its}, operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. The \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who show similar recent response sequences but differ in their individual learning histories. The grounded parameters define a two-dimensional space that is partitioned into four \textit{learning situations} (Section~\ref{sec_situations}), each of which maps to a distinct instructional strategy. As shown in Fig.~\ref{fig_arch3}, these learning situations directly inform the \textit{tutor model}, which implements situation-based instructional routing. 
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{arch3.png}
-\caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional knowledge tracing (KT) mastery estimates. The augmented user model enables situation-based instructional strategies through the tutor model.}
-\label{fig_arch3}
-\end{figure}
+In this section, we first introduce the design principles that guide our proposal. We then describe the architecture, detailing how the integration of gTransformer-derived grounded parameters within the traditional ITS framework enables the transformation of raw learning signals into actionable student representations.
 
 \subsection{Design Principles}
 
-Our proposal is informed by three explicit design principles: 
+Our proposal is informed by three explicit design principles that justify the structural choices of the augmented user model:
 
 \begin{itemize}
 \item \textit{Theory-grounded representations.} This principle is operationalised by embedding pedagogical considerations directly into the architecture design. Rather than pursuing predictive accuracy in a vacuum, we design the system to reflect established learning theories. This ensures that the outputs are not merely data correlates, but legitimate pedagogical constructs that speak the language of the educator, thereby bridging the gap between machine intelligence and human instructional judgment.
@@ -126,30 +118,43 @@ Our proposal is informed by three explicit design principles:
 
 \end{itemize}
 
-%
+\subsection{Proposed Architecture}
+
+Guided by these principles, we propose an \textit{augmented user model} (AUM) that operationalises transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. 
+
+As shown in Fig.~\ref{fig_arch3}, the \textit{user model} moves beyond tracking simple mastery states by incorporating student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This augmentation allows the system to differentiate between learners who exhibit similar recent response patterns but possess distinct learning histories. These parameters define a two-dimensional space partitioned into four \textit{learning situations} described in Section~\ref{sec_situations}. These learning situations inform the \textit{tutor model}, enabling the implementation of situation-based instructional strategies. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{arch3.png}
+\caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional knowledge tracing (KT) mastery estimates. The augmented user model enables situation-based instructional strategies through the tutor model.}
+\label{fig_arch3}
+\end{figure}
+
+
 \section{Methodology}
 
-Our methodology operationalises the design principles by augmenting the ITS user model with the grounded parameters produced by gTransformer and demonstrating how these parameters enable situation-based instructional routing. The validation proceeds along two lines.
+This section describes the methodology used to operationalise the design principles and validate the system's diagnostic utility. We proceed along two lines: first, the augmentation of the user model with longitudinal, student-level grounded parameters; and second, the clustering of these parameters to inform the implementation of situation-based instructional strategies.
 
 \subsection{Augmenting the User Model}
 
 For each student $s$ and knowledge component $c$, gTransformer infers a pair of longitudinally updated parameters $(p_{\text{L}_0,t}, p_{\text{T},t})$ from the full interaction sequence up to time $t$. These are not population-level constants: they are student- and context-specific estimates that encode how much prior knowledge the student brings to a given skill and at what rate new knowledge is being consolidated. They are produced by the grounded track of gTransformer (Section~2.2) and passed through BKT update logic to generate interpretable predictions $\hat{y}_{\text{ref},t}$.
 
-To augment the user model, we record the most recent $(p_{\text{L}_0}, p_{\text{T}})$ pair for each student alongside the standard mastery estimate. This extended user profile allows the ITS to distinguish students who show similar response patterns but differ in their underlying learning dynamics, a distinction that population-level BKT cannot make. We validate the quality of this augmented user model by comparing $\hat{y}_{\text{ref}}$ against classical BKT predictions using AUC on the ASSISTments 2009 (AS2009) dataset.
+To augment the user model, we record the sequence of $(p_{\text{L}_0}, p_{\text{T}})$ pairs for each student. This longitudinal user profile allows the ITS to distinguish students who show similar response patterns but differ in their underlying learning dynamics, a distinction that population-level BKT cannot make. 
 
 \subsection{Clustering into Learning Situations}
 \label{sec_situations}
 
-To translate the continuous parameter space into actionable instructional decisions, we partition the $(p_{\text{L}_0}, p_{\text{T}})$ plane into four \textit{learning situations} using the population medians of both parameters as thresholds. This yields a $2 \times 2$ partition that is interpretable, non-parametric, and data-driven. This choice of a coarse partition is an \textit{intentional design constraint}: while deep learning enables high-dimensional clustering, we deliberately maintain a simple, transparent segmentation to ensure that the resulting labels directly correspond to well-known instructional strategies and remain accountable to human interpretation. The four situations are:
+To translate the continuous parameter space into actionable diagnostic information, we partition the $(p_{\text{L}0}, p{\text{T}})$ plane into the following four \textit{learning situations} using the population medians of both parameters as thresholds. This information is intended to support educator agency by providing the evidence necessary for informed decision-making. To illustrate the instructional utility of these diagnostic signals, we provide representative examples of potential pedagogical responses:
 
 \begin{itemize}
-    \item \textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$): limited prior knowledge and a slow consolidation rate. The instructional priority is scaffolding: worked examples, reduced problem complexity, and frequent low-stakes retrieval practice to establish a stable knowledge base before progressing.
-    \item \textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$): limited prior knowledge but a high learning rate. The situation calls for targeted practice on weaker knowledge components while progressively increasing challenge; the high consolidation rate means well-designed instruction can produce rapid gains.
-    \item \textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$): substantial prior knowledge but a low marginal learning rate, indicating that current instructional conditions are no longer generating new knowledge. The tutorial model should introduce cross-domain challenge or novel problem types to reactivate the learning trajectory.
-    \item \textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$): high prior knowledge combined with an active learning rate. These students can be routed to accelerated content, reduced practice redundancy, and higher-order reasoning tasks without risk of premature challenge.
+    \item \textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$): limited prior knowledge and a slow consolidation rate. An educator might choose to focus on scaffolding techniques, such as worked examples or reduced problem complexity, to establish a stable knowledge base before progressing. 
+    \item \textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$): limited prior knowledge but a high learning rate. This situation suggests that targeted practice on weaker knowledge components could yield rapid gains, provided the instructional challenge is progressively increased.
+    \item \textit{Consolidating} (high $p_{\text{L}0}$, low $p{\text{T}}$): substantial prior knowledge but a low marginal learning rate. This state may suggest boredom due to repetition or that the current instructional material has reached its saturation point. To reactivate growth, an educator might introduce new challenges, interleave the skill with other domains, or fast-track the student to more complex conceptual content.
+    \item \textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$): high prior knowledge combined with an active learning rate. Students in this situation are candidates for accelerated content routing, reduced practice redundancy, or higher-order reasoning tasks.
 \end{itemize}
 
-Because gTransformer updates $(p_{\text{L}_0,t}, p_{\text{T},t})$ at every interaction, a student's assigned learning situation is not fixed at enrolment: it is a rolling summary of their current longitudinal profile, and the tutorial model updates its routing whenever the parameter pair crosses a quadrant boundary. This dynamic routing is the core mechanism through which the augmented user model supports situation-based instruction. The four labels are descriptions of observable learning patterns, not fixed categories or fixed student characteristics.
+Because gTransformer updates $(p_{\text{L}_0}, p_{\text{T}})$ at every interaction, a student's assigned learning situation is not fixed at enrolment: it is a rolling summary of their current longitudinal profile, and the tutorial model updates its routing whenever the parameter pair crosses a quadrant boundary. This dynamic routing is the core mechanism through which the augmented user model supports situation-based instruction. The four labels are descriptions of observable learning patterns, not fixed categories or fixed student characteristics.
 
 %
 \section{Results}
@@ -271,10 +276,10 @@ For \textit{advancing} students, the $p_{\text{L}_0}$ return map shows early sta
 \end{figure}
 
 %
-\section{Context-Aware Personalisation}
+\section{Instructional Utility: Situation-Based Personalisation}
 \label{sec_personalisation}
 
-A key contribution of this work is demonstrating how the augmented student model enables the ITS tutorial model to move from population-level strategies towards situation-based, context-aware instruction. Rather than assigning students to fixed groups, the model identifies four learning situations by partitioning the $(p_{\text{L}_0}, p_{\text{T}})$ parameter space along two dimensions (prior knowledge and learning rate) on the AS2009 dataset. These learning situations are not static: because gTransformer continuously updates its parameter estimates as new interactions arrive, a student's assigned situation evolves with their trajectory. Each situation calls for a distinct tutorial strategy: students in the foundational situation require targeted scaffolding; those in the advancing situation are ready for accelerated pacing; intermediate situations benefit from adjusted challenge levels.
+The empirical evidence presented in Section~5 confirms that the augmented user model reliably identifies distinct learning trajectories that correlate with recognisable pedagogical patterns. We now demonstrate how these patterns are operationalised into the "common language" of instructional strategies. A key contribution of this work is demonstrating how the augmented student model enables the ITS tutorial model to move from population-level strategies towards situation-based, context-aware instruction. 
 
 Each student interaction event can be routed to a different instructional pathway based on the current learning situation. A student whose trajectory places them in the foundational situation triggers a scaffolding strategy; a student identified as advancing is routed towards accelerated content progression. This routing is not static: as new interactions arrive, gTransformer updates its parameter estimates from the full longitudinal context, allowing the tutorial model to dynamically reassign students as their learning trajectory evolves. Two students with an identical recent response pattern may receive different instructional interventions if their prior histories place them in different learning situations, a distinction that population-level BKT cannot support.
 
