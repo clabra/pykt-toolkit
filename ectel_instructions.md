@@ -529,7 +529,7 @@ Final Reviewer‑Safety Checklist
 - Claims match evidence, with no over‑claiming
 - Paper is understandable without reading the MDPI paper
 
-Example of Contribution Statement:
+Example of Conclusions Statement:
 
 "This paper contributed an augmented student model for Intelligent Tutoring Systems that operationalises the principle of shaping technology with learning theory. This design marks a fundamental shift from purely accuracy-driven student modelling to a more mindful approach grounded in pedagogically sound principles. By augmenting the user model with theory-grounded parameter estimates, our system supports both transparent diagnostics, through the detection of distinct learning situations, and purposeful instructional actions through evidence-based strategies. This approach directly benefits students by enabling dynamic, personalised adaptation to their evolving needs, while simultaneously empowering educators through an interpretable architecture that guarantees human agency and accountability in automated educational environments."
 
