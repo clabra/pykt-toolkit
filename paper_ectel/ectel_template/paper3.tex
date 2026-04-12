@@ -89,6 +89,7 @@ The gTransformer architecture, shown in Fig.~\ref{fig_arch2}, is designed to tra
 
 
 \subsection{Intelligent Tutoring Systems and User Models}
+\label{sub_its}
 
 ITS are typically structured around three interacting components \cite{nkambou2010advances}:
 
@@ -99,13 +100,11 @@ ITS are typically structured around three interacting components \cite{nkambou20
 \end{itemize}
 The effectiveness of this traditional architecture is historically constrained by the limitations of the user model that primarily contain mastery states inferred through KT systems. While this information provides a useful snapshot of what a student knows, it is often insufficient for mindful instruction because it fails to capture the underlying learning dynamics that explain why those states were reached. For instructional decisions to be transparent, accountable, and pedagogically grounded, user models must move beyond simple data correlates and instead provide representations that reflect actionable pedagogical constructs, as we propose in Section~\ref{sec_grounded}.
 
-
-\section{Grounded Transformers and Augmented User Models}
-\label{sec_grounded}
-
+\section{Grounded Transformers and Augmented User Models}\label{sec_grounded}
+\vspace{-6pt}
 \subsection{Proposed Architecture}
 
-We propose an \textit{augmented user model} (AUM) that operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. While the \textit{domain model} defines the structured knowledge components, the \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who might show similar response sequences but differ in longitudinal context. As shown in Fig.~\ref{fig_arch3}, the grounded parameters directly inform: 1)~the \textit{tutor model}, which implements situation-based instructional strategies; and 2)~a \textit{diagnostic roster module}, which provides educators with the transparent oversight required for accountable and purposeful TEL environments.
+We propose an \textit{augmented user model} (AUM) that, in order to overcome the limitations of purely mastery-based representations identified in Section~\ref{sub_its}, operationalises the principles of transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. While the \textit{domain model} defines the structured knowledge components, the \textit{user model} goes beyond tracking simple mastery states through its augmentation with student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This allows the system to differentiate between learners who might show similar response sequences but differ in longitudinal context. As shown in Fig.~\ref{fig_arch3}, the grounded parameters directly inform: 1)~the \textit{tutor model}, which implements situation-based instructional strategies; and 2)~a \textit{diagnostic roster module}, which provides educators with the transparent oversight required for accountable and purposeful TEL environments.
 
 \begin{figure}[H]
 \centering
