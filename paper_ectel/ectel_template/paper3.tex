@@ -264,53 +264,6 @@ Figure~\ref{fig_alluvial} illustrates the dynamic nature of these assignments. O
 \end{figure}
 
 
-\subsection {Others}
-
-Augmenting the user model with grounded Transformer parameters yields a measurable gain in predictive accuracy: interpretable predictions derived from gTransformer consistently outperform classical BKT, with an average AUC gain of 19.9\% on the AS2009 dataset. This validates that context-aware, student-specific parameters capture the nuances of individual learning journeys while remaining within the interpretable framework of BKT.
-
-
-
-Figure~\ref{fig_returnmap} shows return maps for the same four representatives. Each panel plots the value of a parameter at interaction $t+1$ against its value at interaction $t$, separately for $p_{\text{L}_0}$ (left sub-panel) and $p_{\text{T}}$ (right sub-panel), with points coloured from dark (early interactions) to bright (late interactions). The diagonal represents a fixed point: points on the diagonal indicate no change between consecutive interactions. Deviations above the diagonal signal an increasing parameter; deviations below signal a decrease. Unlike population-level BKT, which produces a single pair of constant parameter values for all students on a given skill, each return map encodes the unique temporal trajectory of an individual student, a view that is both dynamic and context-aware.
-
-For \textit{foundational} students, the $p_{\text{L}_0}$ return map reveals a systematic downward drift from early interactions (mean 0.61) to late interactions (mean 0.48): the model progressively revises its mastery estimate downward as evidence of insufficient learning accumulates. The $p_{\text{T}}$ panel is tightly concentrated near zero throughout, exposing a converging low-rate attractor. This temporal structure informs instructional timing: an intervention delivered before the orbit locks into the low attractor is far more likely to dislodge the student from this trajectory than one applied after convergence.
-
-For \textit{consolidating} students, the $p_{\text{L}_0}$ return map undergoes a visible temporal transformation: early points span the mid range, while late points consolidate near the diagonal at high mastery (0.80). Simultaneously, $p_{\text{T}}$ declines from 0.077 to 0.050, converging toward a low-rate fixed point. The return map preserves the history of this transition, revealing that the student arrived at the plateau through accumulated practice. The tutorial model can exploit this information to introduce transferable challenge before the orbit fully stabilises.
-
-For \textit{emerging} students, both $p_{\text{L}_0}$ (0.52 $\to$ 0.67) and $p_{\text{T}}$ (0.12 $\to$ 0.20) increase over time, with points distributed above the diagonal in both panels. The dynamic profile captures both early and late states and the transition between them, enabling the tutorial model to progressively accelerate pacing matched to the observed trajectory rather than to a predetermined category.
-
-For \textit{advancing} students, the $p_{\text{L}_0}$ return map shows early stabilisation: mastery is high from the first interactions (mean 0.74) and clusters near the diagonal. The $p_{\text{T}}$ panel declines moderately (0.15 $\to$ 0.11), indicating diminishing marginal gains. The tutorial model can route this student to more demanding content immediately, grounded in the observed trajectory.
-
-\begin{figure}[H]
-\caption{\textbf{Return maps.} Plots for the representative student of each learning situation. Each panel shows $p_{\text{L}_0}(t+1)$ vs $p_{\text{L}_0}(t)$ (left) and $p_{\text{T}}(t+1)$ vs $p_{\text{T}}(t)$ (right). Points are coloured from dark (early) to bright (late) interactions. The diagonal (dashed line) marks the fixed point; deviations above indicate increasing parameters and deviations below indicate decreasing ones.}
-\label{fig_returnmap}
-\centering
-\begin{subfigure}[b]{\textwidth}
-  \centering
-  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_foundational_893468.png}
-  \caption{\textit{Foundational} (low $p_{L_0}$, low $p_T$): broad scatter with downward mastery drift and a stable low learning-rate attractor converging over time.}
-\end{subfigure}
-\begin{subfigure}[b]{\textwidth}
-  \centering
-  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_consolidating_893468.png}
-  \caption{\textit{Consolidating} (high $p_{L_0}$, low $p_T$): mastery orbit migrates to a high-mastery fixed point while learning rate declines, revealing an active-to-plateau transition.}
-\end{subfigure}
-\end{figure}
-\begin{figure}[H]
-\ContinuedFloat
-\centering
-\begin{subfigure}[b]{\textwidth}
-  \centering
-  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_emerging_893468.png}
-  \caption{\textit{Emerging} (low $p_{L_0}$, high $p_T$): both mastery and learning rate increase over time, with points distributed above the diagonal in both panels.}
-\end{subfigure}
-\begin{subfigure}[b]{\textwidth}
-  \centering
-  \includegraphics[width=0.9\textwidth,height=0.44\textheight,keepaspectratio]{attractor_returnmap_advancing_893468.png}
-  \caption{\textit{Advancing} (high $p_{L_0}$, high $p_T$): mastery clusters at high values from the first interactions; learning rate declines moderately as marginal gains diminish.}
-\end{subfigure}
-\end{figure}
-
-%
 \section{Instructional Utility: Situation-Based Personalisation}
 \label{sec_personalisation}
 
