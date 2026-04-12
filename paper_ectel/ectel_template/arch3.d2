@@ -1,0 +1,148 @@
+# Simplified gTransformer architecture for ECTEL 2026
+# Synchronized with arch2.d2 styles: GRID layout and unified spacing
+
+direction: right
+horizontal-gap: 500
+
+classes: {
+  track: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 2
+      shadow: true
+      border-radius: 8
+      font-size: 22
+      text-transform: uppercase
+      fill: "white"
+      bold: true
+    }
+  }
+}
+
+# Section 1: gTransformer as a single box matching arch2.d2 style
+gTransformer: "gTransformer" {
+  style: {
+    stroke: "#333333"
+    stroke-width: 2
+    fill: "#FDFDFD"
+    border-radius: 12
+    shadow: true
+    font-size: 22
+    bold: true
+  }
+}
+
+# Section 2: ITS container
+ITS: {
+  label: "Intelligent Tutoring System (ITS)"
+  style: {
+    stroke: "#333333"
+    stroke-width: 2
+    fill: "white"
+    border-radius: 16
+    font-size: 22
+    bold: true
+  }
+  
+  # Maximize grid spacing for high-fidelity clarity
+  direction: right
+  horizontal-gap: 200
+
+  DomainModel: "Domain Model" {
+    class: track
+    width: 350
+    height: 200
+  }
+
+  # Augmented User Model containing the Grounded Parameters
+  UserModel: "Augmented User Model" {
+    # Align cylinders horizontally with maximum gap
+    grid-columns: 2
+    horizontal-gap: 150
+    
+    style: {
+      fill: "#F0F8FF"
+      stroke: "#1A5276"
+      stroke-width: 3
+      shadow: true
+      border-radius: 12
+      font-size: 20
+      bold: true
+      text-transform: uppercase
+    }
+    
+    Indicators: "Grounded \nPedagogical \nParameters" {
+      shape: cylinder
+      width: 280
+      height: 200
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+        font-size: 18
+      }
+    }
+
+    Mastery: "Knowledge \nComponents \nMastery" {
+      shape: cylinder
+      width: 280
+      height: 200
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+        font-size: 18
+      }
+    }
+  }
+
+  TutorModel: "Tutor Model" {
+    class: track
+    width: 350
+    height: 200
+  }
+}
+
+# Internal ITS pedagogical flow - Defined with explicit routing
+ITS.DomainModel -> ITS.UserModel.Mastery: "{KCᵢ}" { 
+  style: {
+    stroke: "#333333"
+    stroke-width: 1
+    font-size: 18
+    font-color: "#555555"
+    bold: true
+  }
+}
+
+ITS.UserModel -> ITS.TutorModel: "learning\nsituations" { 
+  style: {
+    stroke: "#333333"
+    stroke-width: 2
+    font-size: 20
+    font-color: "#555555"
+    bold: true
+  }
+}
+
+# Connections from engine into the user model components
+gTransformer -> ITS.UserModel.Mastery: "knowledge\ntracing for {KCᵢ}                         " { 
+  style: {
+    stroke: "#333333"
+    stroke-width: 2
+    font-size: 20
+    font-color: "#555555"
+    bold: true
+  }
+}
+
+gTransformer -> ITS.UserModel.Indicators: "parameter estimation\n(p_L₀, p_ₜ)                             " { 
+  style: {
+    stroke: "#1A5276"
+    stroke-width: 3
+    font-size: 20
+    font-color: "#555555"
+    bold: true
+  }
+}
