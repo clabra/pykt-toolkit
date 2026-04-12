@@ -11,13 +11,33 @@ Help the author to create the paper take into account the following:
 Your task is to ensure correct structure, positioning, and referencing across the paper.
 
 ## Core Context
-- **MDPI paper** = Conceptual paper  
-  → Introduces *representational grounding* and produces **grounded model outputs** (interpretable, theory-grounded parameters).
-- **ECTEL paper** = Design paper  
-  → Contributes a **design artefact**: an **Augmented Student Model**.
-  → Operationalises grounded outputs into **actionable representations**.
-  → Demonstrates instructional utility by mapping: **learning situations → instructional strategies**.
-  → Highights **Mindful TEL**: Design with intention, human agency, and transparency.
+
+The paper follows a clear **Rationale Chain** that connects theory to instructional action:
+
+**Grounded outputs** (MDPI Paper) $\rightarrow$ **Actionable representations** (Augmented User Model) $\rightarrow$ **Learning situations** (Situational clusters) $\rightarrow$ **Instructional strategies** (Adaptive response).
+
+### Mapping the Rationale Chain to "Mindful TEL"
+
+This chain isn't just a technical flow; it is the **technical implementation of the ECTEL 2026 theme**:
+
+| Rationale Step | "Mindful" Alignment | Intentional Design Choice |
+| :--- | :--- | :--- |
+| **Grounded Outputs** (MDPI) | **Theory-Grounded Design** | Choosing to anchor deep learning in BKT parameters represents a refusal of "black-box" convenience in favor of established learning theory. |
+| **Actionable Representations** (User Model) | **Purposeful Construction** | Internal states are intentionally engineered as actionable representations for decision support, satisfying the transparency requirements of high-risk AI. |
+| **Learning Situations** (Diagnostic) | **Human-Aware Context** | Abstract data clusters are replaced by "Situations" that map to recognizable human learning patterns, supporting educator and learner agency. |
+| **Instructional Strategies** (Adaptive) | **Accountable Action** | The tutor model's actions are "mindful" because they are derived through a traceable path from theory $\rightarrow$ evidence $\rightarrow$ situation $\rightarrow$ strategy. |
+
+
+### Shaping Technology with Learning Theory: The "Mindful" Connection
+
+The motto of our paper could be summarized as *shaping technology with learning theory*.
+
+This design choice is the cornerstone of the paper's alignment with **Mindful TEL**:
+
+- **The "How" (Methodological Intention):** We do not merely apply a model; we **constrain its latent space** to align with pedagogical constructs. This connects to **ECTEL Topic Lens 1 (Foundations)** by investigating how architectures can be made structurally consistent with pedagogy.
+- **The "Why" (Ethical/Purposeful Intention):** We prioritize **human-inspectable evidence over black-box automation**. This connects to **ECTEL Topic Lens 2 (Human-Technology Collaboration)** and **Lens 4 (Policy/Ethics/EU AI Act)**. By speaking the language of the educator (prior knowledge, learning rate), the AI becomes a **transparent partner** that defends teacher agency and ensures accountability in high-stakes educational contexts.
+
+**When applicable try to connect paper narrative to highligh how our approach fit the ECTEL 2026 theme.**. But do so using a timeless academic tone, focused on the underlying principles of transparency and human agency rather than specific legislative or conference names (to avoid obsolescence).
 
 ## Specific Terminology
 - Use **"learning rate"** instead of "capacity" (focus on observable patterns).
@@ -511,7 +531,5 @@ Final Reviewer‑Safety Checklist
 
 Example of Contribution Statement:
 
-"This paper contributes a design‑driven extension to recent conceptual work on representational grounding in knowledge tracing by operationalising grounded model outputs within an Intelligent Tutoring System. Whereas the prior MDPI work introduced representational grounding as a conceptual and learning‑theoretic framework yielding interpretable, theory‑grounded parameters, it did not address how such outputs could be used to support instructional decision‑making in practice. The present ECTEL paper fills this gap by presenting the design of an augmented student model that transforms grounded knowledge‑tracing outputs into instructionally actionable representations. The model enables the assignment of learners to distinct learning situations derived from a data‑driven partition of grounded parameters, with each situation mapped to a corresponding pedagogically grounded instructional strategy. In doing so, this work provides a necessary and autonomous design contribution that demonstrates how conceptual grounding can be translated into transparent, educator‑inspectable, and purposefully adaptive instructional behaviour in ITSs."
-
-
+"This paper contributed an augmented student model for Intelligent Tutoring Systems that operationalises the principle of shaping technology with learning theory. This design marks a fundamental shift from purely accuracy-driven student modelling to a more mindful approach grounded in pedagogically sound principles. By augmenting the user model with theory-grounded parameter estimates, our system supports both transparent diagnostics, through the detection of distinct learning situations, and purposeful instructional actions through evidence-based strategies. This approach directly benefits students by enabling dynamic, personalised adaptation to their evolving needs, while simultaneously empowering educators through an interpretable architecture that guarantees human agency and accountability in automated educational environments."
 
