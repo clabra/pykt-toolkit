@@ -159,7 +159,7 @@ Below you can find ECTEL design paper authoring instructions:
 
 ---
 
-## 1️⃣ Abstract (VERY STRICT)
+## 1. Abstract (VERY STRICT)
 
 ### Purpose
 - Frame the problem in ITS practice.
@@ -188,32 +188,53 @@ Below you can find ECTEL design paper authoring instructions:
 
 ---
 
-## 2️⃣ Introduction
+## 2. Introduction
 
-### Purpose
-- Situate the problem space (ITS, KT, instructional adaptivity).
-- **Explicitly introduce** the conceptual foundation.
-- **Explicitly articulate the design gap**.
-- Clearly separate conceptual vs. design contributions.
+Rationale Mapping:
+- The Principle: we aim at "Mindful TEL: Learning Technologies Shaped with Intention" by operationalising the principle of shaping technology with learning theory.
+- The Problem-Solution: "our approach marks a fundamental shift from purely accuracy-driven student modelling to an approach grounded in pedagogically sound principles."
+- The Result (Diagnosis & Action): "our approach supports both transparent diagnostics—through the detection of distinct learning situations—and purposeful instructional actions through actionable evidence-based strategies."
+- The Values & Benefits: "our approach directly benefits students by enabling dynamic, personalised adaptation... empowering educators through an interpretable architecture that guarantees human agency and accountability."
 
-### How to reference the MDPI Conceptual Paper
-✅ **Explicit citation allowed and required**
-✅ Treat as **prior conceptual work**
-✅ Include a **boundary statement**
 
-### Required boundary logic
-- Make clear that:
-  - MDPI paper = *conceptual framework & grounded outputs*
-  - ECTEL paper = *design artefact & operationalisation*
+### Positioning logic
 
-### Example positioning logic
-- “Prior work introduced representational grounding as a conceptual framework…”
-- “However, this work did not address how grounded parameters can be integrated into an ITS to support instructional decisions.”
-- “The present paper addresses this gap through design.”
+```
+"While deep learning has significantly advanced the predictive accuracy of KT, the field has become increasingly detached from the learning theories and pedagogical principles that should guide instruction. This orientation towards accuracy-driven opacity creates a fundamental design gap in the development of ITS, which require learner representations that are not only accurate but also mindful of pedagogical intent. Specifically, while recent work on \textit{representational grounding} has shown that Transformer architectures can be anchored to theory-based constructs~\cite{labra2026theory}, there remains a need to demonstrate how such theory-rooted parameters can be operationalised into purposeful user models that support transparent and accountable instructional practice.
 
----
+The present paper addresses this gap by adopting the principles of transparency and pedagogical purpose as primary design requirements for user modeling. Drawing on the theory-grounded parameters provided by grounded Transformers, we present the design of an \textit{augmented user model} that transforms longitudinal learning signals into pedagogically recognisable \textit{learning situations}. Our contribution is twofold: first, we demonstrate how theory-rooted parameter estimates can be used to construct an augmented user model capable of supporting situation-based diagnostics; and second, we show how these learning situations support differentiated instructional strategies that adapt dynamically to each student's evolution. This mindful approach ensures that technological innovation remains anchored in pedagogical purpose, empowering educators with the agency necessary to make sensible, evidence-grounded decisions while providing the transparency and accountability required in high-stakes educational environments.
 
-## 3️⃣ Related Work / Background
+The research question that guides this work is: how can ITS user modeling be augmented with theory-grounded information to support more mindful instructional strategies that comply with the requirements for transparency and pedagogical purpose?"
+```
+
+Why this is strong:
+- The "Why": It explicitly critiques the "accuracy-only" orientation of the field.
+- The "How": It positions Grounded Transformers as a means to an end (the pedagogical engine) rather than the end itself.
+- The "So What": It highlights the benefits for both students (personalization) and tutors (agency and accountability) more clearly.
+
+Key Alignments:
+- Motto: Includes "shaping technology with learning theory."
+- Concept Shift: Directly mentions the shift from "accuracy-driven" to a "mindful approach."
+- Actionable Chain: Clearly links diagnostic "learning situations" to "instructional actions."
+- Set the stage to close with "agency and accountability" for the discussion/conclusion.
+
+### Research Question 
+
+The research question that guides this work is: 
+
+```
+"How can ITS user modeling be augmented with theory-grounded information to support more mindful instructional strategies that comply with the requirements for transparency and pedagogical purpose?"
+```
+
+Following sections should address this Research Question (RQ). To answer how user modeling can be augmented for transparency and pedagogical purpose, Section 2 (Background) must do more than just describe BKT and gTransformer, it must frame them as the mandatory building blocks for this mindful approach.
+
+RQ-Oriented Review of Section 2:
+
+- 2.1 ITS and User Models: We should frame user models not just as "trackers," but as the "intentional interface" between machine data and instructional action.
+- 2.2 BKT: We must frame BKT not as an "old model," but as the "theoretical anchor" that provides the semantic meaning required for transparency.
+- 2.3 gTransformer: We must frame it not just as a "deep model," but as the "longitudinal bridge" that extracts student-specific variations of these theoretical constructs.
+
+## 3. Related Work / Background
 
 ### Purpose
 - Review ITS architectures and student modelling.

@@ -1,0 +1,123 @@
+# Simplified gTransformer architecture for ECTEL 2026
+# Unified container layout using GRID layout to force horizontal alignment
+
+direction: right
+
+classes: {
+  track: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 2
+      shadow: true
+      border-radius: 8
+      font-size: 18
+      text-transform: uppercase
+      fill: "white"
+    }
+  }
+}
+
+Architecture: {
+  label: ""
+  style: {
+    stroke: "#E5E5E5"
+    stroke-width: 1
+    fill: "white"
+    border-radius: 16
+  }
+
+  # Force 3 columns to ensure horizontal alignment
+  grid-columns: 3
+
+  # Section 1: Input (Left)
+  Input: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 1
+      stroke-dash: 4
+      fill: "white"
+      border-radius: 12
+    }
+    direction: down
+
+    Interactions: "Interaction History\n(q, c, r)" {
+      shape: cylinder
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+      }
+    }
+
+    # Dummy edge to force BKT under Interactions
+    Interactions -> BKT: { style.stroke: "white" }
+
+    BKT: "BKT Reference Model\n(Theory Anchor)" {
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+      }
+    }
+  }
+
+  # Section 2: gTransformer (Middle)
+  gTransformer: {
+    label: "gTransformer"
+    style: {
+      stroke: "#333333"
+      stroke-width: 2
+      fill: "#FDFDFD"
+      border-radius: 12
+      shadow: true
+    }
+    direction: down
+
+    StandardTrack: "Standard Track" {
+      class: track
+    }
+
+    GroundedTrack: "Grounded Track" {
+      class: track
+    }
+
+    Loss: "Multi-objective Loss\n(Accuracy + Grounding)" {
+      class: track
+      style.text-transform: none
+    }
+
+    # Internal connections
+    StandardTrack -> GroundedTrack: "Context Vector z_t" { style.stroke: "#333333"; style.stroke-width: 2 }
+    StandardTrack -> Loss: "ŷ_t predictions" { style.stroke: "#333333"; style.stroke-width: 2 }
+    GroundedTrack -> Loss: "ŷ_ref predictions" { style.stroke: "#333333"; style.stroke-width: 2 }
+  }
+
+  # Section 3: Output (Right)
+  Output: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 1
+      stroke-dash: 4
+      fill: "white"
+      border-radius: 12
+    }
+    direction: down
+
+    Indicators: "Grounded Parameters\n(p_L0, p_T)" {
+      shape: cylinder
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+      }
+    }
+  }
+}
+
+# Connections outside the grid to avoid disrupting the 1-2-3 cell layout
+Architecture.Input.Interactions -> Architecture.gTransformer.StandardTrack: { style.stroke: "#333333"; style.stroke-width: 2 }
+Architecture.Input.BKT -> Architecture.gTransformer.GroundedTrack: "(L0, T) priors" { style.stroke: "#333333"; style.stroke-width: 2 }
+Architecture.gTransformer.GroundedTrack -> Architecture.Output.Indicators: "(p_L0, p_T)" { style.stroke: "#333333"; style.stroke-width: 2 }
