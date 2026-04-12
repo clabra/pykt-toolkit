@@ -1,6 +1,6 @@
 # Simplified gTransformer architecture for ECTEL 2026
 # Unified container layout using GRID layout to force horizontal alignment
-# Synchronized with arch3.d2: dark gray labels, larger font sizes, professional notation
+# Synchronized with arch3.d2: massive font sizes, darker outer border
 
 direction: right
 
@@ -11,7 +11,7 @@ classes: {
       stroke-width: 2
       shadow: true
       border-radius: 8
-      font-size: 22
+      font-size: 34
       text-transform: uppercase
       fill: "white"
       bold: true
@@ -22,17 +22,17 @@ classes: {
 Architecture: {
   label: "Grounded Transformer System"
   style: {
-    stroke: "#E5E5E5"
-    stroke-width: 1
+    stroke: "#BBBBBB"
+    stroke-width: 2
     fill: "white"
     border-radius: 16
-    font-size: 22
+    font-size: 42
     bold: true
   }
 
   # Aggressively increase grid spacing
   grid-columns: 3
-  horizontal-gap: 150
+  horizontal-gap: 200
 
   # Section 1: Input (Left)
   Input: {
@@ -48,12 +48,14 @@ Architecture: {
 
     Interactions: "Interaction History\n(q, c, r)" {
       shape: cylinder
+      width: 350
+      height: 150
       style: {
         fill: "white"
         stroke: "#333333"
         stroke-width: 2
         shadow: true
-        font-size: 18
+        font-size: 30
       }
     }
 
@@ -61,12 +63,14 @@ Architecture: {
     Interactions -> BKT: { style.stroke: "white" }
 
     BKT: "BKT Reference Model\n(Theory Anchor)" {
+      width: 350
+      height: 150
       style: {
         fill: "white"
         stroke: "#333333"
         stroke-width: 2
         shadow: true
-        font-size: 18
+        font-size: 30
       }
     }
   }
@@ -80,7 +84,7 @@ Architecture: {
       fill: "#FDFDFD"
       border-radius: 12
       shadow: true
-      font-size: 22
+      font-size: 36
       bold: true
     }
     direction: down
@@ -88,17 +92,23 @@ Architecture: {
 
     StandardTrack: "Standard Track" {
       class: track
+      width: 350
+      height: 100
     }
 
     GroundedTrack: "Grounded Track" {
       class: track
+      width: 350
+      height: 100
     }
 
     Loss: "Multi-objective Loss\n(Accuracy + Grounding)" {
       class: track
+      width: 350
+      height: 120
       style: {
         text-transform: none
-        font-size: 20
+        font-size: 30
       }
     }
 
@@ -108,16 +118,16 @@ Architecture: {
         stroke: "#333333"
         stroke-width: 2
         font-color: "#555555"
-        font-size: 18
+        font-size: 28
         bold: true
       }
     }
-    StandardTrack -> Loss: "ŷₜ predictions" { 
+    StandardTrack -> Loss: "ŷₜ\npredictions" { 
       style: { 
         stroke: "#333333"
         stroke-width: 2
         font-color: "#555555"
-        font-size: 18
+        font-size: 28
         bold: true
       }
     }
@@ -126,7 +136,7 @@ Architecture: {
         stroke: "#333333"
         stroke-width: 2
         font-color: "#555555"
-        font-size: 18
+        font-size: 28
         bold: true
       }
     }
@@ -146,12 +156,14 @@ Architecture: {
 
     Indicators: "Grounded Parameters\n(p_L₀, p_ₜ)" {
       shape: cylinder
+      width: 350
+      height: 150
       style: {
         fill: "white"
         stroke: "#333333"
         stroke-width: 2
         shadow: true
-        font-size: 18
+        font-size: 30
       }
     }
   }
@@ -164,12 +176,12 @@ Architecture.Input.Interactions -> Architecture.gTransformer.StandardTrack: {
     stroke-width: 2
   }
 }
-Architecture.Input.BKT -> Architecture.gTransformer.GroundedTrack: "(L₀, T) priors" { 
+Architecture.Input.BKT -> Architecture.gTransformer.GroundedTrack: "(L₀, T)\npriors" { 
   style: { 
     stroke: "#333333"
     stroke-width: 2
     font-color: "#555555"
-    font-size: 18
+    font-size: 30
     bold: true
   }
 }
@@ -178,7 +190,7 @@ Architecture.gTransformer.GroundedTrack -> Architecture.Output.Indicators: "(p_L
     stroke: "#333333"
     stroke-width: 2
     font-color: "#555555"
-    font-size: 18
+    font-size: 36
     bold: true
   }
 }
