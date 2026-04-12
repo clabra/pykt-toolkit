@@ -4,9 +4,9 @@
 \providecommand{\doi}[1]{https://doi.org/#1}
 
 \bibitem{itssleeman82}
-Auguste, D.: Intelligent tutoring systems: D. sleeman and j.s. brown, (academic
-  press, new york, 1982); 345 pages, \$39.50. Artificial Intelligence
-  \textbf{26}(2),  233--238 (1985). \doi{10.1016/0004-3702(85)90033-5}
+Auguste, D.: Intelligent tutoring systems: {D}. {S}leeman and {J}.{S}. {B}rown,
+  (academic press, new york, 1982); 345 pages, \$39.50. Artificial Intelligence
+   \textbf{26}(2),  233--238 (1985). \doi{10.1016/0004-3702(85)90033-5}
 
 \bibitem{corbett1994knowledge}
 Corbett, A.T., Anderson, J.R.: Knowledge tracing: Modeling the acquisition of
@@ -24,12 +24,12 @@ Ghosh, A., Heffernan, N., Lan, A.S.: Context-aware attentive knowledge tracing.
   mining. pp. 2330--2339 (2020)
 
 \bibitem{labra2026theory}
-Labra, C., Santos, O.C.: Theory-based interpretability in deep knowledge
-  tracing via grounded transformers. Applied Sciences  \textbf{16}(7), ~3138
+Labra, C., Santos, O.C.: {Theory-Based Interpretability in Deep Knowledge
+  Tracing via Grounded Transformers}. Applied Sciences  \textbf{16}(7), ~3138
   (2026)
 
 \bibitem{yudelson2013individualized}
-Yudelson, M.V., Koedinger, K.R., Gordon, G.J.: Individualized bayesian
+Yudelson, M.V., Koedinger, K.R., Gordon, G.J.: Individualized {Bayesian}
   knowledge tracing models. In: International conference on artificial
   intelligence in education. pp. 171--180. Springer (2013)
 
@@ -52,5 +52,10 @@ Holmes, W., Porayska-Pomsta, K., Holstein, K., Sutherland, E., Baker, T., Shum,
   Koedinger, K.R.: Ethics of ai in education: Towards a community-wide
   framework. International Journal of Artificial Intelligence in Education
   \textbf{32}(3),  504--526 (2022). \doi{10.1007/s40593-021-00239-1}
+
+\bibitem{feng2009addressing}
+Feng, M., Heffernan, N., Koedinger, K.: Addressing the assessment challenge
+  with an online system that tutors as it assesses. User modeling and
+  user-adapted interaction  \textbf{19}(3),  243--266 (2009)
 
 \end{thebibliography}
