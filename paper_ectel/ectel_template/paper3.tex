@@ -74,10 +74,20 @@ Historically, KT has been characterized by a dichotomy between two paradigms: tr
 The gTransformer architecture, shown in Fig.~\ref{fig_overview}, is designed to transform learner activity history into actionable pedagogical information through three distinct stages:
 
 \begin{figure}[!htb]
-\centering
-\includegraphics[width=\textwidth]{arch2.png}
-\caption{The gTransformer architecture. The model integrates theoretical priors and interaction history to produce student-specific grounded parameters through parallel standard and grounded tracks.}
-\label{fig_overview}
+  \centering
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch2.png}
+    \caption{The gTransformer architecture integrates theoretical priors and interaction history to produce student-specific grounded parameters.}
+    \label{fig_overview}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch3.png}
+    \caption{Augmentation of an ITS user model through the integration of grounded parameters alongside traditional mastery estimates.}
+    \label{fig_augmentation}
+  \end{subfigure}
+  \caption{System architecture: (a) the gTransformer engine and (b) its operationalisation within an augmented user model to enable situation-based instructional strategies.}
 \end{figure}
 
 \begin{itemize}
@@ -122,12 +132,7 @@ Guided by these principles, we propose an \textit{augmented user model} (AUM) th
 
 As shown in Fig.~\ref{fig_augmentation}, the \textit{user model} moves beyond tracking simple mastery states by incorporating student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{arch3.png}
-\caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional knowledge tracing (KT) mastery estimates. The augmented user model enables situation-based instructional strategies through the tutor model.}
-\label{fig_augmentation}
-\end{figure}
+
 
 This augmentation allows the system to differentiate between learners who exhibit similar recent response patterns but possess distinct learning histories. These parameters define a two-dimensional space partitioned into four \textit{learning situations} described in Section~\ref{sec_situations}. These learning situations inform the \textit{tutor model}, enabling the implementation of situation-based instructional strategies. 
 
@@ -169,19 +174,37 @@ We estimated the grounded parameters associated with the learning trajectory of 
 
 Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellipses, which represent the temporal variation and density of the $(p_{\text{L}_0}, p_{\text{T}})$ estimates across each student's full interaction sequence. This longitudinal view makes explicit that a student's situation is not a static category frozen at enrolment, but a rolling summary of their evolving learning tendency as new interactions arrive. The ellipses in Figure~\ref{fig_orbits} specifically show:
 
-\begin{figure}[!htb]
+\begin{figure}[p]
   \centering
   \begin{subfigure}[b]{\textwidth}
     \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_foundational_893468.png}
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{attractor_ellipse_foundational_893468.png}
     \caption{\textit{Foundational} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_consolidating_893468.png}
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{attractor_ellipse_consolidating_893468.png}
     \caption{\textit{Consolidating} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
   \end{subfigure}
   \caption{\textit{Parameter orbit ellipses.} (Part I: Foundational and Consolidating). Covariance ellipses (1-sigma and 2-sigma) showing the grounded parameters distribution. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability.}
+\end{figure}
+
+
+\begin{figure}[p]
+  \ContinuedFloat
+  \centering
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{attractor_ellipse_emerging_893468.png}
+    \caption{\textit{Emerging} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{attractor_ellipse_advancing_893468.png}
+    \caption{\textit{Advancing} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Parameter orbit ellipses.} (Part II: Emerging and Advancing). Covariance ellipses (1-sigma and 2-sigma).}
+  \label{fig_orbits}
 \end{figure}
 
 \begin{itemize}
@@ -191,40 +214,41 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
   \item \textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$): the ellipse is moderately extended and centred at high values for both mastery and learning rate. The spread confirms that this high-mastery situation is robust across different contexts and interactions.
 \end{itemize}
 
-\begin{figure}[!htb]
-  \ContinuedFloat
-  \centering
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_emerging_893468.png}
-    \caption{\textit{Emerging} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-  \end{subfigure}
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{attractor_ellipse_advancing_893468.png}
-    \caption{\textit{Advancing} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-  \end{subfigure}
-  \caption{\textit{Parameter orbit ellipses.} (Part II: Emerging and Advancing). Covariance ellipses (1-sigma and 2-sigma).}
-  \label{fig_orbits}
-\end{figure}
-
 \subsection{Dynamics of Learning Situation Trajectories}
 
 Figure~\ref{fig_trajectories} presents learning situation trajectory plots for a representative student from each quadrant in the AS2009 dataset. While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. Therefore, we employ these trajectory plots to capture the temporal evolution by tracing a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. They allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
 
-\begin{figure}[!htb]
+\begin{figure}[p]
   \centering
   \begin{subfigure}[b]{\textwidth}
     \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
     \caption{\textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$).}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
     \caption{\textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$).}
   \end{subfigure}
   \caption{\textit{Learning situation trajectories.} (Part I: Foundational and Consolidating). Each plot traces the evolution of the grounded parameters pair. Marker area encodes dwell time.}
+\end{figure}
+
+
+\begin{figure}[p]
+  \ContinuedFloat
+  \centering
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
+    \caption{\textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.46\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
+    \caption{\textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Learning situation trajectories.} (Part II: Emerging and Advancing). Coloured background regions delimit the four learning situations.}
+  \label{fig_trajectories}
 \end{figure}
 
 Each panel traces consecutive sampled interactions in the $(p_{\text{T}}, p_{\text{L}_0})$ plane. The representative for each quadrant is the student who maximises a composite score balancing proximity to the quadrant centroid and number of interactions (equal weights). A candidate point is sampled every 5 interactions and retained only when its Euclidean distance from the last plotted point exceeds $\delta_{\min}\approx 0.3$; otherwise it is absorbed into the preceding point, whose marker area grows proportionally to encode dwell time. The $p_{\text{T}}$ axis is capped at 0.5 to exclude a small fraction of high-rate outlier interactions ($<$6\%). The first and last directional arrows are rendered in a darker tone to temporally anchor the trajectory; all intermediate arrows are in light grey. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift over time.
@@ -236,41 +260,25 @@ Each panel traces consecutive sampled interactions in the $(p_{\text{T}}, p_{\te
 \item The \textit{advancing} student (168 interactions, 4 plotted points) shows consistently high prior mastery combined with above-median learning rates throughout; the large marker at the final plotted point encodes the remaining interactions, confirming that the parameter pair stays in the upper-right region for the bulk of the trajectory. 
 \end{itemize}
 
-\begin{figure}[!htb]
-  \ContinuedFloat
-  \centering
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
-    \caption{\textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$).}
-  \end{subfigure}
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
-    \caption{\textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$).}
-  \end{subfigure}
-  \caption{\textit{Learning situation trajectories.} (Part II: Emerging and Advancing). Coloured background regions delimit the four learning situations.}
-  \label{fig_trajectories}
-\end{figure}
-
 \subsection{Dynamic Nature of Learning Situations}
 
 Figure~\ref{fig_transitions} illustrates the dynamic nature of these assignments. 
 
-\begin{figure}[!htb]
+
+Of the 182 AS2009 students with at least 60 interactions, 67\% were assigned a different learning situation at session exit (last 30 interactions) versus session entry (first 30 interactions). This high transition rate confirms that the augmented model captures genuine learning dynamics rather than stable individual traits, and that situation-based routing responds to the student's observed trajectory rather than to a fixed initial categorisation.
+
+\begin{figure}[p]
   \centering
-  \includegraphics[width=\textwidth,height=0.40\textheight,keepaspectratio]{situation_alluvial_893468.png}
+  \includegraphics[width=\textwidth,height=0.75\textheight,keepaspectratio]{situation_alluvial_893468.png}
   \caption{Learning situation at session entry (first 30 interactions) versus session exit (last 30 interactions) for $n = 182$ students with at least 60 interactions. Ribbon width is proportional to the fraction of students. Ribbons are coloured by entry situation; crossing ribbons indicate a change of learning situation over the course of the session. 67.0\% of students were assigned a different learning situation at the end of their session.}
   \label{fig_transitions}
 \end{figure}
 
-Of the 182 AS2009 students with at least 60 interactions, 67\% were assigned a different learning situation at session exit (last 30 interactions) versus session entry (first 30 interactions). This high transition rate confirms that the augmented model captures genuine learning dynamics rather than stable individual traits, and that situation-based routing responds to the student's observed trajectory rather than to a fixed initial categorisation.
 
 \section{Conclusions}
 
 This paper contributed an augmented student model for Intelligent Tutoring Systems that operationalises the principle of shaping technology with learning theory. This design marks a fundamental shift from purely accuracy-driven student modelling to a more mindful approach grounded in pedagogically sound principles. By augmenting the user model with theory-grounded parameter estimates, our system supports both transparent diagnostics, through the detection of distinct learning situations, and purposeful instructional actions through evidence-based strategies. This approach directly benefits students by enabling dynamic, personalised adaptation to their evolving needs, while simultaneously empowering educators through an interpretable architecture that guarantees human agency and accountability in automated educational environments.
 
-%
 \begin{credits}
 \subsubsection{\ackname}
 This research received no external funding.
@@ -279,7 +287,7 @@ This research received no external funding.
 The authors have no competing interests to declare that are relevant to the content of this article.
 \end{credits}
 
-%
+\clearpage
 \begin{thebibliography}{99}
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\urlprefix}{URL }
