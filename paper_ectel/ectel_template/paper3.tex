@@ -158,34 +158,37 @@ Because gTransformer updates $(p_{\text{L}_0}, p_{\text{T}})$ at every interacti
 
 The results of this study were obtained using a gTransformer model trained on the ASSISTments 2009 (AS2009) dataset \cite{feng2009addressing} following the guidelines detailed in \cite{labra2026theory}. In this section, we characterise the four learning situations through their characteristic parameter orbits and analyze their temporal dynamics.
 
+\begin{figure}[!htb]
+  \centering
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{attractor_ellipse_foundational_893468.png}
+    \caption{\textit{Foundational} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{attractor_ellipse_consolidating_893468.png}
+    \caption{\textit{Consolidating} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Parameter orbit ellipses.} (Part I: Foundational and Consolidating). Covariance ellipses (1-sigma and 2-sigma) showing the grounded parameters distribution. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability.}
+\end{figure}
+
 
 \begin{figure}[!htb]
-\caption{\textit{Parameter orbit ellipses.} Covariance ellipses ($1\protect\sigma$ and $2\protect\sigma$) showing the grounded parameters distribution for the representative student of each learning situation. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability across all interactions.}
-\label{fig_orbits}
-\centering
-\begin{subfigure}[b]{0.48\textwidth}
+  \ContinuedFloat
   \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{attractor_ellipse_foundational_893468.png}
-  \caption{\textit{Foundational} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{attractor_ellipse_consolidating_893468.png}
-  \caption{\textit{Consolidating} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-\end{subfigure}
-
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{attractor_ellipse_emerging_893468.png}
-  \caption{\textit{Emerging} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{attractor_ellipse_advancing_893468.png}
-  \caption{\textit{Advancing} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
-\end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{attractor_ellipse_emerging_893468.png}
+    \caption{\textit{Emerging} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{attractor_ellipse_advancing_893468.png}
+    \caption{\textit{Advancing} ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Parameter orbit ellipses.} (Part II: Emerging and Advancing). Covariance ellipses (1-sigma and 2-sigma).}
+  \label{fig_orbits}
 \end{figure}
 
 \subsection{Characteristics of the Four Learning Situations}
@@ -219,32 +222,35 @@ By reading these trajectories, educators gain theory-grounded evidence of whethe
 
 
 \begin{figure}[!htb]
-\caption{\textit{Learning situation trajectories.} Each plot traces the evolution of the grounded parameters pair for the representative student of one learning situation in the AS2009 dataset. Marker area encodes dwell time (interactions absorbed between two plotted points). The first and last arrows are rendered in a darker tone; all intermediate arrows are in light grey. The $p_{\text{T}}$ axis is capped at 0.5. Coloured background regions delimit the four learning situations.}
-\label{fig_trajectories}
-\centering
-\begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
-  \caption{\textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$).}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
-  \caption{\textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$).}
-\end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{roster_2d_foundational_893468.png}
+    \caption{\textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{roster_2d_consolidating_893468.png}
+    \caption{\textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Learning situation trajectories.} (Part I: Foundational and Consolidating). Each plot traces the evolution of the grounded parameters pair. Marker area encodes dwell time.}
+\end{figure}
 
-\begin{subfigure}[b]{0.48\textwidth}
+\begin{figure}[!htb]
+  \ContinuedFloat
   \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
-  \caption{\textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$).}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\textwidth,height=0.30\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
-  \caption{\textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$).}
-\end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{roster_2d_emerging_893468.png}
+    \caption{\textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$).}
+  \end{subfigure}
+  \begin{subfigure}[b]{\textwidth}
+    \centering
+    \includegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{roster_2d_advancing_893468.png}
+    \caption{\textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$).}
+  \end{subfigure}
+  \caption{\textit{Learning situation trajectories.} (Part II: Emerging and Advancing). Coloured background regions delimit the four learning situations.}
+  \label{fig_trajectories}
 \end{figure}
 
 \begin{figure}[!htb]
