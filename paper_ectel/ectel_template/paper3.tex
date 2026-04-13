@@ -74,6 +74,13 @@ Historically, KT has been characterized by a dichotomy between two paradigms: tr
 
 The gTransformer architecture, shown in Fig.~\ref{fig_overview}, is designed to transform learner activity history into actionable pedagogical information through three distinct stages:
 
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{arch2.png}
+\caption{The gTransformer architecture. The model integrates theoretical priors and interaction history to produce student-specific grounded parameters through parallel standard and grounded tracks.}
+\label{fig_overview}
+\end{figure}
+
 \begin{itemize}
   \item Input: The model integrates raw interaction histories with theoretical priors derived from population-level BKT estimates. This anchoring ensures that the architecture remains grounded in pedagogically sound principles.
   \item Processing: Within the core engine, two parallel tracks process the student's context. The \textit{standard track} optimizes for estimations accuracy, while the \textit{grounded track} projects latent context onto theory-defined axes to derive student-specific parameters ($p_{\text{L}_0}, p_{\text{T}}$). Both tracks are jointly optimized via a multi-objective loss that enforces both inference accuracy and grounding.
@@ -119,7 +126,7 @@ Our proposal is informed by three explicit design principles that justify the st
 
 Guided by these principles, we propose an \textit{augmented user model} (AUM) that operationalises transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. 
 
-As shown in Fig.~\ref{fig_augmentation}, the \textit{user model} moves beyond tracking simple mastery states by incorporating student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context. This augmentation allows the system to differentiate between learners who exhibit similar recent response patterns but possess distinct learning histories. These parameters define a two-dimensional space partitioned into four \textit{learning situations} described in Section~\ref{sec_situations}. These learning situations inform the \textit{tutor model}, enabling the implementation of situation-based instructional strategies. 
+As shown in Fig.~\ref{fig_augmentation}, the \textit{user model} moves beyond tracking simple mastery states by incorporating student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context.
 
 \begin{figure}[H]
 \centering
@@ -127,6 +134,8 @@ As shown in Fig.~\ref{fig_augmentation}, the \textit{user model} moves beyond tr
 \caption{Augmentation of an ITS user model through the integration of gTransformer-derived grounded parameters alongside traditional knowledge tracing (KT) mastery estimates. The augmented user model enables situation-based instructional strategies through the tutor model.}
 \label{fig_augmentation}
 \end{figure}
+
+This augmentation allows the system to differentiate between learners who exhibit similar recent response patterns but possess distinct learning histories. These parameters define a two-dimensional space partitioned into four \textit{learning situations} described in Section~\ref{sec_situations}. These learning situations inform the \textit{tutor model}, enabling the implementation of situation-based instructional strategies. 
 
 %
 \section{Methodology}
@@ -165,12 +174,6 @@ The results of this study were obtained using a gTransformer model trained on th
 We estimated the grounded parameters associated with the learning trajectory of each student in the AS2009 dataset and used them to characterise student learning across the four learning situations. To investigate the characteristic dynamics of these situations, we selected a representative student for each quadrant who balances proximity to the quadrant centroid with interaction volume (weighted equally). 
 
 Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellipses, which represent the temporal variation and density of the $(p_{\text{L}_0}, p_{\text{T}})$ estimates across each student's full interaction sequence. This longitudinal view makes explicit that a student's situation is not a static category frozen at enrolment, but a rolling summary of their evolving learning tendency as new interactions arrive. The ellipses in Figure~\ref{fig_orbits} specifically show:
-\begin{itemize}
-  \item \textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$): the ellipse is compact and centred at low mastery and low learning rate, indicating limited contextual variation. Across interactions, the grounded estimates consistently assign this student low prior knowledge and a slow consolidation rate, reflecting a stable state of low mastery.
-  \item \textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$): the ellipse is the most spatially extended of all four situations, oriented along both the mastery and learning-rate axes. This broad orbit reflects a situation where parameters vary substantially across skills and contexts, indicating high growth potential.
-  \item \textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$): the ellipse is compact and located at high mastery and low learning rate. The small spread indicates a stable region of the parameter space where prior knowledge is high but the per-interaction learning rate has converged toward zero.
-  \item \textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$): the ellipse is moderately extended and centred at high values for both mastery and learning rate. The spread confirms that this high-mastery situation is robust across different contexts and interactions.
-\end{itemize}
 
 \begin{figure}[!htb]
   \centering
@@ -186,6 +189,13 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
   \end{subfigure}
   \caption{\textit{Parameter orbit ellipses.} (Part I: Foundational and Consolidating). Covariance ellipses (1-sigma and 2-sigma) showing the grounded parameters distribution. The centre marks the mean parameter position; ellipse shape encodes the extent and orientation of parameter variability.}
 \end{figure}
+
+\begin{itemize}
+  \item \textit{Foundational} (low $p_{\text{L}_0}$, low $p_{\text{T}}$): the ellipse is compact and centred at low mastery and low learning rate, indicating limited contextual variation. Across interactions, the grounded estimates consistently assign this student low prior knowledge and a slow consolidation rate, reflecting a stable state of low mastery.
+  \item \textit{Emerging} (low $p_{\text{L}_0}$, high $p_{\text{T}}$): the ellipse is the most spatially extended of all four situations, oriented along both the mastery and learning-rate axes. This broad orbit reflects a situation where parameters vary substantially across skills and contexts, indicating high growth potential.
+  \item \textit{Consolidating} (high $p_{\text{L}_0}$, low $p_{\text{T}}$): the ellipse is compact and located at high mastery and low learning rate. The small spread indicates a stable region of the parameter space where prior knowledge is high but the per-interaction learning rate has converged toward zero.
+  \item \textit{Advancing} (high $p_{\text{L}_0}$, high $p_{\text{T}}$): the ellipse is moderately extended and centred at high values for both mastery and learning rate. The spread confirms that this high-mastery situation is robust across different contexts and interactions.
+\end{itemize}
 
 \begin{figure}[!htb]
   \ContinuedFloat
@@ -206,20 +216,7 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
 
 \subsection{Dynamics of Learning Situation Trajectories}
 
-While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. To capture this temporal evolution, we employ \textit{learning situation trajectories} that trace a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. These trajectories allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
-
-Figure~\ref{fig_trajectories} shows the trajectory plot for the representative student of each learning situation on the AS2009 dataset. Each panel traces consecutive sampled interactions in the $(p_{\text{T}}, p_{\text{L}_0})$ plane. The representative for each quadrant is the student who maximises a composite score balancing proximity to the quadrant centroid and number of interactions (equal weights). A candidate point is sampled every 5 interactions and retained only when its Euclidean distance from the last plotted point exceeds $\delta_{\min}\approx 0.3$; otherwise it is absorbed into the preceding point, whose marker area grows proportionally to encode dwell time. The $p_{\text{T}}$ axis is capped at 0.5 to exclude a small fraction of high-rate outlier interactions ($<$6\%). The first and last directional arrows are rendered in a darker tone to temporally anchor the trajectory; all intermediate arrows are in light grey. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift over time.
-
-The four trajectories are qualitatively distinct in ways that are directly instructionally informative.
-
-\begin{itemize}
-\item The \textit{foundational} student (120 interactions, 8 plotted points) remains anchored in the lower-left quadrant throughout, with transient fluctuations that consistently return to low mastery and low learning rate, indicating that current instructional conditions are insufficient to drive durable progress.
-\item The \textit{consolidating} student (148 interactions, 3 plotted points) yields the most compact trajectory of all four: the large marker at the terminal point (interaction 25) encodes the 123 subsequent interactions that produced no displacement exceeding $\delta_{\min}$, making the prolonged absence of movement the primary visible signal of stagnation rather than the parameter values themselves.
-\item The \textit{emerging} student (156 interactions, 15 plotted points, after excluding a small fraction of high-rate outliers with $p_T > 0.5$) produces the most spatially extended orbit, crossing all four quadrants; both $p_{L_0}$ and $p_T$ oscillate with large steps across a wide portion of the visible range, making parameter variability the defining feature of this trajectory rather than convergence to a stable attractor.
-\item The \textit{advancing} student (168 interactions, 4 plotted points) shows consistently high prior mastery combined with above-median learning rates throughout; the large marker at the final plotted point encodes the remaining interactions, confirming that the parameter pair stays in the upper-right region for the bulk of the trajectory. 
-\end{itemize}
-
-By reading these trajectories, educators gain theory-grounded evidence of whether a student is disengaging (decreasing $p_{\text{T}}$), stagnating (stable high $p_{\text{L}_0}$, falling $p_{\text{T}}$), or actively learning (increasing parameters, boundary crossings); evidence that supports intentional instructional decision-making and satisfies the accountability requirements for high-risk educational AI.
+Figure~\ref{fig_trajectories} shows a \textit{learning situation trajectorie} plot for the representative student of each learning situation on the AS2009 dataset. While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. So we employ these trajectory plots to capture the temporal evolution, and trace a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. They allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
 
 
 \begin{figure}[!htb]
@@ -236,6 +233,15 @@ By reading these trajectories, educators gain theory-grounded evidence of whethe
   \end{subfigure}
   \caption{\textit{Learning situation trajectories.} (Part I: Foundational and Consolidating). Each plot traces the evolution of the grounded parameters pair. Marker area encodes dwell time.}
 \end{figure}
+
+Each panel traces consecutive sampled interactions in the $(p_{\text{T}}, p_{\text{L}_0})$ plane. The representative for each quadrant is the student who maximises a composite score balancing proximity to the quadrant centroid and number of interactions (equal weights). A candidate point is sampled every 5 interactions and retained only when its Euclidean distance from the last plotted point exceeds $\delta_{\min}\approx 0.3$; otherwise it is absorbed into the preceding point, whose marker area grows proportionally to encode dwell time. The $p_{\text{T}}$ axis is capped at 0.5 to exclude a small fraction of high-rate outlier interactions ($<$6\%). The first and last directional arrows are rendered in a darker tone to temporally anchor the trajectory; all intermediate arrows are in light grey. Coloured background regions delimit the four learning situations; a point may cross boundaries, indicating a genuine shift over time.
+
+\begin{itemize}
+\item The \textit{foundational} student (120 interactions, 8 plotted points) remains anchored in the lower-left quadrant throughout, with transient fluctuations that consistently return to low mastery and low learning rate, indicating that current instructional conditions are insufficient to drive durable progress.
+\item The \textit{consolidating} student (148 interactions, 3 plotted points) yields the most compact trajectory of all four: the large marker at the terminal point (interaction 25) encodes the 123 subsequent interactions that produced no displacement exceeding $\delta_{\min}$, making the prolonged absence of movement the primary visible signal of stagnation rather than the parameter values themselves.
+\item The \textit{emerging} student (156 interactions, 15 plotted points, after excluding a small fraction of high-rate outliers with $p_T > 0.5$) produces the most spatially extended orbit, crossing all four quadrants; both $p_{L_0}$ and $p_T$ oscillate with large steps across a wide portion of the visible range, making parameter variability the defining feature of this trajectory rather than convergence to a stable attractor.
+\item The \textit{advancing} student (168 interactions, 4 plotted points) shows consistently high prior mastery combined with above-median learning rates throughout; the large marker at the final plotted point encodes the remaining interactions, confirming that the parameter pair stays in the upper-right region for the bulk of the trajectory. 
+\end{itemize}
 
 \begin{figure}[!htb]
   \ContinuedFloat
@@ -255,10 +261,9 @@ By reading these trajectories, educators gain theory-grounded evidence of whethe
 \end{figure}
 
 
-
 \subsection{Dynamic Nature of Learning Situations}
 
-Figure~\ref{fig_transitions} illustrates the dynamic nature of these assignments. Of the 182 AS2009 students with at least 60 interactions, 67\% were assigned a different learning situation at session exit (last 30 interactions) versus session entry (first 30 interactions). This high transition rate confirms that the augmented model captures genuine learning dynamics rather than stable individual traits, and that situation-based routing responds to the student's observed trajectory rather than to a fixed initial categorisation.
+Figure~\ref{fig_transitions} illustrates the dynamic nature of these assignments. 
 
 \begin{figure}[!htb]
   \centering
@@ -266,6 +271,8 @@ Figure~\ref{fig_transitions} illustrates the dynamic nature of these assignments
   \caption{Learning situation at session entry (first 30 interactions) versus session exit (last 30 interactions) for $n = 182$ students with at least 60 interactions. Ribbon width is proportional to the fraction of students. Ribbons are coloured by entry situation; crossing ribbons indicate a change of learning situation over the course of the session. 67.0\% of students were assigned a different learning situation at the end of their session.}
   \label{fig_transitions}
 \end{figure}
+
+Of the 182 AS2009 students with at least 60 interactions, 67\% were assigned a different learning situation at session exit (last 30 interactions) versus session entry (first 30 interactions). This high transition rate confirms that the augmented model captures genuine learning dynamics rather than stable individual traits, and that situation-based routing responds to the student's observed trajectory rather than to a fixed initial categorisation.
 
 \section{Conclusions}
 
