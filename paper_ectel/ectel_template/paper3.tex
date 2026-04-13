@@ -28,8 +28,7 @@
 \maketitle
 %
 \begin{abstract}
-
-Intelligent Tutoring Systems (ITS) rely on student models to drive adaptive instruction, yet the Knowledge Tracing approaches that underpin these models have been developed almost exclusively to optimise predictive accuracy. The resulting representations are either interpretable but rigid, as in classical Bayesian Knowledge Tracing (BKT), or accurate but opaque, as in deep knowledge tracing approaches. Neither type produces actionable outputs that educators can inspect, validate, or act upon directly. While recent work has proposed \textit{representational grounding} as a design principle for interpretable deep knowledge tracing, it has not addressed how the resulting theory-grounded parameters can be integrated into an ITS in order to support purposeful instructional decisions. The present paper addresses this gap by presenting the design of an \textit{augmented student model} that translates the outputs of such grounded knowledge tracing models into instructionally actionable representations. Specifically, we show how continuously updated estimates of prior knowledge and learning rate can be used to assign each student to one of the \textit{learning situations} defined by a data-driven partition of the parameter space, and how each situation implies a distinct and evidence-grounded instructional strategy. The result is a student-centred design in which pedagogically-grounded instructional strategies are continuously adapted to learners' evolving needs, with transparency and educator agency as first-class concerns.
+Intelligent Tutoring Systems (ITS) rely on user models to drive adaptive instruction, yet the Knowledge Tracing (KT) approaches underpinning these models have historically targeted predictive accuracy at the expense of pedagogically actionable representations. This creates a dichotomy between approaches that are interpretable but rigid, such as Bayesian Knowledge Tracing (BKT), and those that are accurate but opaque such as deep knowledge tracing. Neither paradigm provides the transparent evidence necessary for educators to inspect, validate, or act upon. While \textit{representational grounding} has emerged as a design principle for interpretable deep knowledge tracing, its operationalisation into purposeful instructional strategies remains unexplored. This paper addresses this gap by presenting the design of an \textit{augmented user model} that translates the outputs of such grounded knowledge tracing models into pedagogically recognisable \textit{learning situations}. We demonstrate how student-specific estimates of grounded parameters such as prior knowledge and learning rate can be partitioned to inform distinct, evidence-based instructional strategies that adapt dynamically to learners' evolving needs. Our design ensures that adaptive instruction remains anchored in learning theory, prioritising transparency and human agency in high-stakes educational environments.
 
 \keywords{deep knowledge tracing \and intelligent tutoring systems \and user modeling \and grounded transformers \and representational grounding}
 \end{abstract}
@@ -87,12 +86,7 @@ The gTransformer architecture, shown in Fig.~\ref{fig_overview}, is designed to 
   \item Output: The resulting grounded parameters quantify each learner's unique dynamics. They form the data-driven basis of the augmented user model.
 \end{itemize}
 
-\begin{figure}[!htb]
-\centering
-\includegraphics[width=\textwidth]{arch2.png}
-\caption{The gTransformer architecture. The model integrates theoretical priors and interaction history to produce student-specific grounded parameters through parallel standard and grounded tracks.}
-\label{fig_overview}
-\end{figure}
+
 
 \subsection{Intelligent Tutoring Systems and User Models}
 \label{sub_its}
@@ -216,8 +210,7 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
 
 \subsection{Dynamics of Learning Situation Trajectories}
 
-Figure~\ref{fig_trajectories} shows a \textit{learning situation trajectorie} plot for the representative student of each learning situation on the AS2009 dataset. While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. So we employ these trajectory plots to capture the temporal evolution, and trace a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. They allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
-
+Figure~\ref{fig_trajectories} presents learning situation trajectory plots for a representative student from each quadrant in the AS2009 dataset. While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. Therefore, we employ these trajectory plots to capture the temporal evolution by tracing a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. They allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
 
 \begin{figure}[!htb]
   \centering
