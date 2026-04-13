@@ -100,6 +100,7 @@ ITS are typically structured around three interacting components \cite{nkambou20
 \end{itemize}
 The effectiveness of this traditional architecture is historically constrained by the limitations of the user model that primarily contain mastery states inferred through KT systems. While this information provides a useful snapshot of what a student knows, it is often insufficient for mindful instruction because it fails to capture the underlying learning dynamics that explain why those states were reached. For instructional decisions to be transparent, accountable, and pedagogically grounded, user models must move beyond simple data correlates and instead provide representations that reflect actionable pedagogical constructs, as we propose in Section~\ref{sec_grounded}.
 
+%
 \section{Design of the Augmented Student Model}
 \label{sec_grounded}
 
@@ -131,7 +132,7 @@ As shown in Fig.~\ref{fig_arch3}, the \textit{user model} moves beyond tracking 
 \label{fig_arch3}
 \end{figure}
 
-
+%
 \section{Methodology}
 
 This section describes the methodology used to operationalise the design principles and validate the system's diagnostic utility. We proceed along two lines: first, the augmentation of the user model with longitudinal, student-level grounded parameters; and second, the clustering of these parameters to inform the implementation of situation-based instructional strategies.
@@ -156,11 +157,13 @@ To translate the continuous parameter space into actionable diagnostic informati
 
 Because gTransformer updates $(p_{\text{L}_0}, p_{\text{T}})$ at every interaction, a student's assigned learning situation is not fixed at enrolment: it is a rolling summary of their current longitudinal profile, and the tutorial model updates its routing whenever the parameter pair crosses a quadrant boundary. This dynamic routing is the core mechanism through which the augmented user model supports situation-based instruction. The four labels are descriptions of observable learning patterns, not fixed categories or fixed student characteristics.
 
+%
+\section{Results and Discussion}
 
-\section{Results}
 The results of this study were obtained using a gTransformer model trained on the ASSISTments 2009 (AS2009) dataset \cite{feng2009addressing} following the guidelines detailed in \cite{labra2026theory}. 
 
 \subsection{Characteristics of the Four Learning Situations}
+
 We estimated the grounded parameters associated with the learning trajectory of each student in the AS2009 dataset and used them to characterise student learning across the four learning situations. To investigate the characteristic dynamics of these situations, we selected a representative student for each quadrant who balances proximity to the quadrant centroid with interaction volume (weighted equally). 
 
 Figure~\ref{fig_ellipse} visualises their parameter orbits using covariance ellipses, which represent the temporal variation and density of the $(p_{\text{L}_0}, p_{\text{T}})$ estimates across each student's full interaction sequence. This longitudinal view makes explicit that a student's situation is not a static category frozen at enrolment, but a rolling summary of their evolving learning tendency as new interactions arrive. The ellipses in Figure~\ref{fig_ellipse} specifically show:
@@ -213,7 +216,6 @@ The four trajectories are qualitatively distinct in ways that are directly instr
 
 \begin{itemize}
 
-
 \item The \textit{foundational} student (120 interactions, 8 plotted points) remains anchored in the lower-left quadrant throughout, with transient fluctuations that consistently return to low mastery and low learning rate, indicating that current instructional conditions are insufficient to drive durable progress. 
 
 \item The \textit{consolidating} student (148 interactions, 3 plotted points) yields the most compact trajectory of all four: the large marker at the terminal point (interaction 25) encodes the 123 subsequent interactions that produced no displacement exceeding $\delta_{\min}$, making the prolonged absence of movement the primary visible signal of stagnation rather than the parameter values themselves. 
@@ -264,54 +266,9 @@ Figure~\ref{fig_alluvial} illustrates the dynamic nature of these assignments. O
 \end{figure}
 
 
-\section{Instructional Utility: Situation-Based Personalisation}
-\label{sec_personalisation}
-
-The empirical evidence presented in Section~5 confirms that the augmented user model reliably identifies distinct learning trajectories that correlate with recognisable pedagogical patterns. We now demonstrate how these patterns are operationalised into the "common language" of instructional strategies. A key contribution of this work is demonstrating how the augmented student model enables the ITS tutorial model to move from population-level strategies towards situation-based, context-aware instruction. 
-
-Each student interaction event can be routed to a different instructional pathway based on the current learning situation. A student whose trajectory places them in the foundational situation triggers a scaffolding strategy; a student identified as advancing is routed towards accelerated content progression. This routing is not static: as new interactions arrive, gTransformer updates its parameter estimates from the full longitudinal context, allowing the tutorial model to dynamically reassign students as their learning trajectory evolves. Two students with an identical recent response pattern may receive different instructional interventions if their prior histories place them in different learning situations, a distinction that population-level BKT cannot support.
-
-
-
-%
-\section{Discussion}
-
-\subsection{Theory-Grounded Instructional Decisions}
-
-The results demonstrate that augmenting the ITS student model with grounded Transformer parameters provides pedagogically meaningful differentiation at a minimal performance cost. The 19.9\% AUC gain over classical BKT confirms that student-specific, context-aware parameter estimates capture learning dynamics that population-level models cannot represent, while the low grounding cost (3.9\% relative to black-box architectures) confirms that interpretability is not purchased at a prohibitive predictive price.
-
-By grounding instructional signals in BKT parameters ($p_{\text{L}_0}$, $p_{\text{T}}$) that practitioners recognise from established educational theory, the augmented student model provides educators with a diagnostic interface that neither classical BKT nor opaque deep learning models can offer. Decisions are traceable to constructs with pedagogical meaning; the tutorial model's routing recommendations can be inspected, questioned, and overridden by practitioners without requiring machine learning expertise.
-
-\subsection{Beyond Static Labelling: Context-Aware Adaptation}
-
-A central contribution of this design is the shift from population-level, static labelling to situation-based, dynamic diagnosis. The four learning situations are not fixed assignments: they are summaries of each student's current longitudinal profile, continuously revised as new interactions arrive. The 67\% session-level transition rate reported in Section~5 illustrates this directly: conditions that were foundational at session entry may become emerging or consolidating by session exit, and the tutorial model adapts its routing accordingly.
-
-This dynamic property allows educators to identify, for instance, students in the consolidating situation (high prior knowledge but low learning rate, which may signal disengagement or instructional mismatch) and adapt the pacing before significant learning gaps emerge. Conversely, students in the advancing situation can be considered for accelerated progression to prevent unnecessary remediation. The design explicitly avoids treating learning situation labels as permanent characterisations of students: they describe observable learning patterns at a given point in time, not fixed attributes of the individual.
-
-\subsection{Pedagogical Integrity and Educator Agency}
-
-Triple-validation analyses reported in~\cite{labra2026theory} establish that gTransformer's internal representations genuinely encode BKT constructs as primary organising principles rather than as surface correlates. Structural alignment confirms that BKT constructs organise the latent space; semantic alignment confirms that grounded parameters retain their pedagogical semantics; and functional alignment quantifies the confidence with which educators can trust interpretable predictions. These properties mean that the learning situation labels derived from gTransformer are not arbitrary clusters: they reflect genuine differences in prior knowledge and learning rate detectable from the student's full interaction history.
-
-This grounding in validated pedagogical constructs supports a specific form of educator agency: the practitioner can examine a student's parameter trajectory, understand why a learning situation was assigned, and decide whether and how to act. The system presents structured evidence; the instructional decision remains with the educator.
-
-\subsection{Mindful TEL and Responsible AI}
-
-The design presented in this paper is aligned with the ECTEL 2026 theme of Mindful TEL: Learning Technologies Shaped with Intention. Each design choice described in Section~2.3 reflects an explicit intention: interpretability is a first-class requirement, not a post hoc addition; transparency is directed at practitioners, not only AI specialists; and educator agency is preserved through deliberate constraints on automation. These are not rhetorical positions; they are instantiated in the model's architecture (grounded track, BKT parameter space), in the representation of its outputs (learning situation labels with defined instructional implications), and in its interaction model (decision support, not automated execution).
-
-This approach is also responsive to the European regulatory context. The Artificial Intelligence Act (EU) 2024/1689 classifies AI systems that assess or monitor learners as high-risk, imposing requirements for transparency, human oversight, and accountability. The augmented student model addresses these requirements directly: its outputs are grounded in a well-established theoretical framework, its reasoning is traceable to parameters that educators can inspect, and its design explicitly reserves instructional decisions for human practitioners. By combining strong predictive performance with end-user interpretability, the model demonstrates that responsible deployment of AI in high-stakes educational contexts does not require sacrificing accuracy.
-
-Limitations of the current design should be acknowledged. The learning situation partition uses a fixed threshold at the population median, which may not generalise uniformly across datasets with different score distributions. The model does not currently surface estimates of uncertainty to educators, which would strengthen the basis for human judgment. The augmented student model also does not address potential algorithmic biases that may arise if the BKT reference model was fitted on data that underrepresents certain student populations. These are directions for future work.
-
-%
 \section{Conclusions}
 
-This paper contributes the design of an augmented student model for ITS that operationalises the principles of grounded Transformers into instructionally actionable representations, enabling educators to identify distinct learning situations and adapt instruction accordingly. Following the conceptual framework established in~\cite{labra2026theory}, we have shown how the continuously updated estimates of prior knowledge and learning rate produced by a grounded Transformer can be translated into a four-situation partition of the parameter space, each situation implying a concrete and theoretically grounded instructional strategy.
-
-The results on the AS2009 dataset confirm both the predictive validity of the approach (19.9\% AUC gain over classical BKT) and the dynamic character of learning situation assignments (67.0\% of students assigned a different situation at session exit versus entry). The design is grounded in learning theory, transparency, and educator agency as first-class requirements, responding directly to the ECTEL 2026 theme of Mindful TEL and to the regulatory demands of the EU AI Act for high-risk educational AI systems.
-
-The representational grounding methodology is domain-independent and may be extended to other theoretical frameworks beyond BKT. Future work will investigate the integration of uncertainty quantification into learning situation labels, the extension of the design to alternative learning theories, and the evaluation of the augmented student model in live ITS deployments with practitioner feedback. Ultimately, this work demonstrates that the purposeful alignment of deep learning with pedagogical theory is not only technically feasible but essential for building educational technologies that are both powerful and respectful of human agency.
-
-%
+This paper contributed an augmented student model for Intelligent Tutoring Systems that operationalises the principle of shaping technology with learning theory. This design marks a fundamental shift from purely accuracy-driven student modelling to a more mindful approach grounded in pedagogically sound principles. By augmenting the user model with theory-grounded parameter estimates, our system supports both transparent diagnostics, through the detection of distinct learning situations, and purposeful instructional actions through evidence-based strategies. This approach directly benefits students by enabling dynamic, personalised adaptation to their evolving needs, while simultaneously empowering educators through an interpretable architecture that guarantees human agency and accountability in automated educational environments.
 
 
 %
