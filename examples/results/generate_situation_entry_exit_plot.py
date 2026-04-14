@@ -35,7 +35,7 @@ import matplotlib.patches as mpatches
 
 QUAD_COLORS = ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
 QUAD_LABELS = ['Foundational', 'Consolidating', 'Emerging', 'Advancing']
-QUAD_SHORT  = ['Found.', 'Consol.', 'Emerg.', 'Advanc.']
+QUAD_SHORT  = ['Foundational', 'Consolidating', 'Emerging', 'Advancing']
 
 
 def load_data(run_dir):
@@ -228,25 +228,24 @@ def main():
         mid_exit  = exit_bottoms[q]  + exit_pct_arr[q]  / 2
         ax_al.text(-BW - 0.02, mid_entry,
                    f'{QUAD_SHORT[q]}\n{entry_pct_arr[q]:.1f}%',
-                   ha='right', va='center', fontsize=8,
+                   ha='right', va='center', fontsize=14,
                    color=QUAD_COLORS[q], fontweight='bold')
         ax_al.text(1 + BW + 0.02, mid_exit,
                    f'{QUAD_SHORT[q]}\n{exit_pct_arr[q]:.1f}%',
-                   ha='left', va='center', fontsize=8,
+                   ha='left', va='center', fontsize=14,
                    color=QUAD_COLORS[q], fontweight='bold')
 
     ax_al.set_xlim(-0.35, 1.35)
     ax_al.set_ylim(-GAP, total_height)
     ax_al.axis('off')
     ax_al.text(0, -GAP * 0.6, f'Entry\n(first {args.window} interactions)',
-               ha='center', va='top', fontsize=9, style='italic')
+               ha='center', va='top', fontsize=11, style='italic')
     ax_al.text(1, -GAP * 0.6, f'Exit\n(last {args.window} interactions)',
-               ha='center', va='top', fontsize=9, style='italic')
+               ha='center', va='top', fontsize=11, style='italic')
     ax_al.set_title(
         f'Learning situation: entry vs. exit\n'
-        f'(n = {n_students} students with \u2265 {min_required} interactions; '
-        f'{pct_changed:.1f}% changed situation)',
-        fontsize=10, pad=8
+        f'(n = {n_students} students; {pct_changed:.1f}% changed situation)',
+        fontsize=14, pad=8
     )
 
     out_alluvial = os.path.join(output_dir,
@@ -268,24 +267,23 @@ def main():
             text_color = 'white' if prob > 0.55 else 'black'
             ax_heat.text(j, i, f'{prob*100:.1f}%\n({cnt})',
                          ha='center', va='center',
-                         fontsize=8, color=text_color)
+                         fontsize=12, color=text_color)
 
     ax_heat.set_xticks(range(4))
     ax_heat.set_yticks(range(4))
-    ax_heat.set_xticklabels(QUAD_SHORT, fontsize=9, rotation=20, ha='right')
-    ax_heat.set_yticklabels(QUAD_SHORT, fontsize=9)
-    ax_heat.set_xlabel(f'Exit situation (last {args.window} interactions)', fontsize=10)
-    ax_heat.set_ylabel(f'Entry situation (first {args.window} interactions)', fontsize=10)
+    ax_heat.set_xticklabels(QUAD_SHORT, fontsize=14, rotation=20, ha='right')
+    ax_heat.set_yticklabels(QUAD_SHORT, fontsize=14)
+    ax_heat.set_xlabel(f'Exit situation (last {args.window} interactions)', fontsize=16)
+    ax_heat.set_ylabel(f'Entry situation (first {args.window} interactions)', fontsize=16)
     ax_heat.set_title(
         f'Entry \u2192 exit transition probabilities\n'
-        f'(n = {n_students} students with \u2265 {min_required} interactions; '
-        f'each row sums to 100%, counts in parentheses)',
-        fontsize=9.5, pad=6
+        f'(n = {n_students} students)',
+        fontsize=18, pad=6
     )
 
     cb = plt.colorbar(im, ax=ax_heat, fraction=0.046, pad=0.04)
-    cb.set_label('Transition probability', fontsize=8)
-    cb.ax.tick_params(labelsize=7)
+    cb.set_label('Transition probability', fontsize=14)
+    cb.ax.tick_params(labelsize=12)
 
     out_matrix = os.path.join(output_dir,
                               f'situation_transition_matrix_{args.uid_suffix}.png')

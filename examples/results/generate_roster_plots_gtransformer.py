@@ -353,37 +353,36 @@ def main():
                         fontsize=11 if is_endpoint else 10,
                         color='#1a1a1a' if is_endpoint else '#888888', zorder=5)
 
-        ax.set_xlim(0.0, rate_max)
-        ax.set_ylim(0.0, 1.0)
-        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
-        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=12)
+        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=22)
+        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=22)
         x_ticks = [v for v in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0] if v <= rate_max + 1e-9]
         ax.set_xticks(x_ticks)
+        ax.tick_params(axis='both', which='major', labelsize=14)
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
         # Quadrant labels inside the regions (only where visible)
-        ax.text(t_med / 2,                    l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
-        ax.text(t_med / 2,                    (l0_med + 1) / 2, 'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
+        ax.text(t_med / 2,                    l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=18, color=quad_colors[0], alpha=0.7)
+        ax.text(t_med / 2,                    (l0_med + 1) / 2, 'Consolidating', ha='center', va='center', fontsize=18, color=quad_colors[1], alpha=0.7)
         if t_med < rate_max:
-            ax.text((t_med + rate_max) / 2, l0_med / 2,       'Emerging',  ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
-            ax.text((t_med + rate_max) / 2, (l0_med + 1) / 2, 'Advancing', ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
+            ax.text((t_med + rate_max) / 2, l0_med / 2,       'Emerging',  ha='center', va='center', fontsize=18, color=quad_colors[2], alpha=0.7)
+            ax.text((t_med + rate_max) / 2, (l0_med + 1) / 2, 'Advancing', ha='center', va='center', fontsize=18, color=quad_colors[3], alpha=0.7)
 
-        # --- Legend ---
-        legend_handles = [
-            mpatches.Patch(color=quad_colors[q], alpha=0.7, label=quad_labels[q])
-            for q in range(4)
-        ]
-        ax.legend(handles=legend_handles, fontsize=8, framealpha=0.8,
-                  loc='upper center', bbox_to_anchor=(0.5, -0.12),
-                  ncol=2, borderaxespad=0)
+        # --- Legend removed per user request ---
+        # legend_handles = [
+        #     mpatches.Patch(color=quad_colors[q], alpha=0.7, label=quad_labels[q])
+        #     for q in range(4)
+        # ]
+        # ax.legend(handles=legend_handles, fontsize=11, framealpha=0.8,
+        #           loc='upper center', bbox_to_anchor=(0.5, -0.12),
+        #           ncol=2, borderaxespad=0)
 
         mean_l0 = full_subset[init_col].mean()
         mean_t  = full_subset[rate_col].mean()
         ax.set_title(
             f'{quad_labels[i]}\n'
-            f'student {uid}  |  {len(full_subset)} interactions  |  {len(subset)} sampled (every {args.timestep}, min_move={min_move:.3f})\n'
+            f'student {uid}  |  {len(full_subset)} interactions\n'
             f'mean $p_{{L_0}}$ = {mean_l0:.3f}  |  mean $p_T$ = {mean_t:.3f}',
-            fontsize=10, pad=10
+            fontsize=18, pad=10
         )
 
         plt.tight_layout()
@@ -407,18 +406,18 @@ def main():
                 ax_.add_patch(Rectangle((t_med, l0_med), 1.0 - t_med, 1.0 - l0_med, color=quad_colors[3], alpha=0.15, zorder=0))
                 ax_.axvline(t_med,  color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
                 ax_.axhline(l0_med, color='grey', linewidth=1.0, linestyle='--', alpha=0.6, zorder=1)
-                ax_.text(t_med / 2,       l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=8, color=quad_colors[0], alpha=0.7)
-                ax_.text(t_med / 2,       (l0_med + 1) / 2,  'Consolidating', ha='center', va='center', fontsize=8, color=quad_colors[1], alpha=0.7)
-                ax_.text((t_med + 1) / 2, l0_med / 2,        'Emerging',      ha='center', va='center', fontsize=8, color=quad_colors[2], alpha=0.7)
-                ax_.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Advancing',     ha='center', va='center', fontsize=8, color=quad_colors[3], alpha=0.7)
+                ax_.text(t_med / 2,       l0_med / 2,       'Foundational',  ha='center', va='center', fontsize=11, color=quad_colors[0], alpha=0.7)
+                ax_.text(t_med / 2,       (l0_med + 1) / 2,  'Consolidating', ha='center', va='center', fontsize=11, color=quad_colors[1], alpha=0.7)
+                ax_.text((t_med + 1) / 2, l0_med / 2,        'Emerging',      ha='center', va='center', fontsize=11, color=quad_colors[2], alpha=0.7)
+                ax_.text((t_med + 1) / 2, (l0_med + 1) / 2,  'Advancing',     ha='center', va='center', fontsize=11, color=quad_colors[3], alpha=0.7)
                 ax_.set_xlim(0.0, 1.0)
                 ax_.set_ylim(0.0, 1.0)
-                ax_.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
-                ax_.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=12)
+                ax_.set_xlabel('Learning Rate ($p_T$)', fontsize=16)
+                ax_.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=16)
                 ax_.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
                 ax_.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
                 legend_handles_ = [mpatches.Patch(color=quad_colors[q], alpha=0.7, label=quad_labels[q]) for q in range(4)]
-                ax_.legend(handles=legend_handles_, fontsize=8, framealpha=0.8,
+                ax_.legend(handles=legend_handles_, fontsize=11, framealpha=0.8,
                            loc='upper center', bbox_to_anchor=(0.5, -0.12), ncol=2, borderaxespad=0)
 
             _draw_static_bg(ax_g)
@@ -518,9 +517,9 @@ def main():
     zz2b = np.full_like(xx2b, l0_med, dtype=float)
     ax.plot_surface(xx2b, yy2b, zz2b, color=quad_colors[2], alpha=plane_alpha, linewidth=0, antialiased=False)
 
-    ax.set_xlabel('Interaction Time-step ($t$)', fontsize=12, labelpad=10)
-    ax.set_ylabel('Learning Rate ($p_{T}$)', fontsize=12, labelpad=10)
-    ax.set_zlabel('Initial Mastery ($p_{L_0}$)', fontsize=12, labelpad=10)
+    ax.set_xlabel('Interaction Time-step ($t$)', fontsize=16, labelpad=10)
+    ax.set_ylabel('Learning Rate ($p_{T}$)', fontsize=16, labelpad=10)
+    ax.set_zlabel('Initial Mastery ($p_{L_0}$)', fontsize=16, labelpad=10)
     ax.set_xlim(global_max_interactions, 0)
     ax.set_ylim(0.0, 1.0)
     ax.set_zlim(0.0, 1.0)

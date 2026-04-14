@@ -188,8 +188,6 @@ This mapping ensures that the instructional chain is both traceable and transpar
 
 The results of this study were obtained using a gTransformer model trained on the ASSISTments 2009 (AS2009) dataset \cite{feng2009addressing} following the guidelines detailed in \cite{labra2026theory}. In this section, we characterise the four learning situations through their characteristic parameter orbits and analyse their temporal dynamics.
 
-
-
 \subsection{Characteristics of the Four Learning Situations}
 
 We estimated the grounded parameters associated with the learning trajectory of each student in the AS2009 dataset and used them to characterise student learning across the four learning situations. To investigate the characteristic dynamics of these situations, we selected a representative student for each quadrant who balances proximity to the quadrant centroid with interaction volume (weighted equally). 
@@ -221,7 +219,7 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
     \includegraphics[width=\textwidth,keepaspectratio]{attractor_ellipse_advancing_893468.png}
     \caption{\textit{Advancing}.}
   \end{subfigure}
-  \caption{\textit{Parameter orbit ellipses.} Covariance ellipses (1-sigma and 2-sigma) for the representative student of each quadrant ($p_{\text{L}_0}$, $p_{\text{T}}$).}
+  \caption{\textit{Parameter orbit ellipses.} 1-sigma and 2-sigma covariance ellipses for each quadrant representative, showing the dispersion and stability of the student's grounded parameters pair $(p_{L_0}, p_{T})$ across the interaction history.}
   \label{fig_orbits}
 \end{figure}
 
@@ -235,6 +233,7 @@ Figure~\ref{fig_orbits} visualises their parameter orbits using covariance ellip
 \subsection{Dynamics of Learning Situation Trajectories}
 
 Figure~\ref{fig_trajectories} presents learning situation trajectory plots for a representative student from each quadrant in the AS2009 dataset. While the orbit ellipses in Figure~\ref{fig_orbits} confirm that student learning situations are dynamic rather than static, they do not preserve the temporal sequence or direction of these changes. Therefore, we employ these trajectory plots to capture the temporal evolution by tracing a student's movement through the $(p_{\text{T}}, p_{\text{L}_0})$ plane over time. They allow educators to observe whether a student's parameter pair is converging to a stable attractor, exhibiting rhythmic oscillations, or undergoing a transformative shift toward a different learning situation. By interpreting the length and orientation of trajectory segments, instructional designers can differentiate between students who are stagnating, those making steady progress, and those requiring immediate intervention, thus providing a transparent and actionable diagnostic tool for human-in-the-loop oversight. 
+
 
 \begin{figure}[p]
   \centering
@@ -261,7 +260,7 @@ Figure~\ref{fig_trajectories} presents learning situation trajectory plots for a
     \includegraphics[width=\textwidth,keepaspectratio]{roster_2d_advancing_893468.png}
     \caption{\textit{Advancing}.}
   \end{subfigure}
-  \caption{\textit{Learning situation trajectories.} Movement of the grounded parameters pair $(p_{\text{T}}, p_{\text{L}_0})$ over time. Marker area encodes dwell time.}
+  \caption{\textit{Learning trajectories}. Temporal trajectories for each quadrant representative, showing the sequence of movements of the student's grounded parameters pair $(p_{\text{T}}, p_{\text{L}_0})$ across the interaction history. Marker size encodes the dwell time at each parameter state.}
   \label{fig_trajectories}
 \end{figure}
 
@@ -283,7 +282,7 @@ Of the 182 AS2009 students with at least 60 interactions, 67\% were assigned a d
 \begin{figure}[!htb]
   \centering
   \includegraphics[width=\textwidth,height=0.40\textheight,keepaspectratio]{situation_alluvial_893468.png}
-  \caption{Learning situation at session entry (first 30 interactions) versus session exit (last 30 interactions) for $n = 182$ students with at least 60 interactions. Ribbon width is proportional to the fraction of students. Ribbons are coloured by entry situation; crossing ribbons indicate a change of learning situation over the course of the session. 67.0\% of students were assigned a different learning situation at the end of their session.}
+  \caption{Learning situation at session entry (first 30 interactions) versus session exit (last 30 interactions) for $n = 182$ students with at least 60 interactions. Ribbon width is proportional to the fraction of students. Ribbons are coloured by entry situation. Crossing ribbons indicate a change of learning situation over the course of the session. 67.0\% of students were assigned a different learning situation at the end of their session.}
   \label{fig_transitions}
 \end{figure}
 

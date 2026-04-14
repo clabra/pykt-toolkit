@@ -50,7 +50,7 @@ def draw_quadrant_bg(ax, t_med, l0_med, quad_colors, quad_names_short):
     ]
     for q, (px, py) in enumerate(positions):
         ax.text(px, py, quad_names_short[q], ha='center', va='center',
-                fontsize=8, color=quad_colors[q], alpha=0.65, zorder=1)
+                fontsize=18, color=quad_colors[q], alpha=0.65, zorder=1)
 
 
 def covariance_ellipse(ax, x, y, n_std=2.0, **kwargs):
@@ -211,9 +211,10 @@ def main():
 
         ax.set_xlim(0.0, 1.0)
         ax.set_ylim(0.0, 1.0)
-        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=12)
-        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=12)
+        ax.set_xlabel('Learning Rate ($p_T$)', fontsize=22)
+        ax.set_ylabel('Initial Mastery ($p_{L_0}$)', fontsize=22)
         ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
+        ax.tick_params(axis='both', which='major', labelsize=14)
         ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
 
         # Legend: situation name + ellipses + mean
@@ -232,14 +233,14 @@ def main():
         ax.legend(handles=sigma_handles + [
             plt.scatter([], [], s=200, marker='+', color=quad_colors[i],
                         linewidths=2.5, label=f'Mean ({mean_x:.3f}, {mean_y:.3f})')
-        ], fontsize=8, loc='lower right', framealpha=0.8)
+        ], fontsize=14, loc='lower right', framealpha=0.8)
 
         ax.set_title(
             f'{quad_labels[i]}\n'
             f'student {uid}  |  {len(xs)} interactions  '
             f'|  σ₁=({np.sqrt(np.cov(xs, ys)[0,0]):.3f}, '
             f'{np.sqrt(np.cov(xs, ys)[1,1]):.3f})',
-            fontsize=10, pad=10
+            fontsize=18, pad=10
         )
 
         plt.tight_layout()
