@@ -1,0 +1,195 @@
+# Simplified gTransformer architecture for the ECTEL 2026 paper.
+# Two explicit vertical columns: Standard (grey) | Grounded (blue).
+
+direction: down
+
+classes: {
+  std: {
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#555555"
+      stroke-width: 2
+      shadow: true
+      border-radius: 6
+      font-size: 16
+    }
+  }
+  grounded: {
+    style: {
+      fill: "#DDDDDD"
+      stroke: "#555555"
+      stroke-width: 2
+      shadow: true
+      border-radius: 6
+      font-size: 16
+    }
+  }
+  col: {
+    style: {
+      stroke: "#AAAAAA"
+      stroke-width: 1
+      stroke-dash: 4
+      fill: "#FFFFFF"
+      border-radius: 8
+      font-size: 15
+    }
+  }
+}
+
+# ── Left column: Standard track ───────────────────────────────────────────────
+
+Standard: {
+  label: "Standard Track"
+  class: col
+  direction: down
+
+  Interactions: {
+    label: "Student interactions\n(q, c, r) sequences"
+    class: std
+  }
+  HistEmb: {
+    label: "Difficulty-aware\nembeddings"
+    class: std
+  }
+  Encoder: {
+    label: "Encoder\n(self-attention\nover history)"
+    class: std
+  }
+  Decoder: {
+    label: "Decoder\n(cross-attention\nover question)"
+    class: std
+  }
+  ContextVec: {
+    label: "Context vector z_t\n(latent student state)"
+    class: std
+  }
+  SupervisedHead: {
+    label: "Supervised head\nMLP(z_t) → ŷ_t"
+    class: std
+  }
+
+  Interactions -> HistEmb: {
+    style: { stroke: "#555555"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+  HistEmb -> Encoder: {
+    style: { stroke: "#555555"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+  Encoder -> Decoder: "history context" {
+    style: { stroke: "#555555"; stroke-width: 2; font-size: 12 }
+    target-arrowhead: { shape: arrow }
+  }
+  Decoder -> ContextVec: {
+    style: { stroke: "#555555"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+  ContextVec -> SupervisedHead: {
+    style: { stroke: "#555555"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ── Right column: Grounded track ──────────────────────────────────────────────
+
+Grounded: {
+  label: "Grounded Track (gTransformer)"
+  class: col
+  direction: down
+
+  BKTPriors: {
+    label: "BKT reference model\npriors p_L₀, p_T"
+    class: grounded
+  }
+  TheoryBase: {
+    label: "Theory base logits\nlogit(p_L₀), logit(p_T)"
+    class: grounded
+  }
+  SemanticAxes: {
+    label: "Semantic axis projection\nz_t · k_c,  z_t · v_c"
+    class: grounded
+  }
+  GroundedParams: {
+    label: "Grounded parameters\np_L₀ = σ(base + Δ_L₀)\np_T = σ(base + Δ_T)"
+    class: grounded
+  }
+  InterpretableHead: {
+    label: "Interpretable head\nBKT(p_L₀, p_T) → ŷ_ref"
+    class: grounded
+  }
+
+  BKTPriors -> TheoryBase: {
+    style: { stroke: "#2874A6"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+  TheoryBase -> SemanticAxes: {
+    style: { stroke: "#2874A6"; stroke-width: 2; stroke-dash: 3 }
+    target-arrowhead: { shape: arrow }
+  }
+  SemanticAxes -> GroundedParams: {
+    style: { stroke: "#2874A6"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+  GroundedParams -> InterpretableHead: {
+    style: { stroke: "#2874A6"; stroke-width: 2 }
+    target-arrowhead: { shape: arrow }
+  }
+}
+
+# ── User Model: receives grounded params and interpretable predictions ──────────
+
+UserModel: {
+  label: "Augmented User Model"
+  style: {
+    fill: "#B8D9FF"
+    stroke: "#1A5276"
+    stroke-width: 3
+    shadow: true
+    border-radius: 6
+    font-size: 16
+    bold: true
+  }
+}
+
+# ── Shared loss at the bottom ─────────────────────────────────────────────────
+
+Loss: {
+  label: "Multi-objective loss\nℒ = λ·ℒ_sup + λ·ℒ_ref + λ·ℒ_probe"
+  class: grounded
+}
+
+# ── Cross-track: context vector feeds semantic axis projection ────────────────
+
+Standard.ContextVec -> Grounded.SemanticAxes: "z_t" {
+  style: { stroke: "#555555"; stroke-width: 2; stroke-dash: 4; font-size: 12 }
+  target-arrowhead: { shape: arrow }
+}
+
+Standard.HistEmb -> Grounded.SemanticAxes: "question emb" {
+  style: { stroke: "#555555"; stroke-width: 1; stroke-dash: 4; font-size: 11 }
+  target-arrowhead: { shape: arrow }
+}
+
+Grounded.GroundedParams -> UserModel: "p_L₀, p_T" {
+  style: { stroke: "#2874A6"; stroke-width: 2 }
+  target-arrowhead: { shape: arrow }
+}
+Grounded.InterpretableHead -> UserModel: "ŷ_ref" {
+  style: { stroke: "#2874A6"; stroke-width: 2 }
+  target-arrowhead: { shape: arrow }
+}
+
+# ── Both heads converge on loss ───────────────────────────────────────────────
+
+Standard.SupervisedHead -> Loss: {
+  style: { stroke: "#555555"; stroke-width: 2 }
+  target-arrowhead: { shape: arrow }
+}
+Grounded.InterpretableHead -> Loss: {
+  style: { stroke: "#2874A6"; stroke-width: 2 }
+  target-arrowhead: { shape: arrow }
+}
+Standard.Interactions -> Loss: "ground truth" {
+  style: { stroke: "#999999"; stroke-width: 1; stroke-dash: 4; font-size: 12 }
+  target-arrowhead: { shape: arrow }
+}

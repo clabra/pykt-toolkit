@@ -1,0 +1,196 @@
+# Simplified gTransformer architecture for ECTEL 2026
+# Unified container layout using GRID layout to force horizontal alignment
+# Synchronized with arch3.d2: massive font sizes, darker outer border
+
+direction: right
+
+classes: {
+  track: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 2
+      shadow: true
+      border-radius: 8
+      font-size: 34
+      text-transform: uppercase
+      fill: "white"
+      bold: true
+    }
+  }
+}
+
+Architecture: {
+  label: "Grounded Transformer System"
+  style: {
+    stroke: "#BBBBBB"
+    stroke-width: 2
+    fill: "white"
+    border-radius: 16
+    font-size: 42
+    bold: true
+  }
+
+  # Aggressively increase grid spacing
+  grid-columns: 3
+  horizontal-gap: 200
+
+  # Section 1: Input (Left)
+  Input: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 1
+      stroke-dash: 4
+      fill: "white"
+      border-radius: 12
+    }
+    direction: down
+    vertical-gap: 120
+
+    Interactions: "Interaction History\n(q, c, r)" {
+      shape: cylinder
+      width: 350
+      height: 150
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+        font-size: 30
+      }
+    }
+
+    # Dummy edge to force BKT under Interactions
+    Interactions -> BKT: { style.stroke: "white" }
+
+    BKT: "BKT Reference Model\n(Theory Anchor)" {
+      width: 350
+      height: 150
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+        font-size: 30
+      }
+    }
+  }
+
+  # Section 2: gTransformer (Middle)
+  gTransformer: {
+    label: "gTransformer model"
+    style: {
+      stroke: "#333333"
+      stroke-width: 2
+      fill: "#FDFDFD"
+      border-radius: 12
+      shadow: true
+      font-size: 36
+      bold: true
+    }
+    direction: down
+    vertical-gap: 120
+
+    StandardTrack: "Standard Track" {
+      class: track
+      width: 350
+      height: 100
+    }
+
+    GroundedTrack: "Grounded Track" {
+      class: track
+      width: 350
+      height: 100
+    }
+
+    Loss: "Multi-objective Loss\n(Accuracy + Grounding)" {
+      class: track
+      width: 350
+      height: 120
+      style: {
+        text-transform: none
+        font-size: 30
+      }
+    }
+
+    # Internal connections
+    StandardTrack -> GroundedTrack: "Context Vector z_t" { 
+      style: { 
+        stroke: "#333333"
+        stroke-width: 2
+        font-color: "#555555"
+        font-size: 28
+        bold: true
+      }
+    }
+    StandardTrack -> Loss: "ŷₜ\npredictions" { 
+      style: { 
+        stroke: "#333333"
+        stroke-width: 2
+        font-color: "#555555"
+        font-size: 28
+        bold: true
+      }
+    }
+    GroundedTrack -> Loss: "ŷ_ref predictions" { 
+      style: { 
+        stroke: "#333333"
+        stroke-width: 2
+        font-color: "#555555"
+        font-size: 28
+        bold: true
+      }
+    }
+  }
+
+  # Section 3: Output (Right)
+  Output: {
+    style: {
+      stroke: "#333333"
+      stroke-width: 1
+      stroke-dash: 4
+      fill: "white"
+      border-radius: 12
+    }
+    direction: down
+    vertical-gap: 120
+
+    Indicators: "Grounded Parameters\n(p_L₀, p_ₜ)" {
+      shape: cylinder
+      width: 350
+      height: 150
+      style: {
+        fill: "white"
+        stroke: "#333333"
+        stroke-width: 2
+        shadow: true
+        font-size: 30
+      }
+    }
+  }
+}
+
+# Connections outside the grid to avoid disrupting the 1-2-3 cell layout
+Architecture.Input.Interactions -> Architecture.gTransformer.StandardTrack: { 
+  style: { 
+    stroke: "#333333"
+    stroke-width: 2
+  }
+}
+Architecture.Input.BKT -> Architecture.gTransformer.GroundedTrack: "(L₀, T)\npriors" { 
+  style: { 
+    stroke: "#333333"
+    stroke-width: 2
+    font-color: "#555555"
+    font-size: 30
+    bold: true
+  }
+}
+Architecture.gTransformer.GroundedTrack -> Architecture.Output.Indicators: "(p_L₀, p_ₜ)" { 
+  style: { 
+    stroke: "#333333"
+    stroke-width: 2
+    font-color: "#555555"
+    font-size: 36
+    bold: true
+  }
+}
