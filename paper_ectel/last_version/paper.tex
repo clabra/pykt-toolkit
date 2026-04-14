@@ -13,6 +13,7 @@
 \usepackage{subcaption}
 \usepackage{float}
 \definechangesauthor[name=Development, color=blue]{dev}
+\definechangesauthor[name=Revision, color=red]{rev}
 %
 \graphicspath{{img/}}
 %
@@ -45,7 +46,8 @@ The research question that guides this work is:
 
 \textit{RQ: How can ITS user modelling be augmented with theory-grounded information to support more mindful instructional strategies that comply with the requirements for transparency and pedagogical purpose?}
 
-The remainder of the paper is organised as follows. Section~2 provides background on BKT and the architecture of Grounded Transformers and ITS. Section~3 establishes the design principles of the augmented user model. Section~4 describes the methodology for operationalising this model. Section~5 presents the empirical results and discussion. Section~6 present the conclusions.
+The remainder of the paper is organised as follows. Section~2 provides background on BKT and the architecture of Grounded Transformers and ITS. Section~3 establishes the design principles of the augmented user model. Section~4 describes the methodology for operationalising this model. Section~5 presents the empirical results and discussion. Section~6 \replaced[id=rev]{presents} the conclusions.
+
 
 %
 
@@ -76,19 +78,9 @@ The gTransformer architecture, shown in Fig.~\ref{fig_overview}, is designed to 
 
 \begin{figure}[!htb]
   \centering
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch2.png}
-    \caption{The gTransformer architecture integrates theoretical priors and interaction history to produce student-specific grounded parameters.}
-    \label{fig_overview}
-  \end{subfigure}
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch3.png}
-    \caption{Augmentation of an ITS user model through the integration of grounded parameters alongside traditional mastery estimates.}
-    \label{fig_augmentation}
-  \end{subfigure}
-  \caption{System architecture: (a) the gTransformer engine and (b) its operationalisation within an augmented user model to enable situation-based instructional strategies.}
+  \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch2.png}
+  \caption{The gTransformer architecture integrates theoretical priors and interaction history to produce student-specific grounded parameters.}
+  \label{fig_overview}
 \end{figure}
 
 \begin{itemize}
@@ -98,17 +90,17 @@ The gTransformer architecture, shown in Fig.~\ref{fig_overview}, is designed to 
 \end{itemize}
 
 
-
 \subsection{Intelligent Tutoring Systems and User Models}
 \label{sub_its}
 
-ITS are typically structured around three interacting components \cite{nkambou2010advances}:
+ITS have been structured traditionally around three interacting components \cite{nkambou2010advances}:
 
 \begin{itemize}
     \item \textit{Domain model}: This component encodes the knowledge to be taught, typically structured as a set of Knowledge Components (KCs) or skills. It provides the base through which student performance is assessed and instructional content is organised.
     \item \textit{User model}: The user model tracks the learner's evolving state by maintaining a representation of their knowledge across the domain model, serving as the primary source of evidence for instructional decisions. 
     \item \textit{Tutor model}: This component mediates instructional decisions by selecting the next activity or intervention based on the state of the user model. The goal is to provide a personalised learning experience that adapts dynamically to the student's evolution.
 \end{itemize}
+
 The effectiveness of this traditional architecture is historically constrained by the limitations of the user model that primarily contain mastery states inferred through KT systems. While this information provides a useful snapshot of what a student knows, it is often insufficient for mindful instruction because it fails to capture the underlying learning dynamics that explain why those states were reached. For instructional decisions to be transparent, accountable, and pedagogically grounded, user models must move beyond simple data correlates and instead provide representations that reflect actionable pedagogical constructs, as we propose in Section~\ref{sec_grounded}.
 
 %
@@ -127,15 +119,20 @@ Our proposal is informed by three explicit design principles that justify the st
 \item \textit{Human-centred focus.} For students, the design ensures an individualised experience adapted to their evolving learning situations. For educators, it provides the interpretable evidence necessary to make informed pedagogical decisions. By maintaining this human-centred focus, the design guarantees that transparency, accountability and agency remain at the centre of the TEL environment~\cite{Holmes2022504}.
 \end{itemize}
 
-\subsection{Proposed Architecture}
 
+\subsection{Proposed Architecture}
 Guided by these principles, we propose an \textit{augmented user model} that operationalises transparency and pedagogical purpose by integrating the standard ITS framework with a gTransformer engine. 
 
 As shown in Fig.~\ref{fig_augmentation}, the \textit{user model} moves beyond tracking simple mastery states by incorporating student-specific grounded parameters $(p_{\text{L}_0}, p_{\text{T}})$ that encapsulate the learner's longitudinal context.
 
-
-
 This augmentation allows the system to differentiate between learners who exhibit similar recent response patterns but possess distinct learning histories. These parameters define a two-dimensional space partitioned into four \textit{learning situations} described in Section~\ref{sec_situations}. These learning situations inform the \textit{tutor model}, enabling the implementation of situation-based instructional strategies. 
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=\textwidth,height=0.25\textheight,keepaspectratio]{arch3.png}
+  \caption{Augmentation of an ITS user model through the integration of grounded parameters alongside traditional mastery estimates.}
+  \label{fig_augmentation}
+\end{figure}
 
 %
 \section{Methodology}
